@@ -14,3 +14,13 @@ docs/site/
 
 # 173 MB export, not a source
 /Audit- AMPM.pdf
+
+# Knowledge graph (graphify-out/ is committed so every checkout and worktree has it); these are per-machine or temporary
+graphify-out/.graphify_python
+graphify-out/.graphify_root
+graphify-out/.graphify_*.json
+graphify-out/.graphify_*.txt
+graphify-out/.needs_update
+!graphify-out/.graphify_labels.json
+.claude/settings.json.graphify-bak
+__pycache__/

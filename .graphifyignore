@@ -1,0 +1,16 @@
+# Files graphify should not map. .gitignore is honoured as well (vault/, docs/site/, node_modules/).
+# Generated tables and indexes: derived from data-model.md, the assumption registers and decisions.json,
+# which are mapped themselves.
+docs/field-matrix.md
+docs/field-matrix.csv
+docs/decision-register.md
+docs/review/assumptions-taken.md
+# Tooling, not project content
+.claude/
+docs/tools/__pycache__/
+docs/tools/package.json
+docs/tools/package-lock.json
+docs/tools/com.ampm.vault-sync.plist
+.graphifyignore
+.mcp.json
+CLAUDE.md

@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "mempalace": {
+      "type": "stdio",
+      "command": "${HOME}/.local/bin/mempalace-light-mcp",
+      "args": []
+    },
+    "graphify": {
+      "type": "stdio",
+      "command": "${HOME}/.local/bin/graphify-mcp",
+      "args": ["graphify-out/graph.json"]
+    }
+  }
+}

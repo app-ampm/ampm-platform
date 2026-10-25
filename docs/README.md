@@ -102,8 +102,25 @@ Open `vault/` in Obsidian (File, Open folder as vault). `Home.md` is the hub. `n
 | End of every Claude Code turn in this folder (Stop hook in `.claude/settings.json`) | `docs/tools/checkpoint.sh --hook` | commits and pushes the project if anything changed, then syncs the vault; shows a one-line message only when it committed |
 | Every project commit (post-commit hook, installed by `setup_git.sh`) | `docs/tools/vault_sync.py` | copies `docs/` and `reference_docs/` into the vault, rebuilds the generated notes, appends to the day's sync log note, commits and pushes the vault when something changed |
 | Every ten minutes (launchd agent `com.ampm.vault-sync`, definition in `docs/tools/`) | `docs/tools/vault_sync.py --vault-only` | commits and pushes edits made inside Obsidian |
+| Start of every Claude Code session here (SessionStart hook) | `docs/tools/memory_hook.sh session-start` | tells the session what the memory wing and the knowledge graph hold and whether the graph is stale |
+| Every ten human messages, before compaction, and at session end (Stop, PreCompact and SessionEnd hooks) | `docs/tools/memory_hook.sh` | mines the session transcript into the MemPalace wing `ampm`, in the background |
+| Every project commit made by the checkpoint | `mempalace mine docs --wing ampm` | files new or changed design docs into the same wing |
+| Before every search or file read by Claude Code (PreToolUse hook, installed by `graphify install --project`) | `graphify hook-guard` | points the session at the knowledge graph instead of grepping when the graph can answer |
 
-Everything logs to `~/Library/Logs/ampm-vault-sync.log`. By hand: `bash docs/tools/checkpoint.sh "message"` commits with your own message, `python3 docs/tools/vault_sync.py` syncs the vault without touching the project, and `python3 docs/tools/vault_build.py` only rebuilds the notes. Stop the timer with `launchctl bootout gui/$(id -u)/com.ampm.vault-sync`.
+The checkpoint and the vault log to `~/Library/Logs/ampm-vault-sync.log`, the memory hooks to `~/Library/Logs/ampm-memory-hooks.log`. By hand: `bash docs/tools/checkpoint.sh "message"` commits with your own message, `python3 docs/tools/vault_sync.py` syncs the vault without touching the project, and `python3 docs/tools/vault_build.py` only rebuilds the notes. Stop the timer with `launchctl bootout gui/$(id -u)/com.ampm.vault-sync`.
+
+### Session memory and the knowledge graph
+
+Two open-source tools, installed with `uv tool install` and wired into this repository, keep the work of every Claude Code session available to the next one:
+
+| Tool | Upstream | What it holds here | How to use it |
+|---|---|---|---|
+| [MemPalace](https://github.com/mempalace/mempalace) 3.11 | local palace in `~/.mempalace`, wing `ampm` | the transcript of every session run in this folder or its worktrees, and the design docs; verbatim text, semantic search, no API calls | `mempalace search "<words>" --wing ampm`, `mempalace wake-up --wing ampm`; in a session the MCP server `mempalace` (`palace_query`, `palace_exec`) |
+| [graphify](https://github.com/Graphify-Labs/graphify) 0.9 | `graphify-out/` in this repository | a knowledge graph of the design package, the generators and AMPM's source documents: concepts, screens, flows, decisions and the edges between them, each tagged as extracted or inferred | `/graphify .` builds or rebuilds it, `/graphify . --update` refreshes changed files; `graphify query "<question>"`, `graphify explain "<concept>"`, `graphify path "<A>" "<B>"`; `graphify-out/graph.html` in a browser; the MCP server `graphify` |
+
+What is committed: `.claude/settings.json` (the hooks), `.mcp.json` (the two MCP servers, approved once per machine when Claude Code asks), `.claude/skills/graphify/` (the `/graphify` skill), `.graphifyignore` (generated tables and tooling are left out of the graph), `CLAUDE.md` (the rules every session follows) and `graphify-out/` (the graph, its report, the extraction cache and the manifest, so a fresh worktree queries the same graph without rebuilding). Not committed: the palace itself, which stays on the machine.
+
+On a new machine run `bash docs/tools/setup_memory.sh`: it installs the two CLIs at the tested versions and backfills the wing with the project's transcripts and docs. Memory and graph are independent of the vault: the vault is the human-readable record for Obsidian, the palace and the graph are what a session reads.
 
 ### Recording a confirmation from AMPM
 

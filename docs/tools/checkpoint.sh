@@ -1,11 +1,12 @@
 #!/bin/bash
-# Commit the project if anything changed, then sync the Obsidian vault (vault/).
+# Commit the project if anything changed, sync the Obsidian vault (vault/), then file the docs into the MemPalace wing.
 # Runs from the Claude Code Stop hook at the end of every turn (--hook) and by hand:
 #   bash docs/tools/checkpoint.sh ["commit message"]
 # In hook mode all output goes to ~/Library/Logs/ampm-vault-sync.log and a one-line JSON
 # systemMessage is printed only when a commit was made, so Claude Code can show it.
 set -u
 cd "$(dirname "$0")/../.." || exit 0
+export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
 LOG="$HOME/Library/Logs/ampm-vault-sync.log"
 HOOK=0; MSG=""; COMMITTED=""
 for a in "$@"; do case "$a" in --hook) HOOK=1 ;; *) MSG="$a" ;; esac; done
@@ -33,6 +34,11 @@ run() {
     fi
   fi
   python3 docs/tools/vault_sync.py
+  if [ -n "$COMMITTED" ] && command -v mempalace >/dev/null 2>&1; then
+    # file new or changed design docs into the project's memory wing (MemPalace skips files already filed)
+    ( mempalace mine docs --mode projects --wing ampm >> "$HOME/Library/Logs/ampm-memory-hooks.log" 2>&1 & ) >/dev/null 2>&1
+    echo "memory: docs/ queued for the MemPalace wing ampm"
+  fi
 }
 
 if [ "$HOOK" = 1 ]; then
