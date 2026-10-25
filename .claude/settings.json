@@ -1,5 +1,17 @@
 {
   "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PROJECT_DIR:-.}/docs/tools/session_journal.py\" --start",
+            "timeout": 30,
+            "statusMessage": "AMPM: opening the session journal"
+          }
+        ]
+      }
+    ],
     "Stop": [
       {
         "hooks": [

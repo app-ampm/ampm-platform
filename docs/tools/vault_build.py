@@ -238,6 +238,33 @@ def build():
     for i, (title, qs, est, need, why) in enumerate(OPEN_ITEMS, 1):
         idx.append(f"| {i} | [[{safe(title)}]] | {', '.join(qs)} | {'yes' if est else 'no'} |")
     write(NOTES / "Open items.md", "\n".join(idx) + "\n")
+    # ---- build decisions and sessions: hand-written or hook-written notes, indexed from their properties
+    def fm(path):
+        text = path.read_text(encoding="utf8")
+        m = re.match(r"^---\n(.*?)\n---\n", text, re.S)
+        out = {}
+        if m:
+            for line in m.group(1).splitlines():
+                if ":" in line:
+                    k, v = line.split(":", 1)
+                    out[k.strip()] = v.strip().strip('"')
+        return out
+    idx = ["---\ntype: index\ntags: [ampm, index]\n---\n# Build decisions\n",
+           "Technical and process decisions taken during the build, each with context, alternatives and consequences. AMPM's own answers are under [[Decisions]]. "
+           "New record: `python3 docs/tools/new_decision.py \"Title\" --area <area>` in the project repository.\n",
+           "| ID | Decision | Area | Status | Date |", "|---|---|---|---|---|"]
+    for p in sorted((NOTES / "Build decisions").glob("D-*.md")):
+        f = fm(p)
+        idx.append(f"| [[{p.stem}|{f.get('id', p.stem[:5])}]] | {f.get('title', p.stem[6:])} | {f.get('area', '')} | {f.get('status', '')} | {f.get('date', '')} |")
+    write(NOTES / "Build decisions.md", "\n".join(idx) + "\n")
+    idx = ["---\ntype: index\ntags: [ampm, index]\n---\n# Sessions\n",
+           "One note per Claude Code session: the requests made, the commits and files that resulted, and a narrative of what was decided and why. "
+           "The session hooks create and refresh these notes; the narrative is written at wrap-up.\n",
+           "| Session | Title | Started | Requests | Commits |", "|---|---|---|---|---|"]
+    for p in sorted((NOTES / "Sessions").glob("*.md"), reverse=True):
+        f = fm(p)
+        idx.append(f"| [[{p.stem}]] | {f.get('title', '')} | {f.get('started', '')} | {f.get('requests', '')} | {f.get('commits', '')} |")
+    write(NOTES / "Sessions.md", "\n".join(idx) + "\n")
     docs_idx = ["---\ntype: index\ntags: [ampm, index]\n---\n# Documents\n", "The design package under docs/, version 0.2 with AMPM's decisions applied. Diagrams render in Obsidian.\n",
                 "## For AMPM\n", "- [[decision-brief|Decision brief]]: the short version with AMPM's answers", "- [[annotated-brief|Your brief, annotated]]", "- [[redesigned-flowcharts|Your flowcharts, redrawn]]",
                 "- [[open-decisions|Decisions we need from you]] (answered)", "- [[assumptions-taken|Assumptions we took]]", "", "## Developer drafts\n",
@@ -256,13 +283,16 @@ def build():
             f"Wedding-planning platform for AMPM. Design drafts at version 0.2 with AMPM's decisions of {DEC['answered_on']} applied; the schedule and cost estimate are held until the open items are confirmed.\n",
             "## Start here\n", "- [[Decisions]]: the 25 questions and AMPM's answers", "- [[Open items]]: what still needs confirming, and where to record the answers",
             "- [[Assumptions]]: the 98 assumptions and their status", "- [[Findings]]: the audit's conflicts, gaps, ambiguities and risks", "- [[Documents]]: the design package", "- [[Sources]]: AMPM's own documents",
+            "- [[Build decisions]]: technical and process decisions taken during the build, with their reasons", "- [[Sessions]]: one note per Claude Code session, with requests, commits and a narrative",
+            "- [[AMPM Dashboard.base|Dashboard]]: live tables of open items, build decisions, sessions, decisions, assumptions and findings",
             "- Log: " + ", ".join(f"[[{n}]]" for n in LOG_NOTES), "", "## Status\n",
             f"| | |", "|---|---|", f"| Questions | {qc['decided']} decided, {qc['partly']} partly, {qc['open']} open |",
             f"| Assumptions | " + ", ".join(f"{v} {LABEL[k].lower()}" for k, v in sorted(ac.items(), key=lambda kv: -kv[1])) + " |",
             f"| Open items | {len(OPEN_ITEMS)} |", "| Shared pages | [Full package](https://claude.ai/artifact/55fJPFQnnqi8sVVU7FUFcv) · [Decision brief](https://claude.ai/artifact/1VSdFMEAXfqj8V6NzkjPG3) |", "",
-            "## How this vault works\n", "- The documents under docs/ are a synced copy of the design package in the project repository (ampm-platform); edit them there, not here. They render with their diagrams.",
+            "## Open items at a glance\n", "![[AMPM Dashboard.base#Open items]]", "", "## How this vault works\n", "- The documents under docs/ are a synced copy of the design package in the project repository (ampm-platform); edit them there, not here. They render with their diagrams.",
             "- The notes under notes/ are generated from the project's docs/decisions.json, the audit and the assumption registers by `docs/tools/vault_build.py` in the project repository. Decision, assumption and finding notes are rebuilt each run; open items and log notes are written once and kept.",
             "- Every project commit, the end of every Claude Code turn and a ten-minute timer run `docs/tools/vault_sync.py` in the project repository: it copies the documents in, rebuilds the notes, appends to the day's sync log and commits this vault to its repository (ampm-vault). Notes you edit here in Obsidian are committed by the timer.",
+            "- Each Claude Code session gets a note under notes/Sessions: requests, commits and changed files are refreshed automatically at the end of every turn, and the narrative (what was decided and why) is written at wrap-up. Build decisions are D-nnn records under notes/Build decisions. [[AMPM Dashboard.base|The dashboard]] shows live tables of all of these.",
             "- To record a confirmation from AMPM: write it in the open item's note, update docs/decisions.json, then run `apply_decisions.py`, `decision_log_build.py`, the register and sheet generators, `vault_build.py` and `site_build.mjs`.",
             f"\n*Home regenerated on {today}.*"]
     write(ROOT / "Home.md", "\n".join(home) + "\n")
