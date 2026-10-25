@@ -90,10 +90,10 @@
     "semantic_hash": "6f29141725b6f8cc05b66e23175d5b01"
   },
   "docs/README.md": {
-    "mtime": 1792960438.626078,
-    "seen": 1792961935.6606798,
-    "ast_hash": "25541f6cad376e513008817dff0f136a",
-    "semantic_hash": "25541f6cad376e513008817dff0f136a"
+    "mtime": 1792962791.2506952,
+    "seen": 1792963772.2581692,
+    "ast_hash": "10797773e10aa469661d7d4d8fcff105",
+    "semantic_hash": "10797773e10aa469661d7d4d8fcff105"
   },
   "docs/architecture.md": {
     "mtime": 1792956929.1795142,
@@ -234,9 +234,9 @@
     "semantic_hash": "efccfb6e641c763251b12f2cce828f76"
   },
   "docs/tools/setup_memory.sh": {
-    "mtime": 1792960438.626189,
-    "seen": 1792962206.237629,
-    "ast_hash": "3cd339631f5b52a4eb1d81c4c570697b",
-    "semantic_hash": "3cd339631f5b52a4eb1d81c4c570697b"
+    "mtime": 1792962877.442293,
+    "seen": 1792963772.258167,
+    "ast_hash": "641bd90c4d0d7ac1d63a9d4d67fda467",
+    "semantic_hash": "641bd90c4d0d7ac1d63a9d4d67fda467"
   }
 }

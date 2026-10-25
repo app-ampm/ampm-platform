@@ -12,8 +12,15 @@
       "output_tokens": 0,
       "files": 5,
       "note": "incremental, code only (AST)"
+    },
+    {
+      "date": "2026-10-25T21:30:28.018431+00:00",
+      "input_tokens": 105976,
+      "output_tokens": 0,
+      "files": 2,
+      "note": "incremental: docs/README.md re-extracted by one subagent, setup_memory.sh by AST"
     }
   ],
-  "total_input_tokens": 1646194,
+  "total_input_tokens": 1752170,
   "total_output_tokens": 0
 }

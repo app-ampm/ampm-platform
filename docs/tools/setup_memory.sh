@@ -37,7 +37,8 @@ running session under the shared wing wing_api and overwrite the wing set by thi
 To keep AMPM sessions in wing $WING while they run, change those two global hook commands to
   mempalace hook run --hook stop --harness claude-code      (Stop)
   mempalace hook run --hook precompact --harness claude-code (PreCompact)
-and re-key the shared wing with: mempalace wings split --wing wing_api  (then --yes to apply the plan).
+and re-key the shared wing with: mempalace wings split --wing wing_api  (then --yes to apply the plan),
+then rebuild the hallway index: mempalace hallways --rebuild
 EOT
 fi
 cat <<EOT
