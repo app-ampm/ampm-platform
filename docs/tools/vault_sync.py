@@ -2,21 +2,27 @@
 """Sync the design package into the Obsidian vault and commit the vault repository.
 
 Default run: copy docs/ (without tools and site) and reference_docs/ into vault/, rebuild the generated notes,
-append a line to today's sync log, then commit and push the vault if anything changed.
+refresh the session journal when AMPM_SESSION_JSON is set (checkpoint.sh --hook exports the Claude Code hook JSON),
+append a line to today's sync log when the project commit changed, then commit and push the vault if anything changed.
 --vault-only: skip the copy and rebuild; just commit and push edits made inside Obsidian (used by the timer).
 Safe to run anywhere, including from a git hook of the project repository.
 """
 from __future__ import annotations
 
 import datetime
+import json
 import os
 import subprocess
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import session_journal  # noqa: E402
+
 PROJECT = Path(__file__).resolve().parents[2]
 VAULT = Path(os.environ.get("AMPM_VAULT", PROJECT / "vault"))
 LOG_DIR = VAULT / "notes" / "Log"
+STATE = VAULT / ".sync-state"  # last project commit synced; git-ignored
 TRAILER = "Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 ENV = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}  # never inherit a hook's git context
 
@@ -40,7 +46,8 @@ def sync_files():
 
 
 def rebuild_notes():
-    subprocess.run([sys.executable, str(PROJECT / "docs" / "tools" / "vault_build.py")], check=True, env={**ENV, "AMPM_VAULT": str(VAULT)})
+    subprocess.run([sys.executable, str(PROJECT / "docs" / "tools" / "vault_build.py")], check=True,
+                   env={**ENV, "AMPM_VAULT": str(VAULT)})
 
 
 def append_log(line):
@@ -53,32 +60,33 @@ def append_log(line):
         fh.write(f"- {datetime.datetime.now().strftime('%H:%M')} {line}\n")
 
 
-def commit_vault(message, trailer):
-    if not (VAULT / ".git").exists():
-        print("vault: not a git repository yet, nothing committed")
-        return
-    if not git(["config", "--local", "user.email"], VAULT).stdout.strip():
-        print("vault: no repository-local git identity (user.email), nothing committed")
-        return
-    git(["add", "-A"], VAULT)
-    if not git(["status", "--porcelain"], VAULT).stdout.strip():
-        print("vault: nothing to commit")
-        return
-    args = ["commit", "-q", "-m", message] + (["-m", TRAILER] if trailer else [])
-    r = git(args, VAULT)
-    if r.returncode != 0:
-        print("vault: commit failed:", r.stderr.strip()[:300])
-        return
-    print("vault: committed:", message)
-    if git(["remote"], VAULT).stdout.strip():
-        p = git(["push", "-q"], VAULT)
-        print("vault: pushed" if p.returncode == 0 else "vault: push failed: " + p.stderr.strip()[:300])
-
-
 def vault_dirty():
     if not (VAULT / ".git").exists():
         return True
     return bool(git(["status", "--porcelain"], VAULT).stdout.strip())
+
+
+def commit_vault(message, trailer):
+    if not (VAULT / ".git").exists():
+        print("vault: not a git repository yet, nothing committed")
+        return False
+    if not git(["config", "--local", "user.email"], VAULT).stdout.strip():
+        print("vault: no repository-local git identity (user.email), nothing committed")
+        return False
+    git(["add", "-A"], VAULT)
+    if not git(["status", "--porcelain"], VAULT).stdout.strip():
+        print("vault: nothing to commit")
+        return True
+    args = ["commit", "-q", "-m", message] + (["-m", TRAILER] if trailer else [])
+    r = git(args, VAULT)
+    if r.returncode != 0:
+        print("vault: commit failed:", r.stderr.strip()[:300])
+        return False
+    print("vault: committed:", message)
+    if git(["remote"], VAULT).stdout.strip():
+        p = git(["push", "-q"], VAULT)
+        print("vault: pushed" if p.returncode == 0 else "vault: push failed: " + p.stderr.strip()[:300])
+    return True
 
 
 def main():
@@ -89,13 +97,30 @@ def main():
         commit_vault(f"Obsidian edits {datetime.datetime.now().strftime('%Y-%m-%d %H:%M')}", trailer=False)
         return
     sync_files()
+    journal_path, journal_changed = None, False
+    raw = os.environ.get("AMPM_SESSION_JSON", "").strip()
+    if raw:
+        try:  # before the rebuild, so the Sessions index sees the refreshed note
+            journal_path, journal_changed = session_journal.update_facts(json.loads(raw))
+        except Exception as exc:  # the journal must never block the sync
+            print("session journal failed:", exc)
     rebuild_notes()
+    sha, subject = project_ref()
+    last = STATE.read_text().strip() if STATE.exists() else ""
+    project_changed = sha not in (last, "no-commit")
     if not vault_dirty():
+        STATE.write_text(sha + "\n")
         print("vault: up to date")
         return
-    sha, subject = project_ref()
-    append_log(f"Synced from ampm-platform {sha}" + (f": {subject}" if subject else ""))
-    commit_vault(f"Sync from ampm-platform {sha}" + (f": {subject}" if subject else ""), trailer=True)
+    if project_changed:
+        append_log(f"Synced from ampm-platform {sha}" + (f": {subject}" if subject else ""))
+        message = f"Sync from ampm-platform {sha}" + (f": {subject}" if subject else "")
+    elif journal_changed and journal_path is not None:
+        message = f"Session journal: {journal_path.stem}"
+    else:
+        message = f"Vault update {datetime.datetime.now().strftime('%Y-%m-%d %H:%M')}"
+    if commit_vault(message, trailer=True):
+        STATE.write_text(sha + "\n")
 
 
 if __name__ == "__main__":

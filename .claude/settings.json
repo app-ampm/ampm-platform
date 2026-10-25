@@ -5,6 +5,12 @@
         "hooks": [
           {
             "type": "command",
+            "command": "python3 \"${CLAUDE_PROJECT_DIR:-.}/docs/tools/session_journal.py\" --start",
+            "timeout": 30,
+            "statusMessage": "AMPM: opening the session journal"
+          },
+          {
+            "type": "command",
             "command": "bash \"${CLAUDE_PROJECT_DIR:-.}/docs/tools/memory_hook.sh\" session-start",
             "timeout": 30
           }

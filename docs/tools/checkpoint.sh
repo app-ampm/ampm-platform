@@ -2,14 +2,18 @@
 # Commit the project if anything changed, sync the Obsidian vault (vault/), then file the docs into the MemPalace wing.
 # Runs from the Claude Code Stop hook at the end of every turn (--hook) and by hand:
 #   bash docs/tools/checkpoint.sh ["commit message"]
-# In hook mode all output goes to ~/Library/Logs/ampm-vault-sync.log and a one-line JSON
-# systemMessage is printed only when a commit was made, so Claude Code can show it.
+# In hook mode the hook JSON on stdin is passed on (AMPM_SESSION_JSON) so vault_sync.py can refresh the session journal,
+# all output goes to ~/Library/Logs/ampm-vault-sync.log, and a one-line JSON systemMessage is printed only when a commit
+# was made, so Claude Code can show it.
 set -u
 cd "$(dirname "$0")/../.." || exit 0
 export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
 LOG="$HOME/Library/Logs/ampm-vault-sync.log"
 HOOK=0; MSG=""; COMMITTED=""
 for a in "$@"; do case "$a" in --hook) HOOK=1 ;; *) MSG="$a" ;; esac; done
+if [ "$HOOK" = 1 ] && [ ! -t 0 ]; then
+  AMPM_SESSION_JSON=$(cat 2>/dev/null || true); export AMPM_SESSION_JSON
+fi
 
 run() {
   if [ -d .git ] && [ -z "$(git config --local user.email)" ]; then

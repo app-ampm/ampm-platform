@@ -95,10 +95,13 @@ Both repositories carry their own git identity (the `app-ampm` account's address
 
 Open `vault/` in Obsidian (File, Open folder as vault). `Home.md` is the hub. `notes/` holds one note per question with AMPM's decision, one per assumption with its status, one per audit finding, one per open item, and a log. `docs/` and `reference_docs/` are synced copies that render with their diagrams: edit the documents here in the project, not in the vault, because the next sync overwrites the copy. Notes written in Obsidian (open items, the log, your own notes) are kept and committed.
 
+Three more things live in the vault. `notes/Sessions/` has one note per Claude Code session, created by the SessionStart hook and refreshed at the end of every turn with the requests made (the first line of each message), the commits and the files changed; Claude writes the Narrative section at wrap-up with what was decided and why. `notes/Build decisions/` holds D-nnn records for technical and process decisions taken during the build (context, decision, alternatives, consequences), created with `python3 docs/tools/new_decision.py "Title" --area <area>`; AMPM's own answers stay under `notes/Decisions/`. `AMPM Dashboard.base` is an Obsidian Bases file with live tables of open items, build decisions, sessions, AMPM's decisions, assumptions and findings, driven by the notes' properties, so it needs no generator.
+
 ### What runs automatically
 
 | Trigger | Runs | Effect |
 |---|---|---|
+| Start of a Claude Code session in this folder (SessionStart hook) | `docs/tools/session_journal.py --start` | creates the session's journal note and tells Claude where it is |
 | End of every Claude Code turn in this folder (Stop hook in `.claude/settings.json`) | `docs/tools/checkpoint.sh --hook` | commits and pushes the project if anything changed, then syncs the vault; shows a one-line message only when it committed |
 | Every project commit (post-commit hook, installed by `setup_git.sh`) | `docs/tools/vault_sync.py` | copies `docs/` and `reference_docs/` into the vault, rebuilds the generated notes, appends to the day's sync log note, commits and pushes the vault when something changed |
 | Every ten minutes (launchd agent `com.ampm.vault-sync`, definition in `docs/tools/`) | `docs/tools/vault_sync.py --vault-only` | commits and pushes edits made inside Obsidian |
@@ -120,7 +123,7 @@ Two open-source tools, installed with `uv tool install` and wired into this repo
 
 What is committed: `.claude/settings.json` (the hooks), `.mcp.json` (the two MCP servers, approved once per machine when Claude Code asks), `.claude/skills/graphify/` (the `/graphify` skill), `.graphifyignore` (generated tables and tooling are left out of the graph), `CLAUDE.md` (the rules every session follows) and `graphify-out/` (the graph, its report, the extraction cache and the manifest, so a fresh worktree queries the same graph without rebuilding). Not committed: the palace itself, which stays on the machine.
 
-On a new machine run `bash docs/tools/setup_memory.sh`: it installs the two CLIs at the tested versions and backfills the wing with the project's transcripts and docs. Memory and graph are independent of the vault: the vault is the human-readable record for Obsidian, the palace and the graph are what a session reads.
+On a new machine run `bash docs/tools/setup_memory.sh`: it installs the two CLIs at the tested versions and backfills the wing with the project's transcripts and docs. Memory and graph are independent of the vault: the vault is the human-readable record for Obsidian (including the session journal and the build decision records), the palace and the graph are what a session reads.
 
 ### Recording a confirmation from AMPM
 
