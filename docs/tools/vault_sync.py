@@ -97,14 +97,14 @@ def main():
         commit_vault(f"Obsidian edits {datetime.datetime.now().strftime('%Y-%m-%d %H:%M')}", trailer=False)
         return
     sync_files()
-    rebuild_notes()
     journal_path, journal_changed = None, False
     raw = os.environ.get("AMPM_SESSION_JSON", "").strip()
     if raw:
-        try:
+        try:  # before the rebuild, so the Sessions index sees the refreshed note
             journal_path, journal_changed = session_journal.update_facts(json.loads(raw))
         except Exception as exc:  # the journal must never block the sync
             print("session journal failed:", exc)
+    rebuild_notes()
     sha, subject = project_ref()
     last = STATE.read_text().strip() if STATE.exists() else ""
     project_changed = sha not in (last, "no-commit")

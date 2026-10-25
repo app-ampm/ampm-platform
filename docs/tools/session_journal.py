@@ -51,16 +51,22 @@ def local_time(ts):
 
 
 def first_timestamp(transcript):
+    """Earliest timestamp in the transcript (its first line is not always the oldest entry)."""
+    earliest = None
     try:
         with open(transcript, encoding="utf8") as fh:
             for line in fh:
-                if '"timestamp"' in line:
+                if '"timestamp"' not in line:
+                    continue
+                try:
                     when = local_time(json.loads(line).get("timestamp"))
-                    if when:
-                        return when
-    except (OSError, ValueError):
+                except ValueError:
+                    continue
+                if when and (earliest is None or when < earliest):
+                    earliest = when
+    except OSError:
         pass
-    return None
+    return earliest
 
 
 def find_note(sid):
@@ -135,7 +141,7 @@ def requests_from(transcript):
                 continue
             last = line1
             when = local_time(obj.get("timestamp") or "")
-            out.append(f"- {when:%H:%M} {line1}" if when else f"- {line1}")
+            out.append(f"- {when:%d %b %H:%M} {line1}" if when else f"- {line1}")
     return out
 
 
