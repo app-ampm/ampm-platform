@@ -1,0 +1,212 @@
+{
+  "docs/decisions.json": {
+    "mtime": 1792956929.1806078,
+    "seen": 1792961935.660668,
+    "ast_hash": "3afd5748d93cf4c7f196f0c1a9ce21c1",
+    "semantic_hash": "3afd5748d93cf4c7f196f0c1a9ce21c1"
+  },
+  "docs/tools/apply_decisions.py": {
+    "mtime": 1792956929.1841085,
+    "seen": 1792961935.660671,
+    "ast_hash": "995decd9492677a81df4d5c6208f1afe",
+    "semantic_hash": "995decd9492677a81df4d5c6208f1afe"
+  },
+  "docs/tools/assumptions_sheet_build.py": {
+    "mtime": 1792956929.1842022,
+    "seen": 1792961935.660672,
+    "ast_hash": "7fccb474aac5a6ef79f5f7fa961e890a",
+    "semantic_hash": "7fccb474aac5a6ef79f5f7fa961e890a"
+  },
+  "docs/tools/checkpoint.sh": {
+    "mtime": 1792958708.4697165,
+    "seen": 1792961935.6606731,
+    "ast_hash": "de6ca4304e44505a67bcb0b5e209ff86",
+    "semantic_hash": "de6ca4304e44505a67bcb0b5e209ff86"
+  },
+  "docs/tools/decision_log_build.py": {
+    "mtime": 1792956929.184445,
+    "seen": 1792961935.660674,
+    "ast_hash": "6261d45f8ab7cf3c005937109aaf77cb",
+    "semantic_hash": "6261d45f8ab7cf3c005937109aaf77cb"
+  },
+  "docs/tools/decision_register_build.py": {
+    "mtime": 1792956929.1846137,
+    "seen": 1792961935.660674,
+    "ast_hash": "943977e6a98a01eecdeee6fa467ca54d",
+    "semantic_hash": "943977e6a98a01eecdeee6fa467ca54d"
+  },
+  "docs/tools/field_matrix_build.py": {
+    "mtime": 1792956929.1847134,
+    "seen": 1792961935.660675,
+    "ast_hash": "5e69f809a3a1e7c2f16d446883317f45",
+    "semantic_hash": "5e69f809a3a1e7c2f16d446883317f45"
+  },
+  "docs/tools/field_rules.py": {
+    "mtime": 1792956929.185051,
+    "seen": 1792961935.660676,
+    "ast_hash": "366ba527f851a721b11fb20a33ac7a9e",
+    "semantic_hash": "366ba527f851a721b11fb20a33ac7a9e"
+  },
+  "docs/tools/git-credential-ampm.sh": {
+    "mtime": 1792956929.1852138,
+    "seen": 1792961935.660676,
+    "ast_hash": "e9013cbffcdf0d2fbf5a034f655a3a37",
+    "semantic_hash": "e9013cbffcdf0d2fbf5a034f655a3a37"
+  },
+  "docs/tools/git-hooks/post-commit": {
+    "mtime": 1792956929.1853886,
+    "seen": 1792961935.6606772,
+    "ast_hash": "0f12c66faa6c66f6c7a83abfe7390a43",
+    "semantic_hash": "0f12c66faa6c66f6c7a83abfe7390a43"
+  },
+  "docs/tools/setup_git.sh": {
+    "mtime": 1792956929.1856103,
+    "seen": 1792961935.6606772,
+    "ast_hash": "0867810ab3e8974ca0b6a08b154ab82d",
+    "semantic_hash": "0867810ab3e8974ca0b6a08b154ab82d"
+  },
+  "docs/tools/site_build.mjs": {
+    "mtime": 1792956929.1857061,
+    "seen": 1792961935.660678,
+    "ast_hash": "da3b67c054539a9549113240f3243bf9",
+    "semantic_hash": "da3b67c054539a9549113240f3243bf9"
+  },
+  "docs/tools/vault_build.py": {
+    "mtime": 1792958708.4093535,
+    "seen": 1792961935.660678,
+    "ast_hash": "71a8dda6db9b68c3db2e624bc468ce96",
+    "semantic_hash": "71a8dda6db9b68c3db2e624bc468ce96"
+  },
+  "docs/tools/vault_sync.py": {
+    "mtime": 1792958708.4095635,
+    "seen": 1792961935.6606789,
+    "ast_hash": "610324ef40cca2f97e7e0b0e551ea28a",
+    "semantic_hash": "610324ef40cca2f97e7e0b0e551ea28a"
+  },
+  "README.md": {
+    "mtime": 1792958358.7967596,
+    "seen": 1792961935.6606789,
+    "ast_hash": "6f29141725b6f8cc05b66e23175d5b01",
+    "semantic_hash": "6f29141725b6f8cc05b66e23175d5b01"
+  },
+  "docs/README.md": {
+    "mtime": 1792960438.626078,
+    "seen": 1792961935.6606798,
+    "ast_hash": "25541f6cad376e513008817dff0f136a",
+    "semantic_hash": "25541f6cad376e513008817dff0f136a"
+  },
+  "docs/architecture.md": {
+    "mtime": 1792956929.1795142,
+    "seen": 1792961935.6606798,
+    "ast_hash": "f99ad3b15ef627a95bd6b2191155f9db",
+    "semantic_hash": "f99ad3b15ef627a95bd6b2191155f9db"
+  },
+  "docs/data-model.md": {
+    "mtime": 1792956929.1800334,
+    "seen": 1792961935.660681,
+    "ast_hash": "9fe52ef7d95f94795f56503913487f63",
+    "semantic_hash": "9fe52ef7d95f94795f56503913487f63"
+  },
+  "docs/decision-log.md": {
+    "mtime": 1792956929.1801703,
+    "seen": 1792961935.660681,
+    "ast_hash": "ca381dfdcd0cbe2a7db5ac7cb2ccc6a0",
+    "semantic_hash": "ca381dfdcd0cbe2a7db5ac7cb2ccc6a0"
+  },
+  "docs/permission-matrix.md": {
+    "mtime": 1792956929.1819644,
+    "seen": 1792961935.660682,
+    "ast_hash": "22f2a7017099f066930ce09c71906961",
+    "semantic_hash": "22f2a7017099f066930ce09c71906961"
+  },
+  "docs/requirements-audit.md": {
+    "mtime": 1792956929.1822367,
+    "seen": 1792961935.660682,
+    "ast_hash": "920d74e2d72d01057b13cf8a41e9cae6",
+    "semantic_hash": "920d74e2d72d01057b13cf8a41e9cae6"
+  },
+  "docs/review/annotated-brief.md": {
+    "mtime": 1792956929.1825404,
+    "seen": 1792961935.660683,
+    "ast_hash": "e98728eb1301616ad21704725a444254",
+    "semantic_hash": "e98728eb1301616ad21704725a444254"
+  },
+  "docs/review/decision-brief.md": {
+    "mtime": 1792956929.182891,
+    "seen": 1792961935.660683,
+    "ast_hash": "87d5d15e8e9afb7f6629008adc040fff",
+    "semantic_hash": "87d5d15e8e9afb7f6629008adc040fff"
+  },
+  "docs/review/open-decisions.md": {
+    "mtime": 1792956929.182996,
+    "seen": 1792961935.660684,
+    "ast_hash": "2be9207b1ad78bb41fa8d068e06fd181",
+    "semantic_hash": "2be9207b1ad78bb41fa8d068e06fd181"
+  },
+  "docs/review/redesigned-flowcharts.md": {
+    "mtime": 1792956929.183109,
+    "seen": 1792961935.660684,
+    "ast_hash": "1cbed98c3458e24892414c2295bd9673",
+    "semantic_hash": "1cbed98c3458e24892414c2295bd9673"
+  },
+  "docs/test-cases.md": {
+    "mtime": 1792956929.1835573,
+    "seen": 1792961935.660685,
+    "ast_hash": "d420696545f63af94154bff5dfa58189",
+    "semantic_hash": "d420696545f63af94154bff5dfa58189"
+  },
+  "docs/user-flows.md": {
+    "mtime": 1792956929.1863797,
+    "seen": 1792961935.660685,
+    "ast_hash": "71a601e8397b919367c09c9745cfe4f7",
+    "semantic_hash": "71a601e8397b919367c09c9745cfe4f7"
+  },
+  "docs/wireframes.md": {
+    "mtime": 1792956929.186769,
+    "seen": 1792961935.660686,
+    "ast_hash": "d0bef0e6c836f7ef38e020c776d3aeae",
+    "semantic_hash": "d0bef0e6c836f7ef38e020c776d3aeae"
+  },
+  "graphify-out/converted/AMPM_Developer_Technical_Specification_v1_4babf6ee.md": {
+    "mtime": 1792957737.7664514,
+    "seen": 1792961935.660686,
+    "ast_hash": "0df577c21384e5ec7f9aa804d25140d3",
+    "semantic_hash": "0df577c21384e5ec7f9aa804d25140d3"
+  },
+  "reference_docs/AMPM Website & App \u2014  Business Explanation for Developer.pdf": {
+    "mtime": 1792956929.1871784,
+    "seen": 1792961935.6606872,
+    "ast_hash": "40f50862a446fa5f5fde041c8c55aa3c",
+    "semantic_hash": "40f50862a446fa5f5fde041c8c55aa3c"
+  },
+  "reference_docs/AMPM_App_Visual_Flowchart-for team.pdf": {
+    "mtime": 1792956929.1874,
+    "seen": 1792961935.6606872,
+    "ast_hash": "83814ad79f86ae881d42de99e2dae5d1",
+    "semantic_hash": "83814ad79f86ae881d42de99e2dae5d1"
+  },
+  "reference_docs/AMPM_Client_Portal_Visual_Flowchart.pdf": {
+    "mtime": 1792956929.1884248,
+    "seen": 1792961935.660688,
+    "ast_hash": "af8fe7b14fc16edc4b7cf0d5b88c988f",
+    "semantic_hash": "af8fe7b14fc16edc4b7cf0d5b88c988f"
+  },
+  "reference_docs/Why AMPM App.pdf": {
+    "mtime": 1792956929.200806,
+    "seen": 1792961935.660688,
+    "ast_hash": "91e56cfa38f09807ddb42af848d3631d",
+    "semantic_hash": "91e56cfa38f09807ddb42af848d3631d"
+  },
+  "reference_docs/answers/AMPM App \u2013 Compiled Questions & Answers.pdf": {
+    "mtime": 1792956929.2011118,
+    "seen": 1792961935.6606889,
+    "ast_hash": "5146b3b11d9f66234db01cbbcacf9e9f",
+    "semantic_hash": "5146b3b11d9f66234db01cbbcacf9e9f"
+  },
+  "reference_docs/answers/AMPM app brief updated answer.pdf": {
+    "mtime": 1792956929.201474,
+    "seen": 1792961935.6606889,
+    "ast_hash": "80e2a17431d6ef2e7d7ee265c8b8a692",
+    "semantic_hash": "80e2a17431d6ef2e7d7ee265c8b8a692"
+  }
+}
