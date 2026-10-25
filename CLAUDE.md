@@ -21,7 +21,7 @@ Rules:
 - After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
 - A committed graphify-out/graph.json is rewritten whole on every build, so a large diff to it in a pull request is expected. Do not flag it as churn or suggest skipping the graph rebuild or its hooks.
 
-The graph covers the design package, the generators and AMPM's source documents (`.graphifyignore` lists what is left out: generated tables and tooling). `graphify-out/` is committed so every checkout and worktree has the same graph; when `.md` documents change, refresh it with `/graphify . --update` in a session (the semantic pass needs the model; `graphify update .` alone only re-reads the code). Commit the refreshed `graphify-out/` with the change.
+The graph covers the design package, the generators and AMPM's source documents (`.graphifyignore` lists what is left out: generated tables and tooling). `graphify-out/` is committed so every checkout and worktree has the same graph; when `.md` documents change, refresh it with `/graphify . --update` in a session (the semantic pass needs the model; `graphify update .` alone only re-reads the code). A rebuild re-clusters the graph, so at the skill's labelling step run `python3 docs/tools/graph_labels.py` first: it carries the existing community names over to the new communities and lists the few that need a name. Commit the refreshed `graphify-out/` with the change.
 
 ## Commits and the vault
 
