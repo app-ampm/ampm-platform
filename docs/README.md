@@ -80,15 +80,34 @@ rebuilds `site/index.html`, the whole package rendered as one shareable page; ad
 
 Diagrams are Mermaid and render on GitHub, GitLab, VS Code with the Mermaid preview extension, Obsidian, and on the shared page.
 
-## Obsidian vault
+## Repositories and the Obsidian vault
 
-The project folder is an Obsidian vault (open `/Users/amardeepsingh/Desktop/AMPM` in Obsidian; the configuration is in `.obsidian/`). `Home.md` at the root is the hub. Under `notes/` there is one note per question with AMPM's decision, one per assumption with its status, one per audit finding, one per open item, and a log. Decision, assumption and finding notes are generated and rebuilt by:
+The project is two private GitHub repositories under the project's own GitHub account, `app-ampm`:
 
-```bash
-python3 docs/tools/vault_build.py
-```
+| Repository | Folder | Holds |
+|---|---|---|
+| [ampm-platform](https://github.com/app-ampm/ampm-platform) | this folder | the design package, the audit, AMPM's source documents, the generators, and later the code |
+| [ampm-vault](https://github.com/app-ampm/ampm-vault) | `vault/`, ignored by the project repository | the Obsidian vault: generated notes, a synced copy of `docs/`, a copy of `reference_docs/`, the Obsidian configuration |
 
-Open-item and log notes are written once and kept, so record AMPM's confirmations in the open item's note, then update `decisions.json` and rebuild. The documents in `docs/` render in Obsidian with their diagrams.
+Both repositories carry their own git identity (the `app-ampm` account's address) and a credential helper, `docs/tools/git-credential-ampm.sh`, which takes that account's token from the GitHub CLI keyring whichever `gh` account is active. Nothing committed in these folders is recorded under another account, and both scripts below refuse to commit if a repository has no identity of its own. After cloning, `bash docs/tools/setup_git.sh` restores the identity, the credential helper, the post-commit hook and the vault clone.
+
+### Vault layout
+
+Open `vault/` in Obsidian (File, Open folder as vault). `Home.md` is the hub. `notes/` holds one note per question with AMPM's decision, one per assumption with its status, one per audit finding, one per open item, and a log. `docs/` and `reference_docs/` are synced copies that render with their diagrams: edit the documents here in the project, not in the vault, because the next sync overwrites the copy. Notes written in Obsidian (open items, the log, your own notes) are kept and committed.
+
+### What runs automatically
+
+| Trigger | Runs | Effect |
+|---|---|---|
+| End of every Claude Code turn in this folder (Stop hook in `.claude/settings.json`) | `docs/tools/checkpoint.sh --hook` | commits and pushes the project if anything changed, then syncs the vault; shows a one-line message only when it committed |
+| Every project commit (post-commit hook, installed by `setup_git.sh`) | `docs/tools/vault_sync.py` | copies `docs/` and `reference_docs/` into the vault, rebuilds the generated notes, appends to the day's sync log note, commits and pushes the vault when something changed |
+| Every ten minutes (launchd agent `com.ampm.vault-sync`, definition in `docs/tools/`) | `docs/tools/vault_sync.py --vault-only` | commits and pushes edits made inside Obsidian |
+
+Everything logs to `~/Library/Logs/ampm-vault-sync.log`. By hand: `bash docs/tools/checkpoint.sh "message"` commits with your own message, `python3 docs/tools/vault_sync.py` syncs the vault without touching the project, and `python3 docs/tools/vault_build.py` only rebuilds the notes. Stop the timer with `launchctl bootout gui/$(id -u)/com.ampm.vault-sync`.
+
+### Recording a confirmation from AMPM
+
+Open-item and log notes are written once and kept, so record the confirmation in the open item's note (set `status: confirmed`), update `docs/decisions.json`, then run `apply_decisions.py`, `decision_log_build.py`, `decision_register_build.py`, `assumptions_sheet_build.py`, `vault_build.py` and `site_build.mjs` (with `--brief` too) and republish the two shared pages. The next checkpoint commits everything and the vault follows.
 
 ## Source documents
 
