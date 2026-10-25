@@ -1,0 +1,7 @@
+{
+  "name": "ampm-docs-tools",
+  "private": true,
+  "type": "module",
+  "description": "Build tools for the AMPM design package: field matrix, decision register, rendered site.",
+  "dependencies": { "marked": "12.0.2" }
+}

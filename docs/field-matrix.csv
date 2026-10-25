@@ -1,0 +1,1098 @@
+module,table,stage,field,type,key,options,validation,editor,visibility,required,automation,assumptions
+A,users,Account setup,id,uuid,PK,,"UUID v7, generated",SYS,INTERNAL,System,—,"A-13 (Q13), P-6 (Q13)"
+A,users,Account setup,user_type,string,,"staff, client, demo",one of the listed options; fixed at creation,SA; SM and PM (a) for client logins,INTERNAL,At creation,—,"A-13 (Q13), P-6 (Q13)"
+A,users,Account setup,name,string,,,"string, up to 255 characters",SA; SM and PM (a) for client logins,INTERNAL,At creation,—,"A-13 (Q13), P-6 (Q13)"
+A,users,Account setup,email,string,UK,,"valid email address, stored lowercase; unique",SA; SM and PM (a) for client logins,INTERNAL,At creation,Invite or activation email on creation,"A-13 (Q13), P-6 (Q13)"
+A,users,Account setup,phone,string,,,"E.164 format, default +91; required when OTP is enabled",SA; SM and PM (a) for client logins,INTERNAL,Optional,—,"A-13 (Q13), P-6 (Q13)"
+A,users,Account setup,status,string,,"invited, active, disabled, locked",one of the listed options,SA; SM and PM (a) for client logins,INTERNAL,At creation,disabled or locked refuses sign-in at once and revokes sessions,"A-13 (Q13), P-6 (Q13)"
+A,users,Account setup,password_hash,string,,,"string, up to 255 characters; nullable for OTP-only",SYS,SECRET,Optional,—,"A-13 (Q13), P-6 (Q13)"
+A,users,Account setup,mfa_enabled,bool,,,true or false; mandatory true for staff (A-13),SYS; must be true for staff before first sign-in,INTERNAL,At creation for staff,—,"A-13 (Q13), P-6 (Q13)"
+A,users,Account setup,mfa_secret_ref,string,,,"string, up to 255 characters",SYS,SECRET,Optional,—,"A-13 (Q13), P-6 (Q13)"
+A,users,Account setup,last_login_at,datetime,,,timestamp (UTC),SYS,INTERNAL,System,Inactive accounts reported for review,"A-13 (Q13), P-6 (Q13)"
+A,roles,Configuration,id,uuid,PK,,"UUID v7, generated",SYS,INTERNAL,System,—,
+A,roles,Configuration,role_key,string,UK,,"lowercase snake_case; unique; super_admin, sales, hotel_team, project_manager, creative, vendor_coordinator, rsvp_team, hospitality, finance",SA,INTERNAL,At creation,—,
+A,roles,Configuration,name,string,,,"string, up to 255 characters",SA,INTERNAL,At creation,—,
+A,roles,Configuration,is_system,bool,,,true or false,SA,INTERNAL,Optional,System roles cannot be deleted or renamed,
+A,permissions,Configuration,id,uuid,PK,,"UUID v7, generated",SYS,INTERNAL,System,—,
+A,permissions,Configuration,permission_key,string,UK,,module.resource.action with optional :assigned or :own suffix; unique,SA,INTERNAL,At creation,—,
+A,permissions,Configuration,description,string,,,"string, up to 255 characters",SA,INTERNAL,Optional,—,
+A,role_permissions,Configuration,role_id,uuid,FK,,references roles,SA,INTERNAL,At creation,Change recomputes effective permissions; audited,
+A,role_permissions,Configuration,permission_id,uuid,FK,,references permissions,SA,INTERNAL,At creation,—,
+A,user_roles,Configuration,user_id,uuid,FK,,references see data model,SA,INTERNAL,At creation,—,
+A,user_roles,Configuration,role_id,uuid,FK,,references roles,SA,INTERNAL,At creation,Change recomputes effective permissions; audited,
+A,project_members,Project setup,id,uuid,PK,,"UUID v7, generated",SYS,CLIENT,System,—,"A-5 (Q5), P-2 (Q5)"
+A,project_members,Project setup,project_id,uuid,FK,,references wedding_projects,SA; PM (a); SM for client members,CLIENT,At creation,—,"A-5 (Q5), P-2 (Q5)"
+A,project_members,Project setup,user_id,uuid,FK,,references see data model,SA; PM (a); SM for client members,CLIENT,At creation,—,"A-5 (Q5), P-2 (Q5)"
+A,project_members,Project setup,project_role,string,,"project_lead, staff, client_representative","one of the listed options; (A-5 changed by Q5: two per wedding, one per side)",SA; PM (a); SM for client members,CLIENT,At creation,Drives project-scoped permissions; change audited,"A-5 (Q5), P-2 (Q5)"
+A,project_members,Project setup,client_side,string,,"bride, groom",one of the listed options; for client representatives (Q5),SA; PM (a); SM for client members,CLIENT,Optional,—,"A-5 (Q5), P-2 (Q5)"
+A,project_members,Project setup,can_view_finance,bool,,,"true or false; configuration, true for representatives pending Q4",SA; PM (a); SM for client members,CLIENT,Optional,Gates the client finance serialisers (P-2),"A-5 (Q5), P-2 (Q5)"
+A,project_members,Project setup,can_approve,bool,,,"true or false; configuration, true for representatives",SA; PM (a); SM for client members,CLIENT,Optional,Gates approval decisions and vendor selections,"A-5 (Q5), P-2 (Q5)"
+A,project_members,Project setup,status,string,,"invited, active, removed",one of the listed options,SA; PM (a); SM for client members,CLIENT,At creation,removed revokes access at once; set by the retention job after client_access_until (A-23),"A-5 (Q5), P-2 (Q5)"
+A,project_members,Project setup,invited_at,datetime,,,timestamp (UTC),SYS (when the action happens),CLIENT,System,—,"A-5 (Q5), P-2 (Q5)"
+A,project_members,Project setup,accepted_at,datetime,,,timestamp (UTC),SYS (when the action happens),CLIENT,System,—,"A-5 (Q5), P-2 (Q5)"
+A,auth_tokens,System,id,uuid,PK,,"UUID v7, generated",SYS,INTERNAL,System,—,A-13 (Q13)
+A,auth_tokens,System,user_id,uuid,FK,,references see data model,SYS,INTERNAL,At creation,—,A-13 (Q13)
+A,auth_tokens,System,purpose,string,,"invite, password_reset, otp, magic_link",one of the listed options,SYS,INTERNAL,At creation,—,A-13 (Q13)
+A,auth_tokens,System,token_hash,string,,,"string, up to 255 characters",SYS,SECRET,At creation,—,A-13 (Q13)
+A,auth_tokens,System,expires_at,datetime,,,invite 7 days; password reset 1 hour; OTP 10 minutes,SYS,INTERNAL,System,Refused after expiry,A-13 (Q13)
+A,auth_tokens,System,used_at,datetime,,,timestamp (UTC),SYS (when the action happens),INTERNAL,System,Single use; a used token is refused,A-13 (Q13)
+A,notifications,System,id,uuid,PK,,"UUID v7, generated",SYS,Recipient only,System,—,A-11 (Q11)
+A,notifications,System,recipient_type,string,,"user, guest",one of the listed options,SYS,Recipient only,At creation,—,A-11 (Q11)
+A,notifications,System,recipient_id,uuid,,,UUID,SYS,Recipient only,At creation,—,A-11 (Q11)
+A,notifications,System,channel,string,,"in_app, email, whatsapp, sms, push",one of the listed options; (A-11),SYS,Recipient only,At creation,—,A-11 (Q11)
+A,notifications,System,template_key,string,,,"string, up to 255 characters",SYS,Recipient only,At creation,—,A-11 (Q11)
+A,notifications,System,entity_type,string,,,"string, up to 255 characters",SYS,Recipient only,Optional,—,A-11 (Q11)
+A,notifications,System,entity_id,uuid,,,UUID,SYS,Recipient only,Optional,—,A-11 (Q11)
+A,notifications,System,status,string,,"queued, sent, delivered, failed, read",one of the listed options,SYS,Recipient only,At creation,Delivery webhooks update the status; failed sends retry per channel policy,A-11 (Q11)
+A,notifications,System,provider_ref,string,,,provider message identifier,SYS,Recipient only,Optional,—,A-11 (Q11)
+A,notifications,System,sent_at,datetime,,,timestamp (UTC),SYS (when the action happens),Recipient only,System,—,A-11 (Q11)
+A,notifications,System,delivered_at,datetime,,,timestamp (UTC),SYS (when the action happens),Recipient only,System,—,A-11 (Q11)
+A,notification_preferences,User self-service,id,uuid,PK,,"UUID v7, generated",SYS,Owner only,System,—,
+A,notification_preferences,User self-service,user_id,uuid,FK,,references see data model,Owner user,Owner only,At creation,—,
+A,notification_preferences,User self-service,event_type,string,,,"string, up to 255 characters",Owner user,Owner only,At creation,—,
+A,notification_preferences,User self-service,channel,string,,,"string, up to 255 characters",Owner user,Owner only,At creation,—,
+A,notification_preferences,User self-service,enabled,bool,,,true or false,Owner user,Owner only,At creation,—,
+A,audit_events,System,id,uuid,PK,,"UUID v7, generated",SYS,INTERNAL,System,—,
+A,audit_events,System,actor_user_id,uuid,FK,,references users,SYS (acting user),INTERNAL,System,—,
+A,audit_events,System,actor_type,string,,"user, guest_token, system",one of the listed options,SYS (append-only; never updated or deleted),INTERNAL,At creation,—,
+A,audit_events,System,action,string,,"create, update, delete, approve, share, export, restricted_read",one of the listed options,SYS (append-only; never updated or deleted),INTERNAL,At creation,—,
+A,audit_events,System,entity_type,string,,,"string, up to 255 characters",SYS (append-only; never updated or deleted),INTERNAL,At creation,—,
+A,audit_events,System,entity_id,uuid,,,UUID,SYS (append-only; never updated or deleted),INTERNAL,At creation,—,
+A,audit_events,System,project_id,uuid,,,references wedding_projects; denormalised,SYS (append-only; never updated or deleted),INTERNAL,Optional,Project-scoped history for PM (a),
+A,audit_events,System,before_json,json,,,valid JSON; restricted and secret fields masked before storage,SYS (append-only; never updated or deleted),INTERNAL,Optional,—,
+A,audit_events,System,after_json,json,,,valid JSON; restricted and secret fields masked before storage,SYS (append-only; never updated or deleted),INTERNAL,Optional,—,
+A,audit_events,System,ip_address,string,,,"string, up to 255 characters",SYS (append-only; never updated or deleted),INTERNAL,Optional,—,
+A,audit_events,System,occurred_at,datetime,,,timestamp (UTC),SYS,INTERNAL,System,—,
+A,configurations,Configuration,id,uuid,PK,,"UUID v7, generated",SYS,INTERNAL,System,—,
+A,configurations,Configuration,config_key,string,UK,,"lowercase snake_case; unique; e.g. hotel_verification_max_age_days, material_change_threshold_pct",SA,INTERNAL,At creation,—,
+A,configurations,Configuration,value_json,json,,,valid JSON matching the schema registered for config_key,SA,INTERNAL,At creation,Takes effect on the next job run or request; change audited,
+A,configurations,Configuration,scope,string,,"global, project",one of the listed options,SA,INTERNAL,At creation,—,
+A,configurations,Configuration,scope_id,uuid,,,references wedding_projects when scope is project,SA,INTERNAL,Optional,—,
+A,import_jobs,Any (import),id,uuid,PK,,"UUID v7, generated",SYS,INTERNAL,System,—,"A-9 (Q9), GP-22"
+A,import_jobs,Any (import),import_type,string,,"hotels, guests, vendors",one of the listed options; (A-9),SA; HT (hotels); VC (vendors); RG and PM (a) (guests),INTERNAL,At creation,—,"A-9 (Q9), GP-22"
+A,import_jobs,Any (import),project_id,uuid,,,references wedding_projects; required when import_type is guests,SA; HT (hotels); VC (vendors); RG and PM (a) (guests),INTERNAL,At creation for guest imports,—,"A-9 (Q9), GP-22"
+A,import_jobs,Any (import),file_document_id,uuid,FK,,references documents,SA; HT (hotels); VC (vendors); RG and PM (a) (guests),INTERNAL,At creation,—,"A-9 (Q9), GP-22"
+A,import_jobs,Any (import),status,string,,"uploaded, validating, failed, applied",one of the listed options,SA; HT (hotels); VC (vendors); RG and PM (a) (guests),INTERNAL,At creation,validating runs in a worker; applied writes rows plus audit events; failed keeps the error report,"A-9 (Q9), GP-22"
+A,import_jobs,Any (import),row_count,int,,,"integer, 0 or more",SYS,INTERNAL,Optional,—,"A-9 (Q9), GP-22"
+A,import_jobs,Any (import),error_report_json,json,,,valid JSON matching the registered schema,SYS,INTERNAL,Optional,—,"A-9 (Q9), GP-22"
+B,lead_sources,Configuration,id,uuid,PK,,"UUID v7, generated",SYS,INTERNAL,System,—,
+B,lead_sources,Configuration,source_key,string,UK,,"lowercase snake_case; unique; website, instagram, advertisement, referral, call, other",SA,INTERNAL,At creation,—,
+B,lead_sources,Configuration,name,string,,,"string, up to 255 characters",SA,INTERNAL,At creation,—,
+B,lead_sources,Configuration,is_active,bool,,,true or false,SA,INTERNAL,Optional,—,
+B,leads,Lead,id,uuid,PK,,"UUID v7, generated",SYS,INTERNAL,System,—,"A-12 (Q12), GP-39 consent (Q17)"
+B,leads,Lead,source_id,uuid,FK,,references lead_sources,SM; SA; SYS from the public enquiry form,INTERNAL,At creation,—,"A-12 (Q12), GP-39 consent (Q17)"
+B,leads,Lead,status,string,,"new, contacted, introduction_shared, demo_offered, demo_accessed, follow_up, converted, closed",one of the listed options,SM; SA; SYS from the public enquiry form,INTERNAL,At creation,Lead funnel report (SPEC §9); converted creates the client account,"A-12 (Q12), GP-39 consent (Q17)"
+B,leads,Lead,name,string,,,"string, up to 255 characters",SM; SA; SYS from the public enquiry form,INTERNAL,At creation,—,"A-12 (Q12), GP-39 consent (Q17)"
+B,leads,Lead,email,string,,,"valid email address, stored lowercase",SM; SA; SYS from the public enquiry form,INTERNAL,At creation (email or phone),—,"A-12 (Q12), GP-39 consent (Q17)"
+B,leads,Lead,phone,string,,,"E.164 format, default +91",SM; SA; SYS from the public enquiry form,INTERNAL,At creation (email or phone),—,"A-12 (Q12), GP-39 consent (Q17)"
+B,leads,Lead,contact_preference,string,,"phone, whatsapp, email",one of the listed options,SM; SA; SYS from the public enquiry form,INTERNAL,Optional,—,"A-12 (Q12), GP-39 consent (Q17)"
+B,leads,Lead,tentative_date_from,date,,,date,SM; SA; SYS from the public enquiry form,INTERNAL,Optional,—,"A-12 (Q12), GP-39 consent (Q17)"
+B,leads,Lead,tentative_date_to,date,,,date; not before tentative_date_from,SM; SA; SYS from the public enquiry form,INTERNAL,Optional,—,"A-12 (Q12), GP-39 consent (Q17)"
+B,leads,Lead,destination_id,uuid,FK,,references destinations,SM; SA; SYS from the public enquiry form,INTERNAL,Optional,—,"A-12 (Q12), GP-39 consent (Q17)"
+B,leads,Lead,destination_text,string,,,"string, up to 255 characters; free text when not in the database",SM; SA; SYS from the public enquiry form,INTERNAL,Optional,—,"A-12 (Q12), GP-39 consent (Q17)"
+B,leads,Lead,guest_estimate,int,,,"integer, 0 or more",SM; SA; SYS from the public enquiry form,INTERNAL,Optional,Carried into the account and project,"A-12 (Q12), GP-39 consent (Q17)"
+B,leads,Lead,requirements,text,,,"text, up to 10,000 characters",SM; SA; SYS from the public enquiry form,INTERNAL,Optional,—,"A-12 (Q12), GP-39 consent (Q17)"
+B,leads,Lead,consent_marketing,bool,,,true or false,SM; SA; SYS from the public enquiry form,INTERNAL,At creation from the form,Marketing messages suppressed when false,"A-12 (Q12), GP-39 consent (Q17)"
+B,leads,Lead,consent_at,datetime,,,timestamp (UTC),SYS (when the action happens),INTERNAL,System,—,"A-12 (Q12), GP-39 consent (Q17)"
+B,leads,Lead,requested_demo,bool,,,true or false,SM; SA; SYS from the public enquiry form,INTERNAL,Optional,Creates a demo task for the lead owner,"A-12 (Q12), GP-39 consent (Q17)"
+B,leads,Lead,owner_user_id,uuid,FK,,references users,SM; SA,INTERNAL,Before status contacted,Owner receives follow-up reminders,"A-12 (Q12), GP-39 consent (Q17)"
+B,leads,Lead,converted_account_id,uuid,FK,,references client_accounts,SYS,INTERNAL,Optional,Set on conversion; the lead becomes read-only,"A-12 (Q12), GP-39 consent (Q17)"
+B,leads,Lead,converted_at,datetime,,,timestamp (UTC),SYS (when the action happens),INTERNAL,System,—,"A-12 (Q12), GP-39 consent (Q17)"
+B,leads,Lead,closed_reason,string,,,"string, up to 255 characters",SM; SA; SYS from the public enquiry form,INTERNAL,Before status closed,—,"A-12 (Q12), GP-39 consent (Q17)"
+B,lead_activities,Lead,id,uuid,PK,,"UUID v7, generated",SYS,INTERNAL,System,—,AM-15
+B,lead_activities,Lead,lead_id,uuid,FK,,references leads,SM; SA,INTERNAL,At creation,—,AM-15
+B,lead_activities,Lead,activity_type,string,,"call, email, whatsapp, meeting, consultation, demo, questionnaire, call_request, note","one of the listed options; (AM-15; call_request for the pre-purchase Zoom call, Q3)",SM; SA,INTERNAL,At creation,—,AM-15
+B,lead_activities,Lead,occurred_at,datetime,,,timestamp (UTC),SM; SA,INTERNAL,At creation,—,AM-15
+B,lead_activities,Lead,user_id,uuid,FK,,references see data model,SYS (acting user),INTERNAL,System,—,AM-15
+B,lead_activities,Lead,summary,text,,,"text, up to 10,000 characters",SM; SA,INTERNAL,Optional,—,AM-15
+B,lead_activities,Lead,questionnaire_json,json,,,valid JSON matching the registered schema; structured answers when activity_type is questionnaire,SM; SA,INTERNAL,When activity_type is questionnaire,—,AM-15
+B,lead_activities,Lead,next_follow_up_at,datetime,,,timestamp (UTC),SM; SA,INTERNAL,System,Reminder to the lead owner at that time,AM-15
+B,client_accounts,Conversion,id,uuid,PK,,"UUID v7, generated",SYS,CLIENT,System,—,"A-28 (AM-8), P-3 (Q4)"
+B,client_accounts,Conversion,name,string,,,"string, up to 255 characters; couple or family name",SM; SA; FA (billing fields),CLIENT,At creation,—,"A-28 (AM-8), P-3 (Q4)"
+B,client_accounts,Conversion,couple_names,string,,,"string, up to 255 characters; entered at activation (Q2)",SM; SA; FA (billing fields),CLIENT,Optional,—,"A-28 (AM-8), P-3 (Q4)"
+B,client_accounts,Conversion,preferred_locations,text,,,"text, up to 10,000 characters; entered at activation (Q2)",SM; SA; FA (billing fields),CLIENT,Optional,—,"A-28 (AM-8), P-3 (Q4)"
+B,client_accounts,Conversion,is_demo,bool,,,true or false; fixed at creation,SM; SA,INTERNAL,Optional,Scopes every query for demo users (A-28); demo data reset on schedule,"A-28 (AM-8), P-3 (Q4)"
+B,client_accounts,Conversion,status,string,,"prospect, active, suspended, closed",one of the listed options,SM; SA; FA (billing fields),CLIENT,At creation,suspended refuses sign-in for every user of the account,"A-28 (AM-8), P-3 (Q4)"
+B,client_accounts,Conversion,primary_contact_user_id,uuid,FK,,references users,SM; SA,CLIENT,Before subscription activation,—,"A-28 (AM-8), P-3 (Q4)"
+B,client_accounts,Conversion,lead_id,uuid,FK,,references leads,SYS,CLIENT,Optional,—,"A-28 (AM-8), P-3 (Q4)"
+B,client_accounts,Conversion,billing_name,string,,,"string, up to 255 characters",FA; SA; CO (own),RESTRICTED-BANK,Optional,—,"A-28 (AM-8), P-3 (Q4)"
+B,client_accounts,Conversion,billing_address,text,,,"text, up to 10,000 characters",FA; SA; CO (own),RESTRICTED-BANK,Optional,—,"A-28 (AM-8), P-3 (Q4)"
+B,client_accounts,Conversion,gstin,string,,,15-character GSTIN format,FA; SA; CO (own),RESTRICTED-BANK,Optional,—,"A-28 (AM-8), P-3 (Q4)"
+B,client_accounts,Conversion,internal_notes,text,,,"text, up to 10,000 characters",SM; SA; FA (billing fields),RESTRICTED-NOTES,Optional,"Never serialised to client, guest or demo principals","A-28 (AM-8), P-3 (Q4)"
+B,account_contacts,Conversion / project setup,id,uuid,PK,,"UUID v7, generated",SYS,CLIENT,System,—,A-5 (Q5)
+B,account_contacts,Conversion / project setup,account_id,uuid,FK,,references client_accounts,SM; SA; PM (a); CO,CLIENT,At creation,—,A-5 (Q5)
+B,account_contacts,Conversion / project setup,name,string,,,"string, up to 255 characters",SM; SA; PM (a); CO,CLIENT,At creation,—,A-5 (Q5)
+B,account_contacts,Conversion / project setup,relation,string,,,"string, up to 255 characters; e.g. bride, groom, father of the bride",SM; SA; PM (a); CO,CLIENT,At creation,—,A-5 (Q5)
+B,account_contacts,Conversion / project setup,phone,string,,,"E.164 format, default +91",SM; SA; PM (a); CO,CLIENT,Optional,—,A-5 (Q5)
+B,account_contacts,Conversion / project setup,email,string,,,"valid email address, stored lowercase",SM; SA; PM (a); CO,CLIENT,Optional,—,A-5 (Q5)
+B,account_contacts,Conversion / project setup,is_decision_maker,bool,,,true or false,SM; SA; PM (a); CO,CLIENT,Optional,Decision makers are listed on the wedding overview,A-5 (Q5)
+B,account_contacts,Conversion / project setup,user_id,uuid,FK,,references users; set when a login is created for the contact,SYS,CLIENT,Optional,—,A-5 (Q5)
+B,plans,Configuration,id,uuid,PK,,"UUID v7, generated",SYS,PUBLIC when status is active,System,—,A-3 (Q3)
+B,plans,Configuration,plan_key,string,UK,,lowercase snake_case; unique,SA,PUBLIC when status is active,At creation,—,A-3 (Q3)
+B,plans,Configuration,name,string,,,"string, up to 255 characters",SA,PUBLIC when status is active,At creation,—,A-3 (Q3)
+B,plans,Configuration,plan_type,string,,"hotel_discovery, trial, demo, package",one of the listed options,SA,PUBLIC when status is active,At creation,—,A-3 (Q3)
+B,plans,Configuration,billing_type,string,,"one_time, recurring",one of the listed options; (A-3),SA,PUBLIC when status is active,At creation,—,A-3 (Q3)
+B,plans,Configuration,price_amount,decimal,,,"numeric(14,2), 0 or more; value set by AMPM, never hard-coded (Q3)",SA,PUBLIC when status is active,Before status active,Shown on the subscription page; charged at purchase,A-3 (Q3)
+B,plans,Configuration,currency,string,,,"ISO 4217 code, default INR (A-16)",SA,PUBLIC when status is active,At creation,—,A-3 (Q3)
+B,plans,Configuration,term_days,int,,,"integer, 0 or more",SA,PUBLIC when status is active,Before status active for one_time plans,—,A-3 (Q3)
+B,plans,Configuration,trial_days,int,,,"integer, 0 or more",SA,PUBLIC when status is active,Optional,Sets trial_ends_at on trial subscriptions,A-3 (Q3)
+B,plans,Configuration,is_demo,bool,,,true or false,SA,PUBLIC when status is active,Optional,Demo plans never charge and never grant real data,A-3 (Q3)
+B,plans,Configuration,status,string,,"draft, active, retired",one of the listed options,SA,PUBLIC when status is active,At creation,retired plans stay attached to existing subscriptions,A-3 (Q3)
+B,plans,Configuration,terms_version,string,,,"string, up to 255 characters",SA,PUBLIC when status is active,Before status active,—,A-3 (Q3)
+B,plan_modules,Configuration,id,uuid,PK,,"UUID v7, generated",SYS,PUBLIC,System,—,
+B,plan_modules,Configuration,plan_id,uuid,FK,,references plans,SA,PUBLIC,At creation,—,
+B,plan_modules,Configuration,module_key,string,,"hotel_discovery, hotel_assistance, wedding_workspace, guest_rsvp, documents",one of the listed options,SA,PUBLIC,At creation,Resolved into entitlements per request (permission-matrix §3),
+B,plan_modules,Configuration,access_level,string,,"read, full",one of the listed options,SA,PUBLIC,At creation,—,
+B,subscriptions,Subscription,id,uuid,PK,,"UUID v7, generated",SYS,CLIENT,System,—,"A-2 (Q2), A-3 (Q3), A-29 (AM-9), GP-1"
+B,subscriptions,Subscription,account_id,uuid,FK,,references client_accounts,SM; SA; FA (status); SYS (activation and expiry),CLIENT,At creation,—,"A-2 (Q2), A-3 (Q3), A-29 (AM-9), GP-1"
+B,subscriptions,Subscription,plan_id,uuid,FK,,references plans,SM; SA; FA (status); SYS (activation and expiry),CLIENT,At creation,—,"A-2 (Q2), A-3 (Q3), A-29 (AM-9), GP-1"
+B,subscriptions,Subscription,status,string,,"trial, pending_payment, active, expiring, expired, suspended, cancelled",one of the listed options; (GP-2),SM; SA; FA (status); SYS (activation and expiry),CLIENT,At creation,Activated on payment; expiring and expired by job; entitlements recomputed; records never deleted (GP-1),"A-2 (Q2), A-3 (Q3), A-29 (AM-9), GP-1"
+B,subscriptions,Subscription,starts_at,datetime,,,timestamp (UTC),SYS on activation; SA override,CLIENT,Before status active,—,"A-2 (Q2), A-3 (Q3), A-29 (AM-9), GP-1"
+B,subscriptions,Subscription,ends_at,datetime,,,timestamp (UTC),SYS from the plan term; SA override,CLIENT,Before status active,Expiry job and notice notifications,"A-2 (Q2), A-3 (Q3), A-29 (AM-9), GP-1"
+B,subscriptions,Subscription,trial_ends_at,datetime,,,timestamp (UTC),SYS from trial_days,CLIENT,Optional,Trial expiry job,"A-2 (Q2), A-3 (Q3), A-29 (AM-9), GP-1"
+B,subscriptions,Subscription,auto_renew,bool,,,true or false,CO; SM,CLIENT,Optional,Recurring billing only (A-3),"A-2 (Q2), A-3 (Q3), A-29 (AM-9), GP-1"
+B,subscriptions,Subscription,activation_source,string,,"gateway_webhook, manual",one of the listed options; (A-2),SYS,CLIENT,Optional,—,"A-2 (Q2), A-3 (Q3), A-29 (AM-9), GP-1"
+B,subscriptions,Subscription,activated_by_user_id,uuid,FK,,references users,SYS (acting user),CLIENT,System,—,"A-2 (Q2), A-3 (Q3), A-29 (AM-9), GP-1"
+B,subscriptions,Subscription,cancelled_at,datetime,,,timestamp (UTC),SYS (when the action happens),CLIENT,System,—,"A-2 (Q2), A-3 (Q3), A-29 (AM-9), GP-1"
+B,subscriptions,Subscription,cancel_reason,string,,,"string, up to 255 characters",SM; SA; FA (status); SYS (activation and expiry),CLIENT,Before status cancelled,—,"A-2 (Q2), A-3 (Q3), A-29 (AM-9), GP-1"
+B,service_types,Configuration,id,uuid,PK,,"UUID v7, generated",SYS,CLIENT,System,—,
+B,service_types,Configuration,service_key,string,UK,,"lowercase snake_case; unique; availability_check, negotiation, site_visit, contract_review, booking_assistance, design, vendor_coordination, full_management",SA,CLIENT,At creation,—,
+B,service_types,Configuration,name,string,,,"string, up to 255 characters",SA,CLIENT,At creation,—,
+B,service_types,Configuration,category,string,,"hotel_assistance, design, vendor_coordination, full_management, other",one of the listed options,SA,CLIENT,At creation,—,
+B,service_types,Configuration,is_active,bool,,,true or false,SA,CLIENT,Optional,—,
+B,service_agreements,Engagement,id,uuid,PK,,"UUID v7, generated",SYS,CLIENT,System,—,"A-4 (Q4), GP-5, GP-27"
+B,service_agreements,Engagement,account_id,uuid,FK,,references client_accounts,SM; SA; HT (hotel services); PM (a),CLIENT,At creation,—,"A-4 (Q4), GP-5, GP-27"
+B,service_agreements,Engagement,project_id,uuid,FK,,references wedding_projects; nullable until a project exists,SM; SA; HT (hotel services); PM (a),CLIENT,Optional,Back-filled when the project is created (GP-27),"A-4 (Q4), GP-5, GP-27"
+B,service_agreements,Engagement,service_type_id,uuid,FK,,references service_types,SM; SA; HT (hotel services); PM (a),CLIENT,At creation,—,"A-4 (Q4), GP-5, GP-27"
+B,service_agreements,Engagement,hotel_enquiry_id,uuid,FK,,"references hotel_enquiries; nullable, links hotel assistance to its enquiry (GP-5)",SM; SA; HT (hotel services); PM (a),CLIENT,Optional,Unblocks paid consultancy work on that enquiry (GP-5),"A-4 (Q4), GP-5, GP-27"
+B,service_agreements,Engagement,scope_text,text,,,"text, up to 10,000 characters",SM; SA; HT (hotel services); PM (a),CLIENT,Before status sent,—,"A-4 (Q4), GP-5, GP-27"
+B,service_agreements,Engagement,fee_amount,decimal,,,"numeric(14,2), 0 or more; set by AMPM (Q4)",SM; SA; HT (hotel services); PM (a),CLIENT,Before status sent,Feeds payment milestones and the client finance summary,"A-4 (Q4), GP-5, GP-27"
+B,service_agreements,Engagement,fee_structure,string,,"fixed, percentage, milestones",one of the listed options,SM; SA; HT (hotel services); PM (a),CLIENT,Before status sent,—,"A-4 (Q4), GP-5, GP-27"
+B,service_agreements,Engagement,currency,string,,,"ISO 4217 code, default INR (A-16)",SM; SA; HT (hotel services); PM (a),CLIENT,At creation,—,"A-4 (Q4), GP-5, GP-27"
+B,service_agreements,Engagement,terms_version,string,,,"string, up to 255 characters",SM; SA; HT (hotel services); PM (a),CLIENT,Before status sent,—,"A-4 (Q4), GP-5, GP-27"
+B,service_agreements,Engagement,status,string,,"draft, sent, accepted, active, completed, cancelled",one of the listed options,SM; SA; HT (hotel services); PM (a),CLIENT,At creation,active grants the service module (permission-matrix §3); completed or cancelled removes it,"A-4 (Q4), GP-5, GP-27"
+B,service_agreements,Engagement,accepted_at,datetime,,,timestamp (UTC),SYS (when the action happens),CLIENT,System,—,"A-4 (Q4), GP-5, GP-27"
+B,service_agreements,Engagement,accepted_by_user_id,uuid,FK,,references users,SYS (acting user),CLIENT,System,—,"A-4 (Q4), GP-5, GP-27"
+B,service_agreements,Engagement,document_id,uuid,FK,,references see data model,SM; SA; HT (hotel services); PM (a),CLIENT,Before status active (signed agreement),—,"A-4 (Q4), GP-5, GP-27"
+B,payment_milestones,Engagement,id,uuid,PK,,"UUID v7, generated",SYS,CLIENT,System,—,GP-6
+B,payment_milestones,Engagement,service_agreement_id,uuid,FK,,references service_agreements,FA; SA,CLIENT,At creation,—,GP-6
+B,payment_milestones,Engagement,project_id,uuid,FK,,references wedding_projects,FA; SA,CLIENT,Optional,—,GP-6
+B,payment_milestones,Engagement,name,string,,,"string, up to 255 characters",FA; SA,CLIENT,At creation,—,GP-6
+B,payment_milestones,Engagement,due_date,date,,,date,FA; SA,CLIENT,At creation,Unpaid milestones appear on dashboards and notify the client (SPEC §8),GP-6
+B,payment_milestones,Engagement,amount,decimal,,,"numeric(14,2), 0 or more",FA; SA,CLIENT,At creation,—,GP-6
+B,payment_milestones,Engagement,currency,string,,,"ISO 4217 code, default INR (A-16)",FA; SA,CLIENT,At creation,—,GP-6
+B,payment_milestones,Engagement,status,string,,"pending, invoiced, paid, overdue, waived",one of the listed options,FA; SA,CLIENT,At creation,invoiced when an invoice is issued; paid when its payment succeeds; overdue by job,GP-6
+B,payment_milestones,Engagement,invoice_id,uuid,FK,,references invoices,SYS,CLIENT,Optional,—,GP-6
+B,payments,Subscription / engagement / vendor payment,id,uuid,PK,,"UUID v7, generated",SYS,CLIENT when client_visible; RESTRICTED-FINANCE for outbound rows,System,—,"A-2 (Q2), A-4 (Q4), GP-17"
+B,payments,Subscription / engagement / vendor payment,account_id,uuid,FK,,references client_accounts,FA; SA; SYS (gateway webhooks),CLIENT when client_visible; RESTRICTED-FINANCE for outbound rows,At creation,—,"A-2 (Q2), A-4 (Q4), GP-17"
+B,payments,Subscription / engagement / vendor payment,project_id,uuid,FK,,references wedding_projects; nullable,FA; SA; SYS (gateway webhooks),CLIENT when client_visible; RESTRICTED-FINANCE for outbound rows,Optional,—,"A-2 (Q2), A-4 (Q4), GP-17"
+B,payments,Subscription / engagement / vendor payment,direction,string,,"inbound, outbound","inbound for client payments, outbound for vendor and hotel payments",FA; SA; SYS (gateway webhooks),CLIENT when client_visible; RESTRICTED-FINANCE for outbound rows,At creation,—,"A-2 (Q2), A-4 (Q4), GP-17"
+B,payments,Subscription / engagement / vendor payment,counterparty_type,string,,"client, vendor, hotel, other",one of the listed options,FA; SA; SYS (gateway webhooks),CLIENT when client_visible; RESTRICTED-FINANCE for outbound rows,At creation,—,"A-2 (Q2), A-4 (Q4), GP-17"
+B,payments,Subscription / engagement / vendor payment,counterparty_id,uuid,,,UUID,FA; SA; SYS (gateway webhooks),CLIENT when client_visible; RESTRICTED-FINANCE for outbound rows,Optional,—,"A-2 (Q2), A-4 (Q4), GP-17"
+B,payments,Subscription / engagement / vendor payment,purpose,string,,"subscription, service_fee, milestone, vendor_payment, hotel_payment, refund",one of the listed options,FA; SA; SYS (gateway webhooks),CLIENT when client_visible; RESTRICTED-FINANCE for outbound rows,At creation,—,"A-2 (Q2), A-4 (Q4), GP-17"
+B,payments,Subscription / engagement / vendor payment,related_type,string,,,"string, up to 255 characters; subscription / invoice / payment_milestone",FA; SA; SYS (gateway webhooks),CLIENT when client_visible; RESTRICTED-FINANCE for outbound rows,Optional,—,"A-2 (Q2), A-4 (Q4), GP-17"
+B,payments,Subscription / engagement / vendor payment,related_id,uuid,,,UUID,FA; SA; SYS (gateway webhooks),CLIENT when client_visible; RESTRICTED-FINANCE for outbound rows,Optional,—,"A-2 (Q2), A-4 (Q4), GP-17"
+B,payments,Subscription / engagement / vendor payment,amount,decimal,,,"numeric(14,2), more than 0",FA; SA; SYS (gateway webhooks),CLIENT when client_visible; RESTRICTED-FINANCE for outbound rows,At creation,Finance reports; refunds reduce the net,"A-2 (Q2), A-4 (Q4), GP-17"
+B,payments,Subscription / engagement / vendor payment,currency,string,,,"ISO 4217 code, default INR (A-16)",FA; SA; SYS (gateway webhooks),CLIENT when client_visible; RESTRICTED-FINANCE for outbound rows,At creation,—,"A-2 (Q2), A-4 (Q4), GP-17"
+B,payments,Subscription / engagement / vendor payment,method,string,,"gateway, bank_transfer, upi, cheque, cash",one of the listed options,FA; SA; SYS (gateway webhooks),CLIENT when client_visible; RESTRICTED-FINANCE for outbound rows,At creation,—,"A-2 (Q2), A-4 (Q4), GP-17"
+B,payments,Subscription / engagement / vendor payment,provider,string,,,"string, up to 255 characters",SYS,CLIENT when client_visible; RESTRICTED-FINANCE for outbound rows,When method is gateway,—,"A-2 (Q2), A-4 (Q4), GP-17"
+B,payments,Subscription / engagement / vendor payment,provider_ref,string,,,gateway transaction id; unique,SYS,CLIENT when client_visible; RESTRICTED-FINANCE for outbound rows,When method is gateway,—,"A-2 (Q2), A-4 (Q4), GP-17"
+B,payments,Subscription / engagement / vendor payment,status,string,,"initiated, pending, succeeded, failed, refunded, cancelled",one of the listed options,FA; SA; SYS (gateway webhooks),CLIENT when client_visible; RESTRICTED-FINANCE for outbound rows,At creation,succeeded activates only the purchased entitlement (SPEC §8) and marks milestones paid; refunded requires refund_of_payment_id,"A-2 (Q2), A-4 (Q4), GP-17"
+B,payments,Subscription / engagement / vendor payment,paid_at,datetime,,,timestamp (UTC),SYS from the gateway; FA for manual records,CLIENT when client_visible; RESTRICTED-FINANCE for outbound rows,Before status succeeded,—,"A-2 (Q2), A-4 (Q4), GP-17"
+B,payments,Subscription / engagement / vendor payment,recorded_by,uuid,FK,,references users,SYS (acting user),CLIENT when client_visible; RESTRICTED-FINANCE for outbound rows,System,—,"A-2 (Q2), A-4 (Q4), GP-17"
+B,payments,Subscription / engagement / vendor payment,refund_of_payment_id,uuid,FK,,references payments; must be a succeeded payment; refund total never exceeds it,FA; SA; SYS (gateway webhooks),CLIENT when client_visible; RESTRICTED-FINANCE for outbound rows,Optional,—,"A-2 (Q2), A-4 (Q4), GP-17"
+B,payments,Subscription / engagement / vendor payment,client_visible,bool,,,true or false; true for inbound client payments (A-4),FA; SA; SYS (gateway webhooks),CLIENT when client_visible; RESTRICTED-FINANCE for outbound rows,Optional,true only for inbound client payments (A-4),"A-2 (Q2), A-4 (Q4), GP-17"
+C,destinations,Hotel data entry,id,uuid,PK,,"UUID v7, generated",SYS,CLIENT,System,—,A-12 (Q12)
+C,destinations,Hotel data entry,name,string,,,"string, up to 255 characters",HT; SA,CLIENT; PUBLIC when public_visible,At creation,—,A-12 (Q12)
+C,destinations,Hotel data entry,slug,string,UK,,"lowercase letters, digits and hyphens; unique",HT; SA,CLIENT; PUBLIC when public_visible,At creation,—,A-12 (Q12)
+C,destinations,Hotel data entry,region,string,,,"string, up to 255 characters",HT; SA,CLIENT,Optional,—,A-12 (Q12)
+C,destinations,Hotel data entry,state,string,,,"string, up to 255 characters",HT; SA,CLIENT,Optional,—,A-12 (Q12)
+C,destinations,Hotel data entry,country,string,,,"string, up to 255 characters",HT; SA,CLIENT,At creation,—,A-12 (Q12)
+C,destinations,Hotel data entry,description,text,,,"text, up to 10,000 characters",HT; SA,CLIENT,Optional,—,A-12 (Q12)
+C,destinations,Hotel data entry,status,string,,"draft, active, inactive",one of the listed options,HT; SA,CLIENT,At creation,Transitions per permission-matrix §7; each transition audited; notifications per §8,A-12 (Q12)
+C,destinations,Hotel data entry,public_visible,bool,,,true or false; shown on the public website,HT; SA,CLIENT,Optional,Publishes the destination page on the website; audited,A-12 (Q12)
+C,destinations,Hotel data entry,hero_media_id,uuid,FK,,references media_assets,HT; SA,CLIENT; PUBLIC when public_visible,Optional,—,A-12 (Q12)
+C,hotels,Hotel data entry,id,uuid,PK,,"UUID v7, generated",SYS,CLIENT,System,—,"A-9 (Q9), A-28 (AM-8), RK-1"
+C,hotels,Hotel data entry,destination_id,uuid,FK,,references destinations,HT; SA,CLIENT,At creation,—,"A-9 (Q9), A-28 (AM-8), RK-1"
+C,hotels,Hotel data entry,name,string,,,"string, up to 255 characters",HT; SA,CLIENT; PUBLIC when public_showcase,At creation,—,"A-9 (Q9), A-28 (AM-8), RK-1"
+C,hotels,Hotel data entry,slug,string,UK,,"lowercase letters, digits and hyphens; unique",HT; SA,CLIENT,At creation,—,"A-9 (Q9), A-28 (AM-8), RK-1"
+C,hotels,Hotel data entry,brand,string,,,"string, up to 255 characters",HT; SA,CLIENT,Optional,—,"A-9 (Q9), A-28 (AM-8), RK-1"
+C,hotels,Hotel data entry,star_category,string,,,"string, up to 255 characters",HT; SA,CLIENT,Optional,—,"A-9 (Q9), A-28 (AM-8), RK-1"
+C,hotels,Hotel data entry,address,text,,,"text, up to 10,000 characters",HT; SA,CLIENT,Optional,—,"A-9 (Q9), A-28 (AM-8), RK-1"
+C,hotels,Hotel data entry,latitude,decimal,,,decimal between -90 and 90,HT; SA,CLIENT,Optional,—,"A-9 (Q9), A-28 (AM-8), RK-1"
+C,hotels,Hotel data entry,longitude,decimal,,,decimal between -180 and 180,HT; SA,CLIENT,Optional,—,"A-9 (Q9), A-28 (AM-8), RK-1"
+C,hotels,Hotel data entry,description_client,text,,,"text, up to 10,000 characters",HT; SA,CLIENT,Before status active,—,"A-9 (Q9), A-28 (AM-8), RK-1"
+C,hotels,Hotel data entry,website,string,,,"string, up to 255 characters",HT; SA,CLIENT,Optional,—,"A-9 (Q9), A-28 (AM-8), RK-1"
+C,hotels,Hotel data entry,status,string,,"draft, active, inactive",one of the listed options,HT; SA,CLIENT,At creation,inactive hotels leave search results but stay on existing enquiries and projects,"A-9 (Q9), A-28 (AM-8), RK-1"
+C,hotels,Hotel data entry,demo_visible,bool,,,true or false; A-28,HT; SA,CLIENT,Optional,Scopes demo search (A-28),"A-9 (Q9), A-28 (AM-8), RK-1"
+C,hotels,Hotel data entry,public_showcase,bool,,,true or false; approved for the public website,HT; SA,CLIENT,Optional,"Exposes name, destination and hero media on the website only","A-9 (Q9), A-28 (AM-8), RK-1"
+C,hotels,Hotel data entry,internal_rating,int,,,integer 1 to 5,HT; SA,RESTRICTED-NOTES,Optional,—,"A-9 (Q9), A-28 (AM-8), RK-1"
+C,hotels,Hotel data entry,internal_notes,text,,,"text, up to 10,000 characters",HT; SA,RESTRICTED-NOTES,Optional,"Never serialised to client, guest or demo principals","A-9 (Q9), A-28 (AM-8), RK-1"
+C,hotels,Hotel data entry,total_rooms,int,,,"integer, 0 or more",HT; SA,CLIENT,Optional,—,"A-9 (Q9), A-28 (AM-8), RK-1"
+C,hotels,Hotel data entry,street_view_ref,string,,,"string, up to 255 characters; map or street view reference (Q9)",HT; SA,CLIENT,Optional,—,"A-9 (Q9), A-28 (AM-8), RK-1"
+C,hotels,Hotel data entry,last_verified_at,datetime,,,timestamp (UTC); denormalised from hotel_verifications,SYS,CLIENT,System,Denormalised by the verification job; drives the freshness label,"A-9 (Q9), A-28 (AM-8), RK-1"
+C,hotel_contacts,Hotel data entry,id,uuid,PK,,"UUID v7, generated",SYS,RESTRICTED-CONTACT,System,—,P-3 contact tier
+C,hotel_contacts,Hotel data entry,hotel_id,uuid,FK,,references hotels,HT; SA,RESTRICTED-CONTACT,At creation,—,P-3 contact tier
+C,hotel_contacts,Hotel data entry,name,string,,,"string, up to 255 characters; whole table, clients contact hotels through AMPM",HT; SA,RESTRICTED-CONTACT,At creation,—,P-3 contact tier
+C,hotel_contacts,Hotel data entry,role_title,string,,,"string, up to 255 characters",HT; SA,RESTRICTED-CONTACT,Optional,—,P-3 contact tier
+C,hotel_contacts,Hotel data entry,phone,string,,,"E.164 format, default +91",HT; SA,RESTRICTED-CONTACT,Optional,—,P-3 contact tier
+C,hotel_contacts,Hotel data entry,email,string,,,"valid email address, stored lowercase",HT; SA,RESTRICTED-CONTACT,Optional,—,P-3 contact tier
+C,hotel_contacts,Hotel data entry,is_primary,bool,,,true or false,HT; SA,RESTRICTED-CONTACT,Optional,—,P-3 contact tier
+C,hotel_room_categories,Hotel data entry,id,uuid,PK,,"UUID v7, generated",SYS,CLIENT,System,—,A-27 (AM-5)
+C,hotel_room_categories,Hotel data entry,hotel_id,uuid,FK,,references hotels,HT; SA,CLIENT,At creation,—,A-27 (AM-5)
+C,hotel_room_categories,Hotel data entry,name,string,,,"string, up to 255 characters",HT; SA,CLIENT,At creation,—,A-27 (AM-5)
+C,hotel_room_categories,Hotel data entry,room_count,int,,,"integer, 0 or more; inventory in this category (A-27)",HT; SA,CLIENT,At creation,Upper bound for room blocks at this hotel,A-27 (AM-5)
+C,hotel_room_categories,Hotel data entry,max_occupancy,int,,,"integer, 1 or more",HT; SA,CLIENT,At creation,Upper bound for occupants per allocation,A-27 (AM-5)
+C,hotel_room_categories,Hotel data entry,size_sqm,int,,,"integer, 0 or more",HT; SA,CLIENT,Optional,—,A-27 (AM-5)
+C,hotel_room_categories,Hotel data entry,facilities_json,json,,,valid JSON matching the registered schema,HT; SA,CLIENT,Optional,—,A-27 (AM-5)
+C,hotel_room_categories,Hotel data entry,description,text,,,"text, up to 10,000 characters",HT; SA,CLIENT,Optional,—,A-27 (AM-5)
+C,hotel_venues,Hotel data entry,id,uuid,PK,,"UUID v7, generated",SYS,CLIENT,System,—,
+C,hotel_venues,Hotel data entry,hotel_id,uuid,FK,,references hotels,HT; SA,CLIENT,At creation,—,
+C,hotel_venues,Hotel data entry,name,string,,,"string, up to 255 characters",HT; SA,CLIENT,At creation,—,
+C,hotel_venues,Hotel data entry,venue_type,string,,"ballroom, lawn, poolside, rooftop, courtyard, beach, other",one of the listed options,HT; SA,CLIENT,At creation,—,
+C,hotel_venues,Hotel data entry,is_indoor,bool,,,true or false,HT; SA,CLIENT,Optional,—,
+C,hotel_venues,Hotel data entry,area_sqm,int,,,"integer, 0 or more",HT; SA,CLIENT,Optional,—,
+C,hotel_venues,Hotel data entry,capacity_banquet,int,,,"integer, 0 or more",HT; SA,CLIENT,Optional,Compared with function guest_estimate; mismatch flagged,
+C,hotel_venues,Hotel data entry,capacity_theatre,int,,,"integer, 0 or more",HT; SA,CLIENT,Optional,Compared with function guest_estimate; mismatch flagged,
+C,hotel_venues,Hotel data entry,capacity_reception,int,,,"integer, 0 or more",HT; SA,CLIENT,Optional,Compared with function guest_estimate; mismatch flagged,
+C,hotel_venues,Hotel data entry,facilities_json,json,,,valid JSON matching the registered schema,HT; SA,CLIENT,Optional,—,
+C,hotel_venues,Hotel data entry,description,text,,,"text, up to 10,000 characters",HT; SA,CLIENT,Optional,—,
+C,hotel_rate_cards,Hotel data entry,id,uuid,PK,,"UUID v7, generated",SYS,CLIENT,System,—,"A-9 (Q9), GP-8"
+C,hotel_rate_cards,Hotel data entry,hotel_id,uuid,FK,,references hotels,HT; SA,CLIENT,At creation,—,"A-9 (Q9), GP-8"
+C,hotel_rate_cards,Hotel data entry,name,string,,,"string, up to 255 characters; e.g. Wedding season 2027",HT; SA,CLIENT,At creation,—,"A-9 (Q9), GP-8"
+C,hotel_rate_cards,Hotel data entry,valid_from,date,,,date,HT; SA,CLIENT,At creation,—,"A-9 (Q9), GP-8"
+C,hotel_rate_cards,Hotel data entry,valid_to,date,,,date; not before valid_from,HT; SA,CLIENT,At creation,—,"A-9 (Q9), GP-8"
+C,hotel_rate_cards,Hotel data entry,currency,string,,,"ISO 4217 code, default INR (A-16)",HT; SA,CLIENT,At creation,—,"A-9 (Q9), GP-8"
+C,hotel_rate_cards,Hotel data entry,status,string,,"draft, verified, stale, retired",one of the listed options,HT; SA,CLIENT,At creation,verified requires a verification row; stale set by job after the configured age; stale cards are never shown as confirmed (SPEC §12),"A-9 (Q9), GP-8"
+C,hotel_rate_cards,Hotel data entry,verification_id,uuid,FK,,references hotel_verifications,HT; SA,INTERNAL,Before status verified,—,"A-9 (Q9), GP-8"
+C,hotel_rate_cards,Hotel data entry,source,string,,,"string, up to 255 characters; e.g. hotel sales email",HT; SA,RESTRICTED-NOTES,Optional,—,"A-9 (Q9), GP-8"
+C,hotel_rate_cards,Hotel data entry,internal_notes,text,,,"text, up to 10,000 characters",HT; SA,RESTRICTED-NOTES,Optional,"Never serialised to client, guest or demo principals","A-9 (Q9), GP-8"
+C,hotel_rate_items,Hotel data entry,id,uuid,PK,,"UUID v7, generated",SYS,CLIENT when client_visible and the card is verified,System,—,"A-9 (Q9), GP-8"
+C,hotel_rate_items,Hotel data entry,rate_card_id,uuid,FK,,references hotel_rate_cards,HT; SA,CLIENT when client_visible and the card is verified,At creation,—,"A-9 (Q9), GP-8"
+C,hotel_rate_items,Hotel data entry,item_type,string,,"room_rate, venue_rental, per_plate_veg, per_plate_non_veg, wedding_package, beverage_package, service_charge, tax, other","one of the listed options; (A-9, Q9)",HT; SA,CLIENT when client_visible and the card is verified,At creation,—,"A-9 (Q9), GP-8"
+C,hotel_rate_items,Hotel data entry,room_category_id,uuid,FK,,references hotel_room_categories; nullable,HT; SA,CLIENT when client_visible and the card is verified,Optional,—,"A-9 (Q9), GP-8"
+C,hotel_rate_items,Hotel data entry,venue_id,uuid,FK,,references hotel_venues; nullable,HT; SA,CLIENT when client_visible and the card is verified,Optional,—,"A-9 (Q9), GP-8"
+C,hotel_rate_items,Hotel data entry,amount,decimal,,,"numeric(14,2), 0 or more",HT; SA,CLIENT when client_visible and the card is verified,At creation,Client sees it with the card's freshness label,"A-9 (Q9), GP-8"
+C,hotel_rate_items,Hotel data entry,amount_max,decimal,,,"numeric(14,2), 0 or more; upper bound of an indicative range, nullable (Q9)",HT; SA,CLIENT when client_visible and the card is verified,Optional,—,"A-9 (Q9), GP-8"
+C,hotel_rate_items,Hotel data entry,is_indicative,bool,,,true or false; true for ranges shown to clients; confirmed quotations live in hotel_proposals,HT; SA,CLIENT when client_visible and the card is verified,Optional,—,"A-9 (Q9), GP-8"
+C,hotel_rate_items,Hotel data entry,unit,string,,"per_night, per_plate, per_event, percent",one of the listed options,HT; SA,CLIENT when client_visible and the card is verified,At creation,—,"A-9 (Q9), GP-8"
+C,hotel_rate_items,Hotel data entry,min_quantity,int,,,"integer, 0 or more; for example minimum plates",HT; SA,CLIENT when client_visible and the card is verified,Optional,—,"A-9 (Q9), GP-8"
+C,hotel_rate_items,Hotel data entry,inclusions_text,text,,,"text, up to 10,000 characters",HT; SA,CLIENT when client_visible and the card is verified,Optional,—,"A-9 (Q9), GP-8"
+C,hotel_rate_items,Hotel data entry,client_visible,bool,,,true or false; when true and card is verified,HT; SA,CLIENT,Optional,Hidden items are internal references only,"A-9 (Q9), GP-8"
+C,hotel_verifications,Verification,id,uuid,PK,,"UUID v7, generated",SYS,INTERNAL,System,—,SPEC §8 stale rule
+C,hotel_verifications,Verification,hotel_id,uuid,FK,,references hotels,HT; SA,INTERNAL,At creation,—,SPEC §8 stale rule
+C,hotel_verifications,Verification,field_group,string,,"profile, rooms, venues, rates, availability, media, contacts",one of the listed options,HT; SA,CLIENT (freshness label),At creation,—,SPEC §8 stale rule
+C,hotel_verifications,Verification,verified_at,datetime,,,timestamp (UTC),SYS when recorded; HT may backdate with a note,CLIENT (freshness label),At creation,Stale job compares with the configured age and sets the freshness label,SPEC §8 stale rule
+C,hotel_verifications,Verification,verified_by,uuid,FK,,references users,SYS (acting user),INTERNAL,At creation,—,SPEC §8 stale rule
+C,hotel_verifications,Verification,source,string,,"phone, email, site_visit, website, contract",one of the listed options,HT; SA,INTERNAL,At creation,—,SPEC §8 stale rule
+C,hotel_verifications,Verification,status,string,,"verified, unverified, stale",one of the listed options,HT; SA,CLIENT (freshness label),At creation,stale set by the daily job; shown as a label,SPEC §8 stale rule
+C,hotel_verifications,Verification,next_due_at,datetime,,,timestamp (UTC); verified_at plus configurable age,SYS,INTERNAL,System,Set to verified_at plus the configured age,SPEC §8 stale rule
+C,hotel_verifications,Verification,notes,text,,,"text, up to 10,000 characters",HT; SA,INTERNAL,Optional,—,SPEC §8 stale rule
+C,hotel_wedding_references,Hotel data entry,id,uuid,PK,,"UUID v7, generated",SYS,CLIENT when client_visible,System,—,GP-20 (Q9)
+C,hotel_wedding_references,Hotel data entry,hotel_id,uuid,FK,,references hotels,HT; SA,CLIENT when client_visible,At creation,—,GP-20 (Q9)
+C,hotel_wedding_references,Hotel data entry,project_id,uuid,FK,,"references wedding_projects; nullable, the AMPM wedding it refers to",HT; SA,CLIENT when client_visible,Optional,—,GP-20 (Q9)
+C,hotel_wedding_references,Hotel data entry,event_year,int,,,four-digit year,HT; SA,CLIENT when client_visible,At creation,—,GP-20 (Q9)
+C,hotel_wedding_references,Hotel data entry,guest_count,int,,,"integer, 0 or more",HT; SA,CLIENT when client_visible,Optional,—,GP-20 (Q9)
+C,hotel_wedding_references,Hotel data entry,description_client,text,,,"text, up to 10,000 characters",HT; SA,CLIENT,Optional,—,GP-20 (Q9)
+C,hotel_wedding_references,Hotel data entry,client_visible,bool,,,true only when consent_document_id is set,HT; SA,CLIENT when client_visible,Optional,Sharing audited,GP-20 (Q9)
+C,hotel_wedding_references,Hotel data entry,consent_document_id,uuid,FK,,references documents; consent from the referenced client (GP-20),HT; SA,CLIENT when client_visible,Before client_visible,—,GP-20 (Q9)
+C,saved_hotels,Discovery (client),id,uuid,PK,,"UUID v7, generated",SYS,CLIENT,System,—,"GP-10, GP-27"
+C,saved_hotels,Discovery (client),account_id,uuid,FK,,references client_accounts,"CO, CA, CV (own account); DP (demo); SYS back-fills project_id",CLIENT,At creation,—,"GP-10, GP-27"
+C,saved_hotels,Discovery (client),hotel_id,uuid,FK,,references hotels,"CO, CA, CV (own account); DP (demo); SYS back-fills project_id",CLIENT,At creation,—,"GP-10, GP-27"
+C,saved_hotels,Discovery (client),project_id,uuid,FK,,"references wedding_projects; nullable, set when linked to a wedding (GP-27)","CO, CA, CV (own account); DP (demo); SYS back-fills project_id",CLIENT,Optional,Back-filled when a project is created (GP-27),"GP-10, GP-27"
+C,saved_hotels,Discovery (client),saved_by_user_id,uuid,FK,,references users,SYS (acting user),CLIENT,At creation,—,"GP-10, GP-27"
+C,saved_hotels,Discovery (client),note,text,,,"text, up to 10,000 characters","CO, CA, CV (own account); DP (demo); SYS back-fills project_id",CLIENT,Optional,—,"GP-10, GP-27"
+D,hotel_enquiries,Discovery (client request),id,uuid,PK,,"UUID v7, generated",SYS,CLIENT,System,—,"A-9 (Q9), GP-5, GP-27"
+D,hotel_enquiries,Discovery (client request),account_id,uuid,FK,,references client_accounts,"CO, CA (client fields at creation); HT; SA; PM (a)",CLIENT,At creation,—,"A-9 (Q9), GP-5, GP-27"
+D,hotel_enquiries,Discovery (client request),project_id,uuid,FK,,references wedding_projects; nullable before a project exists,"CO, CA (client fields at creation); HT; SA; PM (a)",CLIENT,Optional,Back-filled when the project is created (GP-27),"A-9 (Q9), GP-5, GP-27"
+D,hotel_enquiries,Discovery (client request),hotel_id,uuid,FK,,references hotels,"CO, CA (client fields at creation); HT; SA; PM (a)",CLIENT,At creation,—,"A-9 (Q9), GP-5, GP-27"
+D,hotel_enquiries,Discovery (client request),requested_by_user_id,uuid,FK,,references users,SYS (acting user),CLIENT,At creation,—,"A-9 (Q9), GP-5, GP-27"
+D,hotel_enquiries,Discovery (client request),assigned_user_id,uuid,FK,,references users,HT; SA,INTERNAL,Before status awaiting_hotel,Assignee notified,"A-9 (Q9), GP-5, GP-27"
+D,hotel_enquiries,Discovery (client request),service_agreement_id,uuid,FK,,references service_agreements; nullable (GP-5),"CO, CA (client fields at creation); HT; SA; PM (a)",INTERNAL,Optional,Paid work beyond availability checks waits for an active agreement (GP-5),"A-9 (Q9), GP-5, GP-27"
+D,hotel_enquiries,Discovery (client request),status,string,,"draft, submitted, awaiting_hotel, response_received, negotiating, visit_scheduled, proposal_received, client_decision, confirmed, closed",one of the listed options,"CO, CA (client fields at creation); HT; SA; PM (a)",CLIENT,At creation,Per §7; confirmed requires a confirmed booking milestone and a signed contract; client notified on each change,"A-9 (Q9), GP-5, GP-27"
+D,hotel_enquiries,Discovery (client request),date_from,date,,,date,"CO, CA (client fields at creation); HT; SA; PM (a)",CLIENT,At creation,—,"A-9 (Q9), GP-5, GP-27"
+D,hotel_enquiries,Discovery (client request),date_to,date,,,date; not before date_from,"CO, CA (client fields at creation); HT; SA; PM (a)",CLIENT,At creation,—,"A-9 (Q9), GP-5, GP-27"
+D,hotel_enquiries,Discovery (client request),dates_flexible,bool,,,true or false,"CO, CA (client fields at creation); HT; SA; PM (a)",CLIENT,Optional,—,"A-9 (Q9), GP-5, GP-27"
+D,hotel_enquiries,Discovery (client request),guest_estimate,int,,,"integer, 0 or more","CO, CA (client fields at creation); HT; SA; PM (a)",CLIENT,At creation,—,"A-9 (Q9), GP-5, GP-27"
+D,hotel_enquiries,Discovery (client request),rooms_required,int,,,"integer, 0 or more","CO, CA (client fields at creation); HT; SA; PM (a)",CLIENT,Optional,Starting point for room blocks,"A-9 (Q9), GP-5, GP-27"
+D,hotel_enquiries,Discovery (client request),functions_summary,text,,,"text, up to 10,000 characters","CO, CA (client fields at creation); HT; SA; PM (a)",CLIENT,Optional,—,"A-9 (Q9), GP-5, GP-27"
+D,hotel_enquiries,Discovery (client request),contact_preference,string,,,"string, up to 255 characters","CO, CA (client fields at creation); HT; SA; PM (a)",CLIENT,Optional,—,"A-9 (Q9), GP-5, GP-27"
+D,hotel_enquiries,Discovery (client request),notes_client,text,,,"text, up to 10,000 characters","CO, CA; HT",CLIENT,Optional,—,"A-9 (Q9), GP-5, GP-27"
+D,hotel_enquiries,Discovery (client request),notes_internal,text,,,"text, up to 10,000 characters","CO, CA (client fields at creation); HT; SA; PM (a)",RESTRICTED-NOTES,Optional,—,"A-9 (Q9), GP-5, GP-27"
+D,hotel_enquiries,Discovery (client request),submitted_at,datetime,,,timestamp (UTC),SYS (when the action happens),CLIENT,System,—,"A-9 (Q9), GP-5, GP-27"
+D,hotel_enquiries,Discovery (client request),closed_at,datetime,,,timestamp (UTC),SYS (when the action happens),CLIENT,System,—,"A-9 (Q9), GP-5, GP-27"
+D,hotel_enquiries,Discovery (client request),outcome,string,,"booked, declined, no_availability, withdrawn",one of the listed options,"CO, CA (client fields at creation); HT; SA; PM (a)",CLIENT,Before status closed,Hotel conversion report,"A-9 (Q9), GP-5, GP-27"
+D,hotel_enquiry_events,Consultancy,id,uuid,PK,,"UUID v7, generated",SYS,CLIENT unless internal_only,System,—,SPEC §12 negotiation test
+D,hotel_enquiry_events,Consultancy,enquiry_id,uuid,FK,,references hotel_enquiries,HT; SA; PM (a); SYS for status changes,CLIENT unless internal_only,At creation,—,SPEC §12 negotiation test
+D,hotel_enquiry_events,Consultancy,event_type,string,,"submitted, sent_to_hotel, hotel_response, negotiation_note, client_update, status_change, visit, proposal",one of the listed options,HT; SA; PM (a); SYS for status changes,CLIENT unless internal_only,At creation,—,SPEC §12 negotiation test
+D,hotel_enquiry_events,Consultancy,occurred_at,datetime,,,timestamp (UTC),HT; SA,CLIENT unless internal_only,At creation,—,SPEC §12 negotiation test
+D,hotel_enquiry_events,Consultancy,user_id,uuid,FK,,references see data model,SYS (acting user),CLIENT unless internal_only,System,—,SPEC §12 negotiation test
+D,hotel_enquiry_events,Consultancy,summary,text,,,"text, up to 10,000 characters",HT; SA; PM (a); SYS for status changes,CLIENT unless internal_only,Optional,—,SPEC §12 negotiation test
+D,hotel_enquiry_events,Consultancy,internal_only,bool,,,true or false; true hides the event from the client entirely,HT; SA; PM (a); SYS for status changes,CLIENT unless internal_only,Optional,Hidden from the client serialiser; defaults to true for negotiation_note,SPEC §12 negotiation test
+D,hotel_enquiry_events,Consultancy,document_id,uuid,FK,,references see data model,HT; SA; PM (a); SYS for status changes,CLIENT unless internal_only,Optional,—,SPEC §12 negotiation test
+D,site_visits,Consultancy,id,uuid,PK,,"UUID v7, generated",SYS,CLIENT,System,—,
+D,site_visits,Consultancy,enquiry_id,uuid,FK,,references hotel_enquiries,"HT; SA; PM (a); CO, CA for client_feedback",CLIENT,At creation,—,
+D,site_visits,Consultancy,hotel_id,uuid,FK,,references hotels,"HT; SA; PM (a); CO, CA for client_feedback",CLIENT,At creation,—,
+D,site_visits,Consultancy,scheduled_at,datetime,,,timestamp (UTC),HT; PM (a),CLIENT,At creation,Reminder to attendees; enquiry status visit_scheduled,
+D,site_visits,Consultancy,status,string,,"proposed, confirmed, completed, cancelled",one of the listed options,"HT; SA; PM (a); CO, CA for client_feedback",CLIENT,At creation,Transitions per permission-matrix §7; each transition audited; notifications per §8,
+D,site_visits,Consultancy,attendees_text,text,,,"text, up to 10,000 characters","HT; SA; PM (a); CO, CA for client_feedback",CLIENT,Optional,—,
+D,site_visits,Consultancy,outcome_internal,text,,,"text, up to 10,000 characters","HT; SA; PM (a); CO, CA for client_feedback",RESTRICTED-NOTES,Optional,—,
+D,site_visits,Consultancy,client_feedback,text,,,"text, up to 10,000 characters","CO, CA",CLIENT,Optional,—,
+D,hotel_proposals,Consultancy,id,uuid,PK,,"UUID v7, generated",SYS,CLIENT when shared,System,—,"A-4 (Q4), P-3 (Q4)"
+D,hotel_proposals,Consultancy,enquiry_id,uuid,FK,,references hotel_enquiries,HT; SA; PM (a),CLIENT when shared,At creation,—,"A-4 (Q4), P-3 (Q4)"
+D,hotel_proposals,Consultancy,hotel_id,uuid,FK,,references hotels,HT; SA; PM (a),CLIENT when shared,At creation,—,"A-4 (Q4), P-3 (Q4)"
+D,hotel_proposals,Consultancy,version_number,int,,,"integer, 1 or more; increments by 1 within its parent; immutable once shared",HT; SA; PM (a),CLIENT when shared,At creation,A new version supersedes earlier approvals (SPEC §12),"A-4 (Q4), P-3 (Q4)"
+D,hotel_proposals,Consultancy,status,string,,"draft, shared, revision_requested, accepted, declined, superseded",one of the listed options,HT; SA; PM (a),CLIENT when shared,At creation,shared notifies client approvers; accepted locks the version; a new version supersedes,"A-4 (Q4), P-3 (Q4)"
+D,hotel_proposals,Consultancy,valid_until,date,,,date,HT; SA; PM (a),CLIENT when shared,Optional,Expired proposals flagged on the enquiry,"A-4 (Q4), P-3 (Q4)"
+D,hotel_proposals,Consultancy,client_total_amount,decimal,,,"numeric(14,2), 0 or more; (A-4)",HT; SA; PM (a),CLIENT,Before status shared,Client decision and budget line,"A-4 (Q4), P-3 (Q4)"
+D,hotel_proposals,Consultancy,internal_total_amount,decimal,,,"numeric(14,2), 0 or more; hotel net or commission basis",HT; SA; PM (a),RESTRICTED-FINANCE,Optional,Hotel margin report,"A-4 (Q4), P-3 (Q4)"
+D,hotel_proposals,Consultancy,currency,string,,,"ISO 4217 code, default INR (A-16)",HT; SA; PM (a),CLIENT when shared,At creation,—,"A-4 (Q4), P-3 (Q4)"
+D,hotel_proposals,Consultancy,document_id,uuid,FK,,references see data model,HT; SA; PM (a),CLIENT when shared,Before status shared,—,"A-4 (Q4), P-3 (Q4)"
+D,hotel_proposals,Consultancy,shared_at,datetime,,,timestamp (UTC),SYS (when the action happens),CLIENT when shared,System,—,"A-4 (Q4), P-3 (Q4)"
+D,hotel_proposals,Consultancy,decided_at,datetime,,,timestamp (UTC),SYS (when the action happens),CLIENT when shared,System,—,"A-4 (Q4), P-3 (Q4)"
+D,hotel_proposals,Consultancy,decided_by_user_id,uuid,FK,,references users,SYS (acting user),CLIENT when shared,System,—,"A-4 (Q4), P-3 (Q4)"
+D,hotel_proposals,Consultancy,approval_id,uuid,FK,,references approvals,SYS,CLIENT when shared,Optional,—,"A-4 (Q4), P-3 (Q4)"
+D,hotel_proposals,Consultancy,supersedes_proposal_id,uuid,FK,,references hotel_proposals,SYS,CLIENT when shared,Optional,—,"A-4 (Q4), P-3 (Q4)"
+D,hotel_proposal_lines,Consultancy,id,uuid,PK,,"UUID v7, generated",SYS,CLIENT when client_visible,System,—,
+D,hotel_proposal_lines,Consultancy,proposal_id,uuid,FK,,references hotel_proposals,HT; SA; PM (a),CLIENT when client_visible,At creation,—,
+D,hotel_proposal_lines,Consultancy,item_type,string,,,"string, up to 255 characters; same enumeration as hotel_rate_items",HT; SA; PM (a),CLIENT when client_visible,At creation,—,
+D,hotel_proposal_lines,Consultancy,description,text,,,"text, up to 10,000 characters",HT; SA; PM (a),CLIENT when client_visible,At creation,—,
+D,hotel_proposal_lines,Consultancy,quantity,decimal,,,"numeric, more than 0",HT; SA; PM (a),CLIENT when client_visible,At creation,—,
+D,hotel_proposal_lines,Consultancy,unit_amount,decimal,,,"numeric(14,2), 0 or more",HT; SA; PM (a),CLIENT when client_visible,At creation,—,
+D,hotel_proposal_lines,Consultancy,total_amount,decimal,,,quantity multiplied by unit_amount,HT; SA; PM (a),CLIENT when client_visible,At creation,—,
+D,hotel_proposal_lines,Consultancy,client_visible,bool,,,true or false,HT; SA; PM (a),CLIENT when client_visible,Optional,Sharing change audited; switches the client serialiser,
+D,booking_milestones,Consultancy / booking,id,uuid,PK,,"UUID v7, generated",SYS,CLIENT,System,—,A-4 (Q4) for amounts
+D,booking_milestones,Consultancy / booking,enquiry_id,uuid,FK,,references hotel_enquiries,HT; SA; PM (a); FA for amounts and paid milestones,CLIENT,At creation,—,A-4 (Q4) for amounts
+D,booking_milestones,Consultancy / booking,project_id,uuid,FK,,references wedding_projects; nullable,HT; SA; PM (a); FA for amounts and paid milestones,CLIENT,Optional,—,A-4 (Q4) for amounts
+D,booking_milestones,Consultancy / booking,milestone_type,string,,"hold_placed, contract_sent, contract_signed, advance_paid, rooming_list_due, balance_due, confirmed",one of the listed options,HT; SA; PM (a); FA for amounts and paid milestones,CLIENT,At creation,—,A-4 (Q4) for amounts
+D,booking_milestones,Consultancy / booking,due_at,datetime,,,timestamp (UTC),HT; PM (a),CLIENT,Optional,Overdue items appear on dashboards (SPEC §8),A-4 (Q4) for amounts
+D,booking_milestones,Consultancy / booking,completed_at,datetime,,,timestamp (UTC),SYS (when the action happens),CLIENT,System,—,A-4 (Q4) for amounts
+D,booking_milestones,Consultancy / booking,status,string,,"pending, done, overdue, cancelled",one of the listed options,HT; SA; PM (a); FA for amounts and paid milestones,CLIENT,At creation,done on the confirmed milestone enables enquiry status confirmed,A-4 (Q4) for amounts
+D,booking_milestones,Consultancy / booking,amount,decimal,,,"numeric(14,2), 0 or more",HT; SA; PM (a); FA for amounts and paid milestones,CLIENT when the client pays the hotel directly; confirm (Q4),Optional,—,A-4 (Q4) for amounts
+D,booking_milestones,Consultancy / booking,currency,string,,,"ISO 4217 code, default INR (A-16)",HT; SA; PM (a); FA for amounts and paid milestones,CLIENT,Optional,—,A-4 (Q4) for amounts
+D,booking_milestones,Consultancy / booking,contract_id,uuid,FK,,references contracts,HT; SA; PM (a); FA for amounts and paid milestones,CLIENT,Before the confirmed milestone is done,—,A-4 (Q4) for amounts
+D,booking_milestones,Consultancy / booking,document_id,uuid,FK,,references see data model,HT; SA; PM (a); FA for amounts and paid milestones,CLIENT,Optional,—,A-4 (Q4) for amounts
+E,wedding_projects,Project setup,id,uuid,PK,,"UUID v7, generated",SYS,CLIENT,System,—,"A-16 (Q16), A-18 (Q18), A-23 (Q23), A-28 (AM-8), SPEC §5 example rows"
+E,wedding_projects,Project setup,code,string,UK,,generated AMPM-YYYY-NNN; unique,SYS,CLIENT,System,—,"A-16 (Q16), A-18 (Q18), A-23 (Q23), A-28 (AM-8), SPEC §5 example rows"
+E,wedding_projects,Project setup,account_id,uuid,FK,,references client_accounts,SA; SM (create); PM (a),CLIENT,At creation,—,"A-16 (Q16), A-18 (Q18), A-23 (Q23), A-28 (AM-8), SPEC §5 example rows"
+E,wedding_projects,Project setup,name,string,,,"string, up to 255 characters",SA; SM (create); PM (a),CLIENT,At creation,—,"A-16 (Q16), A-18 (Q18), A-23 (Q23), A-28 (AM-8), SPEC §5 example rows"
+E,wedding_projects,Project setup,status,string,,"setup, planning, approvals, pre_production, ready, live, closure, closed, on_hold",one of the listed options,SA; SM (create); PM (a),CLIENT,At creation,closed requires the closure checklist complete and final accounts approved (permission-matrix §7),"A-16 (Q16), A-18 (Q18), A-23 (Q23), A-28 (AM-8), SPEC §5 example rows"
+E,wedding_projects,Project setup,date_from,date,,,date; tentative allowed early (SPEC §5),SA; SM (create); PM (a),CLIENT,At creation,"Milestones, countdown and function date checks","A-16 (Q16), A-18 (Q18), A-23 (Q23), A-28 (AM-8), SPEC §5 example rows"
+E,wedding_projects,Project setup,date_to,date,,,date; not before date_from,SA; SM (create); PM (a),CLIENT,At creation,"Milestones, countdown and function date checks","A-16 (Q16), A-18 (Q18), A-23 (Q23), A-28 (AM-8), SPEC §5 example rows"
+E,wedding_projects,Project setup,dates_tentative,bool,,,"true or false; SPEC section 5, tentative allowed early",SA; SM (create); PM (a),CLIENT,Optional,Tentative flag on the dashboard; cleared when confirmed,"A-16 (Q16), A-18 (Q18), A-23 (Q23), A-28 (AM-8), SPEC §5 example rows"
+E,wedding_projects,Project setup,destination_id,uuid,FK,,references destinations,SA; SM (create); PM (a),CLIENT,Optional,—,"A-16 (Q16), A-18 (Q18), A-23 (Q23), A-28 (AM-8), SPEC §5 example rows"
+E,wedding_projects,Project setup,primary_hotel_id,uuid,FK,,references hotels; convenience pointer only (A-18),SA; SM (create); PM (a),CLIENT,Optional,—,"A-16 (Q16), A-18 (Q18), A-23 (Q23), A-28 (AM-8), SPEC §5 example rows"
+E,wedding_projects,Project setup,guest_estimate,int,,,"integer, 0 or more",SA; SM (create); PM (a),CLIENT,Optional,Capacity checks and planning; replaced by confirmed attendance later,"A-16 (Q16), A-18 (Q18), A-23 (Q23), A-28 (AM-8), SPEC §5 example rows"
+E,wedding_projects,Project setup,guest_estimate_confirmed,bool,,,true or false,SA; SM (create); PM (a),CLIENT,Optional,—,"A-16 (Q16), A-18 (Q18), A-23 (Q23), A-28 (AM-8), SPEC §5 example rows"
+E,wedding_projects,Project setup,timezone,string,,,IANA time zone name; default Asia/Kolkata,SA; SM (create); PM (a),CLIENT,At creation,—,"A-16 (Q16), A-18 (Q18), A-23 (Q23), A-28 (AM-8), SPEC §5 example rows"
+E,wedding_projects,Project setup,currency,string,,,"ISO 4217 code, default INR (A-16)",SA; SM (create); PM (a),CLIENT,At creation,—,"A-16 (Q16), A-18 (Q18), A-23 (Q23), A-28 (AM-8), SPEC §5 example rows"
+E,wedding_projects,Project setup,primary_service_agreement_id,uuid,FK,,references service_agreements,SA; SM (create); PM (a),INTERNAL,Optional,—,"A-16 (Q16), A-18 (Q18), A-23 (Q23), A-28 (AM-8), SPEC §5 example rows"
+E,wedding_projects,Project setup,project_lead_user_id,uuid,FK,,references users,SA; SM; PM (a),CLIENT,At creation,Lead receives all project notifications,"A-16 (Q16), A-18 (Q18), A-23 (Q23), A-28 (AM-8), SPEC §5 example rows"
+E,wedding_projects,Project setup,is_demo,bool,,,true or false; fixed at creation,SA; SM (create); PM (a),INTERNAL,Optional,—,"A-16 (Q16), A-18 (Q18), A-23 (Q23), A-28 (AM-8), SPEC §5 example rows"
+E,wedding_projects,Project setup,on_hold_reason,string,,,"string, up to 255 characters",SA; SM (create); PM (a),INTERNAL,Before status on_hold,—,"A-16 (Q16), A-18 (Q18), A-23 (Q23), A-28 (AM-8), SPEC §5 example rows"
+E,wedding_projects,Project setup,closed_at,datetime,,,timestamp (UTC),SYS (when the action happens),CLIENT,System,—,"A-16 (Q16), A-18 (Q18), A-23 (Q23), A-28 (AM-8), SPEC §5 example rows"
+E,wedding_projects,Project setup,archived_at,datetime,,,"timestamp (UTC); A-24, set on AMPM approval (Q23)",SYS,INTERNAL,System,—,"A-16 (Q16), A-18 (Q18), A-23 (Q23), A-28 (AM-8), SPEC §5 example rows"
+E,wedding_projects,Project setup,archived_by,uuid,FK,,references users; nullable; the approving user (Q23),SYS (acting user),CLIENT,System,—,"A-16 (Q16), A-18 (Q18), A-23 (Q23), A-28 (AM-8), SPEC §5 example rows"
+E,wedding_projects,Project setup,client_access_until,datetime,,,timestamp (UTC); closed_at plus three months (Q23),SYS at closure (closed_at plus the configured window); SA override,CLIENT,System,Client memberships removed after this date (A-23),"A-16 (Q16), A-18 (Q18), A-23 (Q23), A-28 (AM-8), SPEC §5 example rows"
+E,wedding_projects,Project setup,internal_notes,text,,,"text, up to 10,000 characters",SA; SM (create); PM (a),RESTRICTED-NOTES,Optional,"Never serialised to client, guest or demo principals","A-16 (Q16), A-18 (Q18), A-23 (Q23), A-28 (AM-8), SPEC §5 example rows"
+E,project_hotels,Project setup,id,uuid,PK,,"UUID v7, generated",SYS,CLIENT,System,—,A-18 (Q18)
+E,project_hotels,Project setup,project_id,uuid,FK,,references wedding_projects,PM (a); HT; SA,CLIENT,At creation,—,A-18 (Q18)
+E,project_hotels,Project setup,hotel_id,uuid,FK,,references hotels,PM (a); HT; SA,CLIENT,At creation,—,A-18 (Q18)
+E,project_hotels,Project setup,hotel_role,string,,"primary, overflow, venue_only",one of the listed options; (A-18),PM (a); HT; SA,CLIENT,At creation,—,A-18 (Q18)
+E,project_hotels,Project setup,notes,text,,,"text, up to 10,000 characters",PM (a); HT; SA,CLIENT,Optional,—,A-18 (Q18)
+E,external_venues,Planning,id,uuid,PK,,"UUID v7, generated",SYS,CLIENT,System,—,A-18 (Q18)
+E,external_venues,Planning,project_id,uuid,FK,,references wedding_projects,PM (a); SA; HL (a),CLIENT,At creation,—,A-18 (Q18)
+E,external_venues,Planning,name,string,,,"string, up to 255 characters",PM (a); SA; HL (a),CLIENT,At creation,—,A-18 (Q18)
+E,external_venues,Planning,address,text,,,"text, up to 10,000 characters",PM (a); SA; HL (a),CLIENT,Optional,—,A-18 (Q18)
+E,external_venues,Planning,contact_name,string,,,"string, up to 255 characters",PM (a); SA; HL (a),RESTRICTED-CONTACT,Optional,—,A-18 (Q18)
+E,external_venues,Planning,contact_phone,string,,,"E.164 format, default +91",PM (a); SA; HL (a),RESTRICTED-CONTACT,Optional,—,A-18 (Q18)
+E,external_venues,Planning,capacity,int,,,"integer, 0 or more",PM (a); SA; HL (a),CLIENT,Optional,—,A-18 (Q18)
+E,external_venues,Planning,notes,text,,,"text, up to 10,000 characters",PM (a); SA; HL (a),CLIENT,Optional,—,A-18 (Q18)
+F,function_types,Configuration,id,uuid,PK,,"UUID v7, generated",SYS,CLIENT,System,—,
+F,function_types,Configuration,type_key,string,UK,,"lowercase snake_case; unique; mehendi, haldi, sangeet, ceremony, reception, brunch, other",SA,CLIENT,At creation,—,
+F,function_types,Configuration,name,string,,,"string, up to 255 characters",SA,CLIENT,At creation,—,
+F,function_types,Configuration,sort_order,int,,,"integer, 0 or more; unique within its parent",SA,CLIENT,Optional,—,
+F,function_types,Configuration,is_active,bool,,,true or false,SA,CLIENT,Optional,—,
+F,functions,Planning,id,uuid,PK,,"UUID v7, generated",SYS,CLIENT,System,—,"A-26 (AM-3), AM-2, P-8 (Q10)"
+F,functions,Planning,project_id,uuid,FK,,references wedding_projects,PM (a); SA; CD (a) for theme and dress code; HL (a) for logistics,CLIENT,At creation,—,"A-26 (AM-3), AM-2, P-8 (Q10)"
+F,functions,Planning,function_type_id,uuid,FK,,references function_types,PM (a); SA; CD (a) for theme and dress code; HL (a) for logistics,CLIENT,At creation,—,"A-26 (AM-3), AM-2, P-8 (Q10)"
+F,functions,Planning,name,string,,,"string, up to 255 characters",PM (a); SA; CD (a) for theme and dress code; HL (a) for logistics,CLIENT,At creation,—,"A-26 (AM-3), AM-2, P-8 (Q10)"
+F,functions,Planning,function_date,date,,,date within the project range unless dates_tentative,PM (a); SA; CD (a) for theme and dress code; HL (a) for logistics,CLIENT,At creation,"Countdown, programme, attendance invites, capacity checks","A-26 (AM-3), AM-2, P-8 (Q10)"
+F,functions,Planning,start_time,time,,,time of day in the project time zone,PM (a); SA; CD (a) for theme and dress code; HL (a) for logistics,CLIENT,Optional,—,"A-26 (AM-3), AM-2, P-8 (Q10)"
+F,functions,Planning,end_time,time,,,time; after start_time,PM (a); SA; CD (a) for theme and dress code; HL (a) for logistics,CLIENT,Optional,—,"A-26 (AM-3), AM-2, P-8 (Q10)"
+F,functions,Planning,venue_kind,string,,"hotel_venue, external_venue, tbd",hotel_venue requires hotel_venue_id; external_venue requires external_venue_id,PM (a); SA; CD (a) for theme and dress code; HL (a) for logistics,CLIENT,At creation,—,"A-26 (AM-3), AM-2, P-8 (Q10)"
+F,functions,Planning,hotel_venue_id,uuid,FK,,references hotel_venues; nullable,PM (a); SA; CD (a) for theme and dress code; HL (a) for logistics,CLIENT,Optional,—,"A-26 (AM-3), AM-2, P-8 (Q10)"
+F,functions,Planning,external_venue_id,uuid,FK,,references external_venues; nullable,PM (a); SA; CD (a) for theme and dress code; HL (a) for logistics,CLIENT,Optional,—,"A-26 (AM-3), AM-2, P-8 (Q10)"
+F,functions,Planning,guest_estimate,int,,,"integer, 0 or more",PM (a); SA; CD (a) for theme and dress code; HL (a) for logistics,CLIENT,Optional,Compared with venue capacity; replaced by confirmed attendance,"A-26 (AM-3), AM-2, P-8 (Q10)"
+F,functions,Planning,theme,string,,,"string, up to 255 characters",PM (a); SA; CD (a) for theme and dress code; HL (a) for logistics,CLIENT,Optional,—,"A-26 (AM-3), AM-2, P-8 (Q10)"
+F,functions,Planning,dress_code,string,,,"string, up to 255 characters",PM (a); SA; CD (a) for theme and dress code; HL (a) for logistics,CLIENT,Optional,—,"A-26 (AM-3), AM-2, P-8 (Q10)"
+F,functions,Planning,status,string,,"planned, confirmed, cancelled",one of the listed options; (A-26),PM (a); SA; CD (a) for theme and dress code; HL (a) for logistics,CLIENT,At creation,Transitions per permission-matrix §7; each transition audited; notifications per §8,"A-26 (AM-3), AM-2, P-8 (Q10)"
+F,functions,Planning,readiness_status,string,,"not_started, in_progress, blocked, ready, live, completed",one of the listed options; derived from checklist (A-26),SYS from the readiness checklist; live and completed by PM (a),CLIENT,System,ready needs every required item done or excepted (A-26),"A-26 (AM-3), AM-2, P-8 (Q10)"
+F,functions,Planning,readiness_exception_note,text,,,"text, up to 10,000 characters; documented authorised exception (SPEC section 7)",PM (a); SA; CD (a) for theme and dress code; HL (a) for logistics,INTERNAL,When an exception is authorised,—,"A-26 (AM-3), AM-2, P-8 (Q10)"
+F,functions,Planning,readiness_exception_by,uuid,FK,,references users,SYS (authorising user),INTERNAL,System,—,"A-26 (AM-3), AM-2, P-8 (Q10)"
+F,functions,Planning,internal_notes,text,,,"text, up to 10,000 characters",PM (a); SA; CD (a) for theme and dress code; HL (a) for logistics,RESTRICTED-NOTES,Optional,"Never serialised to client, guest or demo principals","A-26 (AM-3), AM-2, P-8 (Q10)"
+F,function_programme_items,Planning,id,uuid,PK,,"UUID v7, generated",SYS,CLIENT when client_visible,System,—,
+F,function_programme_items,Planning,function_id,uuid,FK,,references functions,PM (a); SA; HL (a),CLIENT when client_visible,At creation,—,
+F,function_programme_items,Planning,start_time,time,,,time of day in the project time zone,PM (a); SA; HL (a),CLIENT when client_visible,At creation,—,
+F,function_programme_items,Planning,end_time,time,,,time; after start_time,PM (a); SA; HL (a),CLIENT when client_visible,Optional,—,
+F,function_programme_items,Planning,title,string,,,"string, up to 255 characters",PM (a); SA; HL (a),CLIENT,At creation,—,
+F,function_programme_items,Planning,description,text,,,"text, up to 10,000 characters",PM (a); SA; HL (a),CLIENT,Optional,—,
+F,function_programme_items,Planning,client_visible,bool,,,true or false; default true,PM (a); SA; HL (a),CLIENT when client_visible,Optional,Shared programme for the client and guests,
+F,run_of_show_items,Pre-production,id,uuid,PK,,"UUID v7, generated",SYS,INTERNAL,System,—,A-1 (Q1) offline read cache
+F,run_of_show_items,Pre-production,function_id,uuid,FK,,references functions,PM (a); HL (a); SA; VC (a) for vendor cues,INTERNAL,At creation,—,A-1 (Q1) offline read cache
+F,run_of_show_items,Pre-production,sequence,int,,,"integer, 0 or more; unique within its parent",PM (a); HL (a); SA; VC (a) for vendor cues,INTERNAL,At creation,—,A-1 (Q1) offline read cache
+F,run_of_show_items,Pre-production,planned_start,datetime,,,timestamp (UTC),PM (a); HL (a); SA; VC (a) for vendor cues,INTERNAL,At creation,—,A-1 (Q1) offline read cache
+F,run_of_show_items,Pre-production,planned_end,datetime,,,timestamp (UTC); not before planned_start,PM (a); HL (a); SA; VC (a) for vendor cues,INTERNAL,Optional,—,A-1 (Q1) offline read cache
+F,run_of_show_items,Pre-production,cue,string,,,"string, up to 255 characters",PM (a); HL (a); SA; VC (a) for vendor cues,INTERNAL,At creation,—,A-1 (Q1) offline read cache
+F,run_of_show_items,Pre-production,description,text,,,"text, up to 10,000 characters",PM (a); HL (a); SA; VC (a) for vendor cues,INTERNAL,Optional,—,A-1 (Q1) offline read cache
+F,run_of_show_items,Pre-production,owner_user_id,uuid,FK,,references users,PM (a); HL (a),INTERNAL,At creation,Owner sees the cue on the live view,A-1 (Q1) offline read cache
+F,run_of_show_items,Pre-production,vendor_assignment_id,uuid,FK,,references vendor_assignments; nullable,PM (a); HL (a); SA; VC (a) for vendor cues,INTERNAL,Optional,—,A-1 (Q1) offline read cache
+F,run_of_show_items,Pre-production,status,string,,"pending, in_progress, done, skipped",one of the listed options,PM (a); HL (a); SA; VC (a) for vendor cues,INTERNAL,At creation,Live execution view; skipped cues reported,A-1 (Q1) offline read cache
+F,run_of_show_items,Pre-production,actual_start,datetime,,,timestamp (UTC),HL (a); PM (a) on the day,INTERNAL,Optional,Live timeline and post-event report,A-1 (Q1) offline read cache
+F,run_of_show_items,Pre-production,actual_end,datetime,,,timestamp (UTC),HL (a); PM (a) on the day,INTERNAL,Optional,Live timeline and post-event report,A-1 (Q1) offline read cache
+F,run_of_show_items,Pre-production,notes,text,,,"text, up to 10,000 characters",PM (a); HL (a); SA; VC (a) for vendor cues,INTERNAL,Optional,—,A-1 (Q1) offline read cache
+G,budget_categories,Configuration,id,uuid,PK,,"UUID v7, generated",SYS,CLIENT,System,—,
+G,budget_categories,Configuration,category_key,string,UK,,lowercase snake_case; unique,SA; FA,CLIENT,At creation,—,
+G,budget_categories,Configuration,name,string,,,"string, up to 255 characters",SA; FA,CLIENT,At creation,—,
+G,budget_categories,Configuration,parent_id,uuid,FK,,references budget_categories; no cycles,SA; FA,CLIENT,Optional,—,
+G,budget_categories,Configuration,sort_order,int,,,"integer, 0 or more; unique within its parent",SA; FA,CLIENT,Optional,—,
+G,budget_categories,Configuration,is_active,bool,,,true or false,SA; FA,CLIENT,Optional,—,
+G,budget_lines,Planning,id,uuid,PK,,"UUID v7, generated",SYS,CLIENT when client_visible,System,—,"A-4 (Q4), P-3 (Q4), A-25 (Q25)"
+G,budget_lines,Planning,project_id,uuid,FK,,references wedding_projects,PM (a); FA; SA; VC (a) for vendor lines; HT for hotel lines,CLIENT when client_visible,At creation,—,"A-4 (Q4), P-3 (Q4), A-25 (Q25)"
+G,budget_lines,Planning,function_id,uuid,FK,,references functions; nullable,PM (a); FA; SA; VC (a) for vendor lines; HT for hotel lines,CLIENT when client_visible,Optional,—,"A-4 (Q4), P-3 (Q4), A-25 (Q25)"
+G,budget_lines,Planning,category_id,uuid,FK,,references budget_categories,PM (a); FA; SA; VC (a) for vendor lines; HT for hotel lines,CLIENT when client_visible,At creation,—,"A-4 (Q4), P-3 (Q4), A-25 (Q25)"
+G,budget_lines,Planning,title,string,,,"string, up to 255 characters",PM (a); FA; SA; VC (a) for vendor lines; HT for hotel lines,CLIENT,At creation,—,"A-4 (Q4), P-3 (Q4), A-25 (Q25)"
+G,budget_lines,Planning,description,text,,,"text, up to 10,000 characters",PM (a); FA; SA; VC (a) for vendor lines; HT for hotel lines,CLIENT,Optional,—,"A-4 (Q4), P-3 (Q4), A-25 (Q25)"
+G,budget_lines,Planning,estimate_amount,decimal,,,"numeric(14,2), 0 or more; planning estimate",PM (a); FA; SA; VC (a) for vendor lines; HT for hotel lines,CLIENT,Before status proposed,Client budget summary; estimate change beyond the threshold sets a material flag (A-25),"A-4 (Q4), P-3 (Q4), A-25 (Q25)"
+G,budget_lines,Planning,approved_amount,decimal,,,"numeric(14,2), 0 or more; locked by approval",SYS from the approval that locked it; FA override is audited,CLIENT,Before status approved,Locked by approval; later changes go through a change request,"A-4 (Q4), P-3 (Q4), A-25 (Q25)"
+G,budget_lines,Planning,actual_amount,decimal,,,"numeric(14,2), 0 or more; amount billed to the client",FA; SA,CLIENT,Optional,Client variance = actual minus approved (SPEC §9),"A-4 (Q4), P-3 (Q4), A-25 (Q25)"
+G,budget_lines,Planning,internal_cost_estimate,decimal,,,"numeric(14,2), 0 or more; (A-4)",PM (a); VC (a); HT; FA,RESTRICTED-FINANCE,Optional,Internal variance and margin,"A-4 (Q4), P-3 (Q4), A-25 (Q25)"
+G,budget_lines,Planning,internal_cost_actual,decimal,,,"numeric(14,2), 0 or more; (A-4)",FA; SYS from cost entries,RESTRICTED-FINANCE,Optional,Internal variance and margin,"A-4 (Q4), P-3 (Q4), A-25 (Q25)"
+G,budget_lines,Planning,currency,string,,,"ISO 4217 code, default INR (A-16)",PM (a); FA; SA; VC (a) for vendor lines; HT for hotel lines,CLIENT when client_visible,At creation,—,"A-4 (Q4), P-3 (Q4), A-25 (Q25)"
+G,budget_lines,Planning,status,string,,"draft, proposed, approved, committed, invoiced, paid, closed",one of the listed options,PM (a); FA; SA; VC (a) for vendor lines; HT for hotel lines,CLIENT when client_visible,At creation,approved needs an approval row; committed when a contract is signed; invoiced and paid follow invoices and payments,"A-4 (Q4), P-3 (Q4), A-25 (Q25)"
+G,budget_lines,Planning,vendor_assignment_id,uuid,FK,,references vendor_assignments; nullable,PM (a); FA; SA; VC (a) for vendor lines; HT for hotel lines,CLIENT when client_visible,Optional,—,"A-4 (Q4), P-3 (Q4), A-25 (Q25)"
+G,budget_lines,Planning,hotel_enquiry_id,uuid,FK,,references hotel_enquiries; nullable,PM (a); FA; SA; VC (a) for vendor lines; HT for hotel lines,CLIENT when client_visible,Optional,—,"A-4 (Q4), P-3 (Q4), A-25 (Q25)"
+G,budget_lines,Planning,approval_id,uuid,FK,,references approvals; nullable,SYS,CLIENT when client_visible,Optional,—,"A-4 (Q4), P-3 (Q4), A-25 (Q25)"
+G,budget_lines,Planning,client_visible,bool,,,true or false,PM (a); FA; SA; VC (a) for vendor lines; HT for hotel lines,CLIENT when client_visible,Optional,Sharing audited; hidden lines are excluded from the client summary,"A-4 (Q4), P-3 (Q4), A-25 (Q25)"
+G,budget_lines,Planning,internal_notes,text,,,"text, up to 10,000 characters",PM (a); FA; SA; VC (a) for vendor lines; HT for hotel lines,RESTRICTED-NOTES,Optional,"Never serialised to client, guest or demo principals","A-4 (Q4), P-3 (Q4), A-25 (Q25)"
+G,cost_entries,Execution / closure,id,uuid,PK,,"UUID v7, generated",SYS,RESTRICTED-FINANCE,System,—,A-4 (Q4)
+G,cost_entries,Execution / closure,project_id,uuid,FK,,references wedding_projects,FA; SA; PM (a); VC (a); HT,RESTRICTED-FINANCE,At creation,—,A-4 (Q4)
+G,cost_entries,Execution / closure,budget_line_id,uuid,FK,,references budget_lines,FA; SA; PM (a); VC (a); HT,RESTRICTED-FINANCE,At creation,—,A-4 (Q4)
+G,cost_entries,Execution / closure,vendor_assignment_id,uuid,FK,,references vendor_assignments; nullable,FA; SA; PM (a); VC (a); HT,RESTRICTED-FINANCE,Optional,—,A-4 (Q4)
+G,cost_entries,Execution / closure,description,text,,,"text, up to 10,000 characters; whole table",FA; SA; PM (a); VC (a); HT,RESTRICTED-FINANCE,At creation,—,A-4 (Q4)
+G,cost_entries,Execution / closure,amount,decimal,,,"numeric(14,2), 0 or more",FA; SA; PM (a); VC (a); HT,RESTRICTED-FINANCE,At creation,Summed into budget_lines.internal_cost_actual and final accounts,A-4 (Q4)
+G,cost_entries,Execution / closure,currency,string,,,"ISO 4217 code, default INR (A-16)",FA; SA; PM (a); VC (a); HT,RESTRICTED-FINANCE,At creation,—,A-4 (Q4)
+G,cost_entries,Execution / closure,incurred_at,date,,,date,FA; PM (a); VC (a),RESTRICTED-FINANCE,At creation,—,A-4 (Q4)
+G,cost_entries,Execution / closure,invoice_id,uuid,FK,,"references invoices; nullable, vendor invoice",FA; SA; PM (a); VC (a); HT,RESTRICTED-FINANCE,Optional,—,A-4 (Q4)
+G,cost_entries,Execution / closure,payment_id,uuid,FK,,"references payments; nullable, outbound payment",FA; SA; PM (a); VC (a); HT,RESTRICTED-FINANCE,Optional,—,A-4 (Q4)
+G,contracts,Approvals,id,uuid,PK,,"UUID v7, generated",SYS,CLIENT when client_visible (client contracts); RESTRICTED-FINANCE for vendor and hotel contracts,System,—,"A-4 (Q4), P-3 (Q4)"
+G,contracts,Approvals,project_id,uuid,FK,,references wedding_projects; nullable for account-level client contracts,FA and SA for client contracts; VC for vendor contracts; HT for hotel contracts; PM (a),CLIENT when client_visible (client contracts); RESTRICTED-FINANCE for vendor and hotel contracts,Optional,—,"A-4 (Q4), P-3 (Q4)"
+G,contracts,Approvals,party_type,string,,"client, vendor, hotel",one of the listed options,FA and SA for client contracts; VC for vendor contracts; HT for hotel contracts; PM (a),CLIENT when client_visible (client contracts); RESTRICTED-FINANCE for vendor and hotel contracts,At creation,—,"A-4 (Q4), P-3 (Q4)"
+G,contracts,Approvals,party_id,uuid,,,"references client_accounts, vendors or hotels per party_type",FA and SA for client contracts; VC for vendor contracts; HT for hotel contracts; PM (a),CLIENT when client_visible (client contracts); RESTRICTED-FINANCE for vendor and hotel contracts,At creation,—,"A-4 (Q4), P-3 (Q4)"
+G,contracts,Approvals,vendor_assignment_id,uuid,FK,,references vendor_assignments; nullable,FA and SA for client contracts; VC for vendor contracts; HT for hotel contracts; PM (a),CLIENT when client_visible (client contracts); RESTRICTED-FINANCE for vendor and hotel contracts,Optional,—,"A-4 (Q4), P-3 (Q4)"
+G,contracts,Approvals,hotel_enquiry_id,uuid,FK,,references hotel_enquiries; nullable,FA and SA for client contracts; VC for vendor contracts; HT for hotel contracts; PM (a),CLIENT when client_visible (client contracts); RESTRICTED-FINANCE for vendor and hotel contracts,Optional,—,"A-4 (Q4), P-3 (Q4)"
+G,contracts,Approvals,title,string,,,"string, up to 255 characters",FA and SA for client contracts; VC for vendor contracts; HT for hotel contracts; PM (a),CLIENT when client_visible (client contracts); RESTRICTED-FINANCE for vendor and hotel contracts,At creation,—,"A-4 (Q4), P-3 (Q4)"
+G,contracts,Approvals,amount,decimal,,,"numeric(14,2), 0 or more",FA and SA for client contracts; VC for vendor contracts; HT for hotel contracts; PM (a),CLIENT when client_visible (client contracts); RESTRICTED-FINANCE for vendor and hotel contracts,At creation,—,"A-4 (Q4), P-3 (Q4)"
+G,contracts,Approvals,currency,string,,,"ISO 4217 code, default INR (A-16)",FA and SA for client contracts; VC for vendor contracts; HT for hotel contracts; PM (a),CLIENT when client_visible (client contracts); RESTRICTED-FINANCE for vendor and hotel contracts,At creation,—,"A-4 (Q4), P-3 (Q4)"
+G,contracts,Approvals,start_date,date,,,date,FA and SA for client contracts; VC for vendor contracts; HT for hotel contracts; PM (a),CLIENT when client_visible (client contracts); RESTRICTED-FINANCE for vendor and hotel contracts,Optional,—,"A-4 (Q4), P-3 (Q4)"
+G,contracts,Approvals,end_date,date,,,date; not before start_date,FA and SA for client contracts; VC for vendor contracts; HT for hotel contracts; PM (a),CLIENT when client_visible (client contracts); RESTRICTED-FINANCE for vendor and hotel contracts,Optional,—,"A-4 (Q4), P-3 (Q4)"
+G,contracts,Approvals,status,string,,"draft, sent, signed, active, completed, terminated",one of the listed options,FA and SA for client contracts; VC for vendor contracts; HT for hotel contracts; PM (a),CLIENT when client_visible (client contracts); RESTRICTED-FINANCE for vendor and hotel contracts,At creation,signed moves linked budget lines to committed and vendor assignments to contracted; audited,"A-4 (Q4), P-3 (Q4)"
+G,contracts,Approvals,signed_at,datetime,,,timestamp (UTC),FA; VC; HT,CLIENT when client_visible (client contracts); RESTRICTED-FINANCE for vendor and hotel contracts,Before status signed,—,"A-4 (Q4), P-3 (Q4)"
+G,contracts,Approvals,document_id,uuid,FK,,references see data model,FA and SA for client contracts; VC for vendor contracts; HT for hotel contracts; PM (a),CLIENT when client_visible (client contracts); RESTRICTED-FINANCE for vendor and hotel contracts,Before status signed,—,"A-4 (Q4), P-3 (Q4)"
+G,contracts,Approvals,client_visible,bool,,,true only when party_type is client,FA and SA for client contracts; VC for vendor contracts; HT for hotel contracts; PM (a),CLIENT when client_visible (client contracts); RESTRICTED-FINANCE for vendor and hotel contracts,Optional,Sharing audited,"A-4 (Q4), P-3 (Q4)"
+G,contracts,Approvals,internal_notes,text,,,"text, up to 10,000 characters",FA and SA for client contracts; VC for vendor contracts; HT for hotel contracts; PM (a),RESTRICTED-NOTES,Optional,"Never serialised to client, guest or demo principals","A-4 (Q4), P-3 (Q4)"
+G,invoices,Approvals / closure,id,uuid,PK,,"UUID v7, generated",SYS,CLIENT when direction is issued_to_client; RESTRICTED-FINANCE otherwise,System,—,"A-16 (Q16), GP-17, GP-18"
+G,invoices,Approvals / closure,account_id,uuid,FK,,references client_accounts,FA; SA; VC (a) and HT for received invoices,CLIENT when direction is issued_to_client; RESTRICTED-FINANCE otherwise,At creation,—,"A-16 (Q16), GP-17, GP-18"
+G,invoices,Approvals / closure,project_id,uuid,FK,,references wedding_projects; nullable,FA; SA; VC (a) and HT for received invoices,CLIENT when direction is issued_to_client; RESTRICTED-FINANCE otherwise,Optional,—,"A-16 (Q16), GP-17, GP-18"
+G,invoices,Approvals / closure,direction,string,,"issued_to_client, received_from_vendor, received_from_hotel",one of the listed options; (GP-17),FA; SA; VC (a) and HT for received invoices,CLIENT when direction is issued_to_client; RESTRICTED-FINANCE otherwise,At creation,—,"A-16 (Q16), GP-17, GP-18"
+G,invoices,Approvals / closure,counterparty_type,string,,,"string, up to 255 characters",FA; SA; VC (a) and HT for received invoices,CLIENT when direction is issued_to_client; RESTRICTED-FINANCE otherwise,At creation,—,"A-16 (Q16), GP-17, GP-18"
+G,invoices,Approvals / closure,counterparty_id,uuid,,,"references client_accounts, vendors or hotels per counterparty_type",FA; SA; VC (a) and HT for received invoices,CLIENT when direction is issued_to_client; RESTRICTED-FINANCE otherwise,At creation,—,"A-16 (Q16), GP-17, GP-18"
+G,invoices,Approvals / closure,invoice_number,string,UK,,sequential per financial year; unique; assigned at issue,SYS,CLIENT when direction is issued_to_client; RESTRICTED-FINANCE otherwise,System at issue,—,"A-16 (Q16), GP-17, GP-18"
+G,invoices,Approvals / closure,issue_date,date,,,date,FA; SA; VC (a) and HT for received invoices,CLIENT when direction is issued_to_client; RESTRICTED-FINANCE otherwise,At creation,—,"A-16 (Q16), GP-17, GP-18"
+G,invoices,Approvals / closure,due_date,date,,,date; not before issue_date,FA; SA; VC (a) and HT for received invoices,CLIENT when direction is issued_to_client; RESTRICTED-FINANCE otherwise,At creation,Overdue by job; dashboards and client notice,"A-16 (Q16), GP-17, GP-18"
+G,invoices,Approvals / closure,subtotal_amount,decimal,,,"numeric(14,2), 0 or more",FA; SA; VC (a) and HT for received invoices,CLIENT when direction is issued_to_client; RESTRICTED-FINANCE otherwise,At creation,—,"A-16 (Q16), GP-17, GP-18"
+G,invoices,Approvals / closure,tax_rate,decimal,,,percentage 0 to 100 with 2 decimals,FA; SA; VC (a) and HT for received invoices,CLIENT when direction is issued_to_client; RESTRICTED-FINANCE otherwise,Optional,—,"A-16 (Q16), GP-17, GP-18"
+G,invoices,Approvals / closure,tax_amount,decimal,,,subtotal multiplied by tax_rate,SYS,CLIENT when direction is issued_to_client; RESTRICTED-FINANCE otherwise,Optional,—,"A-16 (Q16), GP-17, GP-18"
+G,invoices,Approvals / closure,total_amount,decimal,,,subtotal plus tax,FA; SA; VC (a) and HT for received invoices,CLIENT when direction is issued_to_client; RESTRICTED-FINANCE otherwise,At creation,—,"A-16 (Q16), GP-17, GP-18"
+G,invoices,Approvals / closure,currency,string,,,"ISO 4217 code, default INR (A-16)",FA; SA; VC (a) and HT for received invoices,CLIENT when direction is issued_to_client; RESTRICTED-FINANCE otherwise,At creation,—,"A-16 (Q16), GP-17, GP-18"
+G,invoices,Approvals / closure,supplier_gstin,string,,,15-character GSTIN format,FA; SA; VC (a) and HT for received invoices,CLIENT when direction is issued_to_client; RESTRICTED-FINANCE otherwise,When GST invoicing is enabled (Q16),—,"A-16 (Q16), GP-17, GP-18"
+G,invoices,Approvals / closure,recipient_gstin,string,,,15-character GSTIN format,FA; SA; VC (a) and HT for received invoices,CLIENT when direction is issued_to_client; RESTRICTED-FINANCE otherwise,Optional,—,"A-16 (Q16), GP-17, GP-18"
+G,invoices,Approvals / closure,place_of_supply,string,,,Indian state code,FA; SA; VC (a) and HT for received invoices,CLIENT when direction is issued_to_client; RESTRICTED-FINANCE otherwise,When GST invoicing is enabled (Q16),—,"A-16 (Q16), GP-17, GP-18"
+G,invoices,Approvals / closure,status,string,,"draft, issued, partially_paid, paid, overdue, cancelled, credited",one of the listed options,FA; SA; VC (a) and HT for received invoices,CLIENT when direction is issued_to_client; RESTRICTED-FINANCE otherwise,At creation,issued notifies the client and sets the milestone invoiced; paid from payments; overdue by job,"A-16 (Q16), GP-17, GP-18"
+G,invoices,Approvals / closure,payment_milestone_id,uuid,FK,,references payment_milestones; nullable,FA; SA; VC (a) and HT for received invoices,CLIENT when direction is issued_to_client; RESTRICTED-FINANCE otherwise,Optional,—,"A-16 (Q16), GP-17, GP-18"
+G,invoices,Approvals / closure,document_id,uuid,FK,,references see data model,SYS,CLIENT when direction is issued_to_client; RESTRICTED-FINANCE otherwise,Before status issued (generated PDF),—,"A-16 (Q16), GP-17, GP-18"
+G,invoices,Approvals / closure,client_visible,bool,,,true only when direction is issued_to_client,FA; SA; VC (a) and HT for received invoices,CLIENT when direction is issued_to_client; RESTRICTED-FINANCE otherwise,Optional,Sharing change audited; switches the client serialiser,"A-16 (Q16), GP-17, GP-18"
+G,invoice_lines,Approvals / closure,id,uuid,PK,,"UUID v7, generated",SYS,Same class as the invoice,System,—,
+G,invoice_lines,Approvals / closure,invoice_id,uuid,FK,,references invoices,FA; SA,Same class as the invoice,At creation,—,
+G,invoice_lines,Approvals / closure,description,text,,,"text, up to 10,000 characters",FA; SA,Same class as the invoice,At creation,—,
+G,invoice_lines,Approvals / closure,budget_line_id,uuid,FK,,references budget_lines; nullable,FA; SA,Same class as the invoice,Optional,—,
+G,invoice_lines,Approvals / closure,hsn_sac_code,string,,,4 to 8 digits,FA; SA,Same class as the invoice,When GST invoicing is enabled (Q16),—,
+G,invoice_lines,Approvals / closure,quantity,decimal,,,"numeric, more than 0",FA; SA,Same class as the invoice,At creation,—,
+G,invoice_lines,Approvals / closure,unit_amount,decimal,,,"numeric(14,2), 0 or more",FA; SA,Same class as the invoice,At creation,—,
+G,invoice_lines,Approvals / closure,tax_rate,decimal,,,percentage 0 to 100,FA; SA,Same class as the invoice,Optional,—,
+G,invoice_lines,Approvals / closure,line_total,decimal,,,quantity multiplied by unit_amount plus tax,FA; SA,Same class as the invoice,At creation,—,
+G,project_final_accounts,Closure,id,uuid,PK,,"UUID v7, generated",SYS,INTERNAL,System,—,"A-4 (Q4), P-3 (Q4)"
+G,project_final_accounts,Closure,project_id,uuid,FK,,references wedding_projects,FA; SA; PM (a) compiles,INTERNAL,At creation,—,"A-4 (Q4), P-3 (Q4)"
+G,project_final_accounts,Closure,total_client_billed,decimal,,,"numeric(14,2), 0 or more",SYS,CLIENT (closing statement),Optional,Sum of issued client invoices,"A-4 (Q4), P-3 (Q4)"
+G,project_final_accounts,Closure,total_client_paid,decimal,,,"numeric(14,2), 0 or more",SYS,CLIENT (closing statement),Optional,Sum of succeeded inbound payments,"A-4 (Q4), P-3 (Q4)"
+G,project_final_accounts,Closure,total_vendor_cost,decimal,,,"numeric(14,2), 0 or more",SYS,RESTRICTED-FINANCE,Optional,Sum of vendor cost entries,"A-4 (Q4), P-3 (Q4)"
+G,project_final_accounts,Closure,total_hotel_cost,decimal,,,"numeric(14,2), 0 or more",SYS,RESTRICTED-FINANCE,Optional,Sum of hotel cost entries,"A-4 (Q4), P-3 (Q4)"
+G,project_final_accounts,Closure,margin_amount,decimal,,,billed minus vendor and hotel cost,SYS,RESTRICTED-FINANCE,Optional,"Margin report (FA, SA only)","A-4 (Q4), P-3 (Q4)"
+G,project_final_accounts,Closure,status,string,,"draft, reconciled, approved, closed",one of the listed options,FA; SA; PM (a) compiles,INTERNAL,At creation,approved is required before the project can close (permission-matrix §7),"A-4 (Q4), P-3 (Q4)"
+G,project_final_accounts,Closure,reconciled_by,uuid,FK,,references users,SYS (acting user),INTERNAL,System,—,"A-4 (Q4), P-3 (Q4)"
+G,project_final_accounts,Closure,approved_by,uuid,FK,,references users,SYS (acting user),INTERNAL,System,—,"A-4 (Q4), P-3 (Q4)"
+G,project_final_accounts,Closure,document_id,uuid,FK,,references see data model,FA; SA; PM (a) compiles,INTERNAL,Optional,—,"A-4 (Q4), P-3 (Q4)"
+H,vendor_categories,Configuration,id,uuid,PK,,"UUID v7, generated",SYS,CLIENT,System,—,
+H,vendor_categories,Configuration,category_key,string,UK,,"lowercase snake_case; unique; decor, photography, videography, sound_light, artists, catering, tents_props, sfx, transport, other",SA; VC,CLIENT,At creation,—,
+H,vendor_categories,Configuration,name,string,,,"string, up to 255 characters",SA; VC,CLIENT,At creation,—,
+H,vendor_categories,Configuration,parent_id,uuid,FK,,references vendor_categories; no cycles,SA; VC,CLIENT,Optional,—,
+H,vendor_categories,Configuration,is_active,bool,,,true or false,SA; VC,CLIENT,Optional,—,
+H,vendors,Vendor onboarding,id,uuid,PK,,"UUID v7, generated",SYS,CLIENT,System,—,"A-22 (Q22), P-11 (Q22), P-3 contact tier"
+H,vendors,Vendor onboarding,name,string,,,"string, up to 255 characters; when presented",VC; SA,CLIENT,At creation,—,"A-22 (Q22), P-11 (Q22), P-3 contact tier"
+H,vendors,Vendor onboarding,primary_category_id,uuid,FK,,references vendor_categories,VC; SA,CLIENT,At creation,—,"A-22 (Q22), P-11 (Q22), P-3 contact tier"
+H,vendors,Vendor onboarding,description_client,text,,,"text, up to 10,000 characters",VC; SA,CLIENT,Before the vendor is presented to a client,—,"A-22 (Q22), P-11 (Q22), P-3 contact tier"
+H,vendors,Vendor onboarding,contact_name,string,,,"string, up to 255 characters",VC; SA,RESTRICTED-CONTACT,Optional,—,"A-22 (Q22), P-11 (Q22), P-3 contact tier"
+H,vendors,Vendor onboarding,phone,string,,,"E.164 format, default +91",VC; SA,RESTRICTED-CONTACT,Optional,—,"A-22 (Q22), P-11 (Q22), P-3 contact tier"
+H,vendors,Vendor onboarding,email,string,,,"valid email address, stored lowercase",VC; SA,RESTRICTED-CONTACT,Optional,—,"A-22 (Q22), P-11 (Q22), P-3 contact tier"
+H,vendors,Vendor onboarding,website,string,,,valid URL,VC; SA,CLIENT,Optional,—,"A-22 (Q22), P-11 (Q22), P-3 contact tier"
+H,vendors,Vendor onboarding,instagram_handle,string,,,handle without the at sign,VC; SA,CLIENT,Optional,—,"A-22 (Q22), P-11 (Q22), P-3 contact tier"
+H,vendors,Vendor onboarding,base_city,string,,,"string, up to 255 characters",VC; SA,CLIENT,Optional,—,"A-22 (Q22), P-11 (Q22), P-3 contact tier"
+H,vendors,Vendor onboarding,service_area,string,,,"string, up to 255 characters",VC; SA,CLIENT,Optional,—,"A-22 (Q22), P-11 (Q22), P-3 contact tier"
+H,vendors,Vendor onboarding,status,string,,"prospective, active, preferred, inactive, blacklisted",one of the listed options,VC; SA,INTERNAL,At creation,blacklisted and inactive vendors cannot be assigned,"A-22 (Q22), P-11 (Q22), P-3 contact tier"
+H,vendors,Vendor onboarding,internal_rating,int,,,integer 1 to 5,VC; SA,RESTRICTED-NOTES,Optional,—,"A-22 (Q22), P-11 (Q22), P-3 contact tier"
+H,vendors,Vendor onboarding,internal_notes,text,,,"text, up to 10,000 characters",VC; SA,RESTRICTED-NOTES,Optional,"Never serialised to client, guest or demo principals","A-22 (Q22), P-11 (Q22), P-3 contact tier"
+H,vendors,Vendor onboarding,gstin,string,,,15-character GSTIN format,VC; SA,INTERNAL,Optional,—,"A-22 (Q22), P-11 (Q22), P-3 contact tier"
+H,vendors,Vendor onboarding,bank_details_document_id,uuid,FK,,references documents,VC; SA,RESTRICTED-BANK,Optional,—,"A-22 (Q22), P-11 (Q22), P-3 contact tier"
+H,vendors,Vendor onboarding,onboarded_at,datetime,,,timestamp (UTC),VC,INTERNAL,Optional,—,"A-22 (Q22), P-11 (Q22), P-3 contact tier"
+H,vendor_category_links,Vendor onboarding,id,uuid,PK,,"UUID v7, generated",SYS,CLIENT,System,—,
+H,vendor_category_links,Vendor onboarding,vendor_id,uuid,FK,,references vendors,VC; SA,CLIENT,At creation,—,
+H,vendor_category_links,Vendor onboarding,category_id,uuid,FK,,references vendor_categories,VC; SA,CLIENT,At creation,—,
+H,vendor_availability,Vendor onboarding / planning,id,uuid,PK,,"UUID v7, generated",SYS,INTERNAL,System,—,GP-21
+H,vendor_availability,Vendor onboarding / planning,vendor_id,uuid,FK,,references vendors,VC; SA,INTERNAL,At creation,—,GP-21
+H,vendor_availability,Vendor onboarding / planning,date_from,date,,,date,VC; SA,INTERNAL,At creation,—,GP-21
+H,vendor_availability,Vendor onboarding / planning,date_to,date,,,date; not before date_from,VC; SA,INTERNAL,At creation,—,GP-21
+H,vendor_availability,Vendor onboarding / planning,status,string,,"available, tentative, booked, unavailable",one of the listed options; (GP-21),VC; SA,INTERNAL,At creation,booked windows warn when the vendor is assigned to an overlapping function,GP-21
+H,vendor_availability,Vendor onboarding / planning,verified_at,datetime,,,timestamp (UTC),VC,INTERNAL,Optional,Stale after the configured age (BIZ rule 6),GP-21
+H,vendor_availability,Vendor onboarding / planning,verified_by,uuid,FK,,references users,SYS (acting user),INTERNAL,System,—,GP-21
+H,vendor_availability,Vendor onboarding / planning,source,string,,,"string, up to 255 characters",VC; SA,INTERNAL,Optional,—,GP-21
+H,vendor_availability,Vendor onboarding / planning,note,text,,,"text, up to 10,000 characters",VC; SA,INTERNAL,Optional,—,GP-21
+H,vendor_assignments,Planning (presenting options),id,uuid,PK,,"UUID v7, generated",SYS,CLIENT once presented_at is set,System,—,"A-4 (Q4), SPEC §5 vendor decision"
+H,vendor_assignments,Planning (presenting options),project_id,uuid,FK,,references wedding_projects,"VC; PM (a); SA; client decision by CO, CA",CLIENT once presented_at is set,At creation,—,"A-4 (Q4), SPEC §5 vendor decision"
+H,vendor_assignments,Planning (presenting options),function_id,uuid,FK,,references functions; nullable,"VC; PM (a); SA; client decision by CO, CA",CLIENT once presented_at is set,Optional,—,"A-4 (Q4), SPEC §5 vendor decision"
+H,vendor_assignments,Planning (presenting options),vendor_id,uuid,FK,,references vendors,"VC; PM (a); SA; client decision by CO, CA",CLIENT once presented_at is set,At creation,—,"A-4 (Q4), SPEC §5 vendor decision"
+H,vendor_assignments,Planning (presenting options),category_id,uuid,FK,,references vendor_categories,"VC; PM (a); SA; client decision by CO, CA",CLIENT once presented_at is set,At creation,—,"A-4 (Q4), SPEC §5 vendor decision"
+H,vendor_assignments,Planning (presenting options),scope_text,text,,,"text, up to 10,000 characters","VC; PM (a); SA; client decision by CO, CA",CLIENT,Before presented,—,"A-4 (Q4), SPEC §5 vendor decision"
+H,vendor_assignments,Planning (presenting options),status,string,,"option, shortlisted, selected, contracted, delivering, completed, cancelled, declined",one of the listed options,"VC; PM (a); SA; client decision by CO, CA",CLIENT once presented_at is set,At creation,Per §7; selected links the vendor to the project; completed needs every deliverable accepted,"A-4 (Q4), SPEC §5 vendor decision"
+H,vendor_assignments,Planning (presenting options),client_decision,string,,"none, interested, shortlisted, selected, declined",one of the listed options; (SPEC section 5),"CO, CA; VC or PM (a) recording the decision",CLIENT once presented_at is set,At creation,selected moves status to selected; declined closes the option,"A-4 (Q4), SPEC §5 vendor decision"
+H,vendor_assignments,Planning (presenting options),client_decision_at,datetime,,,timestamp (UTC),SYS (when the action happens),CLIENT once presented_at is set,System,—,"A-4 (Q4), SPEC §5 vendor decision"
+H,vendor_assignments,Planning (presenting options),client_decision_by,uuid,FK,,references users,SYS (acting user),CLIENT once presented_at is set,System,—,"A-4 (Q4), SPEC §5 vendor decision"
+H,vendor_assignments,Planning (presenting options),presented_at,datetime,,,timestamp (UTC); sees the option from here,SYS when the option is shared,CLIENT,System,Makes the option client-visible,"A-4 (Q4), SPEC §5 vendor decision"
+H,vendor_assignments,Planning (presenting options),contract_id,uuid,FK,,references contracts; nullable,SYS,INTERNAL,Optional,—,"A-4 (Q4), SPEC §5 vendor decision"
+H,vendor_assignments,Planning (presenting options),completion_confirmed_at,datetime,,,timestamp (UTC); vendor completion for closure,SYS,INTERNAL,System,Closure checklist vendor completion item,"A-4 (Q4), SPEC §5 vendor decision"
+H,vendor_assignments,Planning (presenting options),completion_confirmed_by,uuid,FK,,references users,SYS (acting user),CLIENT once presented_at is set,System,—,"A-4 (Q4), SPEC §5 vendor decision"
+H,vendor_assignments,Planning (presenting options),share_contact,bool,,,true or false; true only in an AMPM-approved case (Q4),"VC; PM (a); SA; client decision by CO, CA",CLIENT once presented_at is set,Optional,—,"A-4 (Q4), SPEC §5 vendor decision"
+H,vendor_assignments,Planning (presenting options),internal_notes,text,,,"text, up to 10,000 characters","VC; PM (a); SA; client decision by CO, CA",RESTRICTED-NOTES,Optional,"Never serialised to client, guest or demo principals","A-4 (Q4), SPEC §5 vendor decision"
+H,vendor_quotes,Planning,id,uuid,PK,,"UUID v7, generated",SYS,RESTRICTED-FINANCE,System,—,"A-4 (Q4), P-3 (Q4)"
+H,vendor_quotes,Planning,vendor_id,uuid,FK,,references vendors,VC; SA,RESTRICTED-FINANCE,At creation,—,"A-4 (Q4), P-3 (Q4)"
+H,vendor_quotes,Planning,project_id,uuid,FK,,references wedding_projects,VC; SA,RESTRICTED-FINANCE,At creation,—,"A-4 (Q4), P-3 (Q4)"
+H,vendor_quotes,Planning,vendor_assignment_id,uuid,FK,,references vendor_assignments; nullable,VC; SA,RESTRICTED-FINANCE,Optional,—,"A-4 (Q4), P-3 (Q4)"
+H,vendor_quotes,Planning,version_number,int,,,"integer, 1 or more; increments by 1 within its parent; immutable once shared",VC; SA,RESTRICTED-FINANCE,At creation,A new version supersedes earlier approvals (SPEC §12),"A-4 (Q4), P-3 (Q4)"
+H,vendor_quotes,Planning,amount,decimal,,,"numeric(14,2), 0 or more; whole table, raw quote to AMPM",VC; SA,RESTRICTED-FINANCE,At creation,—,"A-4 (Q4), P-3 (Q4)"
+H,vendor_quotes,Planning,currency,string,,,"ISO 4217 code, default INR (A-16)",VC; SA,RESTRICTED-FINANCE,At creation,—,"A-4 (Q4), P-3 (Q4)"
+H,vendor_quotes,Planning,received_at,datetime,,,timestamp (UTC),VC,RESTRICTED-FINANCE,At creation,—,"A-4 (Q4), P-3 (Q4)"
+H,vendor_quotes,Planning,valid_until,date,,,date,VC; SA,RESTRICTED-FINANCE,Optional,Expired quotes flagged,"A-4 (Q4), P-3 (Q4)"
+H,vendor_quotes,Planning,document_id,uuid,FK,,references see data model,VC; SA,RESTRICTED-FINANCE,Optional,—,"A-4 (Q4), P-3 (Q4)"
+H,vendor_quotes,Planning,status,string,,"received, shortlisted, selected, rejected, expired",one of the listed options,VC; SA,RESTRICTED-FINANCE,At creation,Transitions per permission-matrix §7; each transition audited; notifications per §8,"A-4 (Q4), P-3 (Q4)"
+H,vendor_quotes,Planning,internal_notes,text,,,"text, up to 10,000 characters",VC; SA,RESTRICTED-FINANCE,Optional,"Never serialised to client, guest or demo principals","A-4 (Q4), P-3 (Q4)"
+H,vendor_proposals,Planning,id,uuid,PK,,"UUID v7, generated",SYS,CLIENT when shared,System,—,"A-4 (Q4), P-3 (Q4)"
+H,vendor_proposals,Planning,vendor_assignment_id,uuid,FK,,references vendor_assignments,VC; PM (a); SA,CLIENT when shared,At creation,—,"A-4 (Q4), P-3 (Q4)"
+H,vendor_proposals,Planning,version_number,int,,,"integer, 1 or more; increments by 1 within its parent; immutable once shared",VC; PM (a); SA,CLIENT when shared,At creation,A new version supersedes earlier approvals (SPEC §12),"A-4 (Q4), P-3 (Q4)"
+H,vendor_proposals,Planning,title,string,,,"string, up to 255 characters",VC; PM (a); SA,CLIENT,At creation,—,"A-4 (Q4), P-3 (Q4)"
+H,vendor_proposals,Planning,description_client,text,,,"text, up to 10,000 characters",VC; PM (a); SA,CLIENT,Optional,—,"A-4 (Q4), P-3 (Q4)"
+H,vendor_proposals,Planning,inclusions_text,text,,,"text, up to 10,000 characters",VC; PM (a); SA,CLIENT,Optional,—,"A-4 (Q4), P-3 (Q4)"
+H,vendor_proposals,Planning,client_visible_amount,decimal,,,"numeric(14,2), 0 or more; (A-4)",VC; PM (a); SA,CLIENT,Before status shared,Client budget and approval,"A-4 (Q4), P-3 (Q4)"
+H,vendor_proposals,Planning,internal_cost,decimal,,,"numeric(14,2), 0 or more; (A-4)",VC; PM (a); SA,RESTRICTED-FINANCE,Before status shared (margin check),Margin report,"A-4 (Q4), P-3 (Q4)"
+H,vendor_proposals,Planning,currency,string,,,"ISO 4217 code, default INR (A-16)",VC; PM (a); SA,CLIENT when shared,At creation,—,"A-4 (Q4), P-3 (Q4)"
+H,vendor_proposals,Planning,status,string,,"draft, shared, revision_requested, accepted, declined, superseded",one of the listed options,VC; PM (a); SA,CLIENT when shared,At creation,shared notifies approvers; accepted locks the version and creates or updates the budget line; superseded on a new version,"A-4 (Q4), P-3 (Q4)"
+H,vendor_proposals,Planning,shared_at,datetime,,,timestamp (UTC),SYS (when the action happens),CLIENT when shared,System,—,"A-4 (Q4), P-3 (Q4)"
+H,vendor_proposals,Planning,decided_at,datetime,,,timestamp (UTC),SYS (when the action happens),CLIENT when shared,System,—,"A-4 (Q4), P-3 (Q4)"
+H,vendor_proposals,Planning,decided_by_user_id,uuid,FK,,references users,SYS (acting user),CLIENT when shared,System,—,"A-4 (Q4), P-3 (Q4)"
+H,vendor_proposals,Planning,approval_id,uuid,FK,,references approvals,SYS,CLIENT when shared,Optional,—,"A-4 (Q4), P-3 (Q4)"
+H,vendor_proposals,Planning,document_id,uuid,FK,,references see data model,VC; PM (a); SA,CLIENT when shared,Before status shared,—,"A-4 (Q4), P-3 (Q4)"
+H,vendor_proposals,Planning,supersedes_proposal_id,uuid,FK,,references vendor_proposals,SYS,CLIENT when shared,Optional,—,"A-4 (Q4), P-3 (Q4)"
+H,vendor_deliverables,Approvals,id,uuid,PK,,"UUID v7, generated",SYS,INTERNAL,System,—,
+H,vendor_deliverables,Approvals,vendor_assignment_id,uuid,FK,,references vendor_assignments,VC; PM (a); SA; HL (a) marks delivered,INTERNAL,At creation,—,
+H,vendor_deliverables,Approvals,function_id,uuid,FK,,references functions; nullable,VC; PM (a); SA; HL (a) marks delivered,INTERNAL,Optional,—,
+H,vendor_deliverables,Approvals,title,string,,,"string, up to 255 characters",VC; PM (a); SA; HL (a) marks delivered,INTERNAL,At creation,—,
+H,vendor_deliverables,Approvals,due_at,datetime,,,timestamp (UTC),VC; PM (a),INTERNAL,Optional,Overdue items appear on dashboards (SPEC §8),
+H,vendor_deliverables,Approvals,status,string,,"pending, in_progress, delivered, accepted, rejected",one of the listed options,VC; PM (a); SA; HL (a) marks delivered,INTERNAL,At creation,"accepted by PM (a); when all are accepted, completion_confirmed_at is set on the assignment",
+H,vendor_deliverables,Approvals,accepted_by,uuid,FK,,references users,SYS (acting user),INTERNAL,System,—,
+H,vendor_deliverables,Approvals,accepted_at,datetime,,,timestamp (UTC),SYS (when the action happens),INTERNAL,System,—,
+H,vendor_deliverables,Approvals,notes,text,,,"text, up to 10,000 characters",VC; PM (a); SA; HL (a) marks delivered,INTERNAL,Optional,—,
+H,artist_bookings,Pre-production,id,uuid,PK,,"UUID v7, generated",SYS,INTERNAL,System,—,A-4 (Q4) for the fee
+H,artist_bookings,Pre-production,vendor_assignment_id,uuid,FK,,references vendor_assignments,VC; PM (a); SA,INTERNAL,At creation,—,A-4 (Q4) for the fee
+H,artist_bookings,Pre-production,function_id,uuid,FK,,references functions,VC; PM (a); SA,INTERNAL,At creation,—,A-4 (Q4) for the fee
+H,artist_bookings,Pre-production,artist_name,string,,,"string, up to 255 characters",VC; PM (a); SA,CLIENT,At creation,—,A-4 (Q4) for the fee
+H,artist_bookings,Pre-production,performance_type,string,,,"string, up to 255 characters",VC; PM (a); SA,CLIENT,Optional,—,A-4 (Q4) for the fee
+H,artist_bookings,Pre-production,slot_start,datetime,,,timestamp (UTC),VC; PM (a),CLIENT,Optional,Run-of-show cue created,A-4 (Q4) for the fee
+H,artist_bookings,Pre-production,slot_end,datetime,,,timestamp (UTC); after slot_start; within the function,VC; PM (a),CLIENT,Optional,—,A-4 (Q4) for the fee
+H,artist_bookings,Pre-production,status,string,,"enquiry, held, confirmed, performed, cancelled",one of the listed options,VC; PM (a); SA,INTERNAL,At creation,Transitions per permission-matrix §7; each transition audited; notifications per §8,A-4 (Q4) for the fee
+H,artist_bookings,Pre-production,technical_rider_document_id,uuid,FK,,references documents,VC; PM (a); SA,INTERNAL,Optional,Production readiness item,A-4 (Q4) for the fee
+H,artist_bookings,Pre-production,hospitality_requirements,text,,,"text, up to 10,000 characters",VC; PM (a); SA,INTERNAL,Optional,—,A-4 (Q4) for the fee
+H,artist_bookings,Pre-production,travel_arrangements,text,,,"text, up to 10,000 characters",VC; PM (a); SA,INTERNAL,Optional,—,A-4 (Q4) for the fee
+H,artist_bookings,Pre-production,fee_internal,decimal,,,"numeric(14,2), 0 or more",VC; PM (a); SA,RESTRICTED-FINANCE,Optional,—,A-4 (Q4) for the fee
+H,artist_bookings,Pre-production,currency,string,,,"ISO 4217 code, default INR (A-16)",VC; PM (a); SA,INTERNAL,Optional,—,A-4 (Q4) for the fee
+H,production_items,Pre-production,id,uuid,PK,,"UUID v7, generated",SYS,INTERNAL,System,—,
+H,production_items,Pre-production,function_id,uuid,FK,,references functions,VC; HL (a); PM (a); SA,INTERNAL,At creation,—,
+H,production_items,Pre-production,vendor_assignment_id,uuid,FK,,references vendor_assignments; nullable,VC; HL (a); PM (a); SA,INTERNAL,Optional,—,
+H,production_items,Pre-production,category,string,,"sound, lighting, stage, led, tent, props, sfx, power, other",one of the listed options,VC; HL (a); PM (a); SA,INTERNAL,At creation,—,
+H,production_items,Pre-production,description,text,,,"text, up to 10,000 characters",VC; HL (a); PM (a); SA,INTERNAL,At creation,—,
+H,production_items,Pre-production,quantity,int,,,"integer, 1 or more",VC; HL (a); PM (a); SA,INTERNAL,At creation,—,
+H,production_items,Pre-production,status,string,,"planned, ordered, delivered, installed, tested, struck",one of the listed options,VC; HL (a); PM (a); SA,INTERNAL,At creation,tested feeds the readiness checklist; struck recorded at closure,
+H,production_items,Pre-production,owner_user_id,uuid,FK,,references users,PM (a); HL (a),INTERNAL,At creation,—,
+H,production_items,Pre-production,checklist_item_id,uuid,FK,,"references checklist_items; nullable, links to a readiness item",VC; HL (a); PM (a); SA,INTERNAL,Optional,Links the item to a readiness check,
+H,production_items,Pre-production,notes,text,,,"text, up to 10,000 characters",VC; HL (a); PM (a); SA,INTERNAL,Optional,—,
+I,design_items,Planning,id,uuid,PK,,"UUID v7, generated",SYS,CLIENT when client_visible,System,—,
+I,design_items,Planning,project_id,uuid,FK,,references wedding_projects,CD (a); PM (a); SA,CLIENT when client_visible,At creation,—,
+I,design_items,Planning,function_id,uuid,FK,,references functions; nullable,CD (a); PM (a); SA,CLIENT when client_visible,Optional,—,
+I,design_items,Planning,category,string,,"concept, moodboard, render, invitation, save_the_date, stationery, signage, other",one of the listed options,CD (a); PM (a); SA,CLIENT when client_visible,At creation,—,
+I,design_items,Planning,title,string,,,"string, up to 255 characters",CD (a); PM (a); SA,CLIENT,At creation,—,
+I,design_items,Planning,brief_text,text,,,"text, up to 10,000 characters; design brief",CD (a); PM (a); SA,INTERNAL,Optional,—,
+I,design_items,Planning,status,string,,"briefing, in_progress, review, approved, archived",one of the listed options,CD (a); PM (a); SA,CLIENT when client_visible,At creation,approved when the current version is approved,
+I,design_items,Planning,owner_user_id,uuid,FK,,references users,PM (a); CD (a),CLIENT when client_visible,At creation,—,
+I,design_items,Planning,client_visible,bool,,,true or false,CD (a); PM (a); SA,CLIENT when client_visible,Optional,Sharing change audited; switches the client serialiser,
+I,design_versions,Planning,id,uuid,PK,,"UUID v7, generated",SYS,CLIENT when shared,System,—,SPEC §12 version lock
+I,design_versions,Planning,design_item_id,uuid,FK,,references design_items,CD (a); PM (a); SA,CLIENT when shared,At creation,—,SPEC §12 version lock
+I,design_versions,Planning,version_number,int,,,"integer, 1 or more; increments by 1 within its parent; immutable once shared",CD (a); PM (a); SA,CLIENT when shared,At creation,A new version supersedes earlier approvals (SPEC §12),SPEC §12 version lock
+I,design_versions,Planning,summary,text,,,"text, up to 10,000 characters",CD (a); PM (a); SA,CLIENT,Optional,—,SPEC §12 version lock
+I,design_versions,Planning,status,string,,"draft, shared, revision_requested, approved, rejected, superseded",one of the listed options,CD (a); PM (a); SA,CLIENT when shared,At creation,shared notifies approvers; approved locks the files; immutable once shared; superseded by the next version,SPEC §12 version lock
+I,design_versions,Planning,shared_at,datetime,,,timestamp (UTC),SYS (when the action happens),CLIENT when shared,System,—,SPEC §12 version lock
+I,design_versions,Planning,approval_id,uuid,FK,,references approvals,SYS,CLIENT when shared,Optional,—,SPEC §12 version lock
+I,comments,Any,id,uuid,PK,,"UUID v7, generated",SYS,CLIENT unless is_internal,System,—,
+I,comments,Any,entity_type,string,,"design_version, vendor_proposal, menu_version, client_request, task, incident, hotel_enquiry",one of the listed options,Author; SA may delete,CLIENT unless is_internal,At creation,—,
+I,comments,Any,entity_id,uuid,,,must exist and be reachable by the author,Author; SA may delete,CLIENT unless is_internal,At creation,—,
+I,comments,Any,author_user_id,uuid,FK,,references users,SYS (acting user),CLIENT unless is_internal,At creation,—,
+I,comments,Any,body,text,,,"text, up to 10,000 characters",Author; SA may delete,CLIENT unless is_internal,At creation,—,
+I,comments,Any,is_internal,bool,,,true or false; true is never client-visible,Author at creation; cannot be changed later,CLIENT unless is_internal,Optional,Internal comments never reach client serialisers,
+I,comments,Any,parent_comment_id,uuid,FK,,references comments on the same entity,Author; SA may delete,CLIENT unless is_internal,Optional,—,
+I,comments,Any,annotation_json,json,,,x and y between 0 and 1 of the image,Author; SA may delete,CLIENT unless is_internal,Optional,—,
+I,client_requests,Any (client),id,uuid,PK,,"UUID v7, generated",SYS,CLIENT,System,—,"A-20 (Q20), A-21 (Q21), A-25 (Q25)"
+I,client_requests,Any (client),project_id,uuid,FK,,references wedding_projects,"CO, CA, CV create; assigned staff respond; PM (a) and SA decide",CLIENT,At creation,—,"A-20 (Q20), A-21 (Q21), A-25 (Q25)"
+I,client_requests,Any (client),account_id,uuid,FK,,references client_accounts,"CO, CA, CV create; assigned staff respond; PM (a) and SA decide",CLIENT,At creation,—,"A-20 (Q20), A-21 (Q21), A-25 (Q25)"
+I,client_requests,Any (client),request_type,string,,"question, change_request, support","one of the listed options; (A-20, A-21)","CO, CA, CV create; assigned staff respond; PM (a) and SA decide",CLIENT,At creation,—,"A-20 (Q20), A-21 (Q21), A-25 (Q25)"
+I,client_requests,Any (client),requested_by_user_id,uuid,FK,,references users,SYS (acting user),CLIENT,At creation,—,"A-20 (Q20), A-21 (Q21), A-25 (Q25)"
+I,client_requests,Any (client),entity_type,string,,,"string, up to 255 characters; nullable, the record the request is about","CO, CA, CV create; assigned staff respond; PM (a) and SA decide",CLIENT,Optional,—,"A-20 (Q20), A-21 (Q21), A-25 (Q25)"
+I,client_requests,Any (client),entity_id,uuid,,,must be reachable by the requester,"CO, CA, CV create; assigned staff respond; PM (a) and SA decide",CLIENT,Optional,—,"A-20 (Q20), A-21 (Q21), A-25 (Q25)"
+I,client_requests,Any (client),title,string,,,"string, up to 255 characters","CO, CA, CV create; assigned staff respond; PM (a) and SA decide",CLIENT,At creation,—,"A-20 (Q20), A-21 (Q21), A-25 (Q25)"
+I,client_requests,Any (client),description,text,,,"text, up to 10,000 characters","CO, CA, CV create; assigned staff respond; PM (a) and SA decide",CLIENT,At creation,—,"A-20 (Q20), A-21 (Q21), A-25 (Q25)"
+I,client_requests,Any (client),status,string,,"submitted, under_review, clarification_requested, answered, accepted, rejected, implemented, closed, withdrawn",one of the listed options; (closed added by Q21),"CO, CA, CV create; assigned staff respond; PM (a) and SA decide",CLIENT,At creation,Per §7; submitted notifies the project lead; accepted material changes raise impact flags (SPEC §8),"A-20 (Q20), A-21 (Q21), A-25 (Q25)"
+I,client_requests,Any (client),is_material,bool,,,true or false; A-25,SYS,CLIENT,Optional,Set from configurable thresholds (A-25),"A-20 (Q20), A-21 (Q21), A-25 (Q25)"
+I,client_requests,Any (client),budget_impact_amount,decimal,,,"numeric(14,2), 0 or more",PM (a); FA,CLIENT,Optional,—,"A-20 (Q20), A-21 (Q21), A-25 (Q25)"
+I,client_requests,Any (client),impact_flags_json,json,,,"valid JSON matching the registered schema; budget, contract, task, run_of_show (SPEC section 8)",SYS,CLIENT,Optional,"Creates review tasks on budgets, contracts, tasks and run-of-show items","A-20 (Q20), A-21 (Q21), A-25 (Q25)"
+I,client_requests,Any (client),assigned_user_id,uuid,FK,,references users,PM (a); SA,CLIENT,Optional,Assignee notified,"A-20 (Q20), A-21 (Q21), A-25 (Q25)"
+I,client_requests,Any (client),responded_by,uuid,FK,,references users,SYS (acting user),CLIENT,System,—,"A-20 (Q20), A-21 (Q21), A-25 (Q25)"
+I,client_requests,Any (client),responded_at,datetime,,,timestamp (UTC),SYS (when the action happens),CLIENT,System,—,"A-20 (Q20), A-21 (Q21), A-25 (Q25)"
+I,client_requests,Any (client),response_text,text,,,"text, up to 10,000 characters",Assigned staff,CLIENT,"Before status answered, accepted or rejected",—,"A-20 (Q20), A-21 (Q21), A-25 (Q25)"
+I,approvals,Approvals,id,uuid,PK,,"UUID v7, generated",SYS,CLIENT,System,—,"A-5 (Q5), AM-7, SPEC §12 version lock"
+I,approvals,Approvals,project_id,uuid,FK,,references wedding_projects,Requester per permission-matrix §5.9; SYS supersedes,CLIENT,At creation,—,"A-5 (Q5), AM-7, SPEC §12 version lock"
+I,approvals,Approvals,record_type,string,,"vendor_proposal, hotel_proposal, design_version, menu_version, invitation_version, budget_line, contract, client_request",one of the listed options,Requester per permission-matrix §5.9; SYS supersedes,CLIENT,At creation,—,"A-5 (Q5), AM-7, SPEC §12 version lock"
+I,approvals,Approvals,record_id,uuid,,,UUID,Requester per permission-matrix §5.9; SYS supersedes,CLIENT,At creation,—,"A-5 (Q5), AM-7, SPEC §12 version lock"
+I,approvals,Approvals,version_number,int,,,integer; must equal the record's version at submission,Requester per permission-matrix §5.9; SYS supersedes,CLIENT,At creation,Locks that exact version,"A-5 (Q5), AM-7, SPEC §12 version lock"
+I,approvals,Approvals,requested_by_user_id,uuid,FK,,references users,SYS (acting user),CLIENT,At creation,—,"A-5 (Q5), AM-7, SPEC §12 version lock"
+I,approvals,Approvals,requested_at,datetime,,,timestamp (UTC),SYS (when the action happens),CLIENT,System,—,"A-5 (Q5), AM-7, SPEC §12 version lock"
+I,approvals,Approvals,required_decisions,int,,,"integer, 1 or more; default 1; configurable per record_type",Requester per permission-matrix §5.9; SYS supersedes,CLIENT,At creation,Approval completes when approved decisions reach it,"A-5 (Q5), AM-7, SPEC §12 version lock"
+I,approvals,Approvals,status,string,,"draft, submitted, revision_requested, approved, rejected, superseded",one of the listed options,Requester per permission-matrix §5.9; SYS supersedes,CLIENT,At creation,approved at the required count; one rejection or revision request moves it at once; superseded when a new version is created; requester notified,"A-5 (Q5), AM-7, SPEC §12 version lock"
+I,approvals,Approvals,decided_at,datetime,,,timestamp (UTC),SYS (when the action happens),CLIENT,System,—,"A-5 (Q5), AM-7, SPEC §12 version lock"
+I,approvals,Approvals,superseded_by_approval_id,uuid,FK,,references approvals,SYS,CLIENT,Optional,—,"A-5 (Q5), AM-7, SPEC §12 version lock"
+I,approval_decisions,Approvals,id,uuid,PK,,"UUID v7, generated",SYS,CLIENT,System,—,P-9 (Q5)
+I,approval_decisions,Approvals,approval_id,uuid,FK,,references approvals,"CO, CA with can_approve; PM (a) and SA on behalf with evidence",CLIENT,At creation,—,P-9 (Q5)
+I,approval_decisions,Approvals,approver_user_id,uuid,FK,,references users,"CO, CA with can_approve; PM (a) and SA on behalf with evidence",CLIENT,At creation,—,P-9 (Q5)
+I,approval_decisions,Approvals,decision,string,,"approved, revision_requested, rejected",one of the listed options,"CO, CA with can_approve; PM (a) and SA on behalf with evidence",CLIENT,At creation,—,P-9 (Q5)
+I,approval_decisions,Approvals,comment,text,,,"text, up to 10,000 characters","CO, CA with can_approve; PM (a) and SA on behalf with evidence",CLIENT,When decision is revision_requested or rejected,—,P-9 (Q5)
+I,approval_decisions,Approvals,decided_at,datetime,,,timestamp (UTC),SYS (when the action happens),CLIENT,At creation,—,P-9 (Q5)
+I,approval_decisions,Approvals,recorded_on_behalf_by,uuid,FK,,references users; staff user when the decision was given offline,SYS (acting staff user),CLIENT,System,Audit shows the decision was recorded by staff,P-9 (Q5)
+I,approval_decisions,Approvals,evidence_document_id,uuid,FK,,references documents; required when recorded on behalf,"CO, CA with can_approve; PM (a) and SA on behalf with evidence",CLIENT,When recorded on behalf,—,P-9 (Q5)
+J,invitations,Planning,id,uuid,PK,,"UUID v7, generated",SYS,CLIENT,System,—,AM-12
+J,invitations,Planning,project_id,uuid,FK,,references wedding_projects,CD (a); PM (a); RG (a); SA,CLIENT,At creation,—,AM-12
+J,invitations,Planning,invitation_type,string,,"save_the_date, invitation, reminder, update",one of the listed options,CD (a); PM (a); RG (a); SA,CLIENT,At creation,—,AM-12
+J,invitations,Planning,title,string,,,"string, up to 255 characters",CD (a); PM (a); RG (a); SA,CLIENT,At creation,—,AM-12
+J,invitations,Planning,design_item_id,uuid,FK,,references design_items; nullable,CD (a); PM (a); RG (a); SA,CLIENT,Optional,—,AM-12
+J,invitations,Planning,channels_json,json,,,"subset of email, whatsapp, sms, print",CD (a); PM (a); RG (a); SA,CLIENT,Optional,—,AM-12
+J,invitations,Planning,status,string,,"draft, approved, scheduled, sending, sent, closed",one of the listed options,CD (a); PM (a); RG (a); SA,CLIENT,At creation,approved requires an approved version; sending creates recipients and tokens,AM-12
+J,invitations,Planning,scheduled_at,datetime,,,timestamp (UTC),RG (a),CLIENT,Optional,Send job at the scheduled time,AM-12
+J,invitations,Planning,sent_at,datetime,,,timestamp (UTC),SYS (when the action happens),CLIENT,System,—,AM-12
+J,invitation_versions,Planning,id,uuid,PK,,"UUID v7, generated",SYS,CLIENT when shared,System,—,
+J,invitation_versions,Planning,invitation_id,uuid,FK,,references invitations,CD (a); PM (a); SA,CLIENT when shared,At creation,—,
+J,invitation_versions,Planning,version_number,int,,,"integer, 1 or more; increments by 1 within its parent; immutable once shared",CD (a); PM (a); SA,CLIENT when shared,At creation,A new version supersedes earlier approvals (SPEC §12),
+J,invitation_versions,Planning,content_media_id,uuid,FK,,references media_assets,CD (a); PM (a); SA,CLIENT when shared,Before status approved,—,
+J,invitation_versions,Planning,message_text,text,,,"text, up to 10,000 characters",CD (a); PM (a); SA,CLIENT,Optional,—,
+J,invitation_versions,Planning,status,string,,"draft, shared, approved, superseded",one of the listed options,CD (a); PM (a); SA,CLIENT when shared,At creation,Transitions per permission-matrix §7; each transition audited; notifications per §8,
+J,invitation_versions,Planning,approval_id,uuid,FK,,references approvals,SYS,CLIENT when shared,Optional,—,
+J,invitation_recipients,Guest operations,id,uuid,PK,,"UUID v7, generated",SYS,INTERNAL,System,—,"A-7 (Q7), A-11 (Q11)"
+J,invitation_recipients,Guest operations,invitation_id,uuid,FK,,references invitations,RG (a); SA; SYS for delivery status,INTERNAL,At creation,—,"A-7 (Q7), A-11 (Q11)"
+J,invitation_recipients,Guest operations,invitation_version_id,uuid,FK,,references invitation_versions,RG (a); SA; SYS for delivery status,INTERNAL,At creation,—,"A-7 (Q7), A-11 (Q11)"
+J,invitation_recipients,Guest operations,family_group_id,uuid,FK,,references family_groups,RG (a); SA; SYS for delivery status,INTERNAL,At creation,—,"A-7 (Q7), A-11 (Q11)"
+J,invitation_recipients,Guest operations,guest_id,uuid,FK,,"references guests; nullable, the addressee within the group",RG (a); SA; SYS for delivery status,INTERNAL,Optional,—,"A-7 (Q7), A-11 (Q11)"
+J,invitation_recipients,Guest operations,channel,string,,,"string, up to 255 characters",RG (a); SA; SYS for delivery status,INTERNAL,At creation,—,"A-7 (Q7), A-11 (Q11)"
+J,invitation_recipients,Guest operations,status,string,,"pending, sent, delivered, opened, failed, bounced",one of the listed options,SYS,INTERNAL,At creation,Delivery webhooks; failed and bounced create follow-up tasks for RG,"A-7 (Q7), A-11 (Q11)"
+J,invitation_recipients,Guest operations,sent_at,datetime,,,timestamp (UTC),SYS (when the action happens),INTERNAL,System,—,"A-7 (Q7), A-11 (Q11)"
+J,invitation_recipients,Guest operations,delivered_at,datetime,,,timestamp (UTC),SYS (when the action happens),INTERNAL,System,—,"A-7 (Q7), A-11 (Q11)"
+J,invitation_recipients,Guest operations,provider_ref,string,,,"string, up to 255 characters",SYS,INTERNAL,Optional,—,"A-7 (Q7), A-11 (Q11)"
+J,invitation_recipients,Guest operations,rsvp_token_id,uuid,FK,,references rsvp_tokens,SYS,INTERNAL,Optional,Token issued when the invitation is sent,"A-7 (Q7), A-11 (Q11)"
+J,family_groups,Guest operations,id,uuid,PK,,"UUID v7, generated",SYS,CLIENT,System,—,"A-7 (Q7), GP-13"
+J,family_groups,Guest operations,project_id,uuid,FK,,references wedding_projects,RG (a); PM (a); CO; SA; import,CLIENT,At creation,—,"A-7 (Q7), GP-13"
+J,family_groups,Guest operations,name,string,,,"string, up to 255 characters; e.g. Mehta family, Mumbai",RG (a); PM (a); CO; SA; import,CLIENT,At creation,—,"A-7 (Q7), GP-13"
+J,family_groups,Guest operations,side,string,,"partner_a, partner_b, both, other",one of the listed options,RG (a); PM (a); CO; SA; import,CLIENT,At creation,—,"A-7 (Q7), GP-13"
+J,family_groups,Guest operations,tier,string,,,one of the configured tiers,RG (a); PM (a); CO; SA; import,CLIENT,Optional,—,"A-7 (Q7), GP-13"
+J,family_groups,Guest operations,primary_guest_id,uuid,FK,,references guests,SYS (first guest); RG (a),CLIENT,Optional,—,"A-7 (Q7), GP-13"
+J,family_groups,Guest operations,invited_by_contact_id,uuid,FK,,references account_contacts; the account contact who added them,RG (a); PM (a); CO; SA; import,CLIENT,Optional,Shown on the client guest list,"A-7 (Q7), GP-13"
+J,family_groups,Guest operations,max_additional_guests,int,,,"integer, 0 or more; default 0",RG (a); CO,CLIENT,Optional,Caps self-added members through the RSVP portal,"A-7 (Q7), GP-13"
+J,family_groups,Guest operations,source,string,,"client_list, ampm_entry, import",one of the listed options,SYS,CLIENT,At creation,—,"A-7 (Q7), GP-13"
+J,family_groups,Guest operations,internal_notes,text,,,"text, up to 10,000 characters",RG (a); PM (a); CO; SA; import,RESTRICTED-NOTES,Optional,"Never serialised to client, guest or demo principals","A-7 (Q7), GP-13"
+J,guests,Guest operations,id,uuid,PK,,"UUID v7, generated",SYS,CLIENT,System,—,"A-7 (Q7), A-17 (Q17), GP-24, GP-25"
+J,guests,Guest operations,project_id,uuid,FK,,references wedding_projects,RG (a); PM (a); CO; GU for the own row; SA; import,CLIENT,At creation,—,"A-7 (Q7), A-17 (Q17), GP-24, GP-25"
+J,guests,Guest operations,family_group_id,uuid,FK,,references family_groups,RG (a); PM (a); CO; GU for the own row; SA; import,CLIENT,At creation,—,"A-7 (Q7), A-17 (Q17), GP-24, GP-25"
+J,guests,Guest operations,salutation,string,,,"string, up to 255 characters",RG (a); PM (a); CO; GU for the own row; SA; import,CLIENT,Optional,—,"A-7 (Q7), A-17 (Q17), GP-24, GP-25"
+J,guests,Guest operations,first_name,string,,,"string, up to 255 characters",RG (a); PM (a); CO; GU for the own row; SA; import,CLIENT,At creation,—,"A-7 (Q7), A-17 (Q17), GP-24, GP-25"
+J,guests,Guest operations,last_name,string,,,"string, up to 255 characters",RG (a); PM (a); CO; GU for the own row; SA; import,CLIENT,Optional,—,"A-7 (Q7), A-17 (Q17), GP-24, GP-25"
+J,guests,Guest operations,relation_to_couple,string,,,"string, up to 255 characters",RG (a); PM (a); CO; GU for the own row; SA; import,CLIENT,Optional,—,"A-7 (Q7), A-17 (Q17), GP-24, GP-25"
+J,guests,Guest operations,age_band,string,,"adult, child, infant",one of the listed options,RG (a); PM (a); CO; GU for the own row; SA; import,CLIENT,At creation,Child and infant counts for menus and rooming,"A-7 (Q7), A-17 (Q17), GP-24, GP-25"
+J,guests,Guest operations,email,string,,,valid email address,RG (a); PM (a); CO; GU for the own row; SA; import,CLIENT,At least one contact for the group primary,—,"A-7 (Q7), A-17 (Q17), GP-24, GP-25"
+J,guests,Guest operations,phone,string,,,"E.164 format, default +91",RG (a); PM (a); CO; GU for the own row; SA; import,CLIENT,At least one contact for the group primary,—,"A-7 (Q7), A-17 (Q17), GP-24, GP-25"
+J,guests,Guest operations,whatsapp_number,string,,,"E.164 format, default +91",RG (a); PM (a); CO; GU for the own row; SA; import,CLIENT,Optional,—,"A-7 (Q7), A-17 (Q17), GP-24, GP-25"
+J,guests,Guest operations,city,string,,,"string, up to 255 characters",RG (a); PM (a); CO; GU for the own row; SA; import,CLIENT,Optional,—,"A-7 (Q7), A-17 (Q17), GP-24, GP-25"
+J,guests,Guest operations,country,string,,,"string, up to 255 characters",RG (a); PM (a); CO; GU for the own row; SA; import,CLIENT,Optional,—,"A-7 (Q7), A-17 (Q17), GP-24, GP-25"
+J,guests,Guest operations,is_group_primary,bool,,,exactly one per family group,RG (a); PM (a); CO; GU for the own row; SA; import,CLIENT,Optional,—,"A-7 (Q7), A-17 (Q17), GP-24, GP-25"
+J,guests,Guest operations,dietary_preference,string,,"veg, non_veg, jain, vegan, eggetarian, other",one of the listed options; (GP-24),RG (a); CO; GU for the own row,CLIENT,Optional,Feeds menu headcounts,"A-7 (Q7), A-17 (Q17), GP-24, GP-25"
+J,guests,Guest operations,allergies_text,text,,,"text, up to 10,000 characters",RG (a); CO; GU for the own row,SENSITIVE-GUEST,Optional,Hospitality dietary request; never exported,"A-7 (Q7), A-17 (Q17), GP-24, GP-25"
+J,guests,Guest operations,accessibility_needs,text,,,"text, up to 10,000 characters",RG (a); CO; GU for the own row,SENSITIVE-GUEST,Optional,Hospitality support request; never exported,"A-7 (Q7), A-17 (Q17), GP-24, GP-25"
+J,guests,Guest operations,special_requests,text,,,"text, up to 10,000 characters",RG (a); PM (a); CO; GU for the own row; SA; import,CLIENT,Optional,—,"A-7 (Q7), A-17 (Q17), GP-24, GP-25"
+J,guests,Guest operations,status,string,,"draft, invited, confirmed, removed",one of the listed options,RG (a); PM (a); CO; GU for the own row; SA; import,CLIENT,At creation,removed keeps the row for audit and sets attendance to not_attending,"A-7 (Q7), A-17 (Q17), GP-24, GP-25"
+J,guests,Guest operations,source,string,,"client_list, ampm_entry, self_added, import",self_added only through a token within the group allowance,SYS,CLIENT,At creation,—,"A-7 (Q7), A-17 (Q17), GP-24, GP-25"
+J,guests,Guest operations,identification_status,string,,"not_needed, pending, matched, review","one of the listed options; (self-identification on side or wedding links, Q7)",RG (a); PM (a); CO; GU for the own row; SA; import,CLIENT,Optional,—,"A-7 (Q7), A-17 (Q17), GP-24, GP-25"
+J,guests,Guest operations,internal_notes,text,,,"text, up to 10,000 characters",RG (a); PM (a); CO; GU for the own row; SA; import,RESTRICTED-NOTES,Optional,"Never serialised to client, guest or demo principals","A-7 (Q7), A-17 (Q17), GP-24, GP-25"
+J,guest_function_attendance,Guest operations (on invite),id,uuid,PK,,"UUID v7, generated",SYS,CLIENT,System,—,"A-7 (Q7), GP-13"
+J,guest_function_attendance,Guest operations (on invite),guest_id,uuid,FK,,references guests,RG (a); PM (a); GU for the own group; CO; SYS for imports,CLIENT,At creation,—,"A-7 (Q7), GP-13"
+J,guest_function_attendance,Guest operations (on invite),function_id,uuid,FK,,references functions,RG (a); PM (a); GU for the own group; CO; SYS for imports,CLIENT,At creation,—,"A-7 (Q7), GP-13"
+J,guest_function_attendance,Guest operations (on invite),is_invited,bool,,,true or false,RG (a); PM (a); GU for the own group; CO; SYS for imports,CLIENT,At creation,Only invited functions appear in the RSVP portal,"A-7 (Q7), GP-13"
+J,guest_function_attendance,Guest operations (on invite),status,string,,"no_response, attending, not_attending, tentative",one of the listed options,RG (a); PM (a); GU for the own group; CO; SYS for imports,CLIENT,At creation,Recalculates function totals and menu headcounts; flags room allocations and transfers for the guest (SPEC §8),"A-7 (Q7), GP-13"
+J,guest_function_attendance,Guest operations (on invite),responded_at,datetime,,,timestamp (UTC),SYS (when the action happens),CLIENT,System,—,"A-7 (Q7), GP-13"
+J,guest_function_attendance,Guest operations (on invite),response_source,string,,"self_service, ampm_call, client, import",one of the listed options,SYS,CLIENT,System,—,"A-7 (Q7), GP-13"
+J,guest_function_attendance,Guest operations (on invite),updated_by,uuid,FK,,references users,SYS (acting user),CLIENT,System,—,"A-7 (Q7), GP-13"
+J,rsvp_tokens,Guest operations (on send),id,uuid,PK,,"UUID v7, generated",SYS,INTERNAL,System,—,"A-7 (Q7), P-4 (Q7)"
+J,rsvp_tokens,Guest operations (on send),project_id,uuid,FK,,references wedding_projects,RG (a); PM (a); SA; SYS,INTERNAL,At creation,—,"A-7 (Q7), P-4 (Q7)"
+J,rsvp_tokens,Guest operations (on send),link_scope,string,,"household, side, wedding",one of the listed options; (Q7: per side or one combined link),RG (a); PM (a); SA; SYS,INTERNAL,Optional,—,"A-7 (Q7), P-4 (Q7)"
+J,rsvp_tokens,Guest operations (on send),side,string,,"bride, groom, both",one of the listed options,RG (a); PM (a); SA; SYS,INTERNAL,Optional,—,"A-7 (Q7), P-4 (Q7)"
+J,rsvp_tokens,Guest operations (on send),family_group_id,uuid,FK,,references family_groups; nullable for side or wedding links,RG (a); PM (a); SA; SYS,INTERNAL,At creation,—,"A-7 (Q7), P-4 (Q7)"
+J,rsvp_tokens,Guest operations (on send),token_hash,string,UK,,"string, up to 255 characters",SYS,SECRET,At creation,—,"A-7 (Q7), P-4 (Q7)"
+J,rsvp_tokens,Guest operations (on send),expires_at,datetime,,,timestamp (UTC),RG (a); default the first function date,INTERNAL,At creation,Link refused after expiry,"A-7 (Q7), P-4 (Q7)"
+J,rsvp_tokens,Guest operations (on send),status,string,,"active, revoked, expired",one of the listed options,RG (a); PM (a); SA; SYS,INTERNAL,At creation,revoked refuses the link immediately; a new token is issued,"A-7 (Q7), P-4 (Q7)"
+J,rsvp_tokens,Guest operations (on send),last_accessed_at,datetime,,,timestamp (UTC),SYS,INTERNAL,System,—,"A-7 (Q7), P-4 (Q7)"
+J,rsvp_tokens,Guest operations (on send),access_count,int,,,system counter,SYS,INTERNAL,Optional,—,"A-7 (Q7), P-4 (Q7)"
+J,rsvp_tokens,Guest operations (on send),revoked_at,datetime,,,timestamp (UTC),SYS (when the action happens),INTERNAL,System,—,"A-7 (Q7), P-4 (Q7)"
+J,rsvp_tokens,Guest operations (on send),revoked_by,uuid,FK,,references users,SYS (acting user),INTERNAL,System,—,"A-7 (Q7), P-4 (Q7)"
+J,rsvp_responses,RSVP,id,uuid,PK,,"UUID v7, generated",SYS,INTERNAL,System,—,"A-7 (Q7), SPEC §12 duplicate test"
+J,rsvp_responses,RSVP,project_id,uuid,FK,,references wedding_projects,SYS for self-service; RG (a) for assisted responses,INTERNAL,At creation,—,"A-7 (Q7), SPEC §12 duplicate test"
+J,rsvp_responses,RSVP,family_group_id,uuid,FK,,references family_groups,SYS for self-service; RG (a) for assisted responses,INTERNAL,At creation,—,"A-7 (Q7), SPEC §12 duplicate test"
+J,rsvp_responses,RSVP,guest_id,uuid,FK,,references guests; nullable,SYS for self-service; RG (a) for assisted responses,INTERNAL,Optional,—,"A-7 (Q7), SPEC §12 duplicate test"
+J,rsvp_responses,RSVP,channel,string,,"web, phone, whatsapp, email, in_person",one of the listed options,SYS for self-service; RG (a) for assisted responses,INTERNAL,At creation,—,"A-7 (Q7), SPEC §12 duplicate test"
+J,rsvp_responses,RSVP,token_id,uuid,FK,,"references rsvp_tokens; nullable, set for self-service",SYS for self-service; RG (a) for assisted responses,INTERNAL,Optional,—,"A-7 (Q7), SPEC §12 duplicate test"
+J,rsvp_responses,RSVP,captured_by_user_id,uuid,FK,,"references users; nullable, set for AMPM-assisted",SYS (acting user),INTERNAL,System,—,"A-7 (Q7), SPEC §12 duplicate test"
+J,rsvp_responses,RSVP,submitted_at,datetime,,,timestamp (UTC),SYS,INTERNAL,System,—,"A-7 (Q7), SPEC §12 duplicate test"
+J,rsvp_responses,RSVP,payload_json,json,,,valid JSON; immutable after insert,SYS,INTERNAL,At creation,Audit of what was submitted,"A-7 (Q7), SPEC §12 duplicate test"
+J,rsvp_responses,RSVP,locked,bool,,,true or false; true after submission; corrections go through the RSVP team (Q7),SYS for self-service; RG (a) for assisted responses,INTERNAL,Optional,—,"A-7 (Q7), SPEC §12 duplicate test"
+J,rsvp_responses,RSVP,ip_address,string,,,IPv4 or IPv6,SYS,INTERNAL,Optional,—,"A-7 (Q7), SPEC §12 duplicate test"
+J,guest_support_requests,RSVP / live,id,uuid,PK,,"UUID v7, generated",SYS,"INTERNAL; SENSITIVE-GUEST for dietary, accessibility and complaint types",System,—,
+J,guest_support_requests,RSVP / live,project_id,uuid,FK,,references wedding_projects,GU creates; RG (a); HL (a); PM (a); SA,"INTERNAL; SENSITIVE-GUEST for dietary, accessibility and complaint types",At creation,—,
+J,guest_support_requests,RSVP / live,guest_id,uuid,FK,,references guests,GU creates; RG (a); HL (a); PM (a); SA,"INTERNAL; SENSITIVE-GUEST for dietary, accessibility and complaint types",At creation,—,
+J,guest_support_requests,RSVP / live,family_group_id,uuid,FK,,references family_groups,GU creates; RG (a); HL (a); PM (a); SA,"INTERNAL; SENSITIVE-GUEST for dietary, accessibility and complaint types",At creation,—,
+J,guest_support_requests,RSVP / live,request_type,string,,"travel, room, dietary, accessibility, correction, general, complaint",one of the listed options; (correction added by Q7),GU creates; RG (a); HL (a); PM (a); SA,"INTERNAL; SENSITIVE-GUEST for dietary, accessibility and complaint types",At creation,—,
+J,guest_support_requests,RSVP / live,description,text,,,"text, up to 10,000 characters",GU creates; RG (a); HL (a); PM (a); SA,"INTERNAL; SENSITIVE-GUEST for dietary, accessibility and complaint types",At creation,—,
+J,guest_support_requests,RSVP / live,status,string,,"open, assigned, in_progress, resolved, closed",one of the listed options,GU creates; RG (a); HL (a); PM (a); SA,"INTERNAL; SENSITIVE-GUEST for dietary, accessibility and complaint types",At creation,assigned notifies the assignee; open requests on the hospitality dashboard,
+J,guest_support_requests,RSVP / live,assigned_user_id,uuid,FK,,references users,RG (a); HL (a); PM (a),"INTERNAL; SENSITIVE-GUEST for dietary, accessibility and complaint types",Optional,—,
+J,guest_support_requests,RSVP / live,resolved_at,datetime,,,timestamp (UTC),SYS (when the action happens),"INTERNAL; SENSITIVE-GUEST for dietary, accessibility and complaint types",System,—,
+J,guest_support_requests,RSVP / live,resolution_text,text,,,"text, up to 10,000 characters",GU creates; RG (a); HL (a); PM (a); SA,"INTERNAL; SENSITIVE-GUEST for dietary, accessibility and complaint types",Before status resolved,—,
+K,room_blocks,Planning,id,uuid,PK,,"UUID v7, generated",SYS,CLIENT,System,—,"A-19 (Q19), GP-11, A-4 (Q4)"
+K,room_blocks,Planning,project_id,uuid,FK,,references wedding_projects,HT; PM (a); SA,CLIENT,At creation,—,"A-19 (Q19), GP-11, A-4 (Q4)"
+K,room_blocks,Planning,hotel_id,uuid,FK,,references hotels,HT; PM (a); SA,CLIENT,At creation,—,"A-19 (Q19), GP-11, A-4 (Q4)"
+K,room_blocks,Planning,room_category_id,uuid,FK,,references hotel_room_categories,HT; PM (a); SA,CLIENT,At creation,—,"A-19 (Q19), GP-11, A-4 (Q4)"
+K,room_blocks,Planning,date_from,date,,,date,HT; PM (a); SA,CLIENT,At creation,—,"A-19 (Q19), GP-11, A-4 (Q4)"
+K,room_blocks,Planning,date_to,date,,,date; not before date_from,HT; PM (a); SA,CLIENT,At creation,—,"A-19 (Q19), GP-11, A-4 (Q4)"
+K,room_blocks,Planning,rooms_blocked,int,,,"integer, 1 or more; not more than the category room_count",HT; PM (a); SA,CLIENT,At creation,—,"A-19 (Q19), GP-11, A-4 (Q4)"
+K,room_blocks,Planning,rooms_released,int,,,"integer, 0 or more; not more than rooms_blocked",HT; PM (a); SA,CLIENT,Optional,Allocations validated against blocked minus released,"A-19 (Q19), GP-11, A-4 (Q4)"
+K,room_blocks,Planning,release_deadline,date,,,date,HT; PM (a); SA,CLIENT,Optional,Reminder to HT and PM (a) before the deadline,"A-19 (Q19), GP-11, A-4 (Q4)"
+K,room_blocks,Planning,internal_rate_amount,decimal,,,"numeric(14,2), 0 or more; (A-4)",HT; PM (a); SA,RESTRICTED-FINANCE,Optional,—,"A-19 (Q19), GP-11, A-4 (Q4)"
+K,room_blocks,Planning,client_rate_amount,decimal,,,"numeric(14,2), 0 or more; nullable",HT; PM (a); SA,CLIENT,Optional,—,"A-19 (Q19), GP-11, A-4 (Q4)"
+K,room_blocks,Planning,currency,string,,,"ISO 4217 code, default INR (A-16)",HT; PM (a); SA,CLIENT,At creation,—,"A-19 (Q19), GP-11, A-4 (Q4)"
+K,room_blocks,Planning,status,string,,"requested, held, contracted, partially_released, released, closed",one of the listed options,HT; PM (a); SA,CLIENT,At creation,Transitions per permission-matrix §7; each transition audited; notifications per §8,"A-19 (Q19), GP-11, A-4 (Q4)"
+K,room_blocks,Planning,contract_id,uuid,FK,,references contracts,HT; PM (a); SA,INTERNAL,Optional,—,"A-19 (Q19), GP-11, A-4 (Q4)"
+K,room_blocks,Planning,internal_notes,text,,,"text, up to 10,000 characters",HT; PM (a); SA,RESTRICTED-NOTES,Optional,"Never serialised to client, guest or demo principals","A-19 (Q19), GP-11, A-4 (Q4)"
+K,room_allocations,Guest operations,id,uuid,PK,,"UUID v7, generated",SYS,CLIENT for the client's own guests,System,—,A-19 (Q19)
+K,room_allocations,Guest operations,project_id,uuid,FK,,references wedding_projects,HL (a); RG (a); PM (a); SA,CLIENT for the client's own guests,At creation,—,A-19 (Q19)
+K,room_allocations,Guest operations,room_block_id,uuid,FK,,references room_blocks; dates within the block; count within availability,HL (a); RG (a); PM (a); SA,CLIENT for the client's own guests,Optional,—,A-19 (Q19)
+K,room_allocations,Guest operations,hotel_id,uuid,FK,,references hotels,HL (a); RG (a); PM (a); SA,CLIENT for the client's own guests,At creation,—,A-19 (Q19)
+K,room_allocations,Guest operations,room_category_id,uuid,FK,,references hotel_room_categories,HL (a); RG (a); PM (a); SA,CLIENT for the client's own guests,At creation,—,A-19 (Q19)
+K,room_allocations,Guest operations,room_number,string,,,"string, up to 255 characters",HL (a) at check-in,CLIENT for the client's own guests,Optional,—,A-19 (Q19)
+K,room_allocations,Guest operations,check_in_date,date,,,date,HL (a); RG (a); PM (a); SA,CLIENT for the client's own guests,At creation,—,A-19 (Q19)
+K,room_allocations,Guest operations,check_out_date,date,,,date; after check_in_date,HL (a); RG (a); PM (a); SA,CLIENT for the client's own guests,At creation,—,A-19 (Q19)
+K,room_allocations,Guest operations,status,string,,"requested, proposed, confirmed, checked_in, checked_out, cancelled",one of the listed options,HL (a); RG (a); PM (a); SA,CLIENT for the client's own guests,At creation,Per §7; every change audited (SPEC §7); confirmed notifies hospitality; checked_out feeds departures,A-19 (Q19)
+K,room_allocations,Guest operations,allocated_by,uuid,FK,,references users,SYS (acting user),CLIENT for the client's own guests,At creation,—,A-19 (Q19)
+K,room_allocations,Guest operations,special_requests,text,,,"text, up to 10,000 characters",HL (a); RG (a); PM (a); SA,CLIENT for the client's own guests,Optional,—,A-19 (Q19)
+K,room_allocations,Guest operations,notes,text,,,"text, up to 10,000 characters",HL (a); RG (a); PM (a); SA,CLIENT for the client's own guests,Optional,—,A-19 (Q19)
+K,room_allocation_occupants,Guest operations,id,uuid,PK,,"UUID v7, generated",SYS,CLIENT for the client's own guests,System,—,
+K,room_allocation_occupants,Guest operations,room_allocation_id,uuid,FK,,references room_allocations,HL (a); RG (a); SA,CLIENT for the client's own guests,At creation,—,
+K,room_allocation_occupants,Guest operations,guest_id,uuid,FK,,references guests,HL (a); RG (a); SA,CLIENT for the client's own guests,At creation,—,
+K,room_allocation_occupants,Guest operations,is_primary_occupant,bool,,,exactly one per room,HL (a); RG (a); SA,CLIENT for the client's own guests,Optional,—,
+K,travel_segments,Guest operations,id,uuid,PK,,"UUID v7, generated",SYS,CLIENT for the client's own guests,System,—,
+K,travel_segments,Guest operations,project_id,uuid,FK,,references wedding_projects,RG (a); HL (a); GU for the own group; SA,CLIENT for the client's own guests,At creation,—,
+K,travel_segments,Guest operations,guest_id,uuid,FK,,references guests,RG (a); HL (a); GU for the own group; SA,CLIENT for the client's own guests,At creation,—,
+K,travel_segments,Guest operations,family_group_id,uuid,FK,,"references family_groups; nullable, set when entered for the whole group",RG (a); HL (a); GU for the own group; SA,CLIENT for the client's own guests,Optional,—,
+K,travel_segments,Guest operations,direction,string,,"arrival, departure, internal",one of the listed options,RG (a); HL (a); GU for the own group; SA,CLIENT for the client's own guests,At creation,—,
+K,travel_segments,Guest operations,mode,string,,"flight, train, car, bus, other",one of the listed options,RG (a); HL (a); GU for the own group; SA,CLIENT for the client's own guests,At creation,—,
+K,travel_segments,Guest operations,carrier,string,,,"string, up to 255 characters",RG (a); HL (a); GU for the own group; SA,CLIENT for the client's own guests,Optional,—,
+K,travel_segments,Guest operations,reference_number,string,,,"string, up to 255 characters",RG (a); HL (a); GU for the own group; SA,CLIENT for the client's own guests,Optional,—,
+K,travel_segments,Guest operations,from_location,string,,,"string, up to 255 characters",RG (a); HL (a); GU for the own group; SA,CLIENT for the client's own guests,Optional,—,
+K,travel_segments,Guest operations,to_location,string,,,"string, up to 255 characters",RG (a); HL (a); GU for the own group; SA,CLIENT for the client's own guests,Optional,—,
+K,travel_segments,Guest operations,scheduled_at,datetime,,,timestamp (UTC),RG (a); GU,CLIENT for the client's own guests,At creation,Arrival and departure manifests; transfer planning,
+K,travel_segments,Guest operations,actual_at,datetime,,,timestamp (UTC),HL (a),CLIENT for the client's own guests,Optional,—,
+K,travel_segments,Guest operations,status,string,,"planned, confirmed, arrived, delayed, cancelled",one of the listed options,RG (a); HL (a); GU for the own group; SA,CLIENT for the client's own guests,At creation,delayed flags the linked transfer,
+K,travel_segments,Guest operations,booked_by,string,,"guest, client, ampm",one of the listed options,RG (a); HL (a); GU for the own group; SA,CLIENT for the client's own guests,Optional,—,
+K,travel_segments,Guest operations,ticket_document_id,uuid,FK,,references documents,GU; RG (a),CLIENT for the client's own guests,Optional,—,
+K,travel_segments,Guest operations,notes,text,,,"text, up to 10,000 characters",RG (a); HL (a); GU for the own group; SA,CLIENT for the client's own guests,Optional,—,
+K,vehicles,Pre-production,id,uuid,PK,,"UUID v7, generated",SYS,INTERNAL,System,—,
+K,vehicles,Pre-production,project_id,uuid,FK,,references wedding_projects,HL (a); SA,INTERNAL,At creation,—,
+K,vehicles,Pre-production,vendor_assignment_id,uuid,FK,,references vendor_assignments; nullable,HL (a); SA,INTERNAL,Optional,—,
+K,vehicles,Pre-production,vehicle_type,string,,,"string, up to 255 characters",HL (a); SA,INTERNAL,At creation,—,
+K,vehicles,Pre-production,registration_number,string,,,vehicle registration format,HL (a); SA,INTERNAL,Optional,—,
+K,vehicles,Pre-production,seat_capacity,int,,,"integer, 1 or more",HL (a); SA,INTERNAL,At creation,Passenger count validated against it,
+K,vehicles,Pre-production,driver_name,string,,,"string, up to 255 characters",HL (a); SA,INTERNAL,Optional,—,
+K,vehicles,Pre-production,driver_phone,string,,,"E.164 format, default +91",HL (a); SA,RESTRICTED-CONTACT,Optional,—,
+K,vehicles,Pre-production,status,string,,"planned, available, in_service, released",one of the listed options,HL (a); SA,INTERNAL,At creation,Transitions per permission-matrix §7; each transition audited; notifications per §8,
+K,transfers,Pre-production,id,uuid,PK,,"UUID v7, generated",SYS,INTERNAL,System,—,
+K,transfers,Pre-production,project_id,uuid,FK,,references wedding_projects,HL (a); SA,INTERNAL,At creation,—,
+K,transfers,Pre-production,vehicle_id,uuid,FK,,references vehicles; nullable,HL (a); SA,INTERNAL,Optional,—,
+K,transfers,Pre-production,transfer_type,string,,"airport_pickup, airport_drop, venue_shuttle, other",one of the listed options,HL (a); SA,INTERNAL,At creation,—,
+K,transfers,Pre-production,pickup_location,string,,,"string, up to 255 characters",HL (a); SA,INTERNAL,At creation,—,
+K,transfers,Pre-production,drop_location,string,,,"string, up to 255 characters",HL (a); SA,INTERNAL,At creation,—,
+K,transfers,Pre-production,scheduled_at,datetime,,,timestamp (UTC),HL (a),INTERNAL,At creation,—,
+K,transfers,Pre-production,actual_departure_at,datetime,,,timestamp (UTC),HL (a) on the day,INTERNAL,Optional,—,
+K,transfers,Pre-production,actual_arrival_at,datetime,,,timestamp (UTC),HL (a) on the day,INTERNAL,Optional,—,
+K,transfers,Pre-production,status,string,,"planned, assigned, en_route, completed, cancelled",one of the listed options,HL (a); SA,INTERNAL,At creation,Per §7; changes notify hospitality and RSVP staff (SPEC §8),
+K,transfers,Pre-production,coordinator_user_id,uuid,FK,,references users,HL (a),INTERNAL,Optional,—,
+K,transfers,Pre-production,notes,text,,,"text, up to 10,000 characters",HL (a); SA,INTERNAL,Optional,—,
+K,transfer_passengers,Pre-production,id,uuid,PK,,"UUID v7, generated",SYS,INTERNAL; the guest sees the own pickup time,System,—,
+K,transfer_passengers,Pre-production,transfer_id,uuid,FK,,references transfers,HL (a); SA,INTERNAL; the guest sees the own pickup time,At creation,—,
+K,transfer_passengers,Pre-production,guest_id,uuid,FK,,references guests,HL (a); SA,INTERNAL; the guest sees the own pickup time,At creation,—,
+K,transfer_passengers,Pre-production,travel_segment_id,uuid,FK,,references travel_segments; nullable,HL (a); SA,INTERNAL; the guest sees the own pickup time,Optional,—,
+K,transfer_passengers,Pre-production,status,string,,"assigned, boarded, no_show",one of the listed options,HL (a); SA,INTERNAL; the guest sees the own pickup time,At creation,Transitions per permission-matrix §7; each transition audited; notifications per §8,
+K,guest_departures,Live / closure,id,uuid,PK,,"UUID v7, generated",SYS,INTERNAL,System,—,
+K,guest_departures,Live / closure,project_id,uuid,FK,,references wedding_projects,HL (a); RG (a); SA,INTERNAL,At creation,—,
+K,guest_departures,Live / closure,guest_id,uuid,FK,,references guests,HL (a); RG (a); SA,INTERNAL,At creation,—,
+K,guest_departures,Live / closure,room_allocation_id,uuid,FK,,references room_allocations; nullable,HL (a); RG (a); SA,INTERNAL,Optional,—,
+K,guest_departures,Live / closure,transfer_id,uuid,FK,,references transfers; nullable,HL (a); RG (a); SA,INTERNAL,Optional,—,
+K,guest_departures,Live / closure,checked_out_at,datetime,,,timestamp (UTC),HL (a),INTERNAL,Optional,Closure checklist departures item,
+K,guest_departures,Live / closure,departure_confirmed,bool,,,true or false,HL (a); RG (a); SA,INTERNAL,At creation,All staying guests confirmed completes the departures item,
+K,guest_departures,Live / closure,confirmed_by,uuid,FK,,references users,SYS (acting user),INTERNAL,System,—,
+K,guest_departures,Live / closure,notes,text,,,"text, up to 10,000 characters",HL (a); RG (a); SA,INTERNAL,Optional,—,
+K,lost_and_found_items,Live,id,uuid,PK,,"UUID v7, generated",SYS,INTERNAL,System,—,
+K,lost_and_found_items,Live,project_id,uuid,FK,,references wedding_projects,HL (a); PM (a); SA,INTERNAL,At creation,—,
+K,lost_and_found_items,Live,function_id,uuid,FK,,references functions; nullable,HL (a); PM (a); SA,INTERNAL,Optional,—,
+K,lost_and_found_items,Live,description,text,,,"text, up to 10,000 characters",HL (a); PM (a); SA,INTERNAL,At creation,—,
+K,lost_and_found_items,Live,found_at,datetime,,,timestamp (UTC),HL (a),INTERNAL,At creation,—,
+K,lost_and_found_items,Live,found_location,string,,,"string, up to 255 characters",HL (a); PM (a); SA,INTERNAL,At creation,—,
+K,lost_and_found_items,Live,found_by_user_id,uuid,FK,,references users,SYS (acting user),INTERNAL,At creation,—,
+K,lost_and_found_items,Live,photo_media_id,uuid,FK,,references media_assets,HL (a); PM (a); SA,INTERNAL,Optional,—,
+K,lost_and_found_items,Live,status,string,,"logged, claimed, returned, disposed",one of the listed options,HL (a); PM (a); SA,INTERNAL,At creation,logged or claimed items block the closure item until returned or disposed,
+K,lost_and_found_items,Live,claimed_by_guest_id,uuid,FK,,references guests,HL (a); PM (a); SA,INTERNAL,Optional,—,
+K,lost_and_found_items,Live,returned_at,datetime,,,timestamp (UTC),HL (a),INTERNAL,Before status returned,—,
+L,menus,Planning,id,uuid,PK,,"UUID v7, generated",SYS,CLIENT when client_visible,System,—,
+L,menus,Planning,project_id,uuid,FK,,references wedding_projects,PM (a); VC (a); SA,CLIENT when client_visible,At creation,—,
+L,menus,Planning,function_id,uuid,FK,,references functions,PM (a); VC (a); SA,CLIENT when client_visible,At creation,—,
+L,menus,Planning,title,string,,,"string, up to 255 characters",PM (a); VC (a); SA,CLIENT,At creation,—,
+L,menus,Planning,caterer_assignment_id,uuid,FK,,references vendor_assignments; nullable,PM (a); VC (a); SA,CLIENT when client_visible,Optional,—,
+L,menus,Planning,service_style,string,,"buffet, plated, live_counters, mixed",one of the listed options,PM (a); VC (a); SA,CLIENT when client_visible,At creation,—,
+L,menus,Planning,status,string,,"draft, shared, approved, final",one of the listed options,PM (a); VC (a); SA,CLIENT when client_visible,At creation,approved when the current version is approved; final freezes the guaranteed headcount,
+L,menus,Planning,client_visible,bool,,,true or false,PM (a); VC (a); SA,CLIENT when client_visible,Optional,Sharing change audited; switches the client serialiser,
+L,menu_versions,Planning,id,uuid,PK,,"UUID v7, generated",SYS,CLIENT when shared,System,—,
+L,menu_versions,Planning,menu_id,uuid,FK,,references menus,PM (a); VC (a); SA,CLIENT when shared,At creation,—,
+L,menu_versions,Planning,version_number,int,,,"integer, 1 or more; increments by 1 within its parent; immutable once shared",PM (a); VC (a); SA,CLIENT when shared,At creation,A new version supersedes earlier approvals (SPEC §12),
+L,menu_versions,Planning,status,string,,"draft, shared, revision_requested, approved, superseded",one of the listed options,PM (a); VC (a); SA,CLIENT when shared,At creation,shared notifies approvers; approved locks the version; superseded on the next version,
+L,menu_versions,Planning,submitted_by,uuid,FK,,references users,SYS (acting user),CLIENT when shared,At creation,—,
+L,menu_versions,Planning,submitted_at,datetime,,,timestamp (UTC),SYS (when the action happens),CLIENT when shared,System,—,
+L,menu_versions,Planning,approval_id,uuid,FK,,references approvals,SYS,CLIENT when shared,Optional,—,
+L,menu_versions,Planning,document_id,uuid,FK,,references see data model,PM (a); VC (a); SA,CLIENT when shared,Optional,—,
+L,menu_versions,Planning,notes,text,,,"text, up to 10,000 characters",PM (a); VC (a); SA,CLIENT when shared,Optional,—,
+L,menu_items,Planning,id,uuid,PK,,"UUID v7, generated",SYS,CLIENT,System,—,
+L,menu_items,Planning,menu_version_id,uuid,FK,,references menu_versions,PM (a); VC (a); SA,CLIENT,At creation,—,
+L,menu_items,Planning,course,string,,,"string, up to 255 characters",PM (a); VC (a); SA,CLIENT,At creation,—,
+L,menu_items,Planning,name,string,,,"string, up to 255 characters",PM (a); VC (a); SA,CLIENT,At creation,—,
+L,menu_items,Planning,description,text,,,"text, up to 10,000 characters",PM (a); VC (a); SA,CLIENT,Optional,—,
+L,menu_items,Planning,dietary_tags_json,json,,,"subset of veg, jain, vegan, gluten_free, contains_nuts",PM (a); VC (a); SA,CLIENT,Optional,Headcount categories,
+L,menu_items,Planning,is_live_counter,bool,,,true or false,PM (a); VC (a); SA,CLIENT,Optional,—,
+L,menu_items,Planning,sort_order,int,,,"integer, 0 or more; unique within its parent",PM (a); VC (a); SA,CLIENT,Optional,—,
+L,menu_headcounts,System,id,uuid,PK,,"UUID v7, generated",SYS,INTERNAL,System,—,"A-7 (Q7), GP-24"
+L,menu_headcounts,System,menu_version_id,uuid,FK,,references menu_versions,SYS; guaranteed_count by PM (a),INTERNAL,At creation,—,"A-7 (Q7), GP-24"
+L,menu_headcounts,System,dietary_category,string,,,"string, up to 255 characters",SYS; guaranteed_count by PM (a),INTERNAL,At creation,—,"A-7 (Q7), GP-24"
+L,menu_headcounts,System,expected_count,int,,,"integer, 0 or more; from attendance and dietary preference (A-7)",SYS,INTERNAL,At creation,Recalculated on attendance or dietary change,"A-7 (Q7), GP-24"
+L,menu_headcounts,System,guaranteed_count,int,,,"integer, 0 or more; the number given to the caterer",PM (a),INTERNAL,Optional,Frozen when sent to the caterer; difference reported,"A-7 (Q7), GP-24"
+L,menu_headcounts,System,calculated_at,datetime,,,timestamp (UTC),SYS,INTERNAL,System,—,"A-7 (Q7), GP-24"
+M,tasks,Any,id,uuid,PK,,"UUID v7, generated",SYS,CLIENT when client_visible; INTERNAL otherwise,System,—,
+M,tasks,Any,project_id,uuid,FK,,"references wedding_projects; nullable, global tasks allowed",Creator; owner; PM (a); SA,CLIENT when client_visible; INTERNAL otherwise,Optional,—,
+M,tasks,Any,function_id,uuid,FK,,references functions; nullable,Creator; owner; PM (a); SA,CLIENT when client_visible; INTERNAL otherwise,Optional,—,
+M,tasks,Any,title,string,,,"string, up to 255 characters",Creator; owner; PM (a); SA,CLIENT when client_visible; INTERNAL otherwise,At creation,—,
+M,tasks,Any,description,text,,,"text, up to 10,000 characters",Creator; owner; PM (a); SA,CLIENT when client_visible; INTERNAL otherwise,Optional,—,
+M,tasks,Any,owner_user_id,uuid,FK,,references users,Creator; PM (a),CLIENT when client_visible; INTERNAL otherwise,At creation,Owner notified on assignment,
+M,tasks,Any,due_at,datetime,,,timestamp (UTC),Creator; owner; PM (a); SA,CLIENT when client_visible; INTERNAL otherwise,Optional,Overdue items appear on dashboards (SPEC §8),
+M,tasks,Any,priority,string,,"low, normal, high, urgent",one of the listed options,Creator; owner; PM (a); SA,CLIENT when client_visible; INTERNAL otherwise,At creation,—,
+M,tasks,Any,status,string,,"not_started, in_progress, blocked, completed, cancelled",one of the listed options,Creator; owner; PM (a); SA,CLIENT when client_visible; INTERNAL otherwise,At creation,Per §7; blocked requires blocked_reason; overdue on dashboards,
+M,tasks,Any,is_milestone,bool,,,true or false; shown on the client dashboard milestones,Creator; owner; PM (a); SA,CLIENT when client_visible; INTERNAL otherwise,Optional,Shown on the client dashboard,
+M,tasks,Any,client_visible,bool,,,true or false; pending decisions the client must act on,Creator; owner; PM (a); SA,CLIENT when client_visible; INTERNAL otherwise,Optional,Pending decisions list for the client,
+M,tasks,Any,blocked_reason,text,,,"text, up to 10,000 characters",Creator; owner; PM (a); SA,CLIENT when client_visible; INTERNAL otherwise,Before status blocked,—,
+M,tasks,Any,completed_at,datetime,,,timestamp (UTC),SYS (when the action happens),CLIENT when client_visible; INTERNAL otherwise,System,—,
+M,tasks,Any,entity_type,string,,,"string, up to 255 characters; nullable, related record",Creator; owner; PM (a); SA,CLIENT when client_visible; INTERNAL otherwise,Optional,—,
+M,tasks,Any,entity_id,uuid,,,optional link to any record in the same project,Creator; owner; PM (a); SA,CLIENT when client_visible; INTERNAL otherwise,Optional,—,
+M,tasks,Any,checklist_item_id,uuid,FK,,references checklist_items; nullable,SYS,CLIENT when client_visible; INTERNAL otherwise,Optional,—,
+M,task_dependencies,Any,id,uuid,PK,,"UUID v7, generated",SYS,INTERNAL,System,—,
+M,task_dependencies,Any,task_id,uuid,FK,,references tasks,PM (a); SA; task creator,INTERNAL,At creation,—,
+M,task_dependencies,Any,depends_on_task_id,uuid,FK,,references tasks in the same project; no cycles,PM (a); SA; task creator,INTERNAL,At creation,Dependent task cannot start before the prerequisite completes,
+M,task_dependencies,Any,dependency_type,string,,,"string, up to 255 characters; finish_to_start",PM (a); SA; task creator,INTERNAL,At creation,—,
+M,staff_assignments,Pre-production,id,uuid,PK,,"UUID v7, generated",SYS,INTERNAL,System,—,GP-30
+M,staff_assignments,Pre-production,project_id,uuid,FK,,references wedding_projects,PM (a); HL (a); SA,INTERNAL,At creation,—,GP-30
+M,staff_assignments,Pre-production,function_id,uuid,FK,,references functions; nullable,PM (a); HL (a); SA,INTERNAL,Optional,—,GP-30
+M,staff_assignments,Pre-production,user_id,uuid,FK,,references see data model,PM (a); HL (a); SA,INTERNAL,At creation,—,GP-30
+M,staff_assignments,Pre-production,on_site_role,string,,,"string, up to 255 characters; function_lead, hospitality_desk, vendor_liaison, transport, floater",PM (a); HL (a); SA,INTERNAL,At creation,—,GP-30
+M,staff_assignments,Pre-production,shift_start,datetime,,,timestamp (UTC),PM (a); HL (a); SA,INTERNAL,At creation,—,GP-30
+M,staff_assignments,Pre-production,shift_end,datetime,,,timestamp (UTC); after shift_start; no overlapping shifts for one user,PM (a); HL (a); SA,INTERNAL,At creation,—,GP-30
+M,staff_assignments,Pre-production,status,string,,"planned, confirmed, on_duty, off_duty, cancelled",one of the listed options,PM (a); HL (a); SA,INTERNAL,At creation,on_duty set from the live view,GP-30
+M,staff_assignments,Pre-production,notes,text,,,"text, up to 10,000 characters",PM (a); HL (a); SA,INTERNAL,Optional,—,GP-30
+M,incidents,Live,id,uuid,PK,,"UUID v7, generated",SYS,RESTRICTED-NOTES; title and status CLIENT when client_visible,System,—,SPEC §7 critical rule
+M,incidents,Live,project_id,uuid,FK,,references wedding_projects,Reporter; assignee; PM (a); HL (a); SA,RESTRICTED-NOTES; title and status CLIENT when client_visible,At creation,—,SPEC §7 critical rule
+M,incidents,Live,function_id,uuid,FK,,references functions; nullable,Reporter; assignee; PM (a); HL (a); SA,RESTRICTED-NOTES; title and status CLIENT when client_visible,Optional,—,SPEC §7 critical rule
+M,incidents,Live,reported_by,uuid,FK,,references users,SYS (acting user),RESTRICTED-NOTES; title and status CLIENT when client_visible,At creation,—,SPEC §7 critical rule
+M,incidents,Live,reported_at,datetime,,,timestamp (UTC),SYS (when the action happens),RESTRICTED-NOTES; title and status CLIENT when client_visible,At creation,—,SPEC §7 critical rule
+M,incidents,Live,title,string,,,"string, up to 255 characters",Reporter; assignee; PM (a); HL (a); SA,RESTRICTED-NOTES; title and status CLIENT when client_visible,At creation,—,SPEC §7 critical rule
+M,incidents,Live,description,text,,,"text, up to 10,000 characters",Reporter; assignee; PM (a); HL (a); SA,RESTRICTED-NOTES; title and status CLIENT when client_visible,At creation,—,SPEC §7 critical rule
+M,incidents,Live,severity,string,,"low, medium, high, critical",one of the listed options,Reporter; assignee; PM (a); HL (a); SA,RESTRICTED-NOTES; title and status CLIENT when client_visible,At creation,critical starts the escalation timer (permission-matrix §8),SPEC §7 critical rule
+M,incidents,Live,category,string,,,"string, up to 255 characters; guest, vendor, venue, safety, transport, other",Reporter; assignee; PM (a); HL (a); SA,RESTRICTED-NOTES; title and status CLIENT when client_visible,Optional,—,SPEC §7 critical rule
+M,incidents,Live,status,string,,"open, assigned, in_progress, escalated, resolved, closed",one of the listed options,Reporter; assignee; PM (a); HL (a); SA,RESTRICTED-NOTES; title and status CLIENT when client_visible,At creation,Per §7; resolved requires resolution_notes when critical,SPEC §7 critical rule
+M,incidents,Live,assigned_user_id,uuid,FK,,references users,PM (a); HL (a); SA,RESTRICTED-NOTES; title and status CLIENT when client_visible,Optional,Assignee notified,SPEC §7 critical rule
+M,incidents,Live,escalated_to_user_id,uuid,FK,,references users,SYS per escalation rules; PM (a),RESTRICTED-NOTES; title and status CLIENT when client_visible,Optional,—,SPEC §7 critical rule
+M,incidents,Live,escalated_at,datetime,,,timestamp (UTC),SYS (when the action happens),RESTRICTED-NOTES; title and status CLIENT when client_visible,System,—,SPEC §7 critical rule
+M,incidents,Live,resolved_at,datetime,,,timestamp (UTC),SYS (when the action happens),RESTRICTED-NOTES; title and status CLIENT when client_visible,System,—,SPEC §7 critical rule
+M,incidents,Live,resolution_notes,text,,,"text, up to 10,000 characters; required before resolved when severity is critical (SPEC section 7)",Reporter; assignee; PM (a); HL (a); SA,RESTRICTED-NOTES; title and status CLIENT when client_visible,Before status resolved when severity is critical,—,SPEC §7 critical rule
+M,incidents,Live,closed_at,datetime,,,timestamp (UTC),SYS (when the action happens),RESTRICTED-NOTES; title and status CLIENT when client_visible,System,—,SPEC §7 critical rule
+M,incidents,Live,client_visible,bool,,,true or false; default false,Reporter; assignee; PM (a); HL (a); SA,RESTRICTED-NOTES; title and status CLIENT when client_visible,Optional,Sharing change audited; switches the client serialiser,SPEC §7 critical rule
+N,documents,Any,id,uuid,PK,,"UUID v7, generated",SYS,Per the visibility field,System,—,"A-17 (Q17), A-14 (Q14)"
+N,documents,Any,project_id,uuid,FK,,references wedding_projects; nullable,Uploader; PM (a); SA; sharing per permission-matrix §5.14,Per the visibility field,Optional,—,"A-17 (Q17), A-14 (Q14)"
+N,documents,Any,account_id,uuid,FK,,references client_accounts; nullable,Uploader; PM (a); SA; sharing per permission-matrix §5.14,Per the visibility field,Optional,—,"A-17 (Q17), A-14 (Q14)"
+N,documents,Any,owner_type,string,,,"string, up to 255 characters; the record the file belongs to",Uploader; PM (a); SA; sharing per permission-matrix §5.14,Per the visibility field,At creation,—,"A-17 (Q17), A-14 (Q14)"
+N,documents,Any,owner_id,uuid,,,must exist; access follows the owning record,Uploader; PM (a); SA; sharing per permission-matrix §5.14,Per the visibility field,At creation,—,"A-17 (Q17), A-14 (Q14)"
+N,documents,Any,title,string,,,"string, up to 255 characters",Uploader; PM (a); SA; sharing per permission-matrix §5.14,Per the visibility field,At creation,—,"A-17 (Q17), A-14 (Q14)"
+N,documents,Any,document_type,string,,"proposal, contract, invoice, design, menu, schedule, rooming_list, rider, ticket, consent, other",one of the listed options,Uploader; PM (a); SA; sharing per permission-matrix §5.14,Per the visibility field,At creation,—,"A-17 (Q17), A-14 (Q14)"
+N,documents,Any,storage_key,string,,,"string, up to 255 characters; private object storage",SYS,SECRET,At creation,—,"A-17 (Q17), A-14 (Q14)"
+N,documents,Any,mime_type,string,,,allowed list per document_type; file scanned on upload,Uploader; PM (a); SA; sharing per permission-matrix §5.14,Per the visibility field,At creation,—,"A-17 (Q17), A-14 (Q14)"
+N,documents,Any,size_bytes,int,,,integer; within the configured limit (25 MB for documents),Uploader; PM (a); SA; sharing per permission-matrix §5.14,Per the visibility field,At creation,—,"A-17 (Q17), A-14 (Q14)"
+N,documents,Any,checksum,string,,,SHA-256 hex,SYS,Per the visibility field,At creation,—,"A-17 (Q17), A-14 (Q14)"
+N,documents,Any,version_number,int,,,"integer, 1 or more; increments by 1 within its parent; immutable once shared",SYS,Per the visibility field,At creation,A new upload with previous_version_id increments it,"A-17 (Q17), A-14 (Q14)"
+N,documents,Any,previous_version_id,uuid,FK,,references documents,Uploader; PM (a); SA; sharing per permission-matrix §5.14,Per the visibility field,Optional,—,"A-17 (Q17), A-14 (Q14)"
+N,documents,Any,visibility,string,,"internal, client, guest, public",one of the listed options,Uploader; PM (a); SA; sharing per permission-matrix §5.14,Per the visibility field,At creation,Sharing audited; guest and public need explicit permission,"A-17 (Q17), A-14 (Q14)"
+N,documents,Any,uploaded_by,uuid,FK,,references users,SYS (acting user),Per the visibility field,At creation,—,"A-17 (Q17), A-14 (Q14)"
+N,documents,Any,retention_class,string,,,"string, up to 255 characters; A-17",SYS from document_type; SA override,Per the visibility field,At creation,—,"A-17 (Q17), A-14 (Q14)"
+N,documents,Any,retention_until,datetime,,,timestamp (UTC),SYS,Per the visibility field,Optional,Retention job deletes the file after this date (A-17),"A-17 (Q17), A-14 (Q14)"
+N,media_assets,Any,id,uuid,PK,,"UUID v7, generated",SYS,Per the visibility field,System,—,GP-20 (Q9)
+N,media_assets,Any,owner_type,string,,"hotel, destination, vendor, design_version, invitation_version, project, cms",one of the listed options,"HT (hotels); VC (vendors); CD (a) (designs); SA; SM (rights, showcase)",Per the visibility field,At creation,—,GP-20 (Q9)
+N,media_assets,Any,owner_id,uuid,,,UUID,"HT (hotels); VC (vendors); CD (a) (designs); SA; SM (rights, showcase)",Per the visibility field,At creation,—,GP-20 (Q9)
+N,media_assets,Any,kind,string,,"image, video",one of the listed options,"HT (hotels); VC (vendors); CD (a) (designs); SA; SM (rights, showcase)",Per the visibility field,At creation,—,GP-20 (Q9)
+N,media_assets,Any,storage_key,string,,,"string, up to 255 characters",SYS,SECRET,At creation,—,GP-20 (Q9)
+N,media_assets,Any,thumbnail_key,string,,,"string, up to 255 characters",SYS,SECRET,Optional,Generated by the media worker; video transcoded for controlled delivery,GP-20 (Q9)
+N,media_assets,Any,caption,string,,,"string, up to 255 characters","HT (hotels); VC (vendors); CD (a) (designs); SA; SM (rights, showcase)",Same class as the asset,Optional,—,GP-20 (Q9)
+N,media_assets,Any,sort_order,int,,,"integer, 0 or more; unique within its parent","HT (hotels); VC (vendors); CD (a) (designs); SA; SM (rights, showcase)",Per the visibility field,Optional,—,GP-20 (Q9)
+N,media_assets,Any,visibility,string,,"internal, client, demo, public",one of the listed options,"HT (hotels); VC (vendors); CD (a) (designs); SA; SM (rights, showcase)",Per the visibility field,At creation,Sharing change audited; switches the serialiser per class,GP-20 (Q9)
+N,media_assets,Any,rights_status,string,,"owned, licensed, consent_required, consent_obtained","client, demo or public visibility requires owned, licensed or consent_obtained",HT; VC; SM; SA,Per the visibility field,At creation,"Client, demo or public visibility refused unless owned, licensed or consent_obtained",GP-20 (Q9)
+N,media_assets,Any,consent_source_project_id,uuid,FK,,"references wedding_projects; nullable, the wedding the media came from","HT (hotels); VC (vendors); CD (a) (designs); SA; SM (rights, showcase)",Per the visibility field,When rights_status is consent_obtained for wedding media,—,GP-20 (Q9)
+N,media_assets,Any,consent_document_id,uuid,FK,,references documents; nullable,"HT (hotels); VC (vendors); CD (a) (designs); SA; SM (rights, showcase)",Per the visibility field,When rights_status is consent_obtained,—,GP-20 (Q9)
+N,media_assets,Any,uploaded_by,uuid,FK,,references users,SYS (acting user),Per the visibility field,At creation,—,GP-20 (Q9)
+N,identity_documents,Guest operations (conditional),id,uuid,PK,,"UUID v7, generated",SYS,RESTRICTED-IDENTITY,System,—,"A-8 (Q8), P-5 (Q8), GP-41"
+N,identity_documents,Guest operations (conditional),guest_id,uuid,FK,,references guests,RG (a) with explicit grant; GU for the own document; SA break-glass,RESTRICTED-IDENTITY,At creation,—,"A-8 (Q8), P-5 (Q8), GP-41"
+N,identity_documents,Guest operations (conditional),project_id,uuid,FK,,references wedding_projects,RG (a) with explicit grant; GU for the own document; SA break-glass,RESTRICTED-IDENTITY,At creation,—,"A-8 (Q8), P-5 (Q8), GP-41"
+N,identity_documents,Guest operations (conditional),document_type,string,,"passport, voter_id, driving_licence, other","passport, voter_id, driving_licence or other; aadhaar is rejected (A-8)",RG (a) with explicit grant; GU for the own document; SA break-glass,RESTRICTED-IDENTITY,At creation,—,"A-8 (Q8), P-5 (Q8), GP-41"
+N,identity_documents,Guest operations (conditional),masked_reference,string,,,last 4 characters only; the full number is never stored,RG (a) with explicit grant; GU for the own document; SA break-glass,RESTRICTED-IDENTITY,At creation,—,"A-8 (Q8), P-5 (Q8), GP-41"
+N,identity_documents,Guest operations (conditional),issuing_country,string,,,"string, up to 255 characters",RG (a) with explicit grant; GU for the own document; SA break-glass,RESTRICTED-IDENTITY,Optional,—,"A-8 (Q8), P-5 (Q8), GP-41"
+N,identity_documents,Guest operations (conditional),expiry_date,date,,,date; not in the past at collection,RG (a) with explicit grant; GU for the own document; SA break-glass,RESTRICTED-IDENTITY,Optional,—,"A-8 (Q8), P-5 (Q8), GP-41"
+N,identity_documents,Guest operations (conditional),file_document_id,uuid,FK,,references documents; stored in the restricted bucket,RG (a) with explicit grant; GU for the own document; SA break-glass,RESTRICTED-IDENTITY,At creation,Restricted bucket; every read audited,"A-8 (Q8), P-5 (Q8), GP-41"
+N,identity_documents,Guest operations (conditional),purpose,string,,"hotel_checkin, visa, travel",one of the listed options,RG (a) with explicit grant; GU for the own document; SA break-glass,RESTRICTED-IDENTITY,At creation,—,"A-8 (Q8), P-5 (Q8), GP-41"
+N,identity_documents,Guest operations (conditional),consent_at,datetime,,,timestamp (UTC),SYS,RESTRICTED-IDENTITY,At creation,—,"A-8 (Q8), P-5 (Q8), GP-41"
+N,identity_documents,Guest operations (conditional),collected_by,uuid,FK,,"references users; nullable, null when uploaded by the guest",SYS (acting user),RESTRICTED-IDENTITY,System,—,"A-8 (Q8), P-5 (Q8), GP-41"
+N,identity_documents,Guest operations (conditional),retention_until,datetime,,,"timestamp (UTC); nullable; set only when AMPM approves deletion (Q8, Q17)",SYS: checkout plus 30 days,RESTRICTED-IDENTITY,System,Deletion job removes the file and nulls the reference,"A-8 (Q8), P-5 (Q8), GP-41"
+N,identity_documents,Guest operations (conditional),deletion_approved_by,uuid,FK,,references users; nullable; AMPM approval record (Q17),SYS (acting user),RESTRICTED-IDENTITY,System,—,"A-8 (Q8), P-5 (Q8), GP-41"
+N,document_access_links,System on share,id,uuid,PK,,"UUID v7, generated",SYS,INTERNAL,System,—,
+N,document_access_links,System on share,document_id,uuid,FK,,references see data model,SYS on share; the creator or SA may revoke,INTERNAL,At creation,—,
+N,document_access_links,System on share,token_hash,string,,,"string, up to 255 characters",SYS,SECRET,At creation,—,
+N,document_access_links,System on share,expires_at,datetime,,,default 15 minutes; never more than 24 hours,SYS,INTERNAL,System,Refused after expiry,
+N,document_access_links,System on share,max_downloads,int,,,"integer, 1 or more",SYS on share; the creator or SA may revoke,INTERNAL,Optional,—,
+N,document_access_links,System on share,download_count,int,,,system counter,SYS,INTERNAL,Optional,—,
+N,document_access_links,System on share,created_by,uuid,FK,,references users,SYS (acting user),INTERNAL,At creation,—,
+N,document_access_links,System on share,revoked_at,datetime,,,timestamp (UTC),Creator; SA,INTERNAL,System,—,
+O,checklist_templates,Configuration,id,uuid,PK,,"UUID v7, generated",SYS,INTERNAL,System,—,
+O,checklist_templates,Configuration,template_key,string,UK,,"lowercase snake_case; unique; function_readiness, project_closure",SA,INTERNAL,At creation,—,
+O,checklist_templates,Configuration,entity_type,string,,"function, project",one of the listed options,SA,INTERNAL,At creation,—,
+O,checklist_templates,Configuration,name,string,,,"string, up to 255 characters",SA,INTERNAL,At creation,—,
+O,checklist_templates,Configuration,items_json,json,,,"ordered items with item_key, title and is_required",SA,INTERNAL,At creation,—,
+O,checklist_templates,Configuration,is_active,bool,,,true or false,SA,INTERNAL,Optional,—,
+O,checklists,System on function or project creation,id,uuid,PK,,"UUID v7, generated",SYS,INTERNAL,System,—,
+O,checklists,System on function or project creation,template_id,uuid,FK,,references checklist_templates,SYS,INTERNAL,At creation,—,
+O,checklists,System on function or project creation,entity_type,string,,"function, project",one of the listed options,SYS,INTERNAL,At creation,—,
+O,checklists,System on function or project creation,entity_id,uuid,,,UUID,SYS,INTERNAL,At creation,—,
+O,checklists,System on function or project creation,name,string,,,"string, up to 255 characters",SYS,INTERNAL,At creation,—,
+O,checklists,System on function or project creation,status,string,,"not_started, in_progress, blocked, complete, complete_with_exception",one of the listed options,SYS,INTERNAL,At creation,Derived from the items; drives function readiness and project closure,
+O,checklist_items,System from template,id,uuid,PK,,"UUID v7, generated",SYS,INTERNAL,System,—,P-8 (Q10)
+O,checklist_items,System from template,checklist_id,uuid,FK,,references checklists,PM (a); HL (a); VC; FA; SA per item (permission-matrix §5.15),INTERNAL,At creation,—,P-8 (Q10)
+O,checklist_items,System from template,item_key,string,,,"string, up to 255 characters; e.g. departures, lost_and_found, vendor_completion, final_accounts",PM (a); HL (a); VC; FA; SA per item (permission-matrix §5.15),INTERNAL,At creation,—,P-8 (Q10)
+O,checklist_items,System from template,title,string,,,"string, up to 255 characters",PM (a); HL (a); VC; FA; SA per item (permission-matrix §5.15),INTERNAL,At creation,—,P-8 (Q10)
+O,checklist_items,System from template,is_required,bool,,,true or false,PM (a); HL (a); VC; FA; SA per item (permission-matrix §5.15),INTERNAL,At creation,—,P-8 (Q10)
+O,checklist_items,System from template,status,string,,"pending, done, not_applicable, exception",one of the listed options,PM (a); HL (a); VC; FA; SA per item (permission-matrix §5.15),INTERNAL,At creation,done or exception on every required item completes the checklist; closure items are verified against data (data-model §17),P-8 (Q10)
+O,checklist_items,System from template,completed_by,uuid,FK,,references users,SYS (acting user),INTERNAL,System,—,P-8 (Q10)
+O,checklist_items,System from template,completed_at,datetime,,,timestamp (UTC),SYS (when the action happens),INTERNAL,System,—,P-8 (Q10)
+O,checklist_items,System from template,exception_reason,text,,,"text, up to 10,000 characters",PM (a); HL (a); VC; FA; SA per item (permission-matrix §5.15),INTERNAL,When status is exception,—,P-8 (Q10)
+O,checklist_items,System from template,exception_authorised_by,uuid,FK,,references users,SYS (authorising user holding the exception permission),INTERNAL,When status is exception,—,P-8 (Q10)
+O,checklist_items,System from template,evidence_document_id,uuid,FK,,references documents,PM (a); HL (a); VC; FA; SA per item (permission-matrix §5.15),INTERNAL,For closure items where the template demands evidence,—,P-8 (Q10)
+O,client_feedback,Closure (client),id,uuid,PK,,"UUID v7, generated",SYS,CLIENT,System,—,A-24 (Q24)
+O,client_feedback,Closure (client),project_id,uuid,FK,,references wedding_projects,"CO, CA",CLIENT,At creation,—,A-24 (Q24)
+O,client_feedback,Closure (client),submitted_by_user_id,uuid,FK,,references users,SYS (acting user),CLIENT,At creation,—,A-24 (Q24)
+O,client_feedback,Closure (client),overall_rating,int,,,integer 1 to 5,"CO, CA",CLIENT,At creation,—,A-24 (Q24)
+O,client_feedback,Closure (client),comments_text,text,,,"text, up to 10,000 characters","CO, CA",CLIENT,Optional,—,A-24 (Q24)
+O,client_feedback,Closure (client),consent_to_publish,bool,,,true or false,"CO, CA",CLIENT,Optional,Allows use in showcase content,A-24 (Q24)
+O,client_feedback,Closure (client),submitted_at,datetime,,,timestamp (UTC),SYS (when the action happens),CLIENT,System,—,A-24 (Q24)
+P,cms_pages,Configuration,id,uuid,PK,,"UUID v7, generated",SYS,PUBLIC when published,System,—,A-12 (Q12)
+P,cms_pages,Configuration,slug,string,UK,,"lowercase letters, digits and hyphens; unique; home, how_it_works, services, about, contact",SA; SM,PUBLIC when published,At creation,—,A-12 (Q12)
+P,cms_pages,Configuration,title,string,,,"string, up to 255 characters",SA; SM,PUBLIC when published,At creation,—,A-12 (Q12)
+P,cms_pages,Configuration,status,string,,"draft, published",one of the listed options,SA; SM,PUBLIC when published,At creation,published renders on the website; audited,A-12 (Q12)
+P,cms_pages,Configuration,sections_json,json,,,valid JSON matching the page template schema,SA; SM,PUBLIC when published,At creation,—,A-12 (Q12)
+P,cms_pages,Configuration,seo_title,string,,,up to 60 characters,SA; SM,PUBLIC when published,Optional,—,A-12 (Q12)
+P,cms_pages,Configuration,seo_description,string,,,up to 160 characters,SA; SM,PUBLIC when published,Optional,—,A-12 (Q12)
+P,cms_pages,Configuration,published_at,datetime,,,timestamp (UTC),SYS (when the action happens),PUBLIC when published,System,—,A-12 (Q12)
+P,cms_showcase_items,Content,id,uuid,PK,,"UUID v7, generated",SYS,PUBLIC when is_published,System,—,"A-12 (Q12), GP-20"
+P,cms_showcase_items,Content,title,string,,,"string, up to 255 characters",SA; SM,PUBLIC when is_published,At creation,—,"A-12 (Q12), GP-20"
+P,cms_showcase_items,Content,description,text,,,"text, up to 10,000 characters",SA; SM,PUBLIC when is_published,Optional,—,"A-12 (Q12), GP-20"
+P,cms_showcase_items,Content,media_asset_id,uuid,FK,,references media_assets,SA; SM,PUBLIC when is_published,At creation,—,"A-12 (Q12), GP-20"
+P,cms_showcase_items,Content,destination_id,uuid,FK,,references destinations; nullable,SA; SM,PUBLIC when is_published,Optional,—,"A-12 (Q12), GP-20"
+P,cms_showcase_items,Content,hotel_id,uuid,FK,,references hotels; nullable,SA; SM,PUBLIC when is_published,Optional,—,"A-12 (Q12), GP-20"
+P,cms_showcase_items,Content,source_project_id,uuid,FK,,"references wedding_projects; nullable, consent (GP-20)",SA; SM,PUBLIC when is_published,Optional,Consent record for wedding media,"A-12 (Q12), GP-20"
+P,cms_showcase_items,Content,is_published,bool,,,"true only when the media rights are owned, licensed or consent_obtained",SA; SM,PUBLIC when is_published,At creation,Audited,"A-12 (Q12), GP-20"
+P,cms_showcase_items,Content,sort_order,int,,,"integer, 0 or more; unique within its parent",SA; SM,PUBLIC when is_published,At creation,—,"A-12 (Q12), GP-20"
+Q,conversations,Any (client or staff opens a chat),id,uuid,PK,,"UUID v7, generated",SYS,CLIENT,System,—,A-20 changed (Q20)
+Q,conversations,Any (client or staff opens a chat),account_id,uuid,FK,,references client_accounts,"CR opens; SM, PM (a), HT, RG (a), HL (a), SA handle",CLIENT,At creation,—,A-20 changed (Q20)
+Q,conversations,Any (client or staff opens a chat),project_id,uuid,FK,,"references wedding_projects; nullable, subscriber conversations have no project","CR opens; SM, PM (a), HT, RG (a), HL (a), SA handle",CLIENT,Optional,—,A-20 changed (Q20)
+Q,conversations,Any (client or staff opens a chat),subject,string,,,"string, up to 255 characters","CR opens; SM, PM (a), HT, RG (a), HL (a), SA handle",CLIENT,At creation,—,A-20 changed (Q20)
+Q,conversations,Any (client or staff opens a chat),status,string,,"open, waiting_on_client, closed",one of the listed options,"CR opens; SM, PM (a), HT, RG (a), HL (a), SA handle",CLIENT,At creation,open and waiting_on_client surface on the team dashboard; closed after inactivity per configuration,A-20 changed (Q20)
+Q,conversations,Any (client or staff opens a chat),assigned_user_id,uuid,FK,,references users; nullable,SA; the handling team,CLIENT,Optional,Assignee notified in real time,A-20 changed (Q20)
+Q,conversations,Any (client or staff opens a chat),last_message_at,datetime,,,timestamp (UTC),SYS,CLIENT,System,—,A-20 changed (Q20)
+Q,conversations,Any (client or staff opens a chat),closed_at,datetime,,,timestamp (UTC),SYS (when the action happens),CLIENT,System,—,A-20 changed (Q20)
+Q,messages,Any,id,uuid,PK,,"UUID v7, generated",SYS,CLIENT,System,—,A-20 changed (Q20)
+Q,messages,Any,conversation_id,uuid,FK,,references see data model,Sender,CLIENT,At creation,—,A-20 changed (Q20)
+Q,messages,Any,sender_type,string,,"client, staff, system",one of the listed options,Sender,CLIENT,At creation,—,A-20 changed (Q20)
+Q,messages,Any,sender_id,uuid,,,references users or the client representative per sender_type,SYS (acting user),CLIENT,System,—,A-20 changed (Q20)
+Q,messages,Any,body,text,,,"text, up to 4,000 characters",Sender,CLIENT,At creation,—,A-20 changed (Q20)
+Q,messages,Any,attachment_document_id,uuid,FK,,references documents; nullable,Sender,CLIENT,Optional,—,A-20 changed (Q20)
+Q,messages,Any,client_request_id,uuid,FK,,references see data model; nullable; set when a message is turned into a tracked request,"Staff, when a message is turned into a tracked request",CLIENT,Optional,Creates the request with this message as its description,A-20 changed (Q20)
+Q,messages,Any,read_at,datetime,,,timestamp (UTC),SYS,CLIENT,System,Read receipts per side,A-20 changed (Q20)

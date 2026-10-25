@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PROJECT_DIR:-.}/docs/tools/checkpoint.sh\" --hook",
+            "timeout": 180,
+            "statusMessage": "AMPM: committing the project and syncing the Obsidian vault"
+          }
+        ]
+      }
+    ]
+  }
+}

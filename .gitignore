@@ -1,0 +1,16 @@
+# AMPM platform project repository
+
+# The Obsidian vault is its own repository (ampm-vault)
+vault/
+
+# Tooling output
+docs/tools/node_modules/
+docs/site/
+
+# Local state
+.obsidian/
+.DS_Store
+.claude/settings.local.json
+
+# 173 MB export, not a source
+/Audit- AMPM.pdf
