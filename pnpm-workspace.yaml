@@ -1,0 +1,20 @@
+packages:
+  - apps/*
+  - packages/*
+
+# One version of React, React DOM and TypeScript across the repository, dictated by the Expo SDK
+# (docs/engineering/standards.md §2.1; expo-template-default@sdk-58 pins react 19.3.0 and typescript ~6.0.3).
+catalog:
+  react: 19.3.0
+  react-dom: 19.3.0
+  "@types/react": ~19.3.0
+  typescript: ~6.0.3
+
+# pnpm runs no install scripts unless approved (allowBuilds, pnpm 11+); Prisma needs its engine download, nothing else does yet.
+allowBuilds:
+  prisma: true
+  "@prisma/engines": true
+
+# Expo's default for pnpm monorepos (docs.expo.dev/guides/monorepos): a flat node_modules so Metro and the native
+# tooling resolve one copy of everything. pnpm 12 reads this here, not from .npmrc.
+nodeLinker: hoisted

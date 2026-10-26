@@ -2,6 +2,14 @@
 
 Read [docs/README.md](docs/README.md) first: the reading order of the design package, how the identifiers work (Q1 to Q25, CF/GP/AM/RK findings, the assumption prefixes), and which files are generated and must never be edited by hand. AMPM's decisions are in `docs/decisions.json` and `docs/decision-log.md`; the points still to confirm are listed there. Sessions run in worktrees under `.claude/worktrees/`; every tool below treats them as this project.
 
+## Delivery model
+
+AMPM is built by one developer, the user, with Claude Code as the development team; there are no other developers (recorded 26 October 2026, decision D-012). Plan, estimate and sequence for one person: one stream of work at a time, no parallel teams, and every assumption in the drafts that says "the development team" or "a small team" means the user plus Claude. The developer's own planning inputs are in `docs/planning/`.
+
+## Engineering rules
+
+Code lives in `apps/` (web, mobile, api) and `packages/` (tokens, ui, core, policy, api-client, config); bootstrap step 1 of `docs/engineering/standards.md` §2.7 is done (26 October 2026), steps 2 to 6 follow. Toolchain: Node 24 through nvm (`.nvmrc`; Expo SDK 58 needs 22.13 or newer), pnpm 12 through corepack with the hoisted linker, Turborepo; `pnpm install`, `pnpm dev --filter=web|mobile|api`, `pnpm typecheck`, `pnpm check`. Ports 3000, 3100 and 8081 on this machine belong to other projects; use `next dev --port <free>` and `expo start --port <free>` when checking. The engineering standards are the AMPM edition of the universal-app standards, adopted on 26 October 2026 (decision D-013): `docs/engineering/standards.md` holds the review and the standards; the enforceable rules load by path from `.claude/rules/` (`code.md`, `ui.md`, `styling.md`, `api.md`, `security.md`, `offline.md`, `data.md`); `.claude/hooks/check-file.sh` lints every TypeScript file written and `.claude/hooks/typecheck.sh` blocks the end of a turn while typecheck fails, both inert until `pnpm-workspace.yaml` exists; `packages/config/eslint/boundaries.mjs` holds the import boundaries. Stack as decided: Expo for both apps (phones and tablets, web export for the client portals), Next.js for the public website, NestJS with Prisma for the API, Zod contracts in `packages/core`, the permission matrix as code in `packages/policy`; hosting locked on 26 October 2026 (R13): everything on AMPM's dedicated VPS per `docs/engineering/vps-setup.md`; identity service Amazon Cognito in Mumbai (locked 26 October 2026).
+
 ## Session memory (MemPalace)
 
 Every session in this folder or one of its worktrees is mined into the MemPalace wing `ampm` by the hooks in `.claude/settings.json` (every ten human messages, before compaction and at session end); the design docs are filed into the same wing by the checkpoint after each commit. The palace is local (`~/.mempalace`), nothing leaves the machine.

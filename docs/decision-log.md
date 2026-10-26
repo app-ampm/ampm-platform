@@ -1,6 +1,6 @@
 # AMPM Platform — Decision Log
 
-**Status:** AMPM's decisions of 2026-10-25, generated from `docs/decisions.json` by `docs/tools/decision_log_build.py`. Do not edit by hand; change the JSON and rebuild.
+**Status:** AMPM's decisions of 2026-10-25, with the round-two decisions of 2026-10-26 (Decisions relayed by the developer on 26 October 2026, to be countersigned by AMPM in the blueprint sign-off sheet) where marked, generated from `docs/decisions.json` by `docs/tools/decision_log_build.py`. Do not edit by hand; change the JSON and rebuild.
 **Sources:** AMPM App – Compiled Questions & Answers (PDF, 5 pages, 25 Oct 2026); AMPM Management – Final App Decision Brief & Developer Requirements (PDF, 14 pages, 25 Oct 2026).
 
 This log is the record of what AMPM decided, question by question, and what each answer does to the assumptions the drafts were built on. The assumption registers in every draft carry the same markers; the generated decision register and assumptions sheet show them too.
@@ -9,61 +9,55 @@ This log is the record of what AMPM decided, question by question, and what each
 
 | | Count |
 |---|---|
-| Questions decided | 13 |
-| Questions partly decided (an open point remains) | 9 |
-| Questions still open | 3 |
-| Assumptions confirmed | 28 |
-| Assumptions changed | 35 |
-| Assumptions partly decided | 15 |
+| Questions decided | 16 |
+| Questions partly decided (an open point remains) | 7 |
+| Questions still open | 2 |
+| Assumptions confirmed | 30 |
+| Assumptions changed | 41 |
+| Assumptions partly decided | 13 |
 | Assumptions dropped | 4 |
-| Assumptions still open | 7 |
-| Assumptions not addressed, standing | 9 |
+| Assumptions still open | 2 |
+| Assumptions not addressed, standing | 8 |
 
 ## Tier 1
 
 ### Q1 Delivery platform — Decided
 
-**AMPM decided.** Native iOS and Android apps are required. Offline access to essential wedding-day information is required, with automatic synchronisation when the device reconnects, conflict detection and a controlled resolution process. The final technical architecture is to be agreed with the development team.
-
-**Still open.** 1. Whether the client portal is also needed on the web (desktop) in addition to the apps.
+**AMPM decided.** Native iOS and Android apps are required. Offline access to essential wedding-day information is required, with automatic synchronisation when the device reconnects, conflict detection and a controlled resolution process. The final technical architecture is to be agreed with the development team. Decided 26 October 2026: the client portals (hotel discovery and the wedding portal) also run in the browser, and both apps support iPad and Android tablets as well as phones.
 
 | Assumption | Status | What AMPM's answer means for it |
 |---|---|---|
-| A-1 ([data-model.md](data-model.md) §0) | Changed | Native iOS and Android apps with offline use from launch; the web remains for the public website. Whether the client portal also needs a web version is open. |
-| T-1 ([architecture.md](architecture.md) §0) | Changed | Native iOS and Android apps for the team and the client, with offline-first operations; web for the public website. |
+| A-1 ([data-model.md](data-model.md) §0) | Changed | Native iOS and Android apps with offline use from launch; the client portals also run in the browser; both apps support phones and tablets; the web remains for the public website. |
+| T-1 ([architecture.md](architecture.md) §0) | Changed | Native apps for the team and the client from one codebase, with a browser build of the client portals and tablet layouts for both apps; web for the public website. |
 | T-11 ([architecture.md](architecture.md) §0) | Changed | Offline-first in the native apps from launch, with sync, conflict detection and protected local storage. |
 | U-7 ([user-flows.md](user-flows.md) §0) | Confirmed | Offline operation is required, not optional. |
-| W-3 ([wireframes.md](wireframes.md) §0) | Changed | Native apps for client and team; responsive web for the public site only. |
+| W-3 ([wireframes.md](wireframes.md) §0) | Changed | Native apps for client and team with phone and tablet layouts; the client portals also in the browser; responsive web for the public site. |
 | W-10 ([wireframes.md](wireframes.md) §0) | Changed | Offline screens at launch and extended to tasks, department information and arrival lists. |
 | V-4 ([test-cases.md](test-cases.md) §0) | Changed | Offline tests move to the first release and run on native builds. |
 
 ### Q2 Payment mode for Phase 1 — Decided
 
-**AMPM decided.** AMPM creates the client's account or sends an invitation link. The client enters basic wedding details (couple's names, contact information, tentative dates, preferred locations) and pays the subscription online by card or UPI. The gateway provider will be selected by AMPM. Payments must create a record, activate the subscription once, and be reviewable by authorised staff.
-
-**Still open.** 1. Payment gateway provider.
+**AMPM decided.** AMPM creates the client's account or sends an invitation link. The client enters basic wedding details (couple's names, contact information, tentative dates, preferred locations) and pays the subscription online by card or UPI. The gateway provider will be selected by AMPM. Payments must create a record, activate the subscription once, and be reviewable by authorised staff. Decided 26 October 2026: Razorpay is the gateway.
 
 | Assumption | Status | What AMPM's answer means for it |
 |---|---|---|
-| A-2 ([data-model.md](data-model.md) §0) | Changed | Online payment only, by card or UPI, after AMPM creates or invites the account and the client enters basic wedding details. Gateway to be selected by AMPM. Manual recording stays as a staff fallback for exceptions. |
-| T-3 ([architecture.md](architecture.md) §0) | Still open | Gateway to be selected by AMPM; card and UPI required. |
+| A-2 ([data-model.md](data-model.md) §0) | Changed | Online payment only, by card or UPI through Razorpay, after AMPM creates or invites the account and the client enters basic wedding details; no refund is offered; manual recording stays as a staff fallback. |
+| T-3 ([architecture.md](architecture.md) §0) | Confirmed | Razorpay, card and UPI, hosted checkout, activation once per transaction; no refunds offered. |
 | U-2 ([user-flows.md](user-flows.md) §0) | Confirmed | Confirmed; the client also completes basic wedding details before paying; payment online only. |
 | W-15 ([wireframes.md](wireframes.md) §0) | Confirmed | Purchase after activation, with the basic wedding details form first. |
-| V-1 ([test-cases.md](test-cases.md) §0) | Partly decided | Gateway sandbox depends on the provider choice. |
+| V-1 ([test-cases.md](test-cases.md) §0) | Confirmed | Razorpay sandbox for the contract tests. |
 
 ### Q3 Subscription shape — Decided
 
-**AMPM decided.** The subscription is for hotel discovery only: Rs 50,000, one-time, one month from activation, configurable in settings. Renewal is a new purchase. After expiry the client keeps read-only access to saved hotel names and existing enquiries; nothing is deleted; renewal restores access and data. There is no separate trial: the demo, reached by mobile OTP, serves that purpose.
-
-**Still open.** 1. Demo duration. 2. Demo limits: up to three locations, one or two sample hotels per location.
+**AMPM decided.** The subscription is for hotel discovery only: Rs 50,000, one-time, one month from activation, configurable in settings. Renewal is a new purchase. After expiry the client keeps read-only access to saved hotel names and existing enquiries; nothing is deleted; renewal restores access and data. There is no separate trial: the demo, reached by mobile OTP, serves that purpose. Decided 26 October 2026: the demo has no time limit, shows three locations with one real hotel each at indicative prices, and is managed by the admin; no refund is offered on the subscription.
 
 | Assumption | Status | What AMPM's answer means for it |
 |---|---|---|
 | A-3 ([data-model.md](data-model.md) §0) | Confirmed | Rs 50,000, one-time, one month, configurable; renewal is a new purchase; no separate trial plan, the demo serves that purpose. |
-| A-28 ([data-model.md](data-model.md) §0) | Changed | Demo shows up to three locations and one or two sample hotels each with indicative prices and street view, after OTP; limits and duration configurable and to be finalised. |
+| A-28 ([data-model.md](data-model.md) §0) | Changed | Demo after OTP with no time limit: three locations, one real hotel each with indicative prices and street view, managed by the admin. |
 | P-7 ([permission-matrix.md](permission-matrix.md) §0) | Changed | Demo users see a limited set of hotels with indicative prices, not masked prices. |
-| U-1 ([user-flows.md](user-flows.md) §0) | Confirmed | Confirmed, with OTP login to the demo and an optional 15 to 20 minute Zoom call before purchase. |
-| V-10 ([test-cases.md](test-cases.md) §0) | Partly decided | Demo content changed; isolation tests stand. |
+| U-1 ([user-flows.md](user-flows.md) §0) | Confirmed | Sales authorises the demo; OTP login; no expiry; optional 15 to 20 minute Zoom call before purchase. |
+| V-10 ([test-cases.md](test-cases.md) §0) | Changed | Demo content: three real hotels with indicative prices and no expiry; isolation tests stand. |
 
 ### Q4 Client-visible finance — Partly decided
 
@@ -80,13 +74,13 @@ This log is the record of what AMPM decided, question by question, and what each
 
 ### Q5 Client-side users — Partly decided
 
-**AMPM decided.** Only two nominated family representatives use the client portal, one from the bride's side and one from the groom's side; the families decide who. No other family member may hold an account without AMPM's authorisation. Cost and margin information is never visible to them. AMPM may record a decision made outside the portal when a note or supporting record is attached.
+**AMPM decided.** Only two nominated family representatives use the client portal, one from the bride's side and one from the groom's side; the families decide who. No other family member may hold an account without AMPM's authorisation. Cost and margin information is never visible to them. AMPM may record a decision made outside the portal when a note or supporting record is attached. Confirmed 26 October 2026: the client-portal access and permission rules of the brief's section 5 stand as written. Working decision on logins: two individually authenticated accounts, the brief's stated preference, to be countersigned.
 
-**Still open.** 1. One shared login or two separately authenticated accounts on the same wedding (separate accounts recommended for security and audit history). 2. Whether one representative's approval completes a decision or both must approve.
+**Still open.** 1. Login implementation: working decision of 26 October 2026 is two individually authenticated accounts; AMPM to countersign. 2. Whether one representative's approval completes a decision or both must approve.
 
 | Assumption | Status | What AMPM's answer means for it |
 |---|---|---|
-| A-5 ([data-model.md](data-model.md) §0) | Changed | Two family representatives, one per side, with equal rights; no viewer role and no finance flag. Shared or separate logins to be decided; separate recommended. |
+| A-5 ([data-model.md](data-model.md) §0) | Changed | Two family representatives, one per side, with equal rights; no viewer role and no finance flag; working decision two individually authenticated accounts, each verified by email and mobile, to be countersigned. |
 | P-2 ([permission-matrix.md](permission-matrix.md) §0) | Changed | Two family representatives with equal rights replace the owner, approver and viewer roles. |
 | P-9 ([permission-matrix.md](permission-matrix.md) §0) | Confirmed | On-behalf decisions allowed with a note or supporting record. |
 | U-4 ([user-flows.md](user-flows.md) §0) | Confirmed | On-behalf decisions with a note or record. |
@@ -141,15 +135,13 @@ This log is the record of what AMPM decided, question by question, and what each
 | A-27 ([data-model.md](data-model.md) §0) | Not addressed, stands | Not addressed; stands. |
 | A-15 ([data-model.md](data-model.md) §0) | Changed | About 200 hotels and 20 concurrent weddings; staff and guest capacity to be confirmed. |
 
-### Q10 Phase 1 scope — Partly decided
+### Q10 Phase 1 scope — Decided
 
-**AMPM decided.** The first release includes the demo and the subscription hotel-discovery workflow, wedding management after appointment, vendor selection, the client portal, department-based team access, RSVP, tracked requests, live chat and offline wedding-day operations. It excludes website editing, online milestone payments and GST invoicing. Only Eva's authorised personnel may approve operational exceptions; the authority must be configurable.
-
-**Still open.** 1. Whether this scope launches as one release or hotel discovery launches first while the wedding modules follow.
+**AMPM decided.** The first release includes the demo and the subscription hotel-discovery workflow, wedding management after appointment, vendor selection, the client portal, department-based team access, RSVP, tracked requests, live chat and offline wedding-day operations. It excludes website editing, online milestone payments and GST invoicing. Only Eva's authorised personnel may approve operational exceptions; the authority must be configurable. Decided 26 October 2026: the whole first release goes live at once, in one launch.
 
 | Assumption | Status | What AMPM's answer means for it |
 |---|---|---|
-| A-10 ([data-model.md](data-model.md) §0) | Changed | First release includes discovery, wedding management, vendors, client portal, department access, RSVP, requests, live chat and offline operations; excludes website editing, online milestone payments and GST invoicing. Single or staged launch to be agreed. |
+| A-10 ([data-model.md](data-model.md) §0) | Changed | First release includes discovery, wedding management, vendors, client portal, department access, RSVP, requests, live chat and offline operations; excludes website editing, online milestone payments and GST invoicing. Single or staged launch to be agreed. Launched at once in one go-live (decided 26 October 2026). |
 | P-8 ([permission-matrix.md](permission-matrix.md) §0) | Changed | Only Eva's authorised personnel may authorise exceptions; the authority is configurable but the policy names Eva. |
 | V-11 ([test-cases.md](test-cases.md) §0) | Changed | Exit packs follow the first-release scope. |
 
@@ -177,33 +169,29 @@ This log is the record of what AMPM decided, question by question, and what each
 | T-5 ([architecture.md](architecture.md) §0) | Dropped | No content editor; the website is static and maintained outside the app. |
 | W-4 ([wireframes.md](wireframes.md) §0) | Dropped | No website editor. |
 
-### Q13 Sign-in — Partly decided
+### Q13 Sign-in — Decided
 
-**AMPM decided.** Prospects, demo users and clients sign in with their mobile number and an OTP. There is no unrestricted self-registration; AMPM creates the account or sends an invitation. Staff have individual authorised accounts with role- and department-based access; the exact staff authentication method is to be finalised with the development team.
-
-**Still open.** 1. Staff authentication method (authenticator app recommended).
+**AMPM decided.** Prospects, demo users and clients sign in with their mobile number and an OTP. There is no unrestricted self-registration; AMPM creates the account or sends an invitation. Staff have individual authorised accounts with role- and department-based access; the exact staff authentication method is to be finalised with the development team. Decided 26 October 2026: a client is verified by both email and mobile number; sign-in stays by mobile number and OTP. Decided 26 October 2026: staff sign in with a password and an authenticator-app code; the identity service is Amazon Cognito in Mumbai.
 
 | Assumption | Status | What AMPM's answer means for it |
 |---|---|---|
-| A-13 ([data-model.md](data-model.md) §0) | Changed | Prospects, demo users and clients sign in with mobile number and OTP; staff method to be finalised (authenticator app recommended). |
+| A-13 ([data-model.md](data-model.md) §0) | Changed | Clients are verified by email and mobile and sign in with mobile OTP; staff sign in with a password and an authenticator-app code; the identity service is Cognito. |
 | P-6 ([permission-matrix.md](permission-matrix.md) §0) | Changed | Mobile OTP for prospects and clients; staff method to be finalised. |
-| T-6 ([architecture.md](architecture.md) §0) | Changed | OTP sign-in for clients and prospects; staff method to be finalised. |
-| U-9 ([user-flows.md](user-flows.md) §0) | Changed | OTP sign-in for clients; staff method open. |
+| T-6 ([architecture.md](architecture.md) §0) | Changed | Identity through Amazon Cognito (Mumbai): OTP for prospects and clients with email and mobile verified at activation, password plus authenticator app for staff; principals, guest tokens, entitlements and no self-registration in the API. |
+| U-9 ([user-flows.md](user-flows.md) §0) | Changed | Client activation verifies email and mobile; OTP sign-in for clients; staff by password plus authenticator-app code. |
 | W-7 ([wireframes.md](wireframes.md) §0) | Changed | OTP sign-in screens for prospects and clients. |
 | V-3 ([test-cases.md](test-cases.md) §0) | Changed | OTP sign-in tests for clients and prospects. |
 
-### Q14 Hosting and data residency — Still open
+### Q14 Hosting and data residency — Decided
 
-**AMPM decided.** Hosting arrangements, backup frequency and recovery timelines are yet to be confirmed with the developer.
-
-**Still open.** 1. Hosting provider and region. 2. Backup location. 3. Recovery targets.
+**AMPM decided.** Hosting arrangements, backup frequency and recovery timelines are yet to be confirmed with the developer. Decided 26 October 2026: everything runs on AMPM's dedicated VPS, a Hostinger KVM 4 in the India (Mumbai) datacentre, with pgBackRest archives to a Mumbai S3 bucket and rehearsed monthly restores (recovery point about one minute, rebuild within four hours), files and identity documents in Mumbai buckets, Cognito for identity; the specification is docs/engineering/vps-setup.md.
 
 | Assumption | Status | What AMPM's answer means for it |
 |---|---|---|
-| A-14 ([data-model.md](data-model.md) §0) | Still open | Hosting to be confirmed with the developer; the recommendation stands as a proposal. |
-| T-2 ([architecture.md](architecture.md) §0) | Still open | Hosting to be confirmed; the Indian-region recommendation stands as a proposal. |
-| T-13 ([architecture.md](architecture.md) §0) | Still open | Backup and recovery targets to be confirmed. |
-| V-13 ([test-cases.md](test-cases.md) §0) | Still open | Recovery targets to be confirmed. |
+| A-14 ([data-model.md](data-model.md) §0) | Changed | Hosted on AMPM's dedicated VPS, a Hostinger KVM 4 in Mumbai; backups and files in Mumbai S3 buckets; all personal data stays in India. |
+| T-2 ([architecture.md](architecture.md) §0) | Changed | Hostinger KVM 4 in the India (Mumbai) datacentre instead of AWS compute; Mumbai S3 buckets for backups, media and the restricted identity store; Cognito in Mumbai for identity. |
+| T-13 ([architecture.md](architecture.md) §0) | Changed | pgBackRest archives to an encrypted Mumbai bucket forced every minute, full weekly and differential daily, retention two full sets and fourteen days; Hostinger weekly backups and snapshots as the second layer; monthly restore rehearsal into staging, quarterly full rebuild; targets fifteen minutes and four hours measured, not assumed. |
+| V-13 ([test-cases.md](test-cases.md) §0) | Changed | The restore drill is the monthly pgBackRest rehearsal into staging and the quarterly rebuild; AC-22 measures the recovery point and time. |
 
 ### Q15 Volumes — Partly decided
 
@@ -328,13 +316,16 @@ This log is the record of what AMPM decided, question by question, and what each
 - Configurable settings: subscription price and duration, demo limits, hotel categories, vendor categories, pricing thresholds, change-request rules, access and approval settings.
 - Public website: company information, enquiry submission, demo requests, contact details, login and invitation entry points; no editing by staff.
 - The platform is for AMPM's internal business use, not for licensing to other wedding planners.
+- Both apps, the team app and the client app, on iOS and Android, must support iPad and Android tablets as well as phones (26 October 2026).
+- A client is verified by both email and mobile number; sign-in is by mobile number and OTP (26 October 2026).
+- The demo is managed by the admin: no time limit, three locations, one real hotel per location with indicative prices (26 October 2026).
 
 ## Items AMPM listed to confirm before development
 
-1. Exact demo duration and final hotel and location limits
-2. Whether the demo shows one or two sample hotels per location with indicative prices
-3. Payment gateway provider and transaction-handling requirements
-4. Whether the two family representatives share one login or have separate authenticated accounts
+1. Exact demo duration and final hotel and location limits — Answered 26 October 2026: no time limit; three locations; one real hotel per location with indicative prices; managed by the admin.
+2. Whether the demo shows one or two sample hotels per location with indicative prices — Answered 26 October 2026: one hotel per location.
+3. Payment gateway provider and transaction-handling requirements — Answered 26 October 2026: Razorpay; transaction handling as in the brief's section 3; no refunds.
+4. Whether the two family representatives share one login or have separate authenticated accounts — Working decision 26 October 2026: two individually authenticated accounts, to be countersigned.
 5. Final staff roles and which internal users may access hotel costs or vendor costs
 6. Hosting provider, backup location and recovery targets
 7. Initial capacity for staff, hotels, weddings and guests
@@ -345,15 +336,15 @@ This log is the record of what AMPM decided, question by question, and what each
 
 ## Assumptions by status
 
-**Changed (35):** A-1, A-2, A-5, A-7, A-10, A-13, A-15, A-17, A-20, A-23, A-28, P-2, P-4, P-6, P-7, P-8, T-1, T-6, T-7, T-9, T-11, U-5, U-9, U-12, W-3, W-5, W-7, W-8, W-10, V-3, V-4, V-5, V-6, V-9, V-11
+**Changed (41):** A-1, A-2, A-5, A-7, A-10, A-13, A-14, A-15, A-17, A-20, A-23, A-28, P-2, P-4, P-6, P-7, P-8, T-1, T-2, T-6, T-7, T-9, T-10, T-11, T-13, U-5, U-9, U-12, W-3, W-5, W-7, W-8, W-10, V-3, V-4, V-5, V-6, V-9, V-10, V-11, V-13
 
 **Dropped (4):** A-12, T-5, W-4, V-12
 
-**Partly decided (15):** A-4, A-6, A-8, A-11, A-25, P-1, T-4, U-3, U-11, W-1, W-6, W-9, V-1, V-2, V-10
+**Partly decided (13):** A-4, A-6, A-8, A-11, A-25, P-1, T-4, U-3, U-11, W-1, W-6, W-9, V-2
 
-**Still open (7):** A-14, T-2, T-3, T-12, T-13, W-14, V-13
+**Still open (2):** T-12, W-14
 
-**Confirmed (28):** A-3, A-9, A-16, A-18, A-19, A-21, A-22, A-24, A-26, A-30, P-3, P-5, P-9, P-10, P-11, T-8, U-1, U-2, U-4, U-6, U-7, U-8, W-2, W-13, W-15, V-7, V-8, V-14
+**Confirmed (30):** A-3, A-9, A-16, A-18, A-19, A-21, A-22, A-24, A-26, A-30, P-3, P-5, P-9, P-10, P-11, T-3, T-8, U-1, U-2, U-4, U-6, U-7, U-8, W-2, W-13, W-15, V-1, V-7, V-8, V-14
 
-**Not addressed, stands (9):** A-27, A-29, T-10, T-14, U-10, W-11, W-12, V-15, V-16
+**Not addressed, stands (8):** A-27, A-29, T-14, U-10, W-11, W-12, V-15, V-16
 

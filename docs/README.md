@@ -1,6 +1,6 @@
 # AMPM Platform — Design Package
 
-**Status:** drafts, version 0.2, 25 October 2026. AMPM answered all 25 questions on 25 October; the answers are applied to every draft (each opens with a "Changes from AMPM's decisions" section) and stamped on every assumption. Eleven points remain to confirm, listed in the decision log. Nothing is signed off yet.
+**Status:** drafts, version 0.2, 25 October 2026. AMPM answered all 25 questions on 25 October; the answers are applied to every draft (each opens with a "Changes from AMPM's decisions" section) and stamped on every assumption. Eleven points remain to confirm, listed in the decision log; with the points raised while applying the answers they are the nineteen questions of Part A7, of which R1 to R4 and R17 were answered on 26 October 2026 and R5 carries a working decision. Nothing is signed off yet.
 
 The package has two parts. Part A is written for AMPM and needs no technical background. Part B is the developer drafts behind it, for reference.
 
@@ -14,6 +14,12 @@ The package has two parts. Part A is written for AMPM and needs no technical bac
 | A4 | [Your flowcharts, redrawn](review/redesigned-flowcharts.md) | Your two flowcharts and the customer journey, as supplied and as upgraded, with additions in green and changes in amber | Approve the structure, or mark boxes to change |
 | A5 | [Decisions we need from you](review/open-decisions.md) | The 25 questions in plain language with choices, what we assumed, and a box for your answer | Answer the ten Tier 1 questions first |
 | A6 | [Assumptions we took](review/assumptions-taken.md) | Every assumption made in place of an answer, grouped by theme, with a confirm column | Tick or correct each line |
+| A7 | [The questions still open](review/remaining-questions.md) | Round two: the nineteen points still open after the 25 October answers (R1 to R19), each with what AMPM's documents already say, our proposal and an answer box | Answer R1 to R19; a tick is enough where you agree with the proposal |
+| A8 | [Short version](review/remaining-questions-short.md) | The same nineteen questions as one line each, with the proposal and tick boxes; three pages when printed | Decide from this page, read A7 for the reasons |
+| A9 | [Platform blueprint](review/platform-blueprint.md) | The platforms, how they connect, what each carries, the data model, the roles and the flows, each point marked locked, proposed or open (R number); the document to finalise the architecture and data model against | Read platform by platform; lock each section or mark what changes |
+| A10 | [Blueprint, short version](review/platform-blueprint-short.md) | The same blueprint as a sign-off sheet: one page per platform plus the data model, flows and architecture tables, with a lock box for each | Sign off from this sheet, read A9 for the detail |
+| A11 | [Build plan](review/build-plan.md) | The end-to-end build plan for one developer with Claude Code: how the work is done, the six phases with sprint themes and gates, effort in developer-days with the rates shown, cost, the decision calendar and AMPM's dates, the pilot and the launch, risks | Choose the capacity, the commercial form and the levers; then sign |
+| A12 | [Build plan, short version](review/build-plan-short.md) | The same plan on a few pages: phases, effort, cost, AMPM's dates, decisions by sprint, levers, sign-off | Decide from this page, read A11 for the reasoning |
 
 ## Part B — developer drafts, for reference
 
@@ -23,20 +29,22 @@ The package has two parts. Part A is written for AMPM and needs no technical bac
 | B1 | [requirements-audit.md](requirements-audit.md) | The audit of the brief: 9 conflicts, 44 gaps, 15 ambiguities, 8 risks, 25 decisions |
 | B2 | [decision-register.md](decision-register.md) | Every assumption indexed by the question it depends on (generated) |
 | B3 | [user-flows.md](user-flows.md) | Twelve end-to-end flows with statuses, notifications and screens |
-| B4 | [wireframes.md](wireframes.md) | Screen-by-screen specification, 124 screens, with sketches |
-| B5 | [data-model.md](data-model.md) | Entity-relationship model, 106 tables in 17 diagrams |
+| B4 | [wireframes.md](wireframes.md) | Screen-by-screen specification, 126 screens, with sketches |
+| B5 | [data-model.md](data-model.md) | Entity-relationship model, 108 tables in 18 diagrams |
 | B6 | [permission-matrix.md](permission-matrix.md) | Roles, entitlements, visibility classes, transitions, audited actions |
 | B7 | [field-matrix.md](field-matrix.md) ([csv](field-matrix.csv)) | Every field: type, validation, editor, visibility, when required, automation (generated) |
 | B8 | [architecture.md](architecture.md) | Technology, hosting, security, backups, maintenance, integration plan |
 | B9 | [test-cases.md](test-cases.md) | 36 acceptance criteria, 208 tests, phase exit packs, test data |
 
-Not yet drafted: the milestone schedule and cost estimate, held until the platform (Q1) and volume (Q15) questions are answered.
+The milestone schedule and cost estimate are Part A11, the build plan (version 0.1, 26 October 2026), drafted on the proposed defaults with a decision calendar; its capacity and commercial assumptions wait on the developer's planning inputs in [docs/planning/risk-questions.md](planning/risk-questions.md). The delivery model is one developer building with Claude Code (CLAUDE.md, decision D-012).
 
 ## How the identifiers work
 
 | Prefix | Meaning | Defined in |
 |---|---|---|
 | Q1 to Q25 | A decision only AMPM can make | Part A2 and A5, and requirements-audit.md §11 |
+| R1 to R19 | A point still open after AMPM's answers of 25 October 2026 | Part A7 |
+| K1 to K22 | A planning risk question for the developer, answered before the schedule and estimate | docs/planning/risk-questions.md |
 | CF, GP, AM, RK | Audit findings: conflict, gap, ambiguity, risk | requirements-audit.md §4 to §10; placed in context in Part A3 |
 | A, P, T, U, W, V | Assumptions made in place of an answer: data model, permissions, technology, flows, screens, testing | Part A6, and §0 of each developer draft |
 | PUB, AUTH, DM, CP, TW, GR | Screens: public site, sign-in, demo, client portal, team workspace, guest RSVP portal | wireframes.md |
@@ -76,9 +84,21 @@ stamps AMPM's decisions from `decisions.json` on every assumption register and r
 node docs/tools/site_build.mjs
 ```
 
-rebuilds `site/index.html`, the whole package rendered as one shareable page; add `--brief` to rebuild `site/brief.html`, the decision brief on its own (needs the `marked` package, installed with `npm install` inside `docs/tools`). The published copy for AMPM is the private artifact at https://claude.ai/artifact/55fJPFQnnqi8sVVU7FUFcv; republish it after rebuilding so the link stays the same.
+rebuilds `site/index.html`, the whole package rendered as one shareable page; add `--brief` to rebuild `site/brief.html`, the decision brief on its own, `--questions` for `site/questions.html`, the round-two questions with the short version first, `--short` for `site/short.html`, the short version alone, `--blueprint` for `site/blueprint.html`, the platform blueprint with its short version first, `--blueprint-short` for the sign-off sheet alone, `--plan` for `site/plan.html`, the build plan with its short version first, or `--plan-short` for the short plan alone (needs the `marked` package, installed with `npm install` inside `docs/tools`). The published copies for AMPM are private artifacts: the package at https://claude.ai/artifact/55fJPFQnnqi8sVVU7FUFcv, the brief at https://claude.ai/artifact/1VSdFMEAXfqj8V6NzkjPG3, the questions at https://claude.ai/artifact/8DGAsEb4hZX46wUoaLjLhH; republish after rebuilding so the links stay the same.
+
+```bash
+python3 docs/tools/pdf_build.py docs/site/questions.html "docs/site/AMPM Open Questions.pdf"
+```
+
+prints a built page to an A4 PDF with headless Google Chrome, rendering the diagrams first; the same works for `site/short.html` and the other pages. The PDFs live in `site/`, which is not committed.
 
 Diagrams are Mermaid and render on GitHub, GitLab, VS Code with the Mermaid preview extension, Obsidian, and on the shared page.
+
+## Engineering standards
+
+The engineering layer under the blueprint is [docs/engineering/standards.md](engineering/standards.md): the review of the universal-app standards against AMPM's decisions, the AMPM edition of the standards (stack, layout, enforcement, rules in brief, the policy package, offline, the bootstrap plan) and the day-one checklist. The enforceable parts live in `.claude/rules/`, `.claude/hooks/` and `packages/config/eslint/boundaries.mjs`.
+
+The data platform and identity service are compared with prices in [docs/engineering/platform-options.md](engineering/platform-options.md) (26 October 2026); the choice is the developer's and is recorded as R13.
 
 ## Repositories and the Obsidian vault
 

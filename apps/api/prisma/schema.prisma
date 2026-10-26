@@ -1,0 +1,12 @@
+// AMPM data model. The schema mirrors docs/data-model.md and is extended module by module from bootstrap step 5
+// (module A first). Field types and constraints come from docs/field-matrix.md (.claude/rules/data.md).
+// Connection settings live in prisma.config.ts, not here (Prisma 7).
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}

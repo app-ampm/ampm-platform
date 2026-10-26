@@ -1,0 +1,21 @@
+{
+  "name": "ampm-platform",
+  "private": true,
+  "description": "AMPM wedding platform: public website, client and team apps, API. Design package in docs/, code in apps/ and packages/.",
+  "packageManager": "pnpm@12.15.0",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "check": "turbo run lint typecheck test"
+  },
+  "devDependencies": {
+    "turbo": "2.11.10",
+    "typescript": "catalog:"
+  }
+}
