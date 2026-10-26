@@ -1,6 +1,7 @@
 /**
- * @ampm/core — pure TypeScript domain: types, Zod schemas, business rules, errors, logger, i18n keys.
- * Must run in browser, native and server: no React, no Node APIs, no fetch (.claude/rules/api.md).
- * Bootstrap step 1 placeholder: errors, logger, first schemas and i18n arrive in step 5.
+ * @ampm/core: pure TypeScript shared by the apps and the API; no React, no I/O (code.md).
  */
-export const CORE_VERSION = "0.0.0" as const;
+export const CORE_VERSION = "0.1.0";
+
+export { clientAmount, formatAmount, internalAmount } from "./money";
+export type { ClientAmount, Currency, InternalAmount } from "./money";

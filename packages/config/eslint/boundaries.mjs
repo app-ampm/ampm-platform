@@ -41,6 +41,11 @@ export const boundaries = [
     rules: restricted(noApps, noFrameworkRouting, presentational),
   },
   {
+    // The shared Link is the one place expo-router is allowed in packages/ (the rule above says so).
+    files: ["packages/ui/src/components/link/**/*.{ts,tsx}"],
+    rules: restricted(noApps, presentational),
+  },
+  {
     files: ["apps/api/src/modules/**/*.ts"],
     rules: restricted({
       group: ["razorpay", "@aws-sdk/*", "twilio", "*/providers/*/sdk"],

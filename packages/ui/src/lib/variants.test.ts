@@ -1,5 +1,3 @@
-import { describe, expect, it } from "vitest";
-
 import { variants } from "./variants";
 
 const chip = variants("rounded-full px-3 py-1 text-sm", {

@@ -9,7 +9,7 @@ export { colors, textColors, surfaceColors, statusColors } from "./colors";
 export type { Hex, ColorToken, ColorName } from "./colors";
 export { spacing, sizes } from "./spacing";
 export { radii } from "./radii";
-export { fontFamily, fontSize, fontWeight } from "./typography";
+export { fontFaces, fontFamily, fontSize, fontWeight } from "./typography";
 export { shadows } from "./shadows";
 export { duration, easing, motionMs, motionBezier } from "./motion";
 export { breakpoints } from "./breakpoints";

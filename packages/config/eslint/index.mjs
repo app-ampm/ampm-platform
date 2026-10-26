@@ -135,7 +135,8 @@ export const ampm = defineConfig([
     rules: { "@typescript-eslint/consistent-type-imports": "off" },
   },
   {
-    files: ["**/*.{test,spec}.{ts,tsx}", "**/test/**/*.ts"],
+    files: ["**/*.{test,spec}.{ts,tsx}", "**/test/**/*.ts", "**/jest.setup.cjs"],
+    languageOptions: { globals: { ...globals.jest } },
     rules: { "max-lines-per-function": "off", "no-console": "off" },
   },
   prettier,

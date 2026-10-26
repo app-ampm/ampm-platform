@@ -10,6 +10,7 @@ import {
 } from "react";
 
 import type { ResolvedTheme, ThemeContextValue, ThemePreference } from "./theme.types";
+import { useIsClient } from "../hooks/use-is-client";
 import { useFollowSystemScheme } from "./use-follow-system-scheme";
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
@@ -53,7 +54,10 @@ export function ThemeProvider({
     [onPreferenceChange],
   );
 
-  const resolved: ResolvedTheme = colorScheme === "dark" ? "dark" : "light";
+  // The server renders light and so does the hydration pass; the real scheme applies right after, so
+  // colours resolved in JavaScript (icons, spinners) never disagree with the server-rendered markup.
+  const isClient = useIsClient();
+  const resolved: ResolvedTheme = isClient && colorScheme === "dark" ? "dark" : "light";
 
   const toggle = useCallback(() => {
     setPreference(resolved === "dark" ? "light" : "dark");

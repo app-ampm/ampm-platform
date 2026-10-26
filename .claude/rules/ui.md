@@ -16,4 +16,6 @@ paths:
 - AMPM's recurring elements are shared components, not per-screen markup: `StatusChip` (text label, never colour alone), `Callout` (indicative, requested, verified, awaiting confirmation; offline; pending sync), `OfflineState`, `MoneyText` (client-facing amounts only; it never receives an internal amount).
 - Tokens change only in `packages/tokens/src/*.ts`; run `pnpm tokens:build` to regenerate the Tailwind preset and CSS variables. Never edit generated output.
 - Before adding a component, confirm an existing one with a new variant cannot do the job.
-- The stories file documents every variant and state; it is the living catalogue of the design system.
+- The stories file documents every variant and state; it is the living catalogue of the design system. Shape: `export const stories = defineStories({ title, stories: [{ name, render }] })`, listed in `src/stories/index.ts` and rendered by the `Gallery` on web and native (Storybook, if adopted, wraps these modules).
+- User-facing defaults live only in `src/copy.ts` until the apps' i18n replaces them; every component also takes its strings as props.
+- Web is server-rendered: nothing that depends on the window or the colour scheme may change the markup before hydration (`useIsClient()`; the theme resolves light until the client takes over).

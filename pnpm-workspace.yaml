@@ -37,6 +37,8 @@ allowBuilds:
   # lefthook installs its git hooks on postinstall; unrs-resolver (eslint-plugin-import-x) checks its native binary.
   lefthook: true
   unrs-resolver: true
+  # @parcel/watcher (Jest watch mode) ships prebuilt binaries; its from-source fallback is not needed.
+  "@parcel/watcher": false
 
 # Expo's default for pnpm monorepos (docs.expo.dev/guides/monorepos): a flat node_modules so Metro and the native
 # tooling resolve one copy of everything. pnpm 12 reads this here, not from .npmrc.

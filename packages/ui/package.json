@@ -13,26 +13,45 @@
   "scripts": {
     "lint": "eslint .",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "vitest run --passWithNoTests"
+    "test": "jest --passWithNoTests"
   },
   "devDependencies": {
     "@ampm/config": "workspace:*",
+    "@testing-library/react-native": "^14.1.0",
+    "@types/jest": "^29.5.14",
     "@types/react": "catalog:",
+    "babel-preset-expo": "~58.0.20",
+    "expo": "~58.0.19",
+    "expo-image": "~58.0.17",
+    "expo-router": "~58.0.26",
+    "jest": "^29.7.0",
+    "jest-expo": "~58.0.12",
     "nativewind": "catalog:",
     "react": "catalog:",
+    "react-dom": "catalog:",
     "react-native": "0.88.0",
-    "typescript": "catalog:",
-    "vitest": "catalog:"
+    "react-native-safe-area-context": "~5.10.1",
+    "react-native-svg": "15.16.0",
+    "react-native-web": "~0.21.4",
+    "test-renderer": "^1.0.0",
+    "typescript": "catalog:"
   },
   "dependencies": {
+    "@ampm/core": "workspace:*",
     "@ampm/tokens": "workspace:*",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "lucide-react-native": "^1.61.0",
     "tailwind-merge": "catalog:"
   },
   "peerDependencies": {
+    "expo": "*",
+    "expo-image": "*",
+    "expo-router": "*",
     "nativewind": "^4.2.7",
     "react": "^19.0.0",
-    "react-native": ">=0.81.0"
+    "react-native": ">=0.81.0",
+    "react-native-safe-area-context": "*",
+    "react-native-svg": "*"
   }
 }
