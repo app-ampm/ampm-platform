@@ -15,6 +15,21 @@
   },
   "devDependencies": {
     "@ampm/config": "workspace:*",
+    "@types/react": "catalog:",
+    "nativewind": "catalog:",
+    "react": "catalog:",
+    "react-native": "0.88.0",
     "typescript": "catalog:"
+  },
+  "dependencies": {
+    "@ampm/tokens": "workspace:*",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "tailwind-merge": "catalog:"
+  },
+  "peerDependencies": {
+    "nativewind": "^4.2.7",
+    "react": "^19.0.0",
+    "react-native": ">=0.81.0"
   }
 }

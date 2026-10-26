@@ -14,9 +14,13 @@
     "react-dom": "catalog:"
   },
   "devDependencies": {
-    "@types/node": "^20",
+    "@ampm/tokens": "workspace:*",
+    "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "^19",
+    "autoprefixer": "^10.6.1",
+    "postcss": "^8.5.31",
+    "tailwindcss": "catalog:",
     "typescript": "catalog:"
   },
   "description": "AMPM public website: static Next.js, the only web app; the client portals' browser version is the Expo web export."

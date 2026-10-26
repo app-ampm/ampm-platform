@@ -1,0 +1,4 @@
+/* Tailwind only; theme values come from @ampm/tokens through the preset (styling.md). */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;

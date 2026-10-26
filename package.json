@@ -8,11 +8,13 @@
   },
   "scripts": {
     "dev": "turbo run dev",
+    "tokens:build": "pnpm --filter @ampm/tokens build",
     "build": "turbo run build",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
-    "check": "turbo run lint typecheck test"
+    "check": "turbo run lint typecheck test",
+    "prepare": "pnpm tokens:build"
   },
   "devDependencies": {
     "turbo": "2.11.10",

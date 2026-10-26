@@ -48,3 +48,6 @@ web-build/
 .env.*
 !.env.example
 prisma/*.db
+
+# Per-machine dev-server launch config for the Claude desktop app (absolute paths, local ports)
+.claude/launch.json

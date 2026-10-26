@@ -1,98 +1,57 @@
-import * as Device from 'expo-device';
-import { Platform, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useEffect, useState } from "react";
+import { Pressable, ScrollView, Text, View } from "react-native";
 
-import { AnimatedIcon } from '@/components/animated-icon';
-import { HintRow } from '@/components/hint-row';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+import { useTheme } from "@ampm/ui";
 
-function getDevMenuHint() {
-  if (Platform.OS === 'web') {
-    return <ThemedText type="small">use browser devtools</ThemedText>;
-  }
-  if (Device.isDevice) {
-    return (
-      <ThemedText type="small">
-        shake device or press <ThemedText type="code">m</ThemedText> in terminal
-      </ThemedText>
-    );
-  }
-  const shortcut = Platform.OS === 'android' ? 'cmd+m (or ctrl+m)' : 'cmd+d';
+/**
+ * Bootstrap check screen: a View and a Text with token classes only. It must look the same on web
+ * and native, light and dark. Replaced by the real home screen in sprint 2.
+ */
+export default function TokensCheckScreen() {
+  const { resolved, toggle } = useTheme();
+  // The web build is server-rendered; the server cannot know the device scheme, so text that names it
+  // appears only after hydration (otherwise React reports a hydration mismatch).
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => setHydrated(true), []);
+  const schemeName = hydrated ? resolved : "system";
   return (
-    <ThemedText type="small">
-      press <ThemedText type="code">{shortcut}</ThemedText>
-    </ThemedText>
+    <ScrollView className="flex-1 bg-surface" contentContainerClassName="p-6 gap-4" testID="tokens-screen">
+      <View className="rounded-lg border border-subtle bg-surface-elevated p-4 gap-2 shadow-sm" testID="tokens-card">
+        <Text className="text-lg font-semibold text-primary" testID="tokens-title">
+          AMPM tokens
+        </Text>
+        <Text className="text-base text-muted" testID="tokens-body">
+          Surface, text, border and brand colours from @ampm/tokens; {schemeName} scheme.
+        </Text>
+        <View className="flex-row flex-wrap gap-2 pt-2">
+          <View className="rounded-full bg-success-soft px-3 py-1">
+            <Text className="text-sm font-medium text-success">Verified</Text>
+          </View>
+          <View className="rounded-full bg-warning-soft px-3 py-1">
+            <Text className="text-sm font-medium text-warning">Awaiting confirmation</Text>
+          </View>
+          <View className="rounded-full bg-danger-soft px-3 py-1">
+            <Text className="text-sm font-medium text-danger">Conflict</Text>
+          </View>
+          <View className="rounded-full bg-info-soft px-3 py-1">
+            <Text className="text-sm font-medium text-info">Indicative</Text>
+          </View>
+        </View>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Switch colour scheme"
+          className="mt-2 min-h-touch items-center justify-center rounded bg-brand px-4"
+          onPress={toggle}
+          testID="tokens-toggle"
+        >
+          <Text className="text-base font-semibold text-brand-ink">
+            {hydrated ? `Switch to ${resolved === "dark" ? "light" : "dark"}` : "Switch scheme"}
+          </Text>
+        </Pressable>
+      </View>
+      <View className="rounded-lg bg-surface-inset p-4">
+        <Text className="font-mono text-sm text-primary">bg-surface-inset · text-primary · font-mono</Text>
+      </View>
+    </ScrollView>
   );
 }
-
-export default function HomeScreen() {
-  return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedView style={styles.heroSection}>
-          <AnimatedIcon />
-          <ThemedText type="title" style={styles.title}>
-            Welcome to&nbsp;Expo
-          </ThemedText>
-        </ThemedView>
-
-        <ThemedText type="code" style={styles.code}>
-          get started
-        </ThemedText>
-
-        <ThemedView type="backgroundElement" style={styles.stepContainer}>
-          <HintRow
-            title="Try editing"
-            hint={<ThemedText type="code">src/app/index.tsx</ThemedText>}
-          />
-          <HintRow title="Dev tools" hint={getDevMenuHint()} />
-          <HintRow
-            title="Fresh start"
-            hint={<ThemedText type="code">npm run reset-project</ThemedText>}
-          />
-        </ThemedView>
-
-        {Platform.OS === 'web' && <WebBadge />}
-      </SafeAreaView>
-    </ThemedView>
-  );
-}
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    flexDirection: 'row',
-  },
-  safeArea: {
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    alignItems: 'center',
-    gap: Spacing.three,
-    paddingBottom: BottomTabInset + Spacing.three,
-    maxWidth: MaxContentWidth,
-  },
-  heroSection: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.four,
-  },
-  title: {
-    textAlign: 'center',
-  },
-  code: {
-    textTransform: 'uppercase',
-  },
-  stepContainer: {
-    gap: Spacing.three,
-    alignSelf: 'stretch',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.four,
-    borderRadius: Spacing.four,
-  },
-});

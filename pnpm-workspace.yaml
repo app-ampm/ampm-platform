@@ -9,6 +9,13 @@ catalog:
   react-dom: 19.3.0
   "@types/react": ~19.3.0
   typescript: ~6.0.3
+  "@types/node": ^24.19.2
+  # Styling layer (.claude/rules/styling.md): NativeWind's stable release and the one Tailwind major it supports.
+  # nativewind 4.2.7 peer-depends on tailwindcss >3.3.0 and its docs install tailwindcss@^3.4.17 (Tailwind v3);
+  # NativeWind v5 (Tailwind v4) is only a release candidate. tailwind-merge stays on v2: v3 dropped Tailwind v3.
+  nativewind: 4.2.7
+  tailwindcss: ^3.4.17
+  tailwind-merge: ^2.6.1
 
 # pnpm runs no install scripts unless approved (allowBuilds, pnpm 11+); Prisma needs its engine download, nothing else does yet.
 allowBuilds:
