@@ -17,7 +17,17 @@
   },
   "devDependencies": {
     "@ampm/config": "workspace:*",
+    "@types/react": "catalog:",
+    "react": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
+  },
+  "dependencies": {
+    "@ampm/core": "workspace:*",
+    "@tanstack/react-query": "catalog:",
+    "zod": "catalog:"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0"
   }
 }

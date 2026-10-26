@@ -125,7 +125,8 @@ export const ampm = defineConfig([
     rules: { "no-restricted-syntax": ["error", ...arbitraryValueSelectors] },
   },
   {
-    files: ["packages/tokens/scripts/**/*.ts"],
+    // Command-line scripts and seeds talk on stdout; the applications log through the structured logger.
+    files: ["**/scripts/**/*.ts", "**/prisma/seed.ts"],
     rules: { "no-console": "off" },
   },
   {

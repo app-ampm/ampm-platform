@@ -6,18 +6,27 @@
   "type": "module",
   "exports": {
     ".": {
-      "types": "./src/index.ts",
-      "default": "./src/index.ts"
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
     }
   },
   "scripts": {
+    "build": "tsup",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run --passWithNoTests"
   },
   "devDependencies": {
     "@ampm/config": "workspace:*",
+    "tsup": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
-  }
+  },
+  "dependencies": {
+    "i18next": "catalog:",
+    "zod": "catalog:"
+  },
+  "files": [
+    "dist"
+  ]
 }

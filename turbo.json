@@ -4,7 +4,8 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": [".next/**", "!.next/cache/**", "dist/**"]
+      "outputs": [".next/**", "!.next/cache/**", "dist/**"],
+      "env": ["NODE_ENV"]
     },
     "dev": {
       "dependsOn": ["^build"],
@@ -18,7 +19,16 @@
       "dependsOn": ["^build"]
     },
     "test": {
-      "dependsOn": ["^build"]
+      "dependsOn": ["^build"],
+      "env": [
+        "NODE_ENV",
+        "CI",
+        "DATABASE_URL",
+        "DATABASE_URL_TEST",
+        "IDENTITY_PROVIDER",
+        "IDENTITY_LOCAL_SECRET",
+        "LOG_LEVEL"
+      ]
     }
   }
 }

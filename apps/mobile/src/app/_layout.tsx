@@ -12,9 +12,12 @@ import { useFonts } from "expo-font";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
 
+import { ApiProvider } from "@ampm/api-client";
 import { fontFaces } from "@ampm/tokens";
 import { ThemeProvider, ToastProvider } from "@ampm/ui";
 
+import { env } from "@/lib/env";
+import { getAccessToken } from "@/lib/session";
 import { AppStack } from "@/navigation/app-stack";
 
 SplashScreen.preventAutoHideAsync();
@@ -41,10 +44,12 @@ export default function RootLayout() {
   if (!ready) return null;
 
   return (
-    <ThemeProvider>
-      <ToastProvider>
-        <AppStack />
-      </ToastProvider>
-    </ThemeProvider>
+    <ApiProvider baseUrl={env.EXPO_PUBLIC_API_URL} getAccessToken={getAccessToken}>
+      <ThemeProvider>
+        <ToastProvider>
+          <AppStack />
+        </ToastProvider>
+      </ThemeProvider>
+    </ApiProvider>
   );
 }

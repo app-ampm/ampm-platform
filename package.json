@@ -19,7 +19,7 @@
     "db:generate": "pnpm --filter api exec prisma generate",
     "db:migrate": "pnpm --filter api exec prisma migrate dev",
     "authz:generate": "pnpm --filter @ampm/policy run authz:generate",
-    "prepare": "pnpm tokens:build && lefthook install"
+    "prepare": "turbo run build --filter=@ampm/tokens --filter=@ampm/core --filter=@ampm/policy && lefthook install"
   },
   "devDependencies": {
     "@commitlint/cli": "^21.2.4",

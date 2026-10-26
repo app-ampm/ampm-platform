@@ -159,9 +159,8 @@ erDiagram
         string email UK
         string phone
         string status "enum invited / active / disabled / locked"
-        string password_hash "RESTRICTED, nullable for OTP-only"
-        bool mfa_enabled "mandatory true for staff (A-13)"
-        string mfa_secret_ref "RESTRICTED"
+        string identity_subject UK "the identity service's subject (Cognito sub, T-6); null until activated"
+        bool mfa_enabled "mandatory true for staff (A-13); enforced by the identity service, mirrored here"
         datetime last_login_at
     }
     roles {
@@ -259,6 +258,7 @@ Notes:
 - Staff get global roles through `user_roles`; their reach into a wedding is limited by `project_members` for the roles the spec marks "assigned" (Project Manager, Creative, Vendor Coordinator, RSVP, Hospitality). Client users are ordinary `users` rows with `user_type = client` and a `project_members` row per wedding (A-5).
 - `permissions.permission_key` follows `module.resource.action` and optionally `.scope`; the permission matrix lists them.
 - `audit_events.project_id` is denormalised so a project manager can read the history of their own project without scanning everything.
+- **26 October 2026 (T-6, D-022):** credentials, OTP and authenticator codes live in Amazon Cognito; `users` keeps `identity_subject` instead of `password_hash` and `mfa_secret_ref`, and `auth_tokens` remains for the invitation and link tokens the API still mints. Implemented in `apps/api/prisma/schema.prisma` (bootstrap step 5).
 
 ---
 

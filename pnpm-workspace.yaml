@@ -29,6 +29,12 @@ catalog:
   vitest: ^5.0.5
   "@vitest/coverage-v8": ^5.0.5
   vite: ^8.0.0
+  # Domain, policy and API layer (bootstrap step 5): one schema library, one query library, one JWT library.
+  zod: ^4.6.7
+  "@tanstack/react-query": ^5.105.0
+  i18next: ^26.5.11
+  # core and policy ship one bundled ESM file so Node (the API), Metro, Next and Jest all load the same thing.
+  tsup: ^9.0.0
 
 # pnpm runs no install scripts unless approved (allowBuilds, pnpm 11+); Prisma needs its engine download, nothing else does yet.
 allowBuilds:
@@ -39,7 +45,14 @@ allowBuilds:
   unrs-resolver: true
   # @parcel/watcher (Jest watch mode) ships prebuilt binaries; its from-source fallback is not needed.
   "@parcel/watcher": false
+  # esbuild (tsup) checks its platform binary on postinstall.
+  esbuild: true
 
 # Expo's default for pnpm monorepos (docs.expo.dev/guides/monorepos): a flat node_modules so Metro and the native
 # tooling resolve one copy of everything. pnpm 12 reads this here, not from .npmrc.
 nodeLinker: hoisted
+
+minimumReleaseAgeExclude:
+  - "@tanstack/query-core@5.105.0"
+  - "@tanstack/react-query@5.105.0"
+  - i18next@26.5.11
