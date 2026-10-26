@@ -1,10 +1,13 @@
 import { useEffect, useRef } from "react";
-import { Animated, type ViewProps } from "react-native";
+import { Animated, Platform, type ViewProps } from "react-native";
 
 import { motionMs } from "@ampm/tokens";
 
 import { useReducedMotion } from "../../hooks/use-reduced-motion";
 import { cn } from "../../lib/cn";
+
+// react-native-web has no native animated module; the JS driver is the only one on the web.
+const NATIVE_DRIVER = Platform.OS !== "web";
 
 export interface SkeletonProps extends ViewProps {
   readonly shape?: "rect" | "circle" | "text" | undefined;
@@ -29,12 +32,12 @@ export function Skeleton({ shape = "rect", className, style, ...rest }: Skeleton
         Animated.timing(opacity, {
           toValue: 0.45,
           duration: motionMs.slow * 2,
-          useNativeDriver: true,
+          useNativeDriver: NATIVE_DRIVER,
         }),
         Animated.timing(opacity, {
           toValue: 1,
           duration: motionMs.slow * 2,
-          useNativeDriver: true,
+          useNativeDriver: NATIVE_DRIVER,
         }),
       ]),
     );

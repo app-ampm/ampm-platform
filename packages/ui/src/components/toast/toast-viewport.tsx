@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { Animated, View } from "react-native";
+import { Animated, Platform, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { motionMs } from "@ampm/tokens";
@@ -12,6 +12,9 @@ import { Icon, type IconName } from "../icon";
 import { chipTextTone } from "../status-chip/status-chip.styles";
 import { Text } from "../text";
 import type { ToastItem, ToastTone } from "./toast.types";
+
+// react-native-web has no native animated module; the JS driver is the only one on the web.
+const NATIVE_DRIVER = Platform.OS !== "web";
 
 const TONE_ICON: Record<ToastTone, IconName> = {
   neutral: "info",
@@ -98,7 +101,7 @@ function ToastCard({ item, onDismiss, dismissLabel }: ToastCardProps) {
     Animated.timing(progress, {
       toValue: 1,
       duration: reducedMotion ? 0 : motionMs.base,
-      useNativeDriver: true,
+      useNativeDriver: NATIVE_DRIVER,
     }).start();
   }, [progress, reducedMotion]);
 
