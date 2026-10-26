@@ -14,3 +14,7 @@ docs/tools/com.ampm.vault-sync.plist
 .graphifyignore
 .mcp.json
 CLAUDE.md
+# Monorepo (apps/ and packages/): installs and build outputs (node_modules/, dist/, .next/, .expo/) are
+# gitignored and so already skipped; the Expo template's binary assets (icons, logos, template images) are
+# tracked but are boilerplate, not AMPM content.
+apps/mobile/assets/

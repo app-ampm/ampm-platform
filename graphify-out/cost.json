@@ -25,8 +25,15 @@
       "input_tokens": 420766,
       "output_tokens": 0,
       "files": 6
+    },
+    {
+      "date": "2026-10-26T14:42:37.251866+00:00",
+      "input_tokens": 1207759,
+      "output_tokens": 0,
+      "files": 88,
+      "note": "incremental --update: 7 semantic subagents (combined tokens); AST free"
     }
   ],
-  "total_input_tokens": 2172936,
+  "total_input_tokens": 3380695,
   "total_output_tokens": 0
 }
