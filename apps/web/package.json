@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "typecheck": "next typegen && tsc --noEmit"
+    "lint": "eslint .",
+    "typecheck": "next typegen && tsc --noEmit",
+    "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
     "next": "16.4.3",
@@ -21,7 +23,8 @@
     "autoprefixer": "^10.6.1",
     "postcss": "^8.5.31",
     "tailwindcss": "catalog:",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   },
   "description": "AMPM public website: static Next.js, the only web app; the client portals' browser version is the Expo web export."
 }

@@ -8,15 +8,26 @@
   },
   "scripts": {
     "dev": "turbo run dev",
-    "tokens:build": "pnpm --filter @ampm/tokens build",
     "build": "turbo run build",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
     "check": "turbo run lint typecheck test",
-    "prepare": "pnpm tokens:build"
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "tokens:build": "pnpm --filter @ampm/tokens build",
+    "db:generate": "pnpm --filter api exec prisma generate",
+    "db:migrate": "pnpm --filter api exec prisma migrate dev",
+    "authz:generate": "pnpm --filter @ampm/policy run authz:generate",
+    "prepare": "pnpm tokens:build && lefthook install"
   },
   "devDependencies": {
+    "@commitlint/cli": "^21.2.4",
+    "@commitlint/config-conventional": "^21.2.4",
+    "eslint": "catalog:",
+    "lefthook": "^2.2.2",
+    "prettier": "catalog:",
+    "prettier-plugin-tailwindcss": "catalog:",
     "turbo": "2.11.10",
     "typescript": "catalog:"
   }

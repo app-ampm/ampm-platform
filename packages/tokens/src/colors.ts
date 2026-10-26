@@ -52,7 +52,15 @@ export const colors = {
 export type ColorName = keyof typeof colors;
 
 /** Text colours that must stay readable on every surface. */
-export const textColors = ["primary", "muted", "brand", "success", "warning", "danger", "info"] as const;
+export const textColors = [
+  "primary",
+  "muted",
+  "brand",
+  "success",
+  "warning",
+  "danger",
+  "info",
+] as const;
 
 /** Surfaces text is placed on. */
 export const surfaceColors = ["surface", "surface-elevated", "surface-inset"] as const;

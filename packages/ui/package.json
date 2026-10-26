@@ -11,7 +11,9 @@
     }
   },
   "scripts": {
-    "typecheck": "tsc --noEmit -p tsconfig.json"
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run --passWithNoTests"
   },
   "devDependencies": {
     "@ampm/config": "workspace:*",
@@ -19,7 +21,8 @@
     "nativewind": "catalog:",
     "react": "catalog:",
     "react-native": "0.88.0",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   },
   "dependencies": {
     "@ampm/tokens": "workspace:*",

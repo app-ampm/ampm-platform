@@ -8,6 +8,9 @@
 set -u
 cd "$(dirname "$0")/../.." || exit 0
 export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
+# Automated checkpoints skip the lefthook git hooks (staged lint, commitlint): they may run from launchd without
+# node on PATH, and their file-list subjects exceed commitlint's header limit. CI and the Claude hooks are their gate.
+export LEFTHOOK=0
 LOG="$HOME/Library/Logs/ampm-vault-sync.log"
 HOOK=0; MSG=""; COMMITTED=""
 for a in "$@"; do case "$a" in --hook) HOOK=1 ;; *) MSG="$a" ;; esac; done

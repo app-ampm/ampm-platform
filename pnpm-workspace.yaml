@@ -16,11 +16,27 @@ catalog:
   nativewind: 4.2.7
   tailwindcss: ^3.4.17
   tailwind-merge: ^2.6.1
+  # Quality tooling (bootstrap step 3, standards §2.3): one ESLint, Prettier and Vitest line for every workspace.
+  eslint: ^10.13.0
+  "@eslint/js": ^10.0.1
+  typescript-eslint: ^8.72.0
+  eslint-plugin-import-x: ^4.17.1
+  eslint-plugin-react-hooks: ^7.1.1
+  eslint-config-prettier: ^10.1.8
+  globals: ^17.13.0
+  prettier: ^3.9.10
+  prettier-plugin-tailwindcss: ^0.8.1
+  vitest: ^5.0.5
+  "@vitest/coverage-v8": ^5.0.5
+  vite: ^8.0.0
 
 # pnpm runs no install scripts unless approved (allowBuilds, pnpm 11+); Prisma needs its engine download, nothing else does yet.
 allowBuilds:
   prisma: true
   "@prisma/engines": true
+  # lefthook installs its git hooks on postinstall; unrs-resolver (eslint-plugin-import-x) checks its native binary.
+  lefthook: true
+  unrs-resolver: true
 
 # Expo's default for pnpm monorepos (docs.expo.dev/guides/monorepos): a flat node_modules so Metro and the native
 # tooling resolve one copy of everything. pnpm 12 reads this here, not from .npmrc.

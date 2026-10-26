@@ -15,8 +15,15 @@ export default function TokensCheckScreen() {
   useEffect(() => setHydrated(true), []);
   const schemeName = hydrated ? resolved : "system";
   return (
-    <ScrollView className="flex-1 bg-surface" contentContainerClassName="p-6 gap-4" testID="tokens-screen">
-      <View className="rounded-lg border border-subtle bg-surface-elevated p-4 gap-2 shadow-sm" testID="tokens-card">
+    <ScrollView
+      className="flex-1 bg-surface"
+      contentContainerClassName="gap-4 p-6"
+      testID="tokens-screen"
+    >
+      <View
+        className="gap-2 rounded-lg border border-subtle bg-surface-elevated p-4 shadow-sm"
+        testID="tokens-card"
+      >
         <Text className="text-lg font-semibold text-primary" testID="tokens-title">
           AMPM tokens
         </Text>
@@ -50,7 +57,9 @@ export default function TokensCheckScreen() {
         </Pressable>
       </View>
       <View className="rounded-lg bg-surface-inset p-4">
-        <Text className="font-mono text-sm text-primary">bg-surface-inset · text-primary · font-mono</Text>
+        <Text className="font-mono text-sm text-primary">
+          bg-surface-inset · text-primary · font-mono
+        </Text>
       </View>
     </ScrollView>
   );

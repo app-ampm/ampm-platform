@@ -1,0 +1,18 @@
+# Only the code is formatted: the design package, the vault, the graph and generated output are left alone.
+node_modules
+dist
+.next
+.expo
+.turbo
+coverage
+pnpm-lock.yaml
+docs
+vault
+graphify-out
+reference_docs
+raw
+.claude
+apps/api/src/generated
+apps/mobile/assets
+expo-env.d.ts
+CLAUDE.md

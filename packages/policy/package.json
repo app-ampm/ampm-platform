@@ -2,7 +2,7 @@
   "name": "@ampm/policy",
   "version": "0.0.0",
   "private": true,
-  "description": "The permission matrix as code: keys, scopes, visibility classes, transitions, and the authorisation test generator (docs/engineering/standards.md §2.5).",
+  "description": "The permission matrix as code: keys, scopes, visibility classes, transitions, and the authorisation test generator (docs/engineering/standards.md \u00a72.5).",
   "type": "module",
   "exports": {
     ".": {
@@ -11,10 +11,14 @@
     }
   },
   "scripts": {
-    "typecheck": "tsc --noEmit -p tsconfig.json"
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run --passWithNoTests",
+    "authz:generate": "node -e \"console.error('authz:generate arrives with the policy package (bootstrap step 5)'); process.exit(1)\""
   },
   "devDependencies": {
     "@ampm/config": "workspace:*",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   }
 }

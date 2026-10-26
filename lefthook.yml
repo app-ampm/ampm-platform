@@ -1,0 +1,18 @@
+# Git hooks (docs/engineering/standards.md §2.3): format and lint what is staged, check the commit message.
+# `pnpm install` installs them (root prepare script). Automated checkpoint commits run with LEFTHOOK=0
+# (docs/tools/checkpoint.sh): they may start from launchd without node on PATH, and CI is their gate.
+pre-commit:
+  piped: true
+  jobs:
+    - name: prettier
+      glob: "*.{ts,tsx,js,mjs,cjs,json,css,md,yml,yaml}"
+      run: pnpm exec prettier --write --ignore-unknown {staged_files}
+      stage_fixed: true
+    - name: eslint
+      glob: "{apps,packages}/**/*.{ts,tsx,js,mjs,cjs}"
+      run: pnpm exec eslint --no-warn-ignored {staged_files}
+
+commit-msg:
+  jobs:
+    - name: commitlint
+      run: pnpm exec commitlint --edit {1}

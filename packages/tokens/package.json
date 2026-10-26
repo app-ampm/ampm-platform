@@ -17,13 +17,16 @@
   },
   "scripts": {
     "build": "node scripts/build.ts",
-    "typecheck": "tsc --noEmit -p tsconfig.json"
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run --passWithNoTests"
   },
   "devDependencies": {
     "@ampm/config": "workspace:*",
     "@types/node": "catalog:",
     "tailwindcss": "catalog:",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   },
   "peerDependencies": {
     "tailwindcss": "^3.4.17"

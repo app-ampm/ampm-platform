@@ -1,5 +1,13 @@
 import { colorScheme as nativewindScheme, useColorScheme } from "nativewind";
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 
 import type { ResolvedTheme, ThemeContextValue, ThemePreference } from "./theme.types";
 import { useFollowSystemScheme } from "./use-follow-system-scheme";
@@ -24,7 +32,11 @@ export interface ThemeProviderProps {
  * The web build is server-rendered: the server renders light and the class is applied after
  * hydration, so text that names the scheme must wait for the client (see apps/mobile/src/app/index.tsx).
  */
-export function ThemeProvider({ children, initialPreference = "system", onPreferenceChange }: ThemeProviderProps) {
+export function ThemeProvider({
+  children,
+  initialPreference = "system",
+  onPreferenceChange,
+}: ThemeProviderProps) {
   const [preference, setPreferenceState] = useState<ThemePreference>(initialPreference);
   const { colorScheme } = useColorScheme();
 
