@@ -63,6 +63,10 @@ const STATE_VARIANTS: ReadonlySet<string> = new Set([
   "disabled",
 ]);
 
+// `!hidden` compiles to `display: none !important`; react-native-css-interop applies important
+// rules after the others (runtime/native/native-interop.js), so one beats any rank without it.
+const IMPORTANT_RANK = 10;
+
 function variantRank(variant: string): number {
   if (STATE_VARIANTS.has(variant)) return 1;
   if (NATIVE_OSES.has(variant)) return 2;
@@ -92,9 +96,10 @@ function reachOf(variants: readonly string[], os: string): Reach {
 function parseClass(token: string, os: string): ClassToken {
   // Colons inside an arbitrary variant ("[&:hover]:flex") do not separate variants.
   const parts = token.split(/:(?![^[]*\])/);
-  const utility = parts.pop() ?? "";
-  const rank = Math.max(0, ...parts.map(variantRank));
-  return { utility, reach: reachOf(parts, os), rank };
+  const last = parts.pop() ?? "";
+  const important = last.startsWith("!");
+  const rank = Math.max(0, ...parts.map(variantRank)) + (important ? IMPORTANT_RANK : 0);
+  return { utility: important ? last.slice(1) : last, reach: reachOf(parts, os), rank };
 }
 
 function isClassHidden(className: string | undefined, os: string): boolean {
@@ -121,7 +126,8 @@ function isClassHidden(className: string | undefined, os: string): boolean {
  * display-none style, or a `hidden` class that applies on this platform at rest). NativeWind's
  * variants are resolved against `Platform.OS`: `native:hidden` and `ios:hidden` hide on iOS,
  * `hidden web:flex` stays hidden there and shows on the web, and of two display classes the one
- * later in NativeWind's stylesheet wins (`native:hidden ios:flex` hides on iOS).
+ * later in NativeWind's stylesheet wins (`native:hidden ios:flex` hides on iOS) unless the other
+ * one is important (`!hidden md:flex` hides, `hidden !flex` shows).
  * `importantForAccessibility` is Android-only and does not count. A hidden ancestor, or a
  * breakpoint or state variant that hides or shows (`md:hidden`, `hidden md:flex`,
  * `hidden dark:flex`), is not decided here: such a surface counts as reachable and announces, so

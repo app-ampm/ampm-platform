@@ -63,6 +63,17 @@ const cases: readonly (readonly [string, Verdicts])[] = [
   ["native:hidden hover:flex", { ios: true, android: true, web: false }],
   ["native:hidden dark:flex", nowhere],
   ["native:hidden md:flex", nowhere],
+  // The important modifier compiles to `display: none !important` (`.\!hidden`), which beats any
+  // display rule without it, and loses to a later important one.
+  ["!hidden", everywhere],
+  ["!hidden md:flex", everywhere],
+  ["!hidden native:flex", everywhere],
+  ["native:!hidden web:flex", { ios: true, android: true, web: false }],
+  ["hidden !flex", nowhere],
+  ["native:hidden !flex", nowhere],
+  ["!hidden md:!flex", nowhere],
+  ["!flex !hidden", everywhere],
+  ["!hidden ios:!flex", { ios: false, android: true, web: true }],
   // A state variant can display the view: the tokens' preset sets darkMode "class", so
   // `.dark\:flex:is(.dark *)` shows it in dark mode, and ui.md:13 wants errors announced. Like a
   // breakpoint, the helper leaves it announced rather than silence a displayed surface.
