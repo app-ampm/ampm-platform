@@ -5,7 +5,13 @@ import { AppModule } from "../src/app.module.js";
 import { configureHttp } from "../src/http.setup.js";
 import { LocalIdentityAdapter } from "../src/identity/local.adapter.js";
 
-/** The API as main.ts serves it, and tokens of the local provider for the seeded accounts. */
+/**
+ * The API as main.ts serves it, and tokens of the local provider for the seeded accounts.
+ *
+ * @example
+ * let api: TestApi;
+ * beforeAll(async () => (api = await startApi()));
+ */
 export interface TestApi {
   readonly app: NestExpressApplication;
   /** An access token for a local identity subject (prisma/seed.ts), e.g. "local:pm". */

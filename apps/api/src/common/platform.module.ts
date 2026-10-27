@@ -9,6 +9,9 @@ import { AppLogger } from "./logger.service.js";
 /**
  * Environment, logging and the two envelopes, available everywhere. The request context is not a
  * Nest middleware: configureHttp (http.setup.ts) creates it ahead of the body parser.
+ *
+ * @example
+ * \@Module({ imports: [PlatformModule, DbModule, PolicyModule] })
  */
 @Global()
 @Module({
