@@ -25,23 +25,30 @@ KEEP = 4  # characters left readable at the start of a match
 # ordinary identifiers do not match while a token at the start of an escaped line still does.
 START = rb"(?:(?<=\\[ntr])|(?<![A-Za-z0-9_]))"
 START_DASH = rb"(?:(?<=\\[ntr])|(?<![A-Za-z0-9_-]))"
+# Between a key and its value: a quote that may be JSON-escaped once or more (\" inside a transcript),
+# then = or :, on the same line.
+KEY_SEP = rb"(?:\\{0,7}[\"'])?[ \t]*[:=][ \t]*(?:\\{0,7}[\"'])?"
 
 # Each pattern's group "secret" is what gets masked.
 PATTERNS: list[tuple[str, re.Pattern[bytes]]] = [
     ("github-token", re.compile(START + rb"(?P<secret>gh[pousr]_[A-Za-z0-9]{36,255})")),
     ("github-pat", re.compile(START + rb"(?P<secret>github_pat_[A-Za-z0-9_]{22,255})")),
     ("aws-access-key", re.compile(rb"(?<![A-Z0-9])(?P<secret>(?:AKIA|ASIA)[0-9A-Z]{16})(?![A-Z0-9])")),
+    ("aws-secret-key", re.compile(rb"(?i:secret_?access_?key)" + KEY_SEP + rb"(?P<secret>[A-Za-z0-9/+]{40})")),
     (
-        "aws-secret-key",
-        re.compile(
-            rb"(?i:aws_secret_access_key|secretaccesskey)[\"']?\s*[:=]\s*[\"']?(?P<secret>[A-Za-z0-9/+]{40})"
-        ),
+        "aws-session-token",
+        re.compile(rb"(?i:session_?token|security_?token)" + KEY_SEP + rb"(?P<secret>[A-Za-z0-9/+=]{100,})"),
     ),
     (
         "jwt",
         re.compile(
             START_DASH + rb"(?P<secret>eyJ[A-Za-z0-9_-]{8,}\.eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,})"
         ),
+    ),
+    # A JWE (a Cognito refresh token): five segments, only the header is base64url JSON.
+    (
+        "jwe",
+        re.compile(START_DASH + rb"(?P<secret>eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]*(?:\.[A-Za-z0-9_-]{8,}){3})"),
     ),
     ("slack-token", re.compile(START + rb"(?P<secret>xox[abprs]-[A-Za-z0-9-]{10,})")),
     ("api-key-sk", re.compile(START_DASH + rb"(?P<secret>sk-(?:ant-|proj-)?[A-Za-z0-9_-]{32,})")),
@@ -111,39 +118,14 @@ def redact_file(path: str, check_only: bool) -> int:
 
 
 def self_test() -> int:
-    # Samples are assembled at run time so this file never holds a credential-shaped literal.
-    gh = "gh" + "o_" + "Ab1" * 12
-    pat = "github" + "_pat_" + "11AB" * 6
-    aws = "AK" + "IA" + "ABCDEFGHIJKLMNOP"
-    jwt = "ey" + "J" + "hbGciOiJIUzI1" + "." + "ey" + "J" + "zdWIiOiJsb2Nh" + "." + "c2lnbmF0dXJlMTI"
-    pem_body = "MIIEvQIBADANBgkqhkiG9w0BAQEFAASC" + "\\n" + "BKcwggSjAgEAAoIBAQC7"
-    pem = "-----BEGIN PRIVATE KEY-----\\n" + pem_body + "\\n-----END PRIVATE KEY-----"
-    cases = [
-        (f'{{"t":"{gh}"}}', 1),
-        (f"keychain dump\\n{gh}\\n", 1),
-        (f"token {pat} end", 1),
-        (f"id={aws}", 1),
-        (f"Bearer {jwt}", 1),
-        ("postgresql://ampm:ampm@localhost:5432/ampm", 0),
-        ("postgresql://svc:S3cr3t-Value-99@db.internal:5432/ampm", 1),
-        (pem, 2),
-        ("ordinary text about gho_ prefixes and eyJ examples", 0),
-    ]
-    failures = 0
-    for text, expected in cases:
-        edits = find(text.encode())
-        masked = bytearray(text.encode())
-        for offset, replacement in edits:
-            masked[offset : offset + len(replacement)] = replacement
-        ok = len(edits) == expected and len(masked) == len(text.encode())
-        if expected:
-            ok = ok and not find(bytes(masked))  # masking is idempotent
-            ok = ok and b"\\*" not in masked  # no escape such as \n is broken into \*
-        if not ok:
-            failures += 1
-            print(f"FAIL: expected {expected}, found {len(edits)} (sample length {len(text)})")
-    print("self-test passed" if failures == 0 else f"self-test: {failures} failure(s)")
-    return 1 if failures else 0
+    """Runs redact_secrets_test.py, the pattern tests that sit next to this file.
+
+    python3 docs/tools/redact_secrets.py --self-test   # prints "self-test passed", exit 0
+    """
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    import redact_secrets_test
+
+    return redact_secrets_test.run()
 
 
 def main(argv: list[str]) -> int:
