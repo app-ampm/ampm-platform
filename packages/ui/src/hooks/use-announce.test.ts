@@ -1,5 +1,6 @@
-import { AccessibilityInfo, Platform } from "react-native";
+import { Platform } from "react-native";
 
+import { spyOnAnnounce } from "../test/announce";
 import { renderHook } from "../test/render";
 import { announcementText, useAnnounce } from "./use-announce";
 
@@ -17,9 +18,7 @@ function renderAnnounce(initialProps: HookProps) {
 describe("useAnnounce", () => {
   let announce: jest.SpyInstance;
   beforeEach(() => {
-    // The preset already mocks the announcer; clear it so each test counts only its own calls.
-    announce = jest.spyOn(AccessibilityInfo, "announceForAccessibilityWithOptions");
-    announce.mockClear();
+    announce = spyOnAnnounce();
   });
   afterEach(() => jest.restoreAllMocks());
 
