@@ -7,11 +7,11 @@
 
 Called by docs/tools/memory_hook.sh before every mine (CLAUDE.md: never file secrets or tokens). A
 credential is overwritten in place with the same number of bytes, its first characters kept so the
-kind stays readable and the rest turned to '*'; JSON escapes and UTF-8 characters are never split, and
-no match reaches past one JSON string, so every masked line still parses. Same-length writes at fixed offsets keep the file's
-size and every other byte, so a transcript Claude Code is still appending to is never truncated or
-reordered. A line still being written (no trailing newline yet) is left for the next run. Nothing
-matched is ever printed: the output is a count per file.
+kind stays readable and the rest turned to '*'; JSON escapes and UTF-8 characters are never split,
+and no match reaches past one JSON string, so every masked line still parses. Same-length writes at
+fixed offsets keep the file's size and every other byte, so a transcript Claude Code is still
+appending to is never truncated or reordered. A line still being written (no trailing newline yet) is
+left for the next run. Nothing matched is ever printed: the output is a count per file.
 """
 
 from __future__ import annotations
@@ -22,55 +22,71 @@ import sys
 
 KEEP = 4  # characters left readable at the start of a match
 
-# A credential starts after a non-word character or after a JSON escape (\n, \t, \r), so substrings of
-# ordinary identifiers do not match while a token at the start of an escaped line still does.
-START = rb"(?:(?<=\\[ntr])|(?<![A-Za-z0-9_]))"
-START_DASH = rb"(?:(?<=\\[ntr])|(?<![A-Za-z0-9_-]))"
+# A token with a known prefix must not be the tail of a longer identifier: it follows a non-word byte
+# (for some kinds also not a dash), a JSON escape (\n, \t, \r) or an ANSI colour or erase escape
+# (\u001b[32m, \u001b[38;5;196m, \u001b[K). Checked after the match, so each search keeps its fast prefix.
+WORD = frozenset(b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_")
+WORD_DASH = WORD | {ord("-")}
+ANY: frozenset[int] = frozenset()
+ANSI_TAIL = re.compile(rb"\[[0-9;]{0,12}[mK]\Z")
 # Between a key and its value: a quote that may be JSON-escaped once or more (\" inside a transcript),
 # then = or :, on the same line.
 KEY_SEP = rb"(?:\\{0,7}[\"'])?[ \t]*[:=][ \t]*(?:\\{0,7}[\"'])?"
 # One character of a JSON string as a transcript line holds it: an escape, or anything but a quote.
 JSON_CHAR = rb"(?:\\.|[^\"\\\n])"
+# PEM and PGP armour: the label after BEGIN or END, and the lines of a key as a JSON string holds them
+# (\n between lines, escaped again when the key sits in JSON a tool printed).
+KEY_LABEL = rb"(?:[A-Z0-9]+ )*PRIVATE KEY(?: BLOCK)?-----"
+NEXT_LINE = rb"(?:\\+r)?\\+n"
+HEADER_LINE = rb"[A-Za-z][A-Za-z0-9-]*:[^\\\"\n]*"  # Proc-Type: 4,ENCRYPTED, or Version: in PGP armour
+BASE64_LINE = rb"[A-Za-z0-9+/=]+(?=[\\\"\n]|\Z)"
 
-# Each pattern's group "secret" is what gets masked.
-PATTERNS: list[tuple[str, re.Pattern[bytes]]] = [
-    ("github-token", re.compile(START + rb"(?P<secret>gh[pousr]_[A-Za-z0-9]{36,255})")),
-    ("github-pat", re.compile(START + rb"(?P<secret>github_pat_[A-Za-z0-9_]{22,255})")),
-    ("aws-access-key", re.compile(rb"(?<![A-Z0-9])(?P<secret>(?:AKIA|ASIA)[0-9A-Z]{16})(?![A-Z0-9])")),
-    ("aws-secret-key", re.compile(rb"(?i:secret_?access_?key)" + KEY_SEP + rb"(?P<secret>[A-Za-z0-9/+]{40})")),
+# Each pattern's group "secret" is what gets masked; the set holds the bytes that must not precede it.
+PATTERNS: list[tuple[str, re.Pattern[bytes], frozenset[int]]] = [
+    ("github-token", re.compile(rb"(?P<secret>gh[pousr]_[A-Za-z0-9]{36,255})"), WORD),
+    ("github-pat", re.compile(rb"(?P<secret>github_pat_[A-Za-z0-9_]{22,255})"), WORD),
+    ("aws-access-key", re.compile(rb"(?<![A-Z0-9])(?P<secret>(?:AKIA|ASIA)[0-9A-Z]{16})(?![A-Z0-9])"), ANY),
+    ("aws-secret-key", re.compile(rb"(?i:secret_?access_?key)" + KEY_SEP + rb"(?P<secret>[A-Za-z0-9/+]{40})"), ANY),
     (
         "aws-session-token",
         re.compile(rb"(?i:session_?token|security_?token)" + KEY_SEP + rb"(?P<secret>[A-Za-z0-9/+=]{100,})"),
+        ANY,
     ),
-    (
-        "jwt",
-        re.compile(
-            START_DASH + rb"(?P<secret>eyJ[A-Za-z0-9_-]{8,}\.eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,})"
-        ),
-    ),
+    ("jwt", re.compile(rb"(?P<secret>eyJ[A-Za-z0-9_-]{8,}\.eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,})"), WORD_DASH),
     # A JWE (a Cognito refresh token): five segments, only the header is base64url JSON.
+    ("jwe", re.compile(rb"(?P<secret>eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]*(?:\.[A-Za-z0-9_-]{8,}){3})"), WORD_DASH),
     (
-        "jwe",
-        re.compile(START_DASH + rb"(?P<secret>eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]*(?:\.[A-Za-z0-9_-]{8,}){3})"),
+        "auth-header",
+        re.compile(rb"(?i:authorization)" + KEY_SEP + rb"(?i:basic|bearer) +(?P<secret>[A-Za-z0-9+/=._~-]{12,})"),
+        ANY,
     ),
-    ("slack-token", re.compile(START + rb"(?P<secret>xox[abprs]-[A-Za-z0-9-]{10,})")),
-    ("api-key-sk", re.compile(START_DASH + rb"(?P<secret>sk-(?:ant-|proj-)?[A-Za-z0-9_-]{32,})")),
-    ("stripe-key", re.compile(START + rb"(?P<secret>[sr]k_(?:live|test)_[A-Za-z0-9]{16,})")),
-    ("google-api-key", re.compile(START_DASH + rb"(?P<secret>AIza[0-9A-Za-z_-]{35})")),
-    ("npm-token", re.compile(START + rb"(?P<secret>npm_[A-Za-z0-9]{36})")),
-    # A password inside a connection URL; eight characters or more, so the local ampm:ampm stays.
+    ("slack-token", re.compile(rb"(?P<secret>xox[abprs]-[A-Za-z0-9-]{10,})"), WORD),
+    ("api-key-sk", re.compile(rb"(?P<secret>sk-(?:ant-|proj-)?[A-Za-z0-9_-]{32,})"), WORD_DASH),
+    ("stripe-key", re.compile(rb"(?P<secret>[sr]k_(?:live|test)_[A-Za-z0-9]{16,})"), WORD),
+    ("google-api-key", re.compile(rb"(?P<secret>AIza[0-9A-Za-z_-]{35})"), WORD_DASH),
+    ("npm-token", re.compile(rb"(?P<secret>npm_[A-Za-z0-9]{36})"), WORD),
+    # A password inside a connection URL, the user part may be empty (redis://:pw@host); eight characters
+    # or more, so the local ampm:ampm stays.
     (
         "url-password",
-        re.compile(rb"[a-z][a-z0-9+.-]{1,20}://[^:/@\s\"'\\]{1,64}:(?P<secret>[^:/@\s\"'\\]{8,128})@"),
+        re.compile(rb"[a-z][a-z0-9+.-]{1,20}://[^:/@\s\"'\\]{0,64}:(?P<secret>[^:/@\s\"'\\]{8,128})@"),
+        ANY,
     ),
     # The body of a PEM private key, kept inside one JSON string of one transcript line (no re.S); only
     # its base64 characters are masked, the markers and escapes stay.
     (
         "private-key",
+        re.compile(rb"-----BEGIN " + KEY_LABEL + rb"(?P<secret>" + JSON_CHAR + rb"{16,12000}?)-----END " + KEY_LABEL),
+        ANY,
+    ),
+    # A key cut short (head -n 5 key.pem): the base64 lines after BEGIN, up to the first other line.
+    (
+        "private-key-head",
         re.compile(
-            rb"-----BEGIN (?:[A-Z0-9]+ )*PRIVATE KEY-----(?P<secret>" + JSON_CHAR + rb"{16,12000}?)"
-            rb"-----END (?:[A-Z0-9]+ )*PRIVATE KEY-----"
+            rb"-----BEGIN " + KEY_LABEL + rb"(?P<secret>(?:" + NEXT_LINE + rb"(?:" + HEADER_LINE + rb")?)*?"
+            rb"(?:" + NEXT_LINE + BASE64_LINE + rb")+)"
         ),
+        ANY,
     ),
 ]
 BASE64 = frozenset(b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=")
@@ -117,11 +133,25 @@ def _render(data: bytes, start: int, end: int, base64_only: bool) -> bytes:
     return bytes(out)
 
 
+def _clean_start(data: bytes, start: int, not_before: frozenset[int]) -> bool:
+    """True when the byte before start is not in not_before, or ends a JSON or ANSI escape.
+
+    _clean_start(b"xghp_", 1, WORD) is False; _clean_start(b"[32mghp_", 4, WORD) is True
+    """
+    if start == 0 or data[start - 1] not in not_before:
+        return True
+    if start >= 2 and data[start - 2] == BACKSLASH and data[start - 1] in b"ntr":
+        return True
+    return ANSI_TAIL.search(data, max(0, start - 16), start) is not None
+
+
 def _spans(data: bytes) -> list[tuple[int, int, bool]]:
     """(start, end, base64_only) of every match, overlapping matches merged into one credential."""
     found = []
-    for kind, pattern in PATTERNS:
+    for kind, pattern, not_before in PATTERNS:
         for match in pattern.finditer(data):
+            if not _clean_start(data, match.start("secret"), not_before):
+                continue
             start, end = _widen(data, *match.span("secret"))
             found.append((start, end, kind.startswith("private-key")))
     merged: list[tuple[int, int, bool]] = []

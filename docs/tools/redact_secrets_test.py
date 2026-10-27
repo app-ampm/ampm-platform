@@ -76,6 +76,7 @@ def baseline_cases() -> list[Case]:
         ("local ampm password", tool_result("postgresql://ampm:ampm@localhost:5432/ampm"), 0, []),
         ("url password", tool_result(f"postgresql://svc:{s['pw']}@db.internal:5432/ampm"), 1, [s["pw"]]),
         ("ordinary text", tool_result("ordinary text about gho_ prefixes and eyJ examples"), 0, []),
+        ("token-shaped tail of an identifier", tool_result(f"const x{s['gh']} = 1"), 0, []),
     ]
 
 
@@ -93,6 +94,36 @@ def ops01_cases() -> list[Case]:
         ("aws session env", tool_result(f"AWS_SESSION_TOKEN={s['session']}"), 1, [s["session"]]),
         ("cognito refresh", tool_result(json.dumps({"RefreshToken": s["jwe"]})), 1, [s["jwe"]]),
     ]
+
+
+def ops04_cases() -> list[Case]:
+    """OPS-04: password-only URLs, tokens after an ANSI colour, PGP keys and a PEM with no END marker."""
+    s = samples()
+    npm = "npm" + "_" + "Zx9" * 12
+    encrypted = "-----BEGIN RSA PRIVATE KEY-----\nProc-Type: 4,ENCRYPTED\nDEK-Info: AES-128-CBC,0A1B\n\n"
+    return [
+        ("password-only url", tool_result(f"REDIS_URL=redis://:{s['pw']}@localhost:6379"), 1, [s["pw"]]),
+        ("token after an ansi colour", tool_result(f"\x1b[32m{s['gh']}\x1b[0m"), 1, [s["gh"]]),
+        ("token after a 256-colour escape", tool_result(f"\x1b[38;5;196m{npm}\x1b[0m"), 1, [npm]),
+        ("token after grep --color", tool_result(f"a.env:\x1b[01;31m\x1b[K{s['gh']}\x1b[m\x1b[K"), 1, [s["gh"]]),
+        ("pgp private key", tool_result(pem(["", s["b64"], s["b64_2"], "=AbCd"], "PGP ")), 1, [s["b64"], s["b64_2"]]),
+        ("pem with no end", tool_result(f"-----BEGIN PRIVATE KEY-----\n{s['b64']}\n{s['b64_2']}\n"), 1,
+         [s["b64"], s["b64_2"]]),
+        ("encrypted pem with no end", tool_result(f"{encrypted}{s['b64']}\n"), 1, [s["b64"]]),
+        ("pgp key with no end", tool_result(f"-----BEGIN PGP PRIVATE KEY BLOCK-----\n\n{s['b64']}"), 1, [s["b64"]]),
+        ("begin marker then prose", tool_result("-----BEGIN PRIVATE KEY-----\nnot a key here"), 0, []),
+        ("basic auth header", tool_use(f"curl -H 'Authorization: Basic {s['b64_2']}' x"), 1, [s["b64_2"]]),
+    ]
+
+
+def check_head_stops_at_prose() -> list[str]:
+    """A PEM with no END marker is masked up to the first line that is not base64, and no further."""
+    s = samples()
+    data = tool_result(f"-----BEGIN PRIVATE KEY-----\n{s['b64']}\n$ ls docs\nREADMEfileswithlongnames").encode()
+    masked = apply(data, rs.find(data))
+    if s["b64"].encode() in masked or b"READMEfileswithlongnames" not in masked:
+        return ["pem with no end: masked too little or past the first non-base64 line"]
+    return []
 
 
 def ops05_cases() -> list[Case]:
@@ -157,9 +188,9 @@ def check_case(name: str, line: str, expected: int, fragments: list[str]) -> lis
 def run() -> int:
     """Runs every case; prints each failure and returns 1 when any failed."""
     failures: list[str] = []
-    for case in baseline_cases() + ops01_cases() + ops05_cases():
+    for case in baseline_cases() + ops01_cases() + ops04_cases() + ops05_cases():
         failures += check_case(*case)
-    failures += check_lines_kept_apart() + check_nested_json_survives()
+    failures += check_head_stops_at_prose() + check_lines_kept_apart() + check_nested_json_survives()
     for failure in failures:
         print(f"FAIL: {failure}")
     print("self-test passed" if not failures else f"self-test: {len(failures)} failure(s)")
