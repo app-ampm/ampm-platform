@@ -22,7 +22,10 @@ export interface RoleGrant {
  * const grant: ExplicitGrant = { key: "guests.identity_documents.read", projectId };
  */
 export interface ExplicitGrant {
-  /** The base key, `module.resource.action` without a scope suffix. */
+  /**
+   * The key, as §10 spells it or as its base key: a scope suffix or a §10 alias of the same row
+   * names the same grant (`guests.identity_documents.read:assigned`, line 547).
+   */
   readonly key: string;
   readonly projectId: string;
 }
@@ -160,9 +163,12 @@ function scopeMiss(scope: Scope, principal: PolicyPrincipal, target: PolicyTarge
   return target.ownerId !== undefined && target.ownerId === principal.userId ? null : "not_owner";
 }
 
+/** The grant is compared by the base key it decides on, so every spelling of the key counts. */
 function holdsExplicitGrant(principal: PolicyPrincipal, base: string, projectId?: string) {
   if (projectId === undefined) return false;
-  return (principal.explicitGrants ?? []).some((g) => g.key === base && g.projectId === projectId);
+  return (principal.explicitGrants ?? []).some(
+    (grant) => grant.projectId === projectId && baseKey(grant.key) === base,
+  );
 }
 
 /**

@@ -30,6 +30,29 @@ describe("§5.10 identity documents (P-5)", () => {
     expect(decide(elsewhere, key, { projectId: "p-1" }).allowed).toBe(false);
   });
 
+  it("§10 lines 547-548, P-5 line 21: an explicit grant counts however §10 spells its key", () => {
+    for (const spelling of [
+      "guests.identity_documents.read:assigned",
+      "guests.family_groups_guests_standard.read_identity",
+    ]) {
+      const granted = staff(["RG"], { explicitGrants: [{ key: spelling, projectId: "p-1" }] });
+      expect(decide(granted, key, { projectId: "p-1" }), spelling).toMatchObject({
+        allowed: true,
+        scope: "assigned",
+      });
+    }
+  });
+
+  it("P-5 line 21, §5.10 line 264: RG's upload and edit need their own explicit grant (fail closed)", () => {
+    // The document names only the read grant; whether it also opens C and U of the cell is open
+    // for AMPM. Until then each action of the cell needs an explicit grant of its own key.
+    const create = "guests.identity_documents.create";
+    const readOnly = staff(["RG"], { explicitGrants: [{ key, projectId: "p-1" }] });
+    expect(decide(readOnly, create, { projectId: "p-1" }).reason).toBe("condition_unmet");
+    const uploader = staff(["RG"], { explicitGrants: [{ key: create, projectId: "p-1" }] });
+    expect(decide(uploader, create, { projectId: "p-1" }).allowed).toBe(true);
+  });
+
   it("§5.10 line 264: HL reads identity documents on assigned weddings at check-in only", () => {
     expect(decide(staff(["HL"]), key, { projectId: "p-1" }).reason).toBe("condition_unmet");
     expect(decide(staff(["HL"]), key, { projectId: "p-1", checks: ["check_in"] })).toMatchObject({
