@@ -170,7 +170,6 @@ function readTransition(value: unknown, path: string): Transition {
     client: flag(rule["client"], `${path}.client`),
     system: flag(rule["system"], `${path}.system`),
     actors: each(rule["actors"], ACTORS, `${path}.actors`),
-    exception: flag(rule["exception"], `${path}.exception`),
     who: text(rule["who"], `${path}.who`),
     condition: condition === null ? null : text(condition, `${path}.condition`),
   };

@@ -21,13 +21,11 @@ export interface StatusMachine {
   readonly sets: Readonly<Record<string, readonly string[]>>;
   /** A parenthesised qualifier → the record kind a row is limited to (`client_requests.request_type`). */
   readonly kinds: Readonly<Record<string, string>>;
-  /** Where an authorised exception moves the record (P-8 changed by Q10), if the machine has one. */
-  readonly exceptionTarget: string | null;
   /** A From-cell prefix that selects this machine under a shared heading ("readiness:"). */
   readonly prefix: string | null;
 }
 
-const PLAIN = { sets: {}, kinds: {}, exceptionTarget: null, prefix: null } as const;
+const PLAIN = { sets: {}, kinds: {}, prefix: null } as const;
 
 /**
  * The machines by entity, the `entity` canTransition() takes.
@@ -122,10 +120,9 @@ export const STATUS_MACHINES: Readonly<Record<string, StatusMachine>> = {
     heading: "Function status and readiness",
     prefix: "readiness",
     statuses: ["not_started", "in_progress", "blocked", "ready", "live", "completed"],
-    // The checklist derives these four; live and completed are set on the day (§7, AC-13.3).
+    // The checklist derives these four, an item's authorised exception included (data-model.md
+    // lines 849 and 1838, AC-13.2); live and completed are set on the day (§7, AC-13.3).
     sets: { derived: ["not_started", "in_progress", "blocked", "ready"] },
-    // An authorised exception lets a function become ready with a required check unmet (AC-13.2).
-    exceptionTarget: "ready",
   },
   incident: {
     ...PLAIN,

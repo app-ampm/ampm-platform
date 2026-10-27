@@ -10704,7 +10704,6 @@
       "client": false,
       "system": true,
       "actors": [],
-      "exception": false,
       "condition": "on payment succeeded"
     },
     {
@@ -10732,7 +10731,6 @@
       "client": false,
       "system": false,
       "actors": [],
-      "exception": false,
       "condition": "manually, with a payment record attached"
     },
     {
@@ -10750,7 +10748,6 @@
       "client": false,
       "system": true,
       "actors": [],
-      "exception": false,
       "condition": "at `ends_at` minus the configured notice period"
     },
     {
@@ -10768,7 +10765,6 @@
       "client": false,
       "system": true,
       "actors": [],
-      "exception": false,
       "condition": "at `ends_at`"
     },
     {
@@ -10796,7 +10792,6 @@
       "client": false,
       "system": false,
       "actors": [],
-      "exception": false,
       "condition": "(non-payment, dispute) with reason"
     },
     {
@@ -10823,7 +10818,6 @@
       "client": false,
       "system": false,
       "actors": [],
-      "exception": false,
       "condition": null
     },
     {
@@ -10855,7 +10849,6 @@
       "client": false,
       "system": false,
       "actors": [],
-      "exception": false,
       "condition": "with reason; a client asks for cancellation through a client request"
     },
     {
@@ -10874,7 +10867,6 @@
       "client": false,
       "system": false,
       "actors": [],
-      "exception": false,
       "condition": "New subscription row; the old one is never reactivated"
     },
     {
@@ -10892,7 +10884,6 @@
       "client": true,
       "system": false,
       "actors": [],
-      "exception": false,
       "condition": null
     },
     {
@@ -10919,7 +10910,6 @@
       "client": false,
       "system": false,
       "actors": [],
-      "exception": false,
       "condition": "on the client's behalf"
     },
     {
@@ -10942,7 +10932,6 @@
       "client": false,
       "system": false,
       "actors": [],
-      "exception": false,
       "condition": null
     },
     {
@@ -10965,7 +10954,6 @@
       "client": false,
       "system": false,
       "actors": [],
-      "exception": false,
       "condition": null
     },
     {
@@ -10988,7 +10976,6 @@
       "client": false,
       "system": false,
       "actors": [],
-      "exception": false,
       "condition": null
     },
     {
@@ -11016,7 +11003,6 @@
       "client": false,
       "system": false,
       "actors": [],
-      "exception": false,
       "condition": null
     },
     {
@@ -11044,7 +11030,6 @@
       "client": false,
       "system": false,
       "actors": [],
-      "exception": false,
       "condition": null
     },
     {
@@ -11071,7 +11056,6 @@
       "client": false,
       "system": false,
       "actors": [],
-      "exception": false,
       "condition": "when a proposal is shared"
     },
     {
@@ -11098,7 +11082,6 @@
       "client": false,
       "system": false,
       "actors": [],
-      "exception": false,
       "condition": "only when a booking milestone of type confirmed is done and a contract is signed"
     },
     {
@@ -11137,7 +11120,6 @@
       "client": false,
       "system": false,
       "actors": [],
-      "exception": false,
       "condition": "with an outcome"
     },
     {
@@ -11164,7 +11146,6 @@
       "client": false,
       "system": false,
       "actors": [],
-      "exception": false,
       "condition": null
     },
     {
@@ -11187,7 +11168,6 @@
       "client": false,
       "system": false,
       "actors": [],
-      "exception": false,
       "condition": null
     },
     {
@@ -11210,7 +11190,6 @@
       "client": false,
       "system": false,
       "actors": [],
-      "exception": false,
       "condition": "when the configured key approvals are approved"
     },
     {
@@ -11233,7 +11212,6 @@
       "client": false,
       "system": false,
       "actors": [],
-      "exception": false,
       "condition": "when every confirmed function is ready"
     },
     {
@@ -11260,7 +11238,6 @@
       "client": false,
       "system": false,
       "actors": [],
-      "exception": false,
       "condition": null
     },
     {
@@ -11283,7 +11260,6 @@
       "client": false,
       "system": false,
       "actors": [],
-      "exception": false,
       "condition": null
     },
     {
@@ -11310,7 +11286,6 @@
       "client": false,
       "system": false,
       "actors": [],
-      "exception": false,
       "condition": "only when the closure checklist is complete and final accounts are approved by FA"
     },
     {
@@ -11344,7 +11319,6 @@
       "client": false,
       "system": false,
       "actors": [],
-      "exception": false,
       "condition": "with reason; approvals are paused"
     },
     {
@@ -11369,7 +11343,6 @@
       "client": false,
       "system": false,
       "actors": [],
-      "exception": false,
       "condition": null
     },
     {
@@ -11392,7 +11365,6 @@
       "client": false,
       "system": false,
       "actors": [],
-      "exception": false,
       "condition": "audited"
     },
     {
@@ -11412,7 +11384,6 @@
       "actors": [
         "requester"
       ],
-      "exception": false,
       "condition": "per §5.9"
     },
     {
@@ -11432,7 +11403,6 @@
       "client": true,
       "system": false,
       "actors": [],
-      "exception": false,
       "condition": "Approved needs `required_decisions` approvals, one by default; one rejection or revision request moves it immediately"
     },
     {
@@ -11461,7 +11431,6 @@
       "client": false,
       "system": false,
       "actors": [],
-      "exception": false,
       "condition": "on the client's behalf with a note or record (P-9 confirmed); Approved needs `required_decisions` approvals, one by default; one rejection or revision request moves it immediately"
     },
     {
@@ -11483,7 +11452,6 @@
       "client": false,
       "system": true,
       "actors": [],
-      "exception": false,
       "condition": "when a new version of the record is created"
     },
     {
@@ -11502,7 +11470,6 @@
       "client": true,
       "system": false,
       "actors": [],
-      "exception": false,
       "condition": "as a client decision"
     },
     {
@@ -11530,7 +11497,6 @@
       "client": false,
       "system": false,
       "actors": [],
-      "exception": false,
       "condition": "recording the client's decision"
     },
     {
@@ -11548,7 +11514,6 @@
       "client": true,
       "system": false,
       "actors": [],
-      "exception": false,
       "condition": null
     },
     {
@@ -11571,7 +11536,6 @@
       "client": false,
       "system": false,
       "actors": [],
-      "exception": false,
       "condition": "on the client's behalf with evidence"
     },
     {
@@ -11594,7 +11558,6 @@
       "client": false,
       "system": false,
       "actors": [],
-      "exception": false,
       "condition": "when the contract is signed"
     },
     {
@@ -11621,7 +11584,6 @@
       "client": false,
       "system": false,
       "actors": [],
-      "exception": false,
       "condition": null
     },
     {
@@ -11644,7 +11606,6 @@
       "client": false,
       "system": false,
       "actors": [],
-      "exception": false,
       "condition": "when every deliverable is accepted"
     },
     {
@@ -11681,7 +11642,6 @@
       "client": false,
       "system": false,
       "actors": [],
-      "exception": false,
       "condition": "with reason"
     },
     {
@@ -11704,7 +11664,6 @@
       "client": false,
       "system": false,
       "actors": [],
-      "exception": false,
       "condition": null
     },
     {
@@ -11732,7 +11691,6 @@
       "client": false,
       "system": false,
       "actors": [],
-      "exception": false,
       "condition": null
     },
     {
@@ -11756,33 +11714,7 @@
       "client": false,
       "system": true,
       "actors": [],
-      "exception": false,
-      "condition": "from the readiness checklist"
-    },
-    {
-      "entity": "function_readiness",
-      "from": [
-        "not_started",
-        "in_progress",
-        "blocked"
-      ],
-      "to": [
-        "ready"
-      ],
-      "restore": false,
-      "kind": null,
-      "who": "System, from the readiness checklist; an exception needs SA, Eva's authorised personnel (P-8 changed by Q10)",
-      "roles": [
-        {
-          "role": "SA",
-          "assigned": false
-        }
-      ],
-      "client": false,
-      "system": false,
-      "actors": [],
-      "exception": true,
-      "condition": "Eva's authorised personnel (P-8 changed by Q10)"
+      "condition": "from the readiness checklist; an exception needs SA, Eva's authorised personnel (P-8 changed by Q10)"
     },
     {
       "entity": "function_readiness",
@@ -11808,7 +11740,6 @@
       "client": false,
       "system": false,
       "actors": [],
-      "exception": false,
       "condition": "on the day"
     },
     {
@@ -11831,7 +11762,6 @@
       "client": false,
       "system": false,
       "actors": [],
-      "exception": false,
       "condition": null
     },
     {
@@ -11862,7 +11792,6 @@
       "client": false,
       "system": false,
       "actors": [],
-      "exception": false,
       "condition": null
     },
     {
@@ -11882,7 +11811,6 @@
       "actors": [
         "assignee"
       ],
-      "exception": false,
       "condition": null
     },
     {
@@ -11909,7 +11837,6 @@
       "actors": [
         "assignee"
       ],
-      "exception": false,
       "condition": "per the escalation rules"
     },
     {
@@ -11935,7 +11862,6 @@
       "actors": [
         "assignee"
       ],
-      "exception": false,
       "condition": "a critical incident requires resolution notes"
     },
     {
@@ -11962,7 +11888,6 @@
       "client": false,
       "system": false,
       "actors": [],
-      "exception": false,
       "condition": null
     },
     {
@@ -11989,7 +11914,6 @@
       "actors": [
         "owner"
       ],
-      "exception": false,
       "condition": null
     },
     {
@@ -12014,7 +11938,6 @@
       "actors": [
         "owner"
       ],
-      "exception": false,
       "condition": null
     },
     {
@@ -12046,7 +11969,6 @@
       "actors": [
         "creator"
       ],
-      "exception": false,
       "condition": null
     },
     {
@@ -12073,7 +11995,6 @@
       "client": false,
       "system": false,
       "actors": [],
-      "exception": false,
       "condition": null
     },
     {
@@ -12096,7 +12017,6 @@
       "client": false,
       "system": false,
       "actors": [],
-      "exception": false,
       "condition": null
     },
     {
@@ -12119,7 +12039,6 @@
       "client": false,
       "system": false,
       "actors": [],
-      "exception": false,
       "condition": null
     },
     {
@@ -12142,7 +12061,6 @@
       "client": false,
       "system": false,
       "actors": [],
-      "exception": false,
       "condition": null
     },
     {
@@ -12173,7 +12091,6 @@
       "client": false,
       "system": false,
       "actors": [],
-      "exception": false,
       "condition": null
     },
     {
@@ -12193,7 +12110,6 @@
       "actors": [
         "assignee"
       ],
-      "exception": false,
       "condition": null
     },
     {
@@ -12213,7 +12129,6 @@
       "actors": [
         "assignee"
       ],
-      "exception": false,
       "condition": null
     },
     {
@@ -12233,7 +12148,6 @@
       "actors": [
         "assignee"
       ],
-      "exception": false,
       "condition": null
     },
     {
@@ -12261,7 +12175,6 @@
       "client": false,
       "system": false,
       "actors": [],
-      "exception": false,
       "condition": null
     },
     {
@@ -12284,7 +12197,6 @@
       "client": false,
       "system": false,
       "actors": [],
-      "exception": false,
       "condition": null
     },
     {
@@ -12311,7 +12223,6 @@
       "actors": [
         "requester"
       ],
-      "exception": false,
       "condition": null
     }
   ]

@@ -144,18 +144,16 @@ describe("§7 client request", () => {
 });
 
 describe("§7 function readiness and subscriptions", () => {
-  it("§7 line 446, P-8 line 24: readiness is derived by the System; an exception needs SA", () => {
+  it("§7 line 446, data-model.md lines 849 and 1838: only the System derives readiness, even past an exception", () => {
     expect(canTransition(system, "function_readiness", "blocked", "ready")).not.toBeNull();
-    expect(canTransition(staff(["SA"]), "function_readiness", "blocked", "ready")).toBeNull();
-    expect(
-      canTransition(staff(["SA"]), "function_readiness", "blocked", "ready", { exception: true }),
-    ).not.toBeNull();
-    expect(
-      canTransition(staff(["PM"]), "function_readiness", "blocked", "ready", {
-        ...onProject,
-        exception: true,
-      }),
-    ).toBeNull();
+    expect(canTransition(system, "function_readiness", "not_started", "ready")).not.toBeNull();
+    // AC-13.2: SA authorises the exception on the checklist item (decide() on readiness_exceptions);
+    // the System then derives ready. A caller's claim of an exception moves nothing.
+    const claimed = { ...onProject, exception: true };
+    for (const from of ["not_started", "in_progress", "blocked"]) {
+      expect(canTransition(staff(["SA"]), "function_readiness", from, "ready", claimed)).toBeNull();
+      expect(canTransition(staff(["PM"]), "function_readiness", from, "ready", claimed)).toBeNull();
+    }
   });
 
   it("§7 line 447: a ready function goes live by PM (a) or HL (a) on the day", () => {

@@ -1,8 +1,8 @@
 /**
  * The generated transition suite (test-cases.md AC-31.1, permission-matrix §7): for every rule and
  * every move it covers, each listed mover may make it and every other role may not; an assigned
- * mover needs the membership, a qualified or exception rule its kind or exception; and no principal
- * makes a move that no rule lists.
+ * mover needs the membership, a qualified rule its kind; and no principal makes a move that no rule
+ * lists.
  */
 import { describe, expect, it } from "vitest";
 
@@ -38,7 +38,6 @@ function contextFor(rule: Transition, to: string): TransitionContext {
   return {
     projectId: MEMBER_PROJECT,
     kind: rule.kind ?? undefined,
-    exception: rule.exception ? true : undefined,
     previousStatus: rule.restore ? to : undefined,
   };
 }
@@ -63,8 +62,7 @@ function rulesFor(rule: Transition, from: string, to: string): Transition[] {
       other.entity === rule.entity &&
       other.from.includes(from) &&
       (other.restore ? rule.restore : other.to.includes(to)) &&
-      (other.kind === null || other.kind === rule.kind) &&
-      (!other.exception || rule.exception),
+      (other.kind === null || other.kind === rule.kind),
   );
 }
 
@@ -123,18 +121,13 @@ function expectNarrowing(rule: Transition, from: string, to: string): void {
       other.entity === rule.entity &&
       other.from.includes(from) &&
       other.to.includes(to) &&
-      other.kind === null &&
-      !other.exception,
+      other.kind === null,
   );
   for (const mover of rule.roles) {
     if (plain.some((other) => other.roles.some((m) => m.role === mover.role))) continue;
     if (rule.kind !== null) {
       const otherKind = { ...context, kind: "another_kind" };
       expect(canTransition(member(mover.role), rule.entity, from, to, otherKind)).toBeNull();
-    }
-    if (rule.exception) {
-      const plainMove = { ...context, exception: undefined };
-      expect(canTransition(member(mover.role), rule.entity, from, to, plainMove)).toBeNull();
     }
   }
 }
@@ -170,7 +163,6 @@ describe("generated transition suite: §7", () => {
             ownerId: ME,
             creatorId: ME,
             requesterId: ME,
-            exception: true,
           };
           for (const principal of [everyone, client, system]) {
             expect(

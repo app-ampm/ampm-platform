@@ -98,7 +98,7 @@ describe("parseTransitions", () => {
     expect(rule).toMatchObject({ from: ["on_hold"], to: [], restore: true });
   });
 
-  it("§7 line 446: readiness is derived by the System; the exception is SA's own rule", () => {
+  it("§7 line 446: readiness is derived by the System; 'an exception needs SA' names no mover", () => {
     const rules = parseTransitions(
       table(
         "Function status and readiness",
@@ -106,18 +106,30 @@ describe("parseTransitions", () => {
         "| ready | live | PM (a), HL (a) on the day |",
       ),
     );
-    expect(rules.map((r) => [r.entity, r.from, r.to, r.system, r.exception])).toEqual([
+    // data-model.md line 1838: the exception is authorised on the checklist item (§5.6 line 207);
+    // the System derives ready from the items, so SA moves the readiness status by no rule.
+    expect(rules.map((r) => [r.entity, r.from, r.to, r.system, r.roles])).toEqual([
       [
         "function_readiness",
         ["not_started", "in_progress", "blocked", "ready"],
         ["not_started", "in_progress", "blocked", "ready"],
         true,
-        false,
+        [],
       ],
-      ["function_readiness", ["not_started", "in_progress", "blocked"], ["ready"], false, true],
-      ["function_readiness", ["ready"], ["live"], false, false],
+      [
+        "function_readiness",
+        ["ready"],
+        ["live"],
+        false,
+        [
+          { role: "PM", assigned: true },
+          { role: "HL", assigned: true },
+        ],
+      ],
     ]);
-    expect(rules[1]?.roles).toEqual([{ role: "SA", assigned: false }]);
+    expect(rules[0]?.condition).toBe(
+      "from the readiness checklist; an exception needs SA, Eva's authorised personnel (P-8 changed by Q10)",
+    );
   });
 
   it("§7 line 395: a row with no mover is kept only when the document says nobody moves it", () => {

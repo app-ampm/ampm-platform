@@ -112,8 +112,6 @@ export interface Transition {
   readonly client: boolean;
   readonly system: boolean;
   readonly actors: readonly Actor[];
-  /** The movers act only through an authorised exception (P-8 changed by Q10). */
-  readonly exception: boolean;
   /** The whole Who cell, for reference. */
   readonly who: string;
   /** What the service still has to check for this clause ("with reason", "only when ..."). */

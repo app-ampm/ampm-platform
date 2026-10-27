@@ -20,8 +20,6 @@ export interface TransitionContext {
   readonly previousStatus?: string | undefined;
   /** The record's kind, for rows limited to one ("answered (question)": the request type). */
   readonly kind?: string | undefined;
-  /** The move is the outcome of an exception authorised for the record (P-8, readiness). */
-  readonly exception?: boolean | undefined;
 }
 
 /** The actors a client may be: the requester of a request, the owner of a record. */
@@ -44,7 +42,6 @@ function actorId(context: TransitionContext, actor: Actor): string | undefined {
 function reaches(rule: Transition, from: string, to: string, context: TransitionContext): boolean {
   if (!rule.from.includes(from)) return false;
   if (rule.kind !== null && rule.kind !== context.kind) return false;
-  if (rule.exception && context.exception !== true) return false;
   return rule.restore ? context.previousStatus === to : rule.to.includes(to);
 }
 

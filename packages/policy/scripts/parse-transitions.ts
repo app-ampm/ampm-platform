@@ -20,7 +20,6 @@ interface Movers {
 interface Clause {
   readonly movers: Movers;
   readonly condition: string;
-  readonly exception: boolean;
 }
 
 interface StatusCell {
@@ -39,7 +38,6 @@ const ACTORS: readonly [string, Actor][] = [
   ["The creator", "creator"],
   ["The requester", "requester"],
 ];
-const EXCEPTION = "an exception needs ";
 /** Clauses that name no mover but say how the move happens; they join the rules' conditions. */
 const NO_MOVER_CLAUSES: readonly string[] = [
   "a client asks for cancellation through a client request",
@@ -47,6 +45,10 @@ const NO_MOVER_CLAUSES: readonly string[] = [
   "a critical incident requires resolution notes",
   "New subscription row",
   "the old one is never reactivated",
+  // §7 line 446: SA authorises the exception on a checklist item (§5.6 line 207, decide() on the
+  // readiness exceptions row); readiness then follows from the items (data-model.md line 1838), so
+  // the clause says who authorises, not who moves the status.
+  "an exception needs SA, Eva's authorised personnel (P-8 changed by Q10)",
 ];
 /** Who-cells under which nobody moves the record: the document says so. */
 const NO_MOVER_ROWS: readonly string[] = ["New subscription row; the old one is never reactivated"];
@@ -100,10 +102,9 @@ function parseWho(who: string): { clauses: Clause[]; notes: string[] } {
   const clauses: Clause[] = [];
   const notes: string[] = [];
   for (const part of first.split(/;\s*(?![^(]*\))/).map((text) => text.trim())) {
-    const exception = part.startsWith(EXCEPTION);
-    const parsed = parseMovers(exception ? part.slice(EXCEPTION.length) : part);
+    const parsed = parseMovers(part);
     if (parsed.count > 0) {
-      clauses.push({ movers: parsed.movers, condition: parsed.rest, exception });
+      clauses.push({ movers: parsed.movers, condition: parsed.rest });
     } else if (NO_MOVER_CLAUSES.includes(part)) {
       notes.push(part);
     } else {
@@ -174,7 +175,7 @@ function machineFor(heading: string, from: string, to: string) {
   return { entity: fit.entity, machine: fit.machine, from: fit.from, to: fit.to };
 }
 
-const NOBODY = { roles: [], client: false, system: false, actors: [], exception: false } as const;
+const NOBODY = { roles: [], client: false, system: false, actors: [] } as const;
 
 function joined(parts: readonly string[]): string | null {
   const text = parts.filter((part) => part !== "").join("; ");
@@ -183,27 +184,9 @@ function joined(parts: readonly string[]): string | null {
 
 type RuleBase = Pick<Transition, "entity" | "from" | "to" | "restore" | "kind" | "who">;
 
-/** "an exception needs SA": the exception's movers move the record to the machine's target only. */
-function exceptionRule(base: RuleBase, clause: Clause, machine: StatusMachine, notes: string[]) {
-  const target = machine.exceptionTarget;
-  if (target === null) {
-    throw new Error(`§7 "${base.who}": an exception on ${base.entity}, which has none`);
-  }
-  const rule: Transition = {
-    ...base,
-    from: base.from.filter((status) => status !== target),
-    to: [target],
-    restore: false,
-    ...clause.movers,
-    exception: true,
-    condition: joined([clause.condition, ...notes]),
-  };
-  return rule;
-}
-
 function rowRules(heading: string, cells: readonly string[]): Transition[] {
   const [fromCell = "", toCell = "", who = ""] = cells;
-  const { entity, machine, from, to } = machineFor(heading, fromCell, toCell);
+  const { entity, from, to } = machineFor(heading, fromCell, toCell);
   const { clauses, notes } = parseWho(who);
   if (from.kind !== null && to.kind !== null && from.kind !== to.kind) {
     throw new Error(`§7 ${heading} "${fromCell} → ${toCell}": two qualifiers`);
@@ -219,15 +202,11 @@ function rowRules(heading: string, cells: readonly string[]): Transition[] {
     who,
   };
   if (clauses.length === 0) return [{ ...base, ...NOBODY, condition: joined(notes) }];
-  return clauses.map((clause): Transition => {
-    if (clause.exception) return exceptionRule(base, clause, machine, notes);
-    return {
-      ...base,
-      ...clause.movers,
-      exception: false,
-      condition: joined([clause.condition, ...notes]),
-    };
-  });
+  return clauses.map((clause): Transition => ({
+    ...base,
+    ...clause.movers,
+    condition: joined([clause.condition, ...notes]),
+  }));
 }
 
 /**
