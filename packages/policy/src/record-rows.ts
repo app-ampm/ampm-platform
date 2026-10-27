@@ -104,7 +104,7 @@ function isRead(row: MatrixRow): boolean {
   return Object.values(row.grants).some((grants) => grants.some((g) => g.actions.includes("read")));
 }
 
-/** The parent row a class row's §10 key names (resources.ts KEY_ALIASES), as tableRow() reads it. */
+/** The parent row a class row's §10 key names (resources.ts KEY_ALIASES), as tableRow() does. */
 function parentRow(row: MatrixRow): MatrixRow | undefined {
   const parent = row.aliases.find((alias) => alias.resource !== row.resource);
   if (!parent) return undefined;

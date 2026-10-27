@@ -24,7 +24,8 @@ export interface TestApi {
  *
  * @example
  * const { app, mint } = await startApi();
- * await request(app.getHttpServer()).get("/me").set("authorization", `Bearer ${await mint("local:pm")}`);
+ * const bearer = `Bearer ${await mint("local:pm")}`;
+ * await request(app.getHttpServer()).get("/me").set("authorization", bearer);
  */
 export async function startApi(): Promise<TestApi> {
   const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
