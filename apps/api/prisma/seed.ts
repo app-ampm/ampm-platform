@@ -1,7 +1,8 @@
 /**
  * Synthetic seed (data.md): the nine roles with their permission keys from the policy package, a
- * Super Admin and a client representative with one project membership. Example-domain emails,
- * reserved phone range, local identity subjects. Never real people.
+ * Super Admin, and a project manager, a creative and a client representative who are members of
+ * one project. Example-domain emails, reserved phone range, local identity subjects. Never real
+ * people. Every write is an upsert, so the seed runs again without duplicating anything.
  */
 import { PrismaPg } from "@prisma/adapter-pg";
 import { permissionKeysForRole, STAFF_ROLE_CODES, STAFF_ROLES, type StaffRole } from "@ampm/policy";
@@ -12,9 +13,17 @@ const url = process.env["DATABASE_URL"];
 if (!url) throw new Error("DATABASE_URL is required to seed");
 const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: url }) });
 
+/**
+ * The synthetic accounts and the project they belong to; `subject` is what `dev:token` mints.
+ *
+ * @example
+ * SEED.creative.subject; // "local:cd"
+ */
 export const SEED = {
   superAdmin: { email: "admin@example.com", name: "Asha Admin", subject: "local:admin" },
   projectManager: { email: "pm@example.com", name: "Priya Manager", subject: "local:pm" },
+  // Creative: create and read only on the wedding's incidents (permission-matrix §5.13 line 296).
+  creative: { email: "creative@example.com", name: "Chitra Creative", subject: "local:cd" },
   client: { email: "client@example.com", name: "Rhea Client", subject: "local:client" },
   disabled: { email: "disabled@example.com", name: "Dev Disabled", subject: "local:disabled" },
   projectId: "0192f3a0-7d3e-7b1a-9c2f-0000000000a1",
@@ -92,7 +101,22 @@ async function assignRole(userId: string, roleId: string): Promise<void> {
   });
 }
 
-/** The Super Admin, the project manager with a project lead membership, and a disabled account. */
+/** An active staff membership of the seeded project. */
+async function joinProject(userId: string, projectRole: "project_lead" | "staff"): Promise<void> {
+  await prisma.projectMember.upsert({
+    where: { projectId_userId: { projectId: SEED.projectId, userId } },
+    update: { status: "active" },
+    create: {
+      projectId: SEED.projectId,
+      userId,
+      projectRole,
+      status: "active",
+      acceptedAt: new Date(),
+    },
+  });
+}
+
+/** The Super Admin, the project's lead and creative, and a disabled account. */
 async function seedStaff(roleIds: ReadonlyMap<StaffRole, string>): Promise<void> {
   const admin = await upsertAccount(SEED.superAdmin, {
     userType: "staff",
@@ -106,17 +130,13 @@ async function seedStaff(roleIds: ReadonlyMap<StaffRole, string>): Promise<void>
     mfaEnabled: true,
   });
   await assignRole(pm.id, roleId(roleIds, "PM"));
-  await prisma.projectMember.upsert({
-    where: { projectId_userId: { projectId: SEED.projectId, userId: pm.id } },
-    update: { status: "active" },
-    create: {
-      projectId: SEED.projectId,
-      userId: pm.id,
-      projectRole: "project_lead",
-      status: "active",
-      acceptedAt: new Date(),
-    },
+  await joinProject(pm.id, "project_lead");
+  const creative = await upsertAccount(SEED.creative, {
+    userType: "staff",
+    phone: "+911234567004",
   });
+  await assignRole(creative.id, roleId(roleIds, "CD"));
+  await joinProject(creative.id, "staff");
   await upsertAccount(SEED.disabled, { userType: "staff", status: "disabled" });
 }
 
@@ -143,7 +163,7 @@ async function main(): Promise<void> {
   const roleIds = await seedRoles();
   await seedStaff(roleIds);
   await seedClient();
-  console.log("seeded roles, permissions and four synthetic accounts");
+  console.log("seeded roles, permissions and five synthetic accounts");
 }
 
 try {

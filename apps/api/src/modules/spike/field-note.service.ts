@@ -6,8 +6,13 @@ import {
   type FieldNoteUpsertResult,
   type FieldNoteView,
 } from "@ampm/core";
+import { decide, type PolicyPrincipal } from "@ampm/policy";
 
 import { isInScope, type RecordScope } from "../../db/scoping.js";
+import { refusalFor } from "../../policy/refusal.js";
+
+// The route's guard checks the create key; changing a note that exists needs this one as well.
+const UPDATE = "tasks.incidents.update";
 
 /**
  * SPIKE STAND-IN — sprint 2 offline spike (docs/review/build-plan.md §11.4). The server half of the
@@ -43,15 +48,29 @@ export class FieldNoteService {
   /**
    * One offline-capable write. A replay of the same (id, baseVersion) returns the stored record with
    * no second apply; an in-order write applies and bumps the version; a stale base loses to the
-   * server and comes back as a conflict, surfaced to the user and never dropped (offline.md).
+   * server and comes back as a conflict, surfaced to the user and never dropped (offline.md). A
+   * write to a note that exists needs the writer to hold the update key (permission-matrix §5.13
+   * line 296: CD, VC and RG create and read incidents only): without it, a 403, or the 404 of a
+   * missing record for a writer who may not see the notes, and nothing changes.
+   *
+   * @example
+   * this.notes.upsert(params.projectId, body, toPolicyPrincipal(principal));
    */
-  upsert(projectId: string, input: FieldNoteUpsert): FieldNoteUpsertResult {
+  upsert(
+    projectId: string,
+    input: FieldNoteUpsert,
+    writer: PolicyPrincipal,
+  ): FieldNoteUpsertResult {
     const idempotencyKey = `${projectId}:${input.id}:${input.baseVersion}`;
     const replayed = this.applied.get(idempotencyKey);
     if (replayed) return fieldNoteUpsertResult.parse({ outcome: "duplicate", note: replayed });
 
     const recordKey = `${projectId}:${input.id}`;
-    const result = this.resolve(projectId, input, this.notes.get(recordKey));
+    const current = this.notes.get(recordKey);
+    if (current && !decide(writer, UPDATE, { projectId }).allowed) {
+      throw refusalFor(writer, UPDATE, projectId);
+    }
+    const result = this.resolve(projectId, input, current);
 
     this.notes.set(recordKey, result.note);
     this.applied.set(idempotencyKey, result.note);

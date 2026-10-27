@@ -149,5 +149,23 @@ describe("API (e2e)", () => {
       expect(response.body.error.code).toBe("validation_failed");
       expect(JSON.stringify(response.body.error.details)).toContain("projectId");
     });
+
+    it("§5.13 line 296: CD (a), create-only on incidents, adds notes but changing one is a 403", async () => {
+      const post = async (subject: string, id: string, baseVersion: number, body: string) =>
+        request(app.getHttpServer())
+          .post(notes(SEEDED_PROJECT))
+          .set("authorization", await as(subject))
+          .send({ id, baseVersion, body, status: "open", clientTimestamp: "2026-10-27T05:00:00Z" });
+      const pmNote = "0192f3a0-7d3e-7b1a-9c2f-00000000a1a1";
+      expect((await post("local:pm", pmNote, 0, "Stage lights flicker")).status).toBe(201);
+      const changed = await post("local:cd", pmNote, 1, "Replaced by the creative");
+      expect(changed.status).toBe(403);
+      expect(changed.body).toEqual(errors.forbidden().toEnvelope());
+      // PM (a) holds the update key (CRUA (a)); the creative's own new note is a create.
+      const edited = await post("local:pm", pmNote, 1, "Electrician on the way");
+      expect(edited.body.data).toMatchObject({ outcome: "applied", note: { version: 2 } });
+      const created = await post("local:cd", "0192f3a0-7d3e-7b1a-9c2f-00000000a1a2", 0, "Florist");
+      expect(created.body.data.outcome).toBe("applied");
+    });
   });
 });
