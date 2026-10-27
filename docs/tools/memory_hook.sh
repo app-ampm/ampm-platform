@@ -12,7 +12,9 @@
 # scanned, masked, to a per-session snapshot in $STATE/redacted (0600 in a 0700 directory). The miner
 # reads only that snapshot, so a line the session appends after the scan is never filed unscanned. The
 # snapshot is reused by the session's next mine, which replaces it atomically and never with a shorter
-# copy; a failed redaction skips the mine.
+# copy; a failed redaction skips the mine. Once the snapshot is filed, docs/tools/purge_live_drawers.py
+# drops the drawers an earlier mine filed under the live transcript path, so they neither linger
+# unrefreshed nor double the snapshot's.
 #
 # MemPalace's own global hooks, when installed, file mid-session saves under a machine-wide wing. These
 # hooks always name the wing, so every session run in this folder or in one of its worktrees can be found
@@ -55,6 +57,17 @@ redact_transcript() {  # transcript, snapshot: masks the transcript in place and
     || { log "secret redaction failed for $(basename "$1"); not mining"; return 1; }
 }
 
+palace_python() {  # the interpreter MemPalace runs under (its command's shebang); fails when there is none
+  local py; py=$(sed -n '1s/^#!//p' "$(command -v mempalace 2>/dev/null)" 2>/dev/null)
+  [ -n "$py" ] && [ -x "$py" ] && printf '%s' "$py"
+}
+
+purge_live_drawers() {  # transcript, snapshot: drops the drawers filed under the live path once the snapshot is
+  local py; py=$(palace_python) || { log "no MemPalace interpreter found; live-path drawers of $(basename "$1") kept"; return 0; }
+  "$py" "$PROJECT/docs/tools/purge_live_drawers.py" "$1" "$2" >> "$LOG" 2>&1 \
+    || log "purge of the live-path drawers of $(basename "$1") did not complete (see above); retried next mine"
+}
+
 mine_transcript() {  # mines one transcript into the wing; MemPalace skips a file it has already filed unchanged
   command -v mempalace >/dev/null 2>&1 || { log "mempalace is not installed; nothing mined"; return 0; }
   # CLAUDE.md: never file secrets or tokens. The miner gets the redacted snapshot, never the live file; a
@@ -63,6 +76,7 @@ mine_transcript() {  # mines one transcript into the wing; MemPalace skips a fil
   redact_transcript "$1" "$snapshot" || return 0
   if mempalace mine "$snapshot" --mode convos --wing "$WING" >> "$LOG" 2>&1; then
     log "mined $(basename "$1") into wing $WING"
+    purge_live_drawers "$1" "$snapshot"
   else
     log "mine of $(basename "$1") failed or the palace was busy (see above)"
   fi
@@ -71,8 +85,8 @@ mine_transcript() {  # mines one transcript into the wing; MemPalace skips a fil
 mine_in_background() { ( mine_transcript "$1" ) >/dev/null 2>&1 </dev/null & disown 2>/dev/null || true; }
 
 human_messages() {  # number of human messages in a Claude Code transcript (MemPalace's counter, else a fallback)
-  local py; py=$(sed -n '1s/^#!//p' "$(command -v mempalace 2>/dev/null)" 2>/dev/null)
-  if [ -n "$py" ] && [ -x "$py" ]; then "$py" -m mempalace.hook_shell count-human-messages "$1" 2>/dev/null && return; fi
+  local py; py=$(palace_python)
+  if [ -n "$py" ]; then "$py" -m mempalace.hook_shell count-human-messages "$1" 2>/dev/null && return; fi
   python3 - "$1" <<'PY' 2>/dev/null
 import json, sys
 n = 0
