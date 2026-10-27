@@ -1,5 +1,6 @@
-import { View, type ViewProps } from "react-native";
+import { Platform, View, type AccessibilityProps, type ViewProps } from "react-native";
 
+import { announcementText, useAnnounce } from "../../hooks/use-announce";
 import { cn } from "../../lib/cn";
 import { Button } from "../button";
 import { Icon, type IconName, type IconTone } from "../icon";
@@ -17,9 +18,24 @@ export interface StateViewProps extends ViewProps {
   readonly title: string;
   readonly description?: string | undefined;
   readonly action?: StateAction | undefined;
-  /** Announce the description when the view appears (ErrorState). */
+  /**
+   * Announce the title and description when the view appears (ErrorState, OfflineState): role alert
+   * on the web, a live region on Android, useAnnounce on iOS.
+   */
   readonly announce?: boolean | undefined;
   readonly className?: string;
+}
+
+type AnnounceProps = Pick<AccessibilityProps, "accessibilityRole" | "accessibilityLiveRegion">;
+
+/** Makes the description an alert, plus a live region on Android, when the view announces. */
+function announceProps(announce: boolean): AnnounceProps {
+  if (!announce) return {};
+  // Android reads role alert as a role description only, so its live region is what speaks there;
+  // the web keeps the alert alone, since a polite live region would soften its assertive default.
+  return Platform.OS === "android"
+    ? { accessibilityRole: "alert", accessibilityLiveRegion: "polite" }
+    : { accessibilityRole: "alert" };
 }
 
 function StateActionButton({ action }: { action: StateAction }) {
@@ -35,7 +51,12 @@ function StateActionButton({ action }: { action: StateAction }) {
   );
 }
 
-/** The shape behind EmptyState, ErrorState and OfflineState: icon, title, one paragraph, one action. */
+/**
+ * The shape behind EmptyState, ErrorState and OfflineState: icon, title, one paragraph, one action.
+ * With `announce`, the title and description are spoken when the view appears.
+ *
+ *   <StateView icon="alert-triangle" title="Upload failed" description="Nothing was saved." announce />
+ */
 export function StateView({
   icon,
   iconTone = "muted",
@@ -46,6 +67,7 @@ export function StateView({
   className,
   ...rest
 }: StateViewProps) {
+  useAnnounce(announcementText(title, description), announce);
   return (
     <View className={cn("items-center justify-center gap-3 px-6 py-10", className)} {...rest}>
       <View className="h-14 w-14 items-center justify-center rounded-full bg-surface-inset">
@@ -55,12 +77,7 @@ export function StateView({
         {title}
       </Text>
       {description ? (
-        <Text
-          tone="muted"
-          align="center"
-          className="max-w-sm"
-          {...(announce ? { accessibilityRole: "alert" as const } : {})}
-        >
+        <Text tone="muted" align="center" className="max-w-sm" {...announceProps(announce)}>
           {description}
         </Text>
       ) : null}

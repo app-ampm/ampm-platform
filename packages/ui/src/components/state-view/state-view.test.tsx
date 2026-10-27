@@ -1,4 +1,7 @@
+import { Platform } from "react-native";
+
 import { uiCopy } from "../../copy";
+import { spyOnAnnounce } from "../../test/announce";
 import { fireEvent, renderWithProviders, screen } from "../../test/render";
 import { EmptyState } from "../empty-state";
 import { ErrorState } from "../error-state";
@@ -32,5 +35,45 @@ describe("state views", () => {
     await renderWithProviders(<OfflineState />);
     expect(screen.getByText(uiCopy.offline.title)).toBeOnTheScreen();
     expect(screen.queryByRole("button")).toBeNull();
+  });
+
+  describe("announcements", () => {
+    let announce: jest.SpyInstance;
+    beforeEach(() => {
+      announce = spyOnAnnounce();
+    });
+    afterEach(() => jest.restoreAllMocks());
+
+    it("announces the error state on iOS", async () => {
+      await renderWithProviders(<ErrorState />);
+      expect(announce).toHaveBeenCalledWith(`${uiCopy.error.title}. ${uiCopy.error.description}`, {
+        queue: true,
+      });
+    });
+
+    it("announces the offline state on iOS", async () => {
+      await renderWithProviders(<OfflineState />);
+      expect(announce).toHaveBeenCalledWith(
+        `${uiCopy.offline.title}. ${uiCopy.offline.description}`,
+        { queue: true },
+      );
+    });
+
+    it("keeps the empty state silent", async () => {
+      await renderWithProviders(
+        <EmptyState title="No requests yet" description="They appear here." />,
+      );
+      expect(announce).not.toHaveBeenCalled();
+    });
+
+    it("gives the error a live region on Android instead of announcing", async () => {
+      jest.replaceProperty(Platform, "OS", "android");
+      await renderWithProviders(<ErrorState />);
+      expect(announce).not.toHaveBeenCalled();
+      expect(screen.getByText(uiCopy.error.description)).toHaveProp(
+        "accessibilityLiveRegion",
+        "polite",
+      );
+    });
   });
 });
