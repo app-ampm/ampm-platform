@@ -5,6 +5,7 @@
  */
 import { describe, expect, it } from "vitest";
 
+import { documentTableRows } from "./authz/document";
 import { decide, type PolicyPrincipal } from "./engine";
 import { RESOURCES, slugify } from "./resources";
 import { STAFF_ROLE_CODES, type StaffRole } from "./roles";
@@ -137,6 +138,13 @@ function expectReach(key: string, role: StaffRole, scope: "all" | "assigned" | n
 }
 
 describe("§5.16 reports and exports", () => {
+  it("holds every report row of §5.16, on the line and under the label the document gives it", () => {
+    const document = documentTableRows("### 5.16", "## 6. Permission matrix");
+    expect(GOLDEN.map((golden) => [golden.line, golden.label])).toEqual(
+      document.map((row) => [row.line, row.cells[0]]),
+    );
+  });
+
   it("§10 line 552: the internal cost and margin export is reports.budget_internal.export (FA, SA)", () => {
     expect(RESOURCES["5.16"]?.["Internal cost and margin variance"]).toBe("budget_internal");
     expect(decide(staff("FA"), "reports.budget_internal.export").allowed).toBe(true);

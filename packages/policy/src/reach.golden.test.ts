@@ -7,6 +7,7 @@
  */
 import { describe, expect, it } from "vitest";
 
+import { documentTableRows } from "./authz/document";
 import type { ConditionFacts } from "./conditions";
 import { refusedVariants } from "./golden/facts";
 import { decideReach, type ReachPrincipal } from "./reach";
@@ -207,8 +208,12 @@ function expectCell(type: ReachPrincipal, label: string, cell: Cell): void {
 }
 
 describe("§6 golden table: client, guest and demo principals", () => {
-  it("lists all 33 rows of §6, lines 342-374", () => {
-    expect(ROWS.map((row) => row.line)).toEqual(Array.from({ length: 33 }, (_, i) => 342 + i));
+  it("holds every row of §6, on the line and under the label the document's text gives it", () => {
+    const document = documentTableRows("## 6. Permission matrix", "## 7. Status transitions");
+    expect(ROWS.map((row) => [row.line, row.label])).toEqual(
+      document.map((row) => [row.line, row.cells[0]]),
+    );
+    expect(ROWS).toHaveLength(33);
   });
 
   for (const row of ROWS) {
