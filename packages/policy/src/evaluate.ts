@@ -40,7 +40,7 @@ export type DenialReason =
  */
 export interface Decision {
   readonly allowed: boolean;
-  /** The scope of the grant that allowed the action. */
+  /** The scope of the grant that allowed the action; of the narrowest one when grants combine. */
   readonly scope?: Scope | undefined;
   readonly reason: "granted" | "system" | DenialReason;
   /** With condition_unmet: what the caller would have to establish. */
@@ -69,9 +69,41 @@ function scopeMiss(scope: Scope, reach: Reach): DenialReason | null {
 }
 
 /**
+ * §1 line 51 across conditioned grants: the target is covered when each of its subjects and fields,
+ * one at a time, is covered by a grant that reaches it with the grant's other conditions met, so
+ * "RU (a) theme, dress code" and "RU (a) logistics notes" update both at once. Returns the narrowest
+ * scope among the covering grants, or null.
+ */
+function unionScope(
+  grants: readonly RoleGrant[],
+  facts: ConditionFacts,
+  explicitGrant: boolean,
+): Scope | null {
+  if (grants.length < 2) return null;
+  let narrowest: Scope | null = null;
+  for (const subject of facts.subjects?.length ? facts.subjects : [undefined]) {
+    for (const field of facts.fields?.length ? facts.fields : [undefined]) {
+      const atom: ConditionFacts = {
+        ...facts,
+        subjects: subject === undefined ? [] : [subject],
+        fields: field === undefined ? [] : [field],
+      };
+      const cover = grants.find(
+        (grant) => unmetConditions(grant.conditions, atom, explicitGrant).length === 0,
+      );
+      if (!cover) return null;
+      if (narrowest === null || WIDTH.indexOf(cover.scope) > WIDTH.indexOf(narrowest)) {
+        narrowest = cover.scope;
+      }
+    }
+  }
+  return narrowest;
+}
+
+/**
  * §1 layer 2, permissions are the union of the roles: the first grant the target satisfies, widest
- * scope first. Otherwise the most useful denial: unmet conditions on a grant whose scope reached the
- * target, then the widest grant's scope failure.
+ * scope first, else the grants that reach it combined. Otherwise the most useful denial: unmet
+ * conditions on a grant whose scope reached the target, then the widest grant's scope failure.
  *
  * @example
  * const grants = grantsForRole("HL").get("guests.identity_documents.read") ?? [];
@@ -85,6 +117,7 @@ export function decideGrants(
   explicitGrant: boolean,
 ): Decision {
   const ordered = [...grants].sort((a, b) => WIDTH.indexOf(a.scope) - WIDTH.indexOf(b.scope));
+  const reaching: RoleGrant[] = [];
   let unmetDenial: Decision | undefined;
   let scopeDenial: Decision | undefined;
   for (const grant of ordered) {
@@ -95,7 +128,10 @@ export function decideGrants(
     }
     const unmet = unmetConditions(grant.conditions, facts, explicitGrant);
     if (unmet.length === 0) return { allowed: true, scope: grant.scope, reason: "granted" };
+    reaching.push(grant);
     unmetDenial ??= { allowed: false, reason: "condition_unmet", unmet };
   }
+  const combined = unionScope(reaching, facts, explicitGrant);
+  if (combined !== null) return { allowed: true, scope: combined, reason: "granted" };
   return unmetDenial ?? scopeDenial ?? NO_GRANT;
 }

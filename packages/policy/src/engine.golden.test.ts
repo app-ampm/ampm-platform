@@ -211,6 +211,30 @@ describe("§1 layer 2: a principal's permissions are the union of its roles", ()
     );
   });
 
+  it("§1 line 51, §5.6 line 203: Creative and Hospitality together update theme and logistics notes at once", () => {
+    const key = "functions.functions.update";
+    const cdHl = staff(["CD", "HL"]);
+    const both = { projectId: "p-1", fields: ["theme", "logistics_notes"] } as const;
+    expect(decide(cdHl, key, both)).toMatchObject({ allowed: true, scope: "assigned" });
+    expect(decide(staff(["CD"]), key, both).reason).toBe("condition_unmet");
+    expect(decide(staff(["HL"]), key, both).reason).toBe("condition_unmet");
+    // A field neither role is given stays closed, and so does another wedding.
+    const extra = { projectId: "p-1", fields: ["theme", "status"] } as const;
+    expect(decide(cdHl, key, extra).reason).toBe("condition_unmet");
+    expect(decide(cdHl, key, { ...both, projectId: "p-2" }).allowed).toBe(false);
+  });
+
+  it("§1 line 51, §5.9 line 251: subjects granted by different roles combine too, at the narrower scope", () => {
+    const key = "creative.approvals_submit_for_decision.create";
+    const target = { projectId: "p-1", subjects: ["hotel_proposal", "design"] } as const;
+    expect(decide(staff(["HT", "CD"]), key, target)).toMatchObject({
+      allowed: true,
+      scope: "assigned",
+    });
+    expect(decide(staff(["HT"]), key, target).allowed).toBe(false);
+    expect(decide(staff(["HT", "CD"]), key, { ...target, projectId: "p-2" }).allowed).toBe(false);
+  });
+
   it("§1 line 51, §5.14 line 305: a PM who is also Sales keeps Sales's own access links", () => {
     const key = "documents.expiring_access_links.create";
     expect(decide(staff(["SM"]), key, { projectId: "p-9", ownerId: "u-1" }).allowed).toBe(true);
