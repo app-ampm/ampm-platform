@@ -100,6 +100,8 @@ The engineering layer under the blueprint is [docs/engineering/standards.md](eng
 
 The data platform and identity service are compared with prices in [docs/engineering/platform-options.md](engineering/platform-options.md) (26 October 2026); the choice is the developer's and is recorded as R13.
 
+The build as it stood on 27 October 2026 (main at d176d1a, the skeleton plus the offline spike) is checked against these standards and the build plan in [docs/engineering/build-verification-2026-10-27.md](engineering/build-verification-2026-10-27.md): a fresh clone set up from the README and a verified multi-agent audit, with what to fix before the next phase.
+
 ## Repositories and the Obsidian vault
 
 The project is two private GitHub repositories under the project's own GitHub account, `app-ampm`:
