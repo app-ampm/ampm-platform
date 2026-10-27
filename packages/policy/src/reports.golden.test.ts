@@ -8,7 +8,7 @@ import { describe, expect, it } from "vitest";
 import { decide, type PolicyPrincipal } from "./engine";
 import { RESOURCES, slugify } from "./resources";
 import { STAFF_ROLE_CODES, type StaffRole } from "./roles";
-import { reportExclusions } from "./visibility";
+import { reportExclusions } from "./exports";
 
 interface Golden {
   readonly line: number;

@@ -23,13 +23,10 @@ export {
 export type { Action, PrincipalType, Scope, StaffRole, StaffRoleKey } from "./roles";
 export { FINANCE_EXPORT_ROLES, NEVER_EXPORTED, VISIBILITY_CLASSES } from "./classes";
 export type { VisibilityClass } from "./classes";
-export {
-  exportableClasses,
-  principalReadableClasses,
-  reportExclusions,
-  staffReadableClasses,
-} from "./visibility";
+export { principalReadableClasses, staffReadableClasses } from "./visibility";
 export type { ClassContext } from "./visibility";
+export { exportShape, exportableClasses, reportExclusions } from "./exports";
+export type { ExportShape } from "./exports";
 export { CHECKS, FIELD_GROUPS, SIDES, SUBJECTS, VIEWS, unmetConditions } from "./conditions";
 export type {
   Check,

@@ -136,7 +136,8 @@ function reachOf(principal: PolicyPrincipal, target: PolicyTarget): Reach {
  * compared by the base key they decide on, so every §10 spelling of the key counts.
  *
  * @example
- * const context = { assigned, explicitGrant: holdsExplicitGrant(principal, "guests.identity_documents.read", doc.projectId) };
+ * const explicitGrant = holdsExplicitGrant(principal, IDENTITY_READ, doc.projectId);
+ * staffReadableClasses(roles, { assigned, explicitGrant, resource: "guests.identity_documents" });
  */
 export function holdsExplicitGrant(
   principal: PolicyPrincipal,

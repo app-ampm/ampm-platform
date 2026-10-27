@@ -9,8 +9,8 @@
  */
 
 /**
- * The counterparty side of a commercial record: a hotel line, a vendor contract (§4 RESTRICTED-FINANCE
- * "hotel-side values", "vendor-side values"). A record has one side, so a target has one value.
+ * The counterparty side of a commercial record: a hotel line, a vendor contract (§4
+ * RESTRICTED-FINANCE, "hotel-side values", "vendor-side values"). A record has one side.
  *
  * @example
  * decide(principal, "budget.budget_lines_internal_cost.read", { side: "hotel" });

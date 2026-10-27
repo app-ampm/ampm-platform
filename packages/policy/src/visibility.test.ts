@@ -5,12 +5,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { StaffRole } from "./roles";
-import {
-  exportableClasses,
-  principalReadableClasses,
-  staffReadableClasses,
-  type ClassContext,
-} from "./visibility";
+import { principalReadableClasses, staffReadableClasses, type ClassContext } from "./visibility";
 
 const HOTELS = "hotels.hotel_profiles_client_fields";
 const VENDORS = "vendors.vendor_profiles_client_fields";
@@ -181,20 +176,5 @@ describe("visibility classes", () => {
     expect(principalReadableClasses("client", { ownRow: true }).has("SENSITIVE-GUEST")).toBe(false);
     expect(principalReadableClasses("guest", { ownRow: true }).has("SENSITIVE-GUEST")).toBe(true);
     expect(principalReadableClasses("guest").has("SENSITIVE-GUEST")).toBe(false);
-  });
-
-  it("§4 line 130: strips the protected classes from every export", () => {
-    const sa = exportableClasses(["SA"]);
-    expect(sa.has("RESTRICTED-FINANCE")).toBe(true);
-    expect(sa.has("SENSITIVE-GUEST")).toBe(false);
-    expect(exportableClasses(["PM"]).has("RESTRICTED-FINANCE")).toBe(false);
-  });
-
-  it("§5.16 lines 324 and 332: a report's exclusions apply unless the role is excepted", () => {
-    const hotels = "hotel_shortlist_enquiries_site";
-    expect(exportableClasses(["HT"], hotels).has("RESTRICTED-FINANCE")).toBe(false);
-    expect(exportableClasses(["SA"], hotels).has("RESTRICTED-FINANCE")).toBe(true);
-    expect(exportableClasses(["SA"], hotels).has("INTERNAL")).toBe(true);
-    expect(() => exportableClasses(["SA"], "no_such_report")).toThrow();
   });
 });
