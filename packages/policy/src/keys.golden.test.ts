@@ -5,12 +5,48 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { decide, type PolicyPrincipal } from "./engine";
+import { FOREIGN_PROJECT, ME, MEMBER_PROJECT, SOMEONE, member } from "./authz/fixtures";
+import { decide, type PolicyPrincipal, type PolicyTarget } from "./engine";
+import { refusedVariants } from "./golden/facts";
+import { KEY_ALIAS_GOLDEN, type AliasHolder } from "./golden/key-aliases";
 import { parsePermissionKey } from "./keys";
-import type { StaffRole } from "./roles";
+import { KEY_ALIASES } from "./resources";
+import { STAFF_ROLE_CODES, type Scope, type StaffRole } from "./roles";
 
 function staff(roles: readonly StaffRole[], extra: Partial<PolicyPrincipal> = {}): PolicyPrincipal {
   return { type: "staff", userId: "u-1", roles, projectIds: ["p-1"], ...extra };
+}
+
+const IN_SCOPE: Readonly<Record<Scope, PolicyTarget>> = {
+  all: {},
+  assigned: { projectId: MEMBER_PROJECT, ownerId: SOMEONE },
+  own: { projectId: FOREIGN_PROJECT, ownerId: ME },
+};
+
+/** An alias key decides as its row's cell says: allowed in scope with the facts, refused without. */
+function expectAliasHolder(role: StaffRole, key: string, holder: AliasHolder | undefined): void {
+  if (holder === undefined) {
+    for (const target of Object.values(IN_SCOPE)) {
+      expect(decide(member(role, key), key, target).reason, `${role} ${key}`).toBe("no_grant");
+    }
+    return;
+  }
+  const principal = holder.explicit === true ? member(role, key) : member(role);
+  const facts = holder.facts ?? {};
+  expect(decide(principal, key, { ...IN_SCOPE[holder.scope], ...facts }), `${role} ${key}`).toEqual(
+    { allowed: true, scope: holder.scope, reason: "granted" },
+  );
+  if (holder.scope === "assigned") {
+    const foreign = { projectId: FOREIGN_PROJECT, ownerId: SOMEONE, ...facts };
+    expect(decide(principal, key, foreign).reason, `${role} ${key}`).toBe("not_assigned");
+  }
+  for (const fewer of refusedVariants(facts)) {
+    const refused = decide(principal, key, { ...IN_SCOPE[holder.scope], ...fewer });
+    expect(refused.allowed, `${role} ${key} ${JSON.stringify(fewer)}`).toBe(false);
+  }
+  if (holder.explicit === true) {
+    expect(decide(member(role), key, IN_SCOPE[holder.scope]).allowed, `${role} ${key}`).toBe(false);
+  }
 }
 
 describe("§10 permission keys", () => {
@@ -100,4 +136,20 @@ describe("§10 permission keys", () => {
     expect(decide(staff(["SA"]), exception).allowed).toBe(true);
     expect(decide(staff(["PM"]), exception, { projectId: "p-1" }).reason).toBe("no_grant");
   });
+});
+
+describe("§10 line 533: every alias key of resources.ts decides on its §5 row", () => {
+  it("has a golden case for every KEY_ALIASES entry, and for nothing else", () => {
+    const entries = Object.entries(KEY_ALIASES).flatMap(([section, labels]) =>
+      Object.keys(labels).map((label) => `§${section} ${label}`),
+    );
+    const golden = KEY_ALIAS_GOLDEN.map((alias) => `§${alias.section} ${alias.label}`);
+    expect([...golden].sort()).toEqual([...entries].sort());
+  });
+
+  for (const alias of KEY_ALIAS_GOLDEN) {
+    it(`§${alias.section} line ${alias.line}: ${alias.key} holds as ${alias.label} does`, () => {
+      for (const role of STAFF_ROLE_CODES) expectAliasHolder(role, alias.key, alias.holders[role]);
+    });
+  }
 });
