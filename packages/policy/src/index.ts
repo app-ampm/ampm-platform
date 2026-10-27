@@ -45,4 +45,4 @@ export type { TransitionContext } from "./transitions";
 export { STATUS_MACHINES } from "./statuses";
 export type { StatusMachine } from "./statuses";
 export { resolveClientEntitlements } from "./entitlements";
-export type { ClientAccountState, Entitlements } from "./entitlements";
+export type { ClientAccountState, Entitlements, HotelReach } from "./entitlements";
