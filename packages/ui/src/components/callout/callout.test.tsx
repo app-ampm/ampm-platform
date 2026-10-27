@@ -44,6 +44,10 @@ describe("Callout", () => {
     { "aria-hidden": true },
     { style: { display: "none" as const } },
     { className: "hidden" },
+    // Platform variants as styling.md writes them: display none on iOS, so silent there.
+    { className: "hidden web:flex" },
+    { className: "native:hidden" },
+    { className: "ios:hidden" },
   ])("keeps a live kind silent while hidden from VoiceOver (%o)", async (hiding) => {
     const announce = spyOnAnnounce();
     await renderWithProviders(
