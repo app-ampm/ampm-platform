@@ -6,6 +6,9 @@ import type { ClassAction, VerbAction } from "./keys";
  * subsection is a module; a row label maps to a resource name here or, until it is curated, to a
  * provisional slug of the label. Curate a row when its feature is built; the generated suite keeps
  * every row either way. Node runs the generator on this file with type stripping: type imports only.
+ *
+ * @example
+ * MODULES["5.10"]; // "guests"
  */
 export const MODULES: Record<string, string> = {
   "5.1": "admin",

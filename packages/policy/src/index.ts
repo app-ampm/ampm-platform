@@ -1,7 +1,15 @@
-/**
+/*
  * @ampm/policy: the permission matrix as code (docs/permission-matrix.md). Pure: no React, no I/O.
  * `pnpm authz:generate` rewrites src/generated/matrix.json from the document; the engine and the
  * generated authorisation suite read it.
+ */
+
+/**
+ * The version of the rules this build carries. It changes when what a grant means changes (a new
+ * condition kind, a changed engine rule), so logs and seeds can say which rules applied.
+ *
+ * @example
+ * logger.info("policy.loaded", { version: POLICY_VERSION });
  */
 export const POLICY_VERSION = "0.3.0";
 
