@@ -222,6 +222,24 @@ def check_snapshot_only_grows() -> list[str]:
     return problems + ([f"snapshot: temporary files left: {left_over}"] if left_over else [])
 
 
+TOOL_TESTS = [
+    "python3 docs/tools/redact_secrets.py --self-test",
+    "python3 docs/tools/purge_live_drawers_test.py",
+    "bash docs/tools/memory_hook_test.sh",
+    "bash docs/tools/setup_memory_test.sh",
+]
+
+
+def check_wired_into_pnpm_check() -> list[str]:
+    """pnpm check, the required check in CLAUDE.md and CI, runs these tests and the hook tests."""
+    root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    with open(os.path.join(root, "package.json"), encoding="utf-8") as handle:
+        scripts = json.load(handle).get("scripts", {})
+    problems = [] if "pnpm run test:tools" in scripts.get("check", "") else ["pnpm check does not run test:tools"]
+    tools = scripts.get("test:tools", "")
+    return problems + [f"test:tools does not run {test}" for test in TOOL_TESTS if test not in tools]
+
+
 def check_case(name: str, line: str, expected: int, fragments: list[str]) -> list[str]:
     """Problems with one case: count, byte length, JSON validity, idempotence and what stayed in clear."""
     data = line.encode()
@@ -248,7 +266,7 @@ def run() -> int:
     for case in baseline_cases() + ops01_cases() + ops04_cases() + ops05_cases():
         failures += check_case(*case)
     failures += check_head_stops_at_prose() + check_lines_kept_apart() + check_nested_json_survives()
-    failures += check_snapshot() + check_snapshot_only_grows()
+    failures += check_snapshot() + check_snapshot_only_grows() + check_wired_into_pnpm_check()
     for failure in failures:
         print(f"FAIL: {failure}")
     print("self-test passed" if not failures else f"self-test: {len(failures)} failure(s)")

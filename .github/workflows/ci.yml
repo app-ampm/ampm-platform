@@ -1,6 +1,7 @@
 # Every push to main and every pull request: install, generate, format check, lint + typecheck + test
-# (the API's e2e suite against a disposable PostgreSQL), the matrix drift check, the builds, then the
-# mobile bundles for web, iOS and Android.
+# (the API's e2e suite against a disposable PostgreSQL) and the docs/tools tests (the transcript
+# redactor and the memory hooks), the matrix drift check, the builds, then the mobile bundles for web,
+# iOS and Android.
 name: CI
 
 on:

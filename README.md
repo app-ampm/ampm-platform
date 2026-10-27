@@ -64,7 +64,7 @@ Production never accepts these tokens: the API refuses the local identity provid
 pnpm dev --filter=api        # http://localhost:3900/health
 pnpm dev --filter=mobile     # Metro on 8082; press i for the iPhone simulator, open http://localhost:8082 for the web build
 pnpm dev --filter=web        # http://localhost:3417
-pnpm check                   # lint + typecheck + test, the definition of done's first line
+pnpm check                   # lint + typecheck + test, then the docs/tools tests (pnpm test:tools); the definition of done's first line
 pnpm --filter mobile bundle:check   # the Expo bundles for web, iOS and Android, as CI builds them
 pnpm format                  # Prettier with Tailwind class sorting
 pnpm authz:generate          # regenerate packages/policy from docs/permission-matrix.md (CI fails on drift)
