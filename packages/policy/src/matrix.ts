@@ -19,7 +19,7 @@ import type { Action, Scope, StaffRole } from "./roles";
  * const grant: Grant = {
  *   actions: ["read", "update"],
  *   scope: "all",
- *   conditions: [{ kind: "subject", anyOf: ["hotel"] }],
+ *   conditions: [{ kind: "side", anyOf: ["hotel"] }],
  * };
  */
 export interface Grant {

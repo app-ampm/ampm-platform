@@ -9,10 +9,22 @@
  */
 
 /**
- * What a record is or belongs to: its counterparty side, its type, or the record it is attached to.
+ * The counterparty side of a commercial record: a hotel line, a vendor contract (§4 RESTRICTED-FINANCE
+ * "hotel-side values", "vendor-side values"). A record has one side, so a target has one value.
  *
  * @example
- * decide(principal, "budget.budget_lines_internal_cost.read", { subjects: ["hotel"] });
+ * decide(principal, "budget.budget_lines_internal_cost.read", { side: "hotel" });
+ */
+export const SIDES = ["hotel", "vendor"] as const;
+/** @example const side: Side = "vendor"; */
+export type Side = (typeof SIDES)[number];
+
+/**
+ * What a record is or is about, besides its side: its type ("finance entities", "designs"), or the
+ * record it is attached to ("hotel threads", "guest conversations").
+ *
+ * @example
+ * decide(principal, "admin.audit_log.read", { subjects: ["finance_entity"] });
  */
 export const SUBJECTS = [
   "hotel",
@@ -35,7 +47,7 @@ export const SUBJECTS = [
   "comment",
   "support_request",
 ] as const;
-/** @example const side: Subject = "vendor"; */
+/** @example const subject: Subject = "design"; */
 export type Subject = (typeof SUBJECTS)[number];
 
 /**
@@ -113,16 +125,25 @@ export type View = (typeof VIEWS)[number];
  * @example
  * CONDITION_KINDS.includes("explicit_grant"); // true
  */
-export const CONDITION_KINDS = ["subject", "fields", "check", "view", "explicit_grant"] as const;
+export const CONDITION_KINDS = [
+  "side",
+  "subject",
+  "fields",
+  "check",
+  "view",
+  "explicit_grant",
+] as const;
 
 /**
  * One narrowing of a grant; a grant applies only when every one of its conditions is met.
  *
  * @example
- * const hotelLines: Condition = { kind: "subject", anyOf: ["hotel"] };
+ * const hotelLines: Condition = { kind: "side", anyOf: ["hotel"] };
  */
 export type Condition =
-  /** The record is about one of these subjects ("hotel lines", "finance entities"). */
+  /** The record's side is one of these ("hotel lines", "CRU vendor"). */
+  | { readonly kind: "side"; readonly anyOf: readonly Side[] }
+  /** Everything the target names is one of these subjects ("finance entities", "designs"). */
   | { readonly kind: "subject"; readonly anyOf: readonly Subject[] }
   /** The action reads or writes these field groups only ("billing", "theme, dress code"). */
   | { readonly kind: "fields"; readonly only: readonly FieldGroup[] }
@@ -137,9 +158,12 @@ export type Condition =
  * What the caller knows about the record and the action; decide() takes these with the target.
  *
  * @example
- * const facts: ConditionFacts = { subjects: ["vendor"], fields: ["vendor_cues"] };
+ * const facts: ConditionFacts = { side: "vendor", fields: ["vendor_cues"] };
  */
 export interface ConditionFacts {
+  /** One side: a list or a record that is both hotel-side and vendor-side is neither. */
+  readonly side?: Side | undefined;
+  /** What the target is or is about; a list target names every subject in it. */
   readonly subjects?: readonly Subject[] | undefined;
   readonly fields?: readonly FieldGroup[] | undefined;
   readonly checks?: readonly Check[] | undefined;
@@ -152,8 +176,13 @@ function conditionMet(
   explicitGrant: boolean,
 ): boolean {
   switch (condition.kind) {
-    case "subject":
-      return (facts.subjects ?? []).some((subject) => condition.anyOf.includes(subject));
+    case "side":
+      return facts.side !== undefined && condition.anyOf.includes(facts.side);
+    // Like fields: a target that also names a subject outside the grant is not covered by it.
+    case "subject": {
+      const subjects = facts.subjects ?? [];
+      return subjects.length > 0 && subjects.every((subject) => condition.anyOf.includes(subject));
+    }
     case "fields": {
       const fields = facts.fields ?? [];
       return fields.length > 0 && fields.every((field) => condition.only.includes(field));
@@ -171,8 +200,8 @@ function conditionMet(
  * The conditions the facts leave unmet; an empty result means the grant applies.
  *
  * @example
- * unmetConditions([{ kind: "subject", anyOf: ["hotel"] }], { subjects: ["vendor"] });
- * // → [{ kind: "subject", anyOf: ["hotel"] }]
+ * unmetConditions([{ kind: "side", anyOf: ["hotel"] }], { side: "vendor" });
+ * // → [{ kind: "side", anyOf: ["hotel"] }]
  */
 export function unmetConditions(
   conditions: readonly Condition[],

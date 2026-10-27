@@ -3595,7 +3595,7 @@
             "scope": "all",
             "conditions": [
               {
-                "kind": "subject",
+                "kind": "side",
                 "anyOf": [
                   "hotel"
                 ]
@@ -3633,7 +3633,7 @@
             "scope": "assigned",
             "conditions": [
               {
-                "kind": "subject",
+                "kind": "side",
                 "anyOf": [
                   "vendor"
                 ]
@@ -3705,7 +3705,7 @@
             "scope": "all",
             "conditions": [
               {
-                "kind": "subject",
+                "kind": "side",
                 "anyOf": [
                   "hotel"
                 ]
@@ -3733,7 +3733,7 @@
             "scope": "assigned",
             "conditions": [
               {
-                "kind": "subject",
+                "kind": "side",
                 "anyOf": [
                   "vendor"
                 ]
@@ -3803,7 +3803,7 @@
             "scope": "all",
             "conditions": [
               {
-                "kind": "subject",
+                "kind": "side",
                 "anyOf": [
                   "hotel"
                 ]
@@ -4030,7 +4030,7 @@
             "scope": "all",
             "conditions": [
               {
-                "kind": "subject",
+                "kind": "side",
                 "anyOf": [
                   "hotel"
                 ]
@@ -4058,7 +4058,7 @@
             "scope": "all",
             "conditions": [
               {
-                "kind": "subject",
+                "kind": "side",
                 "anyOf": [
                   "vendor"
                 ]
@@ -4190,7 +4190,7 @@
             "scope": "all",
             "conditions": [
               {
-                "kind": "subject",
+                "kind": "side",
                 "anyOf": [
                   "hotel"
                 ]
@@ -4217,7 +4217,7 @@
             "scope": "assigned",
             "conditions": [
               {
-                "kind": "subject",
+                "kind": "side",
                 "anyOf": [
                   "vendor"
                 ]

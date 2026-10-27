@@ -4,10 +4,11 @@
  * dropped silently: add it here with its conditions (src/conditions.ts) or change the document.
  * An entry with no conditions is a note that does not narrow the grant, and says why.
  */
-import type { Condition, FieldGroup, Subject } from "../src/conditions.ts";
+import type { Condition, FieldGroup, Side, Subject } from "../src/conditions.ts";
 import type { ReportExclusion } from "../src/matrix.ts";
 import type { Action } from "../src/roles.ts";
 
+const side = (...anyOf: Side[]): Condition => ({ kind: "side", anyOf });
 const subject = (...anyOf: Subject[]): Condition => ({ kind: "subject", anyOf });
 const fields = (...only: FieldGroup[]): Condition => ({ kind: "fields", only });
 
@@ -22,10 +23,12 @@ export const STAFF_NOTES: Readonly<Record<string, readonly Condition[]>> = {
   hotels: [subject("hotel")],
   guests: [subject("guest")],
   vendors: [subject("vendor")],
-  hotel: [subject("hotel")],
-  vendor: [subject("vendor")],
-  "hotel lines": [subject("hotel")],
-  "vendor lines": [subject("vendor")],
+  // The counterparty side of a commercial record: cost entries, contracts, invoices received and
+  // budget lines are hotel-side or vendor-side (§4 RESTRICTED-FINANCE).
+  hotel: [side("hotel")],
+  vendor: [side("vendor")],
+  "hotel lines": [side("hotel")],
+  "vendor lines": [side("vendor")],
   "hotel services": [subject("hotel")],
   "hotel-related": [subject("hotel")],
   "hotel threads": [subject("hotel")],

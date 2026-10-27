@@ -18,13 +18,14 @@ export const FOREIGN_PROJECT = "other";
 export const SOMEONE = "someone";
 
 type ViewCondition = Extract<Condition, { kind: "view" }>;
+type SideCondition = Extract<Condition, { kind: "side" }>;
 
 /**
  * Facts that meet every condition of a grant, so the generated suites can reach a conditioned
  * grant, and check that it is refused without them.
  *
  * @example
- * factsFor([{ kind: "subject", anyOf: ["hotel"] }]); // { facts: { subjects: ["hotel"], ... } }
+ * factsFor([{ kind: "side", anyOf: ["hotel"] }]); // { facts: { side: "hotel", ... } }
  */
 export function factsFor(conditions: readonly Condition[]): {
   readonly facts: ConditionFacts;
@@ -33,8 +34,12 @@ export function factsFor(conditions: readonly Condition[]): {
   const view = conditions.find(
     (condition): condition is ViewCondition => condition.kind === "view",
   );
+  const side = conditions.find(
+    (condition): condition is SideCondition => condition.kind === "side",
+  );
   return {
     facts: {
+      side: side?.anyOf[0],
       subjects: conditions.flatMap((c) => (c.kind === "subject" ? c.anyOf.slice(0, 1) : [])),
       fields: conditions.flatMap((c) => (c.kind === "fields" ? c.only : [])),
       checks: conditions.flatMap((c) => (c.kind === "check" ? [c.check] : [])),

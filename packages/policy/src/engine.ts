@@ -48,7 +48,7 @@ export interface PolicyPrincipal {
  * The record or project an action targets, and what the caller knows about it (conditions.ts).
  *
  * @example
- * const target: PolicyTarget = { projectId, ownerId: task.ownerUserId, subjects: ["hotel"] };
+ * const target: PolicyTarget = { projectId, ownerId: task.ownerUserId, side: "hotel" };
  */
 export interface PolicyTarget extends ConditionFacts {
   readonly projectId?: string | undefined;
@@ -109,7 +109,7 @@ function buildGrants(role: StaffRole): ReadonlyMap<string, readonly RoleGrant[]>
  *
  * @example
  * grantsForRole("HT").get("budget.budget_lines_internal_cost.read");
- * // → [{ scope: "all", conditions: [{ kind: "subject", anyOf: ["hotel"] }] }]
+ * // → [{ scope: "all", conditions: [{ kind: "side", anyOf: ["hotel"] }] }]
  */
 export function grantsForRole(role: StaffRole): ReadonlyMap<string, readonly RoleGrant[]> {
   const known = byRole.get(role);
@@ -199,7 +199,7 @@ function evaluate(
  * never hold keys; their reach is entitlement and membership (§3, §6), see decideReach().
  *
  * @example
- * decide(principal, "budget.budget_lines_internal_cost.read", { projectId, subjects: ["hotel"] });
+ * decide(principal, "budget.budget_lines_internal_cost.read", { projectId, side: "hotel" });
  */
 export function decide(
   principal: PolicyPrincipal,

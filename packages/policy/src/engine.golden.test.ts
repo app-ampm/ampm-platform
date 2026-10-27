@@ -63,11 +63,22 @@ describe("§5.7 internal cost", () => {
 
   it("§5.7 line 216, §4 line 123: HT reads internal cost on hotel lines only", () => {
     expect(decide(staff(["HT"]), read).reason).toBe("condition_unmet");
-    expect(decide(staff(["HT"]), read, { subjects: ["vendor"] }).reason).toBe("condition_unmet");
-    expect(decide(staff(["HT"]), read, { subjects: ["hotel"] })).toMatchObject({
+    expect(decide(staff(["HT"]), read, { side: "vendor" }).reason).toBe("condition_unmet");
+    expect(decide(staff(["HT"]), read, { side: "hotel" })).toMatchObject({
       allowed: true,
       scope: "all",
     });
+  });
+
+  it("§5.7 lines 216 and 220, §4 line 123: a target that names the vendor side never opens a hotel-side grant", () => {
+    // "hotel-side values" only: a list of hotel and vendor lines, or a record described as both,
+    // is not a hotel line. The side is one value; record types are not sides.
+    const mixed = { subjects: ["hotel", "vendor"] } as const;
+    expect(decide(staff(["HT"]), read, mixed).allowed).toBe(false);
+    const contracts = "budget.contracts_vendors_hotels.update";
+    expect(decide(staff(["HT"]), contracts, mixed).allowed).toBe(false);
+    expect(decide(staff(["HT"]), contracts, { side: "hotel" }).allowed).toBe(true);
+    expect(decide(staff(["HT"]), contracts, { side: "vendor" }).allowed).toBe(false);
   });
 
   it("§5.7 line 216, §10 line 544: Finance and the Super Admin read internal cost everywhere", () => {
@@ -78,16 +89,12 @@ describe("§5.7 internal cost", () => {
   it("§5.7 line 216: VC updates internal cost on vendor lines of assigned weddings only", () => {
     const update = "budget.budget_lines_internal_cost.update";
     const vc = staff(["VC"]);
-    expect(decide(vc, update, { projectId: "p-1", subjects: ["vendor"] })).toMatchObject({
+    expect(decide(vc, update, { projectId: "p-1", side: "vendor" })).toMatchObject({
       allowed: true,
       scope: "assigned",
     });
-    expect(decide(vc, update, { projectId: "p-1", subjects: ["hotel"] }).reason).toBe(
-      "condition_unmet",
-    );
-    expect(decide(vc, update, { projectId: "p-2", subjects: ["vendor"] }).reason).toBe(
-      "not_assigned",
-    );
+    expect(decide(vc, update, { projectId: "p-1", side: "hotel" }).reason).toBe("condition_unmet");
+    expect(decide(vc, update, { projectId: "p-2", side: "vendor" }).reason).toBe("not_assigned");
   });
 });
 
@@ -97,6 +104,11 @@ describe("§5.1 administration notes", () => {
     expect(
       decide(staff(["FA"]), "admin.audit_log.read", { subjects: ["finance_entity"] }),
     ).toMatchObject({ allowed: true, scope: "all" });
+    // Every subject the target names must be one the grant names: guest events stay closed.
+    expect(
+      decide(staff(["FA"]), "admin.audit_log.read", { subjects: ["finance_entity", "guest"] })
+        .reason,
+    ).toBe("condition_unmet");
   });
 
   it("§5.1 line 147: HT imports hotels only and RG imports guests on assigned weddings", () => {

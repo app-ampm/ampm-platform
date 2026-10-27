@@ -1,4 +1,5 @@
 import { FINANCE_EXPORT_ROLES, type VisibilityClass } from "./classes";
+import type { Side } from "./conditions";
 import { MATRIX, type MatrixRow, type ReportExclusion } from "./matrix";
 import type { StaffRole } from "./roles";
 
@@ -14,7 +15,7 @@ export interface ClassContext {
   /** The principal owns or created the record. */
   readonly owned?: boolean | undefined;
   /** The record is a hotel-side record (HT) or a vendor-side record (VC); unsided otherwise. */
-  readonly side?: "hotel" | "vendor" | undefined;
+  readonly side?: Side | undefined;
   /** The record is the guest's own row. */
   readonly ownRow?: boolean | undefined;
   /** The record's resource, `module.resource` as in the permission keys; RESTRICTED-NOTES follows it. */

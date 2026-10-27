@@ -43,7 +43,15 @@ describe("parseCell, §5 staff cells", () => {
       {
         actions: ["read", "update"],
         scope: "all",
-        conditions: [{ kind: "subject", anyOf: ["hotel"] }],
+        conditions: [{ kind: "side", anyOf: ["hotel"] }],
+      },
+    ]);
+    // §5.7 line 222: "CR (a) vendor" is the vendor side of an invoice received, not a record type.
+    expect(parseCell("CR (a) vendor", "staff")).toEqual([
+      {
+        actions: ["create", "read"],
+        scope: "assigned",
+        conditions: [{ kind: "side", anyOf: ["vendor"] }],
       },
     ]);
     expect(parseCell("RU (a) theme, dress code", "staff")).toEqual([

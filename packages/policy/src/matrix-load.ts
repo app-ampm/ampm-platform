@@ -3,6 +3,7 @@ import {
   CHECKS,
   CONDITION_KINDS,
   FIELD_GROUPS,
+  SIDES,
   SUBJECTS,
   VIEWS,
   type Condition,
@@ -68,6 +69,8 @@ function readCondition(value: unknown, path: string): Condition {
   const condition = object(value, path);
   const kind = oneOf(condition["kind"], CONDITION_KINDS, `${path}.kind`);
   switch (kind) {
+    case "side":
+      return { kind, anyOf: each(condition["anyOf"], SIDES, `${path}.anyOf`) };
     case "subject":
       return { kind, anyOf: each(condition["anyOf"], SUBJECTS, `${path}.anyOf`) };
     case "fields":

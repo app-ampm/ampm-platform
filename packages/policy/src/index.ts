@@ -30,8 +30,16 @@ export {
   staffReadableClasses,
 } from "./visibility";
 export type { ClassContext } from "./visibility";
-export { CHECKS, FIELD_GROUPS, SUBJECTS, VIEWS, unmetConditions } from "./conditions";
-export type { Check, Condition, ConditionFacts, FieldGroup, Subject, View } from "./conditions";
+export { CHECKS, FIELD_GROUPS, SIDES, SUBJECTS, VIEWS, unmetConditions } from "./conditions";
+export type {
+  Check,
+  Condition,
+  ConditionFacts,
+  FieldGroup,
+  Side,
+  Subject,
+  View,
+} from "./conditions";
 export { KEY_ALIASES, MODULES, RESOURCES, slugify } from "./resources";
 export { CLASS_ACTIONS, VERB_ACTIONS, isAction, parsePermissionKey, permissionKey } from "./keys";
 export type { ClassAction, KeyAction, ParsedKey, PermissionKey, VerbAction } from "./keys";
