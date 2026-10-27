@@ -20,8 +20,8 @@ export interface StateViewProps extends ViewProps {
   readonly description?: string | undefined;
   readonly action?: StateAction | undefined;
   /**
-   * Announce the title and description when the view appears (ErrorState, OfflineState): role alert
-   * on the web, a live region on Android, useAnnounce on iOS.
+   * Announce the title and description when the view appears (ErrorState): every platform speaks
+   * both, through role alert on the web, a live region on Android and useAnnounce on iOS.
    */
   readonly announce?: boolean | undefined;
   readonly className?: string;
@@ -29,7 +29,7 @@ export interface StateViewProps extends ViewProps {
 
 type AnnounceProps = Pick<AccessibilityProps, "accessibilityRole" | "accessibilityLiveRegion">;
 
-/** Makes the description an alert, plus a live region on Android, when the view announces. */
+/** Makes the title-and-description group an alert, plus a live region on Android, when announcing. */
 function announceProps(announce: boolean): AnnounceProps {
   if (!announce) return {};
   // Android reads role alert as a role description only, so its live region is what speaks there;
@@ -74,14 +74,18 @@ export function StateView({
       <View className="h-14 w-14 items-center justify-center rounded-full bg-surface-inset">
         <Icon name={icon} size="xl" tone={iconTone} />
       </View>
-      <Text variant="heading" align="center">
-        {title}
-      </Text>
-      {description ? (
-        <Text tone="muted" align="center" className="max-w-sm" {...announceProps(announce)}>
-          {description}
+      {/* One group around the title and description, so the web alert and the Android live region
+          speak the same text as useAnnounce on iOS, title included and with or without a description. */}
+      <View className="items-center gap-3 self-stretch" {...announceProps(announce)}>
+        <Text variant="heading" align="center">
+          {title}
         </Text>
-      ) : null}
+        {description ? (
+          <Text tone="muted" align="center" className="max-w-sm">
+            {description}
+          </Text>
+        ) : null}
+      </View>
       {action ? <StateActionButton action={action} /> : null}
     </View>
   );

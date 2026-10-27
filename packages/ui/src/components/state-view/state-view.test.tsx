@@ -6,6 +6,25 @@ import { fireEvent, renderWithProviders, screen } from "../../test/render";
 import { EmptyState } from "../empty-state";
 import { ErrorState } from "../error-state";
 import { OfflineState } from "../offline-state";
+import { StateView } from "./state-view";
+
+interface Region {
+  readonly prop: "accessibilityRole" | "accessibilityLiveRegion";
+  readonly value: string;
+}
+const ALERT: Region = { prop: "accessibilityRole", value: "alert" };
+const LIVE_REGION: Region = { prop: "accessibilityLiveRegion", value: "polite" };
+
+/**
+ * The nearest element at or above the text that is the alert or live region. Walked by hand: the
+ * group is a plain View, not an accessibility element (that would merge the heading into one
+ * VoiceOver element), so getByRole does not match it.
+ */
+function regionAround(text: string, { prop, value }: Region) {
+  let node: ReturnType<typeof screen.getByText> | null = screen.getByText(text);
+  while (node && node.props[prop] !== value) node = node.parent;
+  return node;
+}
 
 describe("state views", () => {
   it("renders an empty state with its action", async () => {
@@ -25,8 +44,7 @@ describe("state views", () => {
   it("renders the error state as an alert with a retry", async () => {
     const onRetry = jest.fn();
     await renderWithProviders(<ErrorState onRetry={onRetry} />);
-    expect(screen.getByRole("alert")).toBeOnTheScreen();
-    expect(screen.getByText(uiCopy.error.title)).toBeOnTheScreen();
+    expect(regionAround(uiCopy.error.title, ALERT)).not.toBeNull();
     await fireEvent.press(screen.getByRole("button", { name: uiCopy.retry }));
     expect(onRetry).toHaveBeenCalled();
   });
@@ -61,11 +79,8 @@ describe("state views", () => {
         `${uiCopy.offline.title}. ${uiCopy.offline.description}`,
         { queue: true },
       );
-      expect(screen.queryByRole("alert")).toBeNull();
-      expect(screen.getByText(uiCopy.offline.description)).not.toHaveProp(
-        "accessibilityRole",
-        "alert",
-      );
+      expect(regionAround(uiCopy.offline.title, ALERT)).toBeNull();
+      expect(regionAround(uiCopy.offline.description, ALERT)).toBeNull();
     });
 
     // Announcing (ui.md) a surface hidden from the tree makes VoiceOver speak what it cannot reach.
@@ -83,14 +98,27 @@ describe("state views", () => {
       expect(announce).not.toHaveBeenCalled();
     });
 
-    it("gives the error a live region on Android instead of announcing", async () => {
+    // iOS speaks the title and the description (useAnnounce), so the web alert and the Android
+    // live region must cover both too, or each platform says something different.
+    it("puts the title and the description in the alert", async () => {
+      await renderWithProviders(<ErrorState />);
+      const alert = regionAround(uiCopy.error.title, ALERT);
+      expect(alert).not.toBeNull();
+      expect(regionAround(uiCopy.error.description, ALERT)).toBe(alert);
+    });
+
+    it("still alerts with the title when there is no description", async () => {
+      await renderWithProviders(<StateView icon="alert-triangle" title="Upload failed" announce />);
+      expect(regionAround("Upload failed", ALERT)).not.toBeNull();
+    });
+
+    it("gives the error a live region on Android over its title and description", async () => {
       jest.replaceProperty(Platform, "OS", "android");
       await renderWithProviders(<ErrorState />);
       expect(announce).not.toHaveBeenCalled();
-      expect(screen.getByText(uiCopy.error.description)).toHaveProp(
-        "accessibilityLiveRegion",
-        "polite",
-      );
+      const region = regionAround(uiCopy.error.title, LIVE_REGION);
+      expect(region).not.toBeNull();
+      expect(regionAround(uiCopy.error.description, LIVE_REGION)).toBe(region);
     });
   });
 });
