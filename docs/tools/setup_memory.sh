@@ -3,8 +3,9 @@
 # Installs both CLIs with uv, then backfills the project's memory wing with every Claude Code transcript of this
 # folder (worktrees included) and with the design docs. Like the hooks (docs/tools/memory_hook.sh), it never
 # mines a live transcript: each one is masked by redact_secrets.py, which writes a redacted snapshot to
-# ~/.mempalace/hook_state/redacted (the hooks' paths), only those snapshots are mined, and then the drawers
-# an earlier backfill filed under the live paths are dropped. The project files that use them are committed:
+# ~/.mempalace/hook_state/redacted (the hooks' paths), and only those snapshots are mined; drawers an earlier
+# backfill filed under the live paths are left as they are. The memory notes beside the transcripts are mined
+# as before. The project files that use them are committed:
 # .claude/settings.json (hooks), .mcp.json (MCP servers), .claude/skills/graphify (the /graphify skill),
 # CLAUDE.md (rules) and graphify-out/ (the graph itself).
 set -e
@@ -21,28 +22,26 @@ echo "mempalace $(mempalace --version 2>&1 | tail -1) / $(graphify --version 2>&
 # The folder whose sessions belong to this project: the main checkout, not a worktree under .claude/worktrees/
 MAIN="$PWD"; case "$MAIN" in */.claude/worktrees/*) MAIN="${MAIN%%/.claude/worktrees/*}" ;; esac
 ENC=$(printf '%s' "$MAIN" | sed 's#[/. ]#-#g')      # Claude Code's transcript folder name for a project path
-REDACTED="$HOME/.mempalace/hook_state/redacted"; PAIRS=()   # live transcript, its snapshot, ...
+REDACTED="$HOME/.mempalace/hook_state/redacted"; SNAPSHOTS=0
 for d in "$HOME/.claude/projects/$ENC" "$HOME/.claude/projects/$ENC--claude-worktrees-"*; do
   [ -d "$d" ] || continue
   echo "== redacting the transcripts in $d"
   while IFS= read -r -d '' f; do
     snapshot="$REDACTED/$(basename "$f")"
     if ( umask 077; python3 docs/tools/redact_secrets.py --snapshot "$snapshot" "$f" ) >/dev/null; then
-      PAIRS+=("$f" "$snapshot")
+      SNAPSHOTS=$((SNAPSHOTS + 1))
     else
       echo "   (not mined: redaction failed for $(basename "$f"))"
     fi
   done < <(find "$d" -maxdepth 1 -type f \( -name '*.jsonl' -o -name '*.json' \) -print0)
-done
-if [ "${#PAIRS[@]}" -gt 0 ]; then
-  echo "== mining the redacted transcripts into wing $WING"
-  if mempalace mine "$REDACTED" --mode convos --wing "$WING"; then
-    py=$(sed -n '1s/^#!//p' "$(command -v mempalace)")   # MemPalace's own interpreter
-    "$py" docs/tools/purge_live_drawers.py "${PAIRS[@]}" \
-      || echo "   (the purge of the live-path drawers did not complete; re-run to retry)"
-  else
-    echo "   (skipped: palace busy or mine failed)"
+  if [ -d "$d/memory" ]; then
+    echo "== mining the memory notes in $d/memory into wing $WING"
+    mempalace mine "$d/memory" --mode convos --wing "$WING" || echo "   (skipped: palace busy or mine failed)"
   fi
+done
+if [ "$SNAPSHOTS" -gt 0 ]; then
+  echo "== mining the redacted transcripts into wing $WING"
+  mempalace mine "$REDACTED" --mode convos --wing "$WING" || echo "   (skipped: palace busy or mine failed)"
 fi
 echo "== mining docs/ into wing $WING"
 mempalace mine docs --mode projects --wing "$WING" || echo "   (skipped: palace busy or mine failed)"

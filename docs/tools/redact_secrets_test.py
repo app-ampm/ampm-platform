@@ -224,7 +224,6 @@ def check_snapshot_only_grows() -> list[str]:
 
 TOOL_TESTS = [
     "python3 docs/tools/redact_secrets.py --self-test",
-    "python3 docs/tools/purge_live_drawers_test.py",
     "bash docs/tools/memory_hook_test.sh",
     "bash docs/tools/setup_memory_test.sh",
 ]
