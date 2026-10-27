@@ -21,10 +21,16 @@ import redact_secrets as rs  # noqa: E402
 Case = tuple[str, str, int, list[str]]  # name, transcript line, expected count, fragments that must vanish
 
 
-def tool_result(text: str) -> str:
-    """A user record carrying one tool result, as a transcript line."""
+def tool_result(text: str, ascii_only: bool = True) -> str:
+    """A user record carrying one tool result, as a transcript line (raw UTF-8 when not ascii_only)."""
     content = [{"type": "tool_result", "tool_use_id": "toolu_01ABCDEFGHJKLMNPQRSTUVWX", "content": text}]
-    return json.dumps({"type": "user", "message": {"content": content}})
+    return json.dumps({"type": "user", "message": {"content": content}}, ensure_ascii=ascii_only)
+
+
+def pem(body_lines: list[str], kind: str = "") -> str:
+    """A PEM private key with the given body lines; kind is e.g. "RSA " or "PGP "."""
+    label = f"{kind}PRIVATE KEY" + (" BLOCK" if kind == "PGP " else "")
+    return f"-----BEGIN {label}-----\n" + "\n".join(body_lines) + f"\n-----END {label}-----\n"
 
 
 def tool_use(command: str) -> str:
@@ -53,6 +59,8 @@ def samples() -> dict[str, str]:
         "jwe": "ey" + "JjdHkiOiJKV1QiLCJlbmMiOiJBMjU2R0NNIn0" + "." + "Qm9n" * 30 + "." + "aXZp" * 4
         + "." + "Y2lw" * 40 + "." + "dGFn" * 6,
         "pw": "S3cr3t" + "-Value-99",
+        "b64": "MIIEvQIBADANBgkqhkiG9w0BAQEFAASC" * 2,
+        "b64_2": "BKcwggSjAgEAAoIBAQC7" * 3,
     }
 
 
@@ -87,6 +95,45 @@ def ops01_cases() -> list[Case]:
     ]
 
 
+def ops05_cases() -> list[Case]:
+    """OPS-05: a key stays inside one JSON string, escapes and UTF-8 characters survive masking."""
+    s = samples()
+    gcp = json.dumps({"type": "service_account", "private_key": pem([s["b64"], s["b64_2"]])})
+    split = [{"type": "text", "text": "-----BEGIN PRIVATE KEY-----"}]
+    split.append({"type": "text", "text": "toolu_01ABCDEFGHJKLMNPQRSTUVWX -----END PRIVATE KEY-----"})
+    escaped_body = pem([s["b64"], "Caf\u00e9menuitemsandmoretext \u001b[0m", s["b64_2"]])
+    return [
+        ("pem", tool_result(pem([s["b64"], s["b64_2"]])), 1, [s["b64"], s["b64_2"]]),
+        ("pem in a service-account json", tool_result(gcp), 1, [s["b64"], s["b64_2"]]),
+        ("pem with \\u escapes in the body", tool_result(escaped_body), 1, [s["b64"], s["b64_2"]]),
+        ("pem markers in two json strings", json.dumps({"type": "user", "message": {"content": split}}), 0, []),
+        ("url password with a multi-byte character", tool_result("postgresql://svc:ppp\u00e4secretvalue@db", False), 1,
+         ["secretvalue"]),
+    ]
+
+
+def check_lines_kept_apart() -> list[str]:
+    """A BEGIN marker on one transcript line never pairs with an END marker on a later line."""
+    begin = tool_result("src/x.ts:3: -----BEGIN PRIVATE KEY-----")
+    middle = {"parentUuid": "a1", "isCompactSummary": False, "cwd": "/Users/dev/Desktop/AMPMworktreesampm"}
+    middle["requestId"] = "req_011CUXabcdefghijklmnop"
+    end = json.dumps({"type": "assistant", "message": {"content": "It ends with -----END PRIVATE KEY----- as usual."}})
+    data = "\n".join([begin, json.dumps(middle), tool_use('printf "\\u00e9\\u00e9" > a'), end, ""]).encode()
+    return [] if not rs.find(data) else ["lines kept apart: a key matched across transcript lines"]
+
+
+def check_nested_json_survives() -> list[str]:
+    """A key inside JSON printed by a tool keeps its inner escapes, so the inner JSON still parses."""
+    s = samples()
+    data = tool_result(json.dumps({"private_key": pem([s["b64"]])})).encode()
+    masked = apply(data, rs.find(data))
+    try:
+        json.loads(json.loads(masked)["message"]["content"][0]["content"])
+    except ValueError:
+        return ["nested json: the inner JSON no longer parses after masking"]
+    return []
+
+
 def check_case(name: str, line: str, expected: int, fragments: list[str]) -> list[str]:
     """Problems with one case: count, byte length, JSON validity, idempotence and what stayed in clear."""
     data = line.encode()
@@ -110,8 +157,9 @@ def check_case(name: str, line: str, expected: int, fragments: list[str]) -> lis
 def run() -> int:
     """Runs every case; prints each failure and returns 1 when any failed."""
     failures: list[str] = []
-    for case in baseline_cases() + ops01_cases():
+    for case in baseline_cases() + ops01_cases() + ops05_cases():
         failures += check_case(*case)
+    failures += check_lines_kept_apart() + check_nested_json_survives()
     for failure in failures:
         print(f"FAIL: {failure}")
     print("self-test passed" if not failures else f"self-test: {len(failures)} failure(s)")
