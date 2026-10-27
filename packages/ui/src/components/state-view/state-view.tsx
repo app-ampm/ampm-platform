@@ -29,7 +29,7 @@ export interface StateViewProps extends ViewProps {
 
 type AnnounceProps = Pick<AccessibilityProps, "accessibilityRole" | "accessibilityLiveRegion">;
 
-/** Makes the title-and-description group an alert, plus a live region on Android, when announcing. */
+/** Makes the title and description group an alert, plus a live region on Android, to announce. */
 function announceProps(announce: boolean): AnnounceProps {
   if (!announce) return {};
   // Android reads role alert as a role description only, so its live region is what speaks there;
@@ -74,8 +74,8 @@ export function StateView({
       <View className="h-14 w-14 items-center justify-center rounded-full bg-surface-inset">
         <Icon name={icon} size="xl" tone={iconTone} />
       </View>
-      {/* One group around the title and description, so the web alert and the Android live region
-          speak the same text as useAnnounce on iOS, title included and with or without a description. */}
+      {/* One group around the title and description, so the web alert and the Android live
+          region speak what useAnnounce says on iOS: the title too, description or not. */}
       <View className="items-center gap-3 self-stretch" {...announceProps(announce)}>
         <Text variant="heading" align="center">
           {title}
