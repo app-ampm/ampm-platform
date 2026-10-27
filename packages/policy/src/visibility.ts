@@ -35,6 +35,18 @@ const CONTACT_AND_FINANCE: readonly VisibilityClass[] = [
 ];
 /** The order the grants are applied in, which fixes the order of the resulting set. */
 const GRANT_ORDER: readonly StaffRole[] = ["SA", "FA", "HT", "VC", "SM", "PM", "HL", "RG"];
+/**
+ * §4 line 124, the records with RESTRICTED-CONTACT columns: hotel contacts, the vendors' contact
+ * fields, external venue contacts and drivers' phones, as the §5 rows that hold them.
+ */
+const CONTACT_ROWS: readonly (readonly [section: string, label: string])[] = [
+  ["5.3", "Hotel contacts"],
+  ["5.8", "Vendor contacts"],
+  ["5.5", "Project hotels and external venues"],
+  ["5.11", "Vehicles, transfers, passengers"],
+];
+/** The roles §4 line 124 gives contacts by the record they are on, not by its side. */
+const CONTACTS_BY_ROW: readonly StaffRole[] = ["PM", "HL"];
 
 /** What one role adds to the base classes on a record, given the record's context (§4 "Readable by"). */
 function roleGrants(role: StaffRole, context: ClassContext): readonly VisibilityClass[] {
@@ -57,12 +69,11 @@ function roleGrants(role: StaffRole, context: ClassContext): readonly Visibility
       return context.side === "vendor" ? CONTACT_AND_FINANCE : [];
     case "SM":
       return context.side === "hotel" ? ["RESTRICTED-CONTACT"] : [];
+    // PM and HL read contacts through the contacts rows (readsContacts).
     case "PM":
-      return context.assigned
-        ? ["RESTRICTED-FINANCE", "RESTRICTED-CONTACT", "SENSITIVE-GUEST"]
-        : [];
+      return context.assigned ? ["RESTRICTED-FINANCE", "SENSITIVE-GUEST"] : [];
     case "HL":
-      return context.assigned ? ["RESTRICTED-CONTACT", "SENSITIVE-GUEST"] : [];
+      return context.assigned ? ["SENSITIVE-GUEST"] : [];
     case "RG":
       return context.assigned ? ["SENSITIVE-GUEST"] : [];
     default:
@@ -98,10 +109,26 @@ function tableRow(row: MatrixRow): MatrixRow {
 }
 
 /**
+ * A plain read grant on the row at a scope the context satisfies. A class column opens on it only:
+ * a conditioned read ("RU (a) theme, dress code") names the columns or records it covers.
+ */
+function readsPlainly(roles: readonly StaffRole[], row: MatrixRow, context: ClassContext) {
+  return roles.some((role) =>
+    (row.grants[role] ?? []).some(
+      (grant) =>
+        grant.actions.includes("read") &&
+        grant.conditions.length === 0 &&
+        (grant.scope === "all" ||
+          (grant.scope === "assigned" && context.assigned === true) ||
+          (grant.scope === "own" && context.owned === true)),
+    ),
+  );
+}
+
+/**
  * §4 RESTRICTED-NOTES, "staff with module access per §5": the internal-notes row of the record's
- * table ("Hotel internal rating and notes") when §5 has one, otherwise the table's row. Only a plain
- * read grant opens notes; a conditioned one ("RU (a) theme, dress code") does not. No resource, or
- * one the matrix does not know, opens nothing.
+ * table ("Hotel internal rating and notes") when §5 has one, otherwise the table's row. No resource,
+ * or one the matrix does not know, opens nothing.
  */
 function readsNotes(roles: readonly StaffRole[], context: ClassContext): boolean {
   const resourceRow = rowOf(context.resource);
@@ -115,16 +142,27 @@ function readsNotes(roles: readonly StaffRole[], context: ClassContext): boolean
           (alias) => alias.resource === row.resource && alias.action === "read_internal_notes",
         ),
     ) ?? row;
-  return roles.some((role) =>
-    (notes.grants[role] ?? []).some(
-      (grant) =>
-        grant.actions.includes("read") &&
-        grant.conditions.length === 0 &&
-        (grant.scope === "all" ||
-          (grant.scope === "assigned" && context.assigned === true) ||
-          (grant.scope === "own" && context.owned === true)),
-    ),
-  );
+  return readsPlainly(roles, notes, context);
+}
+
+function isContactRow(row: MatrixRow): boolean {
+  return CONTACT_ROWS.some(([section, label]) => row.section === section && row.label === label);
+}
+
+/**
+ * §4 line 124 for PM and HL: contacts open on the record's contacts row (the resource's own, or
+ * its table's: hotel profiles have "Hotel contacts") when their §5 cell there reads it. No
+ * resource, or a record without contact columns, opens none.
+ */
+function readsContacts(roles: readonly StaffRole[], context: ClassContext): boolean {
+  const resourceRow = rowOf(context.resource);
+  if (!resourceRow) return false;
+  const table = tableRow(resourceRow);
+  const contacts = isContactRow(resourceRow)
+    ? resourceRow
+    : MATRIX.staff.find((row) => isContactRow(row) && row !== table && tableRow(row) === table);
+  const byRow = roles.filter((role) => CONTACTS_BY_ROW.includes(role));
+  return contacts !== undefined && readsPlainly(byRow, contacts, context);
 }
 
 /**
@@ -149,6 +187,7 @@ export function staffReadableClasses(
   for (const role of GRANT_ORDER) {
     if (roles.includes(role)) for (const cls of roleGrants(role, context)) set.add(cls);
   }
+  if (readsContacts(roles, context)) set.add("RESTRICTED-CONTACT");
   return set;
 }
 

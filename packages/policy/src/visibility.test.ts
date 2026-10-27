@@ -90,6 +90,30 @@ describe("visibility classes", () => {
     ).toBe(true);
   });
 
+  it("§4 line 124: HL and PM read contact columns only on the rows that carry them", () => {
+    const contact = (roles: readonly ("HL" | "PM" | "RG")[], resource?: string, assigned = true) =>
+      staffReadableClasses(roles, { resource, assigned }).has("RESTRICTED-CONTACT");
+    // No resource, or a record without contact columns, opens no contacts (fail closed).
+    expect(contact(["HL"])).toBe(false);
+    expect(contact(["HL"], GUESTS)).toBe(false);
+    expect(contact(["PM"], GUESTS)).toBe(false);
+    // Hotel contacts (§5.3 line 170), drivers' phones (§5.11 line 278) and venue contacts (§5.5
+    // line 195), on assigned weddings.
+    for (const resource of [
+      "hotels.hotel_contacts",
+      "rooms.vehicles_transfers_passengers",
+      "projects.project_hotels_external_venues",
+    ]) {
+      expect(contact(["HL"], resource), resource).toBe(true);
+      expect(contact(["HL"], resource, false), resource).toBe(false);
+    }
+    // §5.8 line 231 gives HL "R (a)" on vendor contacts, though §4 line 124 does not list vendors.
+    expect(contact(["HL"], "vendors.vendor_contacts")).toBe(true);
+    expect(contact(["PM"], VENDORS)).toBe(true);
+    // RG reads the vehicles (§5.11 line 278) but §4 gives RG no contacts.
+    expect(contact(["RG"], "rooms.vehicles_transfers_passengers")).toBe(false);
+  });
+
   it("§4 line 122: without a known resource no staff role reads internal notes", () => {
     expect(staffReadableClasses(["SA"]).has("RESTRICTED-NOTES")).toBe(false);
     expect(
