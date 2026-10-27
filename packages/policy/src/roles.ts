@@ -14,7 +14,17 @@ export const STAFF_ROLES = {
 export type StaffRole = keyof typeof STAFF_ROLES;
 export type StaffRoleKey = (typeof STAFF_ROLES)[StaffRole]["key"];
 
-export const STAFF_ROLE_CODES = Object.keys(STAFF_ROLES) as StaffRole[];
+function isStaffRole(code: string): code is StaffRole {
+  return Object.hasOwn(STAFF_ROLES, code);
+}
+
+/**
+ * The nine role codes in the order of §2.
+ *
+ * @example
+ * for (const code of STAFF_ROLE_CODES) seedRole(code, STAFF_ROLES[code]);
+ */
+export const STAFF_ROLE_CODES: StaffRole[] = Object.keys(STAFF_ROLES).filter(isStaffRole);
 
 export function roleFromKey(key: string): StaffRole | undefined {
   return STAFF_ROLE_CODES.find((code) => STAFF_ROLES[code].key === key);
