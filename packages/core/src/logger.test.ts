@@ -17,6 +17,36 @@ describe("logger", () => {
     });
   });
 
+  it("redacts the camelCase and header forms of the same keys (Prisma records, HTTP headers)", () => {
+    expect(
+      redact({
+        tokenHash: "h",
+        identitySubject: "s",
+        ipAddress: "203.0.113.9",
+        accessToken: "a",
+        "Set-Cookie": "c",
+        phoneNumber: "1",
+        passwordHash: "p",
+        apiKey: "k",
+        mfaSecretRef: "m",
+        emailVerified: true,
+        tokenCount: 2,
+      }),
+    ).toEqual({
+      tokenHash: "[redacted]",
+      identitySubject: "[redacted]",
+      ipAddress: "[redacted]",
+      accessToken: "[redacted]",
+      "Set-Cookie": "[redacted]",
+      phoneNumber: "[redacted]",
+      passwordHash: "[redacted]",
+      apiKey: "[redacted]",
+      mfaSecretRef: "[redacted]",
+      emailVerified: true,
+      tokenCount: 2,
+    });
+  });
+
   it("emits structured entries with inherited fields and respects the level", () => {
     const { logger, entries } = createMemoryLogger("info");
     const request = logger.child({ requestId: "r1" });

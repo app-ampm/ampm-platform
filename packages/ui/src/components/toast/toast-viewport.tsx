@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { motionMs } from "@ampm/tokens";
 
 import { uiCopy } from "../../copy";
+import { announcementText, useAnnounce } from "../../hooks/use-announce";
 import { useReducedMotion } from "../../hooks/use-reduced-motion";
 import { cn } from "../../lib/cn";
 import { Button } from "../button";
@@ -92,11 +93,10 @@ interface ToastCardProps {
   readonly dismissLabel: string;
 }
 
-function ToastCard({ item, onDismiss, dismissLabel }: ToastCardProps) {
-  const tone: ToastTone = item.tone ?? "neutral";
+/** Runs the card's entrance from 0 to 1; with reduced motion it starts at its end state. */
+function useEnterProgress(): Animated.Value {
   const reducedMotion = useReducedMotion();
   const progress = useRef(new Animated.Value(reducedMotion ? 1 : 0)).current;
-
   useEffect(() => {
     Animated.timing(progress, {
       toValue: 1,
@@ -104,6 +104,14 @@ function ToastCard({ item, onDismiss, dismissLabel }: ToastCardProps) {
       useNativeDriver: NATIVE_DRIVER,
     }).start();
   }, [progress, reducedMotion]);
+  return progress;
+}
+
+function ToastCard({ item, onDismiss, dismissLabel }: ToastCardProps) {
+  const tone: ToastTone = item.tone ?? "neutral";
+  const progress = useEnterProgress();
+  // Role status speaks on the web and the live region on Android; VoiceOver needs the announcement.
+  useAnnounce(announcementText(item.title, item.description), true);
 
   return (
     <Animated.View

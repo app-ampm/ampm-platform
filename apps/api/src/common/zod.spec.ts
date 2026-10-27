@@ -4,6 +4,7 @@ import { Test } from "@nestjs/testing";
 import request from "supertest";
 import { type App } from "supertest/types.js";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { AppError, isAppError } from "@ampm/core";
 import { z, ZodError } from "zod";
 
 import { AppErrorFilter } from "./app-error.filter.js";
@@ -56,11 +57,23 @@ describe("Zod decorators (validate at the edge)", () => {
     await app.close();
   });
 
-  it("the pipe parses and coerces, and throws the ZodError on a bad value", () => {
+  it("the pipe parses and coerces, and throws a typed validation error on a bad value", () => {
     const pipe = new ZodValidationPipe(query);
     expect(pipe.transform({ limit: "5" })).toEqual({ limit: 5 });
     expect(pipe.transform({})).toEqual({ limit: 20 });
-    expect(() => pipe.transform({ limit: "0" })).toThrow(ZodError);
+    let thrown: unknown;
+    try {
+      pipe.transform({ limit: "0" });
+    } catch (error) {
+      thrown = error;
+    }
+    // Typed at the edge, so the filter can tell a caller's bad input from a server-side schema failure.
+    expect(thrown).toBeInstanceOf(AppError);
+    expect(thrown).not.toBeInstanceOf(ZodError);
+    expect(isAppError(thrown) && thrown.code).toBe("validation_failed");
+    expect(isAppError(thrown) && thrown.details).toEqual([
+      expect.objectContaining({ path: "limit" }),
+    ]);
   });
 
   it("hands the handler the parsed params, query and body", async () => {

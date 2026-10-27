@@ -1,213 +1,234 @@
-import matrix from "./generated/matrix.json" with { type: "json" };
-import {
-  ACTION_LETTERS,
-  type Action,
-  type PrincipalType,
-  type Scope,
-  type StaffRole,
-} from "./roles";
+import type { ConditionFacts } from "./conditions";
+import { decideGrants, type Decision, type Reach, type RoleGrant } from "./evaluate";
+import { documentResource } from "./document-keys";
+import { isAction, parsePermissionKey, permissionKey, type PermissionKey } from "./keys";
+import { MATRIX } from "./matrix";
+import { recordRowOf } from "./record-rows";
+import { OUTSIDE_KEYS } from "./resources";
+import type { PrincipalType, StaffRole } from "./roles";
 
-/** The matrix as generated from docs/permission-matrix.md (scripts/generate.ts). */
-export interface Grant {
-  readonly actions: readonly Action[];
-  readonly scope: Scope;
-  readonly note: string | null;
+/**
+ * A key granted to one user on one wedding beyond their roles (P-5: identity documents).
+ *
+ * @example
+ * const grant: ExplicitGrant = { key: "guests.identity_documents.read", projectId };
+ */
+export interface ExplicitGrant {
+  /**
+   * The key, as §10 spells it or as its base key: a scope suffix or a §10 alias of the same row
+   * names the same grant (`guests.identity_documents.read:assigned`, line 547).
+   */
+  readonly key: string;
+  readonly projectId: string;
 }
 
-export interface MatrixRow {
-  readonly section: string;
-  readonly module: string;
-  readonly resource: string;
-  readonly label: string;
-  readonly provisional: boolean;
-  readonly cells: Readonly<Record<string, string>>;
-  readonly grants: Readonly<Record<string, readonly Grant[]>>;
+/**
+ * What the engine needs to know about the caller. Built by the API from its own records.
+ *
+ * @example
+ * const principal: PolicyPrincipal = { type: "staff", userId, roles: ["PM"], projectIds };
+ */
+export interface PolicyPrincipal {
+  readonly type: PrincipalType;
+  readonly userId?: string | undefined;
+  readonly roles?: readonly StaffRole[] | undefined;
+  /** Projects the principal is an active member of; for a guest token, the wedding of its link. */
+  readonly projectIds?: readonly string[] | undefined;
+  /** Client accounts a client principal belongs to: "own" is its wedding or account (§6 line 338). */
+  readonly accountIds?: readonly string[] | undefined;
+  readonly explicitGrants?: readonly ExplicitGrant[] | undefined;
 }
 
-export interface Transition {
-  readonly entity: string;
-  readonly from: string;
-  readonly to: string;
-  readonly who: string;
-  readonly roles: readonly { readonly role: string; readonly assigned: boolean }[];
-  readonly system: boolean;
-  readonly actors: readonly string[];
-  readonly condition: string | null;
+/**
+ * The record or project an action targets, and what the caller knows about it (conditions.ts).
+ *
+ * @example
+ * const target: PolicyTarget = { projectId, ownerId: task.ownerUserId, side: "hotel" };
+ */
+export interface PolicyTarget extends ConditionFacts {
+  readonly projectId?: string | undefined;
+  readonly ownerId?: string | undefined;
 }
 
-interface Matrix {
-  readonly source: string;
-  readonly staff: readonly MatrixRow[];
-  readonly others: readonly MatrixRow[];
-  readonly transitions: readonly Transition[];
-}
+const SYSTEM: Decision = { allowed: true, scope: "all", reason: "system" };
+const NO_GRANT: Decision = { allowed: false, reason: "no_grant" };
+const byRole = new Map<StaffRole, ReadonlyMap<string, readonly RoleGrant[]>>();
 
-export const MATRIX = matrix as Matrix;
-
-/** `module.resource.action` with an optional `:assigned` or `:own` suffix (permission-matrix §10). */
-export type PermissionKey =
-  `${string}.${string}.${Action}` | `${string}.${string}.${Action}:${Exclude<Scope, "all">}`;
-
-export function permissionKey(
-  module: string,
-  resource: string,
-  action: Action,
-  scope: Scope = "all",
-): PermissionKey {
-  const base = `${module}.${resource}.${action}` as const;
-  return scope === "all" ? base : (`${base}:${scope}` as PermissionKey);
-}
-
-export function parsePermissionKey(
-  key: string,
-): { module: string; resource: string; action: Action; scope: Scope } | null {
-  const match = /^([a-z0-9_]+)\.([a-z0-9_]+)\.([a-z_]+)(?::(assigned|own))?$/.exec(key);
-  if (!match) return null;
-  const action = match[3] as Action;
-  if (!Object.values(ACTION_LETTERS).includes(action)) return null;
-  return {
-    module: match[1] ?? "",
-    resource: match[2] ?? "",
-    action,
-    scope: (match[4] as Scope | undefined) ?? "all",
-  };
-}
-
-/** Every key a staff role holds, with the scope the matrix gives it. */
-export function grantsForRole(role: StaffRole): ReadonlyMap<string, Scope> {
-  const out = new Map<string, Scope>();
+function buildGrants(role: StaffRole): ReadonlyMap<string, readonly RoleGrant[]> {
+  const out = new Map<string, RoleGrant[]>();
   for (const row of MATRIX.staff) {
     for (const grant of row.grants[role] ?? []) {
       for (const action of grant.actions) {
         const base = `${row.module}.${row.resource}.${action}`;
-        const existing = out.get(base);
-        // A wider scope wins when the same key appears twice (all > assigned > own).
-        if (!existing || rank(grant.scope) > rank(existing)) out.set(base, grant.scope);
+        const held = { scope: grant.scope, conditions: grant.conditions };
+        out.set(base, [...(out.get(base) ?? []), held]);
       }
     }
   }
   return out;
 }
 
-function rank(scope: Scope): number {
-  return scope === "all" ? 3 : scope === "assigned" ? 2 : 1;
-}
-
-export function permissionKeysForRole(role: StaffRole): PermissionKey[] {
-  return [...grantsForRole(role)].map(
-    ([base, scope]) => (scope === "all" ? base : `${base}:${scope}`) as PermissionKey,
-  );
-}
-
-/** What the engine needs to know about the caller. Built by the API from its own records. */
-export interface PolicyPrincipal {
-  readonly type: PrincipalType;
-  readonly userId?: string | undefined;
-  readonly roles?: readonly StaffRole[] | undefined;
-  /** Projects the principal is an active member of. */
-  readonly projectIds?: readonly string[] | undefined;
-}
-
-/** The record or project an action targets. */
-export interface PolicyTarget {
-  readonly projectId?: string | undefined;
-  readonly ownerId?: string | undefined;
-}
-
-export interface Decision {
-  readonly allowed: boolean;
-  /** The scope that granted the action, when allowed. */
-  readonly scope?: Scope | undefined;
-  readonly reason: "granted" | "not_staff" | "no_grant" | "not_assigned" | "not_owner" | "system";
+/**
+ * Every key a staff role holds, with the scope and conditions of each grant.
+ *
+ * @example
+ * grantsForRole("HT").get("budget.budget_lines_internal_cost.read");
+ * // → [{ scope: "all", conditions: [{ kind: "side", anyOf: ["hotel"] }] }]
+ */
+export function grantsForRole(role: StaffRole): ReadonlyMap<string, readonly RoleGrant[]> {
+  const known = byRole.get(role);
+  if (known) return known;
+  const built = buildGrants(role);
+  byRole.set(role, built);
+  return built;
 }
 
 /**
- * Step 4 of the pipeline (architecture §6): does the principal hold the key, and does the scope
- * reach the target? Client, guest and demo principals never hold keys; their reach is entitlement
- * and membership (§3, §6), checked by the services with `clientReach()`.
+ * The keys a role holds outright, for `role_permissions`. A conditioned grant ("RU hotel lines")
+ * is not a key the role holds by itself, so it is left out: decide() alone evaluates it.
+ *
+ * @example
+ * permissionKeysForRole("PM").includes("projects.wedding_projects.update:assigned"); // true
+ */
+export function permissionKeysForRole(role: StaffRole): PermissionKey[] {
+  return MATRIX.staff.flatMap((row) =>
+    (row.grants[role] ?? [])
+      .filter((grant) => grant.conditions.length === 0)
+      .flatMap((grant) =>
+        grant.actions.map((action) => permissionKey(row.module, row.resource, action, grant.scope)),
+      ),
+  );
+}
+
+/** A §10 key named from outside its row's subsection (OUTSIDE_KEYS), as the row's own key. */
+function outsideKey(key: string): string | null {
+  const name = key.replace(/:(assigned|own)$/, "");
+  const named = Object.hasOwn(OUTSIDE_KEYS, name) ? OUTSIDE_KEYS[name] : undefined;
+  if (!named) return null;
+  const row = MATRIX.staff.find((r) => r.section === named.section && r.label === named.label);
+  return row ? `${row.module}.${row.resource}.${named.as}` : null;
+}
+
+/**
+ * The base key a key decides on: its own, or the §5 row a §10 key stands for, whether §10 names
+ * it from another module (OUTSIDE_KEYS) or by another resource name (DOCUMENT_RESOURCES).
+ */
+function baseKey(key: string): string | null {
+  const outside = outsideKey(key);
+  if (outside !== null) return outside;
+  const parsed = parsePermissionKey(key);
+  if (!parsed) return null;
+  const { module, action } = parsed;
+  const resource = documentResource(module, parsed.resource);
+  if (isAction(action)) return `${module}.${resource}.${action}`;
+  for (const row of MATRIX.staff) {
+    if (row.module !== module) continue;
+    const alias = row.aliases.find((a) => a.resource === resource && a.action === action);
+    if (alias) return `${module}.${row.resource}.${alias.as}`;
+  }
+  return null;
+}
+
+function reachOf(principal: PolicyPrincipal, target: PolicyTarget): Reach {
+  const { projectId, ownerId } = target;
+  return {
+    assigned: projectId !== undefined && principal.projectIds?.includes(projectId) === true,
+    owned: ownerId !== undefined && ownerId === principal.userId,
+  };
+}
+
+/**
+ * Whether the principal holds an explicit grant of the key on the wedding (P-5). Both keys are
+ * compared by the base key they decide on, so every §10 spelling of the key counts.
+ *
+ * @example
+ * const explicitGrant = holdsExplicitGrant(principal, IDENTITY_READ, doc.projectId);
+ * staffReadableClasses(roles, { assigned, explicitGrant, resource: "guests.identity_documents" });
+ */
+export function holdsExplicitGrant(
+  principal: PolicyPrincipal,
+  key: string,
+  projectId: string | undefined,
+): boolean {
+  const base = baseKey(key);
+  if (base === null || projectId === undefined) return false;
+  return (principal.explicitGrants ?? []).some(
+    (grant) => grant.projectId === projectId && baseKey(grant.key) === base,
+  );
+}
+
+/**
+ * Step 4 of the pipeline (architecture §6): does the principal hold the key, does its scope reach
+ * the target, and do the facts meet the conditions of its cell? Client, guest and demo principals
+ * never hold keys; their reach is entitlement and membership (§3, §6), see decideReach().
+ *
+ * @example
+ * decide(principal, "budget.budget_lines_internal_cost.read", { projectId, side: "hotel" });
  */
 export function decide(
   principal: PolicyPrincipal,
   key: string,
   target: PolicyTarget = {},
 ): Decision {
-  if (principal.type === "system") return { allowed: true, scope: "all", reason: "system" };
+  if (principal.type === "system") return SYSTEM;
   if (principal.type !== "staff") return { allowed: false, reason: "not_staff" };
-  const parsed = parsePermissionKey(key);
-  if (!parsed) return { allowed: false, reason: "no_grant" };
-  const base = `${parsed.module}.${parsed.resource}.${parsed.action}`;
-  let best: Scope | undefined;
-  for (const role of principal.roles ?? []) {
-    const scope = grantsForRole(role).get(base);
-    if (scope && (!best || rank(scope) > rank(best))) best = scope;
-  }
-  if (!best) return { allowed: false, reason: "no_grant" };
-  if (best === "all") return { allowed: true, scope: "all", reason: "granted" };
-  if (best === "assigned") {
-    const member =
-      target.projectId !== undefined && (principal.projectIds ?? []).includes(target.projectId);
-    return member
-      ? { allowed: true, scope: "assigned", reason: "granted" }
-      : { allowed: false, reason: "not_assigned" };
-  }
-  const owner = target.ownerId !== undefined && target.ownerId === principal.userId;
-  return owner
-    ? { allowed: true, scope: "own", reason: "granted" }
-    : { allowed: false, reason: "not_owner" };
+  const base = baseKey(key);
+  if (base === null) return NO_GRANT;
+  const grants = (principal.roles ?? []).flatMap((role) => grantsForRole(role).get(base) ?? []);
+  if (grants.length === 0) return NO_GRANT;
+  const explicit = holdsExplicitGrant(principal, base, target.projectId);
+  return decideGrants(grants, reachOf(principal, target), target, explicit);
 }
 
+/**
+ * Step 4 as the guard runs it, before the record is read (architecture §6): decide() on what the
+ * route names, the project. An own-scope grant cannot be checked yet, because the owner is on the
+ * record, so it passes as scope "own" and the repository reads only the principal's own records;
+ * someone else's is then absent, a 404 (permission-matrix §5 legend, "(o)"). Only an owner the
+ * caller does not know passes so: one it names (`ownerId`) is decided as named, by decide().
+ *
+ * @example
+ * const decision = decideBeforeRead(principal, "tasks.tasks.read", { projectId });
+ * if (decision.allowed) repository.list(scopeFor(principal, decision.scope));
+ */
+export function decideBeforeRead(
+  principal: PolicyPrincipal,
+  key: string,
+  target: PolicyTarget = {},
+): Decision {
+  const decision = decide(principal, key, target);
+  if (decision.allowed || target.ownerId !== undefined || principal.userId === undefined) {
+    return decision;
+  }
+  const asOwner = decide(principal, key, { ...target, ownerId: principal.userId });
+  return asOwner.allowed ? { ...asOwner, scope: "own" } : decision;
+}
+
+/**
+ * The read key of the record a key acts on (record-rows.ts recordRowOf): its own row's, its
+ * table's for a class of a record's columns, the record's for a decision no role reads; null for a
+ * key that names no row or a decision on no one row's record. A principal who holds it may see the
+ * records, so a refused action on them is a 403, not a 404 (test-cases.md line 212).
+ *
+ * @example
+ * readKeyFor("tasks.incidents.update:assigned"); // "tasks.incidents.read"
+ * readKeyFor("projects.close:assigned"); // "projects.wedding_projects.read"
+ */
+export function readKeyFor(key: string): string | null {
+  const base = baseKey(key);
+  if (base === null) return null;
+  const name = base.slice(0, base.lastIndexOf("."));
+  const row = MATRIX.staff.find((r) => `${r.module}.${r.resource}` === name);
+  const record = row ? recordRowOf(row) : null;
+  return record ? `${record.module}.${record.resource}.read` : null;
+}
+
+/**
+ * decide(), as a boolean.
+ *
+ * @example
+ * if (!can(principal, "admin.roles.update")) throw errors.forbidden();
+ */
 export function can(principal: PolicyPrincipal, key: string, target?: PolicyTarget): boolean {
   return decide(principal, key, target).allowed;
-}
-
-/** The §6 cell for a client, guest or demo principal on a resource row, by label or resource slug. */
-export function clientReach(type: "client" | "guest" | "demo", resource: string): readonly Grant[] {
-  const column = type === "client" ? "CR" : type === "guest" ? "GU" : "DP";
-  const row = MATRIX.others.find(
-    (candidate) => candidate.resource === resource || candidate.label === resource,
-  );
-  return row?.grants[column] ?? [];
-}
-
-export interface TransitionContext {
-  readonly assigned?: boolean | undefined;
-  /** The principal is the record's assignee, owner, creator or requester. */
-  readonly actor?: "assignee" | "owner" | "creator" | "requester" | undefined;
-}
-
-/** Step 6 of the pipeline: may this principal move an entity from one status to another (§7)? */
-export function canTransition(
-  principal: PolicyPrincipal,
-  entity: string,
-  from: string,
-  to: string,
-  context: TransitionContext = {},
-): Transition | null {
-  const rules = MATRIX.transitions.filter(
-    (t) => t.entity === entity && matchesStatus(t.from, from) && matchesStatus(t.to, to),
-  );
-  for (const rule of rules) {
-    if (principal.type === "system" && rule.system) return rule;
-    if (principal.type === "client" && rule.roles.some((r) => r.role === "CR")) return rule;
-    if (principal.type === "staff") {
-      for (const grant of rule.roles) {
-        if (grant.role === "CR" || !(principal.roles ?? []).includes(grant.role as StaffRole))
-          continue;
-        if (!grant.assigned || context.assigned) return rule;
-      }
-      if (context.actor && rule.actors.includes(context.actor)) return rule;
-    }
-  }
-  return null;
-}
-
-function matchesStatus(pattern: string, status: string): boolean {
-  const options = pattern
-    .toLowerCase()
-    .replace(/[`*]/g, "")
-    .split(/\s*(?:,|\bor\b)\s*/)
-    .map((option) => option.trim());
-  return options.some(
-    (option) => option === status.toLowerCase() || option === "any" || option.startsWith("any "),
-  );
 }

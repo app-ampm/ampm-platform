@@ -52,6 +52,10 @@ allowBuilds:
 # tooling resolve one copy of everything. pnpm 12 reads this here, not from .npmrc.
 nodeLinker: hoisted
 
+# Node 24 is the repository's runtime (.nvmrc, D-017); an older Node stops at install with a clear message instead of
+# failing later in a build script.
+engineStrict: true
+
 minimumReleaseAgeExclude:
   - "@tanstack/query-core@5.105.0"
   - "@tanstack/react-query@5.105.0"
