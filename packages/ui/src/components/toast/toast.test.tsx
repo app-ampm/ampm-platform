@@ -1,3 +1,4 @@
+import { spyOnAnnounce } from "../../test/announce";
 import { act, fireEvent, renderWithProviders, screen } from "../../test/render";
 import { Button } from "../button";
 import { DEFAULT_TOAST_DURATION_MS, useToast } from "./toast-provider";
@@ -40,5 +41,15 @@ describe("Toast", () => {
     expect(screen.getByText("Saved")).toBeOnTheScreen();
     await fireEvent.press(screen.getByRole("button", { name: "Dismiss" }));
     expect(screen.queryByText("Saved")).toBeNull();
+  });
+
+  it("announces a toast once on iOS when it appears", async () => {
+    const announce = spyOnAnnounce();
+    await renderWithProviders(<Trigger sticky />);
+    await fireEvent.press(screen.getByRole("button", { name: "Show" }));
+    await act(() => jest.advanceTimersByTime(DEFAULT_TOAST_DURATION_MS));
+    expect(announce).toHaveBeenCalledTimes(1);
+    expect(announce).toHaveBeenCalledWith("Saved. All good", { queue: true });
+    jest.restoreAllMocks();
   });
 });
