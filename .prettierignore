@@ -13,6 +13,7 @@ reference_docs
 raw
 .claude
 apps/api/src/generated
+packages/policy/src/generated/matrix.json
 apps/mobile/assets
 expo-env.d.ts
 CLAUDE.md

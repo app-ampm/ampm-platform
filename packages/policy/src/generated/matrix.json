@@ -21,63 +21,84 @@
       "grants": {
         "SA": [
           {
-            "actions": ["create", "read", "update", "delete"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "SM": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "HT": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "PM": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "CD": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "VC": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "RG": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "HL": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "FA": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
@@ -104,14 +125,23 @@
       "grants": {
         "SA": [
           {
-            "actions": ["create", "read", "update", "delete"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "SM": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "all",
             "note": null
           }
@@ -119,7 +149,11 @@
         "HT": [],
         "PM": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "assigned",
             "note": null
           }
@@ -151,63 +185,84 @@
       "grants": {
         "SA": [
           {
-            "actions": ["create", "read", "update", "delete"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "SM": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "HT": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "PM": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "CD": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "VC": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "RG": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "HL": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "FA": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
@@ -234,7 +289,11 @@
       "grants": {
         "SA": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "all",
             "note": null
           }
@@ -248,7 +307,9 @@
         "HL": [],
         "FA": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
@@ -275,7 +336,10 @@
       "grants": {
         "SA": [
           {
-            "actions": ["read", "export"],
+            "actions": [
+              "read",
+              "export"
+            ],
             "scope": "all",
             "note": null
           }
@@ -284,7 +348,9 @@
         "HT": [],
         "PM": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           }
@@ -295,7 +361,9 @@
         "HL": [],
         "FA": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": "finance entities"
           }
@@ -322,7 +390,10 @@
       "grants": {
         "SA": [
           {
-            "actions": ["create", "read"],
+            "actions": [
+              "create",
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
@@ -330,14 +401,20 @@
         "SM": [],
         "HT": [
           {
-            "actions": ["create", "read"],
+            "actions": [
+              "create",
+              "read"
+            ],
             "scope": "all",
             "note": "hotels"
           }
         ],
         "PM": [
           {
-            "actions": ["create", "read"],
+            "actions": [
+              "create",
+              "read"
+            ],
             "scope": "assigned",
             "note": "guests"
           }
@@ -345,14 +422,20 @@
         "CD": [],
         "VC": [
           {
-            "actions": ["create", "read"],
+            "actions": [
+              "create",
+              "read"
+            ],
             "scope": "all",
             "note": "vendors"
           }
         ],
         "RG": [
           {
-            "actions": ["create", "read"],
+            "actions": [
+              "create",
+              "read"
+            ],
             "scope": "assigned",
             "note": "guests"
           }
@@ -381,63 +464,81 @@
       "grants": {
         "SA": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "SM": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "own",
             "note": null
           }
         ],
         "HT": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "own",
             "note": null
           }
         ],
         "PM": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "own",
             "note": null
           }
         ],
         "CD": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "own",
             "note": null
           }
         ],
         "VC": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "own",
             "note": null
           }
         ],
         "RG": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "own",
             "note": null
           }
         ],
         "HL": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "own",
             "note": null
           }
         ],
         "FA": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "own",
             "note": null
           }
@@ -464,28 +565,42 @@
       "grants": {
         "SA": [
           {
-            "actions": ["create", "read", "update", "delete"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "SM": [
           {
-            "actions": ["create", "read", "update", "delete"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "HT": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "PM": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
@@ -517,28 +632,43 @@
       "grants": {
         "SA": [
           {
-            "actions": ["create", "read", "update", "delete"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "SM": [
           {
-            "actions": ["create", "read", "update", "delete"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "HT": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "PM": [
           {
-            "actions": ["read", "update"],
+            "actions": [
+              "read",
+              "update"
+            ],
             "scope": "assigned",
             "note": null
           }
@@ -547,21 +677,28 @@
         "VC": [],
         "RG": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "HL": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "FA": [
           {
-            "actions": ["read", "update"],
+            "actions": [
+              "read",
+              "update"
+            ],
             "scope": "all",
             "note": "billing"
           }
@@ -588,14 +725,21 @@
       "grants": {
         "SA": [
           {
-            "actions": ["create", "read", "update", "delete"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "SM": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
@@ -608,7 +752,9 @@
         "HL": [],
         "FA": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
@@ -635,21 +781,32 @@
       "grants": {
         "SA": [
           {
-            "actions": ["create", "read", "update", "delete"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "SM": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "HT": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
@@ -661,7 +818,10 @@
         "HL": [],
         "FA": [
           {
-            "actions": ["read", "update"],
+            "actions": [
+              "read",
+              "update"
+            ],
             "scope": "all",
             "note": "status"
           }
@@ -688,28 +848,44 @@
       "grants": {
         "SA": [
           {
-            "actions": ["create", "read", "update", "delete"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "SM": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "HT": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "all",
             "note": "hotel services"
           }
         ],
         "PM": [
           {
-            "actions": ["read", "update"],
+            "actions": [
+              "read",
+              "update"
+            ],
             "scope": "assigned",
             "note": null
           }
@@ -720,7 +896,9 @@
         "HL": [],
         "FA": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
@@ -747,14 +925,21 @@
       "grants": {
         "SA": [
           {
-            "actions": ["create", "read", "update", "delete"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "SM": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
@@ -762,7 +947,9 @@
         "HT": [],
         "PM": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           }
@@ -773,7 +960,12 @@
         "HL": [],
         "FA": [
           {
-            "actions": ["create", "read", "update", "delete"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete"
+            ],
             "scope": "all",
             "note": null
           }
@@ -800,14 +992,21 @@
       "grants": {
         "SA": [
           {
-            "actions": ["create", "read", "update", "delete"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "SM": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
@@ -815,7 +1014,9 @@
         "HT": [],
         "PM": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           }
@@ -826,7 +1027,12 @@
         "HL": [],
         "FA": [
           {
-            "actions": ["create", "read", "update", "delete"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete"
+            ],
             "scope": "all",
             "note": null
           }
@@ -853,7 +1059,12 @@
       "grants": {
         "SA": [
           {
-            "actions": ["create", "read", "update", "delete"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete"
+            ],
             "scope": "all",
             "note": null
           }
@@ -861,14 +1072,18 @@
         "SM": [],
         "HT": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "PM": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           }
@@ -876,7 +1091,9 @@
         "CD": [],
         "VC": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           }
@@ -885,7 +1102,12 @@
         "HL": [],
         "FA": [
           {
-            "actions": ["create", "read", "update", "delete"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete"
+            ],
             "scope": "all",
             "note": null
           }
@@ -912,63 +1134,87 @@
       "grants": {
         "SA": [
           {
-            "actions": ["create", "read", "update", "delete"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "SM": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "HT": [
           {
-            "actions": ["create", "read", "update", "delete"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "PM": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "CD": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "VC": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "RG": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "HL": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "FA": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
@@ -995,63 +1241,87 @@
       "grants": {
         "SA": [
           {
-            "actions": ["create", "read", "update", "delete"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "SM": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "HT": [
           {
-            "actions": ["create", "read", "update", "delete"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "PM": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "CD": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "VC": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "RG": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "HL": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "FA": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
@@ -1078,28 +1348,38 @@
       "grants": {
         "SA": [
           {
-            "actions": ["read", "update"],
+            "actions": [
+              "read",
+              "update"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "SM": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "HT": [
           {
-            "actions": ["read", "update"],
+            "actions": [
+              "read",
+              "update"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "PM": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
@@ -1131,28 +1411,42 @@
       "grants": {
         "SA": [
           {
-            "actions": ["create", "read", "update", "delete"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "SM": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "HT": [
           {
-            "actions": ["create", "read", "update", "delete"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "PM": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
@@ -1162,7 +1456,9 @@
         "RG": [],
         "HL": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           }
@@ -1190,63 +1486,87 @@
       "grants": {
         "SA": [
           {
-            "actions": ["create", "read", "update", "delete"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "SM": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "HT": [
           {
-            "actions": ["create", "read", "update", "delete"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "PM": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "CD": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "VC": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "RG": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "HL": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "FA": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
@@ -1273,28 +1593,42 @@
       "grants": {
         "SA": [
           {
-            "actions": ["create", "read", "update", "delete"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "SM": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "HT": [
           {
-            "actions": ["create", "read", "update", "delete"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "PM": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
@@ -1305,7 +1639,9 @@
         "HL": [],
         "FA": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
@@ -1332,63 +1668,85 @@
       "grants": {
         "SA": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "SM": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "HT": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "PM": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "CD": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "VC": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "RG": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "HL": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "FA": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
@@ -1415,42 +1773,63 @@
       "grants": {
         "SA": [
           {
-            "actions": ["create", "read", "update", "delete", "share"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete",
+              "share"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "SM": [
           {
-            "actions": ["read", "update"],
+            "actions": [
+              "read",
+              "update"
+            ],
             "scope": "all",
             "note": "rights"
           }
         ],
         "HT": [
           {
-            "actions": ["create", "read", "update", "delete", "share"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete",
+              "share"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "PM": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "CD": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "VC": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
@@ -1480,28 +1859,42 @@
       "grants": {
         "SA": [
           {
-            "actions": ["create", "read", "update", "delete"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "SM": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "HT": [
           {
-            "actions": ["create", "read", "update", "delete"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "PM": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
@@ -1533,28 +1926,36 @@
       "grants": {
         "SA": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "SM": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "HT": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "PM": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           }
@@ -1586,28 +1987,44 @@
       "grants": {
         "SA": [
           {
-            "actions": ["create", "read", "update", "delete"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "SM": [
           {
-            "actions": ["create", "read"],
+            "actions": [
+              "create",
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "HT": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "PM": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "assigned",
             "note": null
           }
@@ -1618,7 +2035,9 @@
         "HL": [],
         "FA": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
@@ -1645,28 +2064,41 @@
       "grants": {
         "SA": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "SM": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "HT": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "PM": [
           {
-            "actions": ["create", "read"],
+            "actions": [
+              "create",
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           }
@@ -1698,28 +2130,42 @@
       "grants": {
         "SA": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "SM": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "HT": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "PM": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "assigned",
             "note": null
           }
@@ -1751,28 +2197,44 @@
       "grants": {
         "SA": [
           {
-            "actions": ["create", "read", "update", "share"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "share"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "SM": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "HT": [
           {
-            "actions": ["create", "read", "update", "share"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "share"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "PM": [
           {
-            "actions": ["read", "update", "share"],
+            "actions": [
+              "read",
+              "update",
+              "share"
+            ],
             "scope": "assigned",
             "note": null
           }
@@ -1783,7 +2245,9 @@
         "HL": [],
         "FA": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
@@ -1810,7 +2274,10 @@
       "grants": {
         "SA": [
           {
-            "actions": ["read", "update"],
+            "actions": [
+              "read",
+              "update"
+            ],
             "scope": "all",
             "note": null
           }
@@ -1818,14 +2285,19 @@
         "SM": [],
         "HT": [
           {
-            "actions": ["read", "update"],
+            "actions": [
+              "read",
+              "update"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "PM": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           }
@@ -1836,7 +2308,9 @@
         "HL": [],
         "FA": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
@@ -1863,28 +2337,42 @@
       "grants": {
         "SA": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "SM": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "HT": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "PM": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "assigned",
             "note": null
           }
@@ -1895,7 +2383,10 @@
         "HL": [],
         "FA": [
           {
-            "actions": ["read", "update"],
+            "actions": [
+              "read",
+              "update"
+            ],
             "scope": "all",
             "note": null
           }
@@ -1922,63 +2413,87 @@
       "grants": {
         "SA": [
           {
-            "actions": ["create", "read", "update", "delete"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "SM": [
           {
-            "actions": ["create", "read"],
+            "actions": [
+              "create",
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "HT": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "PM": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "CD": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "VC": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "RG": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "HL": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "FA": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
@@ -2005,7 +2520,10 @@
       "grants": {
         "SA": [
           {
-            "actions": ["read", "update"],
+            "actions": [
+              "read",
+              "update"
+            ],
             "scope": "all",
             "note": null
           }
@@ -2014,7 +2532,10 @@
         "HT": [],
         "PM": [
           {
-            "actions": ["read", "update"],
+            "actions": [
+              "read",
+              "update"
+            ],
             "scope": "assigned",
             "note": null
           }
@@ -2025,7 +2546,9 @@
         "HL": [],
         "FA": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
@@ -2052,7 +2575,11 @@
       "grants": {
         "SA": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "all",
             "note": null
           }
@@ -2060,42 +2587,59 @@
         "SM": [],
         "HT": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "PM": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "CD": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "VC": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "RG": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "HL": [
           {
-            "actions": ["read", "update"],
+            "actions": [
+              "read",
+              "update"
+            ],
             "scope": "assigned",
             "note": null
           }
@@ -2123,7 +2667,12 @@
       "grants": {
         "SA": [
           {
-            "actions": ["create", "read", "update", "delete"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete"
+            ],
             "scope": "all",
             "note": null
           }
@@ -2132,35 +2681,48 @@
         "HT": [],
         "PM": [
           {
-            "actions": ["create", "read", "update", "delete"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "CD": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "VC": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "RG": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "HL": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           }
@@ -2188,14 +2750,23 @@
       "grants": {
         "SA": [
           {
-            "actions": ["create", "read", "update", "delete"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "SM": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "all",
             "note": null
           }
@@ -2203,7 +2774,12 @@
         "HT": [],
         "PM": [
           {
-            "actions": ["create", "read", "update", "delete"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete"
+            ],
             "scope": "assigned",
             "note": null
           }
@@ -2235,63 +2811,89 @@
       "grants": {
         "SA": [
           {
-            "actions": ["create", "read", "update", "delete"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "SM": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "HT": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "PM": [
           {
-            "actions": ["create", "read", "update", "delete"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "CD": [
           {
-            "actions": ["read", "update"],
+            "actions": [
+              "read",
+              "update"
+            ],
             "scope": "assigned",
             "note": "theme dress code"
           }
         ],
         "VC": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "RG": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "HL": [
           {
-            "actions": ["read", "update"],
+            "actions": [
+              "read",
+              "update"
+            ],
             "scope": "assigned",
             "note": "logistics notes"
           }
         ],
         "FA": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
@@ -2318,7 +2920,13 @@
       "grants": {
         "SA": [
           {
-            "actions": ["create", "read", "update", "delete", "share"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete",
+              "share"
+            ],
             "scope": "all",
             "note": null
           }
@@ -2327,35 +2935,51 @@
         "HT": [],
         "PM": [
           {
-            "actions": ["create", "read", "update", "delete", "share"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete",
+              "share"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "CD": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "VC": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "RG": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "HL": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "assigned",
             "note": null
           }
@@ -2383,7 +3007,12 @@
       "grants": {
         "SA": [
           {
-            "actions": ["create", "read", "update", "delete"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete"
+            ],
             "scope": "all",
             "note": null
           }
@@ -2392,35 +3021,51 @@
         "HT": [],
         "PM": [
           {
-            "actions": ["create", "read", "update", "delete"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "CD": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "VC": [
           {
-            "actions": ["read", "update"],
+            "actions": [
+              "read",
+              "update"
+            ],
             "scope": "assigned",
             "note": "vendor cues"
           }
         ],
         "RG": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "HL": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "assigned",
             "note": null
           }
@@ -2448,7 +3093,11 @@
       "grants": {
         "SA": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "all",
             "note": null
           }
@@ -2457,35 +3106,51 @@
         "HT": [],
         "PM": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "CD": [
           {
-            "actions": ["read", "update"],
+            "actions": [
+              "read",
+              "update"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "VC": [
           {
-            "actions": ["read", "update"],
+            "actions": [
+              "read",
+              "update"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "RG": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "HL": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "assigned",
             "note": null
           }
@@ -2513,7 +3178,9 @@
       "grants": {
         "SA": [
           {
-            "actions": ["approve"],
+            "actions": [
+              "approve"
+            ],
             "scope": "all",
             "note": null
           }
@@ -2548,7 +3215,9 @@
       "grants": {
         "SA": [
           {
-            "actions": ["update"],
+            "actions": [
+              "update"
+            ],
             "scope": "all",
             "note": null
           }
@@ -2557,7 +3226,9 @@
         "HT": [],
         "PM": [
           {
-            "actions": ["update"],
+            "actions": [
+              "update"
+            ],
             "scope": "assigned",
             "note": null
           }
@@ -2589,63 +3260,87 @@
       "grants": {
         "SA": [
           {
-            "actions": ["create", "read", "update", "delete"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "SM": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "HT": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "PM": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "CD": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "VC": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "RG": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "HL": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "FA": [
           {
-            "actions": ["create", "read", "update", "delete"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete"
+            ],
             "scope": "all",
             "note": null
           }
@@ -2672,7 +3367,13 @@
       "grants": {
         "SA": [
           {
-            "actions": ["create", "read", "update", "delete", "share"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete",
+              "share"
+            ],
             "scope": "all",
             "note": null
           }
@@ -2680,28 +3381,41 @@
         "SM": [],
         "HT": [
           {
-            "actions": ["read", "update"],
+            "actions": [
+              "read",
+              "update"
+            ],
             "scope": "all",
             "note": "hotel lines"
           }
         ],
         "PM": [
           {
-            "actions": ["create", "read", "update", "share"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "share"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "CD": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "VC": [
           {
-            "actions": ["read", "update"],
+            "actions": [
+              "read",
+              "update"
+            ],
             "scope": "assigned",
             "note": "vendor lines"
           }
@@ -2709,14 +3423,21 @@
         "RG": [],
         "HL": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "FA": [
           {
-            "actions": ["create", "read", "update", "share"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "share"
+            ],
             "scope": "all",
             "note": null
           }
@@ -2743,7 +3464,10 @@
       "grants": {
         "SA": [
           {
-            "actions": ["read", "update"],
+            "actions": [
+              "read",
+              "update"
+            ],
             "scope": "all",
             "note": null
           }
@@ -2751,14 +3475,20 @@
         "SM": [],
         "HT": [
           {
-            "actions": ["read", "update"],
+            "actions": [
+              "read",
+              "update"
+            ],
             "scope": "all",
             "note": "hotel lines"
           }
         ],
         "PM": [
           {
-            "actions": ["read", "update"],
+            "actions": [
+              "read",
+              "update"
+            ],
             "scope": "assigned",
             "note": null
           }
@@ -2766,7 +3496,10 @@
         "CD": [],
         "VC": [
           {
-            "actions": ["read", "update"],
+            "actions": [
+              "read",
+              "update"
+            ],
             "scope": "assigned",
             "note": "vendor lines"
           }
@@ -2775,7 +3508,10 @@
         "HL": [],
         "FA": [
           {
-            "actions": ["read", "update"],
+            "actions": [
+              "read",
+              "update"
+            ],
             "scope": "all",
             "note": null
           }
@@ -2802,7 +3538,12 @@
       "grants": {
         "SA": [
           {
-            "actions": ["create", "read", "update", "delete"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete"
+            ],
             "scope": "all",
             "note": null
           }
@@ -2810,14 +3551,20 @@
         "SM": [],
         "HT": [
           {
-            "actions": ["create", "read"],
+            "actions": [
+              "create",
+              "read"
+            ],
             "scope": "all",
             "note": "hotel"
           }
         ],
         "PM": [
           {
-            "actions": ["create", "read"],
+            "actions": [
+              "create",
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           }
@@ -2825,7 +3572,10 @@
         "CD": [],
         "VC": [
           {
-            "actions": ["create", "read"],
+            "actions": [
+              "create",
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           }
@@ -2834,7 +3584,12 @@
         "HL": [],
         "FA": [
           {
-            "actions": ["create", "read", "update", "delete"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete"
+            ],
             "scope": "all",
             "note": null
           }
@@ -2861,7 +3616,12 @@
       "grants": {
         "SA": [
           {
-            "actions": ["create", "read", "update", "delete"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete"
+            ],
             "scope": "all",
             "note": null
           }
@@ -2870,7 +3630,9 @@
         "HT": [],
         "PM": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           }
@@ -2878,7 +3640,12 @@
         "CD": [],
         "VC": [
           {
-            "actions": ["create", "read", "update", "delete"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete"
+            ],
             "scope": "all",
             "note": null
           }
@@ -2887,7 +3654,9 @@
         "HL": [],
         "FA": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
@@ -2914,14 +3683,21 @@
       "grants": {
         "SA": [
           {
-            "actions": ["create", "read", "update", "share"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "share"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "SM": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
@@ -2929,7 +3705,11 @@
         "HT": [],
         "PM": [
           {
-            "actions": ["read", "update", "share"],
+            "actions": [
+              "read",
+              "update",
+              "share"
+            ],
             "scope": "assigned",
             "note": null
           }
@@ -2940,7 +3720,12 @@
         "HL": [],
         "FA": [
           {
-            "actions": ["create", "read", "update", "share"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "share"
+            ],
             "scope": "all",
             "note": null
           }
@@ -2967,7 +3752,11 @@
       "grants": {
         "SA": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "all",
             "note": null
           }
@@ -2975,14 +3764,20 @@
         "SM": [],
         "HT": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "all",
             "note": "hotel"
           }
         ],
         "PM": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           }
@@ -2990,7 +3785,11 @@
         "CD": [],
         "VC": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "all",
             "note": "vendor"
           }
@@ -2999,7 +3798,10 @@
         "HL": [],
         "FA": [
           {
-            "actions": ["read", "update"],
+            "actions": [
+              "read",
+              "update"
+            ],
             "scope": "all",
             "note": null
           }
@@ -3026,14 +3828,21 @@
       "grants": {
         "SA": [
           {
-            "actions": ["create", "read", "update", "share"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "share"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "SM": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
@@ -3041,7 +3850,9 @@
         "HT": [],
         "PM": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           }
@@ -3052,7 +3863,12 @@
         "HL": [],
         "FA": [
           {
-            "actions": ["create", "read", "update", "share"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "share"
+            ],
             "scope": "all",
             "note": null
           }
@@ -3079,7 +3895,11 @@
       "grants": {
         "SA": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "all",
             "note": null
           }
@@ -3087,14 +3907,19 @@
         "SM": [],
         "HT": [
           {
-            "actions": ["create", "read"],
+            "actions": [
+              "create",
+              "read"
+            ],
             "scope": "all",
             "note": "hotel"
           }
         ],
         "PM": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           }
@@ -3102,7 +3927,10 @@
         "CD": [],
         "VC": [
           {
-            "actions": ["create", "read"],
+            "actions": [
+              "create",
+              "read"
+            ],
             "scope": "assigned",
             "note": "vendor"
           }
@@ -3111,7 +3939,11 @@
         "HL": [],
         "FA": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "all",
             "note": null
           }
@@ -3138,7 +3970,12 @@
       "grants": {
         "SA": [
           {
-            "actions": ["create", "read", "update", "approve"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "approve"
+            ],
             "scope": "all",
             "note": null
           }
@@ -3147,7 +3984,10 @@
         "HT": [],
         "PM": [
           {
-            "actions": ["read", "update"],
+            "actions": [
+              "read",
+              "update"
+            ],
             "scope": "assigned",
             "note": null
           }
@@ -3158,7 +3998,12 @@
         "HL": [],
         "FA": [
           {
-            "actions": ["create", "read", "update", "approve"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "approve"
+            ],
             "scope": "all",
             "note": null
           }
@@ -3185,63 +4030,86 @@
       "grants": {
         "SA": [
           {
-            "actions": ["create", "read", "update", "delete"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "SM": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "HT": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "PM": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "CD": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "VC": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "RG": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "HL": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "FA": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
@@ -3268,14 +4136,21 @@
       "grants": {
         "SA": [
           {
-            "actions": ["create", "read", "update", "delete"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "SM": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
@@ -3283,21 +4158,30 @@
         "HT": [],
         "PM": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "CD": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "VC": [
           {
-            "actions": ["create", "read", "update", "delete"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete"
+            ],
             "scope": "all",
             "note": null
           }
@@ -3305,14 +4189,18 @@
         "RG": [],
         "HL": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "FA": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
@@ -3339,7 +4227,10 @@
       "grants": {
         "SA": [
           {
-            "actions": ["read", "update"],
+            "actions": [
+              "read",
+              "update"
+            ],
             "scope": "all",
             "note": null
           }
@@ -3348,7 +4239,9 @@
         "HT": [],
         "PM": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           }
@@ -3356,7 +4249,10 @@
         "CD": [],
         "VC": [
           {
-            "actions": ["read", "update"],
+            "actions": [
+              "read",
+              "update"
+            ],
             "scope": "all",
             "note": null
           }
@@ -3364,7 +4260,9 @@
         "RG": [],
         "HL": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           }
@@ -3392,7 +4290,10 @@
       "grants": {
         "SA": [
           {
-            "actions": ["read", "update"],
+            "actions": [
+              "read",
+              "update"
+            ],
             "scope": "all",
             "note": null
           }
@@ -3401,7 +4302,9 @@
         "HT": [],
         "PM": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           }
@@ -3409,7 +4312,10 @@
         "CD": [],
         "VC": [
           {
-            "actions": ["read", "update"],
+            "actions": [
+              "read",
+              "update"
+            ],
             "scope": "all",
             "note": null
           }
@@ -3439,7 +4345,9 @@
       "grants": {
         "SA": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
@@ -3450,7 +4358,10 @@
         "CD": [],
         "VC": [
           {
-            "actions": ["read", "update"],
+            "actions": [
+              "read",
+              "update"
+            ],
             "scope": "all",
             "note": null
           }
@@ -3459,7 +4370,10 @@
         "HL": [],
         "FA": [
           {
-            "actions": ["read", "update"],
+            "actions": [
+              "read",
+              "update"
+            ],
             "scope": "all",
             "note": null
           }
@@ -3486,7 +4400,11 @@
       "grants": {
         "SA": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "all",
             "note": null
           }
@@ -3495,7 +4413,9 @@
         "HT": [],
         "PM": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
@@ -3503,7 +4423,11 @@
         "CD": [],
         "VC": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "all",
             "note": null
           }
@@ -3533,7 +4457,12 @@
       "grants": {
         "SA": [
           {
-            "actions": ["create", "read", "update", "delete"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete"
+            ],
             "scope": "all",
             "note": null
           }
@@ -3542,21 +4471,31 @@
         "HT": [],
         "PM": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "CD": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "VC": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "all",
             "note": null
           }
@@ -3564,14 +4503,18 @@
         "RG": [],
         "HL": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "FA": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
@@ -3598,7 +4541,12 @@
       "grants": {
         "SA": [
           {
-            "actions": ["create", "read", "update", "share"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "share"
+            ],
             "scope": "all",
             "note": null
           }
@@ -3607,21 +4555,32 @@
         "HT": [],
         "PM": [
           {
-            "actions": ["read", "update", "share"],
+            "actions": [
+              "read",
+              "update",
+              "share"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "CD": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "VC": [
           {
-            "actions": ["create", "read", "update", "share"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "share"
+            ],
             "scope": "all",
             "note": null
           }
@@ -3630,7 +4589,9 @@
         "HL": [],
         "FA": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
@@ -3657,7 +4618,10 @@
       "grants": {
         "SA": [
           {
-            "actions": ["read", "update"],
+            "actions": [
+              "read",
+              "update"
+            ],
             "scope": "all",
             "note": null
           }
@@ -3666,7 +4630,9 @@
         "HT": [],
         "PM": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           }
@@ -3674,7 +4640,10 @@
         "CD": [],
         "VC": [
           {
-            "actions": ["read", "update"],
+            "actions": [
+              "read",
+              "update"
+            ],
             "scope": "all",
             "note": null
           }
@@ -3683,7 +4652,9 @@
         "HL": [],
         "FA": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
@@ -3710,7 +4681,12 @@
       "grants": {
         "SA": [
           {
-            "actions": ["create", "read", "update", "delete"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete"
+            ],
             "scope": "all",
             "note": null
           }
@@ -3719,21 +4695,32 @@
         "HT": [],
         "PM": [
           {
-            "actions": ["create", "read", "update", "approve"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "approve"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "CD": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "VC": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "all",
             "note": null
           }
@@ -3741,7 +4728,9 @@
         "RG": [],
         "HL": [
           {
-            "actions": ["update"],
+            "actions": [
+              "update"
+            ],
             "scope": "assigned",
             "note": "mark delivered"
           }
@@ -3769,7 +4758,12 @@
       "grants": {
         "SA": [
           {
-            "actions": ["create", "read", "update", "delete"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete"
+            ],
             "scope": "all",
             "note": null
           }
@@ -3778,21 +4772,31 @@
         "HT": [],
         "PM": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "CD": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "VC": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "all",
             "note": null
           }
@@ -3800,7 +4804,9 @@
         "RG": [],
         "HL": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           }
@@ -3828,7 +4834,10 @@
       "grants": {
         "SA": [
           {
-            "actions": ["read", "update"],
+            "actions": [
+              "read",
+              "update"
+            ],
             "scope": "all",
             "note": null
           }
@@ -3837,7 +4846,9 @@
         "HT": [],
         "PM": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           }
@@ -3845,7 +4856,10 @@
         "CD": [],
         "VC": [
           {
-            "actions": ["read", "update"],
+            "actions": [
+              "read",
+              "update"
+            ],
             "scope": "all",
             "note": null
           }
@@ -3854,7 +4868,9 @@
         "HL": [],
         "FA": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
@@ -3881,7 +4897,12 @@
       "grants": {
         "SA": [
           {
-            "actions": ["create", "read", "update", "delete"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete"
+            ],
             "scope": "all",
             "note": null
           }
@@ -3890,21 +4911,31 @@
         "HT": [],
         "PM": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "CD": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "VC": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "all",
             "note": null
           }
@@ -3912,7 +4943,11 @@
         "RG": [],
         "HL": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "assigned",
             "note": null
           }
@@ -3940,7 +4975,13 @@
       "grants": {
         "SA": [
           {
-            "actions": ["create", "read", "update", "delete", "share"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete",
+              "share"
+            ],
             "scope": "all",
             "note": null
           }
@@ -3949,35 +4990,52 @@
         "HT": [],
         "PM": [
           {
-            "actions": ["create", "read", "update", "share"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "share"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "CD": [
           {
-            "actions": ["create", "read", "update", "delete", "share"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete",
+              "share"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "VC": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "RG": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "HL": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           }
@@ -4005,103 +5063,156 @@
       "grants": {
         "SA": [
           {
-            "actions": ["create", "read", "update", "delete"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "SM": [
           {
-            "actions": ["create", "read"],
+            "actions": [
+              "create",
+              "read"
+            ],
             "scope": "own",
             "note": null
           },
           {
-            "actions": ["update", "delete"],
+            "actions": [
+              "update",
+              "delete"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "HT": [
           {
-            "actions": ["create", "read"],
+            "actions": [
+              "create",
+              "read"
+            ],
             "scope": "own",
             "note": null
           },
           {
-            "actions": ["update", "delete"],
+            "actions": [
+              "update",
+              "delete"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "PM": [
           {
-            "actions": ["create", "read"],
+            "actions": [
+              "create",
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           },
           {
-            "actions": ["update", "delete"],
+            "actions": [
+              "update",
+              "delete"
+            ],
             "scope": "own",
             "note": null
           }
         ],
         "CD": [
           {
-            "actions": ["create", "read"],
+            "actions": [
+              "create",
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           },
           {
-            "actions": ["update", "delete"],
+            "actions": [
+              "update",
+              "delete"
+            ],
             "scope": "own",
             "note": null
           }
         ],
         "VC": [
           {
-            "actions": ["create", "read"],
+            "actions": [
+              "create",
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           },
           {
-            "actions": ["update", "delete"],
+            "actions": [
+              "update",
+              "delete"
+            ],
             "scope": "own",
             "note": null
           }
         ],
         "RG": [
           {
-            "actions": ["create", "read"],
+            "actions": [
+              "create",
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           },
           {
-            "actions": ["update", "delete"],
+            "actions": [
+              "update",
+              "delete"
+            ],
             "scope": "own",
             "note": null
           }
         ],
         "HL": [
           {
-            "actions": ["create", "read"],
+            "actions": [
+              "create",
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           },
           {
-            "actions": ["update", "delete"],
+            "actions": [
+              "update",
+              "delete"
+            ],
             "scope": "own",
             "note": null
           }
         ],
         "FA": [
           {
-            "actions": ["create", "read"],
+            "actions": [
+              "create",
+              "read"
+            ],
             "scope": "own",
             "note": null
           },
           {
-            "actions": ["update", "delete"],
+            "actions": [
+              "update",
+              "delete"
+            ],
             "scope": "all",
             "note": null
           }
@@ -4128,7 +5239,12 @@
       "grants": {
         "SA": [
           {
-            "actions": ["create", "read", "update", "delete"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete"
+            ],
             "scope": "all",
             "note": null
           }
@@ -4136,35 +5252,55 @@
         "SM": [],
         "HT": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "all",
             "note": "hotel threads"
           }
         ],
         "PM": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "CD": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "assigned",
             "note": "design threads"
           }
         ],
         "VC": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "assigned",
             "note": "proposal threads"
           }
         ],
         "RG": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "assigned",
             "note": "guest threads"
           }
@@ -4172,7 +5308,11 @@
         "HL": [],
         "FA": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "all",
             "note": "invoice threads"
           }
@@ -4199,63 +5339,92 @@
       "grants": {
         "SA": [
           {
-            "actions": ["create", "read", "update", "delete", "approve"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete",
+              "approve"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "SM": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "HT": [
           {
-            "actions": ["read", "update"],
+            "actions": [
+              "read",
+              "update"
+            ],
             "scope": "all",
             "note": "hotel-related"
           }
         ],
         "PM": [
           {
-            "actions": ["read", "update", "approve"],
+            "actions": [
+              "read",
+              "update",
+              "approve"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "CD": [
           {
-            "actions": ["read", "update"],
+            "actions": [
+              "read",
+              "update"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "VC": [
           {
-            "actions": ["read", "update"],
+            "actions": [
+              "read",
+              "update"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "RG": [
           {
-            "actions": ["read", "update"],
+            "actions": [
+              "read",
+              "update"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "HL": [
           {
-            "actions": ["read", "update"],
+            "actions": [
+              "read",
+              "update"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "FA": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
@@ -4282,7 +5451,11 @@
       "grants": {
         "SA": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "all",
             "note": null
           }
@@ -4290,28 +5463,38 @@
         "SM": [],
         "HT": [
           {
-            "actions": ["create"],
+            "actions": [
+              "create"
+            ],
             "scope": "all",
             "note": "hotel proposals"
           }
         ],
         "PM": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "CD": [
           {
-            "actions": ["create"],
+            "actions": [
+              "create"
+            ],
             "scope": "assigned",
             "note": "designs invitations"
           }
         ],
         "VC": [
           {
-            "actions": ["create"],
+            "actions": [
+              "create"
+            ],
             "scope": "all",
             "note": "proposals"
           }
@@ -4320,7 +5503,9 @@
         "HL": [],
         "FA": [
           {
-            "actions": ["create"],
+            "actions": [
+              "create"
+            ],
             "scope": "all",
             "note": "budget lines contracts invoices"
           }
@@ -4347,7 +5532,9 @@
       "grants": {
         "SA": [
           {
-            "actions": ["approve"],
+            "actions": [
+              "approve"
+            ],
             "scope": "all",
             "note": null
           }
@@ -4356,7 +5543,9 @@
         "HT": [],
         "PM": [
           {
-            "actions": ["approve"],
+            "actions": [
+              "approve"
+            ],
             "scope": "assigned",
             "note": null
           }
@@ -4388,63 +5577,94 @@
       "grants": {
         "SA": [
           {
-            "actions": ["create", "read", "update", "delete"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "SM": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "HT": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "all",
             "note": "hotel conversations"
           }
         ],
         "PM": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "CD": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "VC": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "RG": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "assigned",
             "note": "guest conversations"
           }
         ],
         "HL": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "FA": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
@@ -4471,7 +5691,13 @@
       "grants": {
         "SA": [
           {
-            "actions": ["create", "read", "update", "delete", "share"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete",
+              "share"
+            ],
             "scope": "all",
             "note": null
           }
@@ -4480,14 +5706,23 @@
         "HT": [],
         "PM": [
           {
-            "actions": ["create", "read", "update", "share"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "share"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "CD": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "assigned",
             "note": null
           }
@@ -4495,7 +5730,10 @@
         "VC": [],
         "RG": [
           {
-            "actions": ["read", "update"],
+            "actions": [
+              "read",
+              "update"
+            ],
             "scope": "assigned",
             "note": null
           }
@@ -4524,7 +5762,11 @@
       "grants": {
         "SA": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "all",
             "note": null
           }
@@ -4533,7 +5775,9 @@
         "HT": [],
         "PM": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           }
@@ -4542,7 +5786,11 @@
         "VC": [],
         "RG": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "assigned",
             "note": null
           }
@@ -4571,7 +5819,12 @@
       "grants": {
         "SA": [
           {
-            "actions": ["create", "read", "update", "delete"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete"
+            ],
             "scope": "all",
             "note": null
           }
@@ -4580,7 +5833,11 @@
         "HT": [],
         "PM": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "assigned",
             "note": null
           }
@@ -4589,14 +5846,22 @@
         "VC": [],
         "RG": [
           {
-            "actions": ["create", "read", "update", "delete"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "HL": [
           {
-            "actions": ["read", "update"],
+            "actions": [
+              "read",
+              "update"
+            ],
             "scope": "assigned",
             "note": null
           }
@@ -4624,7 +5889,9 @@
       "grants": {
         "SA": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
@@ -4633,7 +5900,9 @@
         "HT": [],
         "PM": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           }
@@ -4642,14 +5911,19 @@
         "VC": [],
         "RG": [
           {
-            "actions": ["read", "update"],
+            "actions": [
+              "read",
+              "update"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "HL": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           }
@@ -4677,7 +5951,10 @@
       "grants": {
         "SA": [
           {
-            "actions": ["read", "update"],
+            "actions": [
+              "read",
+              "update"
+            ],
             "scope": "all",
             "note": null
           }
@@ -4686,7 +5963,9 @@
         "HT": [],
         "PM": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           }
@@ -4695,14 +5974,20 @@
         "VC": [],
         "RG": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "HL": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           }
@@ -4730,7 +6015,9 @@
       "grants": {
         "SA": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": "break-glass"
           }
@@ -4742,14 +6029,20 @@
         "VC": [],
         "RG": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "assigned",
             "note": "with explicit grant"
           }
         ],
         "HL": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "assigned",
             "note": "check-in only"
           }
@@ -4777,7 +6070,11 @@
       "grants": {
         "SA": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "all",
             "note": null
           }
@@ -4786,7 +6083,10 @@
         "HT": [],
         "PM": [
           {
-            "actions": ["read", "update"],
+            "actions": [
+              "read",
+              "update"
+            ],
             "scope": "assigned",
             "note": null
           }
@@ -4795,14 +6095,20 @@
         "VC": [],
         "RG": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "HL": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           }
@@ -4830,7 +6136,11 @@
       "grants": {
         "SA": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "all",
             "note": null
           }
@@ -4839,7 +6149,11 @@
         "HT": [],
         "PM": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "assigned",
             "note": null
           }
@@ -4848,7 +6162,11 @@
         "VC": [],
         "RG": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "assigned",
             "note": null
           }
@@ -4877,7 +6195,9 @@
       "grants": {
         "SA": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
@@ -4886,7 +6206,9 @@
         "HT": [],
         "PM": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           }
@@ -4895,7 +6217,10 @@
         "VC": [],
         "RG": [
           {
-            "actions": ["create", "read"],
+            "actions": [
+              "create",
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           }
@@ -4924,7 +6249,11 @@
       "grants": {
         "SA": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "all",
             "note": null
           }
@@ -4933,7 +6262,10 @@
         "HT": [],
         "PM": [
           {
-            "actions": ["read", "update"],
+            "actions": [
+              "read",
+              "update"
+            ],
             "scope": "assigned",
             "note": null
           }
@@ -4942,14 +6274,22 @@
         "VC": [],
         "RG": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "HL": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "assigned",
             "note": null
           }
@@ -4977,7 +6317,11 @@
       "grants": {
         "SA": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "all",
             "note": null
           }
@@ -4985,14 +6329,22 @@
         "SM": [],
         "HT": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "PM": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "assigned",
             "note": null
           }
@@ -5001,21 +6353,27 @@
         "VC": [],
         "RG": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "HL": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "FA": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
@@ -5042,7 +6400,10 @@
       "grants": {
         "SA": [
           {
-            "actions": ["read", "update"],
+            "actions": [
+              "read",
+              "update"
+            ],
             "scope": "all",
             "note": null
           }
@@ -5050,14 +6411,19 @@
         "SM": [],
         "HT": [
           {
-            "actions": ["read", "update"],
+            "actions": [
+              "read",
+              "update"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "PM": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           }
@@ -5068,7 +6434,9 @@
         "HL": [],
         "FA": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
@@ -5095,7 +6463,12 @@
       "grants": {
         "SA": [
           {
-            "actions": ["create", "read", "update", "delete"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete"
+            ],
             "scope": "all",
             "note": null
           }
@@ -5103,14 +6476,19 @@
         "SM": [],
         "HT": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "PM": [
           {
-            "actions": ["read", "update"],
+            "actions": [
+              "read",
+              "update"
+            ],
             "scope": "assigned",
             "note": null
           }
@@ -5119,14 +6497,23 @@
         "VC": [],
         "RG": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "HL": [
           {
-            "actions": ["create", "read", "update", "delete"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete"
+            ],
             "scope": "assigned",
             "note": null
           }
@@ -5154,7 +6541,11 @@
       "grants": {
         "SA": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "all",
             "note": null
           }
@@ -5163,7 +6554,9 @@
         "HT": [],
         "PM": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           }
@@ -5172,14 +6565,22 @@
         "VC": [],
         "RG": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "HL": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "assigned",
             "note": null
           }
@@ -5207,7 +6608,12 @@
       "grants": {
         "SA": [
           {
-            "actions": ["create", "read", "update", "delete"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete"
+            ],
             "scope": "all",
             "note": null
           }
@@ -5216,7 +6622,10 @@
         "HT": [],
         "PM": [
           {
-            "actions": ["read", "update"],
+            "actions": [
+              "read",
+              "update"
+            ],
             "scope": "assigned",
             "note": null
           }
@@ -5224,21 +6633,30 @@
         "CD": [],
         "VC": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "assigned",
             "note": "transport vendor"
           }
         ],
         "RG": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "HL": [
           {
-            "actions": ["create", "read", "update", "delete"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete"
+            ],
             "scope": "assigned",
             "note": null
           }
@@ -5266,7 +6684,11 @@
       "grants": {
         "SA": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "all",
             "note": null
           }
@@ -5275,7 +6697,9 @@
         "HT": [],
         "PM": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           }
@@ -5284,14 +6708,21 @@
         "VC": [],
         "RG": [
           {
-            "actions": ["read", "update"],
+            "actions": [
+              "read",
+              "update"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "HL": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "assigned",
             "note": null
           }
@@ -5319,7 +6750,11 @@
       "grants": {
         "SA": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "all",
             "note": null
           }
@@ -5328,7 +6763,10 @@
         "HT": [],
         "PM": [
           {
-            "actions": ["read", "update"],
+            "actions": [
+              "read",
+              "update"
+            ],
             "scope": "assigned",
             "note": null
           }
@@ -5337,14 +6775,20 @@
         "VC": [],
         "RG": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "HL": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "assigned",
             "note": null
           }
@@ -5372,7 +6816,13 @@
       "grants": {
         "SA": [
           {
-            "actions": ["create", "read", "update", "delete", "share"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete",
+              "share"
+            ],
             "scope": "all",
             "note": null
           }
@@ -5381,35 +6831,50 @@
         "HT": [],
         "PM": [
           {
-            "actions": ["create", "read", "update", "share"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "share"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "CD": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "VC": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "RG": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "HL": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           }
@@ -5437,7 +6902,9 @@
       "grants": {
         "SA": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
@@ -5446,7 +6913,9 @@
         "HT": [],
         "PM": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           }
@@ -5454,21 +6923,27 @@
         "CD": [],
         "VC": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "RG": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "HL": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           }
@@ -5496,63 +6971,101 @@
       "grants": {
         "SA": [
           {
-            "actions": ["create", "read", "update", "delete"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "SM": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "own",
             "note": null
           }
         ],
         "HT": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "own",
             "note": null
           }
         ],
         "PM": [
           {
-            "actions": ["create", "read", "update", "delete"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "CD": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "VC": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "RG": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "HL": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "FA": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "own",
             "note": null
           }
@@ -5579,7 +7092,12 @@
       "grants": {
         "SA": [
           {
-            "actions": ["create", "read", "update", "delete"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete"
+            ],
             "scope": "all",
             "note": null
           }
@@ -5588,35 +7106,52 @@
         "HT": [],
         "PM": [
           {
-            "actions": ["create", "read", "update", "delete"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "CD": [
           {
-            "actions": ["create", "read"],
+            "actions": [
+              "create",
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "VC": [
           {
-            "actions": ["create", "read"],
+            "actions": [
+              "create",
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "RG": [
           {
-            "actions": ["create", "read"],
+            "actions": [
+              "create",
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "HL": [
           {
-            "actions": ["create", "read"],
+            "actions": [
+              "create",
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           }
@@ -5644,7 +7179,12 @@
       "grants": {
         "SA": [
           {
-            "actions": ["create", "read", "update", "delete"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete"
+            ],
             "scope": "all",
             "note": null
           }
@@ -5653,35 +7193,50 @@
         "HT": [],
         "PM": [
           {
-            "actions": ["create", "read", "update", "delete"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "CD": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "own",
             "note": null
           }
         ],
         "VC": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "own",
             "note": null
           }
         ],
         "RG": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "own",
             "note": null
           }
         ],
         "HL": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "assigned",
             "note": null
           }
@@ -5709,7 +7264,12 @@
       "grants": {
         "SA": [
           {
-            "actions": ["create", "read", "update", "delete"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete"
+            ],
             "scope": "all",
             "note": null
           }
@@ -5718,35 +7278,53 @@
         "HT": [],
         "PM": [
           {
-            "actions": ["create", "read", "update", "approve"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "approve"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "CD": [
           {
-            "actions": ["create", "read"],
+            "actions": [
+              "create",
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "VC": [
           {
-            "actions": ["create", "read"],
+            "actions": [
+              "create",
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "RG": [
           {
-            "actions": ["create", "read"],
+            "actions": [
+              "create",
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "HL": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "assigned",
             "note": null
           }
@@ -5774,63 +7352,101 @@
       "grants": {
         "SA": [
           {
-            "actions": ["create", "read", "update", "delete"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "SM": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "HT": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "PM": [
           {
-            "actions": ["create", "read", "update", "delete"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "CD": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "VC": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "RG": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "HL": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "FA": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "all",
             "note": null
           }
@@ -5857,7 +7473,9 @@
       "grants": {
         "SA": [
           {
-            "actions": ["share"],
+            "actions": [
+              "share"
+            ],
             "scope": "all",
             "note": null
           }
@@ -5865,28 +7483,36 @@
         "SM": [],
         "HT": [
           {
-            "actions": ["share"],
+            "actions": [
+              "share"
+            ],
             "scope": "all",
             "note": "hotel proposals"
           }
         ],
         "PM": [
           {
-            "actions": ["share"],
+            "actions": [
+              "share"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "CD": [
           {
-            "actions": ["share"],
+            "actions": [
+              "share"
+            ],
             "scope": "assigned",
             "note": "designs"
           }
         ],
         "VC": [
           {
-            "actions": ["share"],
+            "actions": [
+              "share"
+            ],
             "scope": "all",
             "note": "proposals"
           }
@@ -5895,7 +7521,9 @@
         "HL": [],
         "FA": [
           {
-            "actions": ["share"],
+            "actions": [
+              "share"
+            ],
             "scope": "all",
             "note": "invoices client contracts"
           }
@@ -5922,42 +7550,67 @@
       "grants": {
         "SA": [
           {
-            "actions": ["create", "read", "update", "delete"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "SM": [
           {
-            "actions": ["read", "update"],
+            "actions": [
+              "read",
+              "update"
+            ],
             "scope": "all",
             "note": "rights showcase"
           }
         ],
         "HT": [
           {
-            "actions": ["create", "read", "update", "delete"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete"
+            ],
             "scope": "all",
             "note": "hotels"
           }
         ],
         "PM": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "CD": [
           {
-            "actions": ["create", "read", "update", "delete"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete"
+            ],
             "scope": "assigned",
             "note": "designs"
           }
         ],
         "VC": [
           {
-            "actions": ["create", "read", "update", "delete"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete"
+            ],
             "scope": "all",
             "note": "vendors"
           }
@@ -5987,63 +7640,84 @@
       "grants": {
         "SA": [
           {
-            "actions": ["create", "read", "update", "delete"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "SM": [
           {
-            "actions": ["create"],
+            "actions": [
+              "create"
+            ],
             "scope": "own",
             "note": null
           }
         ],
         "HT": [
           {
-            "actions": ["create"],
+            "actions": [
+              "create"
+            ],
             "scope": "own",
             "note": null
           }
         ],
         "PM": [
           {
-            "actions": ["create"],
+            "actions": [
+              "create"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "CD": [
           {
-            "actions": ["create"],
+            "actions": [
+              "create"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "VC": [
           {
-            "actions": ["create"],
+            "actions": [
+              "create"
+            ],
             "scope": "own",
             "note": null
           }
         ],
         "RG": [
           {
-            "actions": ["create"],
+            "actions": [
+              "create"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "HL": [
           {
-            "actions": ["create"],
+            "actions": [
+              "create"
+            ],
             "scope": "assigned",
             "note": null
           }
         ],
         "FA": [
           {
-            "actions": ["create"],
+            "actions": [
+              "create"
+            ],
             "scope": "own",
             "note": null
           }
@@ -6070,7 +7744,11 @@
       "grants": {
         "SA": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "all",
             "note": null
           }
@@ -6079,7 +7757,11 @@
         "HT": [],
         "PM": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "assigned",
             "note": null
           }
@@ -6087,7 +7769,9 @@
         "CD": [],
         "VC": [
           {
-            "actions": ["update"],
+            "actions": [
+              "update"
+            ],
             "scope": "all",
             "note": "vendor completion"
           }
@@ -6095,14 +7779,18 @@
         "RG": [],
         "HL": [
           {
-            "actions": ["update"],
+            "actions": [
+              "update"
+            ],
             "scope": "assigned",
             "note": "departures lost and found"
           }
         ],
         "FA": [
           {
-            "actions": ["update"],
+            "actions": [
+              "update"
+            ],
             "scope": "all",
             "note": "final accounts"
           }
@@ -6129,7 +7817,9 @@
       "grants": {
         "SA": [
           {
-            "actions": ["approve"],
+            "actions": [
+              "approve"
+            ],
             "scope": "all",
             "note": null
           }
@@ -6138,7 +7828,9 @@
         "HT": [],
         "PM": [
           {
-            "actions": ["approve"],
+            "actions": [
+              "approve"
+            ],
             "scope": "assigned",
             "note": "when the checklist is complete and final accounts are approved"
           }
@@ -6170,7 +7862,9 @@
       "grants": {
         "SA": [
           {
-            "actions": ["approve"],
+            "actions": [
+              "approve"
+            ],
             "scope": "all",
             "note": null
           }
@@ -6205,7 +7899,9 @@
       "grants": {
         "SA": [
           {
-            "actions": ["approve"],
+            "actions": [
+              "approve"
+            ],
             "scope": "all",
             "note": null
           }
@@ -6240,14 +7936,18 @@
       "grants": {
         "SA": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "SM": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
@@ -6255,7 +7955,9 @@
         "HT": [],
         "PM": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "assigned",
             "note": null
           }
@@ -6287,63 +7989,86 @@
       "grants": {
         "SA": [
           {
-            "actions": ["create", "read", "update", "delete"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "SM": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "HT": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "PM": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "CD": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "VC": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "RG": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "HL": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "FA": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
@@ -6366,7 +8091,9 @@
       "grants": {
         "CR": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
@@ -6374,7 +8101,9 @@
         "GU": [],
         "DP": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": "masked"
           }
@@ -6395,7 +8124,12 @@
       "grants": {
         "CR": [
           {
-            "actions": ["create", "read", "update", "delete"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete"
+            ],
             "scope": "own",
             "note": "account"
           }
@@ -6403,7 +8137,12 @@
         "GU": [],
         "DP": [
           {
-            "actions": ["create", "read", "update", "delete"],
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete"
+            ],
             "scope": "all",
             "note": "demo"
           }
@@ -6424,7 +8163,11 @@
       "grants": {
         "CR": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "own",
             "note": null
           }
@@ -6432,7 +8175,9 @@
         "GU": [],
         "DP": [
           {
-            "actions": ["create"],
+            "actions": [
+              "create"
+            ],
             "scope": "all",
             "note": "routed to Sales"
           }
@@ -6453,12 +8198,16 @@
       "grants": {
         "CR": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": "feedback"
           },
           {
-            "actions": ["update"],
+            "actions": [
+              "update"
+            ],
             "scope": "all",
             "note": "feedback"
           }
@@ -6466,7 +8215,9 @@
         "GU": [],
         "DP": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": "sample"
           }
@@ -6487,12 +8238,16 @@
       "grants": {
         "CR": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           },
           {
-            "actions": ["approve"],
+            "actions": [
+              "approve"
+            ],
             "scope": "all",
             "note": null
           }
@@ -6500,7 +8255,9 @@
         "GU": [],
         "DP": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": "sample"
           }
@@ -6521,7 +8278,9 @@
       "grants": {
         "CR": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
@@ -6529,7 +8288,9 @@
         "GU": [],
         "DP": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": "sample"
           }
@@ -6550,7 +8311,9 @@
       "grants": {
         "CR": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": "changes through a request"
           }
@@ -6573,21 +8336,27 @@
       "grants": {
         "CR": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
         ],
         "GU": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": "invited functions only"
           }
         ],
         "DP": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": "sample"
           }
@@ -6610,7 +8379,9 @@
         "GU": [],
         "DP": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": "sample masked"
           }
@@ -6665,7 +8436,9 @@
       "grants": {
         "CR": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
@@ -6673,7 +8446,9 @@
         "GU": [],
         "DP": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": "sample"
           }
@@ -6694,7 +8469,9 @@
       "grants": {
         "CR": [
           {
-            "actions": ["update"],
+            "actions": [
+              "update"
+            ],
             "scope": "all",
             "note": "(either representative)"
           }
@@ -6717,12 +8494,16 @@
       "grants": {
         "CR": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           },
           {
-            "actions": ["approve"],
+            "actions": [
+              "approve"
+            ],
             "scope": "all",
             "note": null
           }
@@ -6730,7 +8511,9 @@
         "GU": [],
         "DP": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": "sample"
           }
@@ -6751,12 +8534,16 @@
       "grants": {
         "CR": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": "comment"
           },
           {
-            "actions": ["approve"],
+            "actions": [
+              "approve"
+            ],
             "scope": "all",
             "note": "comment"
           }
@@ -6764,7 +8551,9 @@
         "GU": [],
         "DP": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": "sample"
           }
@@ -6785,12 +8574,16 @@
       "grants": {
         "CR": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           },
           {
-            "actions": ["approve"],
+            "actions": [
+              "approve"
+            ],
             "scope": "all",
             "note": null
           }
@@ -6813,24 +8606,32 @@
       "grants": {
         "CR": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": "approved summaries only (Q7)"
           }
         ],
         "GU": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "own",
             "note": "group members attendance and dietary members up to allowance"
           },
           {
-            "actions": ["update"],
+            "actions": [
+              "update"
+            ],
             "scope": "own",
             "note": "group members attendance and dietary members up to allowance"
           },
           {
-            "actions": ["create"],
+            "actions": [
+              "create"
+            ],
             "scope": "own",
             "note": "group members attendance and dietary members up to allowance"
           }
@@ -6853,7 +8654,10 @@
         "CR": [],
         "GU": [
           {
-            "actions": ["read", "update"],
+            "actions": [
+              "read",
+              "update"
+            ],
             "scope": "own",
             "note": "row"
           }
@@ -6893,12 +8697,16 @@
         "CR": [],
         "GU": [
           {
-            "actions": ["create"],
+            "actions": [
+              "create"
+            ],
             "scope": "own",
             "note": "upload when the project requires it status only"
           },
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "own",
             "note": "upload when the project requires it status only"
           }
@@ -6920,21 +8728,28 @@
       "grants": {
         "CR": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": "summaries"
           }
         ],
         "GU": [
           {
-            "actions": ["read", "update"],
+            "actions": [
+              "read",
+              "update"
+            ],
             "scope": "own",
             "note": "group"
           }
         ],
         "DP": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": "sample"
           }
@@ -6955,14 +8770,18 @@
       "grants": {
         "CR": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": "summaries"
           }
         ],
         "GU": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "own",
             "note": "allocation once confirmed"
           }
@@ -6984,14 +8803,20 @@
       "grants": {
         "CR": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": "summaries"
           }
         ],
         "GU": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "own",
             "note": "group travel details when requested"
           }
@@ -7013,12 +8838,16 @@
       "grants": {
         "CR": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           },
           {
-            "actions": ["approve"],
+            "actions": [
+              "approve"
+            ],
             "scope": "all",
             "note": null
           }
@@ -7026,7 +8855,9 @@
         "GU": [],
         "DP": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": "sample"
           }
@@ -7047,21 +8878,29 @@
       "grants": {
         "CR": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "own",
             "note": null
           }
         ],
         "GU": [
           {
-            "actions": ["create"],
+            "actions": [
+              "create"
+            ],
             "scope": "all",
             "note": "support request"
           }
         ],
         "DP": [
           {
-            "actions": ["create"],
+            "actions": [
+              "create"
+            ],
             "scope": "all",
             "note": "routed to Sales"
           }
@@ -7082,7 +8921,9 @@
       "grants": {
         "CR": [
           {
-            "actions": ["approve"],
+            "actions": [
+              "approve"
+            ],
             "scope": "all",
             "note": "(either representative P-9 on-behalf with a note)"
           }
@@ -7105,21 +8946,27 @@
       "grants": {
         "CR": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": "download"
           }
         ],
         "GU": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": "documents shared to guests"
           }
         ],
         "DP": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": "sample"
           }
@@ -7140,7 +8987,9 @@
       "grants": {
         "CR": [
           {
-            "actions": ["create"],
+            "actions": [
+              "create"
+            ],
             "scope": "all",
             "note": null
           }
@@ -7163,7 +9012,9 @@
       "grants": {
         "CR": [
           {
-            "actions": ["read"],
+            "actions": [
+              "read"
+            ],
             "scope": "all",
             "note": null
           }
@@ -7203,7 +9054,9 @@
       "grants": {
         "CR": [
           {
-            "actions": ["create"],
+            "actions": [
+              "create"
+            ],
             "scope": "all",
             "note": null
           }
@@ -7243,7 +9096,11 @@
       "grants": {
         "CR": [
           {
-            "actions": ["create", "read", "update"],
+            "actions": [
+              "create",
+              "read",
+              "update"
+            ],
             "scope": "own",
             "note": "conversations"
           }
@@ -7251,7 +9108,9 @@
         "GU": [],
         "DP": [
           {
-            "actions": ["create"],
+            "actions": [
+              "create"
+            ],
             "scope": "all",
             "note": "routed to Sales"
           }
@@ -7710,7 +9569,9 @@
       "who": "The requester per §5.9",
       "roles": [],
       "system": false,
-      "actors": ["requester"],
+      "actors": [
+        "requester"
+      ],
       "condition": null
     },
     {
@@ -7973,7 +9834,9 @@
       "who": "The assignee",
       "roles": [],
       "system": false,
-      "actors": ["assignee"],
+      "actors": [
+        "assignee"
+      ],
       "condition": null
     },
     {
@@ -7988,7 +9851,9 @@
         }
       ],
       "system": true,
-      "actors": ["assignee"],
+      "actors": [
+        "assignee"
+      ],
       "condition": null
     },
     {
@@ -8003,7 +9868,9 @@
         }
       ],
       "system": false,
-      "actors": ["assignee"],
+      "actors": [
+        "assignee"
+      ],
       "condition": null
     },
     {
@@ -8037,7 +9904,9 @@
         }
       ],
       "system": false,
-      "actors": ["owner"],
+      "actors": [
+        "owner"
+      ],
       "condition": null
     },
     {
@@ -8052,7 +9921,9 @@
         }
       ],
       "system": false,
-      "actors": ["owner"],
+      "actors": [
+        "owner"
+      ],
       "condition": null
     },
     {
@@ -8071,7 +9942,9 @@
         }
       ],
       "system": false,
-      "actors": ["creator"],
+      "actors": [
+        "creator"
+      ],
       "condition": null
     },
     {
@@ -8228,7 +10101,9 @@
       "who": "The requester",
       "roles": [],
       "system": false,
-      "actors": ["requester"],
+      "actors": [
+        "requester"
+      ],
       "condition": null
     }
   ]
