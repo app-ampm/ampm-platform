@@ -5,8 +5,9 @@
  */
 import { describe, expect, it } from "vitest";
 
+import { documentTableRows } from "./authz/document";
 import { FOREIGN_PROJECT, ME, MEMBER_PROJECT, SOMEONE, member } from "./authz/fixtures";
-import { decide, type PolicyPrincipal, type PolicyTarget } from "./engine";
+import { decide, readKeyFor, type PolicyPrincipal, type PolicyTarget } from "./engine";
 import { refusedVariants } from "./golden/facts";
 import { KEY_ALIAS_GOLDEN, type AliasHolder } from "./golden/key-aliases";
 import { parsePermissionKey } from "./keys";
@@ -76,7 +77,9 @@ describe("§10 permission keys", () => {
     expect(parsePermissionKey("budget.lines.read_everything")).toBeNull();
   });
 
-  it("§10 lines 543-544, §5.7 line 216: read_internal_cost on budget lines reads the internal-cost row", () => {
+  // §10 spells this key `budget.lines.read_internal_cost`; that spelling waits for the row's
+  // curation (below), so this checks §10 lines 543-544's holders on the row's spelling.
+  it("§5.7 line 216 with §10 lines 543-544's holders: budget.budget_lines_client_facing.read_internal_cost reads the internal-cost row", () => {
     const key = "budget.budget_lines_client_facing.read_internal_cost";
     expect(decide(staff(["FA"]), key)).toMatchObject({ allowed: true, scope: "all" });
     expect(decide(staff(["PM"]), key, { projectId: "p-1" })).toMatchObject({
@@ -135,6 +138,43 @@ describe("§10 permission keys", () => {
     const exception = "functions.readiness_exceptions.authorise_exception";
     expect(decide(staff(["SA"]), exception).allowed).toBe(true);
     expect(decide(staff(["PM"]), exception, { projectId: "p-1" }).reason).toBe("no_grant");
+  });
+});
+
+/*
+ * §10's example keys that name no row yet (§10 line, then the row they will name). Each resolves
+ * once that row is curated under the key's spelling (resources.ts RESOURCES), or is listed in
+ * OUTSIDE_KEYS or KEY_ALIASES; until then it decides no_grant for every role.
+ */
+const AWAITING_CURATION: readonly string[] = [
+  "hotels.profiles.update", // 537, §5.3 line 168
+  "hotels.rate_cards.read", // 538, §5.3 line 172
+  "hotels.contacts.read", // 539, §5.3 line 170
+  "consultancy.proposals.share", // 540, §5.4 line 185
+  "consultancy.proposals.read_internal_amount", // 541, §5.4 line 186
+  "projects.members.update:assigned", // 542, §5.5 line 196
+  "budget.lines.read_internal_cost:assigned", // 543, §5.7 line 216
+  "budget.lines.read_internal_cost", // 544, §5.7 line 216
+  "guests.sensitive.read:assigned", // 549, §5.10 line 262
+  "functions.readiness.authorise_exception:assigned", // 550, §5.6 line 207
+];
+
+describe("§10 lines 537-552: the example keys as §10 spells them", () => {
+  const keys = documentTableRows("## 10. Permission keys", "## 11. Open questions").map((row) =>
+    (row.cells[0] ?? "").replace(/`/g, ""),
+  );
+
+  it("each resolves to a §5 row, but for the spellings awaiting their row's curation", () => {
+    expect(keys.filter((key) => readKeyFor(key) === null)).toEqual(AWAITING_CURATION);
+  });
+
+  it("a spelling awaiting curation decides no_grant for every role, the Super Admin included", () => {
+    const everything = { projectId: "p-1", checks: ["break_glass", "closure_ready"] } as const;
+    for (const key of AWAITING_CURATION) {
+      for (const role of STAFF_ROLE_CODES) {
+        expect(decide(staff([role]), key, everything).reason, `${role} ${key}`).toBe("no_grant");
+      }
+    }
   });
 });
 
