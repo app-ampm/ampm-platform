@@ -22,7 +22,7 @@ describe("meResponse", () => {
         readOnlyModules: [],
         hotelReach: [],
         financeReach: [],
-        requestTypes: [],
+        requestTypes: { wedding: [], account: [] },
       },
       isDemo: false,
     });
@@ -36,7 +36,7 @@ describe("meResponse", () => {
       readOnlyModules: ["wedding_workspace", "client_finance"],
       hotelReach: ["project_hotels"],
       financeReach: ["own_invoices"],
-      requestTypes: ["support"],
+      requestTypes: { wedding: ["support"], account: [] },
     };
     const parsed = meResponse.parse({
       principal: {
@@ -75,7 +75,7 @@ describe("meResponse", () => {
           readOnlyModules: [],
           hotelReach: [],
           financeReach: [],
-          requestTypes: [],
+          requestTypes: { wedding: [], account: [] },
         },
         isDemo: false,
       }),

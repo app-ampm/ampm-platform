@@ -31,9 +31,24 @@ export interface Entitlements {
   readonly readOnlyModules: readonly EntitlementModule[];
   readonly hotelReach: readonly HotelReach[];
   readonly financeReach: readonly FinanceReach[];
-  /** Request types the principal may create: a closed wedding takes support requests only (§3). */
-  readonly requestTypes: readonly RequestType[];
+  /**
+   * Request types the principal may create, by where the request goes: on the wedding, from the
+   * project row alone (a closed wedding takes support requests only, §3 line 101), or on the
+   * account, from the subscription and agreement rows (lines 96-98, "no project").
+   */
+  readonly requestTypes: RequestTypes;
   readonly signInRefused: boolean;
+}
+
+/**
+ * The request types a principal may create on its wedding and on its account.
+ *
+ * @example
+ * const allowed = entitlements.requestTypes[request.projectId ? "wedding" : "account"];
+ */
+export interface RequestTypes {
+  readonly wedding: readonly RequestType[];
+  readonly account: readonly RequestType[];
 }
 
 type Access = "read" | "write";
@@ -174,11 +189,25 @@ function projectSource(state: ClientAccountState): Source[] {
   return state.project === "closed_in_window" ? [CLOSED_PROJECT] : [];
 }
 
+/** The §3 rows that apply, by what they reach: the account, or the wedding. The demo is both. */
+function sourcesOf(state: ClientAccountState): { account: Source[]; wedding: Source[] } {
+  if (state.isDemo) return { account: [DEMO], wedding: [DEMO] };
+  return {
+    account: [...subscriptionSource(state), ...(state.hotelAssistanceAgreement ? [AGREEMENT] : [])],
+    wedding: projectSource(state),
+  };
+}
+
+function requestsOf(sources: readonly Source[]): RequestType[] {
+  return ANY_REQUEST.filter((type) => sources.some((source) => source.requests.includes(type)));
+}
+
 /**
  * Step 3 of the pipeline (architecture §6): the modules a client principal may reach, from
  * subscription, agreements and memberships combined (permission-matrix §3). A module is writable
- * when any source opens it for writing, and a request type may be created when any source allows
- * it. Computed per request and cached by the API for at most five minutes.
+ * when any source opens it for writing. Request types stay apart by where the request goes, so an
+ * account's rows never widen what a wedding accepts. Computed per request and cached by the API
+ * for at most five minutes.
  *
  * @example
  * const { modules, readOnlyModules } = resolveClientEntitlements(state);
@@ -191,17 +220,12 @@ export function resolveClientEntitlements(state: ClientAccountState): Entitlemen
       readOnlyModules: [],
       hotelReach: [],
       financeReach: [],
-      requestTypes: [],
+      requestTypes: { wedding: [], account: [] },
       signInRefused: true,
     };
   }
-  const sources = state.isDemo
-    ? [DEMO]
-    : [
-        ...subscriptionSource(state),
-        ...(state.hotelAssistanceAgreement ? [AGREEMENT] : []),
-        ...projectSource(state),
-      ];
+  const scoped = sourcesOf(state);
+  const sources = state.isDemo ? [DEMO] : [...scoped.account, ...scoped.wedding];
   const access = (module: EntitlementModule): Access | undefined => {
     const levels = sources.map((source) => source.modules[module]);
     return levels.includes("write") ? "write" : levels.includes("read") ? "read" : undefined;
@@ -212,7 +236,7 @@ export function resolveClientEntitlements(state: ClientAccountState): Entitlemen
     readOnlyModules: modules.filter((module) => access(module) === "read"),
     hotelReach: HOTEL_ORDER.filter((reach) => sources.some((source) => source.hotels === reach)),
     financeReach: FINANCE_ORDER.filter((reach) => sources.some((s) => s.finance === reach)),
-    requestTypes: ANY_REQUEST.filter((type) => sources.some((s) => s.requests.includes(type))),
+    requestTypes: { wedding: requestsOf(scoped.wedding), account: requestsOf(scoped.account) },
     signInRefused: false,
   };
 }

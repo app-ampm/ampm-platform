@@ -26,7 +26,7 @@ describe("resolveClientEntitlements", () => {
       readOnlyModules: [],
       hotelReach: [],
       financeReach: [],
-      requestTypes: [],
+      requestTypes: { wedding: [], account: [] },
       signInRefused: true,
     });
   });
@@ -140,14 +140,24 @@ describe("resolveClientEntitlements", () => {
     const all = ["question", "change_request", "support"];
     const onHold = resolve({ project: "on_hold" });
     const closed = resolve({ project: "closed_in_window" });
-    expect(onHold.requestTypes).toEqual(all);
-    expect(closed.requestTypes).toEqual(["support"]);
+    expect(onHold.requestTypes).toEqual({ wedding: all, account: [] });
+    expect(closed.requestTypes).toEqual({ wedding: ["support"], account: [] });
     expect(closed).not.toEqual(onHold);
-    expect(resolve({ project: "active" }).requestTypes).toEqual(all);
-    // Sources combine: a live subscription still asks any question (§3 line 96).
-    expect(resolve({ project: "closed_in_window", subscription: "active" }).requestTypes).toEqual(
-      all,
-    );
+    expect(resolve({ project: "active" }).requestTypes).toEqual({ wedding: all, account: [] });
+  });
+
+  it("§3 lines 96, 97 and 101: a subscription asks at account level and never widens a closed wedding", () => {
+    const all = ["question", "change_request", "support"];
+    for (const subscription of ["active", "expired", "cancelled"] as const) {
+      expect(resolve({ project: "closed_in_window", subscription }).requestTypes).toEqual({
+        wedding: ["support"],
+        account: all,
+      });
+    }
+    expect(
+      resolve({ project: "closed_in_window", hotelAssistanceAgreement: true }).requestTypes,
+    ).toEqual({ wedding: ["support"], account: all });
+    expect(resolve({ subscription: "active" }).requestTypes).toEqual({ wedding: [], account: all });
   });
 
   it("§3 line 102: an archived wedding reaches nothing in the portal, not even support", () => {
@@ -156,7 +166,7 @@ describe("resolveClientEntitlements", () => {
       readOnlyModules: [],
       hotelReach: [],
       financeReach: [],
-      requestTypes: [],
+      requestTypes: { wedding: [], account: [] },
       signInRefused: false,
     });
   });

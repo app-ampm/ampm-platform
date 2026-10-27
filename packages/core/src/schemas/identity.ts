@@ -85,7 +85,9 @@ export const entitlements = z.object({
   readOnlyModules: z.array(entitlementModule),
   hotelReach: z.array(hotelReach),
   financeReach: z.array(financeReach),
-  requestTypes: z.array(requestType),
+  // Apart by where the request goes: a closed wedding takes support only, whatever the account
+  // allows (§3 lines 96-101).
+  requestTypes: z.object({ wedding: z.array(requestType), account: z.array(requestType) }),
 });
 
 /**

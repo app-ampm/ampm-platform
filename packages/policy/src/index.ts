@@ -59,4 +59,5 @@ export type {
   FinanceReach,
   HotelReach,
   RequestType,
+  RequestTypes,
 } from "./entitlements";

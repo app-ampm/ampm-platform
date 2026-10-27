@@ -9,7 +9,7 @@ const NO_ENTITLEMENTS = {
   readOnlyModules: [],
   hotelReach: [],
   financeReach: [],
-  requestTypes: [],
+  requestTypes: { wedding: [], account: [] },
 };
 
 /**
