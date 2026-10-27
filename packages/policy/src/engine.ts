@@ -121,10 +121,27 @@ export interface Decision {
   readonly reason: "granted" | "not_staff" | "no_grant" | "not_assigned" | "not_owner" | "system";
 }
 
+function scopeMiss(scope: Scope, principal: PolicyPrincipal, target: PolicyTarget) {
+  if (scope === "all") return null;
+  if (scope === "assigned") {
+    const member =
+      target.projectId !== undefined && principal.projectIds?.includes(target.projectId);
+    return member ? null : "not_assigned";
+  }
+  return target.ownerId !== undefined && target.ownerId === principal.userId ? null : "not_owner";
+}
+
 /**
  * Step 4 of the pipeline (architecture §6): does the principal hold the key, and does the scope
  * reach the target? Client, guest and demo principals never hold keys; their reach is entitlement
  * and membership (§3, §6), checked by the services with `clientReach()`.
+ *
+ * §1 layer 2: permissions are the union of the roles. Assigned (member weddings) and own (records
+ * the user owns) are different sets, not one inside the other, so every scope a role gives is tried,
+ * widest first, and the first that reaches the target answers; else the widest one's refusal.
+ *
+ * @example
+ * decide({ type: "staff", userId, roles: ["PM", "FA"], projectIds }, "tasks.tasks.read", { ownerId });
  */
 export function decide(
   principal: PolicyPrincipal,
@@ -136,24 +153,14 @@ export function decide(
   const parsed = parsePermissionKey(key);
   if (!parsed) return { allowed: false, reason: "no_grant" };
   const base = `${parsed.module}.${parsed.resource}.${parsed.action}`;
-  let best: Scope | undefined;
-  for (const role of principal.roles ?? []) {
-    const scope = grantsForRole(role).get(base);
-    if (scope && (!best || rank(scope) > rank(best))) best = scope;
-  }
-  if (!best) return { allowed: false, reason: "no_grant" };
-  if (best === "all") return { allowed: true, scope: "all", reason: "granted" };
-  if (best === "assigned") {
-    const member =
-      target.projectId !== undefined && (principal.projectIds ?? []).includes(target.projectId);
-    return member
-      ? { allowed: true, scope: "assigned", reason: "granted" }
-      : { allowed: false, reason: "not_assigned" };
-  }
-  const owner = target.ownerId !== undefined && target.ownerId === principal.userId;
-  return owner
-    ? { allowed: true, scope: "own", reason: "granted" }
-    : { allowed: false, reason: "not_owner" };
+  const scopes = (principal.roles ?? [])
+    .flatMap((role) => grantsForRole(role).get(base) ?? [])
+    .sort((a, b) => rank(b) - rank(a));
+  const [widest] = scopes;
+  if (widest === undefined) return { allowed: false, reason: "no_grant" };
+  const reached = scopes.find((scope) => scopeMiss(scope, principal, target) === null);
+  if (reached) return { allowed: true, scope: reached, reason: "granted" };
+  return { allowed: false, reason: scopeMiss(widest, principal, target) ?? "no_grant" };
 }
 
 export function can(principal: PolicyPrincipal, key: string, target?: PolicyTarget): boolean {
