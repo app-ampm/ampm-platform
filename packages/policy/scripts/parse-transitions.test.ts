@@ -186,6 +186,45 @@ describe("parseTransitions", () => {
     expect(() => parseTransitions(block)).toThrow(/indented/);
   });
 
+  it("§7 line 428: a later sentence of a Who cell is read like the first, so its mover is a rule", () => {
+    const rules = parseTransitions(
+      table("Incident", "| resolved | closed | PM (a). SA may also close it |"),
+    );
+    expect(rules.map((rule) => [rule.roles, rule.condition])).toEqual([
+      [[{ role: "PM", assigned: true }], null],
+      [[{ role: "SA", assigned: false }], "may also close it"],
+    ]);
+  });
+
+  it("§7 line 428: a later sentence that names no mover, or leaves a role in a condition, stops it", () => {
+    const later = (who: string) => () =>
+      parseTransitions(table("Incident", `| resolved | closed | ${who} |`));
+    expect(later("PM (a). An auditor; HL (a) on the day")).toThrow(/no mover in "An auditor"/);
+    expect(later("PM (a). Closing needs the sign-off of SA")).toThrow(/no mover/);
+    expect(later("PM (a). HL (a) and SA")).toThrow(/SA is in the condition/);
+  });
+
+  it("§7 line 428: the approval row's second sentence names no mover and is known to need none", () => {
+    const counting =
+      "Approved needs `required_decisions` approvals, one by default; one rejection or revision request moves it immediately";
+    const rules = parseTransitions(
+      table(
+        "Approval",
+        `| submitted | approved, revision_requested or rejected | Either CR; PM (a) or SA on the client's behalf with a note or record (P-9 confirmed). ${counting} |`,
+      ),
+    );
+    expect(
+      rules.map((rule) => [rule.client, rule.roles.map((g) => g.role), rule.condition]),
+    ).toEqual([
+      [true, [], counting],
+      [
+        false,
+        ["PM", "SA"],
+        `on the client's behalf with a note or record (P-9 confirmed); ${counting}`,
+      ],
+    ]);
+  });
+
   it("§7 line 419: a role code left in a condition stops the generator unless it says who approves", () => {
     expect(() =>
       parseTransitions(table("Room allocation", "| proposed | confirmed | PM (a) and HL |")),
