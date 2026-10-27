@@ -7,8 +7,8 @@ import type { Grant, MatrixRow, ReportExclusion, RowAlias } from "../src/matrix.
 import { KEY_ALIASES, MODULES, OUTSIDE_KEYS, RESOURCES, slugify } from "../src/resources.ts";
 import type { Action, Scope, StaffRole } from "../src/roles.ts";
 import { lookup } from "./lookup.ts";
-import { REPORT_EXCLUSIONS } from "./notes.ts";
-import { parseCell, type CellKind } from "./parse-cells.ts";
+import { READINGS, REPORT_EXCLUSIONS } from "./notes.ts";
+import { parseCell, readingKey, type CellKind } from "./parse-cells.ts";
 
 const STAFF: readonly StaffRole[] = ["SA", "SM", "HT", "PM", "CD", "VC", "RG", "HL", "FA"];
 const OTHERS = ["CR", "GU", "DP"] as const;
@@ -82,7 +82,7 @@ function cellRow(
   const cell = (index: number) => cells[index + 1] ?? "";
   const grants = columns.map((column, index): [string, Grant[]] => {
     try {
-      return [column, parseCell(cell(index), kind)];
+      return [column, parseCell(cell(index), kind, { section, label, column })];
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error);
       throw new Error(`permission-matrix.md §${section} "${label}", ${column}: ${reason}`, {
@@ -215,6 +215,37 @@ function checkOutsideKeys(rows: readonly MatrixRow[]): void {
   }
 }
 
+/** Whether a subsection belongs to the table a kind parses: §5.x for staff, §6 for the others. */
+function ofKind(section: string, kind: CellKind): boolean {
+  return kind === "staff" ? section.startsWith("5.") : section === "6";
+}
+
+/**
+ * A reading of one cell (notes.ts READINGS, "§5.8 Vendor bank details, VC: RU") names a cell the
+ * block has, with that text: a changed, moved or missing cell needs the reading reviewed, never
+ * silently dropped. Readings of the other kind's table are not this block's; a partial block
+ * (a test's few rows) answers only for the subsections it has.
+ */
+function checkReadings(rows: readonly MatrixRow[], kind: CellKind, partial: boolean): void {
+  const cells = new Set(
+    rows.flatMap((row) =>
+      Object.entries(row.cells).map(([column, cell]) =>
+        readingKey({ section: row.section, label: row.label, column }, cell),
+      ),
+    ),
+  );
+  for (const key of Object.keys(READINGS)) {
+    const section = /^§(\S+) /.exec(key)?.[1];
+    if (section === undefined || !ofKind(section, kind)) continue;
+    if (partial && !rows.some((row) => row.section === section)) continue;
+    if (!cells.has(key)) {
+      throw new Error(
+        `notes.ts READINGS "${key}": the document has no such cell; review the reading`,
+      );
+    }
+  }
+}
+
 function checkUnique(rows: readonly MatrixRow[]): void {
   const seen = new Set<string>();
   for (const row of rows) {
@@ -227,16 +258,35 @@ function checkUnique(rows: readonly MatrixRow[]): void {
 }
 
 /**
- * The rows of §5 (kind "staff", every subsection including §5.16) or §6 (kind "others").
+ * How much of its table a block holds.
+ *
+ * @example
+ * const options: ParseOptions = { partial: true }; // a few rows of one subsection
+ */
+export interface ParseOptions {
+  /** The block is some rows only: the located readings of the subsections it lacks are skipped. */
+  readonly partial?: boolean;
+}
+
+/**
+ * The rows of §5 (kind "staff", every subsection including §5.16) or §6 (kind "others"). The block
+ * is the whole table unless the options say it is partial; a whole one must have a cell for every
+ * located reading of its table, or the generator stops.
  *
  * @example
  * const staff = parseMatrix(section5, "staff");
  * staff.find((row) => row.resource === "audit_log")?.grants["FA"];
+ * parseMatrix(fewRows, "staff", { partial: true });
  */
-export function parseMatrix(block: string, kind: CellKind): MatrixRow[] {
+export function parseMatrix(
+  block: string,
+  kind: CellKind,
+  options: ParseOptions = {},
+): MatrixRow[] {
   const tables = readTables(block, kind === "staff" ? "5.1" : "6");
   const rows = tables.flatMap((table) => tableRows(table, kind));
   checkUnique(rows);
+  checkReadings(rows, kind, options.partial === true);
   if (kind === "others") return rows;
   checkOutsideKeys(rows);
   return withAliases(rows);

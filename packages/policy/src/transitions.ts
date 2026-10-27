@@ -51,7 +51,7 @@ function reaches(
   if (rule.kind !== null && rule.kind !== context.kind) return false;
   if (!rule.restore) return rule.to.includes(to);
   // A terminal status is never put on hold, so a saved one is bad data and must not skip the row
-  // that reaches it ("closure → closed" needs the checklist and FA's approval, §7 line 420).
+  // that reaches it ("closure → closed" needs the checklist and FA's approval, §7 line 419).
   return context.previousStatus === to && !machine.terminal.includes(to);
 }
 

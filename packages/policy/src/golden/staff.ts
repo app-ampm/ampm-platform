@@ -74,7 +74,7 @@ export const explicit = (grant: GoldenGrant): GoldenGrant => ({ ...grant, explic
  * Builds a row.
  *
  * @example
- * row(233, "5.8", "Vendor bank details", { SA: "R", VC: "RU", FA: "RU" });
+ * row(237, "5.8", "Vendor proposals, internal cost", { SA: "RU", PM: assigned("R"), VC: "RU", FA: "R" });
  */
 export function row(
   line: number,

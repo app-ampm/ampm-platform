@@ -1,10 +1,11 @@
 /**
  * Reads §7 of docs/permission-matrix.md into transition rules. Movers come only from the who-part of
  * each clause: the leading list of role codes, "Either CR", "System" and the record's people ("The
- * assignee", "The assigned staff member"); the rest of the clause is its condition. Statuses expand
- * against src/statuses.ts, which also binds each person to the principal types that may be it. An
- * unknown heading, status, set or qualifier, an unbound person, or a clause that names no mover and
- * is not known to need none, stops the generator.
+ * assignee", "The assigned staff member"); the rest of the clause is its condition. Every sentence
+ * of a Who cell is read so. Statuses expand against src/statuses.ts, which also binds each person to
+ * the principal types that may be it. An unknown heading, status, set or qualifier, an unbound
+ * person, a role code left in a condition, or a clause in any sentence that names no mover and is
+ * not known to need none, stops the generator.
  */
 import type { Actor, Transition } from "../src/matrix.ts";
 import type { StaffRole } from "../src/roles.ts";
@@ -50,6 +51,10 @@ const NO_MOVER_CLAUSES: readonly string[] = [
   // readiness exceptions row); readiness then follows from the items (data-model.md line 1838), so
   // the clause says who authorises, not who moves the status.
   "an exception needs SA, Eva's authorised personnel (P-8 changed by Q10)",
+  // §7 line 428, the second sentence: how many decisions approve and what moves the approval at
+  // once; the movers are the first sentence's.
+  "Approved needs `required_decisions` approvals, one by default",
+  "one rejection or revision request moves it immediately",
 ];
 /** Who-cells under which nobody moves the record: the document says so. */
 const NO_MOVER_ROWS: readonly string[] = ["New subscription row; the old one is never reactivated"];
@@ -110,25 +115,29 @@ function parseMovers(clause: string): { movers: Movers; count: number; rest: str
   return { movers, count, rest: condition };
 }
 
-/** Splits a Who cell into its mover clauses and the notes that name no mover. */
+/**
+ * Splits a Who cell into its mover clauses and the notes that name no mover. Each sentence is read
+ * like the first, so a mover named later is a rule, never words in a condition (line 428).
+ */
 function parseWho(who: string): { clauses: Clause[]; notes: string[] } {
-  const [first = "", ...later] = who.split(/\.\s+(?=[A-Z])/);
   const clauses: Clause[] = [];
   const notes: string[] = [];
-  for (const part of first.split(/;\s*(?![^(]*\))/).map((text) => text.trim())) {
-    const parsed = parseMovers(part);
-    if (parsed.count > 0) {
-      clauses.push({ movers: parsed.movers, condition: parsed.rest });
-    } else if (NO_MOVER_CLAUSES.includes(part)) {
-      notes.push(part);
-    } else {
-      throw new Error(`no mover in "${part}" (§7 Who "${who}")`);
+  for (const sentence of who.split(/\.\s+(?=[A-Z])/)) {
+    for (const part of sentence.split(/;\s*(?![^(]*\))/).map((text) => text.trim())) {
+      const parsed = parseMovers(part);
+      if (parsed.count > 0) {
+        clauses.push({ movers: parsed.movers, condition: parsed.rest });
+      } else if (NO_MOVER_CLAUSES.includes(part)) {
+        notes.push(part);
+      } else {
+        throw new Error(`no mover in "${part}" (§7 Who "${who}")`);
+      }
     }
   }
   if (clauses.length === 0 && !NO_MOVER_ROWS.includes(who)) {
     throw new Error(`no mover in the §7 Who cell "${who}"`);
   }
-  return { clauses, notes: [...notes, ...later] };
+  return { clauses, notes };
 }
 
 /** A status cell read against one machine, or the reason it does not fit. */

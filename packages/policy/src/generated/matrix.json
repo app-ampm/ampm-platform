@@ -4670,16 +4670,7 @@
         "HT": [],
         "PM": [],
         "CD": [],
-        "VC": [
-          {
-            "actions": [
-              "read",
-              "update"
-            ],
-            "scope": "all",
-            "conditions": []
-          }
-        ],
+        "VC": [],
         "RG": [],
         "HL": [],
         "FA": [

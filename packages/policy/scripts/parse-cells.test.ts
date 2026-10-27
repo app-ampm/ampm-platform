@@ -22,6 +22,20 @@ describe("parseCell, §5 staff cells", () => {
     ]);
   });
 
+  it("§4 line 125 against §5.8 line 233: a reading can hold for one cell only, named by its place", () => {
+    const readUpdate = [{ actions: ["read", "update"], scope: "all", conditions: [] }];
+    const bank = { section: "5.8", label: "Vendor bank details" };
+    expect(parseCell("RU", "staff", { ...bank, column: "VC" })).toEqual([]);
+    expect(parseCell("RU", "staff", { ...bank, column: "FA" })).toEqual(readUpdate);
+    const contacts = { section: "5.8", label: "Vendor contacts", column: "VC" };
+    expect(parseCell("RU", "staff", contacts)).toEqual(readUpdate);
+    expect(parseCell("RU", "staff")).toEqual(readUpdate);
+    // The reading names the cell's text too: another text in that place is read as written.
+    expect(parseCell("R", "staff", { ...bank, column: "VC" })).toEqual([
+      { actions: ["read"], scope: "all", conditions: [] },
+    ]);
+  });
+
   it("§5.10 line 264: 'with explicit grant' and 'check-in only' narrow the grant", () => {
     expect(parseCell("CRU (a) with explicit grant", "staff")).toEqual([
       {

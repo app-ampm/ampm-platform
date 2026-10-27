@@ -34,7 +34,9 @@ export const STAFF_ROWS_5_8_TO_5_10: readonly GoldenRow[] = [
   }),
   row(231, "5.8", "Vendor contacts", { SA: "RU", PM: assigned("R"), VC: "RU", HL: assigned("R") }),
   row(232, "5.8", "Vendor internal rating and notes", { SA: "RU", PM: assigned("R"), VC: "RU" }),
-  row(233, "5.8", "Vendor bank details", { SA: "R", VC: "RU", FA: "RU" }),
+  // VC "RU": §4 line 125 opens RESTRICTED-BANK to SA and FA only, so VC has no grant until AMPM
+  // decides, the reading of scripts/notes.ts (ENGINE-4); SA keeps "R", FA "RU".
+  row(233, "5.8", "Vendor bank details", { SA: "R", FA: "RU" }),
   row(234, "5.8", "Vendor availability", { SA: "CRU", PM: "R", VC: "CRU" }),
   row(235, "5.8", "Vendor assignments and client decisions", {
     SA: "CRUD",
