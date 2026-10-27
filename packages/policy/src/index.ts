@@ -40,7 +40,8 @@ export type {
   Subject,
   View,
 } from "./conditions";
-export { KEY_ALIASES, MODULES, RESOURCES, slugify } from "./resources";
+export { KEY_ALIASES, MODULES, OUTSIDE_KEYS, RESOURCES, slugify } from "./resources";
+export type { KeyAlias, OutsideKey } from "./resources";
 export { CLASS_ACTIONS, VERB_ACTIONS, isAction, parsePermissionKey, permissionKey } from "./keys";
 export type { ClassAction, KeyAction, ParsedKey, PermissionKey, VerbAction } from "./keys";
 export { MATRIX } from "./matrix";

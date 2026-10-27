@@ -100,6 +100,16 @@ describe("parseMatrix", () => {
     expect(() => parseMatrix(othersBlock, "others")).toThrow(/indented/);
   });
 
+  it("§10 lines 545, 546 and 551: stops when a §10 key names a row label the section does not have", () => {
+    const block = [
+      "### 5.7 Budget and finance",
+      ROLES,
+      "|---|---|---|---|---|---|---|---|---|---|",
+      "| Raw vendor quotes | CRUD | — | — | R (a) | — | CRUD | — | — | R |",
+    ].join("\n");
+    expect(() => parseMatrix(block, "staff")).toThrow(/vendors\.quotes\.read/);
+  });
+
   it("§6 line 371: the client, guest and demo table parses with its own columns", () => {
     const block = [
       "| Resource | CR (both representatives) | GU | DP |",

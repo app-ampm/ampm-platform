@@ -182,6 +182,40 @@ export const KEY_ALIASES: Record<string, Record<string, KeyAlias>> = {
 };
 
 /**
+ * A §10 example key that names its §5 row from outside the row's subsection, or with no action.
+ *
+ * @example
+ * const quotes: OutsideKey = { section: "5.7", label: "Vendor quotes", as: "read" };
+ */
+export interface OutsideKey {
+  readonly section: string;
+  readonly label: string;
+  /** The action of that row the key stands for. */
+  readonly as: Action;
+}
+
+/**
+ * §10 keys whose module is not their row's subsection, by the key without its scope suffix.
+ * Curating resource names (RESOURCES) cannot reach them, since a key's module picks the rows it
+ * is looked up in. The generator stops when a label is missing.
+ *
+ * @example
+ * OUTSIDE_KEYS["projects.close"]?.section; // "5.15"
+ */
+export const OUTSIDE_KEYS: Record<string, OutsideKey> = {
+  // §10 line 545: raw vendor quotes are the §5.7 (budget) row of line 218.
+  "vendors.quotes.read": { section: "5.7", label: "Vendor quotes", as: "read" },
+  // §10 line 546: recording a client decision with evidence is the §5.9 (creative) row of line 252.
+  "approvals.decisions.create_on_behalf": {
+    section: "5.9",
+    label: "Approval decisions, on the client's behalf with evidence",
+    as: "approve",
+  },
+  // §10 line 551: closing a project is the §5.15 (closure) decision of line 312.
+  "projects.close": { section: "5.15", label: "Close the project", as: "approve" },
+};
+
+/**
  * The provisional resource name of a row label.
  *
  * @example

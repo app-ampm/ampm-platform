@@ -2,6 +2,7 @@ import type { ConditionFacts } from "./conditions";
 import { decideGrants, type Decision, type Reach, type RoleGrant } from "./evaluate";
 import { isAction, parsePermissionKey, permissionKey, type PermissionKey } from "./keys";
 import { MATRIX } from "./matrix";
+import { OUTSIDE_KEYS } from "./resources";
 import type { PrincipalType, StaffRole } from "./roles";
 
 /**
@@ -97,8 +98,19 @@ export function permissionKeysForRole(role: StaffRole): PermissionKey[] {
   );
 }
 
-/** The base key a key decides on: its own, or the §5 row a §10 alias key stands for. */
+/** A §10 key named from outside its row's subsection (OUTSIDE_KEYS), as the row's own key. */
+function outsideKey(key: string): string | null {
+  const name = key.replace(/:(assigned|own)$/, "");
+  const named = Object.hasOwn(OUTSIDE_KEYS, name) ? OUTSIDE_KEYS[name] : undefined;
+  if (!named) return null;
+  const row = MATRIX.staff.find((r) => r.section === named.section && r.label === named.label);
+  return row ? `${row.module}.${row.resource}.${named.as}` : null;
+}
+
+/** The base key a key decides on: its own, or the §5 row a §10 key stands for. */
 function baseKey(key: string): string | null {
+  const outside = outsideKey(key);
+  if (outside !== null) return outside;
   const parsed = parsePermissionKey(key);
   if (!parsed) return null;
   const { module, resource, action } = parsed;

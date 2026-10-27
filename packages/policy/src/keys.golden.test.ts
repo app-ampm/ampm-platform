@@ -58,6 +58,40 @@ describe("§10 permission keys", () => {
     expect(decide(staff(["RG"], { explicitGrants }), key, { projectId: "p-1" }).allowed).toBe(true);
   });
 
+  it("§10 line 545, §5.7 line 218: vendors.quotes.read reads the vendor quotes row of §5.7 (budget)", () => {
+    const key = "vendors.quotes.read";
+    for (const role of ["VC", "FA", "SA"] as const) {
+      expect(decide(staff([role]), key), role).toMatchObject({ allowed: true, scope: "all" });
+    }
+    // §5.7 also gives PM "R (a)", which §10's holder list leaves out.
+    expect(decide(staff(["PM"]), key, { projectId: "p-1" })).toMatchObject({
+      allowed: true,
+      scope: "assigned",
+    });
+    expect(decide(staff(["CD"]), key, { projectId: "p-1" }).reason).toBe("no_grant");
+  });
+
+  it("§10 line 546, §5.9 line 252: approvals.decisions.create_on_behalf records a client decision (creative)", () => {
+    const key = "approvals.decisions.create_on_behalf:assigned";
+    expect(decide(staff(["PM"]), key, { projectId: "p-1" })).toMatchObject({
+      allowed: true,
+      scope: "assigned",
+    });
+    expect(decide(staff(["PM"]), key, { projectId: "p-2" }).reason).toBe("not_assigned");
+    expect(decide(staff(["SA"]), key)).toMatchObject({ allowed: true, scope: "all" });
+    expect(decide(staff(["CD"]), key, { projectId: "p-1" }).reason).toBe("no_grant");
+  });
+
+  it("§10 line 551, §5.15 line 312: projects.close closes a project (closure), PM only when ready", () => {
+    const key = "projects.close:assigned";
+    expect(decide(staff(["PM"]), key, { projectId: "p-1" }).reason).toBe("condition_unmet");
+    expect(
+      decide(staff(["PM"]), key, { projectId: "p-1", checks: ["closure_ready"] }),
+    ).toMatchObject({ allowed: true, scope: "assigned" });
+    expect(decide(staff(["SA"]), "projects.close")).toMatchObject({ allowed: true, scope: "all" });
+    expect(decide(staff(["FA"]), key, { checks: ["closure_ready"] }).reason).toBe("no_grant");
+  });
+
   it("§10 lines 546 and 550, §5.9 line 252, §5.6 line 207: the §10 verbs name their rows' decisions", () => {
     const onBehalf = "creative.approval_decisions_on_client.create_on_behalf";
     expect(decide(staff(["PM"]), onBehalf, { projectId: "p-1" }).allowed).toBe(true);

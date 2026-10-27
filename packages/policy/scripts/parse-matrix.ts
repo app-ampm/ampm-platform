@@ -4,7 +4,7 @@
  * row exactly its table's cells, or the generator stops: a row is never skipped silently.
  */
 import type { Grant, MatrixRow, ReportExclusion, RowAlias } from "../src/matrix.ts";
-import { KEY_ALIASES, MODULES, RESOURCES, slugify } from "../src/resources.ts";
+import { KEY_ALIASES, MODULES, OUTSIDE_KEYS, RESOURCES, slugify } from "../src/resources.ts";
 import type { Action, Scope, StaffRole } from "../src/roles.ts";
 import { lookup } from "./lookup.ts";
 import { REPORT_EXCLUSIONS } from "./notes.ts";
@@ -203,6 +203,18 @@ function withAliases(rows: readonly MatrixRow[]): MatrixRow[] {
   return rows.map((row) => ({ ...row, aliases: aliases.get(row) ?? [] }));
 }
 
+/** Every §10 key of OUTSIDE_KEYS names a row the block has, when the block has its section. */
+function checkOutsideKeys(rows: readonly MatrixRow[]): void {
+  for (const [key, named] of Object.entries(OUTSIDE_KEYS)) {
+    if (!rows.some((row) => row.section === named.section)) continue;
+    if (!rows.some((row) => row.section === named.section && row.label === named.label)) {
+      throw new Error(
+        `resources.ts OUTSIDE_KEYS ${key}: no row "${named.label}" in §${named.section}`,
+      );
+    }
+  }
+}
+
 function checkUnique(rows: readonly MatrixRow[]): void {
   const seen = new Set<string>();
   for (const row of rows) {
@@ -225,5 +237,7 @@ export function parseMatrix(block: string, kind: CellKind): MatrixRow[] {
   const tables = readTables(block, kind === "staff" ? "5.1" : "6");
   const rows = tables.flatMap((table) => tableRows(table, kind));
   checkUnique(rows);
-  return kind === "staff" ? withAliases(rows) : rows;
+  if (kind === "others") return rows;
+  checkOutsideKeys(rows);
+  return withAliases(rows);
 }
