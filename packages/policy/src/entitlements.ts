@@ -31,6 +31,15 @@ export type HotelReach = "all_hotels" | "project_hotels" | "agreement_hotels" | 
 export type FinanceReach = "own_invoices" | "agreement_invoices" | "demo_sample";
 
 /**
+ * The kinds of client request (`client_requests.request_type`, data-model.md line 1210) the support
+ * column of §3 lets the principal create.
+ *
+ * @example
+ * if (!entitlements.requestTypes.includes(body.requestType)) throw errors.forbidden();
+ */
+export type RequestType = "question" | "change_request" | "support";
+
+/**
  * What a client principal may reach, and how far.
  *
  * @example
@@ -42,6 +51,8 @@ export interface Entitlements {
   readonly readOnlyModules: readonly EntitlementModule[];
   readonly hotelReach: readonly HotelReach[];
   readonly financeReach: readonly FinanceReach[];
+  /** Request types the principal may create: a closed wedding takes support requests only (§3). */
+  readonly requestTypes: readonly RequestType[];
   readonly signInRefused: boolean;
 }
 
@@ -52,6 +63,7 @@ interface Source {
   readonly modules: Readonly<Partial<Record<EntitlementModule, Access>>>;
   readonly hotels: HotelReach | null;
   readonly finance: FinanceReach | null;
+  readonly requests: readonly RequestType[];
 }
 
 const HOTEL_ORDER: readonly HotelReach[] = [
@@ -65,6 +77,8 @@ const FINANCE_ORDER: readonly FinanceReach[] = [
   "agreement_invoices",
   "demo_sample",
 ];
+/** "Create" in the support column: any kind of request. */
+const ANY_REQUEST: readonly RequestType[] = ["question", "change_request", "support"];
 
 /** §3 line 94: sample data to read; saving hotels and asking for assistance go to Sales. */
 const DEMO: Source = {
@@ -81,6 +95,7 @@ const DEMO: Source = {
   },
   hotels: "demo_hotels",
   finance: "demo_sample",
+  requests: ANY_REQUEST,
 };
 
 /** §3 line 96. */
@@ -93,6 +108,7 @@ const ACTIVE_SUBSCRIPTION: Source = {
   },
   hotels: "all_hotels",
   finance: null,
+  requests: ANY_REQUEST,
 };
 
 /** §3 line 97: saved hotel names, enquiry status and own invoices stay readable; nothing new. */
@@ -105,6 +121,7 @@ const LAPSED_SUBSCRIPTION: Source = {
   },
   hotels: null,
   finance: "own_invoices",
+  requests: ANY_REQUEST,
 };
 
 /** §3 line 98 and line 109: the agreement's own hotels only, never hotel search. */
@@ -118,6 +135,7 @@ const AGREEMENT: Source = {
   },
   hotels: "agreement_hotels",
   finance: "agreement_invoices",
+  requests: ANY_REQUEST,
 };
 
 /**
@@ -137,14 +155,14 @@ const ACTIVE_PROJECT: Source = {
   },
   hotels: "project_hotels",
   finance: null,
+  requests: ANY_REQUEST,
 };
 
 /**
- * §3 lines 100 and 101, on hold or closed within the window: everything read-only except support,
- * and no live chat. The closed row limits support to the support type, which the request service
- * enforces; its "Read-only" finance cell follows the active row, which grants none until Q4.
+ * §3 line 100, on hold: everything read-only except support, and no live chat. Its "Read-only"
+ * finance cell follows the active row, which grants none until Q4.
  */
-const PAUSED_PROJECT: Source = {
+const ON_HOLD_PROJECT: Source = {
   modules: {
     hotel_discovery: "read",
     saved_hotels: "read",
@@ -156,7 +174,11 @@ const PAUSED_PROJECT: Source = {
   },
   hotels: "project_hotels",
   finance: null,
+  requests: ANY_REQUEST,
 };
+
+/** §3 line 101, closed within the window: as on hold, but "Create, support type only". */
+const CLOSED_PROJECT: Source = { ...ON_HOLD_PROJECT, requests: ["support"] };
 
 const LAPSED = new Set<ClientAccountState["subscription"]>(["expired", "cancelled", "suspended"]);
 
@@ -167,17 +189,16 @@ function subscriptionSource(state: ClientAccountState): Source[] {
 
 function projectSource(state: ClientAccountState): Source[] {
   if (state.project === "active") return [ACTIVE_PROJECT];
+  if (state.project === "on_hold") return [ON_HOLD_PROJECT];
   // §3 line 102: after the window the membership is removed; documents are asked for outside.
-  return state.project === "on_hold" || state.project === "closed_in_window"
-    ? [PAUSED_PROJECT]
-    : [];
+  return state.project === "closed_in_window" ? [CLOSED_PROJECT] : [];
 }
 
 /**
  * Step 3 of the pipeline (architecture §6): the modules a client principal may reach, from
  * subscription, agreements and memberships combined (permission-matrix §3). A module is writable
- * when any source opens it for writing. Computed per request and cached by the API for at most
- * five minutes.
+ * when any source opens it for writing, and a request type may be created when any source allows
+ * it. Computed per request and cached by the API for at most five minutes.
  *
  * @example
  * const { modules, readOnlyModules } = resolveClientEntitlements(state);
@@ -190,6 +211,7 @@ export function resolveClientEntitlements(state: ClientAccountState): Entitlemen
       readOnlyModules: [],
       hotelReach: [],
       financeReach: [],
+      requestTypes: [],
       signInRefused: true,
     };
   }
@@ -210,6 +232,7 @@ export function resolveClientEntitlements(state: ClientAccountState): Entitlemen
     readOnlyModules: modules.filter((module) => access(module) === "read"),
     hotelReach: HOTEL_ORDER.filter((reach) => sources.some((source) => source.hotels === reach)),
     financeReach: FINANCE_ORDER.filter((reach) => sources.some((s) => s.finance === reach)),
+    requestTypes: ANY_REQUEST.filter((type) => sources.some((s) => s.requests.includes(type))),
     signInRefused: false,
   };
 }

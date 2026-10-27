@@ -26,6 +26,7 @@ describe("resolveClientEntitlements", () => {
       readOnlyModules: [],
       hotelReach: [],
       financeReach: [],
+      requestTypes: [],
       signInRefused: true,
     });
   });
@@ -135,12 +136,27 @@ describe("resolveClientEntitlements", () => {
     expect(result.readOnlyModules).toContain("wedding_workspace");
   });
 
+  it("§3 lines 100-101: on hold any request may be created; closed in its window, support ones only", () => {
+    const all = ["question", "change_request", "support"];
+    const onHold = resolve({ project: "on_hold" });
+    const closed = resolve({ project: "closed_in_window" });
+    expect(onHold.requestTypes).toEqual(all);
+    expect(closed.requestTypes).toEqual(["support"]);
+    expect(closed).not.toEqual(onHold);
+    expect(resolve({ project: "active" }).requestTypes).toEqual(all);
+    // Sources combine: a live subscription still asks any question (§3 line 96).
+    expect(resolve({ project: "closed_in_window", subscription: "active" }).requestTypes).toEqual(
+      all,
+    );
+  });
+
   it("§3 line 102: an archived wedding reaches nothing in the portal, not even support", () => {
     expect(resolve({ project: "archived" })).toEqual({
       modules: [],
       readOnlyModules: [],
       hotelReach: [],
       financeReach: [],
+      requestTypes: [],
       signInRefused: false,
     });
   });
