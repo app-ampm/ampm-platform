@@ -7,6 +7,9 @@
 #   precompact     mines the transcript before the context is compacted (background; the file survives)
 #   session-end    final mine of the transcript (background)
 #
+# Every mine first runs docs/tools/redact_secrets.py on the transcript, which masks credentials in place
+# (same length, so a transcript still being written is not disturbed); a failed redaction skips the mine.
+#
 # MemPalace's own global hooks, when installed, file mid-session saves under a machine-wide wing. These
 # hooks always name the wing, so every session run in this folder or in one of its worktrees can be found
 # with  mempalace search "..." --wing ampm. Best effort throughout: a missing tool never fails the session.
@@ -40,8 +43,17 @@ valid_transcript() {
   [ -f "$1" ]
 }
 
+redact_transcript() {  # masks credentials in the transcript in place; non-zero means the file must not be mined
+  local script="$PROJECT/docs/tools/redact_secrets.py"
+  [ -f "$script" ] || { log "redact_secrets.py is missing from $PROJECT; not mining"; return 1; }
+  python3 "$script" "$1" >> "$LOG" 2>&1 || { log "secret redaction failed for $(basename "$1"); not mining"; return 1; }
+}
+
 mine_transcript() {  # mines one transcript file into the wing; MemPalace skips a file it has already filed unchanged
   command -v mempalace >/dev/null 2>&1 || { log "mempalace is not installed; nothing mined"; return 0; }
+  # CLAUDE.md: never file secrets or tokens. A masked transcript changes on disk, so the miner purges the
+  # source's earlier drawers and files clean ones in their place.
+  redact_transcript "$1" || return 0
   if mempalace mine "$1" --mode convos --wing "$WING" >> "$LOG" 2>&1; then
     log "mined $(basename "$1") into wing $WING"
   else
