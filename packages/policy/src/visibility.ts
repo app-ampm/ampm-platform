@@ -1,15 +1,17 @@
 import { FINANCE_EXPORT_ROLES, type VisibilityClass } from "./classes";
-import type { Side } from "./conditions";
+import type { ConditionFacts, Side } from "./conditions";
+import { decideGrants } from "./evaluate";
 import { MATRIX, type MatrixRow, type ReportExclusion } from "./matrix";
 import type { StaffRole } from "./roles";
 
 /**
- * What the serialiser knows about the record whose fields it is about to send.
+ * What the serialiser knows about the record whose fields it is about to send, with the facts a
+ * conditioned grant needs (conditions.ts), as decide() takes them.
  *
  * @example
  * const context: ClassContext = { assigned: true, side: "vendor", resource: "vendors.vendor_profiles_client_fields" };
  */
-export interface ClassContext {
+export interface ClassContext extends ConditionFacts {
   /** The principal is a member of the project the record belongs to. */
   readonly assigned?: boolean | undefined;
   /** The principal owns or created the record. */
@@ -18,7 +20,10 @@ export interface ClassContext {
   readonly side?: Side | undefined;
   /** The record is the guest's own row. */
   readonly ownRow?: boolean | undefined;
-  /** The record's resource, `module.resource` as in the permission keys; RESTRICTED-NOTES follows it. */
+  /**
+   * The row the record is read through, `module.resource` as in the permission keys. With it, the
+   * classes follow that row's §5 cell: a role that cannot read it gets public fields only.
+   */
   readonly resource?: string | undefined;
 }
 
@@ -69,6 +74,15 @@ function rowOf(resource: string | undefined): MatrixRow | undefined {
   return MATRIX.staff.find((row) => `${row.module}.${row.resource}` === resource);
 }
 
+/** Whether one of the roles reads the row's records in this context, evaluated as decide() does. */
+function readsRow(roles: readonly StaffRole[], row: MatrixRow, context: ClassContext): boolean {
+  const grants = roles.flatMap((role) =>
+    (row.grants[role] ?? []).filter((grant) => grant.actions.includes("read")),
+  );
+  const reach = { assigned: context.assigned === true, owned: context.owned === true };
+  return decideGrants(grants, reach, context, false).allowed;
+}
+
 /**
  * §4 RESTRICTED-NOTES, "staff with module access per §5": the resource's own internal-notes row
  * ("Hotel internal rating and notes") when §5 has one, otherwise the resource's row. Only a plain
@@ -99,7 +113,10 @@ function readsNotes(roles: readonly StaffRole[], context: ClassContext): boolean
 }
 
 /**
- * The classes staff roles may read on a record, from the "Readable by" column of §4.
+ * The classes staff roles may read on a record, from the "Readable by" column of §4. CLIENT and
+ * INTERNAL are for "staff with module access per §5" (lines 120-121), so with a resource the roles
+ * must read its row in this context, or they get public fields only; an unknown resource is none.
+ * Without a resource the caller has decided the read already (decide()), and the base stands.
  *
  * @example
  * staffReadableClasses(["HT"], { side: "hotel", resource: "hotels.hotel_profiles_client_fields" });
@@ -108,6 +125,10 @@ export function staffReadableClasses(
   roles: readonly StaffRole[],
   context: ClassContext = {},
 ): ReadonlySet<VisibilityClass> {
+  if (context.resource !== undefined) {
+    const row = rowOf(context.resource);
+    if (!row || !readsRow(roles, row, context)) return new Set<VisibilityClass>(["PUBLIC"]);
+  }
   const set = new Set<VisibilityClass>(BASE_CLASSES);
   if (readsNotes(roles, context)) set.add("RESTRICTED-NOTES");
   for (const role of GRANT_ORDER) {

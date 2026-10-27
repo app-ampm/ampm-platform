@@ -77,6 +77,27 @@ describe("visibility classes", () => {
     ).toBe(false);
   });
 
+  it("§4 lines 120-121, §5.8 line 233: a role that cannot read the record's row gets public fields only", () => {
+    const bank = "vendors.vendor_bank_details";
+    expect([...staffReadableClasses(["CD"], { resource: bank, assigned: true })]).toEqual([
+      "PUBLIC",
+    ]);
+    expect(staffReadableClasses(["FA"], { resource: bank }).has("RESTRICTED-BANK")).toBe(true);
+    // §5.5 line 194: PM reads project notes on assigned weddings only.
+    const notes = "projects.project_internal_notes";
+    expect([...staffReadableClasses(["PM"], { resource: notes })]).toEqual(["PUBLIC"]);
+    expect(staffReadableClasses(["PM"], { resource: notes, assigned: true }).has("INTERNAL")).toBe(
+      true,
+    );
+    // A conditioned read counts with its facts only (§5.7 line 216, HT "RU hotel lines").
+    const cost = "budget.budget_lines_internal_cost";
+    expect([...staffReadableClasses(["HT"], { resource: cost })]).toEqual(["PUBLIC"]);
+    expect(
+      staffReadableClasses(["HT"], { resource: cost, side: "hotel" }).has("RESTRICTED-FINANCE"),
+    ).toBe(true);
+    expect([...staffReadableClasses(["SA"], { resource: "hotels.nowhere" })]).toEqual(["PUBLIC"]);
+  });
+
   it("§6 line 359 over §4 line 126: a client representative never reads SENSITIVE-GUEST", () => {
     expect([...principalReadableClasses("client")]).toEqual(["PUBLIC", "CLIENT"]);
     expect(principalReadableClasses("client", { ownRow: true }).has("SENSITIVE-GUEST")).toBe(false);
