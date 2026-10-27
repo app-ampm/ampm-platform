@@ -18,3 +18,19 @@ export type {
   PrincipalType,
   StaffRoleCode,
 } from "./identity";
+export {
+  fieldNoteList,
+  fieldNoteOutcome,
+  fieldNoteStatus,
+  fieldNoteUpsert,
+  fieldNoteUpsertResult,
+  fieldNoteView,
+} from "./field-note";
+export type {
+  FieldNoteList,
+  FieldNoteOutcome,
+  FieldNoteStatus,
+  FieldNoteUpsert,
+  FieldNoteUpsertResult,
+  FieldNoteView,
+} from "./field-note";

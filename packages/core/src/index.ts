@@ -16,5 +16,7 @@ export { parseEnv } from "./env";
 
 export * from "./schemas";
 
+export * from "./offline";
+
 export { createI18n, en } from "./i18n";
 export type { Locale } from "./i18n";
