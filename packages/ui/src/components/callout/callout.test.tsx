@@ -1,4 +1,5 @@
 import { uiCopy } from "../../copy";
+import { spyOnAnnounce } from "../../test/announce";
 import { fireEvent, renderWithProviders, screen } from "../../test/render";
 import { Callout, calloutKinds, type CalloutKind } from "./callout";
 
@@ -26,5 +27,21 @@ describe("Callout", () => {
   it("announces danger as an alert", async () => {
     await renderWithProviders(<Callout kind="danger">Nothing was charged.</Callout>);
     expect(screen.getByRole("alert")).toBeOnTheScreen();
+  });
+
+  it("announces the live kinds on iOS with their title and body", async () => {
+    const announce = spyOnAnnounce();
+    await renderWithProviders(<Callout kind="danger">Nothing was charged.</Callout>);
+    expect(announce).toHaveBeenCalledWith(`${uiCopy.callout.danger}. Nothing was charged.`, {
+      queue: true,
+    });
+    jest.restoreAllMocks();
+  });
+
+  it("keeps the static kinds silent", async () => {
+    const announce = spyOnAnnounce();
+    await renderWithProviders(<Callout kind="indicative">Rates verified on 12 March.</Callout>);
+    expect(announce).not.toHaveBeenCalled();
+    jest.restoreAllMocks();
   });
 });
