@@ -2,6 +2,7 @@ import type { ConditionFacts } from "./conditions";
 import { decideGrants, type Decision, type Reach, type RoleGrant } from "./evaluate";
 import { isAction, parsePermissionKey, permissionKey, type PermissionKey } from "./keys";
 import { MATRIX } from "./matrix";
+import { recordRowOf } from "./record-rows";
 import { OUTSIDE_KEYS } from "./resources";
 import type { PrincipalType, StaffRole } from "./roles";
 
@@ -199,18 +200,22 @@ export function decideBeforeRead(
 }
 
 /**
- * The read key of the row a key decides on, or null for a key that names no row. A principal who
- * holds it may see the records, so a refused action on them is a 403, not a 404 (test-cases.md,
- * denial semantics).
+ * The read key of the record a key acts on (record-rows.ts recordRowOf): its own row's, its
+ * table's for a class of a record's columns, the record's for a decision no role reads; null for a
+ * key that names no row or a decision on no one row's record. A principal who holds it may see the
+ * records, so a refused action on them is a 403, not a 404 (test-cases.md line 212).
  *
  * @example
  * readKeyFor("tasks.incidents.update:assigned"); // "tasks.incidents.read"
+ * readKeyFor("projects.close:assigned"); // "projects.wedding_projects.read"
  */
 export function readKeyFor(key: string): string | null {
   const base = baseKey(key);
   if (base === null) return null;
-  const row = base.slice(0, base.lastIndexOf("."));
-  return MATRIX.staff.some((r) => `${r.module}.${r.resource}` === row) ? `${row}.read` : null;
+  const name = base.slice(0, base.lastIndexOf("."));
+  const row = MATRIX.staff.find((r) => `${r.module}.${r.resource}` === name);
+  const record = row ? recordRowOf(row) : null;
+  return record ? `${record.module}.${record.resource}.read` : null;
 }
 
 /**
