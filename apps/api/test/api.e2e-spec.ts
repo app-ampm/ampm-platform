@@ -156,7 +156,7 @@ describe("API (e2e)", () => {
       }
     });
 
-    it("answers PM (other) and a client with the 404 of a missing record", async () => {
+    it("AC-12.2: answers PM (other) and a client with the 404 of a missing record", async () => {
       const missing = errors.notFound().toEnvelope();
       const other = await request(app.getHttpServer())
         .get(notes(PROJECT))

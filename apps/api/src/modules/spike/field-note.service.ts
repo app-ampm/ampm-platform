@@ -29,7 +29,9 @@ export class FieldNoteService {
 
   /**
    * Reads the app refreshes into its local store, oldest first by the device's own timestamp, inside
-   * the request's scope (step 5): a project outside it reads as empty, never as someone else's.
+   * the request's scope (step 5): a note the scope does not reach is never returned. A wedding the
+   * principal may not reach never gets here: PermissionGuard answers it first with the 404 of a
+   * missing record (test-cases.md AC-12.2, architecture §6).
    */
   list(projectId: string, scope: RecordScope): FieldNoteList {
     const items = [...this.notes.values()]
