@@ -70,6 +70,26 @@ describe("visibility classes", () => {
     ).toBe(false);
   });
 
+  it("§4 lines 122 and 124, §5.3 line 169, §5.8 line 232: a contacts row's notes are its table's notes", () => {
+    const vendorContacts = "vendors.vendor_contacts";
+    const hotelContacts = "hotels.hotel_contacts";
+    for (const resource of [vendorContacts, hotelContacts]) {
+      const classes = staffReadableClasses(["HL"], { resource, assigned: true });
+      expect(classes.has("RESTRICTED-NOTES"), resource).toBe(false);
+    }
+    expect(staffReadableClasses(["VC"], { resource: vendorContacts }).has("RESTRICTED-NOTES")).toBe(
+      true,
+    );
+    expect(staffReadableClasses(["SM"], { resource: hotelContacts }).has("RESTRICTED-NOTES")).toBe(
+      true,
+    );
+    expect(
+      staffReadableClasses(["PM"], { resource: vendorContacts, assigned: true }).has(
+        "RESTRICTED-NOTES",
+      ),
+    ).toBe(true);
+  });
+
   it("§4 line 122: without a known resource no staff role reads internal notes", () => {
     expect(staffReadableClasses(["SA"]).has("RESTRICTED-NOTES")).toBe(false);
     expect(

@@ -84,14 +84,29 @@ function readsRow(roles: readonly StaffRole[], row: MatrixRow, context: ClassCon
 }
 
 /**
- * §4 RESTRICTED-NOTES, "staff with module access per §5": the resource's own internal-notes row
- * ("Hotel internal rating and notes") when §5 has one, otherwise the resource's row. Only a plain
+ * The row of the table a class row's columns belong to: "Vendor contacts" and "Vendor internal
+ * rating and notes" are columns of the vendors, whose row is "Vendor profiles, client fields" (the
+ * row their §10 keys name, resources.ts KEY_ALIASES). Any other row is its own table's.
+ */
+function tableRow(row: MatrixRow): MatrixRow {
+  const parent = row.aliases.find((alias) => alias.resource !== row.resource);
+  if (!parent) return row;
+  const found = MATRIX.staff.find(
+    (candidate) => candidate.module === row.module && candidate.resource === parent.resource,
+  );
+  return found ?? row;
+}
+
+/**
+ * §4 RESTRICTED-NOTES, "staff with module access per §5": the internal-notes row of the record's
+ * table ("Hotel internal rating and notes") when §5 has one, otherwise the table's row. Only a plain
  * read grant opens notes; a conditioned one ("RU (a) theme, dress code") does not. No resource, or
  * one the matrix does not know, opens nothing.
  */
 function readsNotes(roles: readonly StaffRole[], context: ClassContext): boolean {
-  const row = rowOf(context.resource);
-  if (!row) return false;
+  const resourceRow = rowOf(context.resource);
+  if (!resourceRow) return false;
+  const row = tableRow(resourceRow);
   const notes =
     MATRIX.staff.find(
       (candidate) =>
