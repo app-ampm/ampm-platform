@@ -1,42 +1,21 @@
 /**
  * authz:generate — reads docs/permission-matrix.md and writes src/generated/matrix.json:
- *   staff   §5  every row × role as actions with their scope (a = assigned, o = own) and note
- *   others  §6  the client representative, guest and demo columns, parsed the same way
- *   transitions §7 every From → To clause with the roles, people and system that may move it
- *               (scripts/parse-transitions.ts, which stops on anything it cannot read)
- * The engine (src/engine.ts) and the generated authorisation suite read this file, so the document
- * stays the source of truth and CI fails when the committed file drifts from it.
+ *   staff        §5  every row × role, §5.16 reports included, as grants with scope and conditions
+ *   others       §6  the client representative, guest and demo columns, scoped to their own
+ *   transitions  §7  every From → To clause with the roles, people and system that may move it
+ * The parsers stop on any cell, note, row or status they cannot read, so the document stays the
+ * source of truth and nothing in it is dropped; CI fails when the committed file drifts from it.
  * Node type stripping, erasable TypeScript only.
  */
 import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { ACTION_LETTERS, type Action, type Scope } from "../src/roles.ts";
-import { MODULES, RESOURCES, slugify } from "../src/resources.ts";
+import { parseMatrix } from "./parse-matrix.ts";
 import { parseTransitions } from "./parse-transitions.ts";
 
-const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
-const doc = readFileSync(join(root, "docs", "permission-matrix.md"), "utf8");
-
-const STAFF = ["SA", "SM", "HT", "PM", "CD", "VC", "RG", "HL", "FA"] as const;
-const OTHERS = ["CR", "GU", "DP"] as const;
-
-export interface Grant {
-  readonly actions: Action[];
-  readonly scope: Scope;
-  readonly note: string | null;
-}
-
-export interface MatrixRow {
-  readonly section: string;
-  readonly module: string;
-  readonly resource: string;
-  readonly label: string;
-  readonly provisional: boolean;
-  readonly cells: Record<string, string>;
-  readonly grants: Record<string, Grant[]>;
-}
+const here = dirname(fileURLToPath(import.meta.url));
+const doc = readFileSync(join(here, "..", "..", "..", "docs", "permission-matrix.md"), "utf8");
 
 function section(from: string, to: string): string {
   const start = doc.indexOf(from);
@@ -45,96 +24,28 @@ function section(from: string, to: string): string {
   return doc.slice(start, end);
 }
 
-/** "CR (a) UD (o) guests" → create/read on assigned, update/delete on own, note "guests". */
-export function parseCell(cell: string): Grant[] {
-  const text = cell.replace(/\*\*/g, "").trim();
-  if (text === "" || text === "—" || text.startsWith("—") || /^to confirm/i.test(text)) return [];
-  const grants: Grant[] = [];
-  const pattern = /(?<![A-Za-z])([CRUDASX]+)(?![a-z])(?:\s*\((a|o)\))?/g;
-  let note = text;
-  for (const match of text.matchAll(pattern)) {
-    const letters = match[1] ?? "";
-    const actions = [...letters]
-      .map((letter) => ACTION_LETTERS[letter])
-      .filter((a): a is Action => a !== undefined);
-    if (actions.length === 0) continue;
-    const qualifier = match[2];
-    const scope: Scope =
-      qualifier === "a"
-        ? "assigned"
-        : qualifier === "o"
-          ? "own"
-          : /\bown\b/i.test(text)
-            ? "own"
-            : "all";
-    grants.push({ actions, scope, note: null });
-    note = note.replace(match[0], " ");
-  }
-  const cleaned = note
-    .replace(/\bown\b/gi, " ")
-    .replace(/[,;:]+/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-  return grants.map((grant) => ({ ...grant, note: cleaned === "" ? null : cleaned }));
-}
-
-function parseMatrix(block: string, sectionId: string, columns: readonly string[]): MatrixRow[] {
-  const rows: MatrixRow[] = [];
-  let current = sectionId;
-  for (const line of block.split("\n")) {
-    const heading = /^### (\d+\.\d+)/.exec(line);
-    if (heading) current = heading[1] ?? current;
-    if (!line.startsWith("|") || /^\|\s*-+/.test(line) || /^\|\s*Resource/.test(line)) continue;
-    const cells = line
-      .trim()
-      .replace(/^\||\|$/g, "")
-      .split("|")
-      .map((cell) => cell.trim());
-    const label = cells[0] ?? "";
-    if (cells.length !== columns.length + 1) continue; // a table with another layout (§5.16 report tables)
-    const curated = RESOURCES[current]?.[label];
-    const resource = curated ?? slugify(label);
-    const grants: Record<string, Grant[]> = {};
-    const raw: Record<string, string> = {};
-    columns.forEach((column, index) => {
-      raw[column] = cells[index + 1] ?? "";
-      grants[column] = parseCell(raw[column] ?? "");
-    });
-    rows.push({
-      section: current,
-      module: MODULES[current] ?? current,
-      resource,
-      label,
-      provisional: !curated,
-      cells: raw,
-      grants,
-    });
-  }
-  return rows;
-}
-
 const staff = parseMatrix(
   section("## 5. Permission matrix: staff roles", "## 6. Permission matrix"),
-  "5.1",
-  STAFF,
+  "staff",
 );
 const others = parseMatrix(
   section("## 6. Permission matrix", "## 7. Status transitions"),
-  "6",
-  OTHERS,
+  "others",
 );
 const transitions = parseTransitions(section("## 7. Status transitions", "## 8. Automation"));
 
 const output = { source: "docs/permission-matrix.md", staff, others, transitions };
-const target = join(
-  dirname(fileURLToPath(import.meta.url)),
-  "..",
-  "src",
-  "generated",
-  "matrix.json",
+writeFileSync(
+  join(here, "..", "src", "generated", "matrix.json"),
+  `${JSON.stringify(output, null, 2)}\n`,
 );
-writeFileSync(target, `${JSON.stringify(output, null, 2)}\n`);
+
 const provisional = staff.filter((row) => row.provisional).length;
+const conditioned = [...staff, ...others].flatMap((row) =>
+  Object.values(row.grants).flatMap((grants) => grants.filter((g) => g.conditions.length > 0)),
+).length;
 console.log(
-  `policy: ${staff.length} staff rows (${provisional} provisional names), ${others.length} client/guest/demo rows, ${transitions.length} transitions -> src/generated/matrix.json`,
+  `policy: ${staff.length} staff rows (${provisional} provisional names, reports included), ` +
+    `${others.length} client/guest/demo rows, ${conditioned} conditioned grants, ` +
+    `${transitions.length} transition rules -> src/generated/matrix.json`,
 );

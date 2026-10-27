@@ -1,30 +1,6 @@
+import { FINANCE_EXPORT_ROLES, type VisibilityClass } from "./classes";
+import { MATRIX, type ReportExclusion } from "./matrix";
 import type { StaffRole } from "./roles";
-
-/** Field visibility classes (permission-matrix §4). Every column belongs to exactly one. */
-export const VISIBILITY_CLASSES = [
-  "PUBLIC",
-  "CLIENT",
-  "INTERNAL",
-  "RESTRICTED-NOTES",
-  "RESTRICTED-FINANCE",
-  "RESTRICTED-CONTACT",
-  "RESTRICTED-BANK",
-  "SENSITIVE-GUEST",
-  "RESTRICTED-IDENTITY",
-  "SECRET",
-] as const;
-export type VisibilityClass = (typeof VISIBILITY_CLASSES)[number];
-
-/** Never exported, whatever the role (P-10). */
-export const NEVER_EXPORTED: readonly VisibilityClass[] = [
-  "SENSITIVE-GUEST",
-  "RESTRICTED-IDENTITY",
-  "RESTRICTED-BANK",
-  "SECRET",
-];
-
-/** Exported only by Finance and the Super Admin. */
-export const FINANCE_EXPORT_ROLES: readonly StaffRole[] = ["FA", "SA"];
 
 export interface ClassContext {
   /** The principal is a member of the project the record belongs to. */
@@ -104,9 +80,38 @@ export function principalReadableClasses(
   return set;
 }
 
-/** The classes an export may carry for a role (§4, last paragraph). */
-export function exportableClasses(roles: readonly StaffRole[]): ReadonlySet<VisibilityClass> {
+/**
+ * What a §5.16 report's export leaves out; an unknown report stops the export.
+ *
+ * @example
+ * reportExclusions("vendor_selection_contracts_deliverables");
+ * // → [{ kind: "class", class: "RESTRICTED-BANK", unlessRoles: [] }]
+ */
+export function reportExclusions(report: string): readonly ReportExclusion[] {
+  const row = MATRIX.staff.find(
+    (candidate) => candidate.module === "reports" && candidate.resource === report,
+  );
+  if (!row) throw new Error(`no §5.16 report "${report}"`);
+  return row.exclusions;
+}
+
+/**
+ * The classes an export may carry for a role (§4, last paragraph), less what the report excludes.
+ *
+ * @example
+ * exportableClasses(["FA"], "budget_internal").has("RESTRICTED-FINANCE"); // true
+ */
+export function exportableClasses(
+  roles: readonly StaffRole[],
+  report?: string,
+): ReadonlySet<VisibilityClass> {
   const set = new Set<VisibilityClass>(["PUBLIC", "CLIENT", "INTERNAL"]);
   if (roles.some((role) => FINANCE_EXPORT_ROLES.includes(role))) set.add("RESTRICTED-FINANCE");
+  if (report === undefined) return set;
+  for (const exclusion of reportExclusions(report)) {
+    const kept =
+      exclusion.kind === "class" && roles.some((role) => exclusion.unlessRoles.includes(role));
+    if (exclusion.kind === "class" && !kept) set.delete(exclusion.class);
+  }
   return set;
 }

@@ -3,7 +3,7 @@
  * `pnpm authz:generate` rewrites src/generated/matrix.json from the document; the engine and the
  * generated authorisation suite read it.
  */
-export const POLICY_VERSION = "0.2.0";
+export const POLICY_VERSION = "0.3.0";
 
 export {
   ACTION_LETTERS,
@@ -13,28 +13,39 @@ export {
   roleFromKey,
 } from "./roles";
 export type { Action, PrincipalType, Scope, StaffRole, StaffRoleKey } from "./roles";
+export { FINANCE_EXPORT_ROLES, NEVER_EXPORTED, VISIBILITY_CLASSES } from "./classes";
+export type { VisibilityClass } from "./classes";
 export {
-  FINANCE_EXPORT_ROLES,
-  NEVER_EXPORTED,
-  VISIBILITY_CLASSES,
   exportableClasses,
   principalReadableClasses,
+  reportExclusions,
   staffReadableClasses,
 } from "./visibility";
-export type { ClassContext, VisibilityClass } from "./visibility";
+export type { ClassContext } from "./visibility";
+export { CHECKS, FIELD_GROUPS, SUBJECTS, VIEWS, unmetConditions } from "./conditions";
+export type { Check, Condition, ConditionFacts, FieldGroup, Subject, View } from "./conditions";
 export { MODULES, RESOURCES, slugify } from "./resources";
 export { MATRIX } from "./matrix";
-export type { Actor, Grant, MatrixRow, Transition } from "./matrix";
+export type { Actor, Grant, MatrixRow, ReportExclusion, Transition } from "./matrix";
 export {
   can,
-  clientReach,
   decide,
   grantsForRole,
   parsePermissionKey,
   permissionKey,
   permissionKeysForRole,
 } from "./engine";
-export type { Decision, PermissionKey, PolicyPrincipal, PolicyTarget } from "./engine";
+export type {
+  Decision,
+  DenialReason,
+  ExplicitGrant,
+  PermissionKey,
+  PolicyPrincipal,
+  PolicyTarget,
+  RoleGrant,
+} from "./engine";
+export { clientReach, decideReach } from "./reach";
+export type { ReachPrincipal } from "./reach";
 export { canTransition } from "./transitions";
 export type { TransitionContext } from "./transitions";
 export { STATUS_MACHINES } from "./statuses";

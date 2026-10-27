@@ -1,22 +1,53 @@
 import matrix from "./generated/matrix.json" with { type: "json" };
+import type { VisibilityClass } from "./classes";
+import type { Condition } from "./conditions";
+import { readMatrix } from "./matrix-load";
 import type { Action, Scope, StaffRole } from "./roles";
 
 /*
  * The shape of src/generated/matrix.json, which scripts/generate.ts writes from
- * docs/permission-matrix.md.
+ * docs/permission-matrix.md. The file is checked against these types when it loads, so a stale or
+ * hand-edited file stops the package instead of granting by accident.
  */
 
 /**
- * One run of action letters in a cell, with its scope and note.
+ * One run of action letters in a cell, with its scope and the conditions its note sets.
  *
  * @example
- * const grant: Grant = { actions: ["read"], scope: "assigned", note: null };
+ * // "RU hotel lines" (HT, §5.7)
+ * const grant: Grant = {
+ *   actions: ["read", "update"],
+ *   scope: "all",
+ *   conditions: [{ kind: "subject", anyOf: ["hotel"] }],
+ * };
  */
 export interface Grant {
   readonly actions: readonly Action[];
   readonly scope: Scope;
-  readonly note: string | null;
+  /** Every condition must be met; an empty list is a plain grant. */
+  readonly conditions: readonly Condition[];
 }
+
+/**
+ * What a §5.16 report's export leaves out.
+ *
+ * @example
+ * const bank: ReportExclusion = { kind: "class", class: "RESTRICTED-BANK", unlessRoles: [] };
+ */
+export type ReportExclusion =
+  | {
+      readonly kind: "class";
+      readonly class: VisibilityClass;
+      /** Roles the class stays in for ("Internal amounts unless FA or SA"). */
+      readonly unlessRoles: readonly StaffRole[];
+    }
+  | {
+      readonly kind: "variant";
+      /** A named export of the report that carries only these fields. */
+      readonly variant: string;
+      readonly onlyFields: readonly string[];
+      readonly audited: boolean;
+    };
 
 /**
  * One row of a §5 or §6 table.
@@ -30,8 +61,11 @@ export interface MatrixRow {
   readonly resource: string;
   readonly label: string;
   readonly provisional: boolean;
+  /** The document's cells, by column (role codes; for §5.16 the report columns). */
   readonly cells: Readonly<Record<string, string>>;
   readonly grants: Readonly<Record<string, readonly Grant[]>>;
+  /** §5.16 rows only. */
+  readonly exclusions: readonly ReportExclusion[];
 }
 
 /**
@@ -75,7 +109,7 @@ export interface Transition {
  * The generated matrix as a whole.
  *
  * @example
- * MATRIX.transitions.length;
+ * const matrix: Matrix = readMatrix(JSON.parse(text));
  */
 export interface Matrix {
   readonly source: string;
@@ -88,6 +122,6 @@ export interface Matrix {
  * The matrix as generated from docs/permission-matrix.md (scripts/generate.ts).
  *
  * @example
- * MATRIX.staff.filter((row) => row.section === "5.1").map((row) => row.resource);
+ * MATRIX.staff.filter((row) => row.section === "5.16").map((row) => row.resource);
  */
-export const MATRIX = matrix as Matrix;
+export const MATRIX: Matrix = readMatrix(matrix);

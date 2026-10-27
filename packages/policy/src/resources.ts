@@ -24,6 +24,12 @@ export const MODULES: Record<string, string> = {
   "6": "client",
 };
 
+/**
+ * Curated resource names by section and row label; any other row keeps the slug of its label.
+ *
+ * @example
+ * RESOURCES["5.16"]?.["Internal cost and margin variance"]; // "budget_internal"
+ */
 export const RESOURCES: Record<string, Record<string, string>> = {
   "5.1": {
     "Staff users and global roles": "staff_users",
@@ -44,8 +50,18 @@ export const RESOURCES: Record<string, Record<string, string>> = {
     "Payments inbound from clients": "payments_inbound",
     "Payments outbound to vendors and hotels": "payments_outbound",
   },
+  // §10 names this report's export key `reports.budget_internal.export`.
+  "5.16": {
+    "Internal cost and margin variance": "budget_internal",
+  },
 };
 
+/**
+ * The provisional resource name of a row label.
+ *
+ * @example
+ * slugify("Budget lines, internal cost"); // "budget_lines_internal_cost"
+ */
 export function slugify(label: string): string {
   return label
     .toLowerCase()

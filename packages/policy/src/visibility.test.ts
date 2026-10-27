@@ -27,4 +27,12 @@ describe("visibility classes", () => {
     expect(sa.has("SENSITIVE-GUEST")).toBe(false);
     expect(exportableClasses(["PM"]).has("RESTRICTED-FINANCE")).toBe(false);
   });
+
+  it("§5.16 lines 324 and 332: a report's exclusions apply unless the role is excepted", () => {
+    const hotels = "hotel_shortlist_enquiries_site";
+    expect(exportableClasses(["HT"], hotels).has("RESTRICTED-FINANCE")).toBe(false);
+    expect(exportableClasses(["SA"], hotels).has("RESTRICTED-FINANCE")).toBe(true);
+    expect(exportableClasses(["SA"], hotels).has("INTERNAL")).toBe(true);
+    expect(() => exportableClasses(["SA"], "no_such_report")).toThrow();
+  });
 });
