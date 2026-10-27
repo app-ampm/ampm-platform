@@ -25,4 +25,17 @@ describe("refusalFor (test-cases.md line 212, denial semantics)", () => {
   it("§5.13 line 293: a 404 where the only read is the principal's own records", () => {
     expect(refusalFor(staff(["FA"]), "tasks.tasks.delete", MEMBER).status).toBe(404);
   });
+
+  it("AC-12.1 (test-cases.md line 854), §5.13 line 293: on its own record, once read, a 403", () => {
+    // FA and SM read their own tasks: a service that has loaded the task knows whose it is.
+    for (const role of ["FA", "SM"] as const) {
+      const principal = staff([role]);
+      expect(refusalFor(principal, "tasks.tasks.delete", MEMBER, principal.userId).status).toBe(
+        403,
+      );
+      expect(refusalFor(principal, "tasks.tasks.delete", OTHER, principal.userId).status).toBe(403);
+      // Someone else's task is not visible to them: the 404 of a missing record.
+      expect(refusalFor(principal, "tasks.tasks.delete", MEMBER, "u-bob").status).toBe(404);
+    }
+  });
 });
