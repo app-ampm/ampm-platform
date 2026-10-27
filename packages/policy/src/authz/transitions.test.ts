@@ -9,7 +9,7 @@ import { describe, expect, it } from "vitest";
 import type { PolicyPrincipal } from "../engine";
 import { MATRIX, type Actor, type Transition } from "../matrix";
 import { STAFF_ROLE_CODES, type StaffRole } from "../roles";
-import { STATUS_MACHINES } from "../statuses";
+import { STATUS_MACHINES, type ActorPrincipal } from "../statuses";
 import { canTransition, type TransitionContext } from "../transitions";
 import { FOREIGN_PROJECT, ME, MEMBER_PROJECT, SOMEONE, member } from "./fixtures";
 
@@ -21,6 +21,13 @@ const nobody: PolicyPrincipal = {
   roles: [],
   projectIds: [MEMBER_PROJECT],
 };
+/** One principal of each type that may be a record's person, all on the member project. */
+const PEOPLE: readonly [ActorPrincipal, PolicyPrincipal][] = [
+  ["staff", nobody],
+  ["client", client],
+  ["guest", { type: "guest", userId: ME, projectIds: [MEMBER_PROJECT] }],
+  ["demo", { type: "demo", userId: ME, projectIds: [MEMBER_PROJECT] }],
+];
 
 function statusesOf(entity: string): readonly string[] {
   return STATUS_MACHINES[entity]?.statuses ?? [];
@@ -97,19 +104,19 @@ function expectMovers(rule: Transition, from: string, to: string): void {
   );
 }
 
+/** The record's people move it when they are of a type the record binds them to, and only then. */
 function expectActors(rule: Transition, from: string, to: string): void {
   const context = contextFor(rule, to);
+  // "Either CR" on another rule of the same move lets the client move it anyway.
+  const clientElsewhere = rulesFor(rule, from, to).some((other) => other.client);
   for (const actor of rule.actors) {
-    expect(
-      canTransition(nobody, rule.entity, from, to, asActor(actor, ME, context)),
-    ).not.toBeNull();
-    expect(
-      canTransition(nobody, rule.entity, from, to, asActor(actor, SOMEONE, context)),
-    ).toBeNull();
-    if (actor === "requester" || actor === "owner") {
-      expect(
-        canTransition(client, rule.entity, from, to, asActor(actor, ME, context)),
-      ).not.toBeNull();
+    const bound = STATUS_MACHINES[rule.entity]?.actors[actor] ?? [];
+    for (const [type, principal] of PEOPLE) {
+      if (type === "client" && clientElsewhere) continue;
+      const asMe = canTransition(principal, rule.entity, from, to, asActor(actor, ME, context));
+      expect(asMe !== null, `${actor} as ${type}`).toBe(bound.includes(type));
+      const asOther = asActor(actor, SOMEONE, context);
+      expect(canTransition(principal, rule.entity, from, to, asOther), type).toBeNull();
     }
   }
 }

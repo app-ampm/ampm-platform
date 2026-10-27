@@ -4,8 +4,18 @@
  * kinds its parenthesised qualifiers name ("answered (question)"). A plain "any" is every status but
  * the machine's terminal ones. The generator expands §7 against these and stops on a status, set or
  * qualifier they do not define; canTransition() refuses a status outside them. Node runs the
- * generator on this file with type stripping: no imports.
+ * generator on this file with type stripping: type imports only.
  */
+import type { Actor } from "./matrix";
+import type { PrincipalType } from "./roles";
+
+/**
+ * A principal that may be one of a record's people.
+ *
+ * @example
+ * const requesters: readonly ActorPrincipal[] = ["client", "guest", "demo"];
+ */
+export type ActorPrincipal = Exclude<PrincipalType, "system">;
 
 /**
  * One record's statuses as §7 moves them.
@@ -29,9 +39,14 @@ export interface StatusMachine {
    * ("closed → closure", SA only), so "any → on_hold" cannot reopen a closed wedding (AC-15.7).
    */
   readonly terminal: readonly string[];
+  /**
+   * Who each of the record's people §7 names may be ("The requester" of a client request is a
+   * client, guest or demo principal, §6 line 366); the generator stops on a person not bound here.
+   */
+  readonly actors: Readonly<Partial<Record<Actor, readonly ActorPrincipal[]>>>;
 }
 
-const PLAIN = { sets: {}, kinds: {}, prefix: null } as const;
+const PLAIN = { sets: {}, kinds: {}, prefix: null, actors: {} } as const;
 
 /**
  * The machines by entity, the `entity` canTransition() takes.
@@ -109,6 +124,8 @@ export const STATUS_MACHINES: Readonly<Record<string, StatusMachine>> = {
     // An approved or rejected approval is still superseded by a new version (§7 line 429).
     terminal: ["superseded"],
     statuses: ["draft", "submitted", "revision_requested", "approved", "rejected", "superseded"],
+    // §7 line 427, "The requester per §5.9": line 251 lists staff roles only; clients decide.
+    actors: { requester: ["staff"] },
   },
   vendor_assignment: {
     ...PLAIN,
@@ -147,12 +164,15 @@ export const STATUS_MACHINES: Readonly<Record<string, StatusMachine>> = {
     terminal: ["closed"],
     statuses: ["open", "assigned", "in_progress", "escalated", "resolved", "closed"],
     sets: { "open state": ["open", "assigned", "in_progress"] },
+    actors: { assignee: ["staff"] },
   },
   task: {
     ...PLAIN,
     heading: "Task",
     terminal: ["completed", "cancelled"],
     statuses: ["not_started", "in_progress", "blocked", "completed", "cancelled"],
+    // §6 line 370 gives a client representative R on tasks only, so owners and creators are staff.
+    actors: { owner: ["staff"], creator: ["staff"] },
   },
   room_allocation: {
     ...PLAIN,
@@ -176,5 +196,8 @@ export const STATUS_MACHINES: Readonly<Record<string, StatusMachine>> = {
       "withdrawn",
     ],
     kinds: { question: "question", "change request": "change_request" },
+    // §6 line 366: the representatives, a guest (support request) and the demo (routed to Sales)
+    // create requests; "The assigned staff member" is staff.
+    actors: { assignee: ["staff"], requester: ["client", "guest", "demo"] },
   },
 };

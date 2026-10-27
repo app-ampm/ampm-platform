@@ -1,6 +1,6 @@
 import type { PolicyPrincipal } from "./engine";
 import { MATRIX, type Actor, type Transition } from "./matrix";
-import { STATUS_MACHINES } from "./statuses";
+import { STATUS_MACHINES, type StatusMachine } from "./statuses";
 
 /**
  * What the service knows about the record a principal wants to move (permission-matrix §7).
@@ -22,10 +22,6 @@ export interface TransitionContext {
   readonly kind?: string | undefined;
 }
 
-/** The actors a client may be: the requester of a request, the owner of a record. */
-const CLIENT_ACTORS: readonly Actor[] = ["requester", "owner"];
-const STAFF_ACTORS: readonly Actor[] = ["assignee", "owner", "creator", "requester"];
-
 function actorId(context: TransitionContext, actor: Actor): string | undefined {
   switch (actor) {
     case "assignee":
@@ -45,30 +41,39 @@ function reaches(rule: Transition, from: string, to: string, context: Transition
   return rule.restore ? context.previousStatus === to : rule.to.includes(to);
 }
 
+/**
+ * The principal is one of the record's people the rule names, and of a type the record allows for
+ * that person (statuses.ts): a user id alone never makes a client a task's owner.
+ */
 function isActor(
   rule: Transition,
+  machine: StatusMachine,
   principal: PolicyPrincipal,
   context: TransitionContext,
-  allowed: readonly Actor[],
 ): boolean {
-  const { userId } = principal;
-  if (userId === undefined) return false;
-  return rule.actors.some((actor) => allowed.includes(actor) && actorId(context, actor) === userId);
+  const { type, userId } = principal;
+  if (userId === undefined || type === "system") return false;
+  return rule.actors.some(
+    (actor) => machine.actors[actor]?.includes(type) === true && actorId(context, actor) === userId,
+  );
 }
 
-function moves(rule: Transition, principal: PolicyPrincipal, context: TransitionContext): boolean {
+function moves(
+  rule: Transition,
+  machine: StatusMachine,
+  principal: PolicyPrincipal,
+  context: TransitionContext,
+): boolean {
   if (principal.type === "system") return rule.system;
-  if (principal.type === "client") {
-    return rule.client || isActor(rule, principal, context, CLIENT_ACTORS);
-  }
-  // Demo and guest principals move nothing: §7 names neither.
+  if (isActor(rule, machine, principal, context)) return true;
+  if (principal.type === "client") return rule.client;
+  // Guests and the demo move a record only as one of its people (the requester of their request).
   if (principal.type !== "staff") return false;
   const member =
     context.projectId !== undefined && principal.projectIds?.includes(context.projectId);
-  const byRole = rule.roles.some(
+  return rule.roles.some(
     (mover) => principal.roles?.includes(mover.role) && (!mover.assigned || member),
   );
-  return byRole || isActor(rule, principal, context, STAFF_ACTORS);
 }
 
 /**
@@ -96,7 +101,7 @@ export function canTransition(
     (candidate) =>
       candidate.entity === entity &&
       reaches(candidate, from, to, context) &&
-      moves(candidate, principal, context),
+      moves(candidate, machine, principal, context),
   );
   return rule ?? null;
 }

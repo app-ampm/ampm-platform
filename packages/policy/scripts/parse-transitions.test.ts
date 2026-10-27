@@ -171,5 +171,9 @@ describe("parseTransitions", () => {
     expect(() =>
       parseTransitions(table("Incident", "| open | assigned | whoever is on duty |")),
     ).toThrow(/no mover/);
+    // A person the record does not bind to a principal type (statuses.ts actors) names nobody.
+    expect(() =>
+      parseTransitions(table("Room allocation", "| requested | proposed | The owner |")),
+    ).toThrow(/owner/);
   });
 });

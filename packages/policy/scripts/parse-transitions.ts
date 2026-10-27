@@ -2,8 +2,9 @@
  * Reads §7 of docs/permission-matrix.md into transition rules. Movers come only from the who-part of
  * each clause: the leading list of role codes, "Either CR", "System" and the record's people ("The
  * assignee", "The assigned staff member"); the rest of the clause is its condition. Statuses expand
- * against src/statuses.ts. An unknown heading, status, set or qualifier, or a clause that names no
- * mover and is not known to need none, stops the generator.
+ * against src/statuses.ts, which also binds each person to the principal types that may be it. An
+ * unknown heading, status, set or qualifier, an unbound person, or a clause that names no mover and
+ * is not known to need none, stops the generator.
  */
 import type { Actor, Transition } from "../src/matrix.ts";
 import type { StaffRole } from "../src/roles.ts";
@@ -188,10 +189,20 @@ function joined(parts: readonly string[]): string | null {
 
 type RuleBase = Pick<Transition, "entity" | "from" | "to" | "restore" | "kind" | "who">;
 
+/** A person a clause names must be bound to the principals the record allows (statuses.ts). */
+function checkActors(entity: string, machine: StatusMachine, clauses: readonly Clause[]): void {
+  for (const actor of clauses.flatMap((clause) => clause.movers.actors)) {
+    if (!machine.actors[actor]) {
+      throw new Error(`§7 ${entity}: "${actor}" names nobody; bind it in statuses.ts actors`);
+    }
+  }
+}
+
 function rowRules(heading: string, cells: readonly string[]): Transition[] {
   const [fromCell = "", toCell = "", who = ""] = cells;
-  const { entity, from, to } = machineFor(heading, fromCell, toCell);
+  const { entity, machine, from, to } = machineFor(heading, fromCell, toCell);
   const { clauses, notes } = parseWho(who);
+  checkActors(entity, machine, clauses);
   if (from.kind !== null && to.kind !== null && from.kind !== to.kind) {
     throw new Error(`§7 ${heading} "${fromCell} → ${toCell}": two qualifiers`);
   }
