@@ -105,6 +105,15 @@ describe("client reach", () => {
       decideReach("demo", "hotel_assistance_requests", "create", { checks: ["routed_to_sales"] })
         .allowed,
     ).toBe(true);
+    // "R sample": a real record is refused; only a demo or sample record is read.
+    expect(decideReach("demo", "attendance_rsvp_progress", "read")).toEqual({
+      allowed: false,
+      reason: "condition_unmet",
+      unmet: [{ kind: "check", check: "demo_record" }],
+    });
+    expect(
+      decideReach("demo", "attendance_rsvp_progress", "read", { checks: ["demo_record"] }),
+    ).toMatchObject({ allowed: true, scope: "own" });
     expect(decideReach("demo", "attendance_rsvp_progress", "update").reason).toBe("no_grant");
   });
 
