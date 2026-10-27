@@ -1,13 +1,18 @@
-import { Global, type MiddlewareConsumer, Module, type NestModule } from "@nestjs/common";
+import { Global, Module } from "@nestjs/common";
 import { APP_FILTER, APP_INTERCEPTOR } from "@nestjs/core";
 
 import { ENV, loadEnv } from "../env.js";
 import { AppErrorFilter } from "./app-error.filter.js";
 import { EnvelopeInterceptor } from "./envelope.interceptor.js";
 import { AppLogger } from "./logger.service.js";
-import { RequestContextMiddleware } from "./request-context.middleware.js";
 
-/** Environment, request context, logging and the two envelopes, available everywhere. */
+/**
+ * Environment, logging and the two envelopes, available everywhere. The request context is not a
+ * Nest middleware: configureHttp (http.setup.ts) creates it ahead of the body parser.
+ *
+ * @example
+ * \@Module({ imports: [PlatformModule, DbModule, PolicyModule] })
+ */
 @Global()
 @Module({
   providers: [
@@ -18,8 +23,4 @@ import { RequestContextMiddleware } from "./request-context.middleware.js";
   ],
   exports: [ENV, AppLogger],
 })
-export class PlatformModule implements NestModule {
-  configure(consumer: MiddlewareConsumer): void {
-    consumer.apply(RequestContextMiddleware).forRoutes("*");
-  }
-}
+export class PlatformModule {}

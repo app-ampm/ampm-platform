@@ -24,6 +24,33 @@ class Routes {
   @RequirePermission("tasks.tasks.read", { projectParam: "projectId" })
   readTasks(): void {}
 
+  @RequirePermission("tasks.tasks.delete", { projectParam: "projectId" })
+  deleteTask(): void {}
+
+  @RequirePermission("budget.budget_lines_client_facing.read_internal_cost", {
+    projectParam: "projectId",
+  })
+  readInternalCost(): void {}
+
+  // §10 line 551.
+  @RequirePermission("projects.close:assigned", { projectParam: "projectId" })
+  closeProject(): void {}
+
+  @RequirePermission("functions.readiness_exceptions.authorise_exception", {
+    projectParam: "projectId",
+  })
+  authoriseException(): void {}
+
+  // §10 line 550 spells the same decision as the document does.
+  @RequirePermission("functions.readiness.authorise_exception:assigned", {
+    projectParam: "projectId",
+  })
+  authoriseExceptionAsDocumented(): void {}
+
+  // §10 line 543.
+  @RequirePermission("budget.lines.read_internal_cost:assigned", { projectParam: "projectId" })
+  readInternalCostAsDocumented(): void {}
+
   open(): void {}
 }
 
@@ -133,11 +160,55 @@ describe("PermissionGuard (architecture §6 step 4)", () => {
     });
   });
 
+  it("§5.13 line 293, test-cases.md line 212: FA and SM see only their own tasks, so a delete is a 404", () => {
+    // Their read is "(o)": before the task is read the guard cannot tell theirs from Bob's.
+    expect(run(staff(["FA"], []), "deleteTask", OTHER).status).toBe(404);
+    expect(run(staff(["SM"], []), "deleteTask", OTHER).status).toBe(404);
+    expect(run(staff(["FA"]), "deleteTask").status).toBe(404);
+    // CD (a) reads every task of its wedding, so the same refusal is a 403 there.
+    expect(run(staff(["CD"]), "deleteTask").status).toBe(403);
+    expect(run(staff(["PM"]), "deleteTask").allowed).toBe(true);
+  });
+
   it("§6 line 338: a client never holds a staff key and sees no staff records, a 404", () => {
     expect(run(CLIENT, "readIncidents").status).toBe(404);
   });
 
   it("refuses a role that holds nothing on the row as absence, a 404", () => {
     expect(run(staff(["SM"]), "readIncidents").status).toBe(404);
+  });
+
+  it("test-cases.md line 212, §5.7 line 215: CD (a) sees the line but not its internal cost, a 403", () => {
+    expect(run(staff(["CD"]), "readInternalCost").status).toBe(403);
+    expect(run(staff(["CD"]), "readInternalCost", OTHER).status).toBe(404);
+  });
+
+  it("§5.15 line 312: PM (a) closing before the checklist is complete sees its wedding, a 403", () => {
+    expect(run(staff(["PM"]), "closeProject").status).toBe(403);
+    expect(run(staff(["PM"]), "closeProject", OTHER).status).toBe(404);
+    expect(run(staff(["SA"], []), "closeProject", OTHER).allowed).toBe(true);
+  });
+
+  it("AC-13.2 (test-cases.md line 925): HL and PM authorising an exception get 403, 404 outside", () => {
+    for (const role of ["HL", "PM"] as const) {
+      expect(run(staff([role]), "authoriseException").status).toBe(403);
+      expect(run(staff([role]), "authoriseException", OTHER).status).toBe(404);
+    }
+    expect(run(staff(["SA"], []), "authoriseException").allowed).toBe(true);
+  });
+
+  it("§10 line 550, AC-13.2: the key as §10 spells it refuses HL and PM (a) with 403, lets SA through", () => {
+    for (const role of ["HL", "PM"] as const) {
+      expect(run(staff([role]), "authoriseExceptionAsDocumented").status).toBe(403);
+      expect(run(staff([role]), "authoriseExceptionAsDocumented", OTHER).status).toBe(404);
+    }
+    expect(run(staff(["SA"], []), "authoriseExceptionAsDocumented", OTHER).allowed).toBe(true);
+  });
+
+  it("§10 line 543, §5.7 lines 215-216: budget.lines.read_internal_cost as §10 spells it", () => {
+    expect(run(staff(["PM"]), "readInternalCostAsDocumented").allowed).toBe(true);
+    expect(run(staff(["CD"]), "readInternalCostAsDocumented").status).toBe(403);
+    expect(run(staff(["CD"]), "readInternalCostAsDocumented", OTHER).status).toBe(404);
+    expect(run(staff(["FA"], []), "readInternalCostAsDocumented", OTHER).allowed).toBe(true);
   });
 });

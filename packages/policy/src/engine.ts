@@ -1,7 +1,9 @@
 import type { ConditionFacts } from "./conditions";
 import { decideGrants, type Decision, type Reach, type RoleGrant } from "./evaluate";
+import { documentResource } from "./document-keys";
 import { isAction, parsePermissionKey, permissionKey, type PermissionKey } from "./keys";
 import { MATRIX } from "./matrix";
+import { recordRowOf } from "./record-rows";
 import { OUTSIDE_KEYS } from "./resources";
 import type { PrincipalType, StaffRole } from "./roles";
 
@@ -107,13 +109,17 @@ function outsideKey(key: string): string | null {
   return row ? `${row.module}.${row.resource}.${named.as}` : null;
 }
 
-/** The base key a key decides on: its own, or the §5 row a §10 key stands for. */
+/**
+ * The base key a key decides on: its own, or the §5 row a §10 key stands for, whether §10 names
+ * it from another module (OUTSIDE_KEYS) or by another resource name (DOCUMENT_RESOURCES).
+ */
 function baseKey(key: string): string | null {
   const outside = outsideKey(key);
   if (outside !== null) return outside;
   const parsed = parsePermissionKey(key);
   if (!parsed) return null;
-  const { module, resource, action } = parsed;
+  const { module, action } = parsed;
+  const resource = documentResource(module, parsed.resource);
   if (isAction(action)) return `${module}.${resource}.${action}`;
   for (const row of MATRIX.staff) {
     if (row.module !== module) continue;
@@ -178,7 +184,8 @@ export function decide(
  * Step 4 as the guard runs it, before the record is read (architecture §6): decide() on what the
  * route names, the project. An own-scope grant cannot be checked yet, because the owner is on the
  * record, so it passes as scope "own" and the repository reads only the principal's own records;
- * someone else's is then absent, a 404 (permission-matrix §5 legend, "(o)").
+ * someone else's is then absent, a 404 (permission-matrix §5 legend, "(o)"). Only an owner the
+ * caller does not know passes so: one it names (`ownerId`) is decided as named, by decide().
  *
  * @example
  * const decision = decideBeforeRead(principal, "tasks.tasks.read", { projectId });
@@ -190,24 +197,30 @@ export function decideBeforeRead(
   target: PolicyTarget = {},
 ): Decision {
   const decision = decide(principal, key, target);
-  if (decision.allowed || principal.userId === undefined) return decision;
+  if (decision.allowed || target.ownerId !== undefined || principal.userId === undefined) {
+    return decision;
+  }
   const asOwner = decide(principal, key, { ...target, ownerId: principal.userId });
   return asOwner.allowed ? { ...asOwner, scope: "own" } : decision;
 }
 
 /**
- * The read key of the row a key decides on, or null for a key that names no row. A principal who
- * holds it may see the records, so a refused action on them is a 403, not a 404 (test-cases.md,
- * denial semantics).
+ * The read key of the record a key acts on (record-rows.ts recordRowOf): its own row's, its
+ * table's for a class of a record's columns, the record's for a decision no role reads; null for a
+ * key that names no row or a decision on no one row's record. A principal who holds it may see the
+ * records, so a refused action on them is a 403, not a 404 (test-cases.md line 212).
  *
  * @example
  * readKeyFor("tasks.incidents.update:assigned"); // "tasks.incidents.read"
+ * readKeyFor("projects.close:assigned"); // "projects.wedding_projects.read"
  */
 export function readKeyFor(key: string): string | null {
   const base = baseKey(key);
   if (base === null) return null;
-  const row = base.slice(0, base.lastIndexOf("."));
-  return MATRIX.staff.some((r) => `${r.module}.${r.resource}` === row) ? `${row}.read` : null;
+  const name = base.slice(0, base.lastIndexOf("."));
+  const row = MATRIX.staff.find((r) => `${r.module}.${r.resource}` === name);
+  const record = row ? recordRowOf(row) : null;
+  return record ? `${record.module}.${record.resource}.read` : null;
 }
 
 /**

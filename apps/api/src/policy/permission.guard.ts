@@ -1,19 +1,27 @@
 import { type CanActivate, type ExecutionContext, Injectable } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
 import { errors } from "@ampm/core";
-import { decideBeforeRead, readKeyFor, type PolicyPrincipal } from "@ampm/policy";
+import { decideBeforeRead } from "@ampm/policy";
 import type { Request } from "express";
 
 import { AppLogger } from "../common/logger.service.js";
 import { requestContext } from "../common/request-context.js";
 import { PERMISSION, type PermissionRequirement } from "./decorators.js";
 import { toPolicyPrincipal } from "./principal.types.js";
+import { refusalFor } from "./refusal.js";
 
 /**
  * Step 4: the permission key and its scope, before any data is read (architecture §6). An allowed
  * request carries the scope the grant reached to the repository (step 5); an own-scope grant
  * passes as "own", so the repository reads only the principal's records. A refusal is a 404 unless
  * the principal may read the records the key acts on, then a 403 (test-cases.md, denial semantics).
+ * When the only read that shows those records is own-scope ("(o)"), the guard cannot tell before
+ * the record is read whether it is the principal's, so the refusal is a 404: denial equals absence
+ * (refusalFor).
+ *
+ * @example
+ * // policy.module.ts, after AuthGuard has put the principal on the request context:
+ * { provide: APP_GUARD, useClass: PermissionGuard }
  */
 @Injectable()
 export class PermissionGuard implements CanActivate {
@@ -38,23 +46,17 @@ export class PermissionGuard implements CanActivate {
       store.access = { key: requirement.key, scope: decision.scope };
       return true;
     }
-    const visible = canSee(caller, requirement.key, projectId);
+    const refusal = refusalFor(caller, requirement.key, projectId);
     this.logger.info("permission.denied", {
       key: requirement.key,
       reason: decision.reason,
-      status: visible ? 403 : 404,
+      status: refusal.status,
     });
-    throw visible ? errors.forbidden() : errors.notFound();
+    throw refusal;
   }
 }
 
 function projectOf(request: Request, requirement: PermissionRequirement): string | undefined {
   const raw = requirement.projectParam ? request.params[requirement.projectParam] : undefined;
   return typeof raw === "string" ? raw : undefined;
-}
-
-/** May the principal read the records the key acts on? Then a refusal says so (403). */
-function canSee(principal: PolicyPrincipal, key: string, projectId: string | undefined): boolean {
-  const readKey = readKeyFor(key);
-  return readKey !== null && decideBeforeRead(principal, readKey, { projectId }).allowed;
 }

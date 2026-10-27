@@ -5,7 +5,7 @@
 import { describe, expect, it } from "vitest";
 
 import { admittedVisibilities } from "./classes";
-import { decideBeforeRead, readKeyFor } from "./engine";
+import { decide, decideBeforeRead, readKeyFor } from "./engine";
 
 const sa = { type: "staff", userId: "u-sa", roles: ["SA"] } as const;
 const fa = { type: "staff", userId: "u-fa", roles: ["FA"], projectIds: ["p-1"] } as const;
@@ -34,6 +34,16 @@ describe("decideBeforeRead", () => {
       allowed: true,
       scope: "assigned",
     });
+  });
+
+  it("§5 legend line 136, §5.13 line 293: an owner the caller names is decided as named", () => {
+    // "(o)" reaches records the user created or owns: Bob's task is not FA's, whoever asks.
+    expect(
+      decideBeforeRead(fa, "tasks.tasks.update", { projectId: "p-1", ownerId: "u-bob" }),
+    ).toMatchObject({ allowed: false, reason: "not_owner" });
+    expect(
+      decideBeforeRead(fa, "tasks.tasks.update", { projectId: "p-1", ownerId: "u-fa" }),
+    ).toMatchObject({ allowed: true, scope: "own" });
   });
 
   it("§1 line 52, §5.13 line 296: assigned and unscoped grants decide as decide() does", () => {
@@ -73,6 +83,77 @@ describe("readKeyFor", () => {
     expect(readKeyFor("vendors.quotes.read")).toBe("budget.vendor_quotes.read");
     expect(readKeyFor("nonsense")).toBeNull();
     expect(readKeyFor("tasks.unknown_row.read")).toBeNull();
+  });
+
+  it("test-cases.md line 212: a class of a record's columns reads through the record's row", () => {
+    // §5.7 line 216 is the internal cost columns of the budget lines of line 215.
+    expect(readKeyFor("budget.budget_lines_client_facing.read_internal_cost")).toBe(
+      "budget.budget_lines_client_facing.read",
+    );
+    expect(readKeyFor("budget.budget_lines_internal_cost.update")).toBe(
+      "budget.budget_lines_client_facing.read",
+    );
+    // §5.8 line 231 and §5.3 line 169: columns of the vendor and hotel profiles (lines 230, 168).
+    expect(readKeyFor("vendors.vendor_profiles_client_fields.read_contacts")).toBe(
+      "vendors.vendor_profiles_client_fields.read",
+    );
+    expect(readKeyFor("hotels.hotel_profiles_client_fields.read_internal_notes")).toBe(
+      "hotels.hotel_profiles_client_fields.read",
+    );
+  });
+
+  it("data-model.md §19 lines 1949 and 2002: a class kept in a table of its own reads its own row", () => {
+    // AC-10.9 (test-cases.md line 801): RG (a) without the grant gets 404 on the identity route.
+    expect(readKeyFor("guests.identity_documents.read:assigned")).toBe(
+      "guests.identity_documents.read",
+    );
+    expect(readKeyFor("hotels.hotel_profiles_client_fields.read_contacts")).toBe(
+      "hotels.hotel_contacts.read",
+    );
+  });
+
+  it("a decision row no role reads names the read of the record it acts on", () => {
+    const readiness = "functions.readiness_checklist_items.read";
+    expect(readKeyFor("functions.readiness_exceptions.authorise_exception")).toBe(readiness);
+    expect(readKeyFor("functions.readiness_exceptions.approve")).toBe(readiness);
+    expect(readKeyFor("functions.function_status.update:assigned")).toBe(
+      "functions.functions.read",
+    );
+    expect(readKeyFor("approvals.decisions.create_on_behalf:assigned")).toBe(
+      "creative.approvals_submit_for_decision.read",
+    );
+    expect(readKeyFor("documents.set_client_visibility_on.share")).toBe(
+      "documents.documents_on_records_role.read",
+    );
+    expect(readKeyFor("projects.close:assigned")).toBe("projects.wedding_projects.read");
+    expect(readKeyFor("closure.archive_project_after_window.approve")).toBe(
+      "projects.wedding_projects.read",
+    );
+    // §5.15 line 314: the retention job's proposal (§8 line 507) is no one row's record.
+    expect(readKeyFor("closure.approve_retention_deletion_proposed.approve")).toBeNull();
+  });
+});
+
+describe("§10 line 550: functions.readiness.authorise_exception as the document spells it", () => {
+  const key = "functions.readiness.authorise_exception:assigned";
+  const hl = { type: "staff", userId: "u-hl", roles: ["HL"], projectIds: ["p-1"] } as const;
+
+  it("reads through the readiness checklist items it acts on (§5.6 lines 206-207)", () => {
+    expect(readKeyFor(key)).toBe("functions.readiness_checklist_items.read");
+    expect(readKeyFor("functions.readiness.authorise_exception")).toBe(
+      "functions.readiness_checklist_items.read",
+    );
+  });
+
+  it("§5.6 line 207 (Q10), AC-13.2: SA authorises; PM and HL hold no grant", () => {
+    expect(
+      decide(sa, "functions.readiness.authorise_exception", { projectId: "p-1" }),
+    ).toMatchObject({
+      allowed: true,
+      scope: "all",
+    });
+    expect(decide(pm, key, { projectId: "p-1" }).reason).toBe("no_grant");
+    expect(decide(hl, key, { projectId: "p-1" }).reason).toBe("no_grant");
   });
 });
 
