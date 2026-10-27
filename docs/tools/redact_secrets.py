@@ -28,10 +28,12 @@ import sys
 KEEP = 4  # characters left readable at the start of a match
 
 # A token with a known prefix must not be the tail of a longer identifier: it follows a non-word byte
-# (for some kinds also not a dash), a JSON escape (\n, \t, \r) or an ANSI colour or erase escape
-# (\u001b[32m, \u001b[38;5;196m, \u001b[K). Checked after the match, so each search keeps its fast prefix.
+# (for some kinds also not a dash, for an AWS key id no upper-case letter or digit), a JSON escape
+# (\n, \t, \r) or an ANSI colour or erase escape (\u001b[32m, \u001b[38;5;196m, \u001b[K). Checked
+# after the match, so each search keeps its fast prefix.
 WORD = frozenset(b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_")
 WORD_DASH = WORD | {ord("-")}
+UPPER_DIGIT = frozenset(b"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
 ANY: frozenset[int] = frozenset()
 ANSI_TAIL = re.compile(rb"\[[0-9;]{0,12}[mK]\Z")
 # Between a key and its value: a quote that may be JSON-escaped once or more (\" inside a transcript),
@@ -50,7 +52,7 @@ BASE64_LINE = rb"[A-Za-z0-9+/=]+(?=[\\\"\n]|\Z)"
 PATTERNS: list[tuple[str, re.Pattern[bytes], frozenset[int]]] = [
     ("github-token", re.compile(rb"(?P<secret>gh[pousr]_[A-Za-z0-9]{36,255})"), WORD),
     ("github-pat", re.compile(rb"(?P<secret>github_pat_[A-Za-z0-9_]{22,255})"), WORD),
-    ("aws-access-key", re.compile(rb"(?<![A-Z0-9])(?P<secret>(?:AKIA|ASIA)[0-9A-Z]{16})(?![A-Z0-9])"), ANY),
+    ("aws-access-key", re.compile(rb"(?P<secret>(?:AKIA|ASIA)[0-9A-Z]{16})(?![A-Z0-9])"), UPPER_DIGIT),
     ("aws-secret-key", re.compile(rb"(?i:secret_?access_?key)" + KEY_SEP + rb"(?P<secret>[A-Za-z0-9/+]{40})"), ANY),
     (
         "aws-session-token",
