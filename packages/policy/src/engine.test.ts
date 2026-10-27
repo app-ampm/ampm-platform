@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 
 import {
   can,
-  canTransition,
   clientReach,
   decide,
   grantsForRole,
@@ -73,27 +72,5 @@ describe("client reach", () => {
     const reach = clientReach("client", "Hotel proposals, client amounts");
     expect(reach.flatMap((g) => g.actions)).toEqual(expect.arrayContaining(["read", "approve"]));
     expect(clientReach("guest", "Hotel proposals, client amounts")).toEqual([]);
-  });
-});
-
-describe("transitions", () => {
-  it("lets Finance activate a subscription manually but not Sales", () => {
-    expect(
-      canTransition({ type: "staff", roles: ["FA"] }, "subscription", "pending_payment", "active"),
-    ).not.toBeNull();
-    expect(
-      canTransition({ type: "staff", roles: ["SM"] }, "subscription", "pending_payment", "active"),
-    ).toBeNull();
-    expect(canTransition({ type: "system" }, "subscription", "active", "expiring")).not.toBeNull();
-  });
-
-  it("needs membership for an assigned project manager", () => {
-    expect(
-      canTransition(pm, "wedding_project", "setup", "planning", { assigned: true }),
-    ).not.toBeNull();
-    expect(
-      canTransition(pm, "wedding_project", "setup", "planning", { assigned: false }),
-    ).toBeNull();
-    expect(canTransition(sa, "wedding_project", "closed", "closure")).not.toBeNull();
   });
 });

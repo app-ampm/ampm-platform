@@ -6,7 +6,8 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { decide, MATRIX, type MatrixRow } from "../engine";
+import { decide } from "../engine";
+import { MATRIX, type MatrixRow } from "../matrix";
 import { ACTION_LETTERS, STAFF_ROLE_CODES, type Action, type StaffRole } from "../roles";
 
 const ALL_ACTIONS = Object.values(ACTION_LETTERS) as Action[];

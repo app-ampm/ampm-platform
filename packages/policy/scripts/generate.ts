@@ -2,7 +2,8 @@
  * authz:generate — reads docs/permission-matrix.md and writes src/generated/matrix.json:
  *   staff   §5  every row × role as actions with their scope (a = assigned, o = own) and note
  *   others  §6  the client representative, guest and demo columns, parsed the same way
- *   transitions §7 every From → To with who may trigger it
+ *   transitions §7 every From → To clause with the roles, people and system that may move it
+ *               (scripts/parse-transitions.ts, which stops on anything it cannot read)
  * The engine (src/engine.ts) and the generated authorisation suite read this file, so the document
  * stays the source of truth and CI fails when the committed file drifts from it.
  * Node type stripping, erasable TypeScript only.
@@ -13,6 +14,7 @@ import { fileURLToPath } from "node:url";
 
 import { ACTION_LETTERS, type Action, type Scope } from "../src/roles.ts";
 import { MODULES, RESOURCES, slugify } from "../src/resources.ts";
+import { parseTransitions } from "./parse-transitions.ts";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
 const doc = readFileSync(join(root, "docs", "permission-matrix.md"), "utf8");
@@ -34,17 +36,6 @@ export interface MatrixRow {
   readonly provisional: boolean;
   readonly cells: Record<string, string>;
   readonly grants: Record<string, Grant[]>;
-}
-
-export interface Transition {
-  readonly entity: string;
-  readonly from: string;
-  readonly to: string;
-  readonly who: string;
-  readonly roles: { role: string; assigned: boolean }[];
-  readonly system: boolean;
-  readonly actors: string[];
-  readonly condition: string | null;
 }
 
 function section(from: string, to: string): string {
@@ -120,43 +111,6 @@ function parseMatrix(block: string, sectionId: string, columns: readonly string[
     });
   }
   return rows;
-}
-
-const ROLE_CODES = /\b(SA|SM|HT|PM|CD|VC|RG|HL|FA|CR)\b(\s*\(a\))?/g;
-
-function parseTransitions(block: string): Transition[] {
-  const out: Transition[] = [];
-  let entity = "";
-  for (const line of block.split("\n")) {
-    const heading = /^### (.+)$/.exec(line);
-    if (heading) entity = slugify(heading[1] ?? "");
-    if (!line.startsWith("|") || /^\|\s*-+/.test(line) || /^\|\s*From/.test(line)) continue;
-    const [from = "", to = "", who = ""] = line
-      .trim()
-      .replace(/^\||\|$/g, "")
-      .split("|")
-      .map((cell) => cell.trim());
-    const roles = [...who.matchAll(ROLE_CODES)].map((m) => ({
-      role: m[1] ?? "",
-      assigned: Boolean(m[2]),
-    }));
-    const actors = ["assignee", "owner", "creator", "requester"].filter((actor) =>
-      new RegExp(`\\bthe ${actor}\\b`, "i").test(who),
-    );
-    const system = /\bsystem\b/i.test(who);
-    const conditionMatch = /,\s*(when|only when|with|at|per|on)\b(.*)$/i.exec(who);
-    out.push({
-      entity,
-      from,
-      to,
-      who,
-      roles,
-      system,
-      actors,
-      condition: conditionMatch ? `${conditionMatch[1]}${conditionMatch[2]}`.trim() : null,
-    });
-  }
-  return out;
 }
 
 const staff = parseMatrix(

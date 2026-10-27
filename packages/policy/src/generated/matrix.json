@@ -9121,8 +9121,34 @@
   "transitions": [
     {
       "entity": "subscription",
-      "from": "pending_payment or trial",
-      "to": "active",
+      "from": [
+        "pending_payment",
+        "trial"
+      ],
+      "to": [
+        "active"
+      ],
+      "restore": false,
+      "kind": null,
+      "who": "System on payment succeeded; FA or SA manually, with a payment record attached",
+      "roles": [],
+      "client": false,
+      "system": true,
+      "actors": [],
+      "exception": false,
+      "condition": "on payment succeeded"
+    },
+    {
+      "entity": "subscription",
+      "from": [
+        "pending_payment",
+        "trial"
+      ],
+      "to": [
+        "active"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "System on payment succeeded; FA or SA manually, with a payment record attached",
       "roles": [
         {
@@ -9134,34 +9160,59 @@
           "assigned": false
         }
       ],
-      "system": true,
+      "client": false,
+      "system": false,
       "actors": [],
-      "condition": "with a payment record attached"
+      "exception": false,
+      "condition": "manually, with a payment record attached"
     },
     {
       "entity": "subscription",
-      "from": "active",
-      "to": "expiring",
+      "from": [
+        "active"
+      ],
+      "to": [
+        "expiring"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "System, at `ends_at` minus the configured notice period",
       "roles": [],
+      "client": false,
       "system": true,
       "actors": [],
+      "exception": false,
       "condition": "at `ends_at` minus the configured notice period"
     },
     {
       "entity": "subscription",
-      "from": "expiring",
-      "to": "expired",
+      "from": [
+        "expiring"
+      ],
+      "to": [
+        "expired"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "System, at `ends_at`",
       "roles": [],
+      "client": false,
       "system": true,
       "actors": [],
+      "exception": false,
       "condition": "at `ends_at`"
     },
     {
       "entity": "subscription",
-      "from": "active or expiring",
-      "to": "suspended",
+      "from": [
+        "active",
+        "expiring"
+      ],
+      "to": [
+        "suspended"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "SA, FA (non-payment, dispute) with reason",
       "roles": [
         {
@@ -9173,14 +9224,22 @@
           "assigned": false
         }
       ],
+      "client": false,
       "system": false,
       "actors": [],
-      "condition": null
+      "exception": false,
+      "condition": "(non-payment, dispute) with reason"
     },
     {
       "entity": "subscription",
-      "from": "suspended",
-      "to": "active",
+      "from": [
+        "suspended"
+      ],
+      "to": [
+        "active"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "SA, FA",
       "roles": [
         {
@@ -9192,14 +9251,27 @@
           "assigned": false
         }
       ],
+      "client": false,
       "system": false,
       "actors": [],
+      "exception": false,
       "condition": null
     },
     {
       "entity": "subscription",
-      "from": "any",
-      "to": "cancelled",
+      "from": [
+        "trial",
+        "pending_payment",
+        "active",
+        "expiring",
+        "expired",
+        "suspended"
+      ],
+      "to": [
+        "cancelled"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "SA, SM with reason; a client asks for cancellation through a client request",
       "roles": [
         {
@@ -9211,30 +9283,61 @@
           "assigned": false
         }
       ],
+      "client": false,
       "system": false,
       "actors": [],
-      "condition": null
+      "exception": false,
+      "condition": "with reason; a client asks for cancellation through a client request"
     },
     {
       "entity": "subscription",
-      "from": "expired or cancelled",
-      "to": "active",
+      "from": [
+        "expired",
+        "cancelled"
+      ],
+      "to": [
+        "active"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "New subscription row; the old one is never reactivated",
       "roles": [],
+      "client": false,
       "system": false,
       "actors": [],
+      "exception": false,
+      "condition": "New subscription row; the old one is never reactivated"
+    },
+    {
+      "entity": "hotel_enquiry",
+      "from": [
+        "draft"
+      ],
+      "to": [
+        "submitted"
+      ],
+      "restore": false,
+      "kind": null,
+      "who": "Either CR; SM or HT on the client's behalf",
+      "roles": [],
+      "client": true,
+      "system": false,
+      "actors": [],
+      "exception": false,
       "condition": null
     },
     {
       "entity": "hotel_enquiry",
-      "from": "draft",
-      "to": "submitted",
+      "from": [
+        "draft"
+      ],
+      "to": [
+        "submitted"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "Either CR; SM or HT on the client's behalf",
       "roles": [
-        {
-          "role": "CR",
-          "assigned": false
-        },
         {
           "role": "SM",
           "assigned": false
@@ -9244,14 +9347,22 @@
           "assigned": false
         }
       ],
+      "client": false,
       "system": false,
       "actors": [],
-      "condition": null
+      "exception": false,
+      "condition": "on the client's behalf"
     },
     {
       "entity": "hotel_enquiry",
-      "from": "submitted",
-      "to": "awaiting_hotel",
+      "from": [
+        "submitted"
+      ],
+      "to": [
+        "awaiting_hotel"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "HT",
       "roles": [
         {
@@ -9259,14 +9370,22 @@
           "assigned": false
         }
       ],
+      "client": false,
       "system": false,
       "actors": [],
+      "exception": false,
       "condition": null
     },
     {
       "entity": "hotel_enquiry",
-      "from": "awaiting_hotel",
-      "to": "response_received",
+      "from": [
+        "awaiting_hotel"
+      ],
+      "to": [
+        "response_received"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "HT",
       "roles": [
         {
@@ -9274,14 +9393,22 @@
           "assigned": false
         }
       ],
+      "client": false,
       "system": false,
       "actors": [],
+      "exception": false,
       "condition": null
     },
     {
       "entity": "hotel_enquiry",
-      "from": "response_received",
-      "to": "negotiating",
+      "from": [
+        "response_received"
+      ],
+      "to": [
+        "negotiating"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "HT",
       "roles": [
         {
@@ -9289,14 +9416,23 @@
           "assigned": false
         }
       ],
+      "client": false,
       "system": false,
       "actors": [],
+      "exception": false,
       "condition": null
     },
     {
       "entity": "hotel_enquiry",
-      "from": "negotiating or response_received",
-      "to": "visit_scheduled",
+      "from": [
+        "negotiating",
+        "response_received"
+      ],
+      "to": [
+        "visit_scheduled"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "HT, PM (a)",
       "roles": [
         {
@@ -9308,14 +9444,27 @@
           "assigned": true
         }
       ],
+      "client": false,
       "system": false,
       "actors": [],
+      "exception": false,
       "condition": null
     },
     {
       "entity": "hotel_enquiry",
-      "from": "any active",
-      "to": "proposal_received",
+      "from": [
+        "submitted",
+        "awaiting_hotel",
+        "response_received",
+        "negotiating",
+        "visit_scheduled",
+        "client_decision"
+      ],
+      "to": [
+        "proposal_received"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "HT",
       "roles": [
         {
@@ -9323,14 +9472,22 @@
           "assigned": false
         }
       ],
+      "client": false,
       "system": false,
       "actors": [],
+      "exception": false,
       "condition": null
     },
     {
       "entity": "hotel_enquiry",
-      "from": "proposal_received",
-      "to": "client_decision",
+      "from": [
+        "proposal_received"
+      ],
+      "to": [
+        "client_decision"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "HT, PM (a), when a proposal is shared",
       "roles": [
         {
@@ -9342,14 +9499,22 @@
           "assigned": true
         }
       ],
+      "client": false,
       "system": false,
       "actors": [],
+      "exception": false,
       "condition": "when a proposal is shared"
     },
     {
       "entity": "hotel_enquiry",
-      "from": "client_decision",
-      "to": "confirmed",
+      "from": [
+        "client_decision"
+      ],
+      "to": [
+        "confirmed"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "HT, SA, only when a booking milestone of type confirmed is done and a contract is signed",
       "roles": [
         {
@@ -9361,14 +9526,30 @@
           "assigned": false
         }
       ],
+      "client": false,
       "system": false,
       "actors": [],
+      "exception": false,
       "condition": "only when a booking milestone of type confirmed is done and a contract is signed"
     },
     {
       "entity": "hotel_enquiry",
-      "from": "any",
-      "to": "closed",
+      "from": [
+        "draft",
+        "submitted",
+        "awaiting_hotel",
+        "response_received",
+        "negotiating",
+        "visit_scheduled",
+        "proposal_received",
+        "client_decision",
+        "confirmed"
+      ],
+      "to": [
+        "closed"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "HT, SA, PM (a), with an outcome",
       "roles": [
         {
@@ -9384,14 +9565,22 @@
           "assigned": true
         }
       ],
+      "client": false,
       "system": false,
       "actors": [],
+      "exception": false,
       "condition": "with an outcome"
     },
     {
       "entity": "wedding_project",
-      "from": "setup",
-      "to": "planning",
+      "from": [
+        "setup"
+      ],
+      "to": [
+        "planning"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "PM (a), SA",
       "roles": [
         {
@@ -9403,14 +9592,22 @@
           "assigned": false
         }
       ],
+      "client": false,
       "system": false,
       "actors": [],
+      "exception": false,
       "condition": null
     },
     {
       "entity": "wedding_project",
-      "from": "planning",
-      "to": "approvals",
+      "from": [
+        "planning"
+      ],
+      "to": [
+        "approvals"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "PM (a)",
       "roles": [
         {
@@ -9418,14 +9615,22 @@
           "assigned": true
         }
       ],
+      "client": false,
       "system": false,
       "actors": [],
+      "exception": false,
       "condition": null
     },
     {
       "entity": "wedding_project",
-      "from": "approvals",
-      "to": "pre_production",
+      "from": [
+        "approvals"
+      ],
+      "to": [
+        "pre_production"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "PM (a), when the configured key approvals are approved",
       "roles": [
         {
@@ -9433,14 +9638,22 @@
           "assigned": true
         }
       ],
+      "client": false,
       "system": false,
       "actors": [],
+      "exception": false,
       "condition": "when the configured key approvals are approved"
     },
     {
       "entity": "wedding_project",
-      "from": "pre_production",
-      "to": "ready",
+      "from": [
+        "pre_production"
+      ],
+      "to": [
+        "ready"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "PM (a), when every confirmed function is ready",
       "roles": [
         {
@@ -9448,14 +9661,22 @@
           "assigned": true
         }
       ],
+      "client": false,
       "system": false,
       "actors": [],
+      "exception": false,
       "condition": "when every confirmed function is ready"
     },
     {
       "entity": "wedding_project",
-      "from": "ready",
-      "to": "live",
+      "from": [
+        "ready"
+      ],
+      "to": [
+        "live"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "PM (a), SA",
       "roles": [
         {
@@ -9467,14 +9688,22 @@
           "assigned": false
         }
       ],
+      "client": false,
       "system": false,
       "actors": [],
+      "exception": false,
       "condition": null
     },
     {
       "entity": "wedding_project",
-      "from": "live",
-      "to": "closure",
+      "from": [
+        "live"
+      ],
+      "to": [
+        "closure"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "PM (a)",
       "roles": [
         {
@@ -9482,14 +9711,22 @@
           "assigned": true
         }
       ],
+      "client": false,
       "system": false,
       "actors": [],
+      "exception": false,
       "condition": null
     },
     {
       "entity": "wedding_project",
-      "from": "closure",
-      "to": "closed",
+      "from": [
+        "closure"
+      ],
+      "to": [
+        "closed"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "PM (a), SA, only when the closure checklist is complete and final accounts are approved by FA",
       "roles": [
         {
@@ -9499,20 +9736,31 @@
         {
           "role": "SA",
           "assigned": false
-        },
-        {
-          "role": "FA",
-          "assigned": false
         }
       ],
+      "client": false,
       "system": false,
       "actors": [],
+      "exception": false,
       "condition": "only when the closure checklist is complete and final accounts are approved by FA"
     },
     {
       "entity": "wedding_project",
-      "from": "any",
-      "to": "on_hold",
+      "from": [
+        "setup",
+        "planning",
+        "approvals",
+        "pre_production",
+        "ready",
+        "live",
+        "closure",
+        "closed"
+      ],
+      "to": [
+        "on_hold"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "PM (a), SA, with reason; approvals are paused",
       "roles": [
         {
@@ -9524,14 +9772,20 @@
           "assigned": false
         }
       ],
+      "client": false,
       "system": false,
       "actors": [],
+      "exception": false,
       "condition": "with reason; approvals are paused"
     },
     {
       "entity": "wedding_project",
-      "from": "on_hold",
-      "to": "previous status",
+      "from": [
+        "on_hold"
+      ],
+      "to": [],
+      "restore": true,
+      "kind": null,
       "who": "PM (a), SA",
       "roles": [
         {
@@ -9543,14 +9797,22 @@
           "assigned": false
         }
       ],
+      "client": false,
       "system": false,
       "actors": [],
+      "exception": false,
       "condition": null
     },
     {
       "entity": "wedding_project",
-      "from": "closed",
-      "to": "closure",
+      "from": [
+        "closed"
+      ],
+      "to": [
+        "closure"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "SA only, audited",
       "roles": [
         {
@@ -9558,32 +9820,66 @@
           "assigned": false
         }
       ],
+      "client": false,
       "system": false,
       "actors": [],
-      "condition": null
+      "exception": false,
+      "condition": "audited"
     },
     {
       "entity": "approval",
-      "from": "draft",
-      "to": "submitted",
+      "from": [
+        "draft"
+      ],
+      "to": [
+        "submitted"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "The requester per §5.9",
       "roles": [],
+      "client": false,
       "system": false,
       "actors": [
         "requester"
       ],
-      "condition": null
+      "exception": false,
+      "condition": "per §5.9"
     },
     {
       "entity": "approval",
-      "from": "submitted",
-      "to": "approved, revision_requested or rejected",
+      "from": [
+        "submitted"
+      ],
+      "to": [
+        "approved",
+        "revision_requested",
+        "rejected"
+      ],
+      "restore": false,
+      "kind": null,
+      "who": "Either CR; PM (a) or SA on the client's behalf with a note or record (P-9 confirmed). Approved needs `required_decisions` approvals, one by default; one rejection or revision request moves it immediately",
+      "roles": [],
+      "client": true,
+      "system": false,
+      "actors": [],
+      "exception": false,
+      "condition": "Approved needs `required_decisions` approvals, one by default; one rejection or revision request moves it immediately"
+    },
+    {
+      "entity": "approval",
+      "from": [
+        "submitted"
+      ],
+      "to": [
+        "approved",
+        "revision_requested",
+        "rejected"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "Either CR; PM (a) or SA on the client's behalf with a note or record (P-9 confirmed). Approved needs `required_decisions` approvals, one by default; one rejection or revision request moves it immediately",
       "roles": [
-        {
-          "role": "CR",
-          "assigned": false
-        },
         {
           "role": "PM",
           "assigned": true
@@ -9593,30 +9889,66 @@
           "assigned": false
         }
       ],
+      "client": false,
       "system": false,
       "actors": [],
-      "condition": null
+      "exception": false,
+      "condition": "on the client's behalf with a note or record (P-9 confirmed); Approved needs `required_decisions` approvals, one by default; one rejection or revision request moves it immediately"
     },
     {
       "entity": "approval",
-      "from": "any",
-      "to": "superseded",
+      "from": [
+        "draft",
+        "submitted",
+        "revision_requested",
+        "approved",
+        "rejected"
+      ],
+      "to": [
+        "superseded"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "System, when a new version of the record is created",
       "roles": [],
+      "client": false,
       "system": true,
       "actors": [],
+      "exception": false,
       "condition": "when a new version of the record is created"
     },
     {
       "entity": "vendor_assignment",
-      "from": "option",
-      "to": "shortlisted or declined",
+      "from": [
+        "option"
+      ],
+      "to": [
+        "shortlisted",
+        "declined"
+      ],
+      "restore": false,
+      "kind": null,
+      "who": "Either CR as a client decision; VC or PM (a) recording the client's decision",
+      "roles": [],
+      "client": true,
+      "system": false,
+      "actors": [],
+      "exception": false,
+      "condition": "as a client decision"
+    },
+    {
+      "entity": "vendor_assignment",
+      "from": [
+        "option"
+      ],
+      "to": [
+        "shortlisted",
+        "declined"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "Either CR as a client decision; VC or PM (a) recording the client's decision",
       "roles": [
-        {
-          "role": "CR",
-          "assigned": false
-        },
         {
           "role": "VC",
           "assigned": false
@@ -9626,33 +9958,63 @@
           "assigned": true
         }
       ],
+      "client": false,
       "system": false,
       "actors": [],
+      "exception": false,
+      "condition": "recording the client's decision"
+    },
+    {
+      "entity": "vendor_assignment",
+      "from": [
+        "shortlisted"
+      ],
+      "to": [
+        "selected"
+      ],
+      "restore": false,
+      "kind": null,
+      "who": "Either CR; PM (a) on the client's behalf with evidence",
+      "roles": [],
+      "client": true,
+      "system": false,
+      "actors": [],
+      "exception": false,
       "condition": null
     },
     {
       "entity": "vendor_assignment",
-      "from": "shortlisted",
-      "to": "selected",
+      "from": [
+        "shortlisted"
+      ],
+      "to": [
+        "selected"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "Either CR; PM (a) on the client's behalf with evidence",
       "roles": [
-        {
-          "role": "CR",
-          "assigned": false
-        },
         {
           "role": "PM",
           "assigned": true
         }
       ],
+      "client": false,
       "system": false,
       "actors": [],
-      "condition": null
+      "exception": false,
+      "condition": "on the client's behalf with evidence"
     },
     {
       "entity": "vendor_assignment",
-      "from": "selected",
-      "to": "contracted",
+      "from": [
+        "selected"
+      ],
+      "to": [
+        "contracted"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "VC, when the contract is signed",
       "roles": [
         {
@@ -9660,14 +10022,22 @@
           "assigned": false
         }
       ],
+      "client": false,
       "system": false,
       "actors": [],
+      "exception": false,
       "condition": "when the contract is signed"
     },
     {
       "entity": "vendor_assignment",
-      "from": "contracted",
-      "to": "delivering",
+      "from": [
+        "contracted"
+      ],
+      "to": [
+        "delivering"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "VC, PM (a)",
       "roles": [
         {
@@ -9679,14 +10049,22 @@
           "assigned": true
         }
       ],
+      "client": false,
       "system": false,
       "actors": [],
+      "exception": false,
       "condition": null
     },
     {
       "entity": "vendor_assignment",
-      "from": "delivering",
-      "to": "completed",
+      "from": [
+        "delivering"
+      ],
+      "to": [
+        "completed"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "PM (a), when every deliverable is accepted",
       "roles": [
         {
@@ -9694,14 +10072,28 @@
           "assigned": true
         }
       ],
+      "client": false,
       "system": false,
       "actors": [],
+      "exception": false,
       "condition": "when every deliverable is accepted"
     },
     {
       "entity": "vendor_assignment",
-      "from": "any",
-      "to": "cancelled",
+      "from": [
+        "option",
+        "shortlisted",
+        "selected",
+        "contracted",
+        "delivering",
+        "completed",
+        "declined"
+      ],
+      "to": [
+        "cancelled"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "PM (a), VC, SA, with reason",
       "roles": [
         {
@@ -9717,14 +10109,22 @@
           "assigned": false
         }
       ],
+      "client": false,
       "system": false,
       "actors": [],
+      "exception": false,
       "condition": "with reason"
     },
     {
-      "entity": "function_status_readiness",
-      "from": "planned",
-      "to": "confirmed",
+      "entity": "function",
+      "from": [
+        "planned"
+      ],
+      "to": [
+        "confirmed"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "PM (a)",
       "roles": [
         {
@@ -9732,14 +10132,23 @@
           "assigned": true
         }
       ],
+      "client": false,
       "system": false,
       "actors": [],
+      "exception": false,
       "condition": null
     },
     {
-      "entity": "function_status_readiness",
-      "from": "planned or confirmed",
-      "to": "cancelled",
+      "entity": "function",
+      "from": [
+        "planned",
+        "confirmed"
+      ],
+      "to": [
+        "cancelled"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "PM (a), SA",
       "roles": [
         {
@@ -9751,14 +10160,48 @@
           "assigned": false
         }
       ],
+      "client": false,
       "system": false,
       "actors": [],
+      "exception": false,
       "condition": null
     },
     {
-      "entity": "function_status_readiness",
-      "from": "readiness: not_started, in_progress, blocked, ready",
-      "to": "derived",
+      "entity": "function_readiness",
+      "from": [
+        "not_started",
+        "in_progress",
+        "blocked",
+        "ready"
+      ],
+      "to": [
+        "not_started",
+        "in_progress",
+        "blocked",
+        "ready"
+      ],
+      "restore": false,
+      "kind": null,
+      "who": "System, from the readiness checklist; an exception needs SA, Eva's authorised personnel (P-8 changed by Q10)",
+      "roles": [],
+      "client": false,
+      "system": true,
+      "actors": [],
+      "exception": false,
+      "condition": "from the readiness checklist"
+    },
+    {
+      "entity": "function_readiness",
+      "from": [
+        "not_started",
+        "in_progress",
+        "blocked"
+      ],
+      "to": [
+        "ready"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "System, from the readiness checklist; an exception needs SA, Eva's authorised personnel (P-8 changed by Q10)",
       "roles": [
         {
@@ -9766,14 +10209,22 @@
           "assigned": false
         }
       ],
-      "system": true,
+      "client": false,
+      "system": false,
       "actors": [],
-      "condition": null
+      "exception": true,
+      "condition": "Eva's authorised personnel (P-8 changed by Q10)"
     },
     {
-      "entity": "function_status_readiness",
-      "from": "ready",
-      "to": "live",
+      "entity": "function_readiness",
+      "from": [
+        "ready"
+      ],
+      "to": [
+        "live"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "PM (a), HL (a) on the day",
       "roles": [
         {
@@ -9785,14 +10236,22 @@
           "assigned": true
         }
       ],
+      "client": false,
       "system": false,
       "actors": [],
-      "condition": null
+      "exception": false,
+      "condition": "on the day"
     },
     {
-      "entity": "function_status_readiness",
-      "from": "live",
-      "to": "completed",
+      "entity": "function_readiness",
+      "from": [
+        "live"
+      ],
+      "to": [
+        "completed"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "PM (a)",
       "roles": [
         {
@@ -9800,14 +10259,22 @@
           "assigned": true
         }
       ],
+      "client": false,
       "system": false,
       "actors": [],
+      "exception": false,
       "condition": null
     },
     {
       "entity": "incident",
-      "from": "open",
-      "to": "assigned",
+      "from": [
+        "open"
+      ],
+      "to": [
+        "assigned"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "PM (a), HL (a), SA",
       "roles": [
         {
@@ -9823,26 +10290,44 @@
           "assigned": false
         }
       ],
+      "client": false,
       "system": false,
       "actors": [],
+      "exception": false,
       "condition": null
     },
     {
       "entity": "incident",
-      "from": "assigned",
-      "to": "in_progress",
+      "from": [
+        "assigned"
+      ],
+      "to": [
+        "in_progress"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "The assignee",
       "roles": [],
+      "client": false,
       "system": false,
       "actors": [
         "assignee"
       ],
+      "exception": false,
       "condition": null
     },
     {
       "entity": "incident",
-      "from": "any open state",
-      "to": "escalated",
+      "from": [
+        "open",
+        "assigned",
+        "in_progress"
+      ],
+      "to": [
+        "escalated"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "The assignee, PM (a), or System per the escalation rules",
       "roles": [
         {
@@ -9850,16 +10335,25 @@
           "assigned": true
         }
       ],
+      "client": false,
       "system": true,
       "actors": [
         "assignee"
       ],
-      "condition": null
+      "exception": false,
+      "condition": "per the escalation rules"
     },
     {
       "entity": "incident",
-      "from": "in_progress or escalated",
-      "to": "resolved",
+      "from": [
+        "in_progress",
+        "escalated"
+      ],
+      "to": [
+        "resolved"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "The assignee, PM (a); a critical incident requires resolution notes",
       "roles": [
         {
@@ -9867,16 +10361,24 @@
           "assigned": true
         }
       ],
+      "client": false,
       "system": false,
       "actors": [
         "assignee"
       ],
-      "condition": null
+      "exception": false,
+      "condition": "a critical incident requires resolution notes"
     },
     {
       "entity": "incident",
-      "from": "resolved",
-      "to": "closed",
+      "from": [
+        "resolved"
+      ],
+      "to": [
+        "closed"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "PM (a), SA",
       "roles": [
         {
@@ -9888,14 +10390,24 @@
           "assigned": false
         }
       ],
+      "client": false,
       "system": false,
       "actors": [],
+      "exception": false,
       "condition": null
     },
     {
       "entity": "task",
-      "from": "not_started",
-      "to": "in_progress, blocked, completed",
+      "from": [
+        "not_started"
+      ],
+      "to": [
+        "in_progress",
+        "blocked",
+        "completed"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "The owner, PM (a)",
       "roles": [
         {
@@ -9903,16 +10415,24 @@
           "assigned": true
         }
       ],
+      "client": false,
       "system": false,
       "actors": [
         "owner"
       ],
+      "exception": false,
       "condition": null
     },
     {
       "entity": "task",
-      "from": "blocked",
-      "to": "in_progress",
+      "from": [
+        "blocked"
+      ],
+      "to": [
+        "in_progress"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "The owner, PM (a)",
       "roles": [
         {
@@ -9920,16 +10440,27 @@
           "assigned": true
         }
       ],
+      "client": false,
       "system": false,
       "actors": [
         "owner"
       ],
+      "exception": false,
       "condition": null
     },
     {
       "entity": "task",
-      "from": "any",
-      "to": "cancelled",
+      "from": [
+        "not_started",
+        "in_progress",
+        "blocked",
+        "completed"
+      ],
+      "to": [
+        "cancelled"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "The creator, PM (a), SA",
       "roles": [
         {
@@ -9941,16 +10472,24 @@
           "assigned": false
         }
       ],
+      "client": false,
       "system": false,
       "actors": [
         "creator"
       ],
+      "exception": false,
       "condition": null
     },
     {
       "entity": "room_allocation",
-      "from": "requested",
-      "to": "proposed",
+      "from": [
+        "requested"
+      ],
+      "to": [
+        "proposed"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "HL (a), RG (a)",
       "roles": [
         {
@@ -9962,14 +10501,22 @@
           "assigned": true
         }
       ],
+      "client": false,
       "system": false,
       "actors": [],
+      "exception": false,
       "condition": null
     },
     {
       "entity": "room_allocation",
-      "from": "proposed",
-      "to": "confirmed",
+      "from": [
+        "proposed"
+      ],
+      "to": [
+        "confirmed"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "HL (a)",
       "roles": [
         {
@@ -9977,14 +10524,22 @@
           "assigned": true
         }
       ],
+      "client": false,
       "system": false,
       "actors": [],
+      "exception": false,
       "condition": null
     },
     {
       "entity": "room_allocation",
-      "from": "confirmed",
-      "to": "checked_in",
+      "from": [
+        "confirmed"
+      ],
+      "to": [
+        "checked_in"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "HL (a)",
       "roles": [
         {
@@ -9992,14 +10547,22 @@
           "assigned": true
         }
       ],
+      "client": false,
       "system": false,
       "actors": [],
+      "exception": false,
       "condition": null
     },
     {
       "entity": "room_allocation",
-      "from": "checked_in",
-      "to": "checked_out",
+      "from": [
+        "checked_in"
+      ],
+      "to": [
+        "checked_out"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "HL (a)",
       "roles": [
         {
@@ -10007,14 +10570,26 @@
           "assigned": true
         }
       ],
+      "client": false,
       "system": false,
       "actors": [],
+      "exception": false,
       "condition": null
     },
     {
       "entity": "room_allocation",
-      "from": "any",
-      "to": "cancelled",
+      "from": [
+        "requested",
+        "proposed",
+        "confirmed",
+        "checked_in",
+        "checked_out"
+      ],
+      "to": [
+        "cancelled"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "HL (a), PM (a)",
       "roles": [
         {
@@ -10026,44 +10601,83 @@
           "assigned": true
         }
       ],
+      "client": false,
       "system": false,
       "actors": [],
+      "exception": false,
       "condition": null
     },
     {
       "entity": "client_request",
-      "from": "submitted",
-      "to": "under_review",
+      "from": [
+        "submitted"
+      ],
+      "to": [
+        "under_review"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "The assigned staff member",
       "roles": [],
+      "client": false,
       "system": false,
-      "actors": [],
+      "actors": [
+        "assignee"
+      ],
+      "exception": false,
       "condition": null
     },
     {
       "entity": "client_request",
-      "from": "under_review",
-      "to": "clarification_requested",
+      "from": [
+        "under_review"
+      ],
+      "to": [
+        "clarification_requested"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "The assigned staff member",
       "roles": [],
+      "client": false,
       "system": false,
-      "actors": [],
+      "actors": [
+        "assignee"
+      ],
+      "exception": false,
       "condition": null
     },
     {
       "entity": "client_request",
-      "from": "under_review",
-      "to": "answered (question)",
+      "from": [
+        "under_review"
+      ],
+      "to": [
+        "answered"
+      ],
+      "restore": false,
+      "kind": "question",
       "who": "The assigned staff member",
       "roles": [],
+      "client": false,
       "system": false,
-      "actors": [],
+      "actors": [
+        "assignee"
+      ],
+      "exception": false,
       "condition": null
     },
     {
       "entity": "client_request",
-      "from": "under_review",
-      "to": "accepted or rejected (change request)",
+      "from": [
+        "under_review"
+      ],
+      "to": [
+        "accepted",
+        "rejected"
+      ],
+      "restore": false,
+      "kind": "change_request",
       "who": "PM (a), SA",
       "roles": [
         {
@@ -10075,14 +10689,22 @@
           "assigned": false
         }
       ],
+      "client": false,
       "system": false,
       "actors": [],
+      "exception": false,
       "condition": null
     },
     {
       "entity": "client_request",
-      "from": "accepted",
-      "to": "implemented",
+      "from": [
+        "accepted"
+      ],
+      "to": [
+        "implemented"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "PM (a)",
       "roles": [
         {
@@ -10090,20 +10712,37 @@
           "assigned": true
         }
       ],
+      "client": false,
       "system": false,
       "actors": [],
+      "exception": false,
       "condition": null
     },
     {
       "entity": "client_request",
-      "from": "any",
-      "to": "withdrawn",
+      "from": [
+        "submitted",
+        "under_review",
+        "clarification_requested",
+        "answered",
+        "accepted",
+        "rejected",
+        "implemented",
+        "closed"
+      ],
+      "to": [
+        "withdrawn"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "The requester",
       "roles": [],
+      "client": false,
       "system": false,
       "actors": [
         "requester"
       ],
+      "exception": false,
       "condition": null
     }
   ]

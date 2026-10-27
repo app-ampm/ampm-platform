@@ -1,0 +1,148 @@
+/**
+ * Golden cases for the §7 parser, taken from the literal rows of docs/permission-matrix.md (line in
+ * the test name): movers come only from the who-part, status sets and qualifiers are named, and a
+ * row the parser cannot read stops the generator.
+ */
+import { describe, expect, it } from "vitest";
+
+import { parseTransitions } from "./parse-transitions.ts";
+
+function table(heading: string, ...rows: string[]): string {
+  return [`### ${heading}`, "| From | To | Who |", "|---|---|---|", ...rows].join("\n");
+}
+
+describe("parseTransitions", () => {
+  it("§7 line 419: role codes come from the who-part, never from the condition ('approved by FA')", () => {
+    const [rule] = parseTransitions(
+      table(
+        "Wedding project",
+        "| closure | closed | PM (a), SA, only when the closure checklist is complete and final accounts are approved by FA |",
+      ),
+    );
+    expect(rule).toMatchObject({
+      entity: "wedding_project",
+      from: ["closure"],
+      to: ["closed"],
+      roles: [
+        { role: "PM", assigned: true },
+        { role: "SA", assigned: false },
+      ],
+      client: false,
+      system: false,
+      actors: [],
+      condition:
+        "only when the closure checklist is complete and final accounts are approved by FA",
+    });
+  });
+
+  it("§7 line 455: 'any open state' is the named set of open incident states", () => {
+    const [rule] = parseTransitions(
+      table(
+        "Incident",
+        "| any open state | escalated | The assignee, PM (a), or System per the escalation rules |",
+      ),
+    );
+    expect(rule).toMatchObject({
+      from: ["open", "assigned", "in_progress"],
+      to: ["escalated"],
+      roles: [{ role: "PM", assigned: true }],
+      system: true,
+      actors: ["assignee"],
+      condition: "per the escalation rules",
+    });
+  });
+
+  it("§7 lines 389 and 400: each clause of a who-cell is its own rule", () => {
+    const rules = parseTransitions(
+      table(
+        "Subscription",
+        "| pending_payment or trial | active | System on payment succeeded; FA or SA manually, with a payment record attached |",
+      ),
+    );
+    expect(rules.map((r) => [r.system, r.roles.map((g) => g.role), r.condition])).toEqual([
+      [true, [], "on payment succeeded"],
+      [false, ["FA", "SA"], "manually, with a payment record attached"],
+    ]);
+    const enquiry = parseTransitions(
+      table("Hotel enquiry", "| draft | submitted | Either CR; SM or HT on the client's behalf |"),
+    );
+    expect(enquiry.map((r) => [r.client, r.roles.map((g) => g.role)])).toEqual([
+      [true, []],
+      [false, ["SM", "HT"]],
+    ]);
+  });
+
+  it("§7 lines 478-483: the assigned staff member and the requester are actors; qualifiers are kinds", () => {
+    const rules = parseTransitions(
+      table(
+        "Client request",
+        "| submitted | under_review | The assigned staff member |",
+        "| under_review | answered (question) | The assigned staff member |",
+        "| under_review | accepted or rejected (change request) | PM (a), SA |",
+        "| any | withdrawn | The requester |",
+      ),
+    );
+    expect(rules.map((r) => [r.to, r.kind, r.actors])).toEqual([
+      [["under_review"], null, ["assignee"]],
+      [["answered"], "question", ["assignee"]],
+      [["accepted", "rejected"], "change_request", []],
+      [["withdrawn"], null, ["requester"]],
+    ]);
+    expect(rules[3]?.from).not.toContain("withdrawn");
+  });
+
+  it("§7 line 421: 'previous status' restores the status saved before the hold", () => {
+    const [rule] = parseTransitions(
+      table("Wedding project", "| on_hold | previous status | PM (a), SA |"),
+    );
+    expect(rule).toMatchObject({ from: ["on_hold"], to: [], restore: true });
+  });
+
+  it("§7 line 446: readiness is derived by the System; the exception is SA's own rule", () => {
+    const rules = parseTransitions(
+      table(
+        "Function status and readiness",
+        "| readiness: not_started, in_progress, blocked, ready | derived | System, from the readiness checklist; an exception needs SA, Eva's authorised personnel (P-8 changed by Q10) |",
+        "| ready | live | PM (a), HL (a) on the day |",
+      ),
+    );
+    expect(rules.map((r) => [r.entity, r.from, r.to, r.system, r.exception])).toEqual([
+      [
+        "function_readiness",
+        ["not_started", "in_progress", "blocked", "ready"],
+        ["not_started", "in_progress", "blocked", "ready"],
+        true,
+        false,
+      ],
+      ["function_readiness", ["not_started", "in_progress", "blocked"], ["ready"], false, true],
+      ["function_readiness", ["ready"], ["live"], false, false],
+    ]);
+    expect(rules[1]?.roles).toEqual([{ role: "SA", assigned: false }]);
+  });
+
+  it("§7 line 395: a row with no mover is kept only when the document says nobody moves it", () => {
+    const [rule] = parseTransitions(
+      table(
+        "Subscription",
+        "| expired or cancelled | active | New subscription row; the old one is never reactivated |",
+      ),
+    );
+    expect(rule).toMatchObject({ roles: [], client: false, system: false, actors: [] });
+  });
+
+  it("stops on an unknown status, set, qualifier, entity or a who-cell without a mover", () => {
+    expect(() => parseTransitions(table("Incident", "| open | reopened | SA |"))).toThrow(
+      /reopened/,
+    );
+    expect(() => parseTransitions(table("Incident", "| any stale state | closed | SA |"))).toThrow(
+      /stale state/,
+    );
+    expect(() =>
+      parseTransitions(table("Client request", "| under_review | answered (complaint) | SA |")),
+    ).toThrow(/complaint/);
+    expect(() => parseTransitions(table("Invoice", "| draft | issued | FA |"))).toThrow(/Invoice/);
+    expect(() =>
+      parseTransitions(table("Incident", "| open | assigned | whoever is on duty |")),
+    ).toThrow(/no mover/);
+  });
+});

@@ -1,4 +1,4 @@
-import matrix from "./generated/matrix.json" with { type: "json" };
+import { MATRIX, type Grant } from "./matrix";
 import {
   ACTION_LETTERS,
   type Action,
@@ -6,43 +6,6 @@ import {
   type Scope,
   type StaffRole,
 } from "./roles";
-
-/** The matrix as generated from docs/permission-matrix.md (scripts/generate.ts). */
-export interface Grant {
-  readonly actions: readonly Action[];
-  readonly scope: Scope;
-  readonly note: string | null;
-}
-
-export interface MatrixRow {
-  readonly section: string;
-  readonly module: string;
-  readonly resource: string;
-  readonly label: string;
-  readonly provisional: boolean;
-  readonly cells: Readonly<Record<string, string>>;
-  readonly grants: Readonly<Record<string, readonly Grant[]>>;
-}
-
-export interface Transition {
-  readonly entity: string;
-  readonly from: string;
-  readonly to: string;
-  readonly who: string;
-  readonly roles: readonly { readonly role: string; readonly assigned: boolean }[];
-  readonly system: boolean;
-  readonly actors: readonly string[];
-  readonly condition: string | null;
-}
-
-interface Matrix {
-  readonly source: string;
-  readonly staff: readonly MatrixRow[];
-  readonly others: readonly MatrixRow[];
-  readonly transitions: readonly Transition[];
-}
-
-export const MATRIX = matrix as Matrix;
 
 /** `module.resource.action` with an optional `:assigned` or `:own` suffix (permission-matrix §10). */
 export type PermissionKey =
@@ -174,47 +137,4 @@ export function clientReach(type: "client" | "guest" | "demo", resource: string)
     (candidate) => candidate.resource === resource || candidate.label === resource,
   );
   return row?.grants[column] ?? [];
-}
-
-export interface TransitionContext {
-  readonly assigned?: boolean | undefined;
-  /** The principal is the record's assignee, owner, creator or requester. */
-  readonly actor?: "assignee" | "owner" | "creator" | "requester" | undefined;
-}
-
-/** Step 6 of the pipeline: may this principal move an entity from one status to another (§7)? */
-export function canTransition(
-  principal: PolicyPrincipal,
-  entity: string,
-  from: string,
-  to: string,
-  context: TransitionContext = {},
-): Transition | null {
-  const rules = MATRIX.transitions.filter(
-    (t) => t.entity === entity && matchesStatus(t.from, from) && matchesStatus(t.to, to),
-  );
-  for (const rule of rules) {
-    if (principal.type === "system" && rule.system) return rule;
-    if (principal.type === "client" && rule.roles.some((r) => r.role === "CR")) return rule;
-    if (principal.type === "staff") {
-      for (const grant of rule.roles) {
-        if (grant.role === "CR" || !(principal.roles ?? []).includes(grant.role as StaffRole))
-          continue;
-        if (!grant.assigned || context.assigned) return rule;
-      }
-      if (context.actor && rule.actors.includes(context.actor)) return rule;
-    }
-  }
-  return null;
-}
-
-function matchesStatus(pattern: string, status: string): boolean {
-  const options = pattern
-    .toLowerCase()
-    .replace(/[`*]/g, "")
-    .split(/\s*(?:,|\bor\b)\s*/)
-    .map((option) => option.trim());
-  return options.some(
-    (option) => option === status.toLowerCase() || option === "any" || option.startsWith("any "),
-  );
 }

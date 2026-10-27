@@ -23,10 +23,10 @@ export {
 } from "./visibility";
 export type { ClassContext, VisibilityClass } from "./visibility";
 export { MODULES, RESOURCES, slugify } from "./resources";
+export { MATRIX } from "./matrix";
+export type { Actor, Grant, MatrixRow, Transition } from "./matrix";
 export {
-  MATRIX,
   can,
-  canTransition,
   clientReach,
   decide,
   grantsForRole,
@@ -34,15 +34,10 @@ export {
   permissionKey,
   permissionKeysForRole,
 } from "./engine";
-export type {
-  Decision,
-  Grant,
-  MatrixRow,
-  PermissionKey,
-  PolicyPrincipal,
-  PolicyTarget,
-  Transition,
-  TransitionContext,
-} from "./engine";
+export type { Decision, PermissionKey, PolicyPrincipal, PolicyTarget } from "./engine";
+export { canTransition } from "./transitions";
+export type { TransitionContext } from "./transitions";
+export { STATUS_MACHINES } from "./statuses";
+export type { StatusMachine } from "./statuses";
 export { resolveClientEntitlements } from "./entitlements";
 export type { ClientAccountState, Entitlements } from "./entitlements";
