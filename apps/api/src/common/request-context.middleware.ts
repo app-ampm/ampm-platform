@@ -14,6 +14,8 @@ export class RequestContextMiddleware implements NestMiddleware {
     const incoming = req.header("x-request-id");
     const requestId = incoming && REQUEST_ID.test(incoming) ? incoming : randomUUID();
     res.setHeader("x-request-id", requestId);
-    requestContext.run({ requestId, ip: req.ip ?? null, principal: null }, () => next());
+    requestContext.run({ requestId, ip: req.ip ?? null, principal: null, access: null }, () =>
+      next(),
+    );
   }
 }

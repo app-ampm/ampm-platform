@@ -7,6 +7,8 @@ import {
   type FieldNoteView,
 } from "@ampm/core";
 
+import { isInScope, type RecordScope } from "../../db/scoping.js";
+
 /**
  * SPIKE STAND-IN — sprint 2 offline spike (docs/review/build-plan.md §11.4). The server half of the
  * offline-capable mutation. An in-memory store (no Prisma model, no migration, nothing to tear down)
@@ -25,10 +27,13 @@ export class FieldNoteService {
   private readonly notes = new Map<string, FieldNoteView>();
   private readonly applied = new Map<string, FieldNoteView>();
 
-  /** Reads the app refreshes into its local store, oldest first by the device's own timestamp. */
-  list(projectId: string): FieldNoteList {
+  /**
+   * Reads the app refreshes into its local store, oldest first by the device's own timestamp, inside
+   * the request's scope (step 5): a project outside it reads as empty, never as someone else's.
+   */
+  list(projectId: string, scope: RecordScope): FieldNoteList {
     const items = [...this.notes.values()]
-      .filter((note) => note.projectId === projectId)
+      .filter((note) => note.projectId === projectId && isInScope(note, scope))
       .sort((a, b) => a.clientTimestamp.localeCompare(b.clientTimestamp));
     return { items, nextCursor: null };
   }

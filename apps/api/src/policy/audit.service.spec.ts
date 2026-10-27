@@ -25,7 +25,12 @@ const STAFF: StaffPrincipal = {
 const SYSTEM: SystemPrincipal = { type: "system", name: "retention job" };
 
 function inRequest<T>(principal: Principal | null, fn: () => T): T {
-  const context: RequestContext = { requestId: "req-1", ip: "203.0.113.9", principal };
+  const context: RequestContext = {
+    requestId: "req-1",
+    ip: "203.0.113.9",
+    principal,
+    access: null,
+  };
   return requestContext.run(context, fn);
 }
 

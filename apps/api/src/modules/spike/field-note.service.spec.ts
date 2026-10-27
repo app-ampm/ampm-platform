@@ -1,12 +1,18 @@
 import { type FieldNoteUpsert } from "@ampm/core";
 import { describe, expect, it } from "vitest";
 
+import type { RecordScope } from "../../db/scoping.js";
 import { FieldNoteService } from "./field-note.service.js";
 
 const PROJECT = "0192f3a0-7d3e-7b1a-9c2f-aaaaaaaaaaaa";
 const OTHER_PROJECT = "0192f3a0-7d3e-7b1a-9c2f-bbbbbbbbbbbb";
 const NOTE_ID = "0192f3a0-7d3e-7b1a-9c2f-000000000001";
 const AT = "2026-10-27T05:00:00.000Z";
+const EVERY_PROJECT: RecordScope = { where: { deletedAt: null }, isDemo: false };
+const MEMBER_OF_OTHER: RecordScope = {
+  where: { projectId: { in: [OTHER_PROJECT] }, deletedAt: null },
+  isDemo: false,
+};
 
 function write(overrides: Partial<FieldNoteUpsert> = {}): FieldNoteUpsert {
   return {
@@ -39,7 +45,7 @@ describe("FieldNoteService (offline spike)", () => {
     expect(replay.outcome).toBe("duplicate");
     expect(replay.note.version).toBe(1);
     expect(replay.note.body).toBe("Catering van at gate 3");
-    expect(service.list(PROJECT).items).toHaveLength(1);
+    expect(service.list(PROJECT, EVERY_PROJECT).items).toHaveLength(1);
   });
 
   it("rejects a stale base version: the server wins and the record is unchanged", () => {
@@ -57,6 +63,13 @@ describe("FieldNoteService (offline spike)", () => {
   it("keeps notes isolated per project", () => {
     const service = new FieldNoteService();
     service.upsert(PROJECT, write({ baseVersion: 0 }));
-    expect(service.list(OTHER_PROJECT).items).toHaveLength(0);
+    expect(service.list(OTHER_PROJECT, EVERY_PROJECT).items).toHaveLength(0);
+  });
+
+  it("reads nothing outside the request's scope (step 5), even on a project that has notes", () => {
+    const service = new FieldNoteService();
+    service.upsert(PROJECT, write({ baseVersion: 0 }));
+    expect(service.list(PROJECT, MEMBER_OF_OTHER).items).toHaveLength(0);
+    expect(service.list(PROJECT, EVERY_PROJECT).items).toHaveLength(1);
   });
 });

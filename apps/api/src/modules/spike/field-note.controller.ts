@@ -8,8 +8,11 @@ import {
 } from "@ampm/core";
 import { z } from "zod";
 
+import type { Access } from "../../common/request-context.js";
 import { ZodBody, ZodParams } from "../../common/zod.js";
-import { RequirePermission } from "../../policy/decorators.js";
+import { recordScope } from "../../db/scoping.js";
+import { CurrentAccess, CurrentPrincipal, RequirePermission } from "../../policy/decorators.js";
+import type { Principal } from "../../policy/principal.types.js";
 import { FieldNoteService } from "./field-note.service.js";
 
 const projectParams = z.object({ projectId: uuid });
@@ -21,18 +24,22 @@ type ProjectParams = z.infer<typeof projectParams>;
  * PermissionGuard checks the incidents key scoped to the project (a staff member records incidents on
  * an assigned wedding — offline.md's example of a write that must work with no signal). The project
  * id and the body are validated at the edge (api.md) by the Zod decorators; a bad value is the
- * ZodError AppErrorFilter turns into validation_failed. Removed when the real operational records
+ * typed validation_failed error AppErrorFilter answers as a 400. Removed when the real operational records
  * arrive.
  */
 @Controller("spike/projects/:projectId/field-notes")
 export class FieldNoteController {
   constructor(private readonly notes: FieldNoteService) {}
 
-  /** The reads the app refreshes into its local store. */
+  /** The reads the app refreshes into its local store, inside the scope the guard resolved. */
   @Get()
   @RequirePermission("tasks.incidents.read", { projectParam: "projectId" })
-  list(@ZodParams(projectParams) params: ProjectParams): FieldNoteList {
-    return this.notes.list(params.projectId);
+  list(
+    @ZodParams(projectParams) params: ProjectParams,
+    @CurrentPrincipal() principal: Principal,
+    @CurrentAccess() access: Access,
+  ): FieldNoteList {
+    return this.notes.list(params.projectId, recordScope(principal, access.scope));
   }
 
   /** One queued write; idempotent on (id, baseVersion) so a replayed queue never duplicates. */

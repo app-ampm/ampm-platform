@@ -1,3 +1,4 @@
+import { errors } from "@ampm/core";
 import { STAFF_ROLES } from "@ampm/policy";
 import { Test } from "@nestjs/testing";
 import type { NestExpressApplication } from "@nestjs/platform-express";
@@ -10,6 +11,8 @@ import { configureHttp } from "../src/http.setup.js";
 import { LocalIdentityAdapter } from "../src/identity/local.adapter.js";
 
 const PROJECT = "0192f3a0-7d3e-7b1a-9c2f-aaaaaaaaaaaa";
+// The seeded wedding (prisma/seed.ts): the project manager and the client are its members.
+const SEEDED_PROJECT = "0192f3a0-7d3e-7b1a-9c2f-0000000000a1";
 
 describe("API (e2e)", () => {
   let app: NestExpressApplication;
@@ -137,6 +140,49 @@ describe("API (e2e)", () => {
     } finally {
       await prisma.role.update({ where: { roleKey }, data: { deletedAt: null } });
     }
+  });
+
+  describe("a guarded route (test-cases.md, denial semantics)", () => {
+    const notes = (projectId: string) => `/spike/projects/${projectId}/field-notes`;
+    const as = async (subject: string) => `Bearer ${await mint(subject)}`;
+
+    it("lets SA read any wedding and PM (a) read its own", async () => {
+      for (const subject of ["local:admin", "local:pm"]) {
+        const response = await request(app.getHttpServer())
+          .get(notes(SEEDED_PROJECT))
+          .set("authorization", await as(subject))
+          .expect(200);
+        expect(response.body.data).toEqual({ items: [], nextCursor: null });
+      }
+    });
+
+    it("answers PM (other) and a client with the 404 of a missing record", async () => {
+      const missing = errors.notFound().toEnvelope();
+      const other = await request(app.getHttpServer())
+        .get(notes(PROJECT))
+        .set("authorization", await as("local:pm"))
+        .expect(404);
+      expect(other.body).toEqual(missing);
+      await request(app.getHttpServer())
+        .post(notes(PROJECT))
+        .set("authorization", await as("local:pm"))
+        .send({})
+        .expect(404);
+      const client = await request(app.getHttpServer())
+        .get(notes(SEEDED_PROJECT))
+        .set("authorization", await as("local:client"))
+        .expect(404);
+      expect(client.body).toEqual(missing);
+    });
+
+    it("answers a malformed project id as validation_failed naming the field", async () => {
+      const response = await request(app.getHttpServer())
+        .get(notes("not-a-uuid"))
+        .set("authorization", await as("local:admin"))
+        .expect(400);
+      expect(response.body.error.code).toBe("validation_failed");
+      expect(JSON.stringify(response.body.error.details)).toContain("projectId");
+    });
   });
 
   it("keeps a caller's request id", async () => {
