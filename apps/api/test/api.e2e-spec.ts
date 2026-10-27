@@ -1,19 +1,24 @@
-import { type INestApplication } from "@nestjs/common";
+import { STAFF_ROLES } from "@ampm/policy";
 import { Test } from "@nestjs/testing";
+import type { NestExpressApplication } from "@nestjs/platform-express";
 import request from "supertest";
-import { type App } from "supertest/types.js";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { AppModule } from "../src/app.module.js";
+import { PrismaService } from "../src/db/prisma.service.js";
+import { configureHttp } from "../src/http.setup.js";
 import { LocalIdentityAdapter } from "../src/identity/local.adapter.js";
 
+const PROJECT = "0192f3a0-7d3e-7b1a-9c2f-aaaaaaaaaaaa";
+
 describe("API (e2e)", () => {
-  let app: INestApplication<App>;
+  let app: NestExpressApplication;
   let mint: (subject: string) => Promise<string>;
 
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
-    app = moduleRef.createNestApplication();
+    app = moduleRef.createNestApplication<NestExpressApplication>();
+    configureHttp(app);
     await app.init();
     const adapter = new LocalIdentityAdapter(process.env["IDENTITY_LOCAL_SECRET"] ?? "");
     mint = (subject) => adapter.mint(subject);
@@ -85,6 +90,53 @@ describe("API (e2e)", () => {
       canApprove: true,
     });
     expect(response.body.data.entitlements.modules).toContain("wedding_workspace");
+  });
+
+  it("refuses an oversized body before any guard, as payload_too_large", async () => {
+    const response = await request(app.getHttpServer())
+      .post(`/spike/projects/${PROJECT}/field-notes`)
+      .set("content-type", "application/json")
+      .send(JSON.stringify({ body: "x".repeat(200 * 1024) }))
+      .expect(413);
+    expect(response.body).toEqual({
+      error: { code: "payload_too_large", message: "Request body too large" },
+    });
+  });
+
+  it("answers a malformed JSON body as validation_failed", async () => {
+    // Nest turns the parser's SyntaxError into a BadRequestException carrying the parser's message.
+    const response = await request(app.getHttpServer())
+      .post(`/spike/projects/${PROJECT}/field-notes`)
+      .set("content-type", "application/json")
+      .send('{"body": ')
+      .expect(400);
+    expect(response.body.error.code).toBe("validation_failed");
+  });
+
+  it("does not name the framework in its headers", async () => {
+    const response = await request(app.getHttpServer()).get("/health").expect(200);
+    expect(response.headers["x-powered-by"]).toBeUndefined();
+  });
+
+  it("stops granting a role once the role is soft-deleted", async () => {
+    const prisma = app.get(PrismaService);
+    const token = await mint("local:pm");
+    const before = await request(app.getHttpServer())
+      .get("/me")
+      .set("authorization", `Bearer ${token}`)
+      .expect(200);
+    expect(before.body.data.roles).toEqual(["PM"]);
+    const roleKey = STAFF_ROLES.PM.key;
+    await prisma.role.update({ where: { roleKey }, data: { deletedAt: new Date() } });
+    try {
+      const after = await request(app.getHttpServer())
+        .get("/me")
+        .set("authorization", `Bearer ${token}`)
+        .expect(200);
+      expect(after.body.data.roles).toEqual([]);
+    } finally {
+      await prisma.role.update({ where: { roleKey }, data: { deletedAt: null } });
+    }
   });
 
   it("keeps a caller's request id", async () => {
