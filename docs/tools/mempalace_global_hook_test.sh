@@ -10,8 +10,8 @@
 # stand-in mempalace in $HOME/.local/bin that records, per call, its argv, the payload it read, its MEMPAL* environment,
 # whether it inherited fd 9, and a copy of the file transcript_path named; it appends $HOME/hooklog to MemPalace's
 # hook.log, then sleeps for the seconds in $HOME/slow. A python3 shim beside it fails the helper step named in
-# $HOME/fail_step (detach, lock...), or makes the one in $HOME/echo_step hand its input back unchanged. Never touches
-# ~/.mempalace, ~/.claude or ~/Library/Logs.
+# $HOME/fail_step (detach, lock...), makes the one in $HOME/echo_step hand its input back unchanged, or removes the
+# scratch ~/.mempalace before the one in $HOME/remove_at_step. Never touches ~/.mempalace, ~/.claude or ~/Library/Logs.
 set -u
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
 HOOK="$REPO/docs/tools/mempalace_global_hook.sh"
@@ -85,7 +85,9 @@ STANDIN
 } > "$H/.local/bin/mempalace"
 cat > "$H/.local/bin/python3" <<SHIM
 #!/bin/bash
-# python3 for the hook, failing only the helper step named in \$HOME/fail_step, or echoing for \$HOME/echo_step
+# python3 for the hook, failing only the helper step named in \$HOME/fail_step, or echoing for \$HOME/echo_step;
+# before the step named in \$HOME/remove_at_step it removes ~/.mempalace, as a user switching MemPalace off would
+[ -f "\$HOME/remove_at_step" ] && [ "\${4:-}" = "\$(cat "\$HOME/remove_at_step")" ] && rm -rf "\$HOME/.mempalace"
 [ -f "\$HOME/fail_step" ] && [ "\${4:-}" = "\$(cat "\$HOME/fail_step")" ] && exit 1
 [ -f "\$HOME/echo_step" ] && [ "\${4:-}" = "\$(cat "\$HOME/echo_step")" ] && { cat; exit 0; }
 exec "$PYTHON3" "\$@"
@@ -450,6 +452,45 @@ test_only_hook_run_is_called_and_one_line_per_run() {
   return 0
 }
 
+test_mempalace_removed_while_the_redactor_scans() {  # the user switches MemPalace off while a worker scans
+  local slow="$SCRATCH/slow-redactor"
+  mkdir -p "$slow"; cp "$HOOK" "$slow/"
+  cat > "$slow/redact_secrets.py" <<PY
+import os, subprocess, sys, time
+open(os.path.expanduser("~/scanning"), "w").close()  # the worker is past its first off-switch check
+for _ in range(100):  # the test removes ~/.mempalace now, while this scan runs
+    if not os.path.isdir(os.path.expanduser("~/.mempalace")):
+        break
+    time.sleep(0.1)
+sys.exit(subprocess.call([sys.executable, "-I", "$REPO/docs/tools/redact_secrets.py"] + sys.argv[1:]))
+PY
+  record "switched off mid-scan $(token M)" > "$PROJECTS/midscan.jsonl"
+  read -r _ _ _ < <(H="$H" python3 "$SCRATCH/timed.py" "$slow/mempalace_global_hook.sh" stop \
+    "$(payload midscan "$PROJECTS/midscan.jsonl")")
+  for _ in $(seq 1 50); do [ -e "$H/scanning" ] && break; sleep 0.1; done
+  rm -rf "$H/.mempalace"
+  wait_for_runs midscan 1 && log_of midscan | grep -q "not run: ~/.mempalace is gone" \
+    || fail "a worker went on after ~/.mempalace was removed mid-scan: $(log_of midscan)"
+  [ -e "$H/.mempalace" ] && fail "a scan that ended after ~/.mempalace was removed made it again"
+  [ -z "$(calls_of midscan)" ] || fail "MemPalace ran after ~/.mempalace was removed mid-scan"
+  rm -f "$H/scanning"; mkdir -p "$H/.mempalace"
+}
+
+test_mempalace_removed_before_the_snapshot_or_the_call() {
+  local step session
+  for step in validate size; do  # after the lock, before the snapshot folder; the last step before MemPalace
+    session="removed-at-$step"
+    record "switched off at $step" > "$PROJECTS/$session.jsonl"; echo "$step" > "$H/remove_at_step"
+    run_hook precompact "$(payload "$session" "$PROJECTS/$session.jsonl")"
+    wait_for_runs "$session" 1; rm -f "$H/remove_at_step"
+    log_of "$session" | grep -q "not run: ~/.mempalace is gone" \
+      || fail "the worker went on after ~/.mempalace was removed at $step: $(log_of "$session")"
+    [ -z "$(calls_of "$session")" ] || fail "MemPalace ran after ~/.mempalace was removed at $step"
+    [ -e "$H/.mempalace" ] && fail "the worker made ~/.mempalace again after it was removed at $step"
+    mkdir -p "$H/.mempalace"
+  done
+}
+
 test_mempalace_off_switch_is_honoured() {  # last: it removes the scratch ~/.mempalace
   record "switched off" > "$PROJECTS/off.jsonl"
   rm -rf "$H/.mempalace"
@@ -476,6 +517,8 @@ test_mempalace_outcome_is_logged
 test_session_end_sweeps_snapshots_of_deleted_transcripts
 test_block_mode_is_reported
 test_only_hook_run_is_called_and_one_line_per_run
+test_mempalace_removed_while_the_redactor_scans
+test_mempalace_removed_before_the_snapshot_or_the_call
 test_mempalace_off_switch_is_honoured
 [ -n "${SHOW_LOG:-}" ] && cat "$LOG"  # SHOW_LOG=1 bash docs/tools/mempalace_global_hook_test.sh prints what the hooks logged
 [ "$FAILURES" -eq 0 ] && echo "global hook tests passed" || echo "global hook tests: $FAILURES failure(s)"

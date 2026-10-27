@@ -21,8 +21,10 @@ appending to is never truncated or reordered. A line still being written (no tra
 left for the next run. Nothing matched is ever printed: the output is a count per file.
 
 OUT is replaced atomically (0600 in a 0700 folder) and never followed: a link or a stale or foreign file
-there is replaced, not read. Only a newer, longer masked copy of the same transcript is kept (a scan that
-finished late); OUT.lock records which transcript OUT was written from, which is also what --sweep reads.
+there is replaced, not read. Only a newer masked copy of the same transcript, starting with what this run
+masked, is kept (a scan that finished late); OUT.lock records which transcript OUT was written from, which
+is also what --sweep reads. --snapshot-only makes OUT's folder only inside one that exists, so a scan that
+ends after the user removed ~/.mempalace (MemPalace's off switch) fails instead of making it again.
 
 MemPalace's global hooks (docs/tools/mempalace_global_hook.sh) run for every project's sessions, so
 they use --snapshot-only: another project's transcript is never edited, only its snapshot is masked.
@@ -43,7 +45,7 @@ import re
 import stat
 import sys
 import time
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 
 KEEP = 4  # characters left readable at the start of a match
 
@@ -55,6 +57,7 @@ KEEP = 4  # characters left readable at the start of a match
 WORD = frozenset(b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_")
 WORD_DASH = WORD | {ord("-")}
 UPPER_DIGIT = frozenset(b"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
+BASE64_RUN = WORD_DASH | frozenset(b"+/")  # a prefix that base64 data holds by chance: never inside a base64 run
 ANY: frozenset[int] = frozenset()
 JSON_ESCAPE_TAIL = re.compile(rb"\\(?:[ntrbf]|u[0-9a-fA-F]{4})\Z")
 ESC = rb"\\+u001[bB]"  # the escape byte as a JSON string holds it, escaped once or more
@@ -77,17 +80,31 @@ HEADER_LINE = rb"[A-Za-z][A-Za-z0-9-]*:[^\\\"\n]*"  # Proc-Type: 4,ENCRYPTED, or
 BASE64_LINE = rb"[A-Za-z0-9+/=]+(?=[\\\"\n]|\Z)"
 
 # A key whose name says it holds a secret (.env, JSON, YAML, an HTTP header): DATABASE_PASSWORD, client_secret,
-# SECRET_KEY, x-api-key, accessToken, SMTP_PASS, DB_PWD, a Docker "auth". The name is the last word of the key;
-# _named_secret_value checks what comes before it and masks the value only when it looks like a credential, not
-# code, a type, a path or an expansion.
+# SECRET_KEY, x-api-key, accessToken, SMTP_PASS, DB_PWD, a Docker "auth", and a --password or --api-token flag whose
+# value follows a space. The name is the last word of the key; _named_secret_value checks what comes before it and
+# masks the value only when it looks like a credential, not code, a type, a path, an expansion or a word of prose.
 SECRET_WORDS = (b"pass", b"secret", b"token", b"key", b"auth", b"pwd")
 NAMED_SECRET = (
     rb"(?i:(?P<name>pass(?:word|wd|phrase)?|secret|token|key|auth|pwd))"
-    rb"(?:\\{0,7}[\"'])?[ \t]*[:=][ \t]*(?P<quote>\\{0,7}[\"'])?"
+    rb"(?:(?:\\{0,7}[\"'])?[ \t]*[:=][ \t]*|(?P<space>[ \t]+))(?P<quote>\\{0,7}[\"'])?"
     rb"(?P<secret>[A-Za-z0-9+/=_.~!@#$%^*-]{8,512})"
 )
 KEY_OWNER = re.compile(rb"(?:api|access|private|client|encryption|signing|master|secret)[_-]?\Z")  # api_key, apiKey
+# A pass that ends another word is not a password (bypass, compass), unless that word names what it opens: DBPASS.
+PASS_OWNER = re.compile(rb"(?:db|sql|smtp|mail|ftp|ldap|root|admin|user|redis)\Z")
+FLAG = re.compile(rb"(?:\A|[\s\"'=(])--(?:[a-z0-9]+-)*\Z")  # --password, --db-password, --api-token
+# The start of a .env or YAML line up to the secret's name: a line break, the start of a JSON string or the Read
+# tool's line number, then indentation, "export " or a YAML "- ", and the UPPER_SNAKE words of the key before the
+# name (DB_PASSWORD=, POSTGRES_PASSWORD:, PGPASSWORD=).
+ENV_LINE = re.compile(
+    rb"(?:\A|\n|\\+n|\")(?:[ ]*[0-9]+(?:\\+t|\t|\xe2\x86\x92|\\+u2192))?(?:[ \t]|\\+t)*"
+    rb"(?:export[ \t]+|-[ \t]+)?[A-Z0-9_]*\Z"
+)
+LOWER_CAMEL = re.compile(rb"[a-z]+[A-Z][A-Za-z]*")  # dbPassword: an identifier, not a password
 ALNUM = frozenset(b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789")
+LETTERS = frozenset(b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz")
+DIGITS = frozenset(b"0123456789")
+URL_SAFE = ALNUM | {ord("_"), ord("-")}
 # Code, not a value: os.environ, settings.API_KEY, process.env.X! and a TypeScript non-null password! or session!
 DOTTED = re.compile(rb"[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)+!?|[A-Za-z_$]+!")
 RANDOM_BYTES = frozenset(b"0123456789+/=!@#$%^*~")
@@ -97,8 +114,9 @@ WRAP = re.compile(rb"(?:\\+r)?\\+n")  # a line break inside a JSON string, escap
 
 class Prefiltered:
     """A pattern tried only where one of its words occurs, in any case: re is slow at a case-insensitive
-    alternation over a whole transcript, bytes.find is not. Prefiltered(SECRET_WORDS, NAMED_SECRET).finditer(data)
-    yields the matches that start at one of those words, in order, as re.finditer would."""
+    alternation over a whole transcript, bytes.find is not. Prefiltered(SECRET_WORDS, NAMED_SECRET).finditer(data,
+    accept) yields the matches that start at one of those words and that accept takes, in order and never
+    overlapping. A match accept refuses hides no word inside it: in "key": "password=...", the password is tried."""
 
     CHUNK = 1 << 23  # lower-cased a piece at a time, so a large transcript is never copied whole
 
@@ -106,7 +124,7 @@ class Prefiltered:
         self.words, self.pattern = words, re.compile(pattern)
         self.overlap = max(len(word) for word in words) - 1
 
-    def finditer(self, data: bytes) -> Iterator[re.Match[bytes]]:
+    def finditer(self, data: bytes, accept: Callable[[re.Match[bytes]], bool]) -> Iterator[re.Match[bytes]]:
         starts: set[int] = set()
         for offset in range(0, len(data), self.CHUNK):
             piece = data[offset : offset + self.CHUNK + self.overlap].lower()
@@ -118,7 +136,7 @@ class Prefiltered:
         end = 0
         for start in sorted(starts):
             match = self.pattern.match(data, start) if start >= end else None
-            if match:
+            if match and accept(match):  # checked before it hides the starts inside it
                 end = match.end()
                 yield match
 
@@ -160,6 +178,12 @@ PATTERNS: list[tuple[str, re.Pattern[bytes] | Prefiltered, frozenset[int]]] = [
     ("sendgrid-key", re.compile(rb"(?P<secret>SG\.[A-Za-z0-9_-]{16,32}\.[A-Za-z0-9_-]{32,64})"), WORD_DASH),
     ("digitalocean-token", re.compile(rb"(?P<secret>do[opr]_v1_[a-f0-9]{64})"), WORD),
     ("razorpay-key", re.compile(rb"(?P<secret>rzp_(?:live|test)_[A-Za-z0-9]{14,64})"), WORD),
+    ("shopify-token", re.compile(rb"(?P<secret>shp(?:at|ss|ca|pa)_[a-fA-F0-9]{32})"), WORD),
+    ("atlassian-token", re.compile(rb"(?P<secret>ATATT3[A-Za-z0-9_=-]{50,})"), WORD_DASH),
+    ("mailgun-key", re.compile(rb"(?P<secret>key-[0-9a-f]{32})(?![0-9A-Za-z])"), WORD),
+    ("square-token", re.compile(rb"(?P<secret>EAAA[A-Za-z0-9_-]{60,})"), BASE64_RUN),
+    # A legacy FCM server key, AAAA and seven characters then :APA91 and the key: masked from APA91 on.
+    ("fcm-server-key", re.compile(rb":(?P<secret>APA91[A-Za-z0-9_-]{100,})"), ANY),
     ("api-key-sk", re.compile(rb"(?P<secret>sk-(?:ant-|proj-)?[A-Za-z0-9_-]{32,})"), WORD_DASH),
     ("stripe-key", re.compile(rb"(?P<secret>[sr]k_(?:live|test)_[A-Za-z0-9]{16,})"), WORD),
     ("google-api-key", re.compile(rb"(?P<secret>AIza[0-9A-Za-z_-]{35})"), WORD_DASH),
@@ -169,6 +193,33 @@ PATTERNS: list[tuple[str, re.Pattern[bytes] | Prefiltered, frozenset[int]]] = [
     (
         "url-password",
         re.compile(rb"[a-z][a-z0-9+.-]{1,20}://[^:/@\s\"'\\]{0,64}:(?P<secret>[^:/@\s\"'\\]{8,128})@"),
+        ANY,
+    ),
+    # The password of mysql -p<password> and of curl -u user:<password>, in the same shell command; never an
+    # expansion ($VAR) or the empty one of a password prompt (mysql -p, curl -u user:).
+    (
+        "mysql-password",
+        re.compile(
+            rb"mysql(?:dump|admin)?[ \t](?:[^\n|;&]{0,200}?[ \t])?-p(?:\\{0,7}[\"'])?"
+            rb"(?P<secret>[^\s\"'\\$|;&<>`]{4,128})"
+        ),
+        ANY,
+    ),
+    (
+        "curl-password",
+        re.compile(
+            rb"curl[ \t](?:[^\n|;&]{0,300}?[ \t])?(?:-u|--user)(?:[ \t]+|=)?(?:\\{0,7}[\"'])?[^\s:\"'\\$]{1,128}:"
+            rb"(?P<secret>[^\s\"'\\$@]{4,128})"
+        ),
+        ANY,
+    ),
+    # A session cookie in a Cookie or Set-Cookie header: sessionid=, PHPSESSID=, connect.sid=, _app_session=.
+    (
+        "cookie-session",
+        re.compile(
+            rb"ookie(?:\\{0,7}[\"'])?[ \t]*:[ \t]*(?:\\{0,7}[\"'])?(?:[^\n;\"\\]{0,256};[ \t]*){0,16}?"
+            rb"[A-Za-z0-9_.-]*(?i:sess(?:ion)?(?:[_.-]?id)?|sid)=(?P<secret>[A-Za-z0-9%._~+/-]{16,512})"
+        ),
         ANY,
     ),
     # The body of a PEM private key, kept inside one JSON string of one transcript line (no re.S); only
@@ -245,22 +296,46 @@ def _clean_start(data: bytes, start: int, not_before: frozenset[int]) -> bool:
     return CONTROL_TAIL.search(data, max(0, start - 600), start) is not None
 
 
+def _generated(value: bytes) -> bool:
+    """True when a value looks generated, as an API key is: letters and digits mixed, 20 or more URL-safe characters
+    or 32 or more base64 ones (hex included). A word, a name or a path is not: _generated(b"user-settings") is False."""
+    if not (any(byte in DIGITS for byte in value) and any(byte in LETTERS for byte in value)):
+        return False
+    if len(value) >= 20 and all(byte in URL_SAFE for byte in value):
+        return True
+    return len(value) >= 32 and all(byte in BASE64 for byte in value)
+
+
+def _env_line_word(data: bytes, match: re.Match[bytes]) -> bool:
+    """True for a letters-only value of an UPPER_SNAKE key at the start of a .env or YAML line: DB_PASSWORD=Hunter,
+    POSTGRES_PASSWORD: supersecret. A lower-camel-case value is an identifier, and a value after a space is prose."""
+    value, name = match.group("secret"), match.group("name")
+    if match.group("space") is not None or not value.isalpha() or LOWER_CAMEL.fullmatch(value) or not name.isupper():
+        return False
+    return ENV_LINE.search(data, max(0, match.start("name") - 200), match.start("name")) is not None
+
+
 def _named_secret_value(data: bytes, match: re.Match[bytes]) -> bool:
     """True when the value of a secret-named key looks like a credential, not code, a type, an expansion or a word.
 
-    A password may be a plain word, so a quoted value of a password or secret is masked as it is; any other value
-    must hold a digit or a symbol, or be 20 characters or more, as a generated token or key does.
+    A password may be a plain word, so a quoted value of a password or secret is masked as it is, and so is a
+    letters-only value on a .env or YAML line (_env_line_word); any other value must hold a digit or a symbol, or be
+    20 characters or more, as a generated token or key does. A key whose owner is not a secret's (MSG91_AUTH_KEY,
+    Ocp-Apim-Subscription-Key, AccountKey) is masked only when its value looks generated (_generated).
     _named_secret_value(b"PASSWORD=hashed_password,", m) is False; DATABASE_PASSWORD=Pw9Pw9Pw9x is True.
     """
     name, start = match.group("name").lower(), match.start("name")
-    if name == b"key" and not KEY_OWNER.search(data[max(0, start - 12) : start].lower()):
-        return False  # a key that names no secret: PRIMARY_KEY, sort_key, ssh key
+    value = match.group("secret")
+    if match.group("space") is not None and not FLAG.search(data, max(0, start - 40), start):
+        return False  # a word after the name in prose: only a --flag takes its value after a space
+    if name == b"key" and not KEY_OWNER.search(data[max(0, start - 12) : start].lower()) and not _generated(value):
+        return False  # a key that names no secret, and holds a word: PRIMARY_KEY, sort_key, ssh key
     if name in (b"pass", b"auth") and start > 0 and data[start - 1] in ALNUM:
         if not JSON_ESCAPE_TAIL.search(data, max(0, start - 2), start):
-            return False  # bypass, OAuth: the end of another word
+            if name == b"auth" or not PASS_OWNER.search(data[max(0, start - 6) : start].lower()):
+                return False  # bypass, OAuth: the end of another word
     if name == b"pwd" and data[start - 1 : start] not in (b"_", b"-"):
         return False  # PWD and OLDPWD are the working directory
-    value = match.group("secret")
     if value.startswith((b"$", b"-----", b"*")):
         return False  # $VAR, $(cmd), ${{ secrets.X }}; a PEM marker, whose body the private-key rules mask; ** or ***
     if value.lower() == name:
@@ -271,7 +346,9 @@ def _named_secret_value(data: bytes, match: re.Match[bytes]) -> bool:
         return True
     if DOTTED.fullmatch(value):
         return False
-    return len(value) >= 20 or any(byte in RANDOM_BYTES for byte in value)
+    if len(value) >= 20 or any(byte in RANDOM_BYTES for byte in value):
+        return True
+    return name != b"key" and _env_line_word(data, match)
 
 
 def _wrapped_token(data: bytes, match: re.Match[bytes]) -> bool:
@@ -279,19 +356,38 @@ def _wrapped_token(data: bytes, match: re.Match[bytes]) -> bool:
     return len(WRAP.sub(b"", match.group("secret")[4:])) >= 36
 
 
-CHECKS = {"named-secret": _named_secret_value, "github-token-wrapped": _wrapped_token}
+def _session_cookie(data: bytes, match: re.Match[bytes]) -> bool:
+    """True when a session cookie's value mixes letters and digits, as a generated session id does."""
+    value = match.group("secret")
+    return any(byte in DIGITS for byte in value) and any(byte in LETTERS for byte in value)
+
+
+CHECKS = {
+    "named-secret": _named_secret_value,
+    "github-token-wrapped": _wrapped_token,
+    "cookie-session": _session_cookie,
+}
+
+
+def _matches(
+    data: bytes, kind: str, pattern: re.Pattern[bytes] | Prefiltered, not_before: frozenset[int]
+) -> Iterator[re.Match[bytes]]:
+    """The matches of one pattern that start clean and pass its check (CHECKS), in order."""
+    check = CHECKS.get(kind)
+
+    def accept(match: re.Match[bytes]) -> bool:
+        return _clean_start(data, match.start("secret"), not_before) and (check is None or check(data, match))
+
+    if isinstance(pattern, Prefiltered):
+        return pattern.finditer(data, accept)
+    return filter(accept, pattern.finditer(data))
 
 
 def _spans(data: bytes) -> list[tuple[int, int, bool]]:
     """(start, end, base64_only) of every match, overlapping matches merged into one credential."""
     found = []
     for kind, pattern, not_before in PATTERNS:
-        check = CHECKS.get(kind)
-        for match in pattern.finditer(data):
-            if not _clean_start(data, match.start("secret"), not_before):
-                continue
-            if check is not None and not check(data, match):
-                continue
+        for match in _matches(data, kind, pattern, not_before):
             start, end = _widen(data, *match.span("secret"))
             found.append((start, end, kind.startswith("private-key")))
     merged: list[tuple[int, int, bool]] = []
@@ -389,7 +485,9 @@ def _open_lock(out_path: str) -> int:
     raise OSError(errno.EAGAIN, "the snapshot's lock file keeps being replaced", out_path + ".lock")
 
 
-def write_snapshot(out_path: str, data: bytes, source: tuple[str, os.stat_result] | None = None) -> str:
+def write_snapshot(
+    out_path: str, data: bytes, source: tuple[str, os.stat_result] | None = None, make_parents: bool = True
+) -> str:
     """Writes data to out_path atomically, 0600 in a 0700 directory; returns "written", "unchanged" or "kept".
 
     source is the transcript data was read from, as (path, its stat when read). A snapshot that already holds data is
@@ -397,10 +495,16 @@ def write_snapshot(out_path: str, data: bytes, source: tuple[str, os.stat_result
     then keeps the newer, longer snapshot of the same transcript ("kept", _is_newer_copy), so every miner reads the
     newest redacted copy. Anything else at out_path is replaced, never followed or read: a symbolic or hard link, a
     stale or foreign file, a copy of a transcript since rewritten shorter. The lock file records the source.
+    With make_parents=False (--snapshot-only) only out_path's own directory is made, inside one that exists: once
+    the user removed ~/.mempalace (MemPalace's off switch) the write fails with ENOENT instead of making it again.
     write_snapshot(os.path.expanduser("~/.mempalace/hook_state/redacted/<session>.jsonl"), masked, (path, info))
     """
     directory = os.path.dirname(os.path.abspath(out_path))
-    os.makedirs(directory, mode=0o700, exist_ok=True)
+    if make_parents:
+        os.makedirs(directory, mode=0o700, exist_ok=True)
+    else:
+        with contextlib.suppress(FileExistsError):
+            os.mkdir(directory, 0o700)
     os.chmod(directory, 0o700)
     lock = _open_lock(out_path)
     try:
@@ -510,7 +614,7 @@ def redact_file(path: str, check_only: bool, snapshot: str | None = None, in_pla
             _mask_in_place(path, handle, edits)
     if check_only or snapshot is None:
         return len(edits), ""
-    return len(edits), write_snapshot(snapshot, _apply(data, edits), (path, read))
+    return len(edits), write_snapshot(snapshot, _apply(data, edits), (path, read), make_parents=in_place)
 
 
 def self_test() -> int:

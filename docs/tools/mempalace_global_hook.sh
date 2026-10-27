@@ -12,7 +12,9 @@
 # 142 MB transcript must not delay the end of a turn or a compaction. A worker (this script, --worker), detached into
 # a session of its own so a closing terminal does not end it, then
 #
-#   1. stops when ~/.mempalace is gone, and drops MEMPAL_DIR, with which MemPalace would mine a folder unmasked;
+#   1. stops when ~/.mempalace is gone, and drops MEMPAL_DIR, with which MemPalace would mine a folder unmasked. It
+#      makes its folders only inside an existing ~/.mempalace (so does the redactor), and checks again after the
+#      scan and just before MemPalace runs: a ~/.mempalace removed mid-run stays removed and MemPalace is not run;
 #   2. takes a per-session lock, a flock(2) on $STATE/global_hooks/<session>.lock: a Stop worker skips when one for
 #      the session is still running; PreCompact and SessionEnd wait for it, at most $WAIT seconds, and then run anyway,
 #      so a final save is never skipped. The kernel drops the lock of a worker that died, and a worker that locked a
@@ -252,6 +254,15 @@ log_run() {  # outcome: the one line this run writes; never the payload
     >> "$LOG" 2>/dev/null
 }
 
+OFF="not run: ~/.mempalace is gone (MemPalace is switched off)"
+switched_off() {  # MemPalace's off switch is removing ~/.mempalace; this file, installed in it, goes with it
+  [ ! -d "$HOME/.mempalace" ] || [ ! -f "$SELF" ]
+}
+
+make_dir() {  # makes $1 (0700) inside a folder that exists, never a parent: a removed ~/.mempalace stays removed
+  [ -d "$1" ] || mkdir -m 700 "$1" 2>/dev/null || [ -d "$1" ]
+}
+
 mempalace_command() {  # $HOME/.local/bin/mempalace, else the one on PATH; fails when there is none
   local found="$HOME/.local/bin/mempalace"
   [ -x "$found" ] || found=$(command -v mempalace 2>/dev/null)
@@ -260,7 +271,7 @@ mempalace_command() {  # $HOME/.local/bin/mempalace, else the one on PATH; fails
 
 take_lock() {  # sets locked=yes, or lock_problem to why not ("held" when another worker has it)
   local tries rc
-  { mkdir -p "$STATE/global_hooks" && chmod 700 "$STATE/global_hooks"; } 2>/dev/null \
+  { make_dir "$STATE" && make_dir "$STATE/global_hooks" && chmod 700 "$STATE/global_hooks"; } 2>/dev/null \
     || { lock_problem="its folder could not be made"; return; }
   for tries in 1 2 3 4 5; do
     { exec 9>>"$lock_file"; } 2>/dev/null || { lock_problem="it could not be opened"; return; }
@@ -282,8 +293,8 @@ work() {  # the detached worker: lock, validate, snapshot, then MemPalace on the
   { IFS= read -r -d '' SESSION; IFS= read -r -d '' transcript; IFS= read -r -d '' NAME; } \
     < <(printf '%s' "$input" | py fields 2>/dev/null)
   SESSION="${SESSION:-unknown}"; NAME="${NAME:--}"; transcript="${transcript:-}"
-  # MemPalace's off switch: nothing here recreates ~/.mempalace once the user removed it.
-  [ -d "$HOME/.mempalace" ] || { log_run "not run: ~/.mempalace is gone (MemPalace is switched off)"; return; }
+  # MemPalace's off switch: nothing here recreates ~/.mempalace once the user removed it, even mid-run.
+  switched_off && { log_run "$OFF"; return; }
   if [ -n "${MEMPAL_DIR+set}" ]; then  # MemPalace would mine that folder, unmasked, on every save
     note=" (warning: MEMPAL_DIR was set; MemPalace ran without it, so no folder was mined unmasked)"
     unset MEMPAL_DIR
@@ -310,9 +321,14 @@ work() {  # the detached worker: lock, validate, snapshot, then MemPalace on the
 
   # CLAUDE.md: never file secrets or tokens. MemPalace reads only this masked copy, never the live transcript.
   snapshot="$STATE/redacted/$(basename "$resolved")"
+  if ! { make_dir "$STATE" && make_dir "$STATE/redacted"; }; then
+    if switched_off; then log_run "$OFF$note"; else log_run "not run: the snapshot folder could not be made$note"; fi
+    return
+  fi
   out=$( (umask 077; py run "$TIMEOUT" python3 -I "$HERE/redact_secrets.py" --snapshot-only "$snapshot" "$resolved") \
     2>&1 9>&- )
   status=$?
+  switched_off && { log_run "$OFF$note"; return; }  # removed during the scan (the redactor made no folder again)
   if [ "$status" -ne 0 ]; then
     [ "$status" -eq 124 ] && { log_run "not run: the redaction timed out after ${TIMEOUT} s$note"; return; }
     out=$(printf '%s\n' "$out" | sed -n 's/.*not redacted (\(.*\))$/\1/p' | head -1)
@@ -331,6 +347,7 @@ work() {  # the detached worker: lock, validate, snapshot, then MemPalace on the
     && note="$note (warning: MemPalace's hooks.silent_save is off: its Stop would ask Claude to save; this hook answers {})"
 
   offset=$(py size "$STATE/hook.log" 2>/dev/null)
+  switched_off && { log_run "$OFF$note"; return; }  # the last moment it can still be honoured
   printf '%s' "$payload" | py run "$TIMEOUT" "$mp" hook run --hook "$EVENT" --harness claude-code > /dev/null 2>&1 9>&-
   status=$?
   outcome=$(py outcome "$STATE/hook.log" "${offset:-0}" "$(basename "$snapshot")" "$SESSION" 2>/dev/null)

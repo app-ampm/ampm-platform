@@ -172,6 +172,78 @@ def named_and_prefix_cases() -> list[Case]:
     ]
 
 
+def residual_cases() -> list[Case]:
+    """Forms the first named-secret rule left in clear: letters-only passwords on .env and YAML lines, keys of any
+    owner, a value after a --flag, mysql -p, curl -u, a session cookie, more prefixes, and a value inside a match
+    the check rejects."""
+    letters, mixed, hex32 = "Qwertyuiopasdfgh", "Pw9" * 5 + "x", "a1b2c3d4" * 4
+    b64 = "Zq7+" * 21 + "Zq7=" + "="
+    fcm = "AA" + "AA" + "Bc9-xYz" + ":" + "AP" + "A91b" + "Zq7_" * 34
+    compose = f"services:\n  db:\n    environment:\n      POSTGRES_PASSWORD: {letters[:13]}\n"
+    azure = f"DefaultEndpointsProtocol=https;AccountName=ampm;Account{'Key'}={b64};EndpointSuffix=core.windows.net"
+    return [
+        ("a letters-only password in a .env line", tool_result(f"DB_PASSWORD={letters[:12]}\n"), 1, [letters[4:12]]),
+        ("a letters-only password in docker compose", tool_result(compose), 1, [letters[4:13]]),
+        ("a letters-only password in a compose list", tool_result(f"    - SMTP_PASS={letters}\n"), 1, [letters[4:]]),
+        ("a letters-only password read with line numbers", tool_result(numbered(["# db", f"PGPASSWORD={letters}"])),
+         1, [letters[4:]]),
+        ("PGPASSWORD before psql", tool_use(f"PGPASSWORD={letters[:13]} psql -h db -U ampm"), 1, [letters[4:13]]),
+        ("an exported letters-only password", tool_use(f"export ADMIN_SECRET={letters}"), 1, [letters[4:]]),
+        ("a letters-only api token", tool_result(f"API_TOKEN={letters + 'jkl'}\n"), 1, [letters[4:]]),
+        ("a pass after db", tool_result(f"DBPASS={mixed}\n"), 1, [mixed[4:]]),
+        ("a key of another owner", tool_result(f"MSG91_AUTH_KEY={'Zq7' * 8}\n"), 1, ["Zq7" * 7]),
+        ("a hex key of another owner", tool_result(f"ALGOLIA_ADMIN_KEY={hex32}\n"), 1, [hex32[4:]]),
+        ("a write key", tool_result(json.dumps({"SEGMENT_WRITE_KEY": hex32})), 1, [hex32[4:]]),
+        ("a key with no owner", tool_result(f"LICENSE_KEY={hex32}\n"), 1, [hex32[4:]]),
+        ("a subscription key header", tool_use(f"curl -H 'Ocp-Apim-Subscription-Key: {hex32}' https://x"), 1,
+         [hex32[4:]]),
+        ("an azure account key", tool_result(azure), 1, [b64[4:40]]),
+        ("a password after a --flag and a space", tool_use(f"ampm-cli login --password {mixed}"), 1, [mixed[4:]]),
+        ("a quoted token after a --flag", tool_use(f"ampm-cli deploy --api-token '{'Zq7' * 8}'"), 1, ["Zq7" * 7]),
+        ("mysql -p", tool_use(f"mysql -u root -p{mixed} ampm"), 1, [mixed[4:]]),
+        ("mysqldump -p quoted", tool_use(f"mysqldump -uroot -p'{mixed}' ampm > a.sql"), 1, [mixed[4:]]),
+        ("curl -u", tool_use(f"curl -u admin:{mixed} https://api.example.com"), 1, [mixed[4:]]),
+        ("curl --user=", tool_use(f"curl -s --user=admin:{mixed} https://api.example.com"), 1, [mixed[4:]]),
+        ("a session cookie", tool_result(f"< set-cookie: sessionid={hex32}; Path=/; HttpOnly"), 1, [hex32[4:]]),
+        ("a session cookie after others", tool_use(f"curl -H 'Cookie: theme=dark; PHPSESSID={hex32}' x"), 1,
+         [hex32[4:]]),
+        ("a shopify token", tool_result("shp" + "at_" + hex32), 1, [hex32]),
+        ("a shopify shared secret", tool_result("shp" + "ss_" + hex32), 1, [hex32]),
+        ("an atlassian api token", tool_result("ATA" + "TT3x" + "Zq7" * 60), 1, ["Zq7" * 50]),
+        ("a mailgun key", tool_result(json.dumps({"api": "ke" + "y-" + hex32})), 1, [hex32]),
+        ("a square access token", tool_result("EA" + "AA" + "Zq7" * 20), 1, ["Zq7" * 19]),
+        ("an fcm server key", tool_result(f"server key {fcm}"), 1, ["Zq7_" * 34]),
+        ("a password inside a rejected key match", tool_result(json.dumps({"key": "password=" + mixed[:14]})), 1,
+         [mixed[4:14]]),
+    ]
+
+
+def residual_code_cases() -> list[Case]:
+    """What the residual rules must leave alone: code, labels, prompts, expansions and paths."""
+    return [
+        ("a camel-case value on a .env-like line", tool_result("DB_PASSWORD: dbPasswordValue,\n"), 0, []),
+        ("a snake-case value on a .env-like line", tool_result("DB_PASSWORD=hashed_password\n"), 0, []),
+        ("a letters-only value after a lower-case key", tool_result("  password: undefined,\n  token: required\n"), 0,
+         []),
+        ("a letters-only value in prose", tool_result("set API_TOKEN=yourtokenhere in the file"), 0, []),
+        ("a word after a --flag", tool_result("the CLI asks for --password interactively"), 0, []),
+        ("a word after a secret name in prose", tool_result("token management overview and key components"), 0, []),
+        ("a short key value", tool_result(json.dumps({"key": "user-settings", "PARTITION_KEY": "tenantIdentifier"})),
+         0, []),
+        ("an s3 object key", tool_result(json.dumps({"Key": "uploads/2026/10/27/site-photo-0001.jpg"})), 0, []),
+        ("mysql prompting for the password", tool_use("mysql -u root -p ampm; mysql -uroot -p\"$MYSQL_PWD\" ampm"), 0,
+         []),
+        ("curl prompting or expanding", tool_use('curl -u admin: https://x; curl -u "$USER:$PASS" https://x'), 0, []),
+        ("curl with a user agent", tool_use('curl --user-agent "Mozilla/5.0 (X11; Linux x86_64)" https://x'), 0, []),
+        ("a cookie with no session", tool_result("Cookie: theme=dark; lang=en-GB; consent=essentialonly"), 0, []),
+        ("claude code session ids", json.dumps({"sessionId": "12345678-9abc-4def-8123-456789abcdef", "cwd": "/x"}),
+         0, []),
+        ("a compass, not a pass", tool_result("COMPASS=Northeast2026"), 0, []),
+        ("a square-like run inside base64", tool_result("Zq7Q" * 10 + "+" + "EA" + "AA" + "Zq7Q" * 20 + "/Zq7Q"), 0,
+         []),
+    ]
+
+
 def code_and_prose_cases() -> list[Case]:
     """Secret-named keys whose value is code, a type, an expansion, a path or a count: nothing to mask."""
     return [
@@ -375,6 +447,64 @@ def check_snapshot_replaces_what_is_not_a_newer_copy() -> list[str]:
     return problems
 
 
+def check_newer_redactor_replaces_an_older_copy() -> list[str]:
+    """A snapshot written by an older redactor (one rule fewer: an installed copy behind the repository, or a rule
+    added since) is replaced when the full redactor rescans the transcript, at the same size or when the older copy
+    is longer: only its content shows that the value is still in clear there."""
+    value = "Pw9" * 5 + "x"
+    record = {"type": "user", "cwd": "/x", "message": {"content": "DB_PASS" + "WORD=" + value}}
+    line = (json.dumps(record) + "\n").encode()
+    full = rs.PATTERNS
+    older = [pattern for pattern in full if pattern[0] != "named-secret"]
+    problems = []
+    with tempfile.TemporaryDirectory() as scratch:
+        live, out = os.path.join(scratch, "t.jsonl"), os.path.join(scratch, "redacted", "t.jsonl")
+        for variant in ("same size", "older copy longer"):
+            for leftover in (out, out + ".lock"):
+                if os.path.lexists(leftover):
+                    os.unlink(leftover)
+            _write(live, line)
+            early = _source(live)  # the full redactor's scan read this much, and finishes last
+            if variant == "older copy longer":
+                with open(live, "ab") as handle:
+                    handle.write(b'{"type": "user", "message": {"content": "more"}}\n')
+            rs.PATTERNS = older
+            try:
+                with contextlib.redirect_stdout(io.StringIO()):
+                    rs.main(["--snapshot-only", out, live])
+            finally:
+                rs.PATTERNS = full
+            if value.encode() not in _read(out):
+                problems.append(f"newer redactor, {variant}: the older redactor's copy already masked the value")
+                continue
+            state = rs.write_snapshot(out, apply(line, rs.find(line)), early)
+            if state != "written" or value.encode() in _read(out):
+                problems.append(f"newer redactor, {variant}: the older copy was {state}, its value left in clear")
+    return problems
+
+
+def check_snapshot_only_makes_no_parent_folder() -> list[str]:
+    """--snapshot-only makes the snapshot's folder only inside one that exists: MemPalace's off switch is removing
+    ~/.mempalace, and a scan that ends after the user removed it must not bring it back."""
+    with tempfile.TemporaryDirectory() as scratch:
+        live = os.path.join(scratch, "t.jsonl")
+        _write(live, b"{}\n")
+        gone = os.path.join(scratch, "mempalace")
+        out = os.path.join(gone, "hook_state", "redacted", "t.jsonl")
+        printed = io.StringIO()
+        with contextlib.redirect_stdout(printed):
+            status = rs.main(["--snapshot-only", out, live])
+        refused = status == 2 and "not redacted (No such file or directory)" in printed.getvalue()
+        problems = [] if refused else [f"snapshot-only into a removed folder: exited {status}"]
+        problems += ["snapshot-only: a removed folder was made again"] if os.path.exists(gone) else []
+        os.makedirs(os.path.join(gone, "hook_state"), exist_ok=True)
+        with contextlib.redirect_stdout(io.StringIO()):
+            status = rs.main(["--snapshot-only", out, live])
+        made = os.path.dirname(out)
+        ok = status == 0 and os.path.isdir(made) and os.stat(made).st_mode & 0o777 == 0o700
+        return problems + ([] if ok else ["snapshot-only: the snapshot's own folder was not made 0700"])
+
+
 def check_link_with_a_matching_record_is_replaced() -> list[str]:
     """A link put where a snapshot was, its record still naming the transcript, is replaced, never handed on: a link
     to the live transcript would show MemPalace the lines appended after the scan."""
@@ -552,11 +682,13 @@ def run() -> int:
     """Runs every case; prints each failure and returns 1 when any failed."""
     failures: list[str] = []
     cases = baseline_cases() + ops01_cases() + ops04_cases() + ops05_cases()
-    for case in cases + named_and_prefix_cases() + code_and_prose_cases() + escape_cases():
+    cases += named_and_prefix_cases() + residual_cases() + code_and_prose_cases() + residual_code_cases()
+    for case in cases + escape_cases():
         failures += check_case(*case)
     failures += check_head_stops_at_prose() + check_lines_kept_apart() + check_nested_json_survives()
     failures += check_snapshot() + check_snapshot_only_grows() + check_wired_into_pnpm_check()
     failures += check_snapshot_replaces_what_is_not_a_newer_copy() + check_link_with_a_matching_record_is_replaced()
+    failures += check_newer_redactor_replaces_an_older_copy() + check_snapshot_only_makes_no_parent_folder()
     failures += check_sweep()
     failures += check_snapshot_only() + check_locks() + check_fifo_refused()
     for failure in failures:
