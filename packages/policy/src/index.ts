@@ -21,8 +21,14 @@ export {
   roleFromKey,
 } from "./roles";
 export type { Action, PrincipalType, Scope, StaffRole, StaffRoleKey } from "./roles";
-export { FINANCE_EXPORT_ROLES, NEVER_EXPORTED, VISIBILITY_CLASSES } from "./classes";
-export type { VisibilityClass } from "./classes";
+export {
+  FINANCE_EXPORT_ROLES,
+  NEVER_EXPORTED,
+  RECORD_VISIBILITIES,
+  VISIBILITY_CLASSES,
+  admittedVisibilities,
+} from "./classes";
+export type { RecordVisibility, VisibilityClass } from "./classes";
 export { principalReadableClasses, staffReadableClasses } from "./visibility";
 export type { ClassContext } from "./visibility";
 export { exportShape, exportableClasses, reportExclusions } from "./exports";
@@ -43,7 +49,15 @@ export { CLASS_ACTIONS, VERB_ACTIONS, isAction, parsePermissionKey, permissionKe
 export type { ClassAction, KeyAction, ParsedKey, PermissionKey, VerbAction } from "./keys";
 export { MATRIX } from "./matrix";
 export type { Actor, Grant, MatrixRow, ReportExclusion, RowAlias, Transition } from "./matrix";
-export { can, decide, grantsForRole, holdsExplicitGrant, permissionKeysForRole } from "./engine";
+export {
+  can,
+  decide,
+  decideBeforeRead,
+  grantsForRole,
+  holdsExplicitGrant,
+  permissionKeysForRole,
+  readKeyFor,
+} from "./engine";
 export type { ExplicitGrant, PolicyPrincipal, PolicyTarget } from "./engine";
 export type { Decision, DenialReason, Reach, RoleGrant } from "./evaluate";
 export { clientReach, decideReach } from "./reach";

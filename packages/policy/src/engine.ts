@@ -175,6 +175,42 @@ export function decide(
 }
 
 /**
+ * Step 4 as the guard runs it, before the record is read (architecture §6): decide() on what the
+ * route names, the project. An own-scope grant cannot be checked yet, because the owner is on the
+ * record, so it passes as scope "own" and the repository reads only the principal's own records;
+ * someone else's is then absent, a 404 (permission-matrix §5 legend, "(o)").
+ *
+ * @example
+ * const decision = decideBeforeRead(principal, "tasks.tasks.read", { projectId });
+ * if (decision.allowed) repository.list(scopeFor(principal, decision.scope));
+ */
+export function decideBeforeRead(
+  principal: PolicyPrincipal,
+  key: string,
+  target: PolicyTarget = {},
+): Decision {
+  const decision = decide(principal, key, target);
+  if (decision.allowed || principal.userId === undefined) return decision;
+  const asOwner = decide(principal, key, { ...target, ownerId: principal.userId });
+  return asOwner.allowed ? { ...asOwner, scope: "own" } : decision;
+}
+
+/**
+ * The read key of the row a key decides on, or null for a key that names no row. A principal who
+ * holds it may see the records, so a refused action on them is a 403, not a 404 (test-cases.md,
+ * denial semantics).
+ *
+ * @example
+ * readKeyFor("tasks.incidents.update:assigned"); // "tasks.incidents.read"
+ */
+export function readKeyFor(key: string): string | null {
+  const base = baseKey(key);
+  if (base === null) return null;
+  const row = base.slice(0, base.lastIndexOf("."));
+  return MATRIX.staff.some((r) => `${r.module}.${r.resource}` === row) ? `${row}.read` : null;
+}
+
+/**
  * decide(), as a boolean.
  *
  * @example
