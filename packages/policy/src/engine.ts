@@ -1,62 +1,7 @@
 import { unmetConditions, type Condition, type ConditionFacts } from "./conditions";
+import { isAction, parsePermissionKey, permissionKey, type PermissionKey } from "./keys";
 import { MATRIX } from "./matrix";
-import {
-  ACTION_LETTERS,
-  type Action,
-  type PrincipalType,
-  type Scope,
-  type StaffRole,
-} from "./roles";
-
-const ACTIONS: readonly Action[] = Object.values(ACTION_LETTERS);
-
-/**
- * `module.resource.action` with an optional `:assigned` or `:own` suffix (permission-matrix §10).
- *
- * @example
- * const key: PermissionKey = "guests.identity_documents.read:assigned";
- */
-export type PermissionKey =
-  `${string}.${string}.${Action}` | `${string}.${string}.${Action}:${Exclude<Scope, "all">}`;
-
-/**
- * Composes a key.
- *
- * @example
- * permissionKey("projects", "members", "update", "assigned"); // "projects.members.update:assigned"
- */
-export function permissionKey(
-  module: string,
-  resource: string,
-  action: Action,
-  scope: Scope = "all",
-): PermissionKey {
-  const base = `${module}.${resource}.${action}` as const;
-  if (scope === "all") return base;
-  return `${base}:${scope}` as const;
-}
-
-/**
- * Splits a key into its parts, or null when it is not a key.
- *
- * @example
- * parsePermissionKey("budget.lines.read:own");
- * // → { module: "budget", resource: "lines", action: "read", scope: "own" }
- */
-export function parsePermissionKey(
-  key: string,
-): { module: string; resource: string; action: Action; scope: Scope } | null {
-  const match = /^([a-z0-9_]+)\.([a-z0-9_]+)\.([a-z_]+)(?::(assigned|own))?$/.exec(key);
-  const action = ACTIONS.find((candidate) => candidate === match?.[3]);
-  if (!match || action === undefined) return null;
-  const suffix = match[4];
-  return {
-    module: match[1] ?? "",
-    resource: match[2] ?? "",
-    action,
-    scope: suffix === "assigned" || suffix === "own" ? suffix : "all",
-  };
-}
+import type { PrincipalType, Scope, StaffRole } from "./roles";
 
 /**
  * A role's hold on one key: the scope its cell reaches and the conditions its note sets.
@@ -189,10 +134,18 @@ export function permissionKeysForRole(role: StaffRole): PermissionKey[] {
   );
 }
 
-/** The base key a key decides on, `module.resource.action` without its scope suffix. */
+/** The base key a key decides on: its own, or the §5 row a §10 alias key stands for. */
 function baseKey(key: string): string | null {
   const parsed = parsePermissionKey(key);
-  return parsed ? `${parsed.module}.${parsed.resource}.${parsed.action}` : null;
+  if (!parsed) return null;
+  const { module, resource, action } = parsed;
+  if (isAction(action)) return `${module}.${resource}.${action}`;
+  for (const row of MATRIX.staff) {
+    if (row.module !== module) continue;
+    const alias = row.aliases.find((a) => a.resource === resource && a.action === action);
+    if (alias) return `${module}.${row.resource}.${alias.as}`;
+  }
+  return null;
 }
 
 function scopeMiss(scope: Scope, principal: PolicyPrincipal, target: PolicyTarget) {

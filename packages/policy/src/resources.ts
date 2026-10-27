@@ -1,8 +1,11 @@
+import type { Action } from "./roles";
+import type { ClassAction, VerbAction } from "./keys";
+
 /**
  * How the matrix's rows become `module.resource` identifiers (permission-matrix §10). Each §5
  * subsection is a module; a row label maps to a resource name here or, until it is curated, to a
  * provisional slug of the label. Curate a row when its feature is built; the generated suite keeps
- * every row either way.
+ * every row either way. Node runs the generator on this file with type stripping: type imports only.
  */
 export const MODULES: Record<string, string> = {
   "5.1": "admin",
@@ -53,6 +56,125 @@ export const RESOURCES: Record<string, Record<string, string>> = {
   // §10 names this report's export key `reports.budget_internal.export`.
   "5.16": {
     "Internal cost and margin variance": "budget_internal",
+  },
+};
+
+/**
+ * A §5 row that §10 also reaches through another key: `<module>.<resource>.<action>` means `as`.
+ *
+ * @example
+ * const alias: KeyAlias = { label: "Artist bookings", action: "read_internal_cost", as: "read" };
+ */
+export interface KeyAlias {
+  /** The row label whose resource the alias key names (the parent row, or the row itself). */
+  readonly label: string;
+  readonly action: ClassAction | VerbAction;
+  /** The action of this row the alias stands for. */
+  readonly as: Action;
+}
+
+/**
+ * §10's class-specific reads and decisions, by section and row label. §5 holds a visibility class of
+ * a resource in a row of its own ("Budget lines, internal cost"); `read_internal_cost` on the parent
+ * row ("Budget lines, client-facing amounts") reads it. The generator stops when a label is missing.
+ *
+ * @example
+ * KEY_ALIASES["5.7"]?.["Budget lines, internal cost"]?.action; // "read_internal_cost"
+ */
+export const KEY_ALIASES: Record<string, Record<string, KeyAlias>> = {
+  "5.3": {
+    "Hotel internal rating and notes": {
+      label: "Hotel profiles, client fields",
+      action: "read_internal_notes",
+      as: "read",
+    },
+    "Hotel contacts": {
+      label: "Hotel profiles, client fields",
+      action: "read_contacts",
+      as: "read",
+    },
+  },
+  "5.4": {
+    "Enquiry internal notes and internal-only events": {
+      label: "Hotel enquiries, client fields",
+      action: "read_internal_notes",
+      as: "read",
+    },
+    "Hotel proposals, internal amounts": {
+      label: "Hotel proposals, client amounts",
+      action: "read_internal_amount",
+      as: "read",
+    },
+  },
+  "5.5": {
+    "Project internal notes": {
+      label: "Wedding projects (create, edit, status)",
+      action: "read_internal_notes",
+      as: "read",
+    },
+  },
+  "5.6": {
+    "Readiness exceptions (Q10: Eva's authorised personnel only)": {
+      label: "Readiness exceptions (Q10: Eva's authorised personnel only)",
+      action: "authorise_exception",
+      as: "approve",
+    },
+  },
+  "5.7": {
+    "Budget lines, internal cost": {
+      label: "Budget lines, client-facing amounts",
+      action: "read_internal_cost",
+      as: "read",
+    },
+  },
+  "5.8": {
+    "Vendor contacts": {
+      label: "Vendor profiles, client fields",
+      action: "read_contacts",
+      as: "read",
+    },
+    "Vendor internal rating and notes": {
+      label: "Vendor profiles, client fields",
+      action: "read_internal_notes",
+      as: "read",
+    },
+    "Vendor proposals, internal cost": {
+      label: "Vendor proposals, client amounts",
+      action: "read_internal_cost",
+      as: "read",
+    },
+    "Artist fee, internal": { label: "Artist bookings", action: "read_internal_cost", as: "read" },
+  },
+  "5.9": {
+    "Approval decisions, on the client's behalf with evidence": {
+      label: "Approval decisions, on the client's behalf with evidence",
+      action: "create_on_behalf",
+      as: "approve",
+    },
+  },
+  "5.10": {
+    "Guest sensitive fields (allergies, accessibility)": {
+      label: "Family groups and guests, standard fields",
+      action: "read_sensitive",
+      as: "read",
+    },
+    "Guest internal notes": {
+      label: "Family groups and guests, standard fields",
+      action: "read_internal_notes",
+      as: "read",
+    },
+    "Identity documents": {
+      label: "Family groups and guests, standard fields",
+      action: "read_identity",
+      as: "read",
+    },
+  },
+  "5.11": {
+    "Room blocks, internal rate": {
+      label: "Room blocks, client fields",
+      action: "read_internal_cost",
+      as: "read",
+    },
   },
 };
 

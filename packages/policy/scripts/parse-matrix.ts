@@ -3,8 +3,8 @@
  * known layout (the role grid, the §5.16 reports table, the client, guest and demo grid) and each
  * row exactly its table's cells, or the generator stops: a row is never skipped silently.
  */
-import type { Grant, MatrixRow, ReportExclusion } from "../src/matrix.ts";
-import { MODULES, RESOURCES, slugify } from "../src/resources.ts";
+import type { Grant, MatrixRow, ReportExclusion, RowAlias } from "../src/matrix.ts";
+import { KEY_ALIASES, MODULES, RESOURCES, slugify } from "../src/resources.ts";
 import type { Action, Scope, StaffRole } from "../src/roles.ts";
 import { lookup } from "./lookup.ts";
 import { REPORT_EXCLUSIONS } from "./notes.ts";
@@ -90,6 +90,7 @@ function cellRow(
     ...rowBase(section, label),
     cells: Object.fromEntries(columns.map((column, index) => [column, cell(index)])),
     grants: Object.fromEntries(grants),
+    aliases: [],
     exclusions: [],
   };
   return row;
@@ -137,6 +138,7 @@ function reportRow(section: string, cells: readonly string[]): MatrixRow {
     grants: Object.fromEntries(
       STAFF.map((role) => [role, reportGrants(role, run, exported, label)]),
     ),
+    aliases: [],
     exclusions: exclusionsOf(excluded, label),
   };
 }
@@ -172,6 +174,31 @@ function tableRows(table: Table, kind: CellKind): MatrixRow[] {
   });
 }
 
+/** Attaches the §10 alias keys of resources.ts to their rows; a label that is missing stops it. */
+function withAliases(rows: readonly MatrixRow[]): MatrixRow[] {
+  const find = (section: string, label: string) => {
+    const row = rows.find(
+      (candidate) => candidate.section === section && candidate.label === label,
+    );
+    if (!row) throw new Error(`resources.ts KEY_ALIASES: no row "${label}" in §${section}`);
+    return row;
+  };
+  const aliases = new Map<MatrixRow, RowAlias[]>();
+  for (const [section, entries] of Object.entries(KEY_ALIASES)) {
+    // A block without the section (a test fixture) has nothing to alias there.
+    if (!rows.some((row) => row.section === section)) continue;
+    for (const [label, alias] of Object.entries(entries)) {
+      const row = find(section, label);
+      const resource = find(section, alias.label).resource;
+      aliases.set(row, [
+        ...(aliases.get(row) ?? []),
+        { resource, action: alias.action, as: alias.as },
+      ]);
+    }
+  }
+  return rows.map((row) => ({ ...row, aliases: aliases.get(row) ?? [] }));
+}
+
 function checkUnique(rows: readonly MatrixRow[]): void {
   const seen = new Set<string>();
   for (const row of rows) {
@@ -194,5 +221,5 @@ export function parseMatrix(block: string, kind: CellKind): MatrixRow[] {
   const tables = readTables(block, kind === "staff" ? "5.1" : "6");
   const rows = tables.flatMap((table) => tableRows(table, kind));
   checkUnique(rows);
-  return rows;
+  return kind === "staff" ? withAliases(rows) : rows;
 }

@@ -7,7 +7,16 @@ import {
   VIEWS,
   type Condition,
 } from "./conditions";
-import type { Actor, Grant, Matrix, MatrixRow, ReportExclusion, Transition } from "./matrix";
+import { CLASS_ACTIONS, VERB_ACTIONS } from "./keys";
+import type {
+  Actor,
+  Grant,
+  Matrix,
+  MatrixRow,
+  ReportExclusion,
+  RowAlias,
+  Transition,
+} from "./matrix";
 import { ACTION_LETTERS, STAFF_ROLE_CODES } from "./roles";
 
 /**
@@ -19,6 +28,7 @@ type Json = Readonly<Record<string, unknown>>;
 
 const ACTIONS = Object.values(ACTION_LETTERS);
 const SCOPES = ["all", "assigned", "own"] as const;
+const ALIAS_ACTIONS = [...CLASS_ACTIONS, ...VERB_ACTIONS];
 const ACTORS: readonly Actor[] = ["assignee", "owner", "creator", "requester"];
 
 function fail(path: string, expected: string): never {
@@ -82,6 +92,15 @@ function readGrant(value: unknown, path: string): Grant {
   };
 }
 
+function readAlias(value: unknown, path: string): RowAlias {
+  const alias = object(value, path);
+  return {
+    resource: text(alias["resource"], `${path}.resource`),
+    action: oneOf(alias["action"], ALIAS_ACTIONS, `${path}.action`),
+    as: oneOf(alias["as"], ACTIONS, `${path}.as`),
+  };
+}
+
 function readExclusion(value: unknown, path: string): ReportExclusion {
   const exclusion = object(value, path);
   if (oneOf(exclusion["kind"], ["class", "variant"], `${path}.kind`) === "class") {
@@ -120,6 +139,9 @@ function readRow(value: unknown, path: string): MatrixRow {
     provisional: flag(row["provisional"], `${path}.provisional`),
     cells: readRecord(row["cells"], `${path}.cells`, text),
     grants: readRecord(row["grants"], `${path}.grants`, grantList),
+    aliases: list(row["aliases"], `${path}.aliases`).map((alias, index) =>
+      readAlias(alias, `${path}.aliases[${index}]`),
+    ),
     exclusions: list(row["exclusions"], `${path}.exclusions`).map((exclusion, index) =>
       readExclusion(exclusion, `${path}.exclusions[${index}]`),
     ),

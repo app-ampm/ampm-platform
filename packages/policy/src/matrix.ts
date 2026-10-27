@@ -1,6 +1,7 @@
 import matrix from "./generated/matrix.json" with { type: "json" };
 import type { VisibilityClass } from "./classes";
 import type { Condition } from "./conditions";
+import type { ClassAction, VerbAction } from "./keys";
 import { readMatrix } from "./matrix-load";
 import type { Action, Scope, StaffRole } from "./roles";
 
@@ -26,6 +27,19 @@ export interface Grant {
   readonly scope: Scope;
   /** Every condition must be met; an empty list is a plain grant. */
   readonly conditions: readonly Condition[];
+}
+
+/**
+ * A §10 key that names this row: `<module>.<resource>.<action>` stands for this row's `as`.
+ *
+ * @example
+ * // On "Budget lines, internal cost": budget.budget_lines_client_facing.read_internal_cost
+ * const alias: RowAlias = { resource: "budget_lines_client_facing", action: "read_internal_cost", as: "read" };
+ */
+export interface RowAlias {
+  readonly resource: string;
+  readonly action: ClassAction | VerbAction;
+  readonly as: Action;
 }
 
 /**
@@ -64,6 +78,7 @@ export interface MatrixRow {
   /** The document's cells, by column (role codes; for §5.16 the report columns). */
   readonly cells: Readonly<Record<string, string>>;
   readonly grants: Readonly<Record<string, readonly Grant[]>>;
+  readonly aliases: readonly RowAlias[];
   /** §5.16 rows only. */
   readonly exclusions: readonly ReportExclusion[];
 }

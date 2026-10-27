@@ -104,6 +104,7 @@
           }
         ]
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -165,6 +166,7 @@
         "HL": [],
         "FA": []
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -270,6 +272,7 @@
           }
         ]
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -318,6 +321,7 @@
           }
         ]
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -380,6 +384,7 @@
           }
         ]
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -483,6 +488,7 @@
         "HL": [],
         "FA": []
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -585,6 +591,7 @@
           }
         ]
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -653,6 +660,7 @@
         "HL": [],
         "FA": []
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -754,6 +762,7 @@
           }
         ]
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -811,6 +820,7 @@
           }
         ]
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -886,6 +896,7 @@
           }
         ]
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -971,6 +982,7 @@
           }
         ]
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -1039,6 +1051,7 @@
           }
         ]
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -1107,6 +1120,7 @@
           }
         ]
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -1183,6 +1197,7 @@
           }
         ]
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -1291,6 +1306,7 @@
           }
         ]
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -1399,6 +1415,7 @@
           }
         ]
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -1463,6 +1480,13 @@
         "HL": [],
         "FA": []
       },
+      "aliases": [
+        {
+          "resource": "hotel_profiles_client_fields",
+          "action": "read_internal_notes",
+          "as": "read"
+        }
+      ],
       "exclusions": []
     },
     {
@@ -1539,6 +1563,13 @@
         ],
         "FA": []
       },
+      "aliases": [
+        {
+          "resource": "hotel_profiles_client_fields",
+          "action": "read_contacts",
+          "as": "read"
+        }
+      ],
       "exclusions": []
     },
     {
@@ -1647,6 +1678,7 @@
           }
         ]
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -1723,6 +1755,7 @@
           }
         ]
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -1829,6 +1862,7 @@
           }
         ]
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -1923,6 +1957,7 @@
         "HL": [],
         "FA": []
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -1991,6 +2026,7 @@
         "HL": [],
         "FA": []
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -2053,6 +2089,7 @@
         "HL": [],
         "FA": []
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -2131,6 +2168,7 @@
           }
         ]
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -2198,6 +2236,13 @@
         "HL": [],
         "FA": []
       },
+      "aliases": [
+        {
+          "resource": "hotel_enquiries_client_fields",
+          "action": "read_internal_notes",
+          "as": "read"
+        }
+      ],
       "exclusions": []
     },
     {
@@ -2266,6 +2311,7 @@
         "HL": [],
         "FA": []
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -2344,6 +2390,7 @@
           }
         ]
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -2408,6 +2455,13 @@
           }
         ]
       },
+      "aliases": [
+        {
+          "resource": "hotel_proposals_client_amounts",
+          "action": "read_internal_amount",
+          "as": "read"
+        }
+      ],
       "exclusions": []
     },
     {
@@ -2485,6 +2539,7 @@
           }
         ]
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -2593,6 +2648,7 @@
           }
         ]
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -2649,6 +2705,13 @@
           }
         ]
       },
+      "aliases": [
+        {
+          "resource": "wedding_projects",
+          "action": "read_internal_notes",
+          "as": "read"
+        }
+      ],
       "exclusions": []
     },
     {
@@ -2742,6 +2805,7 @@
         ],
         "FA": []
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -2826,6 +2890,7 @@
         ],
         "FA": []
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -2888,6 +2953,7 @@
         "HL": [],
         "FA": []
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -3013,6 +3079,7 @@
           }
         ]
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -3101,6 +3168,7 @@
         ],
         "FA": []
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -3195,6 +3263,7 @@
         ],
         "FA": []
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -3281,6 +3350,7 @@
         ],
         "FA": []
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -3319,6 +3389,13 @@
         "HL": [],
         "FA": []
       },
+      "aliases": [
+        {
+          "resource": "readiness_exceptions",
+          "action": "authorise_exception",
+          "as": "approve"
+        }
+      ],
       "exclusions": []
     },
     {
@@ -3365,6 +3442,7 @@
         "HL": [],
         "FA": []
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -3473,6 +3551,7 @@
           }
         ]
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -3585,6 +3664,7 @@
           }
         ]
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -3674,6 +3754,13 @@
           }
         ]
       },
+      "aliases": [
+        {
+          "resource": "budget_lines_client_facing",
+          "action": "read_internal_cost",
+          "as": "read"
+        }
+      ],
       "exclusions": []
     },
     {
@@ -3760,6 +3847,7 @@
           }
         ]
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -3828,6 +3916,7 @@
           }
         ]
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -3898,6 +3987,7 @@
           }
         ]
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -3989,6 +4079,7 @@
           }
         ]
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -4057,6 +4148,7 @@
           }
         ]
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -4147,6 +4239,7 @@
           }
         ]
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -4208,6 +4301,7 @@
           }
         ]
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -4315,6 +4409,7 @@
           }
         ]
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -4407,6 +4502,7 @@
           }
         ]
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -4471,6 +4567,13 @@
         ],
         "FA": []
       },
+      "aliases": [
+        {
+          "resource": "vendor_profiles_client_fields",
+          "action": "read_contacts",
+          "as": "read"
+        }
+      ],
       "exclusions": []
     },
     {
@@ -4527,6 +4630,13 @@
         "HL": [],
         "FA": []
       },
+      "aliases": [
+        {
+          "resource": "vendor_profiles_client_fields",
+          "action": "read_internal_notes",
+          "as": "read"
+        }
+      ],
       "exclusions": []
     },
     {
@@ -4583,6 +4693,7 @@
           }
         ]
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -4641,6 +4752,7 @@
         "HL": [],
         "FA": []
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -4726,6 +4838,7 @@
           }
         ]
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -4804,6 +4917,7 @@
           }
         ]
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -4868,6 +4982,13 @@
           }
         ]
       },
+      "aliases": [
+        {
+          "resource": "vendor_proposals_client_amounts",
+          "action": "read_internal_cost",
+          "as": "read"
+        }
+      ],
       "exclusions": []
     },
     {
@@ -4953,6 +5074,7 @@
         ],
         "FA": []
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -5030,6 +5152,7 @@
         ],
         "FA": []
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -5094,6 +5217,13 @@
           }
         ]
       },
+      "aliases": [
+        {
+          "resource": "artist_bookings",
+          "action": "read_internal_cost",
+          "as": "read"
+        }
+      ],
       "exclusions": []
     },
     {
@@ -5173,6 +5303,7 @@
         ],
         "FA": []
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -5262,6 +5393,7 @@
         ],
         "FA": []
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -5439,6 +5571,7 @@
           }
         ]
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -5575,6 +5708,7 @@
           }
         ]
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -5695,6 +5829,7 @@
           }
         ]
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -5808,6 +5943,7 @@
           }
         ]
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -5854,6 +5990,13 @@
         "HL": [],
         "FA": []
       },
+      "aliases": [
+        {
+          "resource": "approval_decisions_on_client",
+          "action": "create_on_behalf",
+          "as": "approve"
+        }
+      ],
       "exclusions": []
     },
     {
@@ -5983,6 +6126,7 @@
           }
         ]
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -6055,6 +6199,7 @@
         "HL": [],
         "FA": []
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -6113,6 +6258,7 @@
         "HL": [],
         "FA": []
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -6184,6 +6330,7 @@
         ],
         "FA": []
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -6247,6 +6394,13 @@
         ],
         "FA": []
       },
+      "aliases": [
+        {
+          "resource": "family_groups_guests_standard",
+          "action": "read_sensitive",
+          "as": "read"
+        }
+      ],
       "exclusions": []
     },
     {
@@ -6312,6 +6466,13 @@
         ],
         "FA": []
       },
+      "aliases": [
+        {
+          "resource": "family_groups_guests_standard",
+          "action": "read_internal_notes",
+          "as": "read"
+        }
+      ],
       "exclusions": []
     },
     {
@@ -6382,6 +6543,13 @@
         ],
         "FA": []
       },
+      "aliases": [
+        {
+          "resource": "family_groups_guests_standard",
+          "action": "read_identity",
+          "as": "read"
+        }
+      ],
       "exclusions": []
     },
     {
@@ -6449,6 +6617,7 @@
         ],
         "FA": []
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -6509,6 +6678,7 @@
         "HL": [],
         "FA": []
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -6564,6 +6734,7 @@
         "HL": [],
         "FA": []
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -6633,6 +6804,7 @@
         ],
         "FA": []
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -6717,6 +6889,7 @@
           }
         ]
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -6781,6 +6954,13 @@
           }
         ]
       },
+      "aliases": [
+        {
+          "resource": "room_blocks_client_fields",
+          "action": "read_internal_cost",
+          "as": "read"
+        }
+      ],
       "exclusions": []
     },
     {
@@ -6860,6 +7040,7 @@
         ],
         "FA": []
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -6928,6 +7109,7 @@
         ],
         "FA": []
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -7012,6 +7194,7 @@
         ],
         "FA": []
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -7079,6 +7262,7 @@
         ],
         "FA": []
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -7146,6 +7330,7 @@
         ],
         "FA": []
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -7233,6 +7418,7 @@
         ],
         "FA": []
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -7303,6 +7489,7 @@
         ],
         "FA": []
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -7425,6 +7612,7 @@
           }
         ]
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -7513,6 +7701,7 @@
         ],
         "FA": []
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -7599,6 +7788,7 @@
         ],
         "FA": []
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -7688,6 +7878,7 @@
         ],
         "FA": []
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -7810,6 +8001,7 @@
           }
         ]
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -7917,6 +8109,7 @@
           }
         ]
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -8037,6 +8230,7 @@
         "HL": [],
         "FA": []
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -8142,6 +8336,7 @@
           }
         ]
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -8238,6 +8433,7 @@
           }
         ]
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -8289,6 +8485,7 @@
         "HL": [],
         "FA": []
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -8327,6 +8524,7 @@
         "HL": [],
         "FA": []
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -8365,6 +8563,7 @@
         "HL": [],
         "FA": []
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -8419,6 +8618,7 @@
         "HL": [],
         "FA": []
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -8526,6 +8726,7 @@
           }
         ]
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -8568,6 +8769,7 @@
         "HL": [],
         "FA": []
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -8618,6 +8820,7 @@
           }
         ]
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -8676,6 +8879,7 @@
         "HL": [],
         "FA": []
       },
+      "aliases": [],
       "exclusions": [
         {
           "kind": "class",
@@ -8735,6 +8939,7 @@
         "HL": [],
         "FA": []
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -8786,6 +8991,7 @@
           }
         ]
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -8836,6 +9042,7 @@
           }
         ]
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -8895,6 +9102,7 @@
           }
         ]
       },
+      "aliases": [],
       "exclusions": [
         {
           "kind": "class",
@@ -8960,6 +9168,7 @@
         ],
         "FA": []
       },
+      "aliases": [],
       "exclusions": [
         {
           "kind": "class",
@@ -9024,6 +9233,7 @@
         ],
         "FA": []
       },
+      "aliases": [],
       "exclusions": [
         {
           "kind": "class",
@@ -9098,6 +9308,7 @@
         ],
         "FA": []
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -9148,6 +9359,7 @@
           }
         ]
       },
+      "aliases": [],
       "exclusions": [
         {
           "kind": "class",
@@ -9198,6 +9410,7 @@
           }
         ]
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -9243,6 +9456,7 @@
           }
         ]
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -9284,6 +9498,7 @@
           }
         ]
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -9337,6 +9552,7 @@
           }
         ]
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -9383,6 +9599,7 @@
           }
         ]
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -9422,6 +9639,7 @@
           }
         ]
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -9448,6 +9666,7 @@
         "GU": [],
         "DP": []
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -9500,6 +9719,7 @@
           }
         ]
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -9535,6 +9755,7 @@
           }
         ]
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -9553,6 +9774,7 @@
         "GU": [],
         "DP": []
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -9571,6 +9793,7 @@
         "GU": [],
         "DP": []
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -9610,6 +9833,7 @@
           }
         ]
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -9636,6 +9860,7 @@
         "GU": [],
         "DP": []
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -9682,6 +9907,7 @@
           }
         ]
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -9742,6 +9968,7 @@
           }
         ]
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -9775,6 +10002,7 @@
         "GU": [],
         "DP": []
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -9845,6 +10073,7 @@
         ],
         "DP": []
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -9872,6 +10101,7 @@
         ],
         "DP": []
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -9890,6 +10120,7 @@
         "GU": [],
         "DP": []
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -9933,6 +10164,7 @@
         ],
         "DP": []
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -9986,6 +10218,7 @@
           }
         ]
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -10030,6 +10263,7 @@
         ],
         "DP": []
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -10082,6 +10316,7 @@
         ],
         "DP": []
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -10128,6 +10363,7 @@
           }
         ]
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -10184,6 +10420,7 @@
           }
         ]
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -10210,6 +10447,7 @@
         "GU": [],
         "DP": []
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -10262,6 +10500,7 @@
           }
         ]
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -10288,6 +10527,7 @@
         "GU": [],
         "DP": []
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -10314,6 +10554,7 @@
         "GU": [],
         "DP": []
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -10354,6 +10595,7 @@
           }
         ]
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -10380,6 +10622,7 @@
         "GU": [],
         "DP": []
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -10398,6 +10641,7 @@
         "GU": [],
         "DP": []
       },
+      "aliases": [],
       "exclusions": []
     },
     {
@@ -10439,6 +10683,7 @@
           }
         ]
       },
+      "aliases": [],
       "exclusions": []
     }
   ],

@@ -24,22 +24,16 @@ export {
 export type { ClassContext } from "./visibility";
 export { CHECKS, FIELD_GROUPS, SUBJECTS, VIEWS, unmetConditions } from "./conditions";
 export type { Check, Condition, ConditionFacts, FieldGroup, Subject, View } from "./conditions";
-export { MODULES, RESOURCES, slugify } from "./resources";
+export { KEY_ALIASES, MODULES, RESOURCES, slugify } from "./resources";
+export { CLASS_ACTIONS, VERB_ACTIONS, isAction, parsePermissionKey, permissionKey } from "./keys";
+export type { ClassAction, KeyAction, ParsedKey, PermissionKey, VerbAction } from "./keys";
 export { MATRIX } from "./matrix";
-export type { Actor, Grant, MatrixRow, ReportExclusion, Transition } from "./matrix";
-export {
-  can,
-  decide,
-  grantsForRole,
-  parsePermissionKey,
-  permissionKey,
-  permissionKeysForRole,
-} from "./engine";
+export type { Actor, Grant, MatrixRow, ReportExclusion, RowAlias, Transition } from "./matrix";
+export { can, decide, grantsForRole, permissionKeysForRole } from "./engine";
 export type {
   Decision,
   DenialReason,
   ExplicitGrant,
-  PermissionKey,
   PolicyPrincipal,
   PolicyTarget,
   RoleGrant,

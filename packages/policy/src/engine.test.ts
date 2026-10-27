@@ -1,13 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  can,
-  decide,
-  grantsForRole,
-  parsePermissionKey,
-  permissionKey,
-  permissionKeysForRole,
-} from "./engine";
+import { can, decide, grantsForRole, permissionKeysForRole } from "./engine";
+import { parsePermissionKey, permissionKey } from "./keys";
 import { clientReach, decideReach } from "./reach";
 
 const sa = { type: "staff", userId: "u-sa", roles: ["SA"] } as const;
