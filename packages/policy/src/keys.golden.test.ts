@@ -141,40 +141,15 @@ describe("§10 permission keys", () => {
   });
 });
 
-/*
- * §10's example keys that name no row yet (§10 line, then the row they will name). Each resolves
- * once that row is curated under the key's spelling (resources.ts RESOURCES), or is listed in
- * OUTSIDE_KEYS or KEY_ALIASES; until then it decides no_grant for every role.
- */
-const AWAITING_CURATION: readonly string[] = [
-  "hotels.profiles.update", // 537, §5.3 line 168
-  "hotels.rate_cards.read", // 538, §5.3 line 172
-  "hotels.contacts.read", // 539, §5.3 line 170
-  "consultancy.proposals.share", // 540, §5.4 line 185
-  "consultancy.proposals.read_internal_amount", // 541, §5.4 line 186
-  "projects.members.update:assigned", // 542, §5.5 line 196
-  "budget.lines.read_internal_cost:assigned", // 543, §5.7 line 216
-  "budget.lines.read_internal_cost", // 544, §5.7 line 216
-  "guests.sensitive.read:assigned", // 549, §5.10 line 262
-  "functions.readiness.authorise_exception:assigned", // 550, §5.6 line 207
-];
-
 describe("§10 lines 537-552: the example keys as §10 spells them", () => {
   const keys = documentTableRows("## 10. Permission keys", "## 11. Open questions").map((row) =>
     (row.cells[0] ?? "").replace(/`/g, ""),
   );
 
-  it("each resolves to a §5 row, but for the spellings awaiting their row's curation", () => {
-    expect(keys.filter((key) => readKeyFor(key) === null)).toEqual(AWAITING_CURATION);
-  });
-
-  it("a spelling awaiting curation decides no_grant for every role, the Super Admin included", () => {
-    const everything = { projectId: "p-1", checks: ["break_glass", "closure_ready"] } as const;
-    for (const key of AWAITING_CURATION) {
-      for (const role of STAFF_ROLE_CODES) {
-        expect(decide(staff([role]), key, everything).reason, `${role} ${key}`).toBe("no_grant");
-      }
-    }
+  // Through DOCUMENT_RESOURCES, OUTSIDE_KEYS or KEY_ALIASES; document-keys.test.ts checks the holders.
+  it("each resolves to the §5 row it names", () => {
+    expect(keys.length).toBeGreaterThan(0);
+    expect(keys.filter((key) => readKeyFor(key) === null)).toEqual([]);
   });
 });
 

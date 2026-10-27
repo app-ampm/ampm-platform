@@ -7,10 +7,10 @@ import type { ClassAction, VerbAction } from "./keys";
  * provisional slug of the label. Curate a row when its feature is built; the generated suite keeps
  * every row either way. Node runs the generator on this file with type stripping: type imports only.
  *
- * A key as §10 spells it resolves only once its row is curated under that spelling, or when it is
- * listed in OUTSIDE_KEYS or names a KEY_ALIASES row: `hotels.contacts.read` (§10 line 539) names
- * no row until "Hotel contacts" is curated as `contacts`, so it decides no_grant for every role,
- * the Super Admin included. keys.golden.test.ts lists the §10 spellings still waiting.
+ * A key as §10 spells it resolves to its row through DOCUMENT_RESOURCES (document-keys.ts, the §10
+ * resource names of the row's own module), OUTSIDE_KEYS (a row named from another module) or a
+ * KEY_ALIASES row: `hotels.contacts.read` (§10 line 539) decides on "Hotel contacts". A new §10 key
+ * that none of them covers fails keys.golden.test.ts and document-keys.test.ts.
  *
  * @example
  * MODULES["5.10"]; // "guests"
