@@ -16,6 +16,9 @@ import type { Principal } from "./principal.types.js";
  * Steps 2 and 3 of the pipeline: a verified identity becomes a principal from the API's own
  * records; client and demo principals also get their entitlements (cached five minutes).
  * No account for the subject means no access: there is no self-registration (A-13).
+ *
+ * @example
+ * const principal = await this.principals.resolve(identity);
  */
 @Injectable()
 export class PrincipalService {
@@ -55,6 +58,9 @@ export class PrincipalService {
     const cached = this.cache.get(record.id);
     if (cached) return cached;
     // Subscriptions and agreements arrive with module B; until then membership is the only source.
+    // A project's status (on hold, closed within the window) lives in wedding_projects, which
+    // arrives with module E: until then no membership can be on hold or closed, so an active one
+    // is an active project. Derive the strongest project state here when that table exists.
     const entitlements = resolveClientEntitlements({
       isDemo: record.userType === "demo",
       suspended: false,

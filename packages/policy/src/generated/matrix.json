@@ -28,7 +28,7 @@
               "delete"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [
@@ -37,7 +37,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "HT": [
@@ -46,7 +46,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "PM": [
@@ -55,7 +55,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [
@@ -64,7 +64,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "VC": [
@@ -73,7 +73,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "RG": [
@@ -82,7 +82,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "HL": [
@@ -91,7 +91,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "FA": [
@@ -100,10 +100,12 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ]
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.1",
@@ -132,7 +134,7 @@
               "delete"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [
@@ -143,7 +145,7 @@
               "update"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "HT": [],
@@ -155,7 +157,7 @@
               "update"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [],
@@ -163,7 +165,9 @@
         "RG": [],
         "HL": [],
         "FA": []
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.1",
@@ -192,7 +196,7 @@
               "delete"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [
@@ -201,7 +205,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "HT": [
@@ -210,7 +214,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "PM": [
@@ -219,7 +223,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [
@@ -228,7 +232,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "VC": [
@@ -237,7 +241,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "RG": [
@@ -246,7 +250,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "HL": [
@@ -255,7 +259,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "FA": [
@@ -264,10 +268,12 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ]
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.1",
@@ -295,7 +301,7 @@
               "update"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [],
@@ -311,10 +317,12 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ]
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.1",
@@ -341,7 +349,7 @@
               "export"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [],
@@ -352,7 +360,7 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [],
@@ -365,10 +373,19 @@
               "read"
             ],
             "scope": "all",
-            "note": "finance entities"
+            "conditions": [
+              {
+                "kind": "subject",
+                "anyOf": [
+                  "finance_entity"
+                ]
+              }
+            ]
           }
         ]
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.1",
@@ -395,7 +412,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [],
@@ -406,7 +423,14 @@
               "read"
             ],
             "scope": "all",
-            "note": "hotels"
+            "conditions": [
+              {
+                "kind": "subject",
+                "anyOf": [
+                  "hotel"
+                ]
+              }
+            ]
           }
         ],
         "PM": [
@@ -416,7 +440,14 @@
               "read"
             ],
             "scope": "assigned",
-            "note": "guests"
+            "conditions": [
+              {
+                "kind": "subject",
+                "anyOf": [
+                  "guest"
+                ]
+              }
+            ]
           }
         ],
         "CD": [],
@@ -427,7 +458,14 @@
               "read"
             ],
             "scope": "all",
-            "note": "vendors"
+            "conditions": [
+              {
+                "kind": "subject",
+                "anyOf": [
+                  "vendor"
+                ]
+              }
+            ]
           }
         ],
         "RG": [
@@ -437,12 +475,21 @@
               "read"
             ],
             "scope": "assigned",
-            "note": "guests"
+            "conditions": [
+              {
+                "kind": "subject",
+                "anyOf": [
+                  "guest"
+                ]
+              }
+            ]
           }
         ],
         "HL": [],
         "FA": []
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.1",
@@ -468,7 +515,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [
@@ -477,7 +524,7 @@
               "read"
             ],
             "scope": "own",
-            "note": null
+            "conditions": []
           }
         ],
         "HT": [
@@ -486,7 +533,7 @@
               "read"
             ],
             "scope": "own",
-            "note": null
+            "conditions": []
           }
         ],
         "PM": [
@@ -495,7 +542,7 @@
               "read"
             ],
             "scope": "own",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [
@@ -504,7 +551,7 @@
               "read"
             ],
             "scope": "own",
-            "note": null
+            "conditions": []
           }
         ],
         "VC": [
@@ -513,7 +560,7 @@
               "read"
             ],
             "scope": "own",
-            "note": null
+            "conditions": []
           }
         ],
         "RG": [
@@ -522,7 +569,7 @@
               "read"
             ],
             "scope": "own",
-            "note": null
+            "conditions": []
           }
         ],
         "HL": [
@@ -531,7 +578,7 @@
               "read"
             ],
             "scope": "own",
-            "note": null
+            "conditions": []
           }
         ],
         "FA": [
@@ -540,10 +587,12 @@
               "read"
             ],
             "scope": "own",
-            "note": null
+            "conditions": []
           }
         ]
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.2",
@@ -572,7 +621,7 @@
               "delete"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [
@@ -584,7 +633,7 @@
               "delete"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "HT": [
@@ -593,7 +642,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "PM": [
@@ -602,7 +651,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [],
@@ -610,7 +659,9 @@
         "RG": [],
         "HL": [],
         "FA": []
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.2",
@@ -639,7 +690,7 @@
               "delete"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [
@@ -651,7 +702,7 @@
               "delete"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "HT": [
@@ -660,7 +711,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "PM": [
@@ -670,7 +721,7 @@
               "update"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [],
@@ -681,7 +732,7 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "HL": [
@@ -690,7 +741,7 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "FA": [
@@ -700,10 +751,19 @@
               "update"
             ],
             "scope": "all",
-            "note": "billing"
+            "conditions": [
+              {
+                "kind": "fields",
+                "only": [
+                  "billing"
+                ]
+              }
+            ]
           }
         ]
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.2",
@@ -732,7 +792,7 @@
               "delete"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [
@@ -741,7 +801,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "HT": [],
@@ -756,10 +816,12 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ]
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.2",
@@ -788,7 +850,7 @@
               "delete"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [
@@ -799,7 +861,7 @@
               "update"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "HT": [
@@ -808,7 +870,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "PM": [],
@@ -823,10 +885,19 @@
               "update"
             ],
             "scope": "all",
-            "note": "status"
+            "conditions": [
+              {
+                "kind": "fields",
+                "only": [
+                  "status"
+                ]
+              }
+            ]
           }
         ]
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.2",
@@ -855,7 +926,7 @@
               "delete"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [
@@ -866,7 +937,7 @@
               "update"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "HT": [
@@ -877,7 +948,14 @@
               "update"
             ],
             "scope": "all",
-            "note": "hotel services"
+            "conditions": [
+              {
+                "kind": "subject",
+                "anyOf": [
+                  "hotel"
+                ]
+              }
+            ]
           }
         ],
         "PM": [
@@ -887,7 +965,7 @@
               "update"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [],
@@ -900,10 +978,12 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ]
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.2",
@@ -932,7 +1012,7 @@
               "delete"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [
@@ -941,7 +1021,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "HT": [],
@@ -951,7 +1031,7 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [],
@@ -967,10 +1047,12 @@
               "delete"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ]
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.2",
@@ -999,7 +1081,7 @@
               "delete"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [
@@ -1008,7 +1090,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "HT": [],
@@ -1018,7 +1100,7 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [],
@@ -1034,10 +1116,12 @@
               "delete"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ]
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.2",
@@ -1066,7 +1150,7 @@
               "delete"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [],
@@ -1076,7 +1160,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "PM": [
@@ -1085,7 +1169,7 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [],
@@ -1095,7 +1179,7 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "RG": [],
@@ -1109,10 +1193,12 @@
               "delete"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ]
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.3",
@@ -1141,7 +1227,7 @@
               "delete"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [
@@ -1150,7 +1236,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "HT": [
@@ -1162,7 +1248,7 @@
               "delete"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "PM": [
@@ -1171,7 +1257,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [
@@ -1180,7 +1266,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "VC": [
@@ -1189,7 +1275,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "RG": [
@@ -1198,7 +1284,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "HL": [
@@ -1207,7 +1293,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "FA": [
@@ -1216,10 +1302,12 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ]
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.3",
@@ -1248,7 +1336,7 @@
               "delete"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [
@@ -1257,7 +1345,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "HT": [
@@ -1269,7 +1357,7 @@
               "delete"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "PM": [
@@ -1278,7 +1366,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [
@@ -1287,7 +1375,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "VC": [
@@ -1296,7 +1384,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "RG": [
@@ -1305,7 +1393,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "HL": [
@@ -1314,7 +1402,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "FA": [
@@ -1323,10 +1411,12 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ]
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.3",
@@ -1353,7 +1443,7 @@
               "update"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [
@@ -1362,7 +1452,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "HT": [
@@ -1372,7 +1462,7 @@
               "update"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "PM": [
@@ -1381,7 +1471,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [],
@@ -1389,7 +1479,15 @@
         "RG": [],
         "HL": [],
         "FA": []
-      }
+      },
+      "aliases": [
+        {
+          "resource": "hotel_profiles_client_fields",
+          "action": "read_internal_notes",
+          "as": "read"
+        }
+      ],
+      "exclusions": []
     },
     {
       "section": "5.3",
@@ -1418,7 +1516,7 @@
               "delete"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [
@@ -1427,7 +1525,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "HT": [
@@ -1439,7 +1537,7 @@
               "delete"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "PM": [
@@ -1448,7 +1546,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [],
@@ -1460,11 +1558,19 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "FA": []
-      }
+      },
+      "aliases": [
+        {
+          "resource": "hotel_profiles_client_fields",
+          "action": "read_contacts",
+          "as": "read"
+        }
+      ],
+      "exclusions": []
     },
     {
       "section": "5.3",
@@ -1493,7 +1599,7 @@
               "delete"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [
@@ -1502,7 +1608,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "HT": [
@@ -1514,7 +1620,7 @@
               "delete"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "PM": [
@@ -1523,7 +1629,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [
@@ -1532,7 +1638,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "VC": [
@@ -1541,7 +1647,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "RG": [
@@ -1550,7 +1656,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "HL": [
@@ -1559,7 +1665,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "FA": [
@@ -1568,10 +1674,12 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ]
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.3",
@@ -1600,7 +1708,7 @@
               "delete"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [
@@ -1609,7 +1717,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "HT": [
@@ -1621,7 +1729,7 @@
               "delete"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "PM": [
@@ -1630,7 +1738,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [],
@@ -1643,10 +1751,12 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ]
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.3",
@@ -1674,7 +1784,7 @@
               "update"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [
@@ -1683,7 +1793,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "HT": [
@@ -1694,7 +1804,7 @@
               "update"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "PM": [
@@ -1703,7 +1813,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [
@@ -1712,7 +1822,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "VC": [
@@ -1721,7 +1831,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "RG": [
@@ -1730,7 +1840,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "HL": [
@@ -1739,7 +1849,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "FA": [
@@ -1748,10 +1858,12 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ]
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.3",
@@ -1781,7 +1893,7 @@
               "share"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [
@@ -1791,7 +1903,14 @@
               "update"
             ],
             "scope": "all",
-            "note": "rights"
+            "conditions": [
+              {
+                "kind": "fields",
+                "only": [
+                  "rights"
+                ]
+              }
+            ]
           }
         ],
         "HT": [
@@ -1804,7 +1923,7 @@
               "share"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "PM": [
@@ -1813,7 +1932,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [
@@ -1822,7 +1941,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "VC": [
@@ -1831,13 +1950,15 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "RG": [],
         "HL": [],
         "FA": []
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.3",
@@ -1866,7 +1987,7 @@
               "delete"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [
@@ -1875,7 +1996,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "HT": [
@@ -1887,7 +2008,7 @@
               "delete"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "PM": [
@@ -1896,7 +2017,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [],
@@ -1904,7 +2025,9 @@
         "RG": [],
         "HL": [],
         "FA": []
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.3",
@@ -1930,7 +2053,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [
@@ -1939,7 +2062,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "HT": [
@@ -1948,7 +2071,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "PM": [
@@ -1957,7 +2080,7 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [],
@@ -1965,7 +2088,9 @@
         "RG": [],
         "HL": [],
         "FA": []
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.4",
@@ -1994,7 +2119,7 @@
               "delete"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [
@@ -2004,7 +2129,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "HT": [
@@ -2015,7 +2140,7 @@
               "update"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "PM": [
@@ -2026,7 +2151,7 @@
               "update"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [],
@@ -2039,10 +2164,12 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ]
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.4",
@@ -2070,7 +2197,7 @@
               "update"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [
@@ -2079,7 +2206,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "HT": [
@@ -2090,7 +2217,7 @@
               "update"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "PM": [
@@ -2100,7 +2227,7 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [],
@@ -2108,7 +2235,15 @@
         "RG": [],
         "HL": [],
         "FA": []
-      }
+      },
+      "aliases": [
+        {
+          "resource": "hotel_enquiries_client_fields",
+          "action": "read_internal_notes",
+          "as": "read"
+        }
+      ],
+      "exclusions": []
     },
     {
       "section": "5.4",
@@ -2136,7 +2271,7 @@
               "update"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [
@@ -2145,7 +2280,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "HT": [
@@ -2156,7 +2291,7 @@
               "update"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "PM": [
@@ -2167,7 +2302,7 @@
               "update"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [],
@@ -2175,7 +2310,9 @@
         "RG": [],
         "HL": [],
         "FA": []
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.4",
@@ -2204,7 +2341,7 @@
               "share"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [
@@ -2213,7 +2350,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "HT": [
@@ -2225,7 +2362,7 @@
               "share"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "PM": [
@@ -2236,7 +2373,7 @@
               "share"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [],
@@ -2249,10 +2386,12 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ]
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.4",
@@ -2279,7 +2418,7 @@
               "update"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [],
@@ -2290,7 +2429,7 @@
               "update"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "PM": [
@@ -2299,7 +2438,7 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [],
@@ -2312,10 +2451,18 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ]
-      }
+      },
+      "aliases": [
+        {
+          "resource": "hotel_proposals_client_amounts",
+          "action": "read_internal_amount",
+          "as": "read"
+        }
+      ],
+      "exclusions": []
     },
     {
       "section": "5.4",
@@ -2343,7 +2490,7 @@
               "update"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [
@@ -2352,7 +2499,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "HT": [
@@ -2363,7 +2510,7 @@
               "update"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "PM": [
@@ -2374,7 +2521,7 @@
               "update"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [],
@@ -2388,10 +2535,12 @@
               "update"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ]
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.5",
@@ -2420,7 +2569,7 @@
               "delete"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [
@@ -2430,7 +2579,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "HT": [
@@ -2439,7 +2588,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "PM": [
@@ -2450,7 +2599,7 @@
               "update"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [
@@ -2459,7 +2608,7 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "VC": [
@@ -2468,7 +2617,7 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "RG": [
@@ -2477,7 +2626,7 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "HL": [
@@ -2486,7 +2635,7 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "FA": [
@@ -2495,10 +2644,12 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ]
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.5",
@@ -2525,7 +2676,7 @@
               "update"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [],
@@ -2537,7 +2688,7 @@
               "update"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [],
@@ -2550,10 +2701,18 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ]
-      }
+      },
+      "aliases": [
+        {
+          "resource": "wedding_projects",
+          "action": "read_internal_notes",
+          "as": "read"
+        }
+      ],
+      "exclusions": []
     },
     {
       "section": "5.5",
@@ -2581,7 +2740,7 @@
               "update"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [],
@@ -2593,7 +2752,7 @@
               "update"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "PM": [
@@ -2604,7 +2763,7 @@
               "update"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [
@@ -2613,7 +2772,7 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "VC": [
@@ -2622,7 +2781,7 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "RG": [
@@ -2631,7 +2790,7 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "HL": [
@@ -2641,11 +2800,13 @@
               "update"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "FA": []
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.5",
@@ -2674,7 +2835,7 @@
               "delete"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [],
@@ -2688,7 +2849,7 @@
               "delete"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [
@@ -2697,7 +2858,7 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "VC": [
@@ -2706,7 +2867,7 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "RG": [
@@ -2715,7 +2876,7 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "HL": [
@@ -2724,11 +2885,13 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "FA": []
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.5",
@@ -2757,7 +2920,7 @@
               "delete"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [
@@ -2768,7 +2931,7 @@
               "update"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "HT": [],
@@ -2781,7 +2944,7 @@
               "delete"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [],
@@ -2789,7 +2952,9 @@
         "RG": [],
         "HL": [],
         "FA": []
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.6",
@@ -2818,7 +2983,7 @@
               "delete"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [
@@ -2827,7 +2992,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "HT": [
@@ -2836,7 +3001,7 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "PM": [
@@ -2848,7 +3013,7 @@
               "delete"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [
@@ -2858,7 +3023,15 @@
               "update"
             ],
             "scope": "assigned",
-            "note": "theme dress code"
+            "conditions": [
+              {
+                "kind": "fields",
+                "only": [
+                  "theme",
+                  "dress_code"
+                ]
+              }
+            ]
           }
         ],
         "VC": [
@@ -2867,7 +3040,7 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "RG": [
@@ -2876,7 +3049,7 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "HL": [
@@ -2886,7 +3059,14 @@
               "update"
             ],
             "scope": "assigned",
-            "note": "logistics notes"
+            "conditions": [
+              {
+                "kind": "fields",
+                "only": [
+                  "logistics_notes"
+                ]
+              }
+            ]
           }
         ],
         "FA": [
@@ -2895,10 +3075,12 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ]
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.6",
@@ -2928,7 +3110,7 @@
               "share"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [],
@@ -2943,7 +3125,7 @@
               "share"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [
@@ -2952,7 +3134,7 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "VC": [
@@ -2961,7 +3143,7 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "RG": [
@@ -2970,7 +3152,7 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "HL": [
@@ -2981,11 +3163,13 @@
               "update"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "FA": []
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.6",
@@ -3014,7 +3198,7 @@
               "delete"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [],
@@ -3028,7 +3212,7 @@
               "delete"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [
@@ -3037,7 +3221,7 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "VC": [
@@ -3047,7 +3231,14 @@
               "update"
             ],
             "scope": "assigned",
-            "note": "vendor cues"
+            "conditions": [
+              {
+                "kind": "fields",
+                "only": [
+                  "vendor_cues"
+                ]
+              }
+            ]
           }
         ],
         "RG": [
@@ -3056,7 +3247,7 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "HL": [
@@ -3067,11 +3258,13 @@
               "update"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "FA": []
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.6",
@@ -3099,7 +3292,7 @@
               "update"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [],
@@ -3112,7 +3305,7 @@
               "update"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [
@@ -3122,7 +3315,7 @@
               "update"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "VC": [
@@ -3132,7 +3325,7 @@
               "update"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "RG": [
@@ -3141,7 +3334,7 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "HL": [
@@ -3152,11 +3345,13 @@
               "update"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "FA": []
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.6",
@@ -3182,7 +3377,7 @@
               "approve"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [],
@@ -3193,7 +3388,15 @@
         "RG": [],
         "HL": [],
         "FA": []
-      }
+      },
+      "aliases": [
+        {
+          "resource": "readiness_exceptions",
+          "action": "authorise_exception",
+          "as": "approve"
+        }
+      ],
+      "exclusions": []
     },
     {
       "section": "5.6",
@@ -3219,7 +3422,7 @@
               "update"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [],
@@ -3230,7 +3433,7 @@
               "update"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [],
@@ -3238,7 +3441,9 @@
         "RG": [],
         "HL": [],
         "FA": []
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.7",
@@ -3267,7 +3472,7 @@
               "delete"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [
@@ -3276,7 +3481,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "HT": [
@@ -3285,7 +3490,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "PM": [
@@ -3294,7 +3499,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [
@@ -3303,7 +3508,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "VC": [
@@ -3312,7 +3517,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "RG": [
@@ -3321,7 +3526,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "HL": [
@@ -3330,7 +3535,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "FA": [
@@ -3342,10 +3547,12 @@
               "delete"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ]
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.7",
@@ -3375,7 +3582,7 @@
               "share"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [],
@@ -3386,7 +3593,14 @@
               "update"
             ],
             "scope": "all",
-            "note": "hotel lines"
+            "conditions": [
+              {
+                "kind": "side",
+                "anyOf": [
+                  "hotel"
+                ]
+              }
+            ]
           }
         ],
         "PM": [
@@ -3398,7 +3612,7 @@
               "share"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [
@@ -3407,7 +3621,7 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "VC": [
@@ -3417,7 +3631,14 @@
               "update"
             ],
             "scope": "assigned",
-            "note": "vendor lines"
+            "conditions": [
+              {
+                "kind": "side",
+                "anyOf": [
+                  "vendor"
+                ]
+              }
+            ]
           }
         ],
         "RG": [],
@@ -3427,7 +3648,7 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "FA": [
@@ -3439,10 +3660,12 @@
               "share"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ]
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.7",
@@ -3469,7 +3692,7 @@
               "update"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [],
@@ -3480,7 +3703,14 @@
               "update"
             ],
             "scope": "all",
-            "note": "hotel lines"
+            "conditions": [
+              {
+                "kind": "side",
+                "anyOf": [
+                  "hotel"
+                ]
+              }
+            ]
           }
         ],
         "PM": [
@@ -3490,7 +3720,7 @@
               "update"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [],
@@ -3501,7 +3731,14 @@
               "update"
             ],
             "scope": "assigned",
-            "note": "vendor lines"
+            "conditions": [
+              {
+                "kind": "side",
+                "anyOf": [
+                  "vendor"
+                ]
+              }
+            ]
           }
         ],
         "RG": [],
@@ -3513,10 +3750,18 @@
               "update"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ]
-      }
+      },
+      "aliases": [
+        {
+          "resource": "budget_lines_client_facing",
+          "action": "read_internal_cost",
+          "as": "read"
+        }
+      ],
+      "exclusions": []
     },
     {
       "section": "5.7",
@@ -3545,7 +3790,7 @@
               "delete"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [],
@@ -3556,7 +3801,14 @@
               "read"
             ],
             "scope": "all",
-            "note": "hotel"
+            "conditions": [
+              {
+                "kind": "side",
+                "anyOf": [
+                  "hotel"
+                ]
+              }
+            ]
           }
         ],
         "PM": [
@@ -3566,7 +3818,7 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [],
@@ -3577,7 +3829,7 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "RG": [],
@@ -3591,10 +3843,12 @@
               "delete"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ]
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.7",
@@ -3623,7 +3877,7 @@
               "delete"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [],
@@ -3634,7 +3888,7 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [],
@@ -3647,7 +3901,7 @@
               "delete"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "RG": [],
@@ -3658,10 +3912,12 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ]
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.7",
@@ -3690,7 +3946,7 @@
               "share"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [
@@ -3699,7 +3955,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "HT": [],
@@ -3711,7 +3967,7 @@
               "share"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [],
@@ -3727,10 +3983,12 @@
               "share"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ]
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.7",
@@ -3758,7 +4016,7 @@
               "update"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [],
@@ -3770,7 +4028,14 @@
               "update"
             ],
             "scope": "all",
-            "note": "hotel"
+            "conditions": [
+              {
+                "kind": "side",
+                "anyOf": [
+                  "hotel"
+                ]
+              }
+            ]
           }
         ],
         "PM": [
@@ -3779,7 +4044,7 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [],
@@ -3791,7 +4056,14 @@
               "update"
             ],
             "scope": "all",
-            "note": "vendor"
+            "conditions": [
+              {
+                "kind": "side",
+                "anyOf": [
+                  "vendor"
+                ]
+              }
+            ]
           }
         ],
         "RG": [],
@@ -3803,10 +4075,12 @@
               "update"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ]
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.7",
@@ -3835,7 +4109,7 @@
               "share"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [
@@ -3844,7 +4118,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "HT": [],
@@ -3854,7 +4128,7 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [],
@@ -3870,10 +4144,12 @@
               "share"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ]
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.7",
@@ -3901,7 +4177,7 @@
               "update"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [],
@@ -3912,7 +4188,14 @@
               "read"
             ],
             "scope": "all",
-            "note": "hotel"
+            "conditions": [
+              {
+                "kind": "side",
+                "anyOf": [
+                  "hotel"
+                ]
+              }
+            ]
           }
         ],
         "PM": [
@@ -3921,7 +4204,7 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [],
@@ -3932,7 +4215,14 @@
               "read"
             ],
             "scope": "assigned",
-            "note": "vendor"
+            "conditions": [
+              {
+                "kind": "side",
+                "anyOf": [
+                  "vendor"
+                ]
+              }
+            ]
           }
         ],
         "RG": [],
@@ -3945,10 +4235,12 @@
               "update"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ]
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.7",
@@ -3977,7 +4269,7 @@
               "approve"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [],
@@ -3989,7 +4281,7 @@
               "update"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [],
@@ -4005,10 +4297,12 @@
               "approve"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ]
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.8",
@@ -4037,7 +4331,7 @@
               "delete"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [
@@ -4046,7 +4340,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "HT": [
@@ -4055,7 +4349,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "PM": [
@@ -4064,7 +4358,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [
@@ -4073,7 +4367,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "VC": [
@@ -4084,7 +4378,7 @@
               "update"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "RG": [
@@ -4093,7 +4387,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "HL": [
@@ -4102,7 +4396,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "FA": [
@@ -4111,10 +4405,12 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ]
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.8",
@@ -4143,7 +4439,7 @@
               "delete"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [
@@ -4152,7 +4448,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "HT": [],
@@ -4162,7 +4458,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [
@@ -4171,7 +4467,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "VC": [
@@ -4183,7 +4479,7 @@
               "delete"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "RG": [],
@@ -4193,7 +4489,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "FA": [
@@ -4202,10 +4498,12 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ]
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.8",
@@ -4232,7 +4530,7 @@
               "update"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [],
@@ -4243,7 +4541,7 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [],
@@ -4254,7 +4552,7 @@
               "update"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "RG": [],
@@ -4264,11 +4562,19 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "FA": []
-      }
+      },
+      "aliases": [
+        {
+          "resource": "vendor_profiles_client_fields",
+          "action": "read_contacts",
+          "as": "read"
+        }
+      ],
+      "exclusions": []
     },
     {
       "section": "5.8",
@@ -4295,7 +4601,7 @@
               "update"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [],
@@ -4306,7 +4612,7 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [],
@@ -4317,13 +4623,21 @@
               "update"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "RG": [],
         "HL": [],
         "FA": []
-      }
+      },
+      "aliases": [
+        {
+          "resource": "vendor_profiles_client_fields",
+          "action": "read_internal_notes",
+          "as": "read"
+        }
+      ],
+      "exclusions": []
     },
     {
       "section": "5.8",
@@ -4349,7 +4663,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [],
@@ -4363,7 +4677,7 @@
               "update"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "RG": [],
@@ -4375,10 +4689,12 @@
               "update"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ]
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.8",
@@ -4406,7 +4722,7 @@
               "update"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [],
@@ -4417,7 +4733,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [],
@@ -4429,13 +4745,15 @@
               "update"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "RG": [],
         "HL": [],
         "FA": []
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.8",
@@ -4464,7 +4782,7 @@
               "delete"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [],
@@ -4477,7 +4795,7 @@
               "update"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [
@@ -4486,7 +4804,7 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "VC": [
@@ -4497,7 +4815,7 @@
               "update"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "RG": [],
@@ -4507,7 +4825,7 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "FA": [
@@ -4516,10 +4834,12 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ]
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.8",
@@ -4548,7 +4868,7 @@
               "share"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [],
@@ -4561,7 +4881,7 @@
               "share"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [
@@ -4570,7 +4890,7 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "VC": [
@@ -4582,7 +4902,7 @@
               "share"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "RG": [],
@@ -4593,10 +4913,12 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ]
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.8",
@@ -4623,7 +4945,7 @@
               "update"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [],
@@ -4634,7 +4956,7 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [],
@@ -4645,7 +4967,7 @@
               "update"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "RG": [],
@@ -4656,10 +4978,18 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ]
-      }
+      },
+      "aliases": [
+        {
+          "resource": "vendor_proposals_client_amounts",
+          "action": "read_internal_cost",
+          "as": "read"
+        }
+      ],
+      "exclusions": []
     },
     {
       "section": "5.8",
@@ -4688,7 +5018,7 @@
               "delete"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [],
@@ -4702,7 +5032,7 @@
               "approve"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [
@@ -4711,7 +5041,7 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "VC": [
@@ -4722,7 +5052,7 @@
               "update"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "RG": [],
@@ -4732,11 +5062,20 @@
               "update"
             ],
             "scope": "assigned",
-            "note": "mark delivered"
+            "conditions": [
+              {
+                "kind": "fields",
+                "only": [
+                  "delivered"
+                ]
+              }
+            ]
           }
         ],
         "FA": []
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.8",
@@ -4765,7 +5104,7 @@
               "delete"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [],
@@ -4778,7 +5117,7 @@
               "update"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [
@@ -4787,7 +5126,7 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "VC": [
@@ -4798,7 +5137,7 @@
               "update"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "RG": [],
@@ -4808,11 +5147,13 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "FA": []
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.8",
@@ -4839,7 +5180,7 @@
               "update"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [],
@@ -4850,7 +5191,7 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [],
@@ -4861,7 +5202,7 @@
               "update"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "RG": [],
@@ -4872,10 +5213,18 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ]
-      }
+      },
+      "aliases": [
+        {
+          "resource": "artist_bookings",
+          "action": "read_internal_cost",
+          "as": "read"
+        }
+      ],
+      "exclusions": []
     },
     {
       "section": "5.8",
@@ -4904,7 +5253,7 @@
               "delete"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [],
@@ -4917,7 +5266,7 @@
               "update"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [
@@ -4926,7 +5275,7 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "VC": [
@@ -4937,7 +5286,7 @@
               "update"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "RG": [],
@@ -4949,11 +5298,13 @@
               "update"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "FA": []
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.9",
@@ -4983,7 +5334,7 @@
               "share"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [],
@@ -4997,7 +5348,7 @@
               "share"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [
@@ -5010,7 +5361,7 @@
               "share"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "VC": [
@@ -5019,7 +5370,7 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "RG": [
@@ -5028,7 +5379,7 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "HL": [
@@ -5037,11 +5388,13 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "FA": []
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.9",
@@ -5070,7 +5423,7 @@
               "delete"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [
@@ -5080,15 +5433,15 @@
               "read"
             ],
             "scope": "own",
-            "note": null
+            "conditions": []
           },
           {
             "actions": [
               "update",
               "delete"
             ],
-            "scope": "all",
-            "note": null
+            "scope": "own",
+            "conditions": []
           }
         ],
         "HT": [
@@ -5098,15 +5451,15 @@
               "read"
             ],
             "scope": "own",
-            "note": null
+            "conditions": []
           },
           {
             "actions": [
               "update",
               "delete"
             ],
-            "scope": "all",
-            "note": null
+            "scope": "own",
+            "conditions": []
           }
         ],
         "PM": [
@@ -5116,7 +5469,7 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           },
           {
             "actions": [
@@ -5124,7 +5477,7 @@
               "delete"
             ],
             "scope": "own",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [
@@ -5134,7 +5487,7 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           },
           {
             "actions": [
@@ -5142,7 +5495,7 @@
               "delete"
             ],
             "scope": "own",
-            "note": null
+            "conditions": []
           }
         ],
         "VC": [
@@ -5152,7 +5505,7 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           },
           {
             "actions": [
@@ -5160,7 +5513,7 @@
               "delete"
             ],
             "scope": "own",
-            "note": null
+            "conditions": []
           }
         ],
         "RG": [
@@ -5170,7 +5523,7 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           },
           {
             "actions": [
@@ -5178,7 +5531,7 @@
               "delete"
             ],
             "scope": "own",
-            "note": null
+            "conditions": []
           }
         ],
         "HL": [
@@ -5188,7 +5541,7 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           },
           {
             "actions": [
@@ -5196,7 +5549,7 @@
               "delete"
             ],
             "scope": "own",
-            "note": null
+            "conditions": []
           }
         ],
         "FA": [
@@ -5206,18 +5559,20 @@
               "read"
             ],
             "scope": "own",
-            "note": null
+            "conditions": []
           },
           {
             "actions": [
               "update",
               "delete"
             ],
-            "scope": "all",
-            "note": null
+            "scope": "own",
+            "conditions": []
           }
         ]
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.9",
@@ -5246,7 +5601,7 @@
               "delete"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [],
@@ -5258,7 +5613,14 @@
               "update"
             ],
             "scope": "all",
-            "note": "hotel threads"
+            "conditions": [
+              {
+                "kind": "subject",
+                "anyOf": [
+                  "hotel"
+                ]
+              }
+            ]
           }
         ],
         "PM": [
@@ -5269,7 +5631,7 @@
               "update"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [
@@ -5280,7 +5642,14 @@
               "update"
             ],
             "scope": "assigned",
-            "note": "design threads"
+            "conditions": [
+              {
+                "kind": "subject",
+                "anyOf": [
+                  "design"
+                ]
+              }
+            ]
           }
         ],
         "VC": [
@@ -5291,7 +5660,14 @@
               "update"
             ],
             "scope": "assigned",
-            "note": "proposal threads"
+            "conditions": [
+              {
+                "kind": "subject",
+                "anyOf": [
+                  "vendor_proposal"
+                ]
+              }
+            ]
           }
         ],
         "RG": [
@@ -5302,7 +5678,14 @@
               "update"
             ],
             "scope": "assigned",
-            "note": "guest threads"
+            "conditions": [
+              {
+                "kind": "subject",
+                "anyOf": [
+                  "guest"
+                ]
+              }
+            ]
           }
         ],
         "HL": [],
@@ -5314,10 +5697,19 @@
               "update"
             ],
             "scope": "all",
-            "note": "invoice threads"
+            "conditions": [
+              {
+                "kind": "subject",
+                "anyOf": [
+                  "invoice"
+                ]
+              }
+            ]
           }
         ]
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.9",
@@ -5347,7 +5739,7 @@
               "approve"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [
@@ -5356,7 +5748,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "HT": [
@@ -5366,7 +5758,14 @@
               "update"
             ],
             "scope": "all",
-            "note": "hotel-related"
+            "conditions": [
+              {
+                "kind": "subject",
+                "anyOf": [
+                  "hotel"
+                ]
+              }
+            ]
           }
         ],
         "PM": [
@@ -5377,7 +5776,7 @@
               "approve"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [
@@ -5387,7 +5786,7 @@
               "update"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "VC": [
@@ -5397,7 +5796,7 @@
               "update"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "RG": [
@@ -5407,7 +5806,7 @@
               "update"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "HL": [
@@ -5417,7 +5816,7 @@
               "update"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "FA": [
@@ -5426,10 +5825,12 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ]
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.9",
@@ -5457,7 +5858,7 @@
               "update"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [],
@@ -5467,7 +5868,14 @@
               "create"
             ],
             "scope": "all",
-            "note": "hotel proposals"
+            "conditions": [
+              {
+                "kind": "subject",
+                "anyOf": [
+                  "hotel_proposal"
+                ]
+              }
+            ]
           }
         ],
         "PM": [
@@ -5478,7 +5886,7 @@
               "update"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [
@@ -5487,7 +5895,15 @@
               "create"
             ],
             "scope": "assigned",
-            "note": "designs invitations"
+            "conditions": [
+              {
+                "kind": "subject",
+                "anyOf": [
+                  "design",
+                  "invitation"
+                ]
+              }
+            ]
           }
         ],
         "VC": [
@@ -5496,7 +5912,14 @@
               "create"
             ],
             "scope": "all",
-            "note": "proposals"
+            "conditions": [
+              {
+                "kind": "subject",
+                "anyOf": [
+                  "vendor_proposal"
+                ]
+              }
+            ]
           }
         ],
         "RG": [],
@@ -5507,10 +5930,21 @@
               "create"
             ],
             "scope": "all",
-            "note": "budget lines contracts invoices"
+            "conditions": [
+              {
+                "kind": "subject",
+                "anyOf": [
+                  "budget_line",
+                  "contract",
+                  "invoice"
+                ]
+              }
+            ]
           }
         ]
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.9",
@@ -5536,7 +5970,7 @@
               "approve"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [],
@@ -5547,7 +5981,7 @@
               "approve"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [],
@@ -5555,7 +5989,15 @@
         "RG": [],
         "HL": [],
         "FA": []
-      }
+      },
+      "aliases": [
+        {
+          "resource": "approval_decisions_on_client",
+          "action": "create_on_behalf",
+          "as": "approve"
+        }
+      ],
+      "exclusions": []
     },
     {
       "section": "5.9",
@@ -5584,7 +6026,7 @@
               "delete"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [
@@ -5595,7 +6037,7 @@
               "update"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "HT": [
@@ -5606,7 +6048,14 @@
               "update"
             ],
             "scope": "all",
-            "note": "hotel conversations"
+            "conditions": [
+              {
+                "kind": "subject",
+                "anyOf": [
+                  "hotel"
+                ]
+              }
+            ]
           }
         ],
         "PM": [
@@ -5617,7 +6066,7 @@
               "update"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [
@@ -5626,7 +6075,7 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "VC": [
@@ -5635,7 +6084,7 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "RG": [
@@ -5646,7 +6095,14 @@
               "update"
             ],
             "scope": "assigned",
-            "note": "guest conversations"
+            "conditions": [
+              {
+                "kind": "subject",
+                "anyOf": [
+                  "guest"
+                ]
+              }
+            ]
           }
         ],
         "HL": [
@@ -5657,7 +6113,7 @@
               "update"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "FA": [
@@ -5666,10 +6122,12 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ]
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.10",
@@ -5699,7 +6157,7 @@
               "share"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [],
@@ -5713,7 +6171,7 @@
               "share"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [
@@ -5724,7 +6182,7 @@
               "update"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "VC": [],
@@ -5735,12 +6193,14 @@
               "update"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "HL": [],
         "FA": []
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.10",
@@ -5768,7 +6228,7 @@
               "update"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [],
@@ -5779,7 +6239,7 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [],
@@ -5792,12 +6252,14 @@
               "update"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "HL": [],
         "FA": []
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.10",
@@ -5826,7 +6288,7 @@
               "delete"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [],
@@ -5839,7 +6301,7 @@
               "update"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [],
@@ -5853,7 +6315,7 @@
               "delete"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "HL": [
@@ -5863,11 +6325,13 @@
               "update"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "FA": []
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.10",
@@ -5893,7 +6357,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [],
@@ -5904,7 +6368,7 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [],
@@ -5916,7 +6380,7 @@
               "update"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "HL": [
@@ -5925,11 +6389,19 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "FA": []
-      }
+      },
+      "aliases": [
+        {
+          "resource": "family_groups_guests_standard",
+          "action": "read_sensitive",
+          "as": "read"
+        }
+      ],
+      "exclusions": []
     },
     {
       "section": "5.10",
@@ -5956,7 +6428,7 @@
               "update"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [],
@@ -5967,7 +6439,7 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [],
@@ -5980,7 +6452,7 @@
               "update"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "HL": [
@@ -5989,11 +6461,19 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "FA": []
-      }
+      },
+      "aliases": [
+        {
+          "resource": "family_groups_guests_standard",
+          "action": "read_internal_notes",
+          "as": "read"
+        }
+      ],
+      "exclusions": []
     },
     {
       "section": "5.10",
@@ -6019,7 +6499,12 @@
               "read"
             ],
             "scope": "all",
-            "note": "break-glass"
+            "conditions": [
+              {
+                "kind": "check",
+                "check": "break_glass"
+              }
+            ]
           }
         ],
         "SM": [],
@@ -6035,7 +6520,11 @@
               "update"
             ],
             "scope": "assigned",
-            "note": "with explicit grant"
+            "conditions": [
+              {
+                "kind": "explicit_grant"
+              }
+            ]
           }
         ],
         "HL": [
@@ -6044,11 +6533,24 @@
               "read"
             ],
             "scope": "assigned",
-            "note": "check-in only"
+            "conditions": [
+              {
+                "kind": "check",
+                "check": "check_in"
+              }
+            ]
           }
         ],
         "FA": []
-      }
+      },
+      "aliases": [
+        {
+          "resource": "family_groups_guests_standard",
+          "action": "read_identity",
+          "as": "read"
+        }
+      ],
+      "exclusions": []
     },
     {
       "section": "5.10",
@@ -6076,7 +6578,7 @@
               "update"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [],
@@ -6088,7 +6590,7 @@
               "update"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [],
@@ -6101,7 +6603,7 @@
               "update"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "HL": [
@@ -6110,11 +6612,13 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "FA": []
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.10",
@@ -6142,7 +6646,7 @@
               "update"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [],
@@ -6155,7 +6659,7 @@
               "update"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [],
@@ -6168,12 +6672,14 @@
               "update"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "HL": [],
         "FA": []
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.10",
@@ -6199,7 +6705,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [],
@@ -6210,7 +6716,7 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [],
@@ -6222,12 +6728,14 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "HL": [],
         "FA": []
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.10",
@@ -6255,7 +6763,7 @@
               "update"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [],
@@ -6267,7 +6775,7 @@
               "update"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [],
@@ -6280,7 +6788,7 @@
               "update"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "HL": [
@@ -6291,11 +6799,13 @@
               "update"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "FA": []
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.11",
@@ -6323,7 +6833,7 @@
               "update"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [],
@@ -6335,7 +6845,7 @@
               "update"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "PM": [
@@ -6346,7 +6856,7 @@
               "update"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [],
@@ -6357,7 +6867,7 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "HL": [
@@ -6366,7 +6876,7 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "FA": [
@@ -6375,10 +6885,12 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ]
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.11",
@@ -6405,7 +6917,7 @@
               "update"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [],
@@ -6416,7 +6928,7 @@
               "update"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "PM": [
@@ -6425,7 +6937,7 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [],
@@ -6438,10 +6950,18 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ]
-      }
+      },
+      "aliases": [
+        {
+          "resource": "room_blocks_client_fields",
+          "action": "read_internal_cost",
+          "as": "read"
+        }
+      ],
+      "exclusions": []
     },
     {
       "section": "5.11",
@@ -6470,7 +6990,7 @@
               "delete"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [],
@@ -6480,7 +7000,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "PM": [
@@ -6490,7 +7010,7 @@
               "update"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [],
@@ -6503,7 +7023,7 @@
               "update"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "HL": [
@@ -6515,11 +7035,13 @@
               "delete"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "FA": []
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.11",
@@ -6547,7 +7069,7 @@
               "update"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [],
@@ -6558,7 +7080,7 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [],
@@ -6571,7 +7093,7 @@
               "update"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "HL": [
@@ -6582,11 +7104,13 @@
               "update"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "FA": []
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.11",
@@ -6615,7 +7139,7 @@
               "delete"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [],
@@ -6627,7 +7151,7 @@
               "update"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [],
@@ -6637,7 +7161,14 @@
               "read"
             ],
             "scope": "assigned",
-            "note": "transport vendor"
+            "conditions": [
+              {
+                "kind": "subject",
+                "anyOf": [
+                  "transport_vendor"
+                ]
+              }
+            ]
           }
         ],
         "RG": [
@@ -6646,7 +7177,7 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "HL": [
@@ -6658,11 +7189,13 @@
               "delete"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "FA": []
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.11",
@@ -6690,7 +7223,7 @@
               "update"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [],
@@ -6701,7 +7234,7 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [],
@@ -6713,7 +7246,7 @@
               "update"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "HL": [
@@ -6724,11 +7257,13 @@
               "update"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "FA": []
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.11",
@@ -6756,7 +7291,7 @@
               "update"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [],
@@ -6768,7 +7303,7 @@
               "update"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [],
@@ -6779,7 +7314,7 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "HL": [
@@ -6790,11 +7325,13 @@
               "update"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "FA": []
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.12",
@@ -6824,7 +7361,7 @@
               "share"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [],
@@ -6838,7 +7375,7 @@
               "share"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [
@@ -6847,7 +7384,7 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "VC": [
@@ -6858,7 +7395,7 @@
               "update"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "RG": [
@@ -6867,7 +7404,7 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "HL": [
@@ -6876,11 +7413,13 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "FA": []
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.12",
@@ -6906,7 +7445,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [],
@@ -6917,7 +7456,7 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [],
@@ -6927,7 +7466,7 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "RG": [
@@ -6936,7 +7475,7 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "HL": [
@@ -6945,11 +7484,13 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "FA": []
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.13",
@@ -6978,7 +7519,7 @@
               "delete"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [
@@ -6989,7 +7530,7 @@
               "update"
             ],
             "scope": "own",
-            "note": null
+            "conditions": []
           }
         ],
         "HT": [
@@ -7000,7 +7541,7 @@
               "update"
             ],
             "scope": "own",
-            "note": null
+            "conditions": []
           }
         ],
         "PM": [
@@ -7012,7 +7553,7 @@
               "delete"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [
@@ -7023,7 +7564,7 @@
               "update"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "VC": [
@@ -7034,7 +7575,7 @@
               "update"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "RG": [
@@ -7045,7 +7586,7 @@
               "update"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "HL": [
@@ -7056,7 +7597,7 @@
               "update"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "FA": [
@@ -7067,10 +7608,12 @@
               "update"
             ],
             "scope": "own",
-            "note": null
+            "conditions": []
           }
         ]
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.13",
@@ -7099,7 +7642,7 @@
               "delete"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [],
@@ -7113,7 +7656,7 @@
               "delete"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [
@@ -7123,7 +7666,7 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "VC": [
@@ -7133,7 +7676,7 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "RG": [
@@ -7143,7 +7686,7 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "HL": [
@@ -7153,11 +7696,13 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "FA": []
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.13",
@@ -7186,7 +7731,7 @@
               "delete"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [],
@@ -7200,7 +7745,7 @@
               "delete"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [
@@ -7209,7 +7754,7 @@
               "read"
             ],
             "scope": "own",
-            "note": null
+            "conditions": []
           }
         ],
         "VC": [
@@ -7218,7 +7763,7 @@
               "read"
             ],
             "scope": "own",
-            "note": null
+            "conditions": []
           }
         ],
         "RG": [
@@ -7227,7 +7772,7 @@
               "read"
             ],
             "scope": "own",
-            "note": null
+            "conditions": []
           }
         ],
         "HL": [
@@ -7238,11 +7783,13 @@
               "update"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "FA": []
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.13",
@@ -7271,7 +7818,7 @@
               "delete"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [],
@@ -7285,7 +7832,7 @@
               "approve"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [
@@ -7295,7 +7842,7 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "VC": [
@@ -7305,7 +7852,7 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "RG": [
@@ -7315,7 +7862,7 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "HL": [
@@ -7326,11 +7873,13 @@
               "update"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "FA": []
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.14",
@@ -7359,7 +7908,7 @@
               "delete"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [
@@ -7370,7 +7919,7 @@
               "update"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "HT": [
@@ -7381,7 +7930,7 @@
               "update"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "PM": [
@@ -7393,7 +7942,7 @@
               "delete"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [
@@ -7404,7 +7953,7 @@
               "update"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "VC": [
@@ -7415,7 +7964,7 @@
               "update"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "RG": [
@@ -7426,7 +7975,7 @@
               "update"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "HL": [
@@ -7437,7 +7986,7 @@
               "update"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "FA": [
@@ -7448,10 +7997,12 @@
               "update"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ]
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.14",
@@ -7477,7 +8028,7 @@
               "share"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [],
@@ -7487,7 +8038,14 @@
               "share"
             ],
             "scope": "all",
-            "note": "hotel proposals"
+            "conditions": [
+              {
+                "kind": "subject",
+                "anyOf": [
+                  "hotel_proposal"
+                ]
+              }
+            ]
           }
         ],
         "PM": [
@@ -7496,7 +8054,7 @@
               "share"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [
@@ -7505,7 +8063,14 @@
               "share"
             ],
             "scope": "assigned",
-            "note": "designs"
+            "conditions": [
+              {
+                "kind": "subject",
+                "anyOf": [
+                  "design"
+                ]
+              }
+            ]
           }
         ],
         "VC": [
@@ -7514,7 +8079,14 @@
               "share"
             ],
             "scope": "all",
-            "note": "proposals"
+            "conditions": [
+              {
+                "kind": "subject",
+                "anyOf": [
+                  "vendor_proposal"
+                ]
+              }
+            ]
           }
         ],
         "RG": [],
@@ -7525,10 +8097,20 @@
               "share"
             ],
             "scope": "all",
-            "note": "invoices client contracts"
+            "conditions": [
+              {
+                "kind": "subject",
+                "anyOf": [
+                  "invoice",
+                  "client_contract"
+                ]
+              }
+            ]
           }
         ]
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.14",
@@ -7557,7 +8139,7 @@
               "delete"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [
@@ -7567,7 +8149,15 @@
               "update"
             ],
             "scope": "all",
-            "note": "rights showcase"
+            "conditions": [
+              {
+                "kind": "fields",
+                "only": [
+                  "rights",
+                  "showcase"
+                ]
+              }
+            ]
           }
         ],
         "HT": [
@@ -7579,7 +8169,14 @@
               "delete"
             ],
             "scope": "all",
-            "note": "hotels"
+            "conditions": [
+              {
+                "kind": "subject",
+                "anyOf": [
+                  "hotel"
+                ]
+              }
+            ]
           }
         ],
         "PM": [
@@ -7588,7 +8185,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [
@@ -7600,7 +8197,14 @@
               "delete"
             ],
             "scope": "assigned",
-            "note": "designs"
+            "conditions": [
+              {
+                "kind": "subject",
+                "anyOf": [
+                  "design"
+                ]
+              }
+            ]
           }
         ],
         "VC": [
@@ -7612,13 +8216,22 @@
               "delete"
             ],
             "scope": "all",
-            "note": "vendors"
+            "conditions": [
+              {
+                "kind": "subject",
+                "anyOf": [
+                  "vendor"
+                ]
+              }
+            ]
           }
         ],
         "RG": [],
         "HL": [],
         "FA": []
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.14",
@@ -7647,7 +8260,7 @@
               "delete"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [
@@ -7656,7 +8269,7 @@
               "create"
             ],
             "scope": "own",
-            "note": null
+            "conditions": []
           }
         ],
         "HT": [
@@ -7665,7 +8278,7 @@
               "create"
             ],
             "scope": "own",
-            "note": null
+            "conditions": []
           }
         ],
         "PM": [
@@ -7674,7 +8287,7 @@
               "create"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [
@@ -7683,7 +8296,7 @@
               "create"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "VC": [
@@ -7692,7 +8305,7 @@
               "create"
             ],
             "scope": "own",
-            "note": null
+            "conditions": []
           }
         ],
         "RG": [
@@ -7701,7 +8314,7 @@
               "create"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "HL": [
@@ -7710,7 +8323,7 @@
               "create"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "FA": [
@@ -7719,10 +8332,12 @@
               "create"
             ],
             "scope": "own",
-            "note": null
+            "conditions": []
           }
         ]
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.15",
@@ -7750,7 +8365,7 @@
               "update"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [],
@@ -7763,7 +8378,7 @@
               "update"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [],
@@ -7773,7 +8388,14 @@
               "update"
             ],
             "scope": "all",
-            "note": "vendor completion"
+            "conditions": [
+              {
+                "kind": "subject",
+                "anyOf": [
+                  "vendor_completion"
+                ]
+              }
+            ]
           }
         ],
         "RG": [],
@@ -7783,7 +8405,15 @@
               "update"
             ],
             "scope": "assigned",
-            "note": "departures lost and found"
+            "conditions": [
+              {
+                "kind": "subject",
+                "anyOf": [
+                  "departures",
+                  "lost_and_found"
+                ]
+              }
+            ]
           }
         ],
         "FA": [
@@ -7792,10 +8422,19 @@
               "update"
             ],
             "scope": "all",
-            "note": "final accounts"
+            "conditions": [
+              {
+                "kind": "subject",
+                "anyOf": [
+                  "final_accounts"
+                ]
+              }
+            ]
           }
         ]
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.15",
@@ -7821,7 +8460,7 @@
               "approve"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [],
@@ -7832,7 +8471,12 @@
               "approve"
             ],
             "scope": "assigned",
-            "note": "when the checklist is complete and final accounts are approved"
+            "conditions": [
+              {
+                "kind": "check",
+                "check": "closure_ready"
+              }
+            ]
           }
         ],
         "CD": [],
@@ -7840,7 +8484,9 @@
         "RG": [],
         "HL": [],
         "FA": []
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.15",
@@ -7866,7 +8512,7 @@
               "approve"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [],
@@ -7877,7 +8523,9 @@
         "RG": [],
         "HL": [],
         "FA": []
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.15",
@@ -7903,7 +8551,7 @@
               "approve"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [],
@@ -7914,7 +8562,9 @@
         "RG": [],
         "HL": [],
         "FA": []
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.15",
@@ -7940,7 +8590,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [
@@ -7949,7 +8599,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "HT": [],
@@ -7959,7 +8609,7 @@
               "read"
             ],
             "scope": "assigned",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [],
@@ -7967,7 +8617,9 @@
         "RG": [],
         "HL": [],
         "FA": []
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "5.15",
@@ -7996,7 +8648,7 @@
               "delete"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "SM": [
@@ -8007,7 +8659,7 @@
               "update"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "HT": [
@@ -8016,7 +8668,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "PM": [
@@ -8025,7 +8677,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "CD": [
@@ -8034,7 +8686,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "VC": [
@@ -8043,7 +8695,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "RG": [
@@ -8052,7 +8704,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "HL": [
@@ -8061,7 +8713,7 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ],
         "FA": [
@@ -8070,10 +8722,654 @@
               "read"
             ],
             "scope": "all",
-            "note": null
+            "conditions": []
           }
         ]
-      }
+      },
+      "aliases": [],
+      "exclusions": []
+    },
+    {
+      "section": "5.16",
+      "module": "reports",
+      "resource": "lead_source_conversion_funnel",
+      "label": "Lead source and conversion funnel",
+      "provisional": true,
+      "cells": {
+        "May run": "SA, SM",
+        "May export": "SA, SM",
+        "Excluded from the export": "—"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": [
+              "read",
+              "export"
+            ],
+            "scope": "all",
+            "conditions": []
+          }
+        ],
+        "SM": [
+          {
+            "actions": [
+              "read",
+              "export"
+            ],
+            "scope": "all",
+            "conditions": []
+          }
+        ],
+        "HT": [],
+        "PM": [],
+        "CD": [],
+        "VC": [],
+        "RG": [],
+        "HL": [],
+        "FA": []
+      },
+      "aliases": [],
+      "exclusions": []
+    },
+    {
+      "section": "5.16",
+      "module": "reports",
+      "resource": "subscription_status_payment_history",
+      "label": "Subscription status and payment history",
+      "provisional": true,
+      "cells": {
+        "May run": "SA, SM, FA",
+        "May export": "SA, FA",
+        "Excluded from the export": "—"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": [
+              "read",
+              "export"
+            ],
+            "scope": "all",
+            "conditions": []
+          }
+        ],
+        "SM": [
+          {
+            "actions": [
+              "read"
+            ],
+            "scope": "all",
+            "conditions": []
+          }
+        ],
+        "HT": [],
+        "PM": [],
+        "CD": [],
+        "VC": [],
+        "RG": [],
+        "HL": [],
+        "FA": [
+          {
+            "actions": [
+              "read",
+              "export"
+            ],
+            "scope": "all",
+            "conditions": []
+          }
+        ]
+      },
+      "aliases": [],
+      "exclusions": []
+    },
+    {
+      "section": "5.16",
+      "module": "reports",
+      "resource": "hotel_shortlist_enquiries_site",
+      "label": "Hotel shortlist, enquiries, site visits, booking milestones",
+      "provisional": true,
+      "cells": {
+        "May run": "SA, HT, SM, PM (a)",
+        "May export": "SA, HT",
+        "Excluded from the export": "Internal amounts unless FA or SA"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": [
+              "read",
+              "export"
+            ],
+            "scope": "all",
+            "conditions": []
+          }
+        ],
+        "SM": [
+          {
+            "actions": [
+              "read"
+            ],
+            "scope": "all",
+            "conditions": []
+          }
+        ],
+        "HT": [
+          {
+            "actions": [
+              "read",
+              "export"
+            ],
+            "scope": "all",
+            "conditions": []
+          }
+        ],
+        "PM": [
+          {
+            "actions": [
+              "read"
+            ],
+            "scope": "assigned",
+            "conditions": []
+          }
+        ],
+        "CD": [],
+        "VC": [],
+        "RG": [],
+        "HL": [],
+        "FA": []
+      },
+      "aliases": [],
+      "exclusions": [
+        {
+          "kind": "class",
+          "class": "RESTRICTED-FINANCE",
+          "unlessRoles": [
+            "FA",
+            "SA"
+          ]
+        }
+      ]
+    },
+    {
+      "section": "5.16",
+      "module": "reports",
+      "resource": "wedding_progress_deadlines_approval",
+      "label": "Wedding progress, deadlines, approval tracker",
+      "provisional": true,
+      "cells": {
+        "May run": "SA, PM (a), SM",
+        "May export": "SA, PM (a)",
+        "Excluded from the export": "—"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": [
+              "read",
+              "export"
+            ],
+            "scope": "all",
+            "conditions": []
+          }
+        ],
+        "SM": [
+          {
+            "actions": [
+              "read"
+            ],
+            "scope": "all",
+            "conditions": []
+          }
+        ],
+        "HT": [],
+        "PM": [
+          {
+            "actions": [
+              "read",
+              "export"
+            ],
+            "scope": "assigned",
+            "conditions": []
+          }
+        ],
+        "CD": [],
+        "VC": [],
+        "RG": [],
+        "HL": [],
+        "FA": []
+      },
+      "aliases": [],
+      "exclusions": []
+    },
+    {
+      "section": "5.16",
+      "module": "reports",
+      "resource": "budget_estimate_approved_payments",
+      "label": "Budget estimate, approved, payments, actual, variance (client view)",
+      "provisional": true,
+      "cells": {
+        "May run": "SA, FA, PM (a)",
+        "May export": "SA, FA, PM (a)",
+        "Excluded from the export": "—"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": [
+              "read",
+              "export"
+            ],
+            "scope": "all",
+            "conditions": []
+          }
+        ],
+        "SM": [],
+        "HT": [],
+        "PM": [
+          {
+            "actions": [
+              "read",
+              "export"
+            ],
+            "scope": "assigned",
+            "conditions": []
+          }
+        ],
+        "CD": [],
+        "VC": [],
+        "RG": [],
+        "HL": [],
+        "FA": [
+          {
+            "actions": [
+              "read",
+              "export"
+            ],
+            "scope": "all",
+            "conditions": []
+          }
+        ]
+      },
+      "aliases": [],
+      "exclusions": []
+    },
+    {
+      "section": "5.16",
+      "module": "reports",
+      "resource": "budget_internal",
+      "label": "Internal cost and margin variance",
+      "provisional": false,
+      "cells": {
+        "May run": "SA, FA, PM (a)",
+        "May export": "SA, FA",
+        "Excluded from the export": "—"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": [
+              "read",
+              "export"
+            ],
+            "scope": "all",
+            "conditions": []
+          }
+        ],
+        "SM": [],
+        "HT": [],
+        "PM": [
+          {
+            "actions": [
+              "read"
+            ],
+            "scope": "assigned",
+            "conditions": []
+          }
+        ],
+        "CD": [],
+        "VC": [],
+        "RG": [],
+        "HL": [],
+        "FA": [
+          {
+            "actions": [
+              "read",
+              "export"
+            ],
+            "scope": "all",
+            "conditions": []
+          }
+        ]
+      },
+      "aliases": [],
+      "exclusions": []
+    },
+    {
+      "section": "5.16",
+      "module": "reports",
+      "resource": "vendor_selection_contracts_deliverables",
+      "label": "Vendor selection, contracts, deliverables, payment status",
+      "provisional": true,
+      "cells": {
+        "May run": "SA, VC, PM (a), FA",
+        "May export": "SA, VC, FA",
+        "Excluded from the export": "Bank details"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": [
+              "read",
+              "export"
+            ],
+            "scope": "all",
+            "conditions": []
+          }
+        ],
+        "SM": [],
+        "HT": [],
+        "PM": [
+          {
+            "actions": [
+              "read"
+            ],
+            "scope": "assigned",
+            "conditions": []
+          }
+        ],
+        "CD": [],
+        "VC": [
+          {
+            "actions": [
+              "read",
+              "export"
+            ],
+            "scope": "all",
+            "conditions": []
+          }
+        ],
+        "RG": [],
+        "HL": [],
+        "FA": [
+          {
+            "actions": [
+              "read",
+              "export"
+            ],
+            "scope": "all",
+            "conditions": []
+          }
+        ]
+      },
+      "aliases": [],
+      "exclusions": [
+        {
+          "kind": "class",
+          "class": "RESTRICTED-BANK",
+          "unlessRoles": []
+        }
+      ]
+    },
+    {
+      "section": "5.16",
+      "module": "reports",
+      "resource": "rsvp_progress_function_attendance",
+      "label": "RSVP progress and function attendance",
+      "provisional": true,
+      "cells": {
+        "May run": "SA, RG (a), PM (a), HL (a)",
+        "May export": "SA, RG (a), PM (a)",
+        "Excluded from the export": "Sensitive guest fields"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": [
+              "read",
+              "export"
+            ],
+            "scope": "all",
+            "conditions": []
+          }
+        ],
+        "SM": [],
+        "HT": [],
+        "PM": [
+          {
+            "actions": [
+              "read",
+              "export"
+            ],
+            "scope": "assigned",
+            "conditions": []
+          }
+        ],
+        "CD": [],
+        "VC": [],
+        "RG": [
+          {
+            "actions": [
+              "read",
+              "export"
+            ],
+            "scope": "assigned",
+            "conditions": []
+          }
+        ],
+        "HL": [
+          {
+            "actions": [
+              "read"
+            ],
+            "scope": "assigned",
+            "conditions": []
+          }
+        ],
+        "FA": []
+      },
+      "aliases": [],
+      "exclusions": [
+        {
+          "kind": "class",
+          "class": "SENSITIVE-GUEST",
+          "unlessRoles": []
+        }
+      ]
+    },
+    {
+      "section": "5.16",
+      "module": "reports",
+      "resource": "rooming_list_arrival_or",
+      "label": "Rooming list and arrival or departure manifests",
+      "provisional": true,
+      "cells": {
+        "May run": "SA, HL (a), RG (a), PM (a)",
+        "May export": "SA, HL (a)",
+        "Excluded from the export": "Identity documents; the hotel rooming list export carries names, dates and room category only and is audited"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": [
+              "read",
+              "export"
+            ],
+            "scope": "all",
+            "conditions": []
+          }
+        ],
+        "SM": [],
+        "HT": [],
+        "PM": [
+          {
+            "actions": [
+              "read"
+            ],
+            "scope": "assigned",
+            "conditions": []
+          }
+        ],
+        "CD": [],
+        "VC": [],
+        "RG": [
+          {
+            "actions": [
+              "read"
+            ],
+            "scope": "assigned",
+            "conditions": []
+          }
+        ],
+        "HL": [
+          {
+            "actions": [
+              "read",
+              "export"
+            ],
+            "scope": "assigned",
+            "conditions": []
+          }
+        ],
+        "FA": []
+      },
+      "aliases": [],
+      "exclusions": [
+        {
+          "kind": "class",
+          "class": "RESTRICTED-IDENTITY",
+          "unlessRoles": []
+        },
+        {
+          "kind": "variant",
+          "variant": "hotel_rooming_list",
+          "onlyFields": [
+            "names",
+            "dates",
+            "room_category"
+          ],
+          "audited": true
+        }
+      ]
+    },
+    {
+      "section": "5.16",
+      "module": "reports",
+      "resource": "function_schedules_run_show",
+      "label": "Function schedules, run-of-show, production readiness",
+      "provisional": true,
+      "cells": {
+        "May run": "SA, PM (a), HL (a), VC (a)",
+        "May export": "SA, PM (a)",
+        "Excluded from the export": "—"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": [
+              "read",
+              "export"
+            ],
+            "scope": "all",
+            "conditions": []
+          }
+        ],
+        "SM": [],
+        "HT": [],
+        "PM": [
+          {
+            "actions": [
+              "read",
+              "export"
+            ],
+            "scope": "assigned",
+            "conditions": []
+          }
+        ],
+        "CD": [],
+        "VC": [
+          {
+            "actions": [
+              "read"
+            ],
+            "scope": "assigned",
+            "conditions": []
+          }
+        ],
+        "RG": [],
+        "HL": [
+          {
+            "actions": [
+              "read"
+            ],
+            "scope": "assigned",
+            "conditions": []
+          }
+        ],
+        "FA": []
+      },
+      "aliases": [],
+      "exclusions": []
+    },
+    {
+      "section": "5.16",
+      "module": "reports",
+      "resource": "overdue_tasks_incidents_final",
+      "label": "Overdue tasks, incidents, final reconciliation, closure report",
+      "provisional": true,
+      "cells": {
+        "May run": "SA, PM (a), FA",
+        "May export": "SA, PM (a)",
+        "Excluded from the export": "Margin unless FA or SA"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": [
+              "read",
+              "export"
+            ],
+            "scope": "all",
+            "conditions": []
+          }
+        ],
+        "SM": [],
+        "HT": [],
+        "PM": [
+          {
+            "actions": [
+              "read",
+              "export"
+            ],
+            "scope": "assigned",
+            "conditions": []
+          }
+        ],
+        "CD": [],
+        "VC": [],
+        "RG": [],
+        "HL": [],
+        "FA": [
+          {
+            "actions": [
+              "read"
+            ],
+            "scope": "all",
+            "conditions": []
+          }
+        ]
+      },
+      "aliases": [],
+      "exclusions": [
+        {
+          "kind": "class",
+          "class": "RESTRICTED-FINANCE",
+          "unlessRoles": [
+            "FA",
+            "SA"
+          ]
+        }
+      ]
     }
   ],
   "others": [
@@ -8094,8 +9390,8 @@
             "actions": [
               "read"
             ],
-            "scope": "all",
-            "note": null
+            "scope": "own",
+            "conditions": []
           }
         ],
         "GU": [],
@@ -8104,11 +9400,18 @@
             "actions": [
               "read"
             ],
-            "scope": "all",
-            "note": "masked"
+            "scope": "own",
+            "conditions": [
+              {
+                "kind": "view",
+                "view": "masked"
+              }
+            ]
           }
         ]
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "6",
@@ -8131,7 +9434,7 @@
               "delete"
             ],
             "scope": "own",
-            "note": "account"
+            "conditions": []
           }
         ],
         "GU": [],
@@ -8143,11 +9446,18 @@
               "update",
               "delete"
             ],
-            "scope": "all",
-            "note": "demo"
+            "scope": "own",
+            "conditions": [
+              {
+                "kind": "check",
+                "check": "demo_record"
+              }
+            ]
           }
         ]
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "6",
@@ -8169,7 +9479,7 @@
               "update"
             ],
             "scope": "own",
-            "note": null
+            "conditions": []
           }
         ],
         "GU": [],
@@ -8178,11 +9488,18 @@
             "actions": [
               "create"
             ],
-            "scope": "all",
-            "note": "routed to Sales"
+            "scope": "own",
+            "conditions": [
+              {
+                "kind": "check",
+                "check": "routed_to_sales"
+              }
+            ]
           }
         ]
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "6",
@@ -8201,15 +9518,22 @@
             "actions": [
               "read"
             ],
-            "scope": "all",
-            "note": "feedback"
+            "scope": "own",
+            "conditions": []
           },
           {
             "actions": [
               "update"
             ],
-            "scope": "all",
-            "note": "feedback"
+            "scope": "own",
+            "conditions": [
+              {
+                "kind": "fields",
+                "only": [
+                  "feedback"
+                ]
+              }
+            ]
           }
         ],
         "GU": [],
@@ -8218,11 +9542,18 @@
             "actions": [
               "read"
             ],
-            "scope": "all",
-            "note": "sample"
+            "scope": "own",
+            "conditions": [
+              {
+                "kind": "check",
+                "check": "demo_record"
+              }
+            ]
           }
         ]
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "6",
@@ -8241,15 +9572,15 @@
             "actions": [
               "read"
             ],
-            "scope": "all",
-            "note": null
+            "scope": "own",
+            "conditions": []
           },
           {
             "actions": [
               "approve"
             ],
-            "scope": "all",
-            "note": null
+            "scope": "own",
+            "conditions": []
           }
         ],
         "GU": [],
@@ -8258,11 +9589,18 @@
             "actions": [
               "read"
             ],
-            "scope": "all",
-            "note": "sample"
+            "scope": "own",
+            "conditions": [
+              {
+                "kind": "check",
+                "check": "demo_record"
+              }
+            ]
           }
         ]
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "6",
@@ -8281,8 +9619,8 @@
             "actions": [
               "read"
             ],
-            "scope": "all",
-            "note": null
+            "scope": "own",
+            "conditions": []
           }
         ],
         "GU": [],
@@ -8291,11 +9629,18 @@
             "actions": [
               "read"
             ],
-            "scope": "all",
-            "note": "sample"
+            "scope": "own",
+            "conditions": [
+              {
+                "kind": "check",
+                "check": "demo_record"
+              }
+            ]
           }
         ]
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "6",
@@ -8314,13 +9659,15 @@
             "actions": [
               "read"
             ],
-            "scope": "all",
-            "note": "changes through a request"
+            "scope": "own",
+            "conditions": []
           }
         ],
         "GU": [],
         "DP": []
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "6",
@@ -8339,8 +9686,8 @@
             "actions": [
               "read"
             ],
-            "scope": "all",
-            "note": null
+            "scope": "own",
+            "conditions": []
           }
         ],
         "GU": [
@@ -8348,8 +9695,13 @@
             "actions": [
               "read"
             ],
-            "scope": "all",
-            "note": "invited functions only"
+            "scope": "own",
+            "conditions": [
+              {
+                "kind": "check",
+                "check": "invited"
+              }
+            ]
           }
         ],
         "DP": [
@@ -8357,11 +9709,18 @@
             "actions": [
               "read"
             ],
-            "scope": "all",
-            "note": "sample"
+            "scope": "own",
+            "conditions": [
+              {
+                "kind": "check",
+                "check": "demo_record"
+              }
+            ]
           }
         ]
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "6",
@@ -8382,11 +9741,22 @@
             "actions": [
               "read"
             ],
-            "scope": "all",
-            "note": "sample masked"
+            "scope": "own",
+            "conditions": [
+              {
+                "kind": "check",
+                "check": "demo_record"
+              },
+              {
+                "kind": "view",
+                "view": "masked"
+              }
+            ]
           }
         ]
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "6",
@@ -8403,7 +9773,9 @@
         "CR": [],
         "GU": [],
         "DP": []
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "6",
@@ -8420,7 +9792,9 @@
         "CR": [],
         "GU": [],
         "DP": []
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "6",
@@ -8439,8 +9813,8 @@
             "actions": [
               "read"
             ],
-            "scope": "all",
-            "note": null
+            "scope": "own",
+            "conditions": []
           }
         ],
         "GU": [],
@@ -8449,11 +9823,18 @@
             "actions": [
               "read"
             ],
-            "scope": "all",
-            "note": "sample"
+            "scope": "own",
+            "conditions": [
+              {
+                "kind": "check",
+                "check": "demo_record"
+              }
+            ]
           }
         ]
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "6",
@@ -8472,13 +9853,15 @@
             "actions": [
               "update"
             ],
-            "scope": "all",
-            "note": "(either representative)"
+            "scope": "own",
+            "conditions": []
           }
         ],
         "GU": [],
         "DP": []
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "6",
@@ -8497,15 +9880,15 @@
             "actions": [
               "read"
             ],
-            "scope": "all",
-            "note": null
+            "scope": "own",
+            "conditions": []
           },
           {
             "actions": [
               "approve"
             ],
-            "scope": "all",
-            "note": null
+            "scope": "own",
+            "conditions": []
           }
         ],
         "GU": [],
@@ -8514,11 +9897,18 @@
             "actions": [
               "read"
             ],
-            "scope": "all",
-            "note": "sample"
+            "scope": "own",
+            "conditions": [
+              {
+                "kind": "check",
+                "check": "demo_record"
+              }
+            ]
           }
         ]
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "6",
@@ -8537,15 +9927,29 @@
             "actions": [
               "read"
             ],
-            "scope": "all",
-            "note": "comment"
+            "scope": "own",
+            "conditions": []
+          },
+          {
+            "actions": [
+              "create"
+            ],
+            "scope": "own",
+            "conditions": [
+              {
+                "kind": "subject",
+                "anyOf": [
+                  "comment"
+                ]
+              }
+            ]
           },
           {
             "actions": [
               "approve"
             ],
-            "scope": "all",
-            "note": "comment"
+            "scope": "own",
+            "conditions": []
           }
         ],
         "GU": [],
@@ -8554,11 +9958,18 @@
             "actions": [
               "read"
             ],
-            "scope": "all",
-            "note": "sample"
+            "scope": "own",
+            "conditions": [
+              {
+                "kind": "check",
+                "check": "demo_record"
+              }
+            ]
           }
         ]
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "6",
@@ -8577,20 +9988,22 @@
             "actions": [
               "read"
             ],
-            "scope": "all",
-            "note": null
+            "scope": "own",
+            "conditions": []
           },
           {
             "actions": [
               "approve"
             ],
-            "scope": "all",
-            "note": null
+            "scope": "own",
+            "conditions": []
           }
         ],
         "GU": [],
         "DP": []
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "6",
@@ -8609,8 +10022,17 @@
             "actions": [
               "read"
             ],
-            "scope": "all",
-            "note": "approved summaries only (Q7)"
+            "scope": "own",
+            "conditions": [
+              {
+                "kind": "view",
+                "view": "summary"
+              },
+              {
+                "kind": "check",
+                "check": "approved"
+              }
+            ]
           }
         ],
         "GU": [
@@ -8619,25 +10041,40 @@
               "read"
             ],
             "scope": "own",
-            "note": "group members attendance and dietary members up to allowance"
+            "conditions": []
           },
           {
             "actions": [
               "update"
             ],
             "scope": "own",
-            "note": "group members attendance and dietary members up to allowance"
+            "conditions": [
+              {
+                "kind": "fields",
+                "only": [
+                  "attendance",
+                  "dietary"
+                ]
+              }
+            ]
           },
           {
             "actions": [
               "create"
             ],
             "scope": "own",
-            "note": "group members attendance and dietary members up to allowance"
+            "conditions": [
+              {
+                "kind": "check",
+                "check": "within_allowance"
+              }
+            ]
           }
         ],
         "DP": []
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "6",
@@ -8659,11 +10096,13 @@
               "update"
             ],
             "scope": "own",
-            "note": "row"
+            "conditions": []
           }
         ],
         "DP": []
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "6",
@@ -8680,7 +10119,9 @@
         "CR": [],
         "GU": [],
         "DP": []
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "6",
@@ -8701,18 +10142,30 @@
               "create"
             ],
             "scope": "own",
-            "note": "upload when the project requires it status only"
+            "conditions": [
+              {
+                "kind": "check",
+                "check": "identity_required"
+              }
+            ]
           },
           {
             "actions": [
               "read"
             ],
             "scope": "own",
-            "note": "upload when the project requires it status only"
+            "conditions": [
+              {
+                "kind": "view",
+                "view": "status_only"
+              }
+            ]
           }
         ],
         "DP": []
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "6",
@@ -8731,8 +10184,13 @@
             "actions": [
               "read"
             ],
-            "scope": "all",
-            "note": "summaries"
+            "scope": "own",
+            "conditions": [
+              {
+                "kind": "view",
+                "view": "summary"
+              }
+            ]
           }
         ],
         "GU": [
@@ -8742,7 +10200,7 @@
               "update"
             ],
             "scope": "own",
-            "note": "group"
+            "conditions": []
           }
         ],
         "DP": [
@@ -8750,11 +10208,18 @@
             "actions": [
               "read"
             ],
-            "scope": "all",
-            "note": "sample"
+            "scope": "own",
+            "conditions": [
+              {
+                "kind": "check",
+                "check": "demo_record"
+              }
+            ]
           }
         ]
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "6",
@@ -8773,8 +10238,13 @@
             "actions": [
               "read"
             ],
-            "scope": "all",
-            "note": "summaries"
+            "scope": "own",
+            "conditions": [
+              {
+                "kind": "view",
+                "view": "summary"
+              }
+            ]
           }
         ],
         "GU": [
@@ -8783,11 +10253,18 @@
               "read"
             ],
             "scope": "own",
-            "note": "allocation once confirmed"
+            "conditions": [
+              {
+                "kind": "check",
+                "check": "allocation_confirmed"
+              }
+            ]
           }
         ],
         "DP": []
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "6",
@@ -8806,8 +10283,13 @@
             "actions": [
               "read"
             ],
-            "scope": "all",
-            "note": "summaries"
+            "scope": "own",
+            "conditions": [
+              {
+                "kind": "view",
+                "view": "summary"
+              }
+            ]
           }
         ],
         "GU": [
@@ -8818,11 +10300,24 @@
               "update"
             ],
             "scope": "own",
-            "note": "group travel details when requested"
+            "conditions": [
+              {
+                "kind": "fields",
+                "only": [
+                  "travel_details"
+                ]
+              },
+              {
+                "kind": "check",
+                "check": "travel_requested"
+              }
+            ]
           }
         ],
         "DP": []
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "6",
@@ -8841,15 +10336,15 @@
             "actions": [
               "read"
             ],
-            "scope": "all",
-            "note": null
+            "scope": "own",
+            "conditions": []
           },
           {
             "actions": [
               "approve"
             ],
-            "scope": "all",
-            "note": null
+            "scope": "own",
+            "conditions": []
           }
         ],
         "GU": [],
@@ -8858,11 +10353,18 @@
             "actions": [
               "read"
             ],
-            "scope": "all",
-            "note": "sample"
+            "scope": "own",
+            "conditions": [
+              {
+                "kind": "check",
+                "check": "demo_record"
+              }
+            ]
           }
         ]
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "6",
@@ -8884,7 +10386,7 @@
               "update"
             ],
             "scope": "own",
-            "note": null
+            "conditions": []
           }
         ],
         "GU": [
@@ -8892,8 +10394,15 @@
             "actions": [
               "create"
             ],
-            "scope": "all",
-            "note": "support request"
+            "scope": "own",
+            "conditions": [
+              {
+                "kind": "subject",
+                "anyOf": [
+                  "support_request"
+                ]
+              }
+            ]
           }
         ],
         "DP": [
@@ -8901,11 +10410,18 @@
             "actions": [
               "create"
             ],
-            "scope": "all",
-            "note": "routed to Sales"
+            "scope": "own",
+            "conditions": [
+              {
+                "kind": "check",
+                "check": "routed_to_sales"
+              }
+            ]
           }
         ]
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "6",
@@ -8924,13 +10440,15 @@
             "actions": [
               "approve"
             ],
-            "scope": "all",
-            "note": "(either representative P-9 on-behalf with a note)"
+            "scope": "own",
+            "conditions": []
           }
         ],
         "GU": [],
         "DP": []
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "6",
@@ -8949,8 +10467,8 @@
             "actions": [
               "read"
             ],
-            "scope": "all",
-            "note": "download"
+            "scope": "own",
+            "conditions": []
           }
         ],
         "GU": [
@@ -8958,8 +10476,13 @@
             "actions": [
               "read"
             ],
-            "scope": "all",
-            "note": "documents shared to guests"
+            "scope": "own",
+            "conditions": [
+              {
+                "kind": "check",
+                "check": "shared_with_guests"
+              }
+            ]
           }
         ],
         "DP": [
@@ -8967,11 +10490,18 @@
             "actions": [
               "read"
             ],
-            "scope": "all",
-            "note": "sample"
+            "scope": "own",
+            "conditions": [
+              {
+                "kind": "check",
+                "check": "demo_record"
+              }
+            ]
           }
         ]
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "6",
@@ -8990,13 +10520,15 @@
             "actions": [
               "create"
             ],
-            "scope": "all",
-            "note": null
+            "scope": "own",
+            "conditions": []
           }
         ],
         "GU": [],
         "DP": []
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "6",
@@ -9015,13 +10547,15 @@
             "actions": [
               "read"
             ],
-            "scope": "all",
-            "note": null
+            "scope": "own",
+            "conditions": []
           }
         ],
         "GU": [],
         "DP": []
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "6",
@@ -9035,10 +10569,34 @@
         "DP": "own"
       },
       "grants": {
-        "CR": [],
+        "CR": [
+          {
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete"
+            ],
+            "scope": "own",
+            "conditions": []
+          }
+        ],
         "GU": [],
-        "DP": []
-      }
+        "DP": [
+          {
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete"
+            ],
+            "scope": "own",
+            "conditions": []
+          }
+        ]
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "6",
@@ -9057,13 +10615,15 @@
             "actions": [
               "create"
             ],
-            "scope": "all",
-            "note": null
+            "scope": "own",
+            "conditions": []
           }
         ],
         "GU": [],
         "DP": []
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "6",
@@ -9080,7 +10640,9 @@
         "CR": [],
         "GU": [],
         "DP": []
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     },
     {
       "section": "6",
@@ -9102,7 +10664,7 @@
               "update"
             ],
             "scope": "own",
-            "note": "conversations"
+            "conditions": []
           }
         ],
         "GU": [],
@@ -9111,18 +10673,50 @@
             "actions": [
               "create"
             ],
-            "scope": "all",
-            "note": "routed to Sales"
+            "scope": "own",
+            "conditions": [
+              {
+                "kind": "check",
+                "check": "routed_to_sales"
+              }
+            ]
           }
         ]
-      }
+      },
+      "aliases": [],
+      "exclusions": []
     }
   ],
   "transitions": [
     {
       "entity": "subscription",
-      "from": "pending_payment or trial",
-      "to": "active",
+      "from": [
+        "pending_payment",
+        "trial"
+      ],
+      "to": [
+        "active"
+      ],
+      "restore": false,
+      "kind": null,
+      "who": "System on payment succeeded; FA or SA manually, with a payment record attached",
+      "roles": [],
+      "client": false,
+      "system": true,
+      "actors": [],
+      "condition": "on payment succeeded"
+    },
+    {
+      "entity": "subscription",
+      "from": [
+        "pending_payment",
+        "trial"
+      ],
+      "to": [
+        "active"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "System on payment succeeded; FA or SA manually, with a payment record attached",
       "roles": [
         {
@@ -9134,34 +10728,56 @@
           "assigned": false
         }
       ],
-      "system": true,
+      "client": false,
+      "system": false,
       "actors": [],
-      "condition": "with a payment record attached"
+      "condition": "manually, with a payment record attached"
     },
     {
       "entity": "subscription",
-      "from": "active",
-      "to": "expiring",
+      "from": [
+        "active"
+      ],
+      "to": [
+        "expiring"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "System, at `ends_at` minus the configured notice period",
       "roles": [],
+      "client": false,
       "system": true,
       "actors": [],
       "condition": "at `ends_at` minus the configured notice period"
     },
     {
       "entity": "subscription",
-      "from": "expiring",
-      "to": "expired",
+      "from": [
+        "expiring"
+      ],
+      "to": [
+        "expired"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "System, at `ends_at`",
       "roles": [],
+      "client": false,
       "system": true,
       "actors": [],
       "condition": "at `ends_at`"
     },
     {
       "entity": "subscription",
-      "from": "active or expiring",
-      "to": "suspended",
+      "from": [
+        "active",
+        "expiring"
+      ],
+      "to": [
+        "suspended"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "SA, FA (non-payment, dispute) with reason",
       "roles": [
         {
@@ -9173,14 +10789,21 @@
           "assigned": false
         }
       ],
+      "client": false,
       "system": false,
       "actors": [],
-      "condition": null
+      "condition": "(non-payment, dispute) with reason"
     },
     {
       "entity": "subscription",
-      "from": "suspended",
-      "to": "active",
+      "from": [
+        "suspended"
+      ],
+      "to": [
+        "active"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "SA, FA",
       "roles": [
         {
@@ -9192,14 +10815,25 @@
           "assigned": false
         }
       ],
+      "client": false,
       "system": false,
       "actors": [],
       "condition": null
     },
     {
       "entity": "subscription",
-      "from": "any",
-      "to": "cancelled",
+      "from": [
+        "trial",
+        "pending_payment",
+        "active",
+        "expiring",
+        "suspended"
+      ],
+      "to": [
+        "cancelled"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "SA, SM with reason; a client asks for cancellation through a client request",
       "roles": [
         {
@@ -9211,30 +10845,58 @@
           "assigned": false
         }
       ],
+      "client": false,
       "system": false,
       "actors": [],
-      "condition": null
+      "condition": "with reason; a client asks for cancellation through a client request"
     },
     {
       "entity": "subscription",
-      "from": "expired or cancelled",
-      "to": "active",
+      "from": [
+        "expired",
+        "cancelled"
+      ],
+      "to": [
+        "active"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "New subscription row; the old one is never reactivated",
       "roles": [],
+      "client": false,
+      "system": false,
+      "actors": [],
+      "condition": "New subscription row; the old one is never reactivated"
+    },
+    {
+      "entity": "hotel_enquiry",
+      "from": [
+        "draft"
+      ],
+      "to": [
+        "submitted"
+      ],
+      "restore": false,
+      "kind": null,
+      "who": "Either CR; SM or HT on the client's behalf",
+      "roles": [],
+      "client": true,
       "system": false,
       "actors": [],
       "condition": null
     },
     {
       "entity": "hotel_enquiry",
-      "from": "draft",
-      "to": "submitted",
+      "from": [
+        "draft"
+      ],
+      "to": [
+        "submitted"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "Either CR; SM or HT on the client's behalf",
       "roles": [
-        {
-          "role": "CR",
-          "assigned": false
-        },
         {
           "role": "SM",
           "assigned": false
@@ -9244,14 +10906,21 @@
           "assigned": false
         }
       ],
+      "client": false,
       "system": false,
       "actors": [],
-      "condition": null
+      "condition": "on the client's behalf"
     },
     {
       "entity": "hotel_enquiry",
-      "from": "submitted",
-      "to": "awaiting_hotel",
+      "from": [
+        "submitted"
+      ],
+      "to": [
+        "awaiting_hotel"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "HT",
       "roles": [
         {
@@ -9259,14 +10928,21 @@
           "assigned": false
         }
       ],
+      "client": false,
       "system": false,
       "actors": [],
       "condition": null
     },
     {
       "entity": "hotel_enquiry",
-      "from": "awaiting_hotel",
-      "to": "response_received",
+      "from": [
+        "awaiting_hotel"
+      ],
+      "to": [
+        "response_received"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "HT",
       "roles": [
         {
@@ -9274,14 +10950,21 @@
           "assigned": false
         }
       ],
+      "client": false,
       "system": false,
       "actors": [],
       "condition": null
     },
     {
       "entity": "hotel_enquiry",
-      "from": "response_received",
-      "to": "negotiating",
+      "from": [
+        "response_received"
+      ],
+      "to": [
+        "negotiating"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "HT",
       "roles": [
         {
@@ -9289,14 +10972,22 @@
           "assigned": false
         }
       ],
+      "client": false,
       "system": false,
       "actors": [],
       "condition": null
     },
     {
       "entity": "hotel_enquiry",
-      "from": "negotiating or response_received",
-      "to": "visit_scheduled",
+      "from": [
+        "negotiating",
+        "response_received"
+      ],
+      "to": [
+        "visit_scheduled"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "HT, PM (a)",
       "roles": [
         {
@@ -9308,14 +10999,26 @@
           "assigned": true
         }
       ],
+      "client": false,
       "system": false,
       "actors": [],
       "condition": null
     },
     {
       "entity": "hotel_enquiry",
-      "from": "any active",
-      "to": "proposal_received",
+      "from": [
+        "submitted",
+        "awaiting_hotel",
+        "response_received",
+        "negotiating",
+        "visit_scheduled",
+        "client_decision"
+      ],
+      "to": [
+        "proposal_received"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "HT",
       "roles": [
         {
@@ -9323,14 +11026,21 @@
           "assigned": false
         }
       ],
+      "client": false,
       "system": false,
       "actors": [],
       "condition": null
     },
     {
       "entity": "hotel_enquiry",
-      "from": "proposal_received",
-      "to": "client_decision",
+      "from": [
+        "proposal_received"
+      ],
+      "to": [
+        "client_decision"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "HT, PM (a), when a proposal is shared",
       "roles": [
         {
@@ -9342,14 +11052,21 @@
           "assigned": true
         }
       ],
+      "client": false,
       "system": false,
       "actors": [],
       "condition": "when a proposal is shared"
     },
     {
       "entity": "hotel_enquiry",
-      "from": "client_decision",
-      "to": "confirmed",
+      "from": [
+        "client_decision"
+      ],
+      "to": [
+        "confirmed"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "HT, SA, only when a booking milestone of type confirmed is done and a contract is signed",
       "roles": [
         {
@@ -9361,14 +11078,29 @@
           "assigned": false
         }
       ],
+      "client": false,
       "system": false,
       "actors": [],
       "condition": "only when a booking milestone of type confirmed is done and a contract is signed"
     },
     {
       "entity": "hotel_enquiry",
-      "from": "any",
-      "to": "closed",
+      "from": [
+        "draft",
+        "submitted",
+        "awaiting_hotel",
+        "response_received",
+        "negotiating",
+        "visit_scheduled",
+        "proposal_received",
+        "client_decision",
+        "confirmed"
+      ],
+      "to": [
+        "closed"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "HT, SA, PM (a), with an outcome",
       "roles": [
         {
@@ -9384,14 +11116,21 @@
           "assigned": true
         }
       ],
+      "client": false,
       "system": false,
       "actors": [],
       "condition": "with an outcome"
     },
     {
       "entity": "wedding_project",
-      "from": "setup",
-      "to": "planning",
+      "from": [
+        "setup"
+      ],
+      "to": [
+        "planning"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "PM (a), SA",
       "roles": [
         {
@@ -9403,14 +11142,21 @@
           "assigned": false
         }
       ],
+      "client": false,
       "system": false,
       "actors": [],
       "condition": null
     },
     {
       "entity": "wedding_project",
-      "from": "planning",
-      "to": "approvals",
+      "from": [
+        "planning"
+      ],
+      "to": [
+        "approvals"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "PM (a)",
       "roles": [
         {
@@ -9418,14 +11164,21 @@
           "assigned": true
         }
       ],
+      "client": false,
       "system": false,
       "actors": [],
       "condition": null
     },
     {
       "entity": "wedding_project",
-      "from": "approvals",
-      "to": "pre_production",
+      "from": [
+        "approvals"
+      ],
+      "to": [
+        "pre_production"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "PM (a), when the configured key approvals are approved",
       "roles": [
         {
@@ -9433,14 +11186,21 @@
           "assigned": true
         }
       ],
+      "client": false,
       "system": false,
       "actors": [],
       "condition": "when the configured key approvals are approved"
     },
     {
       "entity": "wedding_project",
-      "from": "pre_production",
-      "to": "ready",
+      "from": [
+        "pre_production"
+      ],
+      "to": [
+        "ready"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "PM (a), when every confirmed function is ready",
       "roles": [
         {
@@ -9448,14 +11208,21 @@
           "assigned": true
         }
       ],
+      "client": false,
       "system": false,
       "actors": [],
       "condition": "when every confirmed function is ready"
     },
     {
       "entity": "wedding_project",
-      "from": "ready",
-      "to": "live",
+      "from": [
+        "ready"
+      ],
+      "to": [
+        "live"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "PM (a), SA",
       "roles": [
         {
@@ -9467,14 +11234,21 @@
           "assigned": false
         }
       ],
+      "client": false,
       "system": false,
       "actors": [],
       "condition": null
     },
     {
       "entity": "wedding_project",
-      "from": "live",
-      "to": "closure",
+      "from": [
+        "live"
+      ],
+      "to": [
+        "closure"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "PM (a)",
       "roles": [
         {
@@ -9482,14 +11256,21 @@
           "assigned": true
         }
       ],
+      "client": false,
       "system": false,
       "actors": [],
       "condition": null
     },
     {
       "entity": "wedding_project",
-      "from": "closure",
-      "to": "closed",
+      "from": [
+        "closure"
+      ],
+      "to": [
+        "closed"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "PM (a), SA, only when the closure checklist is complete and final accounts are approved by FA",
       "roles": [
         {
@@ -9499,20 +11280,29 @@
         {
           "role": "SA",
           "assigned": false
-        },
-        {
-          "role": "FA",
-          "assigned": false
         }
       ],
+      "client": false,
       "system": false,
       "actors": [],
       "condition": "only when the closure checklist is complete and final accounts are approved by FA"
     },
     {
       "entity": "wedding_project",
-      "from": "any",
-      "to": "on_hold",
+      "from": [
+        "setup",
+        "planning",
+        "approvals",
+        "pre_production",
+        "ready",
+        "live",
+        "closure"
+      ],
+      "to": [
+        "on_hold"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "PM (a), SA, with reason; approvals are paused",
       "roles": [
         {
@@ -9524,14 +11314,19 @@
           "assigned": false
         }
       ],
+      "client": false,
       "system": false,
       "actors": [],
       "condition": "with reason; approvals are paused"
     },
     {
       "entity": "wedding_project",
-      "from": "on_hold",
-      "to": "previous status",
+      "from": [
+        "on_hold"
+      ],
+      "to": [],
+      "restore": true,
+      "kind": null,
       "who": "PM (a), SA",
       "roles": [
         {
@@ -9543,14 +11338,21 @@
           "assigned": false
         }
       ],
+      "client": false,
       "system": false,
       "actors": [],
       "condition": null
     },
     {
       "entity": "wedding_project",
-      "from": "closed",
-      "to": "closure",
+      "from": [
+        "closed"
+      ],
+      "to": [
+        "closure"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "SA only, audited",
       "roles": [
         {
@@ -9558,32 +11360,63 @@
           "assigned": false
         }
       ],
+      "client": false,
       "system": false,
       "actors": [],
-      "condition": null
+      "condition": "audited"
     },
     {
       "entity": "approval",
-      "from": "draft",
-      "to": "submitted",
+      "from": [
+        "draft"
+      ],
+      "to": [
+        "submitted"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "The requester per §5.9",
       "roles": [],
+      "client": false,
       "system": false,
       "actors": [
         "requester"
       ],
-      "condition": null
+      "condition": "per §5.9"
     },
     {
       "entity": "approval",
-      "from": "submitted",
-      "to": "approved, revision_requested or rejected",
+      "from": [
+        "submitted"
+      ],
+      "to": [
+        "approved",
+        "revision_requested",
+        "rejected"
+      ],
+      "restore": false,
+      "kind": null,
+      "who": "Either CR; PM (a) or SA on the client's behalf with a note or record (P-9 confirmed). Approved needs `required_decisions` approvals, one by default; one rejection or revision request moves it immediately",
+      "roles": [],
+      "client": true,
+      "system": false,
+      "actors": [],
+      "condition": "Approved needs `required_decisions` approvals, one by default; one rejection or revision request moves it immediately"
+    },
+    {
+      "entity": "approval",
+      "from": [
+        "submitted"
+      ],
+      "to": [
+        "approved",
+        "revision_requested",
+        "rejected"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "Either CR; PM (a) or SA on the client's behalf with a note or record (P-9 confirmed). Approved needs `required_decisions` approvals, one by default; one rejection or revision request moves it immediately",
       "roles": [
-        {
-          "role": "CR",
-          "assigned": false
-        },
         {
           "role": "PM",
           "assigned": true
@@ -9593,30 +11426,63 @@
           "assigned": false
         }
       ],
+      "client": false,
       "system": false,
       "actors": [],
-      "condition": null
+      "condition": "on the client's behalf with a note or record (P-9 confirmed); Approved needs `required_decisions` approvals, one by default; one rejection or revision request moves it immediately"
     },
     {
       "entity": "approval",
-      "from": "any",
-      "to": "superseded",
+      "from": [
+        "draft",
+        "submitted",
+        "revision_requested",
+        "approved",
+        "rejected"
+      ],
+      "to": [
+        "superseded"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "System, when a new version of the record is created",
       "roles": [],
+      "client": false,
       "system": true,
       "actors": [],
       "condition": "when a new version of the record is created"
     },
     {
       "entity": "vendor_assignment",
-      "from": "option",
-      "to": "shortlisted or declined",
+      "from": [
+        "option"
+      ],
+      "to": [
+        "shortlisted",
+        "declined"
+      ],
+      "restore": false,
+      "kind": null,
+      "who": "Either CR as a client decision; VC or PM (a) recording the client's decision",
+      "roles": [],
+      "client": true,
+      "system": false,
+      "actors": [],
+      "condition": "as a client decision"
+    },
+    {
+      "entity": "vendor_assignment",
+      "from": [
+        "option"
+      ],
+      "to": [
+        "shortlisted",
+        "declined"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "Either CR as a client decision; VC or PM (a) recording the client's decision",
       "roles": [
-        {
-          "role": "CR",
-          "assigned": false
-        },
         {
           "role": "VC",
           "assigned": false
@@ -9626,33 +11492,60 @@
           "assigned": true
         }
       ],
+      "client": false,
+      "system": false,
+      "actors": [],
+      "condition": "recording the client's decision"
+    },
+    {
+      "entity": "vendor_assignment",
+      "from": [
+        "shortlisted"
+      ],
+      "to": [
+        "selected"
+      ],
+      "restore": false,
+      "kind": null,
+      "who": "Either CR; PM (a) on the client's behalf with evidence",
+      "roles": [],
+      "client": true,
       "system": false,
       "actors": [],
       "condition": null
     },
     {
       "entity": "vendor_assignment",
-      "from": "shortlisted",
-      "to": "selected",
+      "from": [
+        "shortlisted"
+      ],
+      "to": [
+        "selected"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "Either CR; PM (a) on the client's behalf with evidence",
       "roles": [
-        {
-          "role": "CR",
-          "assigned": false
-        },
         {
           "role": "PM",
           "assigned": true
         }
       ],
+      "client": false,
       "system": false,
       "actors": [],
-      "condition": null
+      "condition": "on the client's behalf with evidence"
     },
     {
       "entity": "vendor_assignment",
-      "from": "selected",
-      "to": "contracted",
+      "from": [
+        "selected"
+      ],
+      "to": [
+        "contracted"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "VC, when the contract is signed",
       "roles": [
         {
@@ -9660,14 +11553,21 @@
           "assigned": false
         }
       ],
+      "client": false,
       "system": false,
       "actors": [],
       "condition": "when the contract is signed"
     },
     {
       "entity": "vendor_assignment",
-      "from": "contracted",
-      "to": "delivering",
+      "from": [
+        "contracted"
+      ],
+      "to": [
+        "delivering"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "VC, PM (a)",
       "roles": [
         {
@@ -9679,14 +11579,21 @@
           "assigned": true
         }
       ],
+      "client": false,
       "system": false,
       "actors": [],
       "condition": null
     },
     {
       "entity": "vendor_assignment",
-      "from": "delivering",
-      "to": "completed",
+      "from": [
+        "delivering"
+      ],
+      "to": [
+        "completed"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "PM (a), when every deliverable is accepted",
       "roles": [
         {
@@ -9694,14 +11601,25 @@
           "assigned": true
         }
       ],
+      "client": false,
       "system": false,
       "actors": [],
       "condition": "when every deliverable is accepted"
     },
     {
       "entity": "vendor_assignment",
-      "from": "any",
-      "to": "cancelled",
+      "from": [
+        "option",
+        "shortlisted",
+        "selected",
+        "contracted",
+        "delivering"
+      ],
+      "to": [
+        "cancelled"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "PM (a), VC, SA, with reason",
       "roles": [
         {
@@ -9717,14 +11635,21 @@
           "assigned": false
         }
       ],
+      "client": false,
       "system": false,
       "actors": [],
       "condition": "with reason"
     },
     {
-      "entity": "function_status_readiness",
-      "from": "planned",
-      "to": "confirmed",
+      "entity": "function",
+      "from": [
+        "planned"
+      ],
+      "to": [
+        "confirmed"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "PM (a)",
       "roles": [
         {
@@ -9732,14 +11657,22 @@
           "assigned": true
         }
       ],
+      "client": false,
       "system": false,
       "actors": [],
       "condition": null
     },
     {
-      "entity": "function_status_readiness",
-      "from": "planned or confirmed",
-      "to": "cancelled",
+      "entity": "function",
+      "from": [
+        "planned",
+        "confirmed"
+      ],
+      "to": [
+        "cancelled"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "PM (a), SA",
       "roles": [
         {
@@ -9751,29 +11684,44 @@
           "assigned": false
         }
       ],
+      "client": false,
       "system": false,
       "actors": [],
       "condition": null
     },
     {
-      "entity": "function_status_readiness",
-      "from": "readiness: not_started, in_progress, blocked, ready",
-      "to": "derived",
-      "who": "System, from the readiness checklist; an exception needs SA, Eva's authorised personnel (P-8 changed by Q10)",
-      "roles": [
-        {
-          "role": "SA",
-          "assigned": false
-        }
+      "entity": "function_readiness",
+      "from": [
+        "not_started",
+        "in_progress",
+        "blocked",
+        "ready"
       ],
+      "to": [
+        "not_started",
+        "in_progress",
+        "blocked",
+        "ready"
+      ],
+      "restore": false,
+      "kind": null,
+      "who": "System, from the readiness checklist; an exception needs SA, Eva's authorised personnel (P-8 changed by Q10)",
+      "roles": [],
+      "client": false,
       "system": true,
       "actors": [],
-      "condition": null
+      "condition": "from the readiness checklist; an exception needs SA, Eva's authorised personnel (P-8 changed by Q10)"
     },
     {
-      "entity": "function_status_readiness",
-      "from": "ready",
-      "to": "live",
+      "entity": "function_readiness",
+      "from": [
+        "ready"
+      ],
+      "to": [
+        "live"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "PM (a), HL (a) on the day",
       "roles": [
         {
@@ -9785,14 +11733,21 @@
           "assigned": true
         }
       ],
+      "client": false,
       "system": false,
       "actors": [],
-      "condition": null
+      "condition": "on the day"
     },
     {
-      "entity": "function_status_readiness",
-      "from": "live",
-      "to": "completed",
+      "entity": "function_readiness",
+      "from": [
+        "live"
+      ],
+      "to": [
+        "completed"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "PM (a)",
       "roles": [
         {
@@ -9800,14 +11755,21 @@
           "assigned": true
         }
       ],
+      "client": false,
       "system": false,
       "actors": [],
       "condition": null
     },
     {
       "entity": "incident",
-      "from": "open",
-      "to": "assigned",
+      "from": [
+        "open"
+      ],
+      "to": [
+        "assigned"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "PM (a), HL (a), SA",
       "roles": [
         {
@@ -9823,16 +11785,24 @@
           "assigned": false
         }
       ],
+      "client": false,
       "system": false,
       "actors": [],
       "condition": null
     },
     {
       "entity": "incident",
-      "from": "assigned",
-      "to": "in_progress",
+      "from": [
+        "assigned"
+      ],
+      "to": [
+        "in_progress"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "The assignee",
       "roles": [],
+      "client": false,
       "system": false,
       "actors": [
         "assignee"
@@ -9841,8 +11811,16 @@
     },
     {
       "entity": "incident",
-      "from": "any open state",
-      "to": "escalated",
+      "from": [
+        "open",
+        "assigned",
+        "in_progress"
+      ],
+      "to": [
+        "escalated"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "The assignee, PM (a), or System per the escalation rules",
       "roles": [
         {
@@ -9850,16 +11828,24 @@
           "assigned": true
         }
       ],
+      "client": false,
       "system": true,
       "actors": [
         "assignee"
       ],
-      "condition": null
+      "condition": "per the escalation rules"
     },
     {
       "entity": "incident",
-      "from": "in_progress or escalated",
-      "to": "resolved",
+      "from": [
+        "in_progress",
+        "escalated"
+      ],
+      "to": [
+        "resolved"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "The assignee, PM (a); a critical incident requires resolution notes",
       "roles": [
         {
@@ -9867,16 +11853,23 @@
           "assigned": true
         }
       ],
+      "client": false,
       "system": false,
       "actors": [
         "assignee"
       ],
-      "condition": null
+      "condition": "a critical incident requires resolution notes"
     },
     {
       "entity": "incident",
-      "from": "resolved",
-      "to": "closed",
+      "from": [
+        "resolved"
+      ],
+      "to": [
+        "closed"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "PM (a), SA",
       "roles": [
         {
@@ -9888,14 +11881,23 @@
           "assigned": false
         }
       ],
+      "client": false,
       "system": false,
       "actors": [],
       "condition": null
     },
     {
       "entity": "task",
-      "from": "not_started",
-      "to": "in_progress, blocked, completed",
+      "from": [
+        "not_started"
+      ],
+      "to": [
+        "in_progress",
+        "blocked",
+        "completed"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "The owner, PM (a)",
       "roles": [
         {
@@ -9903,6 +11905,7 @@
           "assigned": true
         }
       ],
+      "client": false,
       "system": false,
       "actors": [
         "owner"
@@ -9911,8 +11914,14 @@
     },
     {
       "entity": "task",
-      "from": "blocked",
-      "to": "in_progress",
+      "from": [
+        "blocked"
+      ],
+      "to": [
+        "in_progress"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "The owner, PM (a)",
       "roles": [
         {
@@ -9920,6 +11929,7 @@
           "assigned": true
         }
       ],
+      "client": false,
       "system": false,
       "actors": [
         "owner"
@@ -9928,8 +11938,16 @@
     },
     {
       "entity": "task",
-      "from": "any",
-      "to": "cancelled",
+      "from": [
+        "not_started",
+        "in_progress",
+        "blocked"
+      ],
+      "to": [
+        "cancelled"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "The creator, PM (a), SA",
       "roles": [
         {
@@ -9941,6 +11959,7 @@
           "assigned": false
         }
       ],
+      "client": false,
       "system": false,
       "actors": [
         "creator"
@@ -9949,8 +11968,14 @@
     },
     {
       "entity": "room_allocation",
-      "from": "requested",
-      "to": "proposed",
+      "from": [
+        "requested"
+      ],
+      "to": [
+        "proposed"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "HL (a), RG (a)",
       "roles": [
         {
@@ -9962,14 +11987,21 @@
           "assigned": true
         }
       ],
+      "client": false,
       "system": false,
       "actors": [],
       "condition": null
     },
     {
       "entity": "room_allocation",
-      "from": "proposed",
-      "to": "confirmed",
+      "from": [
+        "proposed"
+      ],
+      "to": [
+        "confirmed"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "HL (a)",
       "roles": [
         {
@@ -9977,14 +12009,21 @@
           "assigned": true
         }
       ],
+      "client": false,
       "system": false,
       "actors": [],
       "condition": null
     },
     {
       "entity": "room_allocation",
-      "from": "confirmed",
-      "to": "checked_in",
+      "from": [
+        "confirmed"
+      ],
+      "to": [
+        "checked_in"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "HL (a)",
       "roles": [
         {
@@ -9992,14 +12031,21 @@
           "assigned": true
         }
       ],
+      "client": false,
       "system": false,
       "actors": [],
       "condition": null
     },
     {
       "entity": "room_allocation",
-      "from": "checked_in",
-      "to": "checked_out",
+      "from": [
+        "checked_in"
+      ],
+      "to": [
+        "checked_out"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "HL (a)",
       "roles": [
         {
@@ -10007,14 +12053,24 @@
           "assigned": true
         }
       ],
+      "client": false,
       "system": false,
       "actors": [],
       "condition": null
     },
     {
       "entity": "room_allocation",
-      "from": "any",
-      "to": "cancelled",
+      "from": [
+        "requested",
+        "proposed",
+        "confirmed",
+        "checked_in"
+      ],
+      "to": [
+        "cancelled"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "HL (a), PM (a)",
       "roles": [
         {
@@ -10026,44 +12082,79 @@
           "assigned": true
         }
       ],
+      "client": false,
       "system": false,
       "actors": [],
       "condition": null
     },
     {
       "entity": "client_request",
-      "from": "submitted",
-      "to": "under_review",
+      "from": [
+        "submitted"
+      ],
+      "to": [
+        "under_review"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "The assigned staff member",
       "roles": [],
+      "client": false,
       "system": false,
-      "actors": [],
+      "actors": [
+        "assignee"
+      ],
       "condition": null
     },
     {
       "entity": "client_request",
-      "from": "under_review",
-      "to": "clarification_requested",
+      "from": [
+        "under_review"
+      ],
+      "to": [
+        "clarification_requested"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "The assigned staff member",
       "roles": [],
+      "client": false,
       "system": false,
-      "actors": [],
+      "actors": [
+        "assignee"
+      ],
       "condition": null
     },
     {
       "entity": "client_request",
-      "from": "under_review",
-      "to": "answered (question)",
+      "from": [
+        "under_review"
+      ],
+      "to": [
+        "answered"
+      ],
+      "restore": false,
+      "kind": "question",
       "who": "The assigned staff member",
       "roles": [],
+      "client": false,
       "system": false,
-      "actors": [],
+      "actors": [
+        "assignee"
+      ],
       "condition": null
     },
     {
       "entity": "client_request",
-      "from": "under_review",
-      "to": "accepted or rejected (change request)",
+      "from": [
+        "under_review"
+      ],
+      "to": [
+        "accepted",
+        "rejected"
+      ],
+      "restore": false,
+      "kind": "change_request",
       "who": "PM (a), SA",
       "roles": [
         {
@@ -10075,14 +12166,21 @@
           "assigned": false
         }
       ],
+      "client": false,
       "system": false,
       "actors": [],
       "condition": null
     },
     {
       "entity": "client_request",
-      "from": "accepted",
-      "to": "implemented",
+      "from": [
+        "accepted"
+      ],
+      "to": [
+        "implemented"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "PM (a)",
       "roles": [
         {
@@ -10090,16 +12188,28 @@
           "assigned": true
         }
       ],
+      "client": false,
       "system": false,
       "actors": [],
       "condition": null
     },
     {
       "entity": "client_request",
-      "from": "any",
-      "to": "withdrawn",
+      "from": [
+        "submitted",
+        "under_review",
+        "clarification_requested",
+        "answered",
+        "accepted"
+      ],
+      "to": [
+        "withdrawn"
+      ],
+      "restore": false,
+      "kind": null,
       "who": "The requester",
       "roles": [],
+      "client": false,
       "system": false,
       "actors": [
         "requester"

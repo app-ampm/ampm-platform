@@ -17,11 +17,43 @@ describe("meResponse", () => {
       },
       roles: ["SA"],
       memberships: [],
-      entitlements: { modules: [] },
+      entitlements: {
+        modules: [],
+        readOnlyModules: [],
+        hotelReach: [],
+        financeReach: [],
+        requestTypes: [],
+      },
       isDemo: false,
     });
     expect(parsed.principal).not.toHaveProperty("passwordHash");
     expect(parsed.roles).toEqual(["SA"]);
+  });
+
+  it("keeps how far each module reaches, so /me says what the policy resolved (§3)", () => {
+    const entitlements = {
+      modules: ["wedding_workspace", "client_finance", "support"],
+      readOnlyModules: ["wedding_workspace", "client_finance"],
+      hotelReach: ["project_hotels"],
+      financeReach: ["own_invoices"],
+      requestTypes: ["support"],
+    };
+    const parsed = meResponse.parse({
+      principal: {
+        type: "client",
+        userId: "0192f3a0-7d3e-7b1a-9c2f-123456789abc",
+        name: "Meera",
+        email: null,
+        phone: null,
+        status: "active",
+        lastLoginAt: null,
+      },
+      roles: [],
+      memberships: [],
+      entitlements,
+      isDemo: false,
+    });
+    expect(parsed.entitlements).toEqual(entitlements);
   });
 
   it("rejects an unknown role code", () => {
@@ -38,7 +70,13 @@ describe("meResponse", () => {
         },
         roles: ["XX"],
         memberships: [],
-        entitlements: { modules: [] },
+        entitlements: {
+          modules: [],
+          readOnlyModules: [],
+          hotelReach: [],
+          financeReach: [],
+          requestTypes: [],
+        },
         isDemo: false,
       }),
     ).toThrow();

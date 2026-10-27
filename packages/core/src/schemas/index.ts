@@ -5,17 +5,24 @@ export type { HealthResponse } from "./health";
 export {
   clientSide,
   entitlementModule,
+  entitlements,
+  financeReach,
+  hotelReach,
   meResponse,
   membership,
   principalType,
   projectRole,
+  requestType,
   staffRoleCode,
 } from "./identity";
 export type {
   EntitlementModule,
+  FinanceReach,
+  HotelReach,
   Membership,
   MeResponse,
   PrincipalType,
+  RequestType,
   StaffRoleCode,
 } from "./identity";
 export {
