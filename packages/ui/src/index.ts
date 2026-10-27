@@ -17,6 +17,7 @@ export { useBreakpoint, breakpointFor } from "./hooks/use-breakpoint";
 export type { Breakpoint, BreakpointInfo } from "./hooks/use-breakpoint";
 export { useReducedMotion } from "./hooks/use-reduced-motion";
 export { useIsClient } from "./hooks/use-is-client";
+export { useAnnounce } from "./hooks/use-announce";
 export { uiCopy } from "./copy";
 
 export * from "./components/text";
