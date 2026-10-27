@@ -134,7 +134,7 @@ describe("readKeyFor", () => {
   });
 });
 
-describe("§10 line 549: functions.readiness.authorise_exception as the document spells it", () => {
+describe("§10 line 550: functions.readiness.authorise_exception as the document spells it", () => {
   const key = "functions.readiness.authorise_exception:assigned";
   const hl = { type: "staff", userId: "u-hl", roles: ["HL"], projectIds: ["p-1"] } as const;
 

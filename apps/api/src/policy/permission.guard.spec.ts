@@ -41,11 +41,15 @@ class Routes {
   })
   authoriseException(): void {}
 
-  // §10 line 549 spells the same decision as the document does.
+  // §10 line 550 spells the same decision as the document does.
   @RequirePermission("functions.readiness.authorise_exception:assigned", {
     projectParam: "projectId",
   })
   authoriseExceptionAsDocumented(): void {}
+
+  // §10 line 543.
+  @RequirePermission("budget.lines.read_internal_cost:assigned", { projectParam: "projectId" })
+  readInternalCostAsDocumented(): void {}
 
   open(): void {}
 }
@@ -193,11 +197,18 @@ describe("PermissionGuard (architecture §6 step 4)", () => {
     expect(run(staff(["SA"], []), "authoriseException").allowed).toBe(true);
   });
 
-  it("§10 line 549, AC-13.2: the key as §10 spells it refuses HL and PM (a) with 403, lets SA through", () => {
+  it("§10 line 550, AC-13.2: the key as §10 spells it refuses HL and PM (a) with 403, lets SA through", () => {
     for (const role of ["HL", "PM"] as const) {
       expect(run(staff([role]), "authoriseExceptionAsDocumented").status).toBe(403);
       expect(run(staff([role]), "authoriseExceptionAsDocumented", OTHER).status).toBe(404);
     }
     expect(run(staff(["SA"], []), "authoriseExceptionAsDocumented", OTHER).allowed).toBe(true);
+  });
+
+  it("§10 line 543, §5.7 lines 215-216: budget.lines.read_internal_cost as §10 spells it", () => {
+    expect(run(staff(["PM"]), "readInternalCostAsDocumented").allowed).toBe(true);
+    expect(run(staff(["CD"]), "readInternalCostAsDocumented").status).toBe(403);
+    expect(run(staff(["CD"]), "readInternalCostAsDocumented", OTHER).status).toBe(404);
+    expect(run(staff(["FA"], []), "readInternalCostAsDocumented", OTHER).allowed).toBe(true);
   });
 });
