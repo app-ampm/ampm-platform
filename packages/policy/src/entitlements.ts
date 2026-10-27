@@ -1,4 +1,13 @@
-import { entitlementModule, type EntitlementModule } from "@ampm/core";
+import {
+  entitlementModule,
+  type EntitlementModule,
+  type FinanceReach,
+  type HotelReach,
+  type RequestType,
+} from "@ampm/core";
+
+// The reaches are core's enums, the contract GET /me sends (one schema for API, client and policy).
+export type { FinanceReach, HotelReach, RequestType };
 
 /** A client account's state, the rows of permission-matrix §3. */
 export interface ClientAccountState {
@@ -9,35 +18,6 @@ export interface ClientAccountState {
   /** The strongest membership the principal holds. */
   readonly project: "none" | "active" | "on_hold" | "closed_in_window" | "archived";
 }
-
-/**
- * Which hotels the hotel_discovery module reaches (§3, first column): full search with an active
- * subscription, otherwise the project's, the agreement's or the demo set's hotels only.
- *
- * @example
- * const searchAll = entitlements.hotelReach.includes("all_hotels");
- */
-export type HotelReach = "all_hotels" | "project_hotels" | "agreement_hotels" | "demo_hotels";
-
-/**
- * Which records the client_finance module reaches (§3, finance column): a lapsed subscription the
- * account's own invoices and payments (line 97), an agreement the invoices of that service
- * (line 98), the demo its sample (line 94). A wedding's finance waits for AMPM (Q4, line 99), so
- * no source reaches it, and a module listed without a reach shows nothing.
- *
- * @example
- * if (!entitlements.financeReach.includes("own_invoices")) throw errors.notFound();
- */
-export type FinanceReach = "own_invoices" | "agreement_invoices" | "demo_sample";
-
-/**
- * The kinds of client request (`client_requests.request_type`, data-model.md line 1210) the support
- * column of §3 lets the principal create.
- *
- * @example
- * if (!entitlements.requestTypes.includes(body.requestType)) throw errors.forbidden();
- */
-export type RequestType = "question" | "change_request" | "support";
 
 /**
  * What a client principal may reach, and how far.
