@@ -1,3 +1,4 @@
+import { spyOnAnnounce } from "../../test/announce";
 import { fireEvent, renderWithProviders, screen } from "../../test/render";
 import { Input } from "./input";
 import { fieldStyles } from "./input.styles";
@@ -20,6 +21,18 @@ describe("Input", () => {
     expect(screen.queryByText("10 digits")).toBeNull();
     expect(screen.getByRole("alert")).toHaveTextContent("Enter a 10-digit number");
     expect(screen.getByLabelText("Phone")).toHaveProp("aria-invalid", true);
+  });
+
+  it("announces the error, and not the help text, on iOS", async () => {
+    const announce = spyOnAnnounce();
+    const { rerender } = await renderWithProviders(<Input label="Phone" helpText="10 digits" />);
+    expect(announce).not.toHaveBeenCalled();
+    await rerender(
+      <Input label="Phone" helpText="10 digits" errorText="Enter a 10-digit number" />,
+    );
+    expect(announce).toHaveBeenCalledTimes(1);
+    expect(announce).toHaveBeenCalledWith("Enter a 10-digit number", { queue: true });
+    jest.restoreAllMocks();
   });
 
   it("cannot be edited when disabled", async () => {

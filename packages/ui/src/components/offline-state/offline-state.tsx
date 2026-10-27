@@ -1,16 +1,25 @@
 import { uiCopy } from "../../copy";
+import { announcementText, useAnnounce } from "../../hooks/use-announce";
+import { isHiddenFromAccessibility } from "../../lib/accessibility-hidden";
 import { StateView, type StateViewProps } from "../state-view";
 
 export interface OfflineStateProps extends Omit<
   StateViewProps,
-  "icon" | "iconTone" | "title" | "action"
+  // No announce: OfflineState announces itself politely, and a second announcer would speak twice.
+  "icon" | "iconTone" | "title" | "action" | "announce"
 > {
   readonly title?: string | undefined;
   readonly retryLabel?: string | undefined;
   readonly onRetry?: (() => void) | undefined;
 }
 
-/** The team app's offline screen (W-10): what is stale, what is kept, how to retry. */
+/**
+ * The team app's offline screen (W-10): what is stale, what is kept, how to retry. Announced when it
+ * appears, unless its props hide it from screen readers: the live region on Android and the web,
+ * useAnnounce on iOS.
+ *
+ *   {isOffline ? <OfflineState onRetry={refetch} /> : null}
+ */
 export function OfflineState({
   title = uiCopy.offline.title,
   description = uiCopy.offline.description,
@@ -18,6 +27,8 @@ export function OfflineState({
   onRetry,
   ...rest
 }: OfflineStateProps) {
+  // Polite, not an alert: being offline is a state to know about, not an error to act on now.
+  useAnnounce(announcementText(title, description), !isHiddenFromAccessibility(rest));
   return (
     <StateView
       icon="wifi-off"
