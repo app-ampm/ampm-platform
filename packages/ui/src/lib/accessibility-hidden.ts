@@ -44,8 +44,31 @@ type Reach = "always" | "conditional" | "other";
 
 interface ClassToken {
   readonly utility: string;
-  readonly variants: readonly string[];
   readonly reach: Reach;
+  /** Where the class's rule sits in the stylesheet: of two display rules, the higher one wins. */
+  readonly rank: number;
+}
+
+// Tailwind sorts a rule by its latest-registered variant. Compiled with NATIVEWIND_OS=ios, the
+// order runs: bare classes, the core state variants, the OS blocks, the native: blocks (web: sits
+// at the same place in the web build), dark:, then the screens. An unknown variant ranks last, so
+// a display utility under it leaves the surface announced.
+const STATE_VARIANTS: ReadonlySet<string> = new Set([
+  "hover",
+  "focus",
+  "focus-visible",
+  "focus-within",
+  "active",
+  "enabled",
+  "disabled",
+]);
+
+function variantRank(variant: string): number {
+  if (STATE_VARIANTS.has(variant)) return 1;
+  if (NATIVE_OSES.has(variant)) return 2;
+  if (variant === "native" || variant === "web") return 3;
+  if (variant === "dark") return 4;
+  return WIDTH_VARIANTS.has(variant) ? 5 : 6;
 }
 
 function platformMatches(variant: string, os: string): boolean {
@@ -70,7 +93,8 @@ function parseClass(token: string, os: string): ClassToken {
   // Colons inside an arbitrary variant ("[&:hover]:flex") do not separate variants.
   const parts = token.split(/:(?![^[]*\])/);
   const utility = parts.pop() ?? "";
-  return { utility, variants: parts, reach: reachOf(parts, os) };
+  const rank = Math.max(0, ...parts.map(variantRank));
+  return { utility, reach: reachOf(parts, os), rank };
 }
 
 function isClassHidden(className: string | undefined, os: string): boolean {
@@ -78,14 +102,16 @@ function isClassHidden(className: string | undefined, os: string): boolean {
     .split(/\s+/)
     .filter(Boolean)
     .map((token) => parseClass(token, os));
-  const hides = tokens.some((token) => token.utility === "hidden" && token.reach === "always");
-  // A platform, breakpoint or state variant comes after the bare class in the stylesheet, so its
-  // display wins over `hidden`; a bare `flex` does not (Tailwind orders `hidden` after it).
+  const hiding = tokens.filter((token) => token.utility === "hidden" && token.reach === "always");
+  if (hiding.length === 0) return false;
+  const hiddenRank = Math.max(...hiding.map((token) => token.rank));
+  // A display rule re-shows only from a later place in the stylesheet: at the same rank Tailwind
+  // orders `hidden` after the display utilities, so `flex hidden` and `ios:hidden ios:flex` hide.
   const shows = tokens.some(
     (token) =>
-      DISPLAY_UTILITIES.has(token.utility) && token.variants.length > 0 && token.reach !== "other",
+      DISPLAY_UTILITIES.has(token.utility) && token.reach !== "other" && token.rank > hiddenRank,
   );
-  return hides && !shows;
+  return !shows;
 }
 
 /**
@@ -94,10 +120,12 @@ function isClassHidden(className: string | undefined, os: string): boolean {
  * the accessibility tree (`accessibilityElementsHidden`, `aria-hidden`) or not displayed (a
  * display-none style, or a `hidden` class that applies on this platform at rest). NativeWind's
  * variants are resolved against `Platform.OS`: `native:hidden` and `ios:hidden` hide on iOS,
- * `hidden web:flex` stays hidden there and shows on the web. `importantForAccessibility` is
- * Android-only and does not count. A hidden ancestor, or a breakpoint or state variant that hides
- * or shows (`md:hidden`, `hidden md:flex`, `hidden dark:flex`), is not decided here: such a surface
- * counts as reachable and announces, so render it conditionally instead.
+ * `hidden web:flex` stays hidden there and shows on the web, and of two display classes the one
+ * later in NativeWind's stylesheet wins (`native:hidden ios:flex` hides on iOS).
+ * `importantForAccessibility` is Android-only and does not count. A hidden ancestor, or a
+ * breakpoint or state variant that hides or shows (`md:hidden`, `hidden md:flex`,
+ * `hidden dark:flex`), is not decided here: such a surface counts as reachable and announces, so
+ * render it conditionally instead.
  *
  *   useAnnounce(text, isLive && !isHiddenFromVoiceOver({ ...viewProps, className }));
  *   isHiddenFromVoiceOver({ className: "hidden web:flex" }); // true on iOS, false on the web

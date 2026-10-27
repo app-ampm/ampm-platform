@@ -50,6 +50,19 @@ const cases: readonly (readonly [string, Verdicts])[] = [
   ["hidden native:flex", { ios: false, android: false, web: true }],
   ["hidden web:md:flex", { ios: true, android: true, web: false }],
   ["native:hidden web:flex", { ios: true, android: true, web: false }],
+  // The later rule wins. Compiled with NATIVEWIND_OS=ios, the stylesheet runs: bare classes,
+  // state variants (hover:), the OS blocks (android:, ios:), the native: blocks, dark:, then the
+  // screens; within one variant `hidden` comes after the display utilities.
+  ["native:hidden ios:flex", { ios: true, android: true, web: false }],
+  ["native:hidden android:flex", { ios: true, android: true, web: false }],
+  ["ios:hidden ios:flex", { ios: true, android: false, web: false }],
+  ["native:hidden native:flex", { ios: true, android: true, web: false }],
+  ["web:hidden web:flex", { ios: false, android: false, web: true }],
+  ["flex hidden", everywhere],
+  ["ios:hidden native:flex", nowhere],
+  ["native:hidden hover:flex", { ios: true, android: true, web: false }],
+  ["native:hidden dark:flex", nowhere],
+  ["native:hidden md:flex", nowhere],
   // A state variant can display the view: the tokens' preset sets darkMode "class", so
   // `.dark\:flex:is(.dark *)` shows it in dark mode, and ui.md:13 wants errors announced. Like a
   // breakpoint, the helper leaves it announced rather than silence a displayed surface.
