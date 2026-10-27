@@ -26,10 +26,10 @@ graphify-out/ the knowledge graph of the package and the code
 
 ## Setting up a new machine
 
-Prerequisites: macOS or Linux with Git, the GitHub CLI `gh` signed in as app-ampm (`gh auth login`), [nvm](https://github.com/nvm-sh/nvm), PostgreSQL 16, `jq`, and for the native apps Xcode with an iPhone and an iPad simulator (Android Studio for Android). On a Mac the Homebrew formula is keg-only, so link and start it: `brew install postgresql@16 && brew link --force postgresql@16 && brew services start postgresql@16`. Claude Code sessions also need `bash docs/tools/setup_git.sh` (repository identities and the vault) and `bash docs/tools/setup_memory.sh` (session memory and the graph, which needs `uv`: `brew install uv`); see "Repositories and the Obsidian vault" in `docs/README.md`.
+Prerequisites: macOS or Linux with Git, the GitHub CLI `gh` signed in as app-ampm over HTTPS (`gh auth login --git-protocol https`), [nvm](https://github.com/nvm-sh/nvm), PostgreSQL 16, `jq`, and for the native apps Xcode with an iPhone and an iPad simulator (Android Studio for Android). On a Mac the Homebrew formula is keg-only, so link and start it: `brew install postgresql@16 && brew link --force postgresql@16 && brew services start postgresql@16`. Claude Code sessions also need `bash docs/tools/setup_git.sh` (repository identities and the vault) and `bash docs/tools/setup_memory.sh` (session memory and the graph, which needs `uv`: `brew install uv`); see "Repositories and the Obsidian vault" in `docs/README.md`.
 
 ```bash
-gh repo clone app-ampm/ampm-platform && cd ampm-platform   # HTTPS, so pushes go through the app-ampm credential helper
+gh repo clone https://github.com/app-ampm/ampm-platform && cd ampm-platform   # HTTPS, so pushes use the app-ampm helper
 nvm install            # Node 24 from .nvmrc
 node --version         # must print v24.x; if not, put nvm before any Homebrew node in PATH
 corepack enable        # pnpm 12 from the packageManager field
