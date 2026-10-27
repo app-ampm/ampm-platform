@@ -75,8 +75,10 @@ test_setup_masks_mempalace_global_hooks() {  # the installer runs, against the s
   stop=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["hooks"]["Stop"][0]["hooks"][0]["command"])' \
     "$settings" 2>/dev/null)
   home=$(python3 -c 'import os,sys; print(os.path.normpath(sys.argv[1]))' "$H")  # TMPDIR may end in a slash
-  [ "$stop" = "bash \"$home/.mempalace/bin/mempalace_global_hook.sh\" stop" ] \
-    || fail "setup did not point MemPalace's Stop hook at the wrapper: $stop"
+  case "$stop" in
+    "f=\"$home/.mempalace/bin/mempalace_global_hook.sh\"; "*'exec bash "$f" stop;'*) ;;
+    *) fail "setup did not point MemPalace's Stop hook at the wrapper: $stop" ;;
+  esac
   ls "$settings".backup-* >/dev/null 2>&1 || fail "setup rewrote the settings without a backup"
   grep -q "wings split --wing wing_api" "$SCRATCH/out" || fail "no wing_api re-key note for the legacy shell hooks"
 }

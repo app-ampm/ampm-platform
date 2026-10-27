@@ -7,6 +7,8 @@
                                    mask FILE in place and write the masked complete lines to OUT
     python3 docs/tools/redact_secrets.py --snapshot-only OUT FILE
                                    write the masked complete lines of FILE to OUT; FILE is only read
+    python3 docs/tools/redact_secrets.py --sweep DIR [DAYS]
+                                   remove the snapshots in DIR whose transcript is gone, DAYS (7) old
     python3 docs/tools/redact_secrets.py --self-test      run the pattern tests
 
 Called by docs/tools/memory_hook.sh before every mine (CLAUDE.md: never file secrets or tokens), which
@@ -17,6 +19,10 @@ and no match reaches past one JSON string, so every masked line still parses. Sa
 fixed offsets keep the file's size and every other byte, so a transcript Claude Code is still
 appending to is never truncated or reordered. A line still being written (no trailing newline yet) is
 left for the next run. Nothing matched is ever printed: the output is a count per file.
+
+OUT is replaced atomically (0600 in a 0700 folder) and never followed: a link or a stale or foreign file
+there is replaced, not read. Only a newer, longer masked copy of the same transcript is kept (a scan that
+finished late); OUT.lock records which transcript OUT was written from, which is also what --sweep reads.
 
 MemPalace's global hooks (docs/tools/mempalace_global_hook.sh) run for every project's sessions, so
 they use --snapshot-only: another project's transcript is never edited, only its snapshot is masked.
@@ -31,22 +37,32 @@ import contextlib
 import errno
 import fcntl
 import io
+import json
 import os
 import re
 import stat
 import sys
+import time
+from collections.abc import Iterator
 
 KEEP = 4  # characters left readable at the start of a match
 
 # A token with a known prefix must not be the tail of a longer identifier: it follows a non-word byte
 # (for some kinds also not a dash, for an AWS key id no upper-case letter or digit), a JSON escape
-# (\n, \t, \r) or an ANSI colour or erase escape (\u001b[32m, \u001b[38;5;196m, \u001b[K). Checked
-# after the match, so each search keeps its fast prefix.
+# (\n, \t, \r, \b, \f, or a \uXXXX such as the em dash or < that json.dumps or Go print before it) or
+# a terminal control sequence: any CSI (\u001b[32m, \u001b[2K, \u001b[?25h), or an OSC such as an
+# OSC 8 link, ended by BEL or ST. Checked after the match, so each search keeps its fast prefix.
 WORD = frozenset(b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_")
 WORD_DASH = WORD | {ord("-")}
 UPPER_DIGIT = frozenset(b"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
 ANY: frozenset[int] = frozenset()
-ANSI_TAIL = re.compile(rb"\[[0-9;]{0,12}[mK]\Z")
+JSON_ESCAPE_TAIL = re.compile(rb"\\(?:[ntrbf]|u[0-9a-fA-F]{4})\Z")
+ESC = rb"\\+u001[bB]"  # the escape byte as a JSON string holds it, escaped once or more
+CONTROL_TAIL = re.compile(
+    rb"(?:\[[0-9;]{0,12}[mK]"  # a colour or an erase, even with its escape byte lost
+    rb"|" + ESC + rb"\[[0-9;?<=>]{0,16}[ -/]{0,2}[@-~]"  # any CSI
+    rb"|" + ESC + rb"\][^\"\n]{0,512}?(?:\\+u0007|" + ESC + rb"\\+))\Z"  # an OSC, ended by BEL or ST
+)
 # Between a key and its value: a quote that may be JSON-escaped once or more (\" inside a transcript),
 # then = or :, on the same line.
 KEY_SEP = rb"(?:\\{0,7}[\"'])?[ \t]*[:=][ \t]*(?:\\{0,7}[\"'])?"
@@ -60,9 +76,62 @@ NEXT_LINE = rb"(?:\\+r)?\\+n(?:[ ]*[0-9]+(?:\\+t|\xe2\x86\x92|\\+u2192))?"
 HEADER_LINE = rb"[A-Za-z][A-Za-z0-9-]*:[^\\\"\n]*"  # Proc-Type: 4,ENCRYPTED, or Version: in PGP armour
 BASE64_LINE = rb"[A-Za-z0-9+/=]+(?=[\\\"\n]|\Z)"
 
+# A key whose name says it holds a secret (.env, JSON, YAML, an HTTP header): DATABASE_PASSWORD, client_secret,
+# SECRET_KEY, x-api-key, accessToken, SMTP_PASS, DB_PWD, a Docker "auth". The name is the last word of the key;
+# _named_secret_value checks what comes before it and masks the value only when it looks like a credential, not
+# code, a type, a path or an expansion.
+SECRET_WORDS = (b"pass", b"secret", b"token", b"key", b"auth", b"pwd")
+NAMED_SECRET = (
+    rb"(?i:(?P<name>pass(?:word|wd|phrase)?|secret|token|key|auth|pwd))"
+    rb"(?:\\{0,7}[\"'])?[ \t]*[:=][ \t]*(?P<quote>\\{0,7}[\"'])?"
+    rb"(?P<secret>[A-Za-z0-9+/=_.~!@#$%^*-]{8,512})"
+)
+KEY_OWNER = re.compile(rb"(?:api|access|private|client|encryption|signing|master|secret)[_-]?\Z")  # api_key, apiKey
+ALNUM = frozenset(b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789")
+# Code, not a value: os.environ, settings.API_KEY, process.env.X! and a TypeScript non-null password! or session!
+DOTTED = re.compile(rb"[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)+!?|[A-Za-z_$]+!")
+RANDOM_BYTES = frozenset(b"0123456789+/=!@#$%^*~")
+WRAP = re.compile(rb"(?:\\+r)?\\+n")  # a line break inside a JSON string, escaped once or more
+
+
+
+class Prefiltered:
+    """A pattern tried only where one of its words occurs, in any case: re is slow at a case-insensitive
+    alternation over a whole transcript, bytes.find is not. Prefiltered(SECRET_WORDS, NAMED_SECRET).finditer(data)
+    yields the matches that start at one of those words, in order, as re.finditer would."""
+
+    CHUNK = 1 << 23  # lower-cased a piece at a time, so a large transcript is never copied whole
+
+    def __init__(self, words: tuple[bytes, ...], pattern: bytes) -> None:
+        self.words, self.pattern = words, re.compile(pattern)
+        self.overlap = max(len(word) for word in words) - 1
+
+    def finditer(self, data: bytes) -> Iterator[re.Match[bytes]]:
+        starts: set[int] = set()
+        for offset in range(0, len(data), self.CHUNK):
+            piece = data[offset : offset + self.CHUNK + self.overlap].lower()
+            for word in self.words:
+                found = piece.find(word)
+                while found >= 0:
+                    starts.add(offset + found)
+                    found = piece.find(word, found + 1)
+        end = 0
+        for start in sorted(starts):
+            match = self.pattern.match(data, start) if start >= end else None
+            if match:
+                end = match.end()
+                yield match
+
+
 # Each pattern's group "secret" is what gets masked; the set holds the bytes that must not precede it.
-PATTERNS: list[tuple[str, re.Pattern[bytes], frozenset[int]]] = [
+PATTERNS: list[tuple[str, re.Pattern[bytes] | Prefiltered, frozenset[int]]] = [
     ("github-token", re.compile(rb"(?P<secret>gh[pousr]_[A-Za-z0-9]{36,255})"), WORD),
+    # A GitHub token that a terminal or a narrow column wrapped onto the next line (_wrapped_token).
+    (
+        "github-token-wrapped",
+        re.compile(rb"(?P<secret>gh[pousr]_[A-Za-z0-9]{1,35}(?:(?:\\+r)?\\+n[A-Za-z0-9]{1,36})+)"),
+        WORD,
+    ),
     ("github-pat", re.compile(rb"(?P<secret>github_pat_[A-Za-z0-9_]{22,255})"), WORD),
     ("aws-access-key", re.compile(rb"(?P<secret>(?:AKIA|ASIA)[0-9A-Z]{16})(?![A-Z0-9])"), UPPER_DIGIT),
     ("aws-secret-key", re.compile(rb"(?i:secret_?access_?key)" + KEY_SEP + rb"(?P<secret>[A-Za-z0-9/+]{40})"), ANY),
@@ -79,7 +148,18 @@ PATTERNS: list[tuple[str, re.Pattern[bytes], frozenset[int]]] = [
         re.compile(rb"(?i:authorization)" + KEY_SEP + rb"(?i:basic|bearer) +(?P<secret>[A-Za-z0-9+/=._~-]{12,})"),
         ANY,
     ),
-    ("slack-token", re.compile(rb"(?P<secret>xox[abprs]-[A-Za-z0-9-]{10,})"), WORD),
+    ("slack-token", re.compile(rb"(?P<secret>(?:xox[abeoprs]|xapp)-[A-Za-z0-9-]{10,})"), WORD),
+    (
+        "slack-webhook",
+        re.compile(rb"hooks\.slack\.com/(?:services|workflows|triggers)/(?P<secret>[A-Za-z0-9_/]{20,255})"),
+        ANY,
+    ),
+    ("gitlab-token", re.compile(rb"(?P<secret>gl(?:pat|dt|rt|ptt|cbt)-[A-Za-z0-9_-]{20,255})"), WORD_DASH),
+    ("huggingface-token", re.compile(rb"(?P<secret>hf_[A-Za-z0-9]{34,255})"), WORD),
+    ("google-oauth-secret", re.compile(rb"(?P<secret>GOCSPX-[A-Za-z0-9_-]{28,255})"), WORD_DASH),
+    ("sendgrid-key", re.compile(rb"(?P<secret>SG\.[A-Za-z0-9_-]{16,32}\.[A-Za-z0-9_-]{32,64})"), WORD_DASH),
+    ("digitalocean-token", re.compile(rb"(?P<secret>do[opr]_v1_[a-f0-9]{64})"), WORD),
+    ("razorpay-key", re.compile(rb"(?P<secret>rzp_(?:live|test)_[A-Za-z0-9]{14,64})"), WORD),
     ("api-key-sk", re.compile(rb"(?P<secret>sk-(?:ant-|proj-)?[A-Za-z0-9_-]{32,})"), WORD_DASH),
     ("stripe-key", re.compile(rb"(?P<secret>[sr]k_(?:live|test)_[A-Za-z0-9]{16,})"), WORD),
     ("google-api-key", re.compile(rb"(?P<secret>AIza[0-9A-Za-z_-]{35})"), WORD_DASH),
@@ -107,6 +187,7 @@ PATTERNS: list[tuple[str, re.Pattern[bytes], frozenset[int]]] = [
         ),
         ANY,
     ),
+    ("named-secret", Prefiltered(SECRET_WORDS, NAMED_SECRET), ANY),
 ]
 BASE64 = frozenset(b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=")
 HEX = frozenset(b"0123456789abcdefABCDEF")
@@ -153,23 +234,63 @@ def _render(data: bytes, start: int, end: int, base64_only: bool) -> bytes:
 
 
 def _clean_start(data: bytes, start: int, not_before: frozenset[int]) -> bool:
-    """True when the byte before start is not in not_before, or ends a JSON or ANSI escape.
+    """True when the byte before start is not in not_before, or ends a JSON escape or a terminal control sequence.
 
     _clean_start(b"xghp_", 1, WORD) is False; _clean_start(b"[32mghp_", 4, WORD) is True
     """
     if start == 0 or data[start - 1] not in not_before:
         return True
-    if start >= 2 and data[start - 2] == BACKSLASH and data[start - 1] in b"ntr":
+    if JSON_ESCAPE_TAIL.search(data, max(0, start - 6), start):
         return True
-    return ANSI_TAIL.search(data, max(0, start - 16), start) is not None
+    return CONTROL_TAIL.search(data, max(0, start - 600), start) is not None
+
+
+def _named_secret_value(data: bytes, match: re.Match[bytes]) -> bool:
+    """True when the value of a secret-named key looks like a credential, not code, a type, an expansion or a word.
+
+    A password may be a plain word, so a quoted value of a password or secret is masked as it is; any other value
+    must hold a digit or a symbol, or be 20 characters or more, as a generated token or key does.
+    _named_secret_value(b"PASSWORD=hashed_password,", m) is False; DATABASE_PASSWORD=Pw9Pw9Pw9x is True.
+    """
+    name, start = match.group("name").lower(), match.start("name")
+    if name == b"key" and not KEY_OWNER.search(data[max(0, start - 12) : start].lower()):
+        return False  # a key that names no secret: PRIMARY_KEY, sort_key, ssh key
+    if name in (b"pass", b"auth") and start > 0 and data[start - 1] in ALNUM:
+        if not JSON_ESCAPE_TAIL.search(data, max(0, start - 2), start):
+            return False  # bypass, OAuth: the end of another word
+    if name == b"pwd" and data[start - 1 : start] not in (b"_", b"-"):
+        return False  # PWD and OLDPWD are the working directory
+    value = match.group("secret")
+    if value.startswith((b"$", b"-----", b"*")):
+        return False  # $VAR, $(cmd), ${{ secrets.X }}; a PEM marker, whose body the private-key rules mask; ** or ***
+    if value.lower() == name:
+        return False  # a label: "password": "Password"
+    if data[match.end("secret") : match.end("secret") + 1] in (b"(", b"[", b"{"):
+        return False  # a call or an index: code
+    if match.group("quote") and (name.startswith(b"pass") or name in (b"pwd", b"secret")):
+        return True
+    if DOTTED.fullmatch(value):
+        return False
+    return len(value) >= 20 or any(byte in RANDOM_BYTES for byte in value)
+
+
+def _wrapped_token(data: bytes, match: re.Match[bytes]) -> bool:
+    """True when a GitHub token broken by line breaks still has its 36 characters after the prefix."""
+    return len(WRAP.sub(b"", match.group("secret")[4:])) >= 36
+
+
+CHECKS = {"named-secret": _named_secret_value, "github-token-wrapped": _wrapped_token}
 
 
 def _spans(data: bytes) -> list[tuple[int, int, bool]]:
     """(start, end, base64_only) of every match, overlapping matches merged into one credential."""
     found = []
     for kind, pattern, not_before in PATTERNS:
+        check = CHECKS.get(kind)
         for match in pattern.finditer(data):
             if not _clean_start(data, match.start("secret"), not_before):
+                continue
+            if check is not None and not check(data, match):
                 continue
             start, end = _widen(data, *match.span("secret"))
             found.append((start, end, kind.startswith("private-key")))
@@ -209,21 +330,82 @@ def _apply(data: bytes, edits: list[tuple[int, bytes]]) -> bytes:
     return bytes(out)
 
 
-def write_snapshot(out_path: str, data: bytes) -> None:
-    """Replaces out_path atomically with data, mode 0600 in a 0700 directory; never with a shorter copy.
+def _record(lock: int) -> dict:
+    """What write_snapshot recorded in the snapshot's lock file: the transcript it was written from ({} when none)."""
+    try:
+        record = json.loads(os.pread(lock, 65536, 0).decode("utf-8") or "{}")
+    except (OSError, ValueError):
+        return {}
+    return record if isinstance(record, dict) else {}
 
-    A mine started earlier can finish its scan later; it then leaves the longer snapshot in place, so
-    the file at out_path only grows and every miner reads the newest redacted copy.
-    write_snapshot(os.path.expanduser("~/.mempalace/hook_state/redacted/<session>.jsonl"), masked)
+
+def _starts_with(path: str, data: bytes) -> bool:
+    """True when the file at path begins with data, read a piece at a time."""
+    with open(path, "rb") as handle:
+        for offset in range(0, len(data), 1 << 22):
+            piece = data[offset : offset + (1 << 22)]
+            if handle.read(len(piece)) != piece:
+                return False
+    return True
+
+
+def _is_newer_copy(out_path: str, lock: int, data: bytes, source: tuple[str, os.stat_result] | None) -> bool:
+    """True when out_path already holds data, or data and more, masked from the same transcript, safe to hand on.
+
+    That is a regular file of this user with one link and no group or other access, whose lock file names the same
+    transcript (device and inode) as source, which has not shrunk since, and which starts with data.
+    """
+    try:
+        info = os.lstat(out_path)
+    except FileNotFoundError:
+        return False
+    if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1 or info.st_uid != os.geteuid() or info.st_mode & 0o077:
+        return False  # a symbolic or hard link (to the live transcript, say), or a file another user could read
+    if source is None or info.st_size < len(data):
+        return False
+    path, read = source
+    record = _record(lock)
+    if (record.get("dev"), record.get("ino")) != (read.st_dev, read.st_ino):
+        return False  # written from another transcript, or from one since replaced, or by an older redactor
+    try:
+        if os.stat(path).st_size < record.get("size", 0):
+            return False  # rewritten shorter since that copy: the copy is stale
+    except OSError:
+        pass
+    return _starts_with(out_path, data)
+
+
+def _open_lock(out_path: str) -> int:
+    """Opens and locks out_path's lock file, the same file every writer uses (reopened if it was swept meanwhile)."""
+    for _ in range(5):
+        lock = os.open(out_path + ".lock", os.O_RDWR | os.O_CREAT | getattr(os, "O_NOFOLLOW", 0), 0o600)
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        try:
+            if os.path.samestat(os.fstat(lock), os.stat(out_path + ".lock")):
+                return lock
+        except FileNotFoundError:
+            pass
+        os.close(lock)
+    raise OSError(errno.EAGAIN, "the snapshot's lock file keeps being replaced", out_path + ".lock")
+
+
+def write_snapshot(out_path: str, data: bytes, source: tuple[str, os.stat_result] | None = None) -> str:
+    """Writes data to out_path atomically, 0600 in a 0700 directory; returns "written", "unchanged" or "kept".
+
+    source is the transcript data was read from, as (path, its stat when read). A snapshot that already holds data is
+    left as it is ("unchanged", so a miner does not re-mine it). A mine started earlier can finish its scan later; it
+    then keeps the newer, longer snapshot of the same transcript ("kept", _is_newer_copy), so every miner reads the
+    newest redacted copy. Anything else at out_path is replaced, never followed or read: a symbolic or hard link, a
+    stale or foreign file, a copy of a transcript since rewritten shorter. The lock file records the source.
+    write_snapshot(os.path.expanduser("~/.mempalace/hook_state/redacted/<session>.jsonl"), masked, (path, info))
     """
     directory = os.path.dirname(os.path.abspath(out_path))
     os.makedirs(directory, mode=0o700, exist_ok=True)
     os.chmod(directory, 0o700)
-    lock = os.open(out_path + ".lock", os.O_RDWR | os.O_CREAT | getattr(os, "O_NOFOLLOW", 0), 0o600)
+    lock = _open_lock(out_path)
     try:
-        fcntl.flock(lock, fcntl.LOCK_EX)
-        if os.path.isfile(out_path) and os.path.getsize(out_path) > len(data):
-            return
+        if _is_newer_copy(out_path, lock, data, source):
+            return "unchanged" if os.lstat(out_path).st_size == len(data) else "kept"
         temporary = f"{out_path}.{os.getpid()}.tmp"
         fd = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
         try:
@@ -231,13 +413,63 @@ def write_snapshot(out_path: str, data: bytes) -> None:
                 handle.write(data)
                 handle.flush()
                 os.fsync(handle.fileno())
-            os.replace(temporary, out_path)
+            os.replace(temporary, out_path)  # a link at out_path is replaced itself, its target left alone
         except BaseException:
             with contextlib.suppress(FileNotFoundError):
                 os.unlink(temporary)
             raise
+        record = {}
+        if source is not None:
+            path, read = source
+            record = {"source": os.path.abspath(path), "dev": read.st_dev, "ino": read.st_ino, "size": read.st_size}
+        os.ftruncate(lock, 0)
+        os.pwrite(lock, json.dumps(record).encode("utf-8"), 0)
+        return "written"
     finally:
         os.close(lock)
+
+
+def sweep(directory: str, days: float) -> int:
+    """Removes the snapshots whose transcript is gone (Claude Code's cleanup) and that are days old; returns how many.
+
+    Only a snapshot whose lock file records its transcript is ever removed, with that lock file, and never while a
+    writer holds it. The drawers mined from it keep their text. sweep("~/.mempalace/hook_state/redacted", 7)
+    """
+    removed, cutoff = 0, time.time() - days * 86400
+    try:
+        names = sorted(os.listdir(directory))
+    except FileNotFoundError:
+        return 0
+    for name in names:
+        if not name.endswith(".lock"):
+            continue
+        lock_path = os.path.join(directory, name)
+        snapshot = lock_path[: -len(".lock")]
+        try:
+            lock = os.open(lock_path, os.O_RDWR | getattr(os, "O_NOFOLLOW", 0))
+        except OSError:
+            continue
+        try:
+            try:
+                fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except BlockingIOError:
+                continue  # being written now
+            source = _record(lock).get("source")
+            if not isinstance(source, str) or os.path.lexists(source):
+                continue  # no record (written by an older redactor), or its transcript is still there
+            try:
+                info = os.lstat(snapshot)
+            except FileNotFoundError:
+                info = None
+            if info is not None and (not stat.S_ISREG(info.st_mode) or info.st_mtime > cutoff):
+                continue
+            if info is not None:
+                os.unlink(snapshot)
+            os.unlink(lock_path)
+            removed += 1
+        finally:
+            os.close(lock)
+    return removed
 
 
 def _mask_in_place(path: str, handle: io.BufferedReader, edits: list[tuple[int, bytes]]) -> None:
@@ -253,18 +485,20 @@ def _mask_in_place(path: str, handle: io.BufferedReader, edits: list[tuple[int, 
         os.close(fd)
 
 
-def redact_file(path: str, check_only: bool, snapshot: str | None = None, in_place: bool = True) -> int:
-    """Masks (or counts) the credentials in the file's complete lines; returns how many it found.
+def redact_file(path: str, check_only: bool, snapshot: str | None = None, in_place: bool = True) -> tuple[int, str]:
+    """Masks (or counts) the credentials in the file's complete lines; returns how many, and what became of snapshot.
 
-    With snapshot, also writes those masked complete lines there (write_snapshot), so a miner can read a
-    copy in which every byte has been scanned: redact_file("t.jsonl", False, "redacted/t.jsonl").
+    With snapshot, also writes those masked complete lines there (write_snapshot: "written", "unchanged", or "kept"
+    when a newer copy is there), so a miner can read a copy in which every byte has been scanned:
+    redact_file("t.jsonl", False, "redacted/t.jsonl") == (1, "written").
     With in_place=False (--snapshot-only) the file is opened read-only and never written: only the
     snapshot is masked. redact_file("other.jsonl", False, "redacted/other.jsonl", in_place=False)
     """
     writes = in_place and not check_only
     # Non-blocking, so a FIFO put where a transcript was expected is refused instead of hanging the hook.
     with os.fdopen(os.open(path, os.O_RDONLY | getattr(os, "O_NONBLOCK", 0)), "rb") as handle:
-        if not stat.S_ISREG(os.fstat(handle.fileno()).st_mode):
+        read = os.fstat(handle.fileno())
+        if not stat.S_ISREG(read.st_mode):
             raise OSError(errno.EINVAL, "not a regular file", path)
         # Exclusive while this run may write, shared while it only reads: a read never sees a half-written mask.
         fcntl.flock(handle.fileno(), fcntl.LOCK_EX if writes else fcntl.LOCK_SH)
@@ -274,11 +508,9 @@ def redact_file(path: str, check_only: bool, snapshot: str | None = None, in_pla
         edits = find(data)
         if writes and edits:
             _mask_in_place(path, handle, edits)
-    if check_only:
-        return len(edits)
-    if snapshot is not None:
-        write_snapshot(snapshot, _apply(data, edits))
-    return len(edits)
+    if check_only or snapshot is None:
+        return len(edits), ""
+    return len(edits), write_snapshot(snapshot, _apply(data, edits), (path, read))
 
 
 def self_test() -> int:
@@ -300,6 +532,14 @@ def main(argv: list[str]) -> int:
     """
     if argv[:1] == ["--self-test"]:
         return self_test()
+    if argv[:1] == ["--sweep"] and len(argv) in (2, 3):
+        try:
+            removed = sweep(argv[1], float(argv[2]) if len(argv) == 3 else 7)
+        except (OSError, ValueError) as error:
+            print(f"sweep: not done ({getattr(error, 'strerror', None) or error})")
+            return 2
+        print(f"sweep: {removed} snapshot(s) of deleted transcripts removed")
+        return 0
     check_only = argv[:1] == ["--check"]
     in_place = argv[:1] != ["--snapshot-only"]
     snapshot = argv[1] if argv[:1] in (["--snapshot"], ["--snapshot-only"]) and len(argv) == 3 else None
@@ -310,13 +550,15 @@ def main(argv: list[str]) -> int:
     found_any = False
     for path in paths:
         try:
-            count = redact_file(path, check_only, snapshot, in_place)
+            count, state = redact_file(path, check_only, snapshot, in_place)
         except OSError as error:
             print(f"{os.path.basename(path)}: not redacted ({error.strerror})")
             return 2
         found_any = found_any or count > 0
         verb = "found" if check_only else "masked" if in_place else "masked in the snapshot"
-        print(f"{os.path.basename(path)}: {count} credential(s) {verb}")
+        note = {"kept": "; snapshot kept: a newer masked copy of the same transcript is there",
+                "unchanged": "; snapshot unchanged"}.get(state, "")
+        print(f"{os.path.basename(path)}: {count} credential(s) {verb}{note}")
     return 1 if check_only and found_any else 0
 
 

@@ -75,8 +75,40 @@ test_failed_redaction_is_not_mined() {
   sleep 1.5; [ -s "$H/mine_args" ] && fail "a transcript whose redaction failed was mined"
 }
 
+test_global_wrapper_mines_instead_of_this_hook() {  # MemPalace's own hook mines the same snapshot: one miner, no race
+  local t="$SCRATCH/projects/wired.jsonl" token_w settings="$H/.claude/settings.json" snapshot
+  token_w=$(token W); record "wired $token_w" > "$t"; : > "$H/mine_args"
+  mkdir -p "$H/.claude"
+  python3 -c 'import json,sys
+h = sys.argv[1]
+hook = lambda e: [{"hooks": [{"type": "command", "command": h + "/.local/bin/mempalace hook run --hook " + e}]}]
+print(json.dumps({"hooks": {"Stop": hook("stop"), "PreCompact": hook("precompact"), "SessionEnd": hook("session-end")}}))' \
+    "$H" > "$settings"
+  HOME="$H" python3 "$REPO/docs/tools/install_global_memory_hooks.py" > /dev/null || { fail "the installer failed"; return; }
+  run_hook session-end "$t"
+  wait_for_log "wired.jsonl masked; MemPalace's global hook mines" || fail "no 'global hook mines' line in the log"
+  sleep 1.5; [ -s "$H/mine_args" ] && fail "this hook mined although MemPalace's wrapped hook mines: $(cat "$H/mine_args")"
+  grep -q "$token_w" "$t" && fail "the live transcript was not masked in place when the global hook mines"
+  snapshot="$H/.mempalace/hook_state/redacted/wired.jsonl"
+  [ -f "$snapshot" ] && ! grep -q "$token_w" "$snapshot" || fail "no masked snapshot for MemPalace's hook to mine"
+}
+
+test_session_start_warns_while_the_global_hooks_are_not_masked() {  # after the test above: wrapper installed
+  local ctx project="$SCRATCH/project"  # this checkout's tools, without its graph: graphify writes a cache there
+  mkdir -p "$project/docs"; ln -s "$REPO/docs/tools" "$project/docs/tools"
+  ctx=$(printf '{}' | HOME="$H" CLAUDE_PROJECT_DIR="$project" bash "$REPO/docs/tools/memory_hook.sh" session-start)
+  printf '%s' "$ctx" | grep -q "not fully masked" && fail "a warning although the global hooks are masked: $ctx"
+  printf '# a pattern fix merged later\n' >> "$H/.mempalace/bin/redact_secrets.py"
+  ctx=$(printf '{}' | HOME="$H" CLAUDE_PROJECT_DIR="$project" bash "$REPO/docs/tools/memory_hook.sh" session-start)
+  printf '%s' "$ctx" | grep -q "not fully masked.*redact_secrets.py: differs" \
+    || fail "no warning in the session context while the installed redactor is stale: $ctx"
+  rm -f "$H/.claude/settings.json"
+}
+
 test_appended_token_is_never_mined
 test_failed_redaction_is_not_mined
 test_nothing_is_deleted_from_the_palace
+test_global_wrapper_mines_instead_of_this_hook
+test_session_start_warns_while_the_global_hooks_are_not_masked
 [ "$FAILURES" -eq 0 ] && echo "memory hook tests passed" || echo "memory hook tests: $FAILURES failure(s)"
 [ "$FAILURES" -eq 0 ]

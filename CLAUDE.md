@@ -12,12 +12,12 @@ Code lives in `apps/` (web, mobile, api) and `packages/` (tokens, ui, core, poli
 
 ## Session memory (MemPalace)
 
-Every session in this folder or one of its worktrees is mined into the MemPalace wing `ampm` by the hooks in `.claude/settings.json` (every ten human messages, before compaction and at session end); the design docs are filed into the same wing by the checkpoint after each commit. The palace is local (`~/.mempalace`), nothing leaves the machine.
+Every session in this folder or one of its worktrees is mined into the MemPalace wing `ampm` (every ten human messages, before compaction and at session end) by the hooks in `.claude/settings.json`, or by MemPalace's own masked global hooks once they are installed (see the last point); the design docs are filed into the same wing by the checkpoint after each commit. The palace is local (`~/.mempalace`), nothing leaves the machine.
 
 - Before answering about earlier sessions, past decisions or why something was done, search the wing and quote what it returns verbatim; if it has nothing, say so rather than guessing. CLI: `mempalace search "<words>" --wing ampm`; the short briefing is `mempalace wake-up --wing ampm`. MCP server `mempalace` (tool `palace_query`): `FIND "<words>" IN ampm LIMIT 5`.
 - File a durable outcome of the session (a decision taken with the user, a confirmed fact, a correction) with `palace_exec` as a drawer in wing `ampm`, or `mempalace mine <file> --wing ampm` for a written note. Never file secrets or tokens.
 - `bash docs/tools/setup_memory.sh` installs the tools on a new machine and backfills the wing; `~/Library/Logs/ampm-memory-hooks.log` shows what the hooks did.
-- MemPalace's own global hooks (every project on the machine) mine only a credential-masked snapshot through `~/.mempalace/bin/mempalace_global_hook.sh`; `python3 docs/tools/install_global_memory_hooks.py --check` reports the state, `~/Library/Logs/mempalace-global-hooks.log` shows each run.
+- MemPalace's own global hooks (every project on the machine) mine only a credential-masked snapshot once `python3 docs/tools/install_global_memory_hooks.py` has run (`setup_memory.sh` runs it): they then go through `~/.mempalace/bin/mempalace_global_hook.sh`, and this project's hooks mask the transcript but leave the mine to them. Until then, or while an installed copy differs from the repository, they mine unmasked or with an older redactor: `--check` exits 1 and the SessionStart context carries a warning. Re-run the installer after any change to `redact_secrets.py` or `mempalace_global_hook.sh`; `~/Library/Logs/mempalace-global-hooks.log` shows each run.
 
 ## graphify
 
