@@ -4,6 +4,7 @@ import { TextInput, View, type TextInputProps } from "react-native";
 import { colors } from "@ampm/tokens";
 
 import { useAnnounce } from "../../hooks/use-announce";
+import { isHiddenFromVoiceOver } from "../../lib/accessibility-hidden";
 import { cn } from "../../lib/cn";
 import { useTheme } from "../../theme/theme-provider";
 import { Icon, type IconName } from "../icon";
@@ -44,11 +45,13 @@ interface MessageProps {
   readonly id: string;
   readonly text: string | undefined;
   readonly isError: boolean;
+  /** Set while the field's own props hide it from VoiceOver, so the error is not spoken. */
+  readonly isHidden: boolean;
 }
 
-function FieldMessage({ id, text, isError }: MessageProps) {
+function FieldMessage({ id, text, isError, isHidden }: MessageProps) {
   // The live region and alert role cover Android and the web; VoiceOver needs the announcement.
-  useAnnounce(text, isError);
+  useAnnounce(text, isError && !isHidden);
   if (!text) return null;
   return (
     <Text
@@ -131,8 +134,10 @@ function FieldControl({
 
 /**
  * A labelled text field. States: default, focused, error, disabled. The label is tied to the input
- * for screen readers; the error is a live region and is announced on iOS (useAnnounce). Every state
- * keeps the 44px target.
+ * for screen readers; the error is a live region and is announced on iOS (useAnnounce), unless the
+ * field's className or accessibility props hide it from VoiceOver (isHiddenFromVoiceOver). A hidden
+ * ancestor is not seen, so render a hidden form step conditionally. Every state keeps the 44px
+ * target.
  *
  *   <Input label="Email" keyboardType="email-address" value={email} onChangeText={setEmail} errorText={errors.email} />
  */
@@ -151,6 +156,13 @@ export function Input({
   const messageId = useId();
   const message = errorText ?? helpText;
   const hasError = Boolean(errorText);
+  // className styles the whole block; the accessibility props reach the text input, and a field
+  // hidden from the accessibility tree has no error to speak either.
+  const isHidden = isHiddenFromVoiceOver({
+    className,
+    accessibilityElementsHidden: control.accessibilityElementsHidden,
+    "aria-hidden": control["aria-hidden"],
+  });
   return (
     <View className={cn("gap-1", className)}>
       <FieldLabel id={labelId} label={label} required={required} disabled={disabled} />
@@ -164,7 +176,7 @@ export function Input({
         size={size}
         leadingIcon={leadingIcon}
       />
-      <FieldMessage id={messageId} text={message} isError={hasError} />
+      <FieldMessage id={messageId} text={message} isError={hasError} isHidden={isHidden} />
     </View>
   );
 }

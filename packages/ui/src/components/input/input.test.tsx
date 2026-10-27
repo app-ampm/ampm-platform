@@ -35,6 +35,21 @@ describe("Input", () => {
     jest.restoreAllMocks();
   });
 
+  // Announcing (ui.md) a field hidden from VoiceOver makes it speak what the user cannot reach,
+  // the rule Callout, StateView and OfflineState already follow (isHiddenFromVoiceOver).
+  it.each([
+    { className: "hidden" },
+    { className: "native:hidden" },
+    { className: "hidden web:flex" },
+    { accessibilityElementsHidden: true },
+    { "aria-hidden": true },
+  ])("keeps the error silent on iOS while the field is hidden (%o)", async (hiding) => {
+    const announce = spyOnAnnounce();
+    await renderWithProviders(<Input label="Phone" errorText="Enter a number" {...hiding} />);
+    expect(announce).not.toHaveBeenCalled();
+    jest.restoreAllMocks();
+  });
+
   it("cannot be edited when disabled", async () => {
     await renderWithProviders(<Input label="Reference" disabled defaultValue="AMPM-1" />);
     expect(screen.getByLabelText("Reference")).toBeDisabled();
