@@ -49,8 +49,9 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "lint": "eslint .",
-    "dev": "expo start",
-    "typecheck": "expo customize tsconfig.json && tsc --noEmit"
+    "dev": "expo start --port 8082",
+    "typecheck": "expo customize tsconfig.json && tsc --noEmit",
+    "bundle:check": "EXPO_NO_DOTENV=1 expo export --platform all --output-dir dist"
   },
   "private": true,
   "description": "AMPM client app and team app: iOS, Android, tablets, and the web export of the client portals."

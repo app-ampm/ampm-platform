@@ -1,5 +1,6 @@
 # Every push to main and every pull request: install, generate, format check, lint + typecheck + test
-# (the API's e2e suite against a disposable PostgreSQL), the matrix drift check, then the builds.
+# (the API's e2e suite against a disposable PostgreSQL), the matrix drift check, the builds, then the
+# mobile bundles for web, iOS and Android.
 name: CI
 
 on:
@@ -46,3 +47,7 @@ jobs:
       - name: Permission matrix drift (docs/permission-matrix.md vs packages/policy/src/generated)
         run: pnpm authz:generate && git diff --exit-code -- packages/policy/src/generated
       - run: pnpm build --filter=web --filter=api
+      # The Expo app is bundled for every platform: lint and typecheck do not resolve native or web-only
+      # modules, so a module Metro cannot bundle (expo-sqlite's web worker, 27 Oct 2026) passes them.
+      - name: Mobile bundles (web, iOS, Android)
+        run: pnpm --filter mobile bundle:check
