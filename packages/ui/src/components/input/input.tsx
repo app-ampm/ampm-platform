@@ -3,6 +3,7 @@ import { TextInput, View, type TextInputProps } from "react-native";
 
 import { colors } from "@ampm/tokens";
 
+import { useAnnounce } from "../../hooks/use-announce";
 import { cn } from "../../lib/cn";
 import { useTheme } from "../../theme/theme-provider";
 import { Icon, type IconName } from "../icon";
@@ -46,6 +47,8 @@ interface MessageProps {
 }
 
 function FieldMessage({ id, text, isError }: MessageProps) {
+  // The live region and alert role cover Android and the web; VoiceOver needs the announcement.
+  useAnnounce(text, isError);
   if (!text) return null;
   return (
     <Text
@@ -128,7 +131,8 @@ function FieldControl({
 
 /**
  * A labelled text field. States: default, focused, error, disabled. The label is tied to the input
- * for screen readers; the error is a live region. Every state keeps the 44px target.
+ * for screen readers; the error is a live region and is announced on iOS (useAnnounce). Every state
+ * keeps the 44px target.
  *
  *   <Input label="Email" keyboardType="email-address" value={email} onChangeText={setEmail} errorText={errors.email} />
  */
