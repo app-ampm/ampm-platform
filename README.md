@@ -26,11 +26,12 @@ graphify-out/ the knowledge graph of the package and the code
 
 ## Setting up a new machine
 
-Prerequisites: macOS or Linux with Git, [nvm](https://github.com/nvm-sh/nvm), PostgreSQL 16 (Homebrew `postgresql@16` on a Mac), `jq`, and for the native apps Xcode with an iPhone and an iPad simulator (Android Studio for Android). Claude Code sessions also need `bash docs/tools/setup_git.sh` (repository identities and the vault) and `bash docs/tools/setup_memory.sh` (session memory and the graph); see "Repositories and the Obsidian vault" in `docs/README.md`.
+Prerequisites: macOS or Linux with Git, the GitHub CLI `gh` signed in as app-ampm (`gh auth login`), [nvm](https://github.com/nvm-sh/nvm), PostgreSQL 16, `jq`, and for the native apps Xcode with an iPhone and an iPad simulator (Android Studio for Android). On a Mac the Homebrew formula is keg-only, so link and start it: `brew install postgresql@16 && brew link --force postgresql@16 && brew services start postgresql@16`. Claude Code sessions also need `bash docs/tools/setup_git.sh` (repository identities and the vault) and `bash docs/tools/setup_memory.sh` (session memory and the graph, which needs `uv`: `brew install uv`); see "Repositories and the Obsidian vault" in `docs/README.md`.
 
 ```bash
-git clone git@github.com:app-ampm/ampm-platform.git && cd ampm-platform
+gh repo clone app-ampm/ampm-platform && cd ampm-platform   # HTTPS, so pushes go through the app-ampm credential helper
 nvm install            # Node 24 from .nvmrc
+node --version         # must print v24.x; if not, put nvm before any Homebrew node in PATH
 corepack enable        # pnpm 12 from the packageManager field
 pnpm install           # also builds tokens, core and policy and installs the git hooks
 ```
@@ -40,6 +41,7 @@ Databases and the API's environment:
 ```bash
 createdb ampm && createdb ampm_test
 cp apps/api/.env.example apps/api/.env   # set DATABASE_URL and DATABASE_URL_TEST to your PostgreSQL user; keep IDENTITY_PROVIDER=local
+                                          # and set IDENTITY_LOCAL_SECRET to the output of `openssl rand -base64 48`
 pnpm db:generate                          # the Prisma client
 pnpm --filter api db:deploy               # the migrations
 pnpm --filter api db:seed                 # synthetic roles, permissions and four accounts
@@ -69,7 +71,7 @@ pnpm authz:generate          # regenerate packages/policy from docs/permission-m
 pnpm tokens:build            # regenerate the Tailwind preset from packages/tokens
 ```
 
-Ports 3000, 3100 and 8081 are taken by other projects on the development Mac, hence 3417, 8082 and 3900. The API's end-to-end tests migrate and seed `DATABASE_URL_TEST` on every run; CI runs them against a PostgreSQL service container.
+Ports 3000, 3100 and 8081 are taken by other projects on the development Mac, hence 3417, 8082 and 3900. To use other ports, set `PORT` in `apps/api/.env` (and `EXPO_PUBLIC_API_URL` in `apps/mobile/.env`), pass `-- --port <n>` to the mobile dev command, and list the new web origin in `CORS_ORIGINS` in `apps/api/.env`. The API's end-to-end tests migrate and seed `DATABASE_URL_TEST` on every run; run them alone with `pnpm --filter api test:e2e`. `pnpm check` runs them too, so PostgreSQL must be up; CI runs them against a PostgreSQL service container.
 
 ## How the work is done
 
