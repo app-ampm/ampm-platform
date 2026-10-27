@@ -1,9 +1,10 @@
 /**
  * The status enumerations of the records permission-matrix §7 governs, copied from docs/data-model.md,
  * with the named sets §7's cells refer to ("any active", "any open state", "derived") and the record
- * kinds its parenthesised qualifiers name ("answered (question)"). The generator expands §7 against
- * these and stops on a status, set or qualifier they do not define; canTransition() refuses a status
- * outside them. Node runs the generator on this file with type stripping: no imports.
+ * kinds its parenthesised qualifiers name ("answered (question)"). A plain "any" is every status but
+ * the machine's terminal ones. The generator expands §7 against these and stops on a status, set or
+ * qualifier they do not define; canTransition() refuses a status outside them. Node runs the
+ * generator on this file with type stripping: no imports.
  */
 
 /**
@@ -23,6 +24,11 @@ export interface StatusMachine {
   readonly kinds: Readonly<Record<string, string>>;
   /** A From-cell prefix that selects this machine under a shared heading ("readiness:"). */
   readonly prefix: string | null;
+  /**
+   * Outcomes a plain "any" does not reach. The record leaves them only by a row that names them
+   * ("closed → closure", SA only), so "any → on_hold" cannot reopen a closed wedding (AC-15.7).
+   */
+  readonly terminal: readonly string[];
 }
 
 const PLAIN = { sets: {}, kinds: {}, prefix: null } as const;
@@ -37,6 +43,8 @@ export const STATUS_MACHINES: Readonly<Record<string, StatusMachine>> = {
   subscription: {
     ...PLAIN,
     heading: "Subscription",
+    // §7 line 395: an expired or cancelled row is never reactivated; a new row starts.
+    terminal: ["expired", "cancelled"],
     statuses: [
       "trial",
       "pending_payment",
@@ -50,6 +58,8 @@ export const STATUS_MACHINES: Readonly<Record<string, StatusMachine>> = {
   hotel_enquiry: {
     ...PLAIN,
     heading: "Hotel enquiry",
+    // A confirmed enquiry is still closed with its outcome (§7 line 408).
+    terminal: ["closed"],
     statuses: [
       "draft",
       "submitted",
@@ -79,6 +89,8 @@ export const STATUS_MACHINES: Readonly<Record<string, StatusMachine>> = {
   wedding_project: {
     ...PLAIN,
     heading: "Wedding project",
+    // §7 line 422: closed is left only for closure, by SA, audited.
+    terminal: ["closed"],
     statuses: [
       "setup",
       "planning",
@@ -94,11 +106,14 @@ export const STATUS_MACHINES: Readonly<Record<string, StatusMachine>> = {
   approval: {
     ...PLAIN,
     heading: "Approval",
+    // An approved or rejected approval is still superseded by a new version (§7 line 429).
+    terminal: ["superseded"],
     statuses: ["draft", "submitted", "revision_requested", "approved", "rejected", "superseded"],
   },
   vendor_assignment: {
     ...PLAIN,
     heading: "Vendor assignment",
+    terminal: ["completed", "cancelled", "declined"],
     statuses: [
       "option",
       "shortlisted",
@@ -113,11 +128,13 @@ export const STATUS_MACHINES: Readonly<Record<string, StatusMachine>> = {
   function: {
     ...PLAIN,
     heading: "Function status and readiness",
+    terminal: ["cancelled"],
     statuses: ["planned", "confirmed", "cancelled"],
   },
   function_readiness: {
     ...PLAIN,
     heading: "Function status and readiness",
+    terminal: ["completed"],
     prefix: "readiness",
     statuses: ["not_started", "in_progress", "blocked", "ready", "live", "completed"],
     // The checklist derives these four, an item's authorised exception included (data-model.md
@@ -127,22 +144,26 @@ export const STATUS_MACHINES: Readonly<Record<string, StatusMachine>> = {
   incident: {
     ...PLAIN,
     heading: "Incident",
+    terminal: ["closed"],
     statuses: ["open", "assigned", "in_progress", "escalated", "resolved", "closed"],
     sets: { "open state": ["open", "assigned", "in_progress"] },
   },
   task: {
     ...PLAIN,
     heading: "Task",
+    terminal: ["completed", "cancelled"],
     statuses: ["not_started", "in_progress", "blocked", "completed", "cancelled"],
   },
   room_allocation: {
     ...PLAIN,
     heading: "Room allocation",
+    terminal: ["checked_out", "cancelled"],
     statuses: ["requested", "proposed", "confirmed", "checked_in", "checked_out", "cancelled"],
   },
   client_request: {
     ...PLAIN,
     heading: "Client request",
+    terminal: ["rejected", "implemented", "closed", "withdrawn"],
     statuses: [
       "submitted",
       "under_review",

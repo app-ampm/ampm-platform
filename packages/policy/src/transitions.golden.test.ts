@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 
 import type { PolicyPrincipal } from "./engine";
 import type { StaffRole } from "./roles";
+import { STATUS_MACHINES } from "./statuses";
 import { canTransition } from "./transitions";
 
 function staff(roles: readonly StaffRole[], userId = "u-1"): PolicyPrincipal {
@@ -49,6 +50,62 @@ describe("§7 wedding project", () => {
     expect(
       canTransition(staff(["PM"]), "wedding_project", "closed", "closure", onProject),
     ).toBeNull();
+  });
+
+  it("§7 lines 420 and 422, AC-15.7: 'any → on_hold' never takes a wedding out of closed", () => {
+    expect(canTransition(staff(["PM"]), "wedding_project", "closed", "on_hold", onProject)).toBe(
+      null,
+    );
+    expect(canTransition(staff(["SA"]), "wedding_project", "closed", "on_hold")).toBeNull();
+    expect(
+      canTransition(staff(["PM"]), "wedding_project", "live", "on_hold", onProject),
+    ).not.toBeNull();
+  });
+});
+
+describe("§7 a plain 'any' reaches every status but the terminal ones", () => {
+  const pm = staff(["PM"]);
+
+  it("§7 lines 394-395: an expired subscription is not cancelled; a suspended one is", () => {
+    expect(canTransition(staff(["SA"]), "subscription", "expired", "cancelled")).toBeNull();
+    expect(canTransition(staff(["SA"]), "subscription", "suspended", "cancelled")).not.toBeNull();
+  });
+
+  it("§7 line 439: a completed or declined vendor assignment is not cancelled", () => {
+    for (const from of ["completed", "declined"]) {
+      expect(canTransition(pm, "vendor_assignment", from, "cancelled", onProject)).toBeNull();
+    }
+    expect(
+      canTransition(pm, "vendor_assignment", "delivering", "cancelled", onProject),
+    ).not.toBeNull();
+  });
+
+  it("§7 lines 464 and 473: completed tasks and checked-out rooms are not cancelled", () => {
+    expect(canTransition(pm, "task", "completed", "cancelled", onProject)).toBeNull();
+    expect(canTransition(pm, "task", "in_progress", "cancelled", onProject)).not.toBeNull();
+    expect(canTransition(pm, "room_allocation", "checked_out", "cancelled", onProject)).toBeNull();
+    expect(
+      canTransition(pm, "room_allocation", "confirmed", "cancelled", onProject),
+    ).not.toBeNull();
+  });
+
+  it("§7 line 483: the requester does not withdraw a rejected, implemented or closed request", () => {
+    const mine = { ...onProject, requesterId: "c-1" };
+    for (const from of ["rejected", "implemented", "closed"]) {
+      expect(canTransition(client, "client_request", from, "withdrawn", mine)).toBeNull();
+    }
+    expect(canTransition(client, "client_request", "accepted", "withdrawn", mine)).not.toBeNull();
+  });
+
+  it("§7 lines 408 and 429: a confirmed enquiry still closes; an approved approval is still superseded", () => {
+    expect(canTransition(staff(["HT"]), "hotel_enquiry", "confirmed", "closed")).not.toBeNull();
+    expect(canTransition(system, "approval", "approved", "superseded")).not.toBeNull();
+  });
+
+  it("names only statuses of its own machine as terminal", () => {
+    for (const [entity, machine] of Object.entries(STATUS_MACHINES)) {
+      for (const status of machine.terminal) expect(machine.statuses, entity).toContain(status);
+    }
   });
 });
 

@@ -136,7 +136,11 @@ function readStatuses(
     text = qualified[1] ?? "";
   }
   if (side === "to" && text === "previous status") return { statuses: [], restore: true, kind };
-  if (text === "any") return { statuses: machine.statuses, restore: false, kind };
+  // A plain "any" leaves the outcomes alone: only a row that names a terminal status moves out of it.
+  if (text === "any") {
+    const open = machine.statuses.filter((status) => !machine.terminal.includes(status));
+    return { statuses: open, restore: false, kind };
+  }
   const setName = side === "to" && text === "derived" ? text : /^any (.+)$/.exec(text)?.[1];
   if (setName !== undefined) {
     const set = lookup(machine.sets, setName);

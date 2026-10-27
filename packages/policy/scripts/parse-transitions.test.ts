@@ -98,6 +98,21 @@ describe("parseTransitions", () => {
     expect(rule).toMatchObject({ from: ["on_hold"], to: [], restore: true });
   });
 
+  it("§7 lines 420 and 422: a plain 'any' leaves out the terminal statuses and the target", () => {
+    const [rule] = parseTransitions(
+      table("Wedding project", "| any | on_hold | PM (a), SA, with reason; approvals are paused |"),
+    );
+    expect(rule?.from).toEqual([
+      "setup",
+      "planning",
+      "approvals",
+      "pre_production",
+      "ready",
+      "live",
+      "closure",
+    ]);
+  });
+
   it("§7 line 446: readiness is derived by the System; 'an exception needs SA' names no mover", () => {
     const rules = parseTransitions(
       table(

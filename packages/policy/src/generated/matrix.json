@@ -10827,7 +10827,6 @@
         "pending_payment",
         "active",
         "expiring",
-        "expired",
         "suspended"
       ],
       "to": [
@@ -11297,8 +11296,7 @@
         "pre_production",
         "ready",
         "live",
-        "closure",
-        "closed"
+        "closure"
       ],
       "to": [
         "on_hold"
@@ -11615,9 +11613,7 @@
         "shortlisted",
         "selected",
         "contracted",
-        "delivering",
-        "completed",
-        "declined"
+        "delivering"
       ],
       "to": [
         "cancelled"
@@ -11945,8 +11941,7 @@
       "from": [
         "not_started",
         "in_progress",
-        "blocked",
-        "completed"
+        "blocked"
       ],
       "to": [
         "cancelled"
@@ -12069,8 +12064,7 @@
         "requested",
         "proposed",
         "confirmed",
-        "checked_in",
-        "checked_out"
+        "checked_in"
       ],
       "to": [
         "cancelled"
@@ -12206,10 +12200,7 @@
         "under_review",
         "clarification_requested",
         "answered",
-        "accepted",
-        "rejected",
-        "implemented",
-        "closed"
+        "accepted"
       ],
       "to": [
         "withdrawn"
