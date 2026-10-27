@@ -45,10 +45,13 @@ pnpm --filter api db:deploy               # the migrations
 pnpm --filter api db:seed                 # synthetic roles, permissions and four accounts
 ```
 
-The mobile app reads `apps/mobile/.env` (`EXPO_PUBLIC_API_URL`, default `http://localhost:3900`, and, in development only, `EXPO_PUBLIC_DEV_ACCESS_TOKEN`). Mint a development token for a seeded account:
+Every API script reads `apps/api/.env` (Prisma through `prisma.config.ts`, Nest through `--env-file`); a variable already set in the shell wins over the file, except under `pnpm dev`, where Turborepo passes only declared variables and the file decides.
+
+The mobile app reads `apps/mobile/.env` (`EXPO_PUBLIC_API_URL`, default `http://localhost:3900`, and, in development only, `EXPO_PUBLIC_DEV_ACCESS_TOKEN`). Create it and mint a development token for a seeded account:
 
 ```bash
-pnpm --filter api dev:token local:admin   # also local:pm, local:client, local:disabled
+cp apps/mobile/.env.example apps/mobile/.env
+pnpm --filter api dev:token local:admin   # also local:pm, local:client, local:disabled; paste it into apps/mobile/.env
 ```
 
 Production never accepts these tokens: the API refuses the local identity provider outside development and test, and real sign-in goes through Amazon Cognito (Mumbai).
@@ -60,6 +63,7 @@ pnpm dev --filter=api        # http://localhost:3900/health
 pnpm dev --filter=mobile     # Metro on 8082; press i for the iPhone simulator, open http://localhost:8082 for the web build
 pnpm dev --filter=web        # http://localhost:3417
 pnpm check                   # lint + typecheck + test, the definition of done's first line
+pnpm --filter mobile bundle:check   # the Expo bundles for web, iOS and Android, as CI builds them
 pnpm format                  # Prettier with Tailwind class sorting
 pnpm authz:generate          # regenerate packages/policy from docs/permission-matrix.md (CI fails on drift)
 pnpm tokens:build            # regenerate the Tailwind preset from packages/tokens

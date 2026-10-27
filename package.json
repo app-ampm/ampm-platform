@@ -4,7 +4,7 @@
   "description": "AMPM wedding platform: public website, client and team apps, API. Design package in docs/, code in apps/ and packages/.",
   "packageManager": "pnpm@12.15.0",
   "engines": {
-    "node": ">=22.13.0"
+    "node": ">=24.0.0"
   },
   "scripts": {
     "dev": "turbo run dev",
