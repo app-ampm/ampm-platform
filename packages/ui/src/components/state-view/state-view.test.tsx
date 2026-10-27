@@ -44,18 +44,27 @@ describe("state views", () => {
     });
     afterEach(() => jest.restoreAllMocks());
 
-    it("announces the error state on iOS", async () => {
+    // Once only: a second announcer on the same surface would make VoiceOver say it twice.
+    it("announces the error state on iOS, once", async () => {
       await renderWithProviders(<ErrorState />);
+      expect(announce).toHaveBeenCalledTimes(1);
       expect(announce).toHaveBeenCalledWith(`${uiCopy.error.title}. ${uiCopy.error.description}`, {
         queue: true,
       });
     });
 
-    it("announces the offline state on iOS", async () => {
+    // Once, and politely: being offline is a state to know about, not an alert.
+    it("announces the offline state on iOS, once and without an alert", async () => {
       await renderWithProviders(<OfflineState />);
+      expect(announce).toHaveBeenCalledTimes(1);
       expect(announce).toHaveBeenCalledWith(
         `${uiCopy.offline.title}. ${uiCopy.offline.description}`,
         { queue: true },
+      );
+      expect(screen.queryByRole("alert")).toBeNull();
+      expect(screen.getByText(uiCopy.offline.description)).not.toHaveProp(
+        "accessibilityRole",
+        "alert",
       );
     });
 
