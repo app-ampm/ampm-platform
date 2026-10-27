@@ -4,7 +4,13 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { exportableClasses, principalReadableClasses, staffReadableClasses } from "./visibility";
+import type { StaffRole } from "./roles";
+import {
+  exportableClasses,
+  principalReadableClasses,
+  staffReadableClasses,
+  type ClassContext,
+} from "./visibility";
 
 const HOTELS = "hotels.hotel_profiles_client_fields";
 const VENDORS = "vendors.vendor_profiles_client_fields";
@@ -112,6 +118,34 @@ describe("visibility classes", () => {
     expect(contact(["PM"], VENDORS)).toBe(true);
     // RG reads the vehicles (§5.11 line 278) but §4 gives RG no contacts.
     expect(contact(["RG"], "rooms.vehicles_transfers_passengers")).toBe(false);
+  });
+
+  it("§4 line 127, §5.10 line 264, P-5 line 21: identity documents need break-glass, an explicit grant or check-in", () => {
+    const identity = (roles: readonly StaffRole[], context: ClassContext = {}) =>
+      staffReadableClasses(roles, context).has("RESTRICTED-IDENTITY");
+    expect(identity(["SA"])).toBe(false);
+    expect(identity(["SA"], { checks: ["break_glass"] })).toBe(true);
+    expect(identity(["RG"], { assigned: true })).toBe(false);
+    expect(identity(["RG"], { assigned: true, explicitGrant: true })).toBe(true);
+    expect(identity(["RG"], { explicitGrant: true })).toBe(false);
+    expect(identity(["HL"], { assigned: true, checks: ["check_in"] })).toBe(true);
+    expect(identity(["HL"], { checks: ["check_in"] })).toBe(false);
+    const docs: ClassContext = {
+      resource: "guests.identity_documents",
+      assigned: true,
+      checks: ["check_in"],
+    };
+    expect(identity(["HL"], docs)).toBe(true);
+    // P-5: Finance, Sales, Creative and Vendor Coordinators never; PM and HT have no cell either.
+    const everything: ClassContext = {
+      assigned: true,
+      owned: true,
+      explicitGrant: true,
+      checks: ["check_in", "break_glass"],
+    };
+    for (const role of ["FA", "SM", "CD", "VC", "PM", "HT"] as const) {
+      expect(identity([role], everything), role).toBe(false);
+    }
   });
 
   it("§4 line 122: without a known resource no staff role reads internal notes", () => {

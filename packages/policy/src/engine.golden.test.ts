@@ -6,7 +6,7 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { decide, type PolicyPrincipal } from "./engine";
+import { decide, holdsExplicitGrant, type PolicyPrincipal } from "./engine";
 import type { StaffRole } from "./roles";
 
 function staff(roles: readonly StaffRole[], extra: Partial<PolicyPrincipal> = {}): PolicyPrincipal {
@@ -41,6 +41,16 @@ describe("§5.10 identity documents (P-5)", () => {
         scope: "assigned",
       });
     }
+  });
+
+  it("P-5 line 21: holdsExplicitGrant() tells a serialiser whether the grant is held on that wedding", () => {
+    const granted = staff(["RG"], { explicitGrants: [{ key, projectId: "p-1" }] });
+    expect(holdsExplicitGrant(granted, "guests.identity_documents.read:assigned", "p-1")).toBe(
+      true,
+    );
+    expect(holdsExplicitGrant(granted, key, "p-2")).toBe(false);
+    expect(holdsExplicitGrant(granted, key, undefined)).toBe(false);
+    expect(holdsExplicitGrant(granted, "guests.identity_documents.create", "p-1")).toBe(false);
   });
 
   it("P-5 line 21, §5.10 line 264: RG's upload and edit need their own explicit grant (fail closed)", () => {

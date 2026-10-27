@@ -21,6 +21,11 @@ export interface ClassContext extends ConditionFacts {
   /** The record is the guest's own row. */
   readonly ownRow?: boolean | undefined;
   /**
+   * The principal holds the explicit grant P-5 names on the record's wedding, which an RG needs
+   * for identity documents (§5.10 line 264): holdsExplicitGrant(principal, key, projectId).
+   */
+  readonly explicitGrant?: boolean | undefined;
+  /**
    * The row the record is read through, `module.resource` as in the permission keys. With it, the
    * classes follow that row's §5 cell: a role that cannot read it gets public fields only.
    */
@@ -47,18 +52,15 @@ const CONTACT_ROWS: readonly (readonly [section: string, label: string])[] = [
 ];
 /** The roles §4 line 124 gives contacts by the record they are on, not by its side. */
 const CONTACTS_BY_ROW: readonly StaffRole[] = ["PM", "HL"];
+/** §4 line 127: RESTRICTED-IDENTITY is the identity documents table, read through its §5.10 row. */
+const IDENTITY_ROW = { section: "5.10", label: "Identity documents" } as const;
 
 /** What one role adds to the base classes on a record, given the record's context (§4 "Readable by"). */
 function roleGrants(role: StaffRole, context: ClassContext): readonly VisibilityClass[] {
   switch (role) {
+    // Identity documents follow their row's conditions (readsIdentity): SA by break-glass only.
     case "SA":
-      return [
-        "RESTRICTED-FINANCE",
-        "RESTRICTED-CONTACT",
-        "RESTRICTED-BANK",
-        "SENSITIVE-GUEST",
-        "RESTRICTED-IDENTITY",
-      ];
+      return ["RESTRICTED-FINANCE", "RESTRICTED-CONTACT", "RESTRICTED-BANK", "SENSITIVE-GUEST"];
     case "FA":
       return ["RESTRICTED-FINANCE", "RESTRICTED-BANK"];
     // §4: "HT for hotel-side values", "VC for vendor-side values"; a record without a side is
@@ -91,7 +93,20 @@ function readsRow(roles: readonly StaffRole[], row: MatrixRow, context: ClassCon
     (row.grants[role] ?? []).filter((grant) => grant.actions.includes("read")),
   );
   const reach = { assigned: context.assigned === true, owned: context.owned === true };
-  return decideGrants(grants, reach, context, false).allowed;
+  return decideGrants(grants, reach, context, context.explicitGrant === true).allowed;
+}
+
+/**
+ * §4 line 127 by the §5.10 cell (line 264): SA "R break-glass", RG "with explicit grant" on assigned
+ * weddings, HL "check-in only" on assigned weddings; the facts come in the context, as decide()
+ * takes them, so the class and the key never disagree.
+ */
+function readsIdentity(roles: readonly StaffRole[], context: ClassContext): boolean {
+  const row = MATRIX.staff.find(
+    (candidate) =>
+      candidate.section === IDENTITY_ROW.section && candidate.label === IDENTITY_ROW.label,
+  );
+  return row !== undefined && readsRow(roles, row, context);
 }
 
 /**
@@ -188,6 +203,7 @@ export function staffReadableClasses(
     if (roles.includes(role)) for (const cls of roleGrants(role, context)) set.add(cls);
   }
   if (readsContacts(roles, context)) set.add("RESTRICTED-CONTACT");
+  if (readsIdentity(roles, context)) set.add("RESTRICTED-IDENTITY");
   return set;
 }
 

@@ -46,7 +46,7 @@ export { CLASS_ACTIONS, VERB_ACTIONS, isAction, parsePermissionKey, permissionKe
 export type { ClassAction, KeyAction, ParsedKey, PermissionKey, VerbAction } from "./keys";
 export { MATRIX } from "./matrix";
 export type { Actor, Grant, MatrixRow, ReportExclusion, RowAlias, Transition } from "./matrix";
-export { can, decide, grantsForRole, permissionKeysForRole } from "./engine";
+export { can, decide, grantsForRole, holdsExplicitGrant, permissionKeysForRole } from "./engine";
 export type { ExplicitGrant, PolicyPrincipal, PolicyTarget } from "./engine";
 export type { Decision, DenialReason, Reach, RoleGrant } from "./evaluate";
 export { clientReach, decideReach } from "./reach";

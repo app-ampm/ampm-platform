@@ -131,9 +131,20 @@ function reachOf(principal: PolicyPrincipal, target: PolicyTarget): Reach {
   };
 }
 
-/** The grant is compared by the base key it decides on, so every spelling of the key counts. */
-function holdsExplicitGrant(principal: PolicyPrincipal, base: string, projectId?: string) {
-  if (projectId === undefined) return false;
+/**
+ * Whether the principal holds an explicit grant of the key on the wedding (P-5). Both keys are
+ * compared by the base key they decide on, so every §10 spelling of the key counts.
+ *
+ * @example
+ * const context = { assigned, explicitGrant: holdsExplicitGrant(principal, "guests.identity_documents.read", doc.projectId) };
+ */
+export function holdsExplicitGrant(
+  principal: PolicyPrincipal,
+  key: string,
+  projectId: string | undefined,
+): boolean {
+  const base = baseKey(key);
+  if (base === null || projectId === undefined) return false;
   return (principal.explicitGrants ?? []).some(
     (grant) => grant.projectId === projectId && baseKey(grant.key) === base,
   );
