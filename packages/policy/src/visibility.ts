@@ -35,47 +35,60 @@ export interface ClassContext {
   readonly ownRow?: boolean | undefined;
 }
 
+/** Every staff role reads these on any record it may see at all. */
+const BASE_CLASSES: readonly VisibilityClass[] = [
+  "PUBLIC",
+  "CLIENT",
+  "INTERNAL",
+  "RESTRICTED-NOTES",
+];
+const CONTACT_AND_FINANCE: readonly VisibilityClass[] = [
+  "RESTRICTED-CONTACT",
+  "RESTRICTED-FINANCE",
+];
+/** The order the grants are applied in, which fixes the order of the resulting set. */
+const GRANT_ORDER: readonly StaffRole[] = ["SA", "FA", "HT", "VC", "SM", "PM", "HL", "RG"];
+
+/** What one role adds to the base classes on a record, given the record's context (§4 "Readable by"). */
+function roleGrants(role: StaffRole, context: ClassContext): readonly VisibilityClass[] {
+  switch (role) {
+    case "SA":
+      return [
+        "RESTRICTED-FINANCE",
+        "RESTRICTED-CONTACT",
+        "RESTRICTED-BANK",
+        "SENSITIVE-GUEST",
+        "RESTRICTED-IDENTITY",
+      ];
+    case "FA":
+      return ["RESTRICTED-FINANCE", "RESTRICTED-BANK"];
+    case "HT":
+      return context.side === "vendor" ? [] : CONTACT_AND_FINANCE;
+    case "VC":
+      return context.side === "hotel" ? [] : CONTACT_AND_FINANCE;
+    case "SM":
+      return context.side === "hotel" ? ["RESTRICTED-CONTACT"] : [];
+    case "PM":
+      return context.assigned
+        ? ["RESTRICTED-FINANCE", "RESTRICTED-CONTACT", "SENSITIVE-GUEST"]
+        : [];
+    case "HL":
+      return context.assigned ? ["RESTRICTED-CONTACT", "SENSITIVE-GUEST"] : [];
+    case "RG":
+      return context.assigned ? ["SENSITIVE-GUEST"] : [];
+    default:
+      return [];
+  }
+}
+
 /** The classes a staff role may read on a record, from the "Readable by" column of §4. */
 export function staffReadableClasses(
   roles: readonly StaffRole[],
   context: ClassContext = {},
 ): ReadonlySet<VisibilityClass> {
-  const set = new Set<VisibilityClass>(["PUBLIC", "CLIENT", "INTERNAL", "RESTRICTED-NOTES"]);
-  const has = (role: StaffRole) => roles.includes(role);
-  if (has("SA")) {
-    for (const cls of [
-      "RESTRICTED-FINANCE",
-      "RESTRICTED-CONTACT",
-      "RESTRICTED-BANK",
-      "SENSITIVE-GUEST",
-      "RESTRICTED-IDENTITY",
-    ] as const)
-      set.add(cls);
-  }
-  if (has("FA")) {
-    set.add("RESTRICTED-FINANCE");
-    set.add("RESTRICTED-BANK");
-  }
-  if (has("HT") && context.side !== "vendor") {
-    set.add("RESTRICTED-CONTACT");
-    set.add("RESTRICTED-FINANCE");
-  }
-  if (has("VC") && context.side !== "hotel") {
-    set.add("RESTRICTED-CONTACT");
-    set.add("RESTRICTED-FINANCE");
-  }
-  if (has("SM") && context.side === "hotel") set.add("RESTRICTED-CONTACT");
-  if (context.assigned) {
-    if (has("PM")) {
-      set.add("RESTRICTED-FINANCE");
-      set.add("RESTRICTED-CONTACT");
-      set.add("SENSITIVE-GUEST");
-    }
-    if (has("HL")) {
-      set.add("RESTRICTED-CONTACT");
-      set.add("SENSITIVE-GUEST");
-    }
-    if (has("RG")) set.add("SENSITIVE-GUEST");
+  const set = new Set<VisibilityClass>(BASE_CLASSES);
+  for (const role of GRANT_ORDER) {
+    if (roles.includes(role)) for (const cls of roleGrants(role, context)) set.add(cls);
   }
   return set;
 }

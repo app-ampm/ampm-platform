@@ -45,6 +45,16 @@ function LinkContent({ children, standalone, external, tone, textVariant }: Cont
   );
 }
 
+function linkClasses(standalone: boolean, className: string | undefined): string {
+  return cn(
+    "web:rounded web:focus-visible:outline-none web:focus-visible:ring-2 web:focus-visible:ring-focus",
+    standalone
+      ? "min-h-touch flex-row items-center justify-between gap-2 self-stretch"
+      : "self-start",
+    className,
+  );
+}
+
 /**
  * The only way to navigate from shared UI: Expo Router inside the app, the browser for external
  * URLs. Links read as links to screen readers and underline inline.
@@ -64,13 +74,7 @@ export function Link({
   accessibilityLabel,
 }: LinkProps) {
   const standalone = variant === "standalone";
-  const classes = cn(
-    "web:rounded web:focus-visible:outline-none web:focus-visible:ring-2 web:focus-visible:ring-focus",
-    standalone
-      ? "min-h-touch flex-row items-center justify-between gap-2 self-stretch"
-      : "self-start",
-    className,
-  );
+  const classes = linkClasses(standalone, className);
   const a11y = {
     accessibilityRole: "link" as const,
     accessibilityLabel: accessibilityLabel ?? children,

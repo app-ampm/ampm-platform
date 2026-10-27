@@ -16,6 +16,50 @@ export interface Entitlements {
   readonly signInRefused: boolean;
 }
 
+const DEMO_MODULES: readonly EntitlementModule[] = [
+  "hotel_discovery",
+  "saved_hotels",
+  "hotel_assistance",
+  "wedding_workspace",
+  "guests_rsvp",
+  "menus",
+  "live_chat",
+];
+const ACTIVE_SUBSCRIPTION: readonly EntitlementModule[] = [
+  "hotel_discovery",
+  "saved_hotels",
+  "hotel_assistance",
+];
+/** A lapsed subscription keeps its records readable, finance included, but reaches nothing new. */
+const LAPSED_SUBSCRIPTION: readonly EntitlementModule[] = [
+  "saved_hotels",
+  "hotel_assistance",
+  "client_finance",
+];
+const LAPSED = new Set<ClientAccountState["subscription"]>(["expired", "cancelled", "suspended"]);
+const AGREEMENT_MODULES: readonly EntitlementModule[] = [
+  "hotel_discovery",
+  "saved_hotels",
+  "hotel_assistance",
+  "client_finance",
+];
+const PROJECT_MODULES: readonly EntitlementModule[] = [
+  "saved_hotels",
+  "hotel_assistance",
+  "wedding_workspace",
+  "guests_rsvp",
+  "menus",
+  "live_chat",
+];
+const READ_ONLY_PROJECT = new Set<ClientAccountState["project"]>(["on_hold", "closed_in_window"]);
+
+function subscriptionModules(
+  subscription: ClientAccountState["subscription"],
+): readonly EntitlementModule[] {
+  if (subscription === "active") return ACTIVE_SUBSCRIPTION;
+  return LAPSED.has(subscription) ? LAPSED_SUBSCRIPTION : [];
+}
+
 /**
  * Step 3 of the pipeline (architecture §6): the modules a client principal may reach, from
  * subscription, agreements and memberships combined (permission-matrix §3). Computed per request
@@ -23,52 +67,17 @@ export interface Entitlements {
  */
 export function resolveClientEntitlements(state: ClientAccountState): Entitlements {
   if (state.suspended) return { modules: [], readOnly: true, signInRefused: true };
-  const modules = new Set<EntitlementModule>(["support"]);
-  let readOnly = false;
   if (state.isDemo) {
-    for (const m of [
-      "hotel_discovery",
-      "saved_hotels",
-      "hotel_assistance",
-      "wedding_workspace",
-      "guests_rsvp",
-      "menus",
-      "live_chat",
-    ] as const)
-      modules.add(m);
-    return { modules: [...modules], readOnly: true, signInRefused: false };
+    return { modules: ["support", ...DEMO_MODULES], readOnly: true, signInRefused: false };
   }
-  if (state.subscription === "active") {
-    modules.add("hotel_discovery");
-    modules.add("saved_hotels");
-    modules.add("hotel_assistance");
-  } else if (
-    state.subscription === "expired" ||
-    state.subscription === "cancelled" ||
-    state.subscription === "suspended"
-  ) {
-    modules.add("saved_hotels");
-    modules.add("hotel_assistance");
-    modules.add("client_finance");
-    readOnly = true;
-  }
-  if (state.hotelAssistanceAgreement) {
-    modules.add("hotel_discovery");
-    modules.add("saved_hotels");
-    modules.add("hotel_assistance");
-    modules.add("client_finance");
-  }
-  if (state.project !== "none" && state.project !== "archived") {
-    for (const m of [
-      "saved_hotels",
-      "hotel_assistance",
-      "wedding_workspace",
-      "guests_rsvp",
-      "menus",
-      "live_chat",
-    ] as const)
-      modules.add(m);
-    if (state.project === "on_hold" || state.project === "closed_in_window") readOnly = true;
-  }
+  const hasProject = state.project !== "none" && state.project !== "archived";
+  const modules = new Set<EntitlementModule>([
+    "support",
+    ...subscriptionModules(state.subscription),
+    ...(state.hotelAssistanceAgreement ? AGREEMENT_MODULES : []),
+    ...(hasProject ? PROJECT_MODULES : []),
+  ]);
+  const readOnly =
+    LAPSED.has(state.subscription) || (hasProject && READ_ONLY_PROJECT.has(state.project));
   return { modules: [...modules], readOnly, signInRefused: false };
 }

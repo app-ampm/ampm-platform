@@ -4,7 +4,7 @@
  * reserved phone range, local identity subjects. Never real people.
  */
 import { PrismaPg } from "@prisma/adapter-pg";
-import { permissionKeysForRole, STAFF_ROLE_CODES, STAFF_ROLES } from "@ampm/policy";
+import { permissionKeysForRole, STAFF_ROLE_CODES, STAFF_ROLES, type StaffRole } from "@ampm/policy";
 
 import { PrismaClient } from "../src/generated/prisma/client.js";
 
@@ -20,8 +20,40 @@ export const SEED = {
   projectId: "0192f3a0-7d3e-7b1a-9c2f-0000000000a1",
 } as const;
 
-async function main(): Promise<void> {
-  const roleIds = new Map<string, string>();
+interface Account {
+  readonly email: string;
+  readonly name: string;
+  readonly subject: string;
+}
+
+interface AccountOptions {
+  readonly userType: "staff" | "client";
+  readonly status?: "active" | "disabled";
+  readonly phone?: string;
+  readonly mfaEnabled?: boolean;
+}
+
+/** Upserts a synthetic account by email; the identity subject is the local provider's. */
+async function upsertAccount(account: Account, options: AccountOptions) {
+  const status = options.status ?? "active";
+  return prisma.user.upsert({
+    where: { email: account.email },
+    update: { identitySubject: account.subject, status },
+    create: {
+      userType: options.userType,
+      name: account.name,
+      email: account.email,
+      status,
+      identitySubject: account.subject,
+      ...(options.phone ? { phone: options.phone } : {}),
+      ...(options.mfaEnabled ? { mfaEnabled: true } : {}),
+    },
+  });
+}
+
+/** The nine roles with their permission keys from the policy package; role ids by code. */
+async function seedRoles(): Promise<ReadonlyMap<StaffRole, string>> {
+  const roleIds = new Map<StaffRole, string>();
   for (const code of STAFF_ROLE_CODES) {
     const { key, name } = STAFF_ROLES[code];
     const role = await prisma.role.upsert({
@@ -43,42 +75,37 @@ async function main(): Promise<void> {
       });
     }
   }
-  const admin = await prisma.user.upsert({
-    where: { email: SEED.superAdmin.email },
-    update: { identitySubject: SEED.superAdmin.subject, status: "active" },
-    create: {
-      userType: "staff",
-      name: SEED.superAdmin.name,
-      email: SEED.superAdmin.email,
-      phone: "+911234567001",
-      status: "active",
-      identitySubject: SEED.superAdmin.subject,
-      mfaEnabled: true,
-    },
-  });
+  return roleIds;
+}
+
+function roleId(roleIds: ReadonlyMap<StaffRole, string>, code: StaffRole): string {
+  const id = roleIds.get(code);
+  if (!id) throw new Error(`role ${code} was not seeded`);
+  return id;
+}
+
+async function assignRole(userId: string, roleId: string): Promise<void> {
   await prisma.userRole.upsert({
-    where: { userId_roleId: { userId: admin.id, roleId: roleIds.get("SA")! } },
+    where: { userId_roleId: { userId, roleId } },
     update: {},
-    create: { userId: admin.id, roleId: roleIds.get("SA")! },
+    create: { userId, roleId },
   });
-  const pm = await prisma.user.upsert({
-    where: { email: SEED.projectManager.email },
-    update: { identitySubject: SEED.projectManager.subject, status: "active" },
-    create: {
-      userType: "staff",
-      name: SEED.projectManager.name,
-      email: SEED.projectManager.email,
-      phone: "+911234567002",
-      status: "active",
-      identitySubject: SEED.projectManager.subject,
-      mfaEnabled: true,
-    },
+}
+
+/** The Super Admin, the project manager with a project lead membership, and a disabled account. */
+async function seedStaff(roleIds: ReadonlyMap<StaffRole, string>): Promise<void> {
+  const admin = await upsertAccount(SEED.superAdmin, {
+    userType: "staff",
+    phone: "+911234567001",
+    mfaEnabled: true,
   });
-  await prisma.userRole.upsert({
-    where: { userId_roleId: { userId: pm.id, roleId: roleIds.get("PM")! } },
-    update: {},
-    create: { userId: pm.id, roleId: roleIds.get("PM")! },
+  await assignRole(admin.id, roleId(roleIds, "SA"));
+  const pm = await upsertAccount(SEED.projectManager, {
+    userType: "staff",
+    phone: "+911234567002",
+    mfaEnabled: true,
   });
+  await assignRole(pm.id, roleId(roleIds, "PM"));
   await prisma.projectMember.upsert({
     where: { projectId_userId: { projectId: SEED.projectId, userId: pm.id } },
     update: { status: "active" },
@@ -90,18 +117,12 @@ async function main(): Promise<void> {
       acceptedAt: new Date(),
     },
   });
-  const client = await prisma.user.upsert({
-    where: { email: SEED.client.email },
-    update: { identitySubject: SEED.client.subject, status: "active" },
-    create: {
-      userType: "client",
-      name: SEED.client.name,
-      email: SEED.client.email,
-      phone: "+911234567003",
-      status: "active",
-      identitySubject: SEED.client.subject,
-    },
-  });
+  await upsertAccount(SEED.disabled, { userType: "staff", status: "disabled" });
+}
+
+/** The client representative (bride's side) with finance view and approval rights on the project. */
+async function seedClient(): Promise<void> {
+  const client = await upsertAccount(SEED.client, { userType: "client", phone: "+911234567003" });
   await prisma.projectMember.upsert({
     where: { projectId_userId: { projectId: SEED.projectId, userId: client.id } },
     update: { status: "active" },
@@ -116,17 +137,12 @@ async function main(): Promise<void> {
       acceptedAt: new Date(),
     },
   });
-  await prisma.user.upsert({
-    where: { email: SEED.disabled.email },
-    update: { identitySubject: SEED.disabled.subject, status: "disabled" },
-    create: {
-      userType: "staff",
-      name: SEED.disabled.name,
-      email: SEED.disabled.email,
-      status: "disabled",
-      identitySubject: SEED.disabled.subject,
-    },
-  });
+}
+
+async function main(): Promise<void> {
+  const roleIds = await seedRoles();
+  await seedStaff(roleIds);
+  await seedClient();
   console.log("seeded roles, permissions and four synthetic accounts");
 }
 

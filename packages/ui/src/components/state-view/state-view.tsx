@@ -22,6 +22,19 @@ export interface StateViewProps extends ViewProps {
   readonly className?: string;
 }
 
+function StateActionButton({ action }: { action: StateAction }) {
+  return (
+    <Button
+      variant="secondary"
+      onPress={action.onPress}
+      loading={action.loading ?? false}
+      className="mt-2"
+    >
+      {action.label}
+    </Button>
+  );
+}
+
 /** The shape behind EmptyState, ErrorState and OfflineState: icon, title, one paragraph, one action. */
 export function StateView({
   icon,
@@ -51,16 +64,7 @@ export function StateView({
           {description}
         </Text>
       ) : null}
-      {action ? (
-        <Button
-          variant="secondary"
-          onPress={action.onPress}
-          loading={action.loading ?? false}
-          className="mt-2"
-        >
-          {action.label}
-        </Button>
-      ) : null}
+      {action ? <StateActionButton action={action} /> : null}
     </View>
   );
 }

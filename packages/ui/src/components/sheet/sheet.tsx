@@ -51,6 +51,40 @@ function SheetHeader({
   );
 }
 
+interface ScrimProps {
+  readonly onClose: () => void;
+  readonly label: string;
+  readonly testID: string | undefined;
+}
+
+function SheetScrim({ onClose, label, testID }: ScrimProps) {
+  return (
+    <Pressable
+      // Absolute: the scrim fills the screen behind the panel and closes the sheet on press.
+      className="absolute inset-0 bg-overlay/50"
+      onPress={onClose}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      testID={testID ? `${testID}-scrim` : undefined}
+    />
+  );
+}
+
+function SheetBody({ children, footer }: { children: ReactNode; footer: ReactNode | undefined }) {
+  return (
+    <>
+      <ScrollView
+        className="shrink"
+        contentContainerClassName="gap-3 pb-2"
+        keyboardShouldPersistTaps="handled"
+      >
+        {children}
+      </ScrollView>
+      {footer ? <View className="gap-2 pt-3">{footer}</View> : null}
+    </>
+  );
+}
+
 /**
  * A bottom sheet on a modal: focus stays inside (React Native Web traps it, native treats it as a
  * modal view), the scrim and the close button both dismiss, the slide respects reduced motion.
@@ -79,28 +113,14 @@ export function Sheet({
       testID={testID}
     >
       <View className="flex-1 justify-end">
-        <Pressable
-          // Absolute: the scrim fills the screen behind the panel and closes the sheet on press.
-          className="absolute inset-0 bg-overlay/50"
-          onPress={onClose}
-          accessibilityRole="button"
-          accessibilityLabel={closeLabel}
-          testID={testID ? `${testID}-scrim` : undefined}
-        />
+        <SheetScrim onClose={onClose} label={closeLabel} testID={testID} />
         <View
           accessibilityViewIsModal
           className={cn("rounded-t-2xl bg-surface-elevated px-4 pt-3", SIZE[size])}
           style={{ paddingBottom: insets.bottom + 16 }}
         >
           <SheetHeader title={title} closeLabel={closeLabel} onClose={onClose} />
-          <ScrollView
-            className="shrink"
-            contentContainerClassName="gap-3 pb-2"
-            keyboardShouldPersistTaps="handled"
-          >
-            {children}
-          </ScrollView>
-          {footer ? <View className="gap-2 pt-3">{footer}</View> : null}
+          <SheetBody footer={footer}>{children}</SheetBody>
         </View>
       </View>
     </Modal>
