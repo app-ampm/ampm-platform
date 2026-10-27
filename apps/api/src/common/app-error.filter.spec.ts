@@ -79,24 +79,25 @@ describe("AppErrorFilter", () => {
       body: '"secret"',
     });
     const passed: unknown[] = [];
-    answerParserRefusal(quoted, {} as never, {} as never, (error?: unknown) => passed.push(error));
+    const answer = (error: unknown) =>
+      answerParserRefusal(error, {}, {}, (next?: unknown) => passed.push(next));
+    answer(quoted);
     expect(passed).toHaveLength(1);
     expect(isAppError(passed[0]) && passed[0].toEnvelope()).toEqual({
       error: { code: "validation_failed", message: "Malformed request body" },
     });
 
-    const tooLarge = parserError("request entity too large", 413, "entity.too.large");
-    answerParserRefusal(tooLarge, {} as never, {} as never, (error?: unknown) =>
-      passed.push(error),
-    );
+    answer(parserError("request entity too large", 413, "entity.too.large"));
     expect(isAppError(passed[1]) && passed[1].status).toBe(413);
 
-    // Anything that is not a client error passes on unchanged, for the filter to log as internal.
+    // Anything else passes on unchanged: an unexpected error for the filter to log as internal,
+    // a typed error with its own answer.
     const unexpected = new Error("stream encoding should not be set");
-    answerParserRefusal(unexpected, {} as never, {} as never, (error?: unknown) =>
-      passed.push(error),
-    );
-    expect(passed[2]).toBe(unexpected);
+    const typed = errors.notFound();
+    answer(unexpected);
+    answer(typed);
+    expect(passed.slice(2)).toEqual([unexpected, typed]);
+    expect(passed[3]).toBe(typed);
   });
 
   it("maps framework exceptions by status and hides unexpected errors", () => {

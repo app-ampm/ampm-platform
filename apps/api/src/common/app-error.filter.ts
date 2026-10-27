@@ -1,6 +1,6 @@
 import { type ArgumentsHost, Catch, type ExceptionFilter, HttpException } from "@nestjs/common";
 import { AppError, errors, isAppError, type ApiFailure, type ErrorCode } from "@ampm/core";
-import type { NextFunction, Request, Response } from "express";
+import type { NextFunction, Response } from "express";
 
 import { AppLogger } from "./logger.service.js";
 
@@ -62,13 +62,15 @@ export class AppErrorFilter implements ExceptionFilter {
 /**
  * A refusal raised outside Nest, as the express body parser raises one (http-errors), as the typed
  * error the API answers with: the status its `type` names, else its own 4xx status, with the fixed
- * wording of PARSER_MESSAGES, never the error's text. Undefined for anything else.
+ * wording of PARSER_MESSAGES, never the error's text. Undefined for anything else, a typed error
+ * or a framework exception among it: those keep their own answer.
  *
  * @example
  * parserRefusal(Object.assign(new SyntaxError("…"), { status: 400, type: "entity.parse.failed" }));
  * // → AppError validation_failed, "Malformed request body"
  */
 export function parserRefusal(exception: unknown): AppError | undefined {
+  if (isAppError(exception) || exception instanceof HttpException) return undefined;
   const status = PARSER_TYPES.get(errorType(exception) ?? "") ?? clientErrorStatus(exception);
   return status === undefined
     ? undefined
@@ -86,8 +88,8 @@ export function parserRefusal(exception: unknown): AppError | undefined {
  */
 export function answerParserRefusal(
   error: unknown,
-  _request: Request,
-  _response: Response,
+  _request: unknown,
+  _response: unknown,
   next: NextFunction,
 ): void {
   next(parserRefusal(error) ?? error);
