@@ -129,8 +129,21 @@ function collect(body: string, kind: CellKind, cell: string): (Group | Grant)[] 
 }
 
 /** An edit at this scope reaches records a read at that scope does not; assigned and own differ. */
-function reachesBeyond(edit: Scope, read: Scope): boolean {
+function scopeBeyond(edit: Scope, read: Scope): boolean {
   return read !== "all" && edit !== read;
+}
+
+/**
+ * The edit reaches records the read does not: a wider scope, or a condition of the read ("hotel",
+ * "theme, dress code") the edit lacks. Conditions compare whole, so a narrower one stops the
+ * generator too, for a reading in notes.ts.
+ */
+function reachesBeyond(edit: Grant, read: Grant): boolean {
+  const carried = new Set(edit.conditions.map((condition) => JSON.stringify(condition)));
+  return (
+    scopeBeyond(edit.scope, read.scope) ||
+    read.conditions.some((condition) => !carried.has(JSON.stringify(condition)))
+  );
 }
 
 /** Each action once, and no update or delete beyond the cell's read unless notes.ts says so. */
@@ -146,7 +159,7 @@ function checkCell(grants: readonly Grant[], reading: string, cell: string): voi
   if (edits.length > 0 && reads.length === 0) {
     throw new Error(`the cell "${cell}" edits records it does not read: confirm it in notes.ts`);
   }
-  if (edits.some((edit) => reads.some((read) => reachesBeyond(edit.scope, read.scope)))) {
+  if (edits.some((edit) => reads.some((read) => reachesBeyond(edit, read)))) {
     throw new Error(`the cell "${cell}" edits wider than its read: add a reading to notes.ts`);
   }
 }

@@ -104,6 +104,16 @@ describe("parseCell, §5 staff cells", () => {
     expect(() => parseCell("D", "others")).toThrow(/does not read/);
   });
 
+  it("POL-19: refuses an edit that drops a condition its read carries", () => {
+    // Same scope, but the edit reaches sides, fields or records the read is narrowed away from.
+    expect(() => parseCell("R hotel, U", "staff")).toThrow(/wider than its read/);
+    expect(() => parseCell("RU hotel lines, D", "staff")).toThrow(/wider than its read/);
+    expect(() => parseCell("R (a) theme, dress code, U (a)", "staff")).toThrow(
+      /wider than its read/,
+    );
+    expect(() => parseCell("R (o), U (o) hotel", "staff")).not.toThrow();
+  });
+
   it("§5.6 line 208, §5.8 line 238, §5.9 line 248, §5.15 line 311: the document's own edit-beyond-read cells parse", () => {
     for (const cell of [
       "U",
