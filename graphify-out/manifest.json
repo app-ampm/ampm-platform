@@ -90,9 +90,9 @@
     "semantic_hash": ""
   },
   "docs/README.md": {
-    "mtime": 1793122456.1563125,
-    "seen": 1793123619.7024992,
-    "ast_hash": "a7b0900b82786f73fc24aeea34145b8b",
+    "mtime": 1793126625.1411815,
+    "seen": 1793127275.2520661,
+    "ast_hash": "9a4c363d9e9ff88a6be346f7be824c5e",
     "semantic_hash": ""
   },
   "docs/architecture.md": {
@@ -2010,9 +2010,9 @@
     "semantic_hash": ""
   },
   "docs/tools/redact_secrets.py": {
-    "mtime": 1793122293.1893299,
-    "seen": 1793123619.6938229,
-    "ast_hash": "d3f64820bce5d2b6ed0393fca6e65c37",
+    "mtime": 1793126743.0198042,
+    "seen": 1793127275.248152,
+    "ast_hash": "fe98a38f3459bc54fee619722b2ee503",
     "semantic_hash": ""
   },
   "packages/policy/scripts/lookup.ts": {
@@ -2340,9 +2340,9 @@
     "semantic_hash": ""
   },
   "docs/tools/redact_secrets_test.py": {
-    "mtime": 1793123245.1157503,
-    "seen": 1793123619.693825,
-    "ast_hash": "01ff445fb9e6dd1dcb5291673c840474",
+    "mtime": 1793126705.1732821,
+    "seen": 1793127275.248152,
+    "ast_hash": "1c46290bd0c95cdc23d45a678ff5535e",
     "semantic_hash": ""
   },
   "docs/tools/setup_memory_test.sh": {
@@ -2442,15 +2442,15 @@
     "semantic_hash": ""
   },
   "docs/tools/mempalace_global_hook.sh": {
-    "mtime": 1793122553.7067473,
-    "seen": 1793123619.693745,
-    "ast_hash": "349d81c9a4be82fb3a0c975ab5658937",
+    "mtime": 1793126307.9921668,
+    "seen": 1793127275.248123,
+    "ast_hash": "a26b4713bb1c3740dd1e8a432ab50d0c",
     "semantic_hash": ""
   },
   "docs/tools/mempalace_global_hook_test.sh": {
-    "mtime": 1793122567.691671,
-    "seen": 1793123619.6937459,
-    "ast_hash": "b09bcecf7f833065c7f046974c29cba2",
+    "mtime": 1793126762.3966324,
+    "seen": 1793127275.248124,
+    "ast_hash": "8be3d5526c809fcca255d78ec997652b",
     "semantic_hash": ""
   }
 }
