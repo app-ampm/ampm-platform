@@ -14,6 +14,7 @@ import { canTransition, type TransitionContext } from "../transitions";
 import { FOREIGN_PROJECT, ME, MEMBER_PROJECT, SOMEONE, member } from "./fixtures";
 
 const client: PolicyPrincipal = { type: "client", userId: ME, projectIds: [MEMBER_PROJECT] };
+const outsider: PolicyPrincipal = { type: "client", userId: ME, projectIds: [FOREIGN_PROJECT] };
 const system: PolicyPrincipal = { type: "system" };
 const nobody: PolicyPrincipal = {
   type: "staff",
@@ -98,6 +99,8 @@ function expectMovers(rule: Transition, from: string, to: string): void {
     const moved = canTransition(client, rule.entity, from, to, context);
     expect(moved === null ? "null" : "not.null", "client").toBe(expectClient);
   }
+  // §1 line 52: a representative of another wedding moves nothing on this one.
+  expect(canTransition(outsider, rule.entity, from, to, context), "outsider").toBeNull();
   const systemMoves = same.some((r) => r.system);
   expect(canTransition(system, rule.entity, from, to, context) !== null, "system").toBe(
     systemMoves,

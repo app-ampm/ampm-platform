@@ -3,14 +3,19 @@ import { MATRIX, type Actor, type Transition } from "./matrix";
 import { STATUS_MACHINES, type StatusMachine } from "./statuses";
 
 /**
- * What the service knows about the record a principal wants to move (permission-matrix §7).
+ * What the service knows about the record a principal wants to move (permission-matrix §7). A
+ * client, guest or demo principal moves a record only on its own wedding or account (§1 line 52,
+ * §6 line 338), so the service passes the record's projectId, or its accountId when the record
+ * belongs to an account before any wedding (a hotel enquiry); without either they move nothing.
  *
  * @example
  * const context: TransitionContext = { projectId: incident.projectId, assigneeId: incident.assignedUserId };
  */
 export interface TransitionContext {
-  /** The record's wedding: an assigned mover, "PM (a)", must be a member of it. */
+  /** The record's wedding: an assigned mover, "PM (a)", or a client must be a member of it. */
   readonly projectId?: string | undefined;
+  /** The record's client account, for a record that has no wedding yet (§7 line 400). */
+  readonly accountId?: string | undefined;
   /** The record's people, compared with the principal's userId for "The assignee" and the rest. */
   readonly assigneeId?: string | undefined;
   readonly ownerId?: string | undefined;
@@ -58,6 +63,21 @@ function isActor(
   );
 }
 
+function isMember(principal: PolicyPrincipal, context: TransitionContext): boolean {
+  return (
+    context.projectId !== undefined && principal.projectIds?.includes(context.projectId) === true
+  );
+}
+
+/** §1 line 52: a client, guest or demo principal reaches only its own wedding or account. */
+function ownsRecord(principal: PolicyPrincipal, context: TransitionContext): boolean {
+  const { accountId } = context;
+  return (
+    isMember(principal, context) ||
+    (accountId !== undefined && principal.accountIds?.includes(accountId) === true)
+  );
+}
+
 function moves(
   rule: Transition,
   machine: StatusMachine,
@@ -65,15 +85,16 @@ function moves(
   context: TransitionContext,
 ): boolean {
   if (principal.type === "system") return rule.system;
-  if (isActor(rule, machine, principal, context)) return true;
-  if (principal.type === "client") return rule.client;
-  // Guests and the demo move a record only as one of its people (the requester of their request).
-  if (principal.type !== "staff") return false;
-  const member =
-    context.projectId !== undefined && principal.projectIds?.includes(context.projectId);
-  return rule.roles.some(
-    (mover) => principal.roles?.includes(mover.role) && (!mover.assigned || member),
-  );
+  if (principal.type === "staff") {
+    const byRole = rule.roles.some(
+      (mover) =>
+        principal.roles?.includes(mover.role) && (!mover.assigned || isMember(principal, context)),
+    );
+    return byRole || isActor(rule, machine, principal, context);
+  }
+  if (!ownsRecord(principal, context)) return false;
+  // "Either CR" is a client's; guests and the demo move a record only as one of its people.
+  return isActor(rule, machine, principal, context) || (principal.type === "client" && rule.client);
 }
 
 /**

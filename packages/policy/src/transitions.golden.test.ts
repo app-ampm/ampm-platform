@@ -185,10 +185,14 @@ describe("§7 client request", () => {
 
   it("§7 line 483: the requester withdraws their own request", () => {
     expect(
-      canTransition(client, "client_request", "submitted", "withdrawn", { requesterId: "c-1" }),
+      canTransition(client, "client_request", "submitted", "withdrawn", {
+        ...onProject,
+        requesterId: "c-1",
+      }),
     ).not.toBeNull();
     expect(
       canTransition(client, "client_request", "under_review", "withdrawn", {
+        ...onProject,
         requesterId: "c-2",
       }),
     ).toBeNull();

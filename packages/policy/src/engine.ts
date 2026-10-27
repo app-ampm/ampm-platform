@@ -37,8 +37,10 @@ export interface PolicyPrincipal {
   readonly type: PrincipalType;
   readonly userId?: string | undefined;
   readonly roles?: readonly StaffRole[] | undefined;
-  /** Projects the principal is an active member of. */
+  /** Projects the principal is an active member of; for a guest token, the wedding of its link. */
   readonly projectIds?: readonly string[] | undefined;
+  /** Client accounts a client principal belongs to: "own" is its wedding or account (§6 line 338). */
+  readonly accountIds?: readonly string[] | undefined;
   readonly explicitGrants?: readonly ExplicitGrant[] | undefined;
 }
 
