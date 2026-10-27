@@ -116,4 +116,28 @@ describe("FieldNoteService (offline spike)", () => {
     service.upsert(PROJECT, write({ baseVersion: 0 }), PM);
     expect(refusedWith(service, member("SM"), write({ baseVersion: 1 }))).toBe(404);
   });
+
+  it("offline.md line 11: another writer's change from the same base is not taken for a replay", () => {
+    const service = new FieldNoteService();
+    service.upsert(PROJECT, write({ baseVersion: 0 }), PM);
+    service.upsert(PROJECT, write({ baseVersion: 1, body: "PM edited" }), PM);
+    // CD (a) creates and reads incidents only (§5.13 line 296): its change is refused, not dropped.
+    const offline = write({ baseVersion: 1, body: "CD offline change", status: "resolved" });
+    expect(refusedWith(service, member("CD"), offline)).toBe(403);
+    // A writer who may change the note gets the conflict to show, not a silent "duplicate".
+    const admin = { type: "staff", userId: "u-SA", roles: ["SA"] } as const;
+    expect(service.upsert(PROJECT, write({ baseVersion: 1, body: "SA edit" }), admin).outcome).toBe(
+      "conflict",
+    );
+    // PM's own replay of its edit is still recognised as one.
+    const replay = service.upsert(PROJECT, write({ baseVersion: 1, body: "PM edited" }), PM);
+    expect(replay).toMatchObject({ outcome: "duplicate", note: { version: 2, body: "PM edited" } });
+  });
+
+  it("a create-only writer's replay of its own create is still a duplicate, not a refusal", () => {
+    const service = new FieldNoteService();
+    const creative = member("CD");
+    service.upsert(PROJECT, write({ baseVersion: 0 }), creative);
+    expect(service.upsert(PROJECT, write({ baseVersion: 0 }), creative).outcome).toBe("duplicate");
+  });
 });

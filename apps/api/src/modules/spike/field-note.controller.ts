@@ -44,8 +44,9 @@ export class FieldNoteController {
   }
 
   /**
-   * One queued write; idempotent on (id, baseVersion) so a replayed queue never duplicates. The
-   * guard checks the create key; changing a note that exists also needs the update key (service).
+   * One queued write; idempotent on (id, baseVersion) for the same writer, so a replayed queue
+   * never duplicates. The guard checks the create key; changing a note that exists also needs the
+   * update key (service).
    */
   @Post()
   @RequirePermission("tasks.incidents.create", { projectParam: "projectId" })
