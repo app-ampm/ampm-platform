@@ -213,14 +213,23 @@ export const EDITS_BEYOND_READ: readonly string[] = [
 ];
 
 /**
- * Cells whose letters the document leaves ambiguous, with the reading adopted until AMPM confirms.
- * The generator stops on any other cell that edits wider than it reads (EDITS_BEYOND_READ).
+ * Cells whose letters the document leaves ambiguous, or contradicts elsewhere, with the reading
+ * adopted until AMPM confirms. A key is a cell's text, read so wherever it stands, or one cell named
+ * by its place and text, `§<subsection> <row label>, <column>: <text>` (parse-cells.ts readingKey),
+ * which the generator stops on once the document no longer has it. The generator also stops on any
+ * other cell that edits wider than it reads (EDITS_BEYOND_READ).
  *
  * @example
  * lookup(READINGS, "CR (o) UD"); // "CR (o) UD (o)"
+ * lookup(READINGS, "§5.8 Vendor bank details, VC: RU"); // "—"
  */
 export const READINGS: Readonly<Record<string, string>> = {
   // §5.9 "Comments, internal" (SM, HT, FA): "UD" after "CR (o)" would let them edit and delete every
   // internal comment while reading only their own; the narrower reading holds (POL-19).
   "CR (o) UD": "CR (o) UD (o)",
+  // §4 line 125 makes RESTRICTED-BANK readable by SA and FA and writable by FA and SA; §5.8 line 233
+  // gives VC "RU" on the row that holds that class alone (§5 legend line 136). Until AMPM decides,
+  // the narrower reading holds in both layers: VC has no grant, as the class layer never opens the
+  // class to VC; SA keeps line 233's "R" and FA its "RU" (ENGINE-4).
+  "§5.8 Vendor bank details, VC: RU": "—",
 };

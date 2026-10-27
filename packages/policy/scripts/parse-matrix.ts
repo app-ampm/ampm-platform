@@ -7,8 +7,8 @@ import type { Grant, MatrixRow, ReportExclusion, RowAlias } from "../src/matrix.
 import { KEY_ALIASES, MODULES, OUTSIDE_KEYS, RESOURCES, slugify } from "../src/resources.ts";
 import type { Action, Scope, StaffRole } from "../src/roles.ts";
 import { lookup } from "./lookup.ts";
-import { REPORT_EXCLUSIONS } from "./notes.ts";
-import { parseCell, type CellKind } from "./parse-cells.ts";
+import { READINGS, REPORT_EXCLUSIONS } from "./notes.ts";
+import { parseCell, readingKey, type CellKind } from "./parse-cells.ts";
 
 const STAFF: readonly StaffRole[] = ["SA", "SM", "HT", "PM", "CD", "VC", "RG", "HL", "FA"];
 const OTHERS = ["CR", "GU", "DP"] as const;
@@ -82,7 +82,7 @@ function cellRow(
   const cell = (index: number) => cells[index + 1] ?? "";
   const grants = columns.map((column, index): [string, Grant[]] => {
     try {
-      return [column, parseCell(cell(index), kind)];
+      return [column, parseCell(cell(index), kind, { section, label, column })];
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error);
       throw new Error(`permission-matrix.md §${section} "${label}", ${column}: ${reason}`, {
@@ -215,6 +215,30 @@ function checkOutsideKeys(rows: readonly MatrixRow[]): void {
   }
 }
 
+/**
+ * A reading of one cell (notes.ts READINGS, "§5.8 Vendor bank details, VC: RU") names a cell the
+ * block has, with that text, when the block has its subsection: a changed cell needs the reading
+ * reviewed, never silently dropped.
+ */
+function checkReadings(rows: readonly MatrixRow[]): void {
+  const cells = new Set(
+    rows.flatMap((row) =>
+      Object.entries(row.cells).map(([column, cell]) =>
+        readingKey({ section: row.section, label: row.label, column }, cell),
+      ),
+    ),
+  );
+  for (const key of Object.keys(READINGS)) {
+    const section = /^§(\S+) /.exec(key)?.[1];
+    if (section === undefined || !rows.some((row) => row.section === section)) continue;
+    if (!cells.has(key)) {
+      throw new Error(
+        `notes.ts READINGS "${key}": the document has no such cell; review the reading`,
+      );
+    }
+  }
+}
+
 function checkUnique(rows: readonly MatrixRow[]): void {
   const seen = new Set<string>();
   for (const row of rows) {
@@ -237,6 +261,7 @@ export function parseMatrix(block: string, kind: CellKind): MatrixRow[] {
   const tables = readTables(block, kind === "staff" ? "5.1" : "6");
   const rows = tables.flatMap((table) => tableRows(table, kind));
   checkUnique(rows);
+  checkReadings(rows);
   if (kind === "others") return rows;
   checkOutsideKeys(rows);
   return withAliases(rows);

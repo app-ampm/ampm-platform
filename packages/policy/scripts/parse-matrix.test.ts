@@ -110,6 +110,33 @@ describe("parseMatrix", () => {
     expect(() => parseMatrix(block, "staff")).toThrow(/vendors\.quotes\.read/);
   });
 
+  it("§4 line 125, §5.8 line 233: a reading of one cell holds there only, and stops once the cell changes", () => {
+    const readUpdate = [{ actions: ["read", "update"], scope: "all", conditions: [] }];
+    const vendors = (bankForVC: string) =>
+      [
+        "### 5.8 Vendors, artists and production",
+        ROLES,
+        "|---|---|---|---|---|---|---|---|---|---|",
+        "| Vendor profiles, client fields | CRUD | R | — | R | R | CRUD | — | R | R |",
+        "| Vendor contacts | RU | — | — | R (a) | — | RU | — | R (a) | — |",
+        "| Vendor internal rating and notes | RU | — | — | R (a) | — | RU | — | — | — |",
+        `| Vendor bank details | R | — | — | — | — | ${bankForVC} | — | — | RU |`,
+        "| Vendor proposals, client amounts | CRUS | — | — | RUS (a) | R (a) | CRUS | — | — | R |",
+        "| Vendor proposals, internal cost | RU | — | — | R (a) | — | RU | — | — | R |",
+        "| Artist bookings | CRUD | — | — | CRU (a) | R (a) | CRU | — | R (a) | — |",
+        "| Artist fee, internal | RU | — | — | R (a) | — | RU | — | — | R |",
+      ].join("\n");
+    const rows = parseMatrix(vendors("RU"), "staff");
+    const bank = rows.find((row) => row.label === "Vendor bank details");
+    expect(bank?.cells["VC"]).toBe("RU");
+    expect(bank?.grants["VC"]).toEqual([]);
+    expect(bank?.grants["FA"]).toEqual(readUpdate);
+    expect(bank?.grants["SA"]).toEqual([{ actions: ["read"], scope: "all", conditions: [] }]);
+    expect(rows.find((row) => row.label === "Vendor contacts")?.grants["VC"]).toEqual(readUpdate);
+    // Once the document changes the cell, the reading names nothing: review it, never drop it.
+    expect(() => parseMatrix(vendors("R"), "staff")).toThrow(/READINGS/);
+  });
+
   it("§6 line 371: the client, guest and demo table parses with its own columns", () => {
     const block = [
       "| Resource | CR (both representatives) | GU | DP |",

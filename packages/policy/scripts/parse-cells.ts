@@ -28,6 +28,18 @@ import {
  */
 export type CellKind = "staff" | "others";
 
+/**
+ * Where a cell stands in the document: its subsection, its row's label and its column.
+ *
+ * @example
+ * const place: CellPlace = { section: "5.8", label: "Vendor bank details", column: "VC" };
+ */
+export interface CellPlace {
+  readonly section: string;
+  readonly label: string;
+  readonly column: string;
+}
+
 interface Run {
   readonly actions: Action[];
   readonly qualifier: string | undefined;
@@ -164,17 +176,35 @@ function checkCell(grants: readonly Grant[], reading: string, cell: string): voi
   }
 }
 
+function cellText(cell: string): string {
+  return cell.replace(/\*\*/g, "").replace(/\s+/g, " ").trim();
+}
+
 /**
- * The grants of one cell.
+ * The notes.ts READINGS key of one cell: its place and its text, so a reading of that cell holds
+ * there only, and only while the document still says what the reading read.
+ *
+ * @example
+ * readingKey({ section: "5.8", label: "Vendor bank details", column: "VC" }, "RU");
+ * // → "§5.8 Vendor bank details, VC: RU"
+ */
+export function readingKey(place: CellPlace, cell: string): string {
+  return `§${place.section} ${place.label}, ${place.column}: ${cellText(cell)}`;
+}
+
+/**
+ * The grants of one cell; with its place, a reading notes.ts adopts for that cell alone applies.
  *
  * @example
  * parseCell("RU (a) theme, dress code", "staff");
  * // → [{ actions: ["read", "update"], scope: "assigned",
  * //      conditions: [{ kind: "fields", only: ["theme", "dress_code"] }] }]
+ * parseCell("RU", "staff", { section: "5.8", label: "Vendor bank details", column: "VC" }); // → []
  */
-export function parseCell(cell: string, kind: CellKind): Grant[] {
-  const text = cell.replace(/\*\*/g, "").replace(/\s+/g, " ").trim();
-  const reading = lookup(READINGS, text) ?? text;
+export function parseCell(cell: string, kind: CellKind, place?: CellPlace): Grant[] {
+  const text = cellText(cell);
+  const located = place === undefined ? undefined : lookup(READINGS, readingKey(place, text));
+  const reading = located ?? lookup(READINGS, text) ?? text;
   if (NO_GRANT_CELLS.includes(reading)) return [];
   if (kind === "others" && reading === "own") {
     return [{ actions: [...OWN_ALL], scope: "own", conditions: [] }];
