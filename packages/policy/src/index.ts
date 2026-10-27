@@ -53,4 +53,4 @@ export type { TransitionContext } from "./transitions";
 export { STATUS_MACHINES } from "./statuses";
 export type { ActorPrincipal, StatusMachine } from "./statuses";
 export { resolveClientEntitlements } from "./entitlements";
-export type { ClientAccountState, Entitlements, HotelReach } from "./entitlements";
+export type { ClientAccountState, Entitlements, FinanceReach, HotelReach } from "./entitlements";

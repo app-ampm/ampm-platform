@@ -25,6 +25,7 @@ describe("resolveClientEntitlements", () => {
       modules: [],
       readOnlyModules: [],
       hotelReach: [],
+      financeReach: [],
       signInRefused: true,
     });
   });
@@ -96,6 +97,19 @@ describe("resolveClientEntitlements", () => {
 
   it("§3 line 99: the wedding's client finance waits for AMPM (Q4)", () => {
     expect(resolve({ project: "active" }).modules).not.toContain("client_finance");
+    expect(resolve({ project: "active" }).financeReach).toEqual([]);
+  });
+
+  it("§3 lines 97-99: a lapsed subscription or an agreement reaches its own invoices, never the wedding's finance", () => {
+    for (const subscription of ["expired", "cancelled", "suspended"] as const) {
+      const result = resolve({ subscription, project: "active" });
+      expect(result.readOnlyModules).toContain("client_finance");
+      expect(result.financeReach, subscription).toEqual(["own_invoices"]);
+    }
+    const agreement = resolve({ hotelAssistanceAgreement: true, project: "active" });
+    expect(agreement.financeReach).toEqual(["agreement_invoices"]);
+    expect(resolve({ subscription: "active", project: "active" }).financeReach).toEqual([]);
+    expect(resolve({ isDemo: true }).financeReach).toEqual(["demo_sample"]);
   });
 
   it("§3 line 100: a project on hold is read-only except support, without live chat", () => {
@@ -126,6 +140,7 @@ describe("resolveClientEntitlements", () => {
       modules: [],
       readOnlyModules: [],
       hotelReach: [],
+      financeReach: [],
       signInRefused: false,
     });
   });
