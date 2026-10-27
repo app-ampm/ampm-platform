@@ -2,7 +2,7 @@ import { View, type ViewProps } from "react-native";
 
 import { uiCopy } from "../../copy";
 import { announcementText, useAnnounce } from "../../hooks/use-announce";
-import { isHiddenFromAccessibility } from "../../lib/accessibility-hidden";
+import { isHiddenFromVoiceOver } from "../../lib/accessibility-hidden";
 import { cn } from "../../lib/cn";
 import { Button } from "../button";
 import { Icon, type IconName } from "../icon";
@@ -54,7 +54,7 @@ export interface CalloutProps extends ViewProps {
 /**
  * A framed notice for the states AMPM's screens repeat: indicative, requested, verified, awaiting
  * confirmation, offline, pending sync. Offline, pending-sync and danger are announced when they appear
- * (a live region on Android, useAnnounce on iOS), unless their props hide them from screen readers.
+ * (a live region on Android, useAnnounce on iOS), unless their props hide them from VoiceOver or display none.
  *
  *   <Callout kind="indicative">Rates verified on 12 March; the hotel confirms on request.</Callout>
  */
@@ -63,7 +63,10 @@ export function Callout({ kind, title, children, action, className, ...rest }: C
   const textTone = chipTextTone[spec.tone];
   const heading = title ?? uiCopy.callout[kind];
   // The live region speaks on Android; VoiceOver ignores it, so live kinds announce there too.
-  useAnnounce(announcementText(heading, children), spec.live && !isHiddenFromAccessibility(rest));
+  useAnnounce(
+    announcementText(heading, children),
+    spec.live && !isHiddenFromVoiceOver({ ...rest, className }),
+  );
   return (
     <View
       className={cn(

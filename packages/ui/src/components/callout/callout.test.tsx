@@ -38,12 +38,13 @@ describe("Callout", () => {
     jest.restoreAllMocks();
   });
 
-  // Announcing (ui.md) a surface hidden from the tree makes VoiceOver speak what it cannot reach.
+  // Announcing (ui.md) a surface hidden from VoiceOver makes it speak what the user cannot reach.
   it.each([
     { accessibilityElementsHidden: true },
-    { importantForAccessibility: "no-hide-descendants" as const },
     { "aria-hidden": true },
-  ])("keeps a live kind silent while hidden from the accessibility tree (%o)", async (hiding) => {
+    { style: { display: "none" as const } },
+    { className: "hidden" },
+  ])("keeps a live kind silent while hidden from VoiceOver (%o)", async (hiding) => {
     const announce = spyOnAnnounce();
     await renderWithProviders(
       <Callout kind="danger" {...hiding}>
@@ -51,6 +52,17 @@ describe("Callout", () => {
       </Callout>,
     );
     expect(announce).not.toHaveBeenCalled();
+    jest.restoreAllMocks();
+  });
+
+  it("still announces on iOS when only TalkBack is told to skip it (an Android-only prop)", async () => {
+    const announce = spyOnAnnounce();
+    await renderWithProviders(
+      <Callout kind="danger" importantForAccessibility="no-hide-descendants">
+        Nothing was charged.
+      </Callout>,
+    );
+    expect(announce).toHaveBeenCalledTimes(1);
     jest.restoreAllMocks();
   });
 

@@ -83,11 +83,13 @@ describe("state views", () => {
       expect(regionAround(uiCopy.offline.description, ALERT)).toBeNull();
     });
 
-    // Announcing (ui.md) a surface hidden from the tree makes VoiceOver speak what it cannot reach.
+    // Announcing (ui.md) a surface hidden from VoiceOver makes it speak what the user cannot reach.
     it("keeps a hidden error state and a hidden offline state silent", async () => {
       await renderWithProviders(<ErrorState accessibilityElementsHidden />);
-      await renderWithProviders(<OfflineState importantForAccessibility="no-hide-descendants" />);
+      await renderWithProviders(<OfflineState style={{ display: "none" }} />);
       await renderWithProviders(<ErrorState aria-hidden />);
+      await renderWithProviders(<ErrorState className="hidden" />);
+      await renderWithProviders(<OfflineState className="hidden" />);
       expect(announce).not.toHaveBeenCalled();
     });
 
