@@ -43,34 +43,46 @@ export function FieldNotesScreen() {
       <Text tone="muted">
         {`Offline spike · ${controller.engine}. Notes save on the device and sync when the API is reachable.`}
       </Text>
-
       <SyncBanner isOnline={controller.isOnline} pendingCount={controller.pendingCount} />
-
-      <Stack gap={2}>
-        <Input
-          label="New field note"
-          value={draft}
-          onChangeText={setDraft}
-          placeholder="e.g. Stage-left riser is wobbling"
-          onSubmitEditing={submit}
-        />
-        <Row gap={2} wrap>
-          <Button onPress={submit} disabled={draft.trim().length === 0}>
-            Record note
-          </Button>
-          <Button
-            variant="secondary"
-            icon="refresh"
-            onPress={controller.sync}
-            loading={controller.isSyncing}
-          >
-            Sync now
-          </Button>
-        </Row>
-      </Stack>
-
+      <NoteComposer
+        draft={draft}
+        onChange={setDraft}
+        onSubmit={submit}
+        onSync={controller.sync}
+        isSyncing={controller.isSyncing}
+      />
       <NoteList notes={controller.notes} isLoading={controller.isLoading} />
     </ScrollView>
+  );
+}
+
+interface ComposerProps {
+  readonly draft: string;
+  readonly onChange: (text: string) => void;
+  readonly onSubmit: () => void;
+  readonly onSync: () => void;
+  readonly isSyncing: boolean;
+}
+
+function NoteComposer({ draft, onChange, onSubmit, onSync, isSyncing }: ComposerProps) {
+  return (
+    <Stack gap={2}>
+      <Input
+        label="New field note"
+        value={draft}
+        onChangeText={onChange}
+        placeholder="e.g. Stage-left riser is wobbling"
+        onSubmitEditing={onSubmit}
+      />
+      <Row gap={2} wrap>
+        <Button onPress={onSubmit} disabled={draft.trim().length === 0}>
+          Record note
+        </Button>
+        <Button variant="secondary" icon="refresh" onPress={onSync} loading={isSyncing}>
+          Sync now
+        </Button>
+      </Row>
+    </Stack>
   );
 }
 
