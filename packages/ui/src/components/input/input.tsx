@@ -45,7 +45,7 @@ interface MessageProps {
   readonly id: string;
   readonly text: string | undefined;
   readonly isError: boolean;
-  /** Set while the field's own props hide it from VoiceOver, so the error is not spoken. */
+  /** Set while the field's className hides the whole block, so the error is not spoken. */
   readonly isHidden: boolean;
 }
 
@@ -135,9 +135,10 @@ function FieldControl({
 /**
  * A labelled text field. States: default, focused, error, disabled. The label is tied to the input
  * for screen readers; the error is a live region and is announced on iOS (useAnnounce), unless the
- * field's className or accessibility props hide it from VoiceOver (isHiddenFromVoiceOver). A hidden
- * ancestor is not seen, so render a hidden form step conditionally. Every state keeps the 44px
- * target.
+ * field's className hides the whole block (isHiddenFromVoiceOver). Only className hides the whole
+ * field: `style`, `aria-hidden` and `accessibilityElementsHidden` go to the text input alone, so
+ * the label and the error stay reachable and the error is still spoken. A hidden ancestor is not
+ * seen, so render a hidden form step conditionally. Every state keeps the 44px target.
  *
  *   <Input label="Email" keyboardType="email-address" value={email} onChangeText={setEmail} errorText={errors.email} />
  */
@@ -156,13 +157,9 @@ export function Input({
   const messageId = useId();
   const message = errorText ?? helpText;
   const hasError = Boolean(errorText);
-  // className styles the whole block; the accessibility props reach the text input, and a field
-  // hidden from the accessibility tree has no error to speak either.
-  const isHidden = isHiddenFromVoiceOver({
-    className,
-    accessibilityElementsHidden: control.accessibilityElementsHidden,
-    "aria-hidden": control["aria-hidden"],
-  });
+  // Only className reaches the whole block; the other props stop at the text input, leaving the
+  // label and the error message reachable, so they do not silence the error.
+  const isHidden = isHiddenFromVoiceOver({ className });
   return (
     <View className={cn("gap-1", className)}>
       <FieldLabel id={labelId} label={label} required={required} disabled={disabled} />
