@@ -1,6 +1,14 @@
+/**
+ * Visibility classes against docs/permission-matrix.md §4 (Readable by), §5 (the internal-notes rows)
+ * and §6; expected values are copied from the document, line in the test name.
+ */
 import { describe, expect, it } from "vitest";
 
 import { exportableClasses, principalReadableClasses, staffReadableClasses } from "./visibility";
+
+const HOTELS = "hotels.hotel_profiles_client_fields";
+const VENDORS = "vendors.vendor_profiles_client_fields";
+const GUESTS = "guests.family_groups_guests_standard";
 
 describe("visibility classes", () => {
   it("opens finance and bank columns to Finance and the Super Admin only", () => {
@@ -16,12 +24,67 @@ describe("visibility classes", () => {
     expect(staffReadableClasses(["PM"], { assigned: true }).has("SENSITIVE-GUEST")).toBe(true);
   });
 
-  it("keeps clients and guests to public and client fields, plus a guest's own row", () => {
-    expect([...principalReadableClasses("client")]).toEqual(["PUBLIC", "CLIENT"]);
-    expect(principalReadableClasses("guest", { ownRow: true }).has("SENSITIVE-GUEST")).toBe(true);
+  it("§4 lines 123-124: HT and VC read finance and contacts on their own side only", () => {
+    for (const role of ["HT", "VC"] as const) {
+      const unsided = staffReadableClasses([role]);
+      expect(unsided.has("RESTRICTED-FINANCE")).toBe(false);
+      expect(unsided.has("RESTRICTED-CONTACT")).toBe(false);
+    }
+    expect(staffReadableClasses(["HT"], { side: "hotel" }).has("RESTRICTED-FINANCE")).toBe(true);
+    expect(staffReadableClasses(["HT"], { side: "hotel" }).has("RESTRICTED-CONTACT")).toBe(true);
+    expect(staffReadableClasses(["HT"], { side: "vendor" }).has("RESTRICTED-FINANCE")).toBe(false);
+    expect(staffReadableClasses(["VC"], { side: "vendor" }).has("RESTRICTED-FINANCE")).toBe(true);
+    expect(staffReadableClasses(["VC"], { side: "vendor" }).has("RESTRICTED-CONTACT")).toBe(true);
+    expect(staffReadableClasses(["VC"], { side: "hotel" }).has("RESTRICTED-CONTACT")).toBe(false);
   });
 
-  it("strips the protected classes from every export", () => {
+  it("§4 line 122, §5.3 line 169: hotel internal notes for SA, SM, HT and PM, never CD, VC, RG, HL or FA", () => {
+    for (const role of ["SA", "SM", "HT", "PM"] as const) {
+      expect(staffReadableClasses([role], { resource: HOTELS }).has("RESTRICTED-NOTES")).toBe(true);
+    }
+    for (const role of ["CD", "VC", "RG", "HL", "FA"] as const) {
+      const classes = staffReadableClasses([role], { resource: HOTELS, assigned: true });
+      expect(classes.has("RESTRICTED-NOTES"), role).toBe(false);
+    }
+  });
+
+  it("§5.8 line 232: vendor internal notes for SA and VC, PM on assigned weddings only", () => {
+    expect(staffReadableClasses(["VC"], { resource: VENDORS }).has("RESTRICTED-NOTES")).toBe(true);
+    expect(staffReadableClasses(["PM"], { resource: VENDORS }).has("RESTRICTED-NOTES")).toBe(false);
+    expect(
+      staffReadableClasses(["PM"], { resource: VENDORS, assigned: true }).has("RESTRICTED-NOTES"),
+    ).toBe(true);
+    for (const role of ["SM", "HL", "FA"] as const) {
+      const classes = staffReadableClasses([role], { resource: VENDORS, assigned: true });
+      expect(classes.has("RESTRICTED-NOTES"), role).toBe(false);
+    }
+  });
+
+  it("§5.10 line 263: guest internal notes for RG, PM and HL on assigned weddings, never FA", () => {
+    expect(
+      staffReadableClasses(["RG"], { resource: GUESTS, assigned: true }).has("RESTRICTED-NOTES"),
+    ).toBe(true);
+    expect(staffReadableClasses(["RG"], { resource: GUESTS }).has("RESTRICTED-NOTES")).toBe(false);
+    expect(
+      staffReadableClasses(["FA"], { resource: GUESTS, assigned: true }).has("RESTRICTED-NOTES"),
+    ).toBe(false);
+  });
+
+  it("§4 line 122: without a known resource no staff role reads internal notes", () => {
+    expect(staffReadableClasses(["SA"]).has("RESTRICTED-NOTES")).toBe(false);
+    expect(
+      staffReadableClasses(["SA"], { resource: "hotels.nowhere" }).has("RESTRICTED-NOTES"),
+    ).toBe(false);
+  });
+
+  it("§6 line 359 over §4 line 126: a client representative never reads SENSITIVE-GUEST", () => {
+    expect([...principalReadableClasses("client")]).toEqual(["PUBLIC", "CLIENT"]);
+    expect(principalReadableClasses("client", { ownRow: true }).has("SENSITIVE-GUEST")).toBe(false);
+    expect(principalReadableClasses("guest", { ownRow: true }).has("SENSITIVE-GUEST")).toBe(true);
+    expect(principalReadableClasses("guest").has("SENSITIVE-GUEST")).toBe(false);
+  });
+
+  it("§4 line 130: strips the protected classes from every export", () => {
     const sa = exportableClasses(["SA"]);
     expect(sa.has("RESTRICTED-FINANCE")).toBe(true);
     expect(sa.has("SENSITIVE-GUEST")).toBe(false);

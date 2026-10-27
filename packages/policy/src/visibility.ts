@@ -1,23 +1,28 @@
 import { FINANCE_EXPORT_ROLES, type VisibilityClass } from "./classes";
-import { MATRIX, type ReportExclusion } from "./matrix";
+import { MATRIX, type MatrixRow, type ReportExclusion } from "./matrix";
 import type { StaffRole } from "./roles";
 
+/**
+ * What the serialiser knows about the record whose fields it is about to send.
+ *
+ * @example
+ * const context: ClassContext = { assigned: true, side: "vendor", resource: "vendors.vendor_profiles_client_fields" };
+ */
 export interface ClassContext {
   /** The principal is a member of the project the record belongs to. */
   readonly assigned?: boolean | undefined;
-  /** The record is a hotel-side record (HT) or a vendor-side record (VC). */
+  /** The principal owns or created the record. */
+  readonly owned?: boolean | undefined;
+  /** The record is a hotel-side record (HT) or a vendor-side record (VC); unsided otherwise. */
   readonly side?: "hotel" | "vendor" | undefined;
   /** The record is the guest's own row. */
   readonly ownRow?: boolean | undefined;
+  /** The record's resource, `module.resource` as in the permission keys; RESTRICTED-NOTES follows it. */
+  readonly resource?: string | undefined;
 }
 
 /** Every staff role reads these on any record it may see at all. */
-const BASE_CLASSES: readonly VisibilityClass[] = [
-  "PUBLIC",
-  "CLIENT",
-  "INTERNAL",
-  "RESTRICTED-NOTES",
-];
+const BASE_CLASSES: readonly VisibilityClass[] = ["PUBLIC", "CLIENT", "INTERNAL"];
 const CONTACT_AND_FINANCE: readonly VisibilityClass[] = [
   "RESTRICTED-CONTACT",
   "RESTRICTED-FINANCE",
@@ -38,10 +43,12 @@ function roleGrants(role: StaffRole, context: ClassContext): readonly Visibility
       ];
     case "FA":
       return ["RESTRICTED-FINANCE", "RESTRICTED-BANK"];
+    // §4: "HT for hotel-side values", "VC for vendor-side values"; a record without a side is
+    // neither, so it opens nothing (cost entries, final account totals, outbound payments).
     case "HT":
-      return context.side === "vendor" ? [] : CONTACT_AND_FINANCE;
+      return context.side === "hotel" ? CONTACT_AND_FINANCE : [];
     case "VC":
-      return context.side === "hotel" ? [] : CONTACT_AND_FINANCE;
+      return context.side === "vendor" ? CONTACT_AND_FINANCE : [];
     case "SM":
       return context.side === "hotel" ? ["RESTRICTED-CONTACT"] : [];
     case "PM":
@@ -57,26 +64,72 @@ function roleGrants(role: StaffRole, context: ClassContext): readonly Visibility
   }
 }
 
-/** The classes a staff role may read on a record, from the "Readable by" column of §4. */
+function rowOf(resource: string | undefined): MatrixRow | undefined {
+  return MATRIX.staff.find((row) => `${row.module}.${row.resource}` === resource);
+}
+
+/**
+ * §4 RESTRICTED-NOTES, "staff with module access per §5": the resource's own internal-notes row
+ * ("Hotel internal rating and notes") when §5 has one, otherwise the resource's row. Only a plain
+ * read grant opens notes; a conditioned one ("RU (a) theme, dress code") does not. No resource, or
+ * one the matrix does not know, opens nothing.
+ */
+function readsNotes(roles: readonly StaffRole[], context: ClassContext): boolean {
+  const row = rowOf(context.resource);
+  if (!row) return false;
+  const notes =
+    MATRIX.staff.find(
+      (candidate) =>
+        candidate.module === row.module &&
+        candidate.aliases.some(
+          (alias) => alias.resource === row.resource && alias.action === "read_internal_notes",
+        ),
+    ) ?? row;
+  return roles.some((role) =>
+    (notes.grants[role] ?? []).some(
+      (grant) =>
+        grant.actions.includes("read") &&
+        grant.conditions.length === 0 &&
+        (grant.scope === "all" ||
+          (grant.scope === "assigned" && context.assigned === true) ||
+          (grant.scope === "own" && context.owned === true)),
+    ),
+  );
+}
+
+/**
+ * The classes staff roles may read on a record, from the "Readable by" column of §4.
+ *
+ * @example
+ * staffReadableClasses(["HT"], { side: "hotel", resource: "hotels.hotel_profiles_client_fields" });
+ */
 export function staffReadableClasses(
   roles: readonly StaffRole[],
   context: ClassContext = {},
 ): ReadonlySet<VisibilityClass> {
   const set = new Set<VisibilityClass>(BASE_CLASSES);
+  if (readsNotes(roles, context)) set.add("RESTRICTED-NOTES");
   for (const role of GRANT_ORDER) {
     if (roles.includes(role)) for (const cls of roleGrants(role, context)) set.add(cls);
   }
   return set;
 }
 
-/** Client, demo and guest principals read the public and client classes; a guest also their own sensitive row. */
+/**
+ * Client, demo and guest principals read the public and client classes; a guest also their own
+ * sensitive row. §4 still lists "Client Owner for their own wedding" for SENSITIVE-GUEST, but Q5
+ * replaced that role and §6, rewritten for the representatives, gives CR "—" on guest sensitive
+ * fields: the later, more specific rule holds, so a client never reads them.
+ *
+ * @example
+ * principalReadableClasses("guest", { ownRow: true }).has("SENSITIVE-GUEST"); // true
+ */
 export function principalReadableClasses(
   type: "client" | "demo" | "guest",
   context: ClassContext = {},
 ): ReadonlySet<VisibilityClass> {
   const set = new Set<VisibilityClass>(["PUBLIC", "CLIENT"]);
   if (type === "guest" && context.ownRow) set.add("SENSITIVE-GUEST");
-  if (type === "client" && context.ownRow) set.add("SENSITIVE-GUEST");
   return set;
 }
 
