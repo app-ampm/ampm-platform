@@ -44,6 +44,9 @@ export class FieldNoteService {
    * the request's scope (step 5): a note the scope does not reach is never returned. A wedding the
    * principal may not reach never gets here: PermissionGuard answers it first with the 404 of a
    * missing record (test-cases.md AC-12.2, architecture §6).
+   *
+   * @example
+   * this.notes.list(params.projectId, recordScope(principal, access.scope)); // { items, nextCursor }
    */
   list(projectId: string, scope: RecordScope): FieldNoteList {
     const items = [...this.notes.values()]

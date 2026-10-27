@@ -47,6 +47,11 @@ export class FieldNoteController {
    * One queued write; idempotent on (id, baseVersion) for the same writer, so a replayed queue
    * never duplicates. The guard checks the create key; changing a note that exists also needs the
    * update key (service).
+   *
+   * @example
+   * // POST /spike/projects/:projectId/field-notes with a queued FieldNoteUpsert:
+   * // { id, baseVersion: 0, body: "Van at gate 3", status: "open", clientTimestamp }
+   * // → 201 { outcome: "applied", note: { id, version: 1, … } }
    */
   @Post()
   @RequirePermission("tasks.incidents.create", { projectParam: "projectId" })
