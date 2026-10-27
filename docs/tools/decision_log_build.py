@@ -37,7 +37,7 @@ def build():
     qs, asm = DEC["questions"], DEC["assumptions"]
     qc, ac = Counter(v["status"] for v in qs.values()), Counter(v["status"] for v in asm.values())
     out = [f"# AMPM Platform — Decision Log\n",
-           f"**Status:** AMPM's decisions of {DEC['answered_on']}, generated from `docs/decisions.json` by `docs/tools/decision_log_build.py`. Do not edit by hand; change the JSON and rebuild.",
+           f"**Status:** AMPM's decisions of {DEC['answered_on']}" + (f", with the round-two decisions of {DEC['round_two']['decided_on']} ({DEC['round_two']['decided_by']}) where marked" if DEC.get("round_two") else "") + ", generated from `docs/decisions.json` by `docs/tools/decision_log_build.py`. Do not edit by hand; change the JSON and rebuild.",
            "**Sources:** " + "; ".join(DEC["sources"]) + ".\n",
            "This log is the record of what AMPM decided, question by question, and what each answer does to the assumptions the drafts were built on. "
            "The assumption registers in every draft carry the same markers; the generated decision register and assumptions sheet show them too.\n",
@@ -69,7 +69,8 @@ def build():
         out.append(f"- {r}")
     out.append("\n## Items AMPM listed to confirm before development\n")
     for i, r in enumerate(DEC["items_to_confirm"], 1):
-        out.append(f"{i}. {r}")
+        st = DEC.get("items_to_confirm_status", {}).get(str(i))
+        out.append(f"{i}. {r}" + (f" — {st}." if st else ""))
     out.append("\n## Assumptions by status\n")
     for status in ("changed", "dropped", "partly", "open", "confirmed", "stands"):
         ids = [k for k, v in asm.items() if v["status"] == status]

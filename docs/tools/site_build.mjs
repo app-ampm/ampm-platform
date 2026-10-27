@@ -1,9 +1,8 @@
 #!/usr/bin/env node
 /**
  * Build docs/site/index.html: the whole design package rendered as one page for review.
- * Inputs: the Markdown documents in docs/ (order below). Output: docs/site/index.html and a copy of field-matrix.csv.
- * Run from anywhere: node docs/tools/site_build.mjs
- * Diagrams are left as <pre class="mermaid"> blocks; the artifact viewer renders them natively.
+ * Modes: no flag builds the whole package (index.html); --brief, --questions, --short, --blueprint and --blueprint-short build one
+ * document set each (see MODES below), with the same template and a link back to the full package.
  */
 import { readFileSync, writeFileSync, mkdirSync, copyFileSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -14,29 +13,57 @@ const TOOLS = dirname(fileURLToPath(import.meta.url));
 const DOCS = join(TOOLS, '..');
 const OUT = join(DOCS, 'site');
 
-const BRIEF = process.argv.includes('--brief');
 const FULL_PACKAGE_URL = 'https://claude.ai/artifact/55fJPFQnnqi8sVVU7FUFcv';
-const ORDER = BRIEF ? [
-  { file: 'review/decision-brief.md', token: 'brief', label: 'Decision brief', note: 'Ten decisions, fourteen assumptions', group: 'A' },
-] : [
-  { file: 'README.md', token: 'guide', label: 'Review guide', note: 'Start here', group: 'A' },
-  { file: 'review/decision-brief.md', token: 'brief', label: 'Decision brief', note: 'The short version: ten decisions', group: 'A' },
-  { file: 'review/annotated-brief.md', token: 'brief', label: 'Your brief, annotated', note: 'Your documents with the findings placed', group: 'A' },
-  { file: 'review/redesigned-flowcharts.md', token: 'flowcharts', label: 'Your flowcharts, redrawn', note: 'Gap fills colour-coded', group: 'A' },
-  { file: 'review/open-decisions.md', token: 'decisions', label: 'Decisions we need from you', note: '25 questions with answer boxes', group: 'A' },
-  { file: 'review/assumptions-taken.md', token: 'assumptions', label: 'Assumptions we took', note: '98 lines to confirm or change', group: 'A' },
-  { file: 'decision-log.md', token: 'log', label: 'Decision log', note: "AMPM's answers and their effect", group: 'B' },
-  { file: 'requirements-audit.md', token: 'audit', label: 'Requirements audit', note: 'Findings and the 25 questions', group: 'B' },
-  { file: 'decision-register.md', token: 'register', label: 'Decision register', note: 'Assumptions by question', group: 'B' },
-  { file: 'user-flows.md', token: 'flows', label: 'User flows', note: '12 flows', group: 'B' },
-  { file: 'wireframes.md', token: 'wireframes', label: 'Wireframe specifications', note: '124 screens', group: 'B' },
-  { file: 'data-model.md', token: 'model', label: 'Data model', note: '106 tables', group: 'B' },
-  { file: 'permission-matrix.md', token: 'permissions', label: 'Permission matrix', note: 'Roles and access', group: 'B' },
-  { file: 'field-matrix.md', token: 'fields', label: 'Field matrix', note: '1,068 fields', group: 'B' },
-  { file: 'architecture.md', token: 'architecture', label: 'Architecture and integration plan', note: 'Technology decisions', group: 'B' },
-  { file: 'test-cases.md', token: 'tests', label: 'Test cases', note: '36 criteria', group: 'B' },
-];
-const GROUPS = BRIEF ? { A: 'For AMPM' } : { A: 'For AMPM to review and decide', B: 'Developer drafts, for reference' };
+const DOC = {
+  guide: { file: 'README.md', token: 'guide', label: 'Review guide', note: 'Start here', group: 'A' },
+  brief: { file: 'review/decision-brief.md', token: 'brief', label: 'Decision brief', note: 'The short version: ten decisions', group: 'A' },
+  annotated: { file: 'review/annotated-brief.md', token: 'annotated', label: 'Your brief, annotated', note: 'Your documents with the findings placed', group: 'A' },
+  flowcharts: { file: 'review/redesigned-flowcharts.md', token: 'flowcharts', label: 'Your flowcharts, redrawn', note: 'Gap fills colour-coded', group: 'A' },
+  decisions: { file: 'review/open-decisions.md', token: 'decisions', label: 'Decisions we need from you', note: '25 questions with answer boxes', group: 'A' },
+  assumptions: { file: 'review/assumptions-taken.md', token: 'assumptions', label: 'Assumptions we took', note: '98 lines to confirm or change', group: 'A' },
+  questions: { file: 'review/remaining-questions.md', token: 'questions', label: 'The questions still open', note: 'Round two: nineteen questions', group: 'A' },
+  short: { file: 'review/remaining-questions-short.md', token: 'short', label: 'Short version', note: 'Proposals and tick boxes', group: 'A' },
+  blueprint: { file: 'review/platform-blueprint.md', token: 'blueprint', label: 'Platform blueprint', note: 'Platforms, data model, flows: locked and open', group: 'A' },
+  blueprintShort: { file: 'review/platform-blueprint-short.md', token: 'blueprint-short', label: 'Blueprint, short version', note: 'The sign-off sheet', group: 'A' },
+  plan: { file: 'review/build-plan.md', token: 'plan', label: 'Build plan', note: 'Schedule, effort, cost, method', group: 'A' },
+  planShort: { file: 'review/build-plan-short.md', token: 'plan-short', label: 'Build plan, short version', note: 'What to decide', group: 'A' },
+  log: { file: 'decision-log.md', token: 'log', label: 'Decision log', note: "AMPM's answers and their effect", group: 'B' },
+  audit: { file: 'requirements-audit.md', token: 'audit', label: 'Requirements audit', note: 'Findings and the 25 questions', group: 'B' },
+  register: { file: 'decision-register.md', token: 'register', label: 'Decision register', note: 'Assumptions by question', group: 'B' },
+  flows: { file: 'user-flows.md', token: 'flows', label: 'User flows', note: '12 flows', group: 'B' },
+  wireframes: { file: 'wireframes.md', token: 'wireframes', label: 'Wireframe specifications', note: '126 screens', group: 'B' },
+  model: { file: 'data-model.md', token: 'model', label: 'Data model', note: '108 tables', group: 'B' },
+  permissions: { file: 'permission-matrix.md', token: 'permissions', label: 'Permission matrix', note: 'Roles and access', group: 'B' },
+  fields: { file: 'field-matrix.md', token: 'fields', label: 'Field matrix', note: '1,068 fields', group: 'B' },
+  architecture: { file: 'architecture.md', token: 'architecture', label: 'Architecture and integration plan', note: 'Technology decisions', group: 'B' },
+  tests: { file: 'test-cases.md', token: 'tests', label: 'Test cases', note: '36 criteria', group: 'B' },
+};
+const MODES = {
+  full: {
+    docs: [DOC.guide, DOC.brief, DOC.annotated, DOC.flowcharts, DOC.decisions, DOC.assumptions, DOC.questions, DOC.short, DOC.blueprint, DOC.blueprintShort, DOC.plan, DOC.planShort,
+      DOC.log, DOC.audit, DOC.register, DOC.flows, DOC.wireframes, DOC.model, DOC.permissions, DOC.fields, DOC.architecture, DOC.tests],
+    title: 'AMPM Design Package', out: 'index.html',
+  },
+  brief: { docs: [DOC.brief], title: 'AMPM Decision Brief', out: 'brief.html',
+    status: 'AMPM answered on 25 October 2026 · <b>11 points to confirm</b>', foot: 'A short brief for deciding.' },
+  questions: { docs: [DOC.short, DOC.questions], title: 'AMPM Open Questions', out: 'questions.html',
+    status: 'Round two, 26 October 2026 · <b>19 questions open</b>', foot: "The questions still open after AMPM's answers of 25 October 2026." },
+  short: { docs: [DOC.short], title: 'AMPM Open Questions, Short Version', out: 'short.html',
+    status: 'Round two, 26 October 2026 · <b>19 questions open</b>', foot: "The questions still open after AMPM's answers of 25 October 2026." },
+  blueprint: { docs: [DOC.blueprintShort, DOC.blueprint], title: 'AMPM Platform Blueprint', out: 'blueprint.html',
+    status: 'Blueprint v0.1, 26 October 2026 · <b>For sign-off</b>', foot: 'The platforms, data model and flows as drafted, with what is locked and what is open.' },
+  'blueprint-short': { docs: [DOC.blueprintShort], title: 'AMPM Platform Blueprint, Short Version', out: 'blueprint-short.html',
+    status: 'Blueprint v0.1, 26 October 2026 · <b>For sign-off</b>', foot: 'The platforms, data model and flows as drafted, with what is locked and what is open.' },
+  plan: { docs: [DOC.planShort, DOC.plan], title: 'AMPM Build Plan', out: 'plan.html',
+    status: 'Build plan v0.1, 26 October 2026 · <b>For discussion</b>', foot: 'The end-to-end build plan: method, phases and sprints, effort, cost, decision calendar, pilot and launch.' },
+  'plan-short': { docs: [DOC.planShort], title: 'AMPM Build Plan, Short Version', out: 'plan-short.html',
+    status: 'Build plan v0.1, 26 October 2026 · <b>For discussion</b>', foot: 'The end-to-end build plan: method, phases and sprints, effort, cost, decision calendar, pilot and launch.' },
+};
+const MODE_NAME = Object.keys(MODES).find(m => m !== 'full' && process.argv.includes('--' + m)) ?? 'full';
+const MODE = MODES[MODE_NAME];
+const SINGLE = MODE_NAME !== 'full';
+const ORDER = MODE.docs;
+const GROUPS = SINGLE ? { A: 'For AMPM' } : { A: 'For AMPM to review and decide', B: 'Developer drafts, for reference' };
 const LINKMAP = Object.fromEntries(ORDER.map(d => [d.file.split('/').pop(), '#' + d.token]));
 
 const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -124,7 +151,7 @@ const navHtml = ORDER.map((d, i) => {
   </li>`;
 }).join('');
 
-const page = `<title>${BRIEF ? 'AMPM Decision Brief' : 'AMPM Design Package'}</title>
+const page = `<title>${MODE.title}</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=JetBrains+Mono:wght@400;500&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&display=swap">
@@ -235,8 +262,8 @@ td code, th code { white-space: nowrap; }
 </style>
 
 <div class="topbar"><div class="topbar-inner">
-  <p class="brand">${BRIEF ? 'AMPM Decision Brief' : 'AMPM Design Package'}</p>
-  <p class="status">${BRIEF ? 'AMPM answered on 25 October 2026 · <b>11 points to confirm</b> · <a href="' + FULL_PACKAGE_URL + '" target="_blank" rel="noopener">Full package</a>' : 'Drafts v0.2 with AMPM\'s decisions of 25 October 2026 · <b>Not signed off</b> · ' + ORDER.length + ' documents, ' + totalDiagrams + ' diagrams'}</p>
+  <p class="brand">${MODE.title}</p>
+  <p class="status">${SINGLE ? MODE.status + ' · <a href="' + FULL_PACKAGE_URL + '" target="_blank" rel="noopener">Full package</a>' : 'Drafts v0.2 with AMPM\'s decisions of 25 October 2026 · <b>Not signed off</b> · ' + ORDER.length + ' documents, ' + totalDiagrams + ' diagrams'}</p>
 </div></div>
 
 <div class="shell">
@@ -250,7 +277,7 @@ td code, th code { white-space: nowrap; }
   <main id="main">${rendered.map(r => r.section).join('\n')}
   </main>
 </div>
-<p class="foot">${BRIEF ? 'A short brief for deciding. The full design package, with every finding and the developer drafts, is at <a href="' + FULL_PACKAGE_URL + '" target="_blank" rel="noopener">' + FULL_PACKAGE_URL + '</a>.' : 'Generated from the Markdown sources in the project\'s docs folder by docs/tools/site_build.mjs. Identifier prefixes are explained in the review guide.'}</p>
+<p class="foot">${SINGLE ? MODE.foot + ' The full design package, with every finding and the developer drafts, is at <a href="' + FULL_PACKAGE_URL + '" target="_blank" rel="noopener">' + FULL_PACKAGE_URL + '</a>.' : 'Generated from the Markdown sources in the project\'s docs folder by docs/tools/site_build.mjs. Identifier prefixes are explained in the review guide.'}</p>
 
 <script>
 (function () {
@@ -283,9 +310,9 @@ td code, th code { white-space: nowrap; }
 `;
 
 mkdirSync(OUT, { recursive: true });
-const outName = BRIEF ? 'brief.html' : 'index.html';
+const outName = MODE.out;
 writeFileSync(join(OUT, outName), page, 'utf8');
-if (!BRIEF) copyFileSync(join(DOCS, 'field-matrix.csv'), join(OUT, 'field-matrix.csv'));
+if (!SINGLE) copyFileSync(join(DOCS, 'field-matrix.csv'), join(OUT, 'field-matrix.csv'));
 const size = statSync(join(OUT, outName)).size;
 console.log(`wrote site/${outName} (${(size / 1024 / 1024).toFixed(2)} MB), ${ORDER.length} documents, ${totalDiagrams} diagrams`);
 rendered.forEach((r, i) => console.log(`  ${String(i + 1).padStart(2, '0')} ${ORDER[i].file}: ${r.diagrams} diagrams, ${(r.section.length / 1024).toFixed(0)} KB`));

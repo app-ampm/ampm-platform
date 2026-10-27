@@ -296,6 +296,8 @@ These were the fourteen assumptions with the most business consequence. AMPM's a
 
 Two more from our side: whether the client portal is also needed on the web alongside the apps, and which client-facing amounts the wedding portal shows.
 
+All of these, with the points that came up while applying your answers, are written out as nineteen questions with choices and answer boxes in [the questions still open](remaining-questions.md).
+
 ### Answer sheet (completed 25 October 2026)
 
 | Q | Decision | Decided by | Date |

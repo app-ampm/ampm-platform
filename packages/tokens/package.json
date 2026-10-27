@@ -1,0 +1,34 @@
+{
+  "name": "@ampm/tokens",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Design tokens: colours, spacing, radii, type scale, fonts, shadows, motion, breakpoints. The only place theme values exist (.claude/rules/styling.md). `pnpm tokens:build` generates the Tailwind preset and the CSS variables into dist/.",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./tailwind.preset": {
+      "types": "./dist/tailwind.preset.d.cts",
+      "default": "./dist/tailwind.preset.cjs"
+    },
+    "./tokens.css": "./dist/tokens.css"
+  },
+  "scripts": {
+    "build": "node scripts/build.ts",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run --passWithNoTests"
+  },
+  "devDependencies": {
+    "@ampm/config": "workspace:*",
+    "@types/node": "catalog:",
+    "tailwindcss": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  },
+  "peerDependencies": {
+    "tailwindcss": "^3.4.17"
+  }
+}

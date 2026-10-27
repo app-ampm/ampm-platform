@@ -1,0 +1,8235 @@
+{
+  "source": "docs/permission-matrix.md",
+  "staff": [
+    {
+      "section": "5.1",
+      "module": "admin",
+      "resource": "staff_users",
+      "label": "Staff users and global roles",
+      "provisional": false,
+      "cells": {
+        "SA": "CRUD",
+        "SM": "R",
+        "HT": "R",
+        "PM": "R",
+        "CD": "R",
+        "VC": "R",
+        "RG": "R",
+        "HL": "R",
+        "FA": "R"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["create", "read", "update", "delete"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "HT": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "PM": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "CD": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "VC": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "RG": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "HL": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "FA": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ]
+      }
+    },
+    {
+      "section": "5.1",
+      "module": "admin",
+      "resource": "client_logins",
+      "label": "Client user logins (invite, reset, disable)",
+      "provisional": false,
+      "cells": {
+        "SA": "CRUD",
+        "SM": "CRU",
+        "HT": "—",
+        "PM": "CRU (a)",
+        "CD": "—",
+        "VC": "—",
+        "RG": "—",
+        "HL": "—",
+        "FA": "—"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["create", "read", "update", "delete"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "HT": [],
+        "PM": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "CD": [],
+        "VC": [],
+        "RG": [],
+        "HL": [],
+        "FA": []
+      }
+    },
+    {
+      "section": "5.1",
+      "module": "admin",
+      "resource": "roles",
+      "label": "Roles and permissions",
+      "provisional": false,
+      "cells": {
+        "SA": "CRUD",
+        "SM": "R",
+        "HT": "R",
+        "PM": "R",
+        "CD": "R",
+        "VC": "R",
+        "RG": "R",
+        "HL": "R",
+        "FA": "R"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["create", "read", "update", "delete"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "HT": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "PM": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "CD": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "VC": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "RG": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "HL": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "FA": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ]
+      }
+    },
+    {
+      "section": "5.1",
+      "module": "admin",
+      "resource": "configurations",
+      "label": "Configurations (thresholds, labels, templates, escalation rules)",
+      "provisional": false,
+      "cells": {
+        "SA": "CRU",
+        "SM": "—",
+        "HT": "—",
+        "PM": "—",
+        "CD": "—",
+        "VC": "—",
+        "RG": "—",
+        "HL": "—",
+        "FA": "R"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [],
+        "HT": [],
+        "PM": [],
+        "CD": [],
+        "VC": [],
+        "RG": [],
+        "HL": [],
+        "FA": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ]
+      }
+    },
+    {
+      "section": "5.1",
+      "module": "admin",
+      "resource": "audit_log",
+      "label": "Audit log",
+      "provisional": false,
+      "cells": {
+        "SA": "RX",
+        "SM": "—",
+        "HT": "—",
+        "PM": "R (a)",
+        "CD": "—",
+        "VC": "—",
+        "RG": "—",
+        "HL": "—",
+        "FA": "R finance entities"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["read", "export"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [],
+        "HT": [],
+        "PM": [
+          {
+            "actions": ["read"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "CD": [],
+        "VC": [],
+        "RG": [],
+        "HL": [],
+        "FA": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": "finance entities"
+          }
+        ]
+      }
+    },
+    {
+      "section": "5.1",
+      "module": "admin",
+      "resource": "import_jobs",
+      "label": "Import jobs",
+      "provisional": false,
+      "cells": {
+        "SA": "CR",
+        "SM": "—",
+        "HT": "CR hotels",
+        "PM": "CR (a) guests",
+        "CD": "—",
+        "VC": "CR vendors",
+        "RG": "CR (a) guests",
+        "HL": "—",
+        "FA": "—"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["create", "read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [],
+        "HT": [
+          {
+            "actions": ["create", "read"],
+            "scope": "all",
+            "note": "hotels"
+          }
+        ],
+        "PM": [
+          {
+            "actions": ["create", "read"],
+            "scope": "assigned",
+            "note": "guests"
+          }
+        ],
+        "CD": [],
+        "VC": [
+          {
+            "actions": ["create", "read"],
+            "scope": "all",
+            "note": "vendors"
+          }
+        ],
+        "RG": [
+          {
+            "actions": ["create", "read"],
+            "scope": "assigned",
+            "note": "guests"
+          }
+        ],
+        "HL": [],
+        "FA": []
+      }
+    },
+    {
+      "section": "5.1",
+      "module": "admin",
+      "resource": "notifications",
+      "label": "Notifications log",
+      "provisional": false,
+      "cells": {
+        "SA": "R",
+        "SM": "R (o)",
+        "HT": "R (o)",
+        "PM": "R (o)",
+        "CD": "R (o)",
+        "VC": "R (o)",
+        "RG": "R (o)",
+        "HL": "R (o)",
+        "FA": "R (o)"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [
+          {
+            "actions": ["read"],
+            "scope": "own",
+            "note": null
+          }
+        ],
+        "HT": [
+          {
+            "actions": ["read"],
+            "scope": "own",
+            "note": null
+          }
+        ],
+        "PM": [
+          {
+            "actions": ["read"],
+            "scope": "own",
+            "note": null
+          }
+        ],
+        "CD": [
+          {
+            "actions": ["read"],
+            "scope": "own",
+            "note": null
+          }
+        ],
+        "VC": [
+          {
+            "actions": ["read"],
+            "scope": "own",
+            "note": null
+          }
+        ],
+        "RG": [
+          {
+            "actions": ["read"],
+            "scope": "own",
+            "note": null
+          }
+        ],
+        "HL": [
+          {
+            "actions": ["read"],
+            "scope": "own",
+            "note": null
+          }
+        ],
+        "FA": [
+          {
+            "actions": ["read"],
+            "scope": "own",
+            "note": null
+          }
+        ]
+      }
+    },
+    {
+      "section": "5.2",
+      "module": "crm",
+      "resource": "leads",
+      "label": "Leads and lead activities",
+      "provisional": false,
+      "cells": {
+        "SA": "CRUD",
+        "SM": "CRUD",
+        "HT": "R",
+        "PM": "R",
+        "CD": "—",
+        "VC": "—",
+        "RG": "—",
+        "HL": "—",
+        "FA": "—"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["create", "read", "update", "delete"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [
+          {
+            "actions": ["create", "read", "update", "delete"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "HT": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "PM": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "CD": [],
+        "VC": [],
+        "RG": [],
+        "HL": [],
+        "FA": []
+      }
+    },
+    {
+      "section": "5.2",
+      "module": "crm",
+      "resource": "accounts",
+      "label": "Client accounts and contacts",
+      "provisional": false,
+      "cells": {
+        "SA": "CRUD",
+        "SM": "CRUD",
+        "HT": "R",
+        "PM": "RU (a)",
+        "CD": "—",
+        "VC": "—",
+        "RG": "R (a)",
+        "HL": "R (a)",
+        "FA": "RU billing"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["create", "read", "update", "delete"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [
+          {
+            "actions": ["create", "read", "update", "delete"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "HT": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "PM": [
+          {
+            "actions": ["read", "update"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "CD": [],
+        "VC": [],
+        "RG": [
+          {
+            "actions": ["read"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "HL": [
+          {
+            "actions": ["read"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "FA": [
+          {
+            "actions": ["read", "update"],
+            "scope": "all",
+            "note": "billing"
+          }
+        ]
+      }
+    },
+    {
+      "section": "5.2",
+      "module": "crm",
+      "resource": "plans",
+      "label": "Plans and plan modules",
+      "provisional": false,
+      "cells": {
+        "SA": "CRUD",
+        "SM": "R",
+        "HT": "—",
+        "PM": "—",
+        "CD": "—",
+        "VC": "—",
+        "RG": "—",
+        "HL": "—",
+        "FA": "R"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["create", "read", "update", "delete"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "HT": [],
+        "PM": [],
+        "CD": [],
+        "VC": [],
+        "RG": [],
+        "HL": [],
+        "FA": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ]
+      }
+    },
+    {
+      "section": "5.2",
+      "module": "crm",
+      "resource": "subscriptions",
+      "label": "Subscriptions",
+      "provisional": false,
+      "cells": {
+        "SA": "CRUD",
+        "SM": "CRU",
+        "HT": "R",
+        "PM": "—",
+        "CD": "—",
+        "VC": "—",
+        "RG": "—",
+        "HL": "—",
+        "FA": "RU status"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["create", "read", "update", "delete"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "HT": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "PM": [],
+        "CD": [],
+        "VC": [],
+        "RG": [],
+        "HL": [],
+        "FA": [
+          {
+            "actions": ["read", "update"],
+            "scope": "all",
+            "note": "status"
+          }
+        ]
+      }
+    },
+    {
+      "section": "5.2",
+      "module": "crm",
+      "resource": "service_agreements",
+      "label": "Service agreements",
+      "provisional": false,
+      "cells": {
+        "SA": "CRUD",
+        "SM": "CRU",
+        "HT": "CRU hotel services",
+        "PM": "RU (a)",
+        "CD": "—",
+        "VC": "—",
+        "RG": "—",
+        "HL": "—",
+        "FA": "R"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["create", "read", "update", "delete"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "HT": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "all",
+            "note": "hotel services"
+          }
+        ],
+        "PM": [
+          {
+            "actions": ["read", "update"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "CD": [],
+        "VC": [],
+        "RG": [],
+        "HL": [],
+        "FA": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ]
+      }
+    },
+    {
+      "section": "5.2",
+      "module": "crm",
+      "resource": "payment_milestones",
+      "label": "Payment milestones",
+      "provisional": false,
+      "cells": {
+        "SA": "CRUD",
+        "SM": "R",
+        "HT": "—",
+        "PM": "R (a)",
+        "CD": "—",
+        "VC": "—",
+        "RG": "—",
+        "HL": "—",
+        "FA": "CRUD"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["create", "read", "update", "delete"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "HT": [],
+        "PM": [
+          {
+            "actions": ["read"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "CD": [],
+        "VC": [],
+        "RG": [],
+        "HL": [],
+        "FA": [
+          {
+            "actions": ["create", "read", "update", "delete"],
+            "scope": "all",
+            "note": null
+          }
+        ]
+      }
+    },
+    {
+      "section": "5.2",
+      "module": "crm",
+      "resource": "payments_inbound",
+      "label": "Payments inbound from clients",
+      "provisional": false,
+      "cells": {
+        "SA": "CRUD",
+        "SM": "R",
+        "HT": "—",
+        "PM": "R (a)",
+        "CD": "—",
+        "VC": "—",
+        "RG": "—",
+        "HL": "—",
+        "FA": "CRUD"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["create", "read", "update", "delete"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "HT": [],
+        "PM": [
+          {
+            "actions": ["read"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "CD": [],
+        "VC": [],
+        "RG": [],
+        "HL": [],
+        "FA": [
+          {
+            "actions": ["create", "read", "update", "delete"],
+            "scope": "all",
+            "note": null
+          }
+        ]
+      }
+    },
+    {
+      "section": "5.2",
+      "module": "crm",
+      "resource": "payments_outbound",
+      "label": "Payments outbound to vendors and hotels",
+      "provisional": false,
+      "cells": {
+        "SA": "CRUD",
+        "SM": "—",
+        "HT": "R",
+        "PM": "R (a)",
+        "CD": "—",
+        "VC": "R (a)",
+        "RG": "—",
+        "HL": "—",
+        "FA": "CRUD"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["create", "read", "update", "delete"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [],
+        "HT": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "PM": [
+          {
+            "actions": ["read"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "CD": [],
+        "VC": [
+          {
+            "actions": ["read"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "RG": [],
+        "HL": [],
+        "FA": [
+          {
+            "actions": ["create", "read", "update", "delete"],
+            "scope": "all",
+            "note": null
+          }
+        ]
+      }
+    },
+    {
+      "section": "5.3",
+      "module": "hotels",
+      "resource": "destinations",
+      "label": "Destinations",
+      "provisional": true,
+      "cells": {
+        "SA": "CRUD",
+        "SM": "R",
+        "HT": "CRUD",
+        "PM": "R",
+        "CD": "R",
+        "VC": "R",
+        "RG": "R",
+        "HL": "R",
+        "FA": "R"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["create", "read", "update", "delete"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "HT": [
+          {
+            "actions": ["create", "read", "update", "delete"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "PM": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "CD": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "VC": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "RG": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "HL": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "FA": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ]
+      }
+    },
+    {
+      "section": "5.3",
+      "module": "hotels",
+      "resource": "hotel_profiles_client_fields",
+      "label": "Hotel profiles, client fields",
+      "provisional": true,
+      "cells": {
+        "SA": "CRUD",
+        "SM": "R",
+        "HT": "CRUD",
+        "PM": "R",
+        "CD": "R",
+        "VC": "R",
+        "RG": "R",
+        "HL": "R",
+        "FA": "R"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["create", "read", "update", "delete"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "HT": [
+          {
+            "actions": ["create", "read", "update", "delete"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "PM": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "CD": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "VC": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "RG": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "HL": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "FA": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ]
+      }
+    },
+    {
+      "section": "5.3",
+      "module": "hotels",
+      "resource": "hotel_internal_rating_notes",
+      "label": "Hotel internal rating and notes",
+      "provisional": true,
+      "cells": {
+        "SA": "RU",
+        "SM": "R",
+        "HT": "RU",
+        "PM": "R",
+        "CD": "—",
+        "VC": "—",
+        "RG": "—",
+        "HL": "—",
+        "FA": "—"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["read", "update"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "HT": [
+          {
+            "actions": ["read", "update"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "PM": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "CD": [],
+        "VC": [],
+        "RG": [],
+        "HL": [],
+        "FA": []
+      }
+    },
+    {
+      "section": "5.3",
+      "module": "hotels",
+      "resource": "hotel_contacts",
+      "label": "Hotel contacts",
+      "provisional": true,
+      "cells": {
+        "SA": "CRUD",
+        "SM": "R",
+        "HT": "CRUD",
+        "PM": "R",
+        "CD": "—",
+        "VC": "—",
+        "RG": "—",
+        "HL": "R (a)",
+        "FA": "—"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["create", "read", "update", "delete"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "HT": [
+          {
+            "actions": ["create", "read", "update", "delete"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "PM": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "CD": [],
+        "VC": [],
+        "RG": [],
+        "HL": [
+          {
+            "actions": ["read"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "FA": []
+      }
+    },
+    {
+      "section": "5.3",
+      "module": "hotels",
+      "resource": "room_categories_venues",
+      "label": "Room categories and venues",
+      "provisional": true,
+      "cells": {
+        "SA": "CRUD",
+        "SM": "R",
+        "HT": "CRUD",
+        "PM": "R",
+        "CD": "R",
+        "VC": "R",
+        "RG": "R",
+        "HL": "R",
+        "FA": "R"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["create", "read", "update", "delete"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "HT": [
+          {
+            "actions": ["create", "read", "update", "delete"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "PM": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "CD": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "VC": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "RG": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "HL": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "FA": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ]
+      }
+    },
+    {
+      "section": "5.3",
+      "module": "hotels",
+      "resource": "rate_cards_rate_items",
+      "label": "Rate cards and rate items",
+      "provisional": true,
+      "cells": {
+        "SA": "CRUD",
+        "SM": "R",
+        "HT": "CRUD",
+        "PM": "R",
+        "CD": "—",
+        "VC": "—",
+        "RG": "—",
+        "HL": "—",
+        "FA": "R"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["create", "read", "update", "delete"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "HT": [
+          {
+            "actions": ["create", "read", "update", "delete"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "PM": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "CD": [],
+        "VC": [],
+        "RG": [],
+        "HL": [],
+        "FA": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ]
+      }
+    },
+    {
+      "section": "5.3",
+      "module": "hotels",
+      "resource": "verifications",
+      "label": "Verifications",
+      "provisional": true,
+      "cells": {
+        "SA": "CRU",
+        "SM": "R",
+        "HT": "CRU",
+        "PM": "R",
+        "CD": "R",
+        "VC": "R",
+        "RG": "R",
+        "HL": "R",
+        "FA": "R"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "HT": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "PM": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "CD": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "VC": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "RG": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "HL": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "FA": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ]
+      }
+    },
+    {
+      "section": "5.3",
+      "module": "hotels",
+      "resource": "hotel_media_rights_status",
+      "label": "Hotel media and rights status",
+      "provisional": true,
+      "cells": {
+        "SA": "CRUDS",
+        "SM": "RU rights",
+        "HT": "CRUDS",
+        "PM": "R",
+        "CD": "R",
+        "VC": "R",
+        "RG": "—",
+        "HL": "—",
+        "FA": "—"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["create", "read", "update", "delete", "share"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [
+          {
+            "actions": ["read", "update"],
+            "scope": "all",
+            "note": "rights"
+          }
+        ],
+        "HT": [
+          {
+            "actions": ["create", "read", "update", "delete", "share"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "PM": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "CD": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "VC": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "RG": [],
+        "HL": [],
+        "FA": []
+      }
+    },
+    {
+      "section": "5.3",
+      "module": "hotels",
+      "resource": "wedding_references",
+      "label": "Wedding references",
+      "provisional": true,
+      "cells": {
+        "SA": "CRUD",
+        "SM": "R",
+        "HT": "CRUD",
+        "PM": "R",
+        "CD": "—",
+        "VC": "—",
+        "RG": "—",
+        "HL": "—",
+        "FA": "—"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["create", "read", "update", "delete"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "HT": [
+          {
+            "actions": ["create", "read", "update", "delete"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "PM": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "CD": [],
+        "VC": [],
+        "RG": [],
+        "HL": [],
+        "FA": []
+      }
+    },
+    {
+      "section": "5.3",
+      "module": "hotels",
+      "resource": "saved_hotels",
+      "label": "Saved hotels (created by clients)",
+      "provisional": true,
+      "cells": {
+        "SA": "R",
+        "SM": "R",
+        "HT": "R",
+        "PM": "R (a)",
+        "CD": "—",
+        "VC": "—",
+        "RG": "—",
+        "HL": "—",
+        "FA": "—"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "HT": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "PM": [
+          {
+            "actions": ["read"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "CD": [],
+        "VC": [],
+        "RG": [],
+        "HL": [],
+        "FA": []
+      }
+    },
+    {
+      "section": "5.4",
+      "module": "consultancy",
+      "resource": "hotel_enquiries_client_fields",
+      "label": "Hotel enquiries, client fields",
+      "provisional": true,
+      "cells": {
+        "SA": "CRUD",
+        "SM": "CR",
+        "HT": "CRU",
+        "PM": "CRU (a)",
+        "CD": "—",
+        "VC": "—",
+        "RG": "—",
+        "HL": "—",
+        "FA": "R"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["create", "read", "update", "delete"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [
+          {
+            "actions": ["create", "read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "HT": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "PM": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "CD": [],
+        "VC": [],
+        "RG": [],
+        "HL": [],
+        "FA": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ]
+      }
+    },
+    {
+      "section": "5.4",
+      "module": "consultancy",
+      "resource": "enquiry_internal_notes_internal",
+      "label": "Enquiry internal notes and internal-only events",
+      "provisional": true,
+      "cells": {
+        "SA": "CRU",
+        "SM": "R",
+        "HT": "CRU",
+        "PM": "CR (a)",
+        "CD": "—",
+        "VC": "—",
+        "RG": "—",
+        "HL": "—",
+        "FA": "—"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "HT": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "PM": [
+          {
+            "actions": ["create", "read"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "CD": [],
+        "VC": [],
+        "RG": [],
+        "HL": [],
+        "FA": []
+      }
+    },
+    {
+      "section": "5.4",
+      "module": "consultancy",
+      "resource": "site_visits",
+      "label": "Site visits",
+      "provisional": true,
+      "cells": {
+        "SA": "CRU",
+        "SM": "R",
+        "HT": "CRU",
+        "PM": "CRU (a)",
+        "CD": "—",
+        "VC": "—",
+        "RG": "—",
+        "HL": "—",
+        "FA": "—"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "HT": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "PM": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "CD": [],
+        "VC": [],
+        "RG": [],
+        "HL": [],
+        "FA": []
+      }
+    },
+    {
+      "section": "5.4",
+      "module": "consultancy",
+      "resource": "hotel_proposals_client_amounts",
+      "label": "Hotel proposals, client amounts",
+      "provisional": true,
+      "cells": {
+        "SA": "CRUS",
+        "SM": "R",
+        "HT": "CRUS",
+        "PM": "RUS (a)",
+        "CD": "—",
+        "VC": "—",
+        "RG": "—",
+        "HL": "—",
+        "FA": "R"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["create", "read", "update", "share"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "HT": [
+          {
+            "actions": ["create", "read", "update", "share"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "PM": [
+          {
+            "actions": ["read", "update", "share"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "CD": [],
+        "VC": [],
+        "RG": [],
+        "HL": [],
+        "FA": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ]
+      }
+    },
+    {
+      "section": "5.4",
+      "module": "consultancy",
+      "resource": "hotel_proposals_internal_amounts",
+      "label": "Hotel proposals, internal amounts",
+      "provisional": true,
+      "cells": {
+        "SA": "RU",
+        "SM": "—",
+        "HT": "RU",
+        "PM": "R (a)",
+        "CD": "—",
+        "VC": "—",
+        "RG": "—",
+        "HL": "—",
+        "FA": "R"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["read", "update"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [],
+        "HT": [
+          {
+            "actions": ["read", "update"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "PM": [
+          {
+            "actions": ["read"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "CD": [],
+        "VC": [],
+        "RG": [],
+        "HL": [],
+        "FA": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ]
+      }
+    },
+    {
+      "section": "5.4",
+      "module": "consultancy",
+      "resource": "booking_milestones",
+      "label": "Booking milestones",
+      "provisional": true,
+      "cells": {
+        "SA": "CRU",
+        "SM": "R",
+        "HT": "CRU",
+        "PM": "CRU (a)",
+        "CD": "—",
+        "VC": "—",
+        "RG": "—",
+        "HL": "—",
+        "FA": "RU"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "HT": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "PM": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "CD": [],
+        "VC": [],
+        "RG": [],
+        "HL": [],
+        "FA": [
+          {
+            "actions": ["read", "update"],
+            "scope": "all",
+            "note": null
+          }
+        ]
+      }
+    },
+    {
+      "section": "5.5",
+      "module": "projects",
+      "resource": "wedding_projects",
+      "label": "Wedding projects (create, edit, status)",
+      "provisional": true,
+      "cells": {
+        "SA": "CRUD",
+        "SM": "CR",
+        "HT": "R",
+        "PM": "CRU (a)",
+        "CD": "R (a)",
+        "VC": "R (a)",
+        "RG": "R (a)",
+        "HL": "R (a)",
+        "FA": "R"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["create", "read", "update", "delete"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [
+          {
+            "actions": ["create", "read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "HT": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "PM": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "CD": [
+          {
+            "actions": ["read"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "VC": [
+          {
+            "actions": ["read"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "RG": [
+          {
+            "actions": ["read"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "HL": [
+          {
+            "actions": ["read"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "FA": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ]
+      }
+    },
+    {
+      "section": "5.5",
+      "module": "projects",
+      "resource": "project_internal_notes",
+      "label": "Project internal notes",
+      "provisional": true,
+      "cells": {
+        "SA": "RU",
+        "SM": "—",
+        "HT": "—",
+        "PM": "RU (a)",
+        "CD": "—",
+        "VC": "—",
+        "RG": "—",
+        "HL": "—",
+        "FA": "R"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["read", "update"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [],
+        "HT": [],
+        "PM": [
+          {
+            "actions": ["read", "update"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "CD": [],
+        "VC": [],
+        "RG": [],
+        "HL": [],
+        "FA": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ]
+      }
+    },
+    {
+      "section": "5.5",
+      "module": "projects",
+      "resource": "project_hotels_external_venues",
+      "label": "Project hotels and external venues",
+      "provisional": true,
+      "cells": {
+        "SA": "CRU",
+        "SM": "—",
+        "HT": "CRU",
+        "PM": "CRU (a)",
+        "CD": "R (a)",
+        "VC": "R (a)",
+        "RG": "R (a)",
+        "HL": "RU (a)",
+        "FA": "—"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [],
+        "HT": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "PM": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "CD": [
+          {
+            "actions": ["read"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "VC": [
+          {
+            "actions": ["read"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "RG": [
+          {
+            "actions": ["read"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "HL": [
+          {
+            "actions": ["read", "update"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "FA": []
+      }
+    },
+    {
+      "section": "5.5",
+      "module": "projects",
+      "resource": "project_members_staff",
+      "label": "Project members, staff",
+      "provisional": true,
+      "cells": {
+        "SA": "CRUD",
+        "SM": "—",
+        "HT": "—",
+        "PM": "CRUD (a)",
+        "CD": "R (a)",
+        "VC": "R (a)",
+        "RG": "R (a)",
+        "HL": "R (a)",
+        "FA": "—"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["create", "read", "update", "delete"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [],
+        "HT": [],
+        "PM": [
+          {
+            "actions": ["create", "read", "update", "delete"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "CD": [
+          {
+            "actions": ["read"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "VC": [
+          {
+            "actions": ["read"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "RG": [
+          {
+            "actions": ["read"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "HL": [
+          {
+            "actions": ["read"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "FA": []
+      }
+    },
+    {
+      "section": "5.5",
+      "module": "projects",
+      "resource": "project_members_client_users",
+      "label": "Project members, client users and their flags",
+      "provisional": true,
+      "cells": {
+        "SA": "CRUD",
+        "SM": "CRU",
+        "HT": "—",
+        "PM": "CRUD (a)",
+        "CD": "—",
+        "VC": "—",
+        "RG": "—",
+        "HL": "—",
+        "FA": "—"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["create", "read", "update", "delete"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "HT": [],
+        "PM": [
+          {
+            "actions": ["create", "read", "update", "delete"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "CD": [],
+        "VC": [],
+        "RG": [],
+        "HL": [],
+        "FA": []
+      }
+    },
+    {
+      "section": "5.6",
+      "module": "functions",
+      "resource": "functions",
+      "label": "Functions",
+      "provisional": true,
+      "cells": {
+        "SA": "CRUD",
+        "SM": "R",
+        "HT": "R (a)",
+        "PM": "CRUD (a)",
+        "CD": "RU (a) theme, dress code",
+        "VC": "R (a)",
+        "RG": "R (a)",
+        "HL": "RU (a) logistics notes",
+        "FA": "R"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["create", "read", "update", "delete"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "HT": [
+          {
+            "actions": ["read"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "PM": [
+          {
+            "actions": ["create", "read", "update", "delete"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "CD": [
+          {
+            "actions": ["read", "update"],
+            "scope": "assigned",
+            "note": "theme dress code"
+          }
+        ],
+        "VC": [
+          {
+            "actions": ["read"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "RG": [
+          {
+            "actions": ["read"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "HL": [
+          {
+            "actions": ["read", "update"],
+            "scope": "assigned",
+            "note": "logistics notes"
+          }
+        ],
+        "FA": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ]
+      }
+    },
+    {
+      "section": "5.6",
+      "module": "functions",
+      "resource": "programme_items",
+      "label": "Programme items (shared schedule)",
+      "provisional": true,
+      "cells": {
+        "SA": "CRUDS",
+        "SM": "—",
+        "HT": "—",
+        "PM": "CRUDS (a)",
+        "CD": "R (a)",
+        "VC": "R (a)",
+        "RG": "R (a)",
+        "HL": "CRU (a)",
+        "FA": "—"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["create", "read", "update", "delete", "share"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [],
+        "HT": [],
+        "PM": [
+          {
+            "actions": ["create", "read", "update", "delete", "share"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "CD": [
+          {
+            "actions": ["read"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "VC": [
+          {
+            "actions": ["read"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "RG": [
+          {
+            "actions": ["read"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "HL": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "FA": []
+      }
+    },
+    {
+      "section": "5.6",
+      "module": "functions",
+      "resource": "run_show_items",
+      "label": "Run-of-show items",
+      "provisional": true,
+      "cells": {
+        "SA": "CRUD",
+        "SM": "—",
+        "HT": "—",
+        "PM": "CRUD (a)",
+        "CD": "R (a)",
+        "VC": "RU (a) vendor cues",
+        "RG": "R (a)",
+        "HL": "CRU (a)",
+        "FA": "—"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["create", "read", "update", "delete"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [],
+        "HT": [],
+        "PM": [
+          {
+            "actions": ["create", "read", "update", "delete"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "CD": [
+          {
+            "actions": ["read"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "VC": [
+          {
+            "actions": ["read", "update"],
+            "scope": "assigned",
+            "note": "vendor cues"
+          }
+        ],
+        "RG": [
+          {
+            "actions": ["read"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "HL": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "FA": []
+      }
+    },
+    {
+      "section": "5.6",
+      "module": "functions",
+      "resource": "readiness_checklist_items",
+      "label": "Readiness checklist items",
+      "provisional": true,
+      "cells": {
+        "SA": "CRU",
+        "SM": "—",
+        "HT": "—",
+        "PM": "CRU (a)",
+        "CD": "RU (a)",
+        "VC": "RU (a)",
+        "RG": "R (a)",
+        "HL": "CRU (a)",
+        "FA": "—"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [],
+        "HT": [],
+        "PM": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "CD": [
+          {
+            "actions": ["read", "update"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "VC": [
+          {
+            "actions": ["read", "update"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "RG": [
+          {
+            "actions": ["read"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "HL": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "FA": []
+      }
+    },
+    {
+      "section": "5.6",
+      "module": "functions",
+      "resource": "readiness_exceptions",
+      "label": "Readiness exceptions (Q10: Eva's authorised personnel only)",
+      "provisional": true,
+      "cells": {
+        "SA": "A",
+        "SM": "—",
+        "HT": "—",
+        "PM": "request only",
+        "CD": "—",
+        "VC": "—",
+        "RG": "—",
+        "HL": "—",
+        "FA": "—"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["approve"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [],
+        "HT": [],
+        "PM": [],
+        "CD": [],
+        "VC": [],
+        "RG": [],
+        "HL": [],
+        "FA": []
+      }
+    },
+    {
+      "section": "5.6",
+      "module": "functions",
+      "resource": "function_status",
+      "label": "Function status (planned, confirmed, cancelled)",
+      "provisional": true,
+      "cells": {
+        "SA": "U",
+        "SM": "—",
+        "HT": "—",
+        "PM": "U (a)",
+        "CD": "—",
+        "VC": "—",
+        "RG": "—",
+        "HL": "—",
+        "FA": "—"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["update"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [],
+        "HT": [],
+        "PM": [
+          {
+            "actions": ["update"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "CD": [],
+        "VC": [],
+        "RG": [],
+        "HL": [],
+        "FA": []
+      }
+    },
+    {
+      "section": "5.7",
+      "module": "budget",
+      "resource": "budget_categories",
+      "label": "Budget categories",
+      "provisional": true,
+      "cells": {
+        "SA": "CRUD",
+        "SM": "R",
+        "HT": "R",
+        "PM": "R",
+        "CD": "R",
+        "VC": "R",
+        "RG": "R",
+        "HL": "R",
+        "FA": "CRUD"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["create", "read", "update", "delete"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "HT": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "PM": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "CD": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "VC": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "RG": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "HL": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "FA": [
+          {
+            "actions": ["create", "read", "update", "delete"],
+            "scope": "all",
+            "note": null
+          }
+        ]
+      }
+    },
+    {
+      "section": "5.7",
+      "module": "budget",
+      "resource": "budget_lines_client_facing",
+      "label": "Budget lines, client-facing amounts",
+      "provisional": true,
+      "cells": {
+        "SA": "CRUDS",
+        "SM": "—",
+        "HT": "RU hotel lines",
+        "PM": "CRUS (a)",
+        "CD": "R (a)",
+        "VC": "RU (a) vendor lines",
+        "RG": "—",
+        "HL": "R (a)",
+        "FA": "CRUS"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["create", "read", "update", "delete", "share"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [],
+        "HT": [
+          {
+            "actions": ["read", "update"],
+            "scope": "all",
+            "note": "hotel lines"
+          }
+        ],
+        "PM": [
+          {
+            "actions": ["create", "read", "update", "share"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "CD": [
+          {
+            "actions": ["read"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "VC": [
+          {
+            "actions": ["read", "update"],
+            "scope": "assigned",
+            "note": "vendor lines"
+          }
+        ],
+        "RG": [],
+        "HL": [
+          {
+            "actions": ["read"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "FA": [
+          {
+            "actions": ["create", "read", "update", "share"],
+            "scope": "all",
+            "note": null
+          }
+        ]
+      }
+    },
+    {
+      "section": "5.7",
+      "module": "budget",
+      "resource": "budget_lines_internal_cost",
+      "label": "Budget lines, internal cost",
+      "provisional": true,
+      "cells": {
+        "SA": "RU",
+        "SM": "—",
+        "HT": "RU hotel lines",
+        "PM": "RU (a)",
+        "CD": "—",
+        "VC": "RU (a) vendor lines",
+        "RG": "—",
+        "HL": "—",
+        "FA": "RU"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["read", "update"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [],
+        "HT": [
+          {
+            "actions": ["read", "update"],
+            "scope": "all",
+            "note": "hotel lines"
+          }
+        ],
+        "PM": [
+          {
+            "actions": ["read", "update"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "CD": [],
+        "VC": [
+          {
+            "actions": ["read", "update"],
+            "scope": "assigned",
+            "note": "vendor lines"
+          }
+        ],
+        "RG": [],
+        "HL": [],
+        "FA": [
+          {
+            "actions": ["read", "update"],
+            "scope": "all",
+            "note": null
+          }
+        ]
+      }
+    },
+    {
+      "section": "5.7",
+      "module": "budget",
+      "resource": "cost_entries",
+      "label": "Cost entries",
+      "provisional": true,
+      "cells": {
+        "SA": "CRUD",
+        "SM": "—",
+        "HT": "CR hotel",
+        "PM": "CR (a)",
+        "CD": "—",
+        "VC": "CR (a)",
+        "RG": "—",
+        "HL": "—",
+        "FA": "CRUD"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["create", "read", "update", "delete"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [],
+        "HT": [
+          {
+            "actions": ["create", "read"],
+            "scope": "all",
+            "note": "hotel"
+          }
+        ],
+        "PM": [
+          {
+            "actions": ["create", "read"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "CD": [],
+        "VC": [
+          {
+            "actions": ["create", "read"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "RG": [],
+        "HL": [],
+        "FA": [
+          {
+            "actions": ["create", "read", "update", "delete"],
+            "scope": "all",
+            "note": null
+          }
+        ]
+      }
+    },
+    {
+      "section": "5.7",
+      "module": "budget",
+      "resource": "vendor_quotes",
+      "label": "Vendor quotes",
+      "provisional": true,
+      "cells": {
+        "SA": "CRUD",
+        "SM": "—",
+        "HT": "—",
+        "PM": "R (a)",
+        "CD": "—",
+        "VC": "CRUD",
+        "RG": "—",
+        "HL": "—",
+        "FA": "R"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["create", "read", "update", "delete"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [],
+        "HT": [],
+        "PM": [
+          {
+            "actions": ["read"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "CD": [],
+        "VC": [
+          {
+            "actions": ["create", "read", "update", "delete"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "RG": [],
+        "HL": [],
+        "FA": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ]
+      }
+    },
+    {
+      "section": "5.7",
+      "module": "budget",
+      "resource": "contracts_client",
+      "label": "Contracts with the client",
+      "provisional": true,
+      "cells": {
+        "SA": "CRUS",
+        "SM": "R",
+        "HT": "—",
+        "PM": "RUS (a)",
+        "CD": "—",
+        "VC": "—",
+        "RG": "—",
+        "HL": "—",
+        "FA": "CRUS"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["create", "read", "update", "share"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "HT": [],
+        "PM": [
+          {
+            "actions": ["read", "update", "share"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "CD": [],
+        "VC": [],
+        "RG": [],
+        "HL": [],
+        "FA": [
+          {
+            "actions": ["create", "read", "update", "share"],
+            "scope": "all",
+            "note": null
+          }
+        ]
+      }
+    },
+    {
+      "section": "5.7",
+      "module": "budget",
+      "resource": "contracts_vendors_hotels",
+      "label": "Contracts with vendors and hotels",
+      "provisional": true,
+      "cells": {
+        "SA": "CRU",
+        "SM": "—",
+        "HT": "CRU hotel",
+        "PM": "R (a)",
+        "CD": "—",
+        "VC": "CRU vendor",
+        "RG": "—",
+        "HL": "—",
+        "FA": "RU"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [],
+        "HT": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "all",
+            "note": "hotel"
+          }
+        ],
+        "PM": [
+          {
+            "actions": ["read"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "CD": [],
+        "VC": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "all",
+            "note": "vendor"
+          }
+        ],
+        "RG": [],
+        "HL": [],
+        "FA": [
+          {
+            "actions": ["read", "update"],
+            "scope": "all",
+            "note": null
+          }
+        ]
+      }
+    },
+    {
+      "section": "5.7",
+      "module": "budget",
+      "resource": "invoices_issued_client",
+      "label": "Invoices issued to the client",
+      "provisional": true,
+      "cells": {
+        "SA": "CRUS",
+        "SM": "R",
+        "HT": "—",
+        "PM": "R (a)",
+        "CD": "—",
+        "VC": "—",
+        "RG": "—",
+        "HL": "—",
+        "FA": "CRUS"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["create", "read", "update", "share"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "HT": [],
+        "PM": [
+          {
+            "actions": ["read"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "CD": [],
+        "VC": [],
+        "RG": [],
+        "HL": [],
+        "FA": [
+          {
+            "actions": ["create", "read", "update", "share"],
+            "scope": "all",
+            "note": null
+          }
+        ]
+      }
+    },
+    {
+      "section": "5.7",
+      "module": "budget",
+      "resource": "invoices_received_vendors_hotels",
+      "label": "Invoices received from vendors and hotels",
+      "provisional": true,
+      "cells": {
+        "SA": "CRU",
+        "SM": "—",
+        "HT": "CR hotel",
+        "PM": "R (a)",
+        "CD": "—",
+        "VC": "CR (a) vendor",
+        "RG": "—",
+        "HL": "—",
+        "FA": "CRU"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [],
+        "HT": [
+          {
+            "actions": ["create", "read"],
+            "scope": "all",
+            "note": "hotel"
+          }
+        ],
+        "PM": [
+          {
+            "actions": ["read"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "CD": [],
+        "VC": [
+          {
+            "actions": ["create", "read"],
+            "scope": "assigned",
+            "note": "vendor"
+          }
+        ],
+        "RG": [],
+        "HL": [],
+        "FA": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "all",
+            "note": null
+          }
+        ]
+      }
+    },
+    {
+      "section": "5.7",
+      "module": "budget",
+      "resource": "final_accounts",
+      "label": "Final accounts",
+      "provisional": true,
+      "cells": {
+        "SA": "CRUA",
+        "SM": "—",
+        "HT": "—",
+        "PM": "RU (a)",
+        "CD": "—",
+        "VC": "—",
+        "RG": "—",
+        "HL": "—",
+        "FA": "CRUA"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["create", "read", "update", "approve"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [],
+        "HT": [],
+        "PM": [
+          {
+            "actions": ["read", "update"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "CD": [],
+        "VC": [],
+        "RG": [],
+        "HL": [],
+        "FA": [
+          {
+            "actions": ["create", "read", "update", "approve"],
+            "scope": "all",
+            "note": null
+          }
+        ]
+      }
+    },
+    {
+      "section": "5.8",
+      "module": "vendors",
+      "resource": "vendor_categories",
+      "label": "Vendor categories",
+      "provisional": true,
+      "cells": {
+        "SA": "CRUD",
+        "SM": "R",
+        "HT": "R",
+        "PM": "R",
+        "CD": "R",
+        "VC": "CRU",
+        "RG": "R",
+        "HL": "R",
+        "FA": "R"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["create", "read", "update", "delete"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "HT": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "PM": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "CD": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "VC": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "RG": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "HL": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "FA": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ]
+      }
+    },
+    {
+      "section": "5.8",
+      "module": "vendors",
+      "resource": "vendor_profiles_client_fields",
+      "label": "Vendor profiles, client fields",
+      "provisional": true,
+      "cells": {
+        "SA": "CRUD",
+        "SM": "R",
+        "HT": "—",
+        "PM": "R",
+        "CD": "R",
+        "VC": "CRUD",
+        "RG": "—",
+        "HL": "R",
+        "FA": "R"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["create", "read", "update", "delete"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "HT": [],
+        "PM": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "CD": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "VC": [
+          {
+            "actions": ["create", "read", "update", "delete"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "RG": [],
+        "HL": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "FA": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ]
+      }
+    },
+    {
+      "section": "5.8",
+      "module": "vendors",
+      "resource": "vendor_contacts",
+      "label": "Vendor contacts",
+      "provisional": true,
+      "cells": {
+        "SA": "RU",
+        "SM": "—",
+        "HT": "—",
+        "PM": "R (a)",
+        "CD": "—",
+        "VC": "RU",
+        "RG": "—",
+        "HL": "R (a)",
+        "FA": "—"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["read", "update"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [],
+        "HT": [],
+        "PM": [
+          {
+            "actions": ["read"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "CD": [],
+        "VC": [
+          {
+            "actions": ["read", "update"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "RG": [],
+        "HL": [
+          {
+            "actions": ["read"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "FA": []
+      }
+    },
+    {
+      "section": "5.8",
+      "module": "vendors",
+      "resource": "vendor_internal_rating_notes",
+      "label": "Vendor internal rating and notes",
+      "provisional": true,
+      "cells": {
+        "SA": "RU",
+        "SM": "—",
+        "HT": "—",
+        "PM": "R (a)",
+        "CD": "—",
+        "VC": "RU",
+        "RG": "—",
+        "HL": "—",
+        "FA": "—"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["read", "update"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [],
+        "HT": [],
+        "PM": [
+          {
+            "actions": ["read"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "CD": [],
+        "VC": [
+          {
+            "actions": ["read", "update"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "RG": [],
+        "HL": [],
+        "FA": []
+      }
+    },
+    {
+      "section": "5.8",
+      "module": "vendors",
+      "resource": "vendor_bank_details",
+      "label": "Vendor bank details",
+      "provisional": true,
+      "cells": {
+        "SA": "R",
+        "SM": "—",
+        "HT": "—",
+        "PM": "—",
+        "CD": "—",
+        "VC": "RU",
+        "RG": "—",
+        "HL": "—",
+        "FA": "RU"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [],
+        "HT": [],
+        "PM": [],
+        "CD": [],
+        "VC": [
+          {
+            "actions": ["read", "update"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "RG": [],
+        "HL": [],
+        "FA": [
+          {
+            "actions": ["read", "update"],
+            "scope": "all",
+            "note": null
+          }
+        ]
+      }
+    },
+    {
+      "section": "5.8",
+      "module": "vendors",
+      "resource": "vendor_availability",
+      "label": "Vendor availability",
+      "provisional": true,
+      "cells": {
+        "SA": "CRU",
+        "SM": "—",
+        "HT": "—",
+        "PM": "R",
+        "CD": "—",
+        "VC": "CRU",
+        "RG": "—",
+        "HL": "—",
+        "FA": "—"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [],
+        "HT": [],
+        "PM": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "CD": [],
+        "VC": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "RG": [],
+        "HL": [],
+        "FA": []
+      }
+    },
+    {
+      "section": "5.8",
+      "module": "vendors",
+      "resource": "vendor_assignments_client_decisions",
+      "label": "Vendor assignments and client decisions",
+      "provisional": true,
+      "cells": {
+        "SA": "CRUD",
+        "SM": "—",
+        "HT": "—",
+        "PM": "CRU (a)",
+        "CD": "R (a)",
+        "VC": "CRU",
+        "RG": "—",
+        "HL": "R (a)",
+        "FA": "R"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["create", "read", "update", "delete"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [],
+        "HT": [],
+        "PM": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "CD": [
+          {
+            "actions": ["read"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "VC": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "RG": [],
+        "HL": [
+          {
+            "actions": ["read"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "FA": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ]
+      }
+    },
+    {
+      "section": "5.8",
+      "module": "vendors",
+      "resource": "vendor_proposals_client_amounts",
+      "label": "Vendor proposals, client amounts",
+      "provisional": true,
+      "cells": {
+        "SA": "CRUS",
+        "SM": "—",
+        "HT": "—",
+        "PM": "RUS (a)",
+        "CD": "R (a)",
+        "VC": "CRUS",
+        "RG": "—",
+        "HL": "—",
+        "FA": "R"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["create", "read", "update", "share"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [],
+        "HT": [],
+        "PM": [
+          {
+            "actions": ["read", "update", "share"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "CD": [
+          {
+            "actions": ["read"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "VC": [
+          {
+            "actions": ["create", "read", "update", "share"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "RG": [],
+        "HL": [],
+        "FA": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ]
+      }
+    },
+    {
+      "section": "5.8",
+      "module": "vendors",
+      "resource": "vendor_proposals_internal_cost",
+      "label": "Vendor proposals, internal cost",
+      "provisional": true,
+      "cells": {
+        "SA": "RU",
+        "SM": "—",
+        "HT": "—",
+        "PM": "R (a)",
+        "CD": "—",
+        "VC": "RU",
+        "RG": "—",
+        "HL": "—",
+        "FA": "R"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["read", "update"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [],
+        "HT": [],
+        "PM": [
+          {
+            "actions": ["read"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "CD": [],
+        "VC": [
+          {
+            "actions": ["read", "update"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "RG": [],
+        "HL": [],
+        "FA": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ]
+      }
+    },
+    {
+      "section": "5.8",
+      "module": "vendors",
+      "resource": "vendor_deliverables",
+      "label": "Vendor deliverables",
+      "provisional": true,
+      "cells": {
+        "SA": "CRUD",
+        "SM": "—",
+        "HT": "—",
+        "PM": "CRUA (a)",
+        "CD": "R (a)",
+        "VC": "CRU",
+        "RG": "—",
+        "HL": "U (a) mark delivered",
+        "FA": "—"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["create", "read", "update", "delete"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [],
+        "HT": [],
+        "PM": [
+          {
+            "actions": ["create", "read", "update", "approve"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "CD": [
+          {
+            "actions": ["read"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "VC": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "RG": [],
+        "HL": [
+          {
+            "actions": ["update"],
+            "scope": "assigned",
+            "note": "mark delivered"
+          }
+        ],
+        "FA": []
+      }
+    },
+    {
+      "section": "5.8",
+      "module": "vendors",
+      "resource": "artist_bookings",
+      "label": "Artist bookings",
+      "provisional": true,
+      "cells": {
+        "SA": "CRUD",
+        "SM": "—",
+        "HT": "—",
+        "PM": "CRU (a)",
+        "CD": "R (a)",
+        "VC": "CRU",
+        "RG": "—",
+        "HL": "R (a)",
+        "FA": "—"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["create", "read", "update", "delete"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [],
+        "HT": [],
+        "PM": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "CD": [
+          {
+            "actions": ["read"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "VC": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "RG": [],
+        "HL": [
+          {
+            "actions": ["read"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "FA": []
+      }
+    },
+    {
+      "section": "5.8",
+      "module": "vendors",
+      "resource": "artist_fee_internal",
+      "label": "Artist fee, internal",
+      "provisional": true,
+      "cells": {
+        "SA": "RU",
+        "SM": "—",
+        "HT": "—",
+        "PM": "R (a)",
+        "CD": "—",
+        "VC": "RU",
+        "RG": "—",
+        "HL": "—",
+        "FA": "R"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["read", "update"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [],
+        "HT": [],
+        "PM": [
+          {
+            "actions": ["read"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "CD": [],
+        "VC": [
+          {
+            "actions": ["read", "update"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "RG": [],
+        "HL": [],
+        "FA": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ]
+      }
+    },
+    {
+      "section": "5.8",
+      "module": "vendors",
+      "resource": "production_items",
+      "label": "Production items",
+      "provisional": true,
+      "cells": {
+        "SA": "CRUD",
+        "SM": "—",
+        "HT": "—",
+        "PM": "CRU (a)",
+        "CD": "R (a)",
+        "VC": "CRU",
+        "RG": "—",
+        "HL": "CRU (a)",
+        "FA": "—"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["create", "read", "update", "delete"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [],
+        "HT": [],
+        "PM": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "CD": [
+          {
+            "actions": ["read"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "VC": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "RG": [],
+        "HL": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "FA": []
+      }
+    },
+    {
+      "section": "5.9",
+      "module": "creative",
+      "resource": "design_items_versions",
+      "label": "Design items and versions",
+      "provisional": true,
+      "cells": {
+        "SA": "CRUDS",
+        "SM": "—",
+        "HT": "—",
+        "PM": "CRUS (a)",
+        "CD": "CRUDS (a)",
+        "VC": "R (a)",
+        "RG": "R (a)",
+        "HL": "R (a)",
+        "FA": "—"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["create", "read", "update", "delete", "share"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [],
+        "HT": [],
+        "PM": [
+          {
+            "actions": ["create", "read", "update", "share"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "CD": [
+          {
+            "actions": ["create", "read", "update", "delete", "share"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "VC": [
+          {
+            "actions": ["read"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "RG": [
+          {
+            "actions": ["read"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "HL": [
+          {
+            "actions": ["read"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "FA": []
+      }
+    },
+    {
+      "section": "5.9",
+      "module": "creative",
+      "resource": "comments_internal",
+      "label": "Comments, internal",
+      "provisional": true,
+      "cells": {
+        "SA": "CRUD",
+        "SM": "CR (o) UD",
+        "HT": "CR (o) UD",
+        "PM": "CR (a) UD (o)",
+        "CD": "CR (a) UD (o)",
+        "VC": "CR (a) UD (o)",
+        "RG": "CR (a) UD (o)",
+        "HL": "CR (a) UD (o)",
+        "FA": "CR (o) UD"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["create", "read", "update", "delete"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [
+          {
+            "actions": ["create", "read"],
+            "scope": "own",
+            "note": null
+          },
+          {
+            "actions": ["update", "delete"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "HT": [
+          {
+            "actions": ["create", "read"],
+            "scope": "own",
+            "note": null
+          },
+          {
+            "actions": ["update", "delete"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "PM": [
+          {
+            "actions": ["create", "read"],
+            "scope": "assigned",
+            "note": null
+          },
+          {
+            "actions": ["update", "delete"],
+            "scope": "own",
+            "note": null
+          }
+        ],
+        "CD": [
+          {
+            "actions": ["create", "read"],
+            "scope": "assigned",
+            "note": null
+          },
+          {
+            "actions": ["update", "delete"],
+            "scope": "own",
+            "note": null
+          }
+        ],
+        "VC": [
+          {
+            "actions": ["create", "read"],
+            "scope": "assigned",
+            "note": null
+          },
+          {
+            "actions": ["update", "delete"],
+            "scope": "own",
+            "note": null
+          }
+        ],
+        "RG": [
+          {
+            "actions": ["create", "read"],
+            "scope": "assigned",
+            "note": null
+          },
+          {
+            "actions": ["update", "delete"],
+            "scope": "own",
+            "note": null
+          }
+        ],
+        "HL": [
+          {
+            "actions": ["create", "read"],
+            "scope": "assigned",
+            "note": null
+          },
+          {
+            "actions": ["update", "delete"],
+            "scope": "own",
+            "note": null
+          }
+        ],
+        "FA": [
+          {
+            "actions": ["create", "read"],
+            "scope": "own",
+            "note": null
+          },
+          {
+            "actions": ["update", "delete"],
+            "scope": "all",
+            "note": null
+          }
+        ]
+      }
+    },
+    {
+      "section": "5.9",
+      "module": "creative",
+      "resource": "comments_client_visible_replies",
+      "label": "Comments, client-visible replies",
+      "provisional": true,
+      "cells": {
+        "SA": "CRUD",
+        "SM": "—",
+        "HT": "CRU hotel threads",
+        "PM": "CRU (a)",
+        "CD": "CRU (a) design threads",
+        "VC": "CRU (a) proposal threads",
+        "RG": "CRU (a) guest threads",
+        "HL": "—",
+        "FA": "CRU invoice threads"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["create", "read", "update", "delete"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [],
+        "HT": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "all",
+            "note": "hotel threads"
+          }
+        ],
+        "PM": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "CD": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "assigned",
+            "note": "design threads"
+          }
+        ],
+        "VC": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "assigned",
+            "note": "proposal threads"
+          }
+        ],
+        "RG": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "assigned",
+            "note": "guest threads"
+          }
+        ],
+        "HL": [],
+        "FA": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "all",
+            "note": "invoice threads"
+          }
+        ]
+      }
+    },
+    {
+      "section": "5.9",
+      "module": "creative",
+      "resource": "client_requests",
+      "label": "Client requests (questions, change requests, support)",
+      "provisional": true,
+      "cells": {
+        "SA": "CRUDA",
+        "SM": "R",
+        "HT": "RU hotel-related",
+        "PM": "RUA (a)",
+        "CD": "RU (a)",
+        "VC": "RU (a)",
+        "RG": "RU (a)",
+        "HL": "RU (a)",
+        "FA": "R"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["create", "read", "update", "delete", "approve"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "HT": [
+          {
+            "actions": ["read", "update"],
+            "scope": "all",
+            "note": "hotel-related"
+          }
+        ],
+        "PM": [
+          {
+            "actions": ["read", "update", "approve"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "CD": [
+          {
+            "actions": ["read", "update"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "VC": [
+          {
+            "actions": ["read", "update"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "RG": [
+          {
+            "actions": ["read", "update"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "HL": [
+          {
+            "actions": ["read", "update"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "FA": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ]
+      }
+    },
+    {
+      "section": "5.9",
+      "module": "creative",
+      "resource": "approvals_submit_for_decision",
+      "label": "Approvals, submit for decision",
+      "provisional": true,
+      "cells": {
+        "SA": "CRU",
+        "SM": "—",
+        "HT": "C hotel proposals",
+        "PM": "CRU (a)",
+        "CD": "C (a) designs, invitations",
+        "VC": "C proposals",
+        "RG": "—",
+        "HL": "—",
+        "FA": "C budget lines, contracts, invoices"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [],
+        "HT": [
+          {
+            "actions": ["create"],
+            "scope": "all",
+            "note": "hotel proposals"
+          }
+        ],
+        "PM": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "CD": [
+          {
+            "actions": ["create"],
+            "scope": "assigned",
+            "note": "designs invitations"
+          }
+        ],
+        "VC": [
+          {
+            "actions": ["create"],
+            "scope": "all",
+            "note": "proposals"
+          }
+        ],
+        "RG": [],
+        "HL": [],
+        "FA": [
+          {
+            "actions": ["create"],
+            "scope": "all",
+            "note": "budget lines contracts invoices"
+          }
+        ]
+      }
+    },
+    {
+      "section": "5.9",
+      "module": "creative",
+      "resource": "approval_decisions_on_client",
+      "label": "Approval decisions, on the client's behalf with evidence",
+      "provisional": true,
+      "cells": {
+        "SA": "A",
+        "SM": "—",
+        "HT": "—",
+        "PM": "A (a)",
+        "CD": "—",
+        "VC": "—",
+        "RG": "—",
+        "HL": "—",
+        "FA": "—"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["approve"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [],
+        "HT": [],
+        "PM": [
+          {
+            "actions": ["approve"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "CD": [],
+        "VC": [],
+        "RG": [],
+        "HL": [],
+        "FA": []
+      }
+    },
+    {
+      "section": "5.9",
+      "module": "creative",
+      "resource": "live_chat_conversations_messages",
+      "label": "Live chat conversations and messages (Q20)",
+      "provisional": true,
+      "cells": {
+        "SA": "CRUD",
+        "SM": "CRU",
+        "HT": "CRU hotel conversations",
+        "PM": "CRU (a)",
+        "CD": "R (a)",
+        "VC": "R (a)",
+        "RG": "CRU (a) guest conversations",
+        "HL": "CRU (a)",
+        "FA": "R"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["create", "read", "update", "delete"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "HT": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "all",
+            "note": "hotel conversations"
+          }
+        ],
+        "PM": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "CD": [
+          {
+            "actions": ["read"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "VC": [
+          {
+            "actions": ["read"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "RG": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "assigned",
+            "note": "guest conversations"
+          }
+        ],
+        "HL": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "FA": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ]
+      }
+    },
+    {
+      "section": "5.10",
+      "module": "guests",
+      "resource": "invitations_versions",
+      "label": "Invitations and versions",
+      "provisional": true,
+      "cells": {
+        "SA": "CRUDS",
+        "SM": "—",
+        "HT": "—",
+        "PM": "CRUS (a)",
+        "CD": "CRU (a)",
+        "VC": "—",
+        "RG": "RU (a)",
+        "HL": "—",
+        "FA": "—"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["create", "read", "update", "delete", "share"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [],
+        "HT": [],
+        "PM": [
+          {
+            "actions": ["create", "read", "update", "share"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "CD": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "VC": [],
+        "RG": [
+          {
+            "actions": ["read", "update"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "HL": [],
+        "FA": []
+      }
+    },
+    {
+      "section": "5.10",
+      "module": "guests",
+      "resource": "invitation_distribution",
+      "label": "Invitation distribution (recipients, send)",
+      "provisional": true,
+      "cells": {
+        "SA": "CRU",
+        "SM": "—",
+        "HT": "—",
+        "PM": "R (a)",
+        "CD": "—",
+        "VC": "—",
+        "RG": "CRU (a)",
+        "HL": "—",
+        "FA": "—"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [],
+        "HT": [],
+        "PM": [
+          {
+            "actions": ["read"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "CD": [],
+        "VC": [],
+        "RG": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "HL": [],
+        "FA": []
+      }
+    },
+    {
+      "section": "5.10",
+      "module": "guests",
+      "resource": "family_groups_guests_standard",
+      "label": "Family groups and guests, standard fields",
+      "provisional": true,
+      "cells": {
+        "SA": "CRUD",
+        "SM": "—",
+        "HT": "—",
+        "PM": "CRU (a)",
+        "CD": "—",
+        "VC": "—",
+        "RG": "CRUD (a)",
+        "HL": "RU (a)",
+        "FA": "—"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["create", "read", "update", "delete"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [],
+        "HT": [],
+        "PM": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "CD": [],
+        "VC": [],
+        "RG": [
+          {
+            "actions": ["create", "read", "update", "delete"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "HL": [
+          {
+            "actions": ["read", "update"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "FA": []
+      }
+    },
+    {
+      "section": "5.10",
+      "module": "guests",
+      "resource": "guest_sensitive_fields",
+      "label": "Guest sensitive fields (allergies, accessibility)",
+      "provisional": true,
+      "cells": {
+        "SA": "R",
+        "SM": "—",
+        "HT": "—",
+        "PM": "R (a)",
+        "CD": "—",
+        "VC": "—",
+        "RG": "RU (a)",
+        "HL": "R (a)",
+        "FA": "—"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [],
+        "HT": [],
+        "PM": [
+          {
+            "actions": ["read"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "CD": [],
+        "VC": [],
+        "RG": [
+          {
+            "actions": ["read", "update"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "HL": [
+          {
+            "actions": ["read"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "FA": []
+      }
+    },
+    {
+      "section": "5.10",
+      "module": "guests",
+      "resource": "guest_internal_notes",
+      "label": "Guest internal notes",
+      "provisional": true,
+      "cells": {
+        "SA": "RU",
+        "SM": "—",
+        "HT": "—",
+        "PM": "R (a)",
+        "CD": "—",
+        "VC": "—",
+        "RG": "CRU (a)",
+        "HL": "R (a)",
+        "FA": "—"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["read", "update"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [],
+        "HT": [],
+        "PM": [
+          {
+            "actions": ["read"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "CD": [],
+        "VC": [],
+        "RG": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "HL": [
+          {
+            "actions": ["read"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "FA": []
+      }
+    },
+    {
+      "section": "5.10",
+      "module": "guests",
+      "resource": "identity_documents",
+      "label": "Identity documents",
+      "provisional": true,
+      "cells": {
+        "SA": "R break-glass",
+        "SM": "—",
+        "HT": "—",
+        "PM": "—",
+        "CD": "—",
+        "VC": "—",
+        "RG": "CRU (a) with explicit grant",
+        "HL": "R (a) check-in only",
+        "FA": "—"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": "break-glass"
+          }
+        ],
+        "SM": [],
+        "HT": [],
+        "PM": [],
+        "CD": [],
+        "VC": [],
+        "RG": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "assigned",
+            "note": "with explicit grant"
+          }
+        ],
+        "HL": [
+          {
+            "actions": ["read"],
+            "scope": "assigned",
+            "note": "check-in only"
+          }
+        ],
+        "FA": []
+      }
+    },
+    {
+      "section": "5.10",
+      "module": "guests",
+      "resource": "attendance",
+      "label": "Attendance",
+      "provisional": true,
+      "cells": {
+        "SA": "CRU",
+        "SM": "—",
+        "HT": "—",
+        "PM": "RU (a)",
+        "CD": "—",
+        "VC": "—",
+        "RG": "CRU (a)",
+        "HL": "R (a)",
+        "FA": "—"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [],
+        "HT": [],
+        "PM": [
+          {
+            "actions": ["read", "update"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "CD": [],
+        "VC": [],
+        "RG": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "HL": [
+          {
+            "actions": ["read"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "FA": []
+      }
+    },
+    {
+      "section": "5.10",
+      "module": "guests",
+      "resource": "rsvp_tokens",
+      "label": "RSVP tokens (issue, revoke)",
+      "provisional": true,
+      "cells": {
+        "SA": "CRU",
+        "SM": "—",
+        "HT": "—",
+        "PM": "CRU (a)",
+        "CD": "—",
+        "VC": "—",
+        "RG": "CRU (a)",
+        "HL": "—",
+        "FA": "—"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [],
+        "HT": [],
+        "PM": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "CD": [],
+        "VC": [],
+        "RG": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "HL": [],
+        "FA": []
+      }
+    },
+    {
+      "section": "5.10",
+      "module": "guests",
+      "resource": "rsvp_responses",
+      "label": "RSVP responses (submission log)",
+      "provisional": true,
+      "cells": {
+        "SA": "R",
+        "SM": "—",
+        "HT": "—",
+        "PM": "R (a)",
+        "CD": "—",
+        "VC": "—",
+        "RG": "CR (a)",
+        "HL": "—",
+        "FA": "—"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [],
+        "HT": [],
+        "PM": [
+          {
+            "actions": ["read"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "CD": [],
+        "VC": [],
+        "RG": [
+          {
+            "actions": ["create", "read"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "HL": [],
+        "FA": []
+      }
+    },
+    {
+      "section": "5.10",
+      "module": "guests",
+      "resource": "guest_support_requests",
+      "label": "Guest support requests",
+      "provisional": true,
+      "cells": {
+        "SA": "CRU",
+        "SM": "—",
+        "HT": "—",
+        "PM": "RU (a)",
+        "CD": "—",
+        "VC": "—",
+        "RG": "CRU (a)",
+        "HL": "CRU (a)",
+        "FA": "—"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [],
+        "HT": [],
+        "PM": [
+          {
+            "actions": ["read", "update"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "CD": [],
+        "VC": [],
+        "RG": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "HL": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "FA": []
+      }
+    },
+    {
+      "section": "5.11",
+      "module": "rooms",
+      "resource": "room_blocks_client_fields",
+      "label": "Room blocks, client fields",
+      "provisional": true,
+      "cells": {
+        "SA": "CRU",
+        "SM": "—",
+        "HT": "CRU",
+        "PM": "CRU (a)",
+        "CD": "—",
+        "VC": "—",
+        "RG": "R (a)",
+        "HL": "R (a)",
+        "FA": "R"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [],
+        "HT": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "PM": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "CD": [],
+        "VC": [],
+        "RG": [
+          {
+            "actions": ["read"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "HL": [
+          {
+            "actions": ["read"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "FA": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ]
+      }
+    },
+    {
+      "section": "5.11",
+      "module": "rooms",
+      "resource": "room_blocks_internal_rate",
+      "label": "Room blocks, internal rate",
+      "provisional": true,
+      "cells": {
+        "SA": "RU",
+        "SM": "—",
+        "HT": "RU",
+        "PM": "R (a)",
+        "CD": "—",
+        "VC": "—",
+        "RG": "—",
+        "HL": "—",
+        "FA": "R"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["read", "update"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [],
+        "HT": [
+          {
+            "actions": ["read", "update"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "PM": [
+          {
+            "actions": ["read"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "CD": [],
+        "VC": [],
+        "RG": [],
+        "HL": [],
+        "FA": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ]
+      }
+    },
+    {
+      "section": "5.11",
+      "module": "rooms",
+      "resource": "room_allocations_occupants",
+      "label": "Room allocations and occupants",
+      "provisional": true,
+      "cells": {
+        "SA": "CRUD",
+        "SM": "—",
+        "HT": "R",
+        "PM": "RU (a)",
+        "CD": "—",
+        "VC": "—",
+        "RG": "CRU (a)",
+        "HL": "CRUD (a)",
+        "FA": "—"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["create", "read", "update", "delete"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [],
+        "HT": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "PM": [
+          {
+            "actions": ["read", "update"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "CD": [],
+        "VC": [],
+        "RG": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "HL": [
+          {
+            "actions": ["create", "read", "update", "delete"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "FA": []
+      }
+    },
+    {
+      "section": "5.11",
+      "module": "rooms",
+      "resource": "travel_segments",
+      "label": "Travel segments",
+      "provisional": true,
+      "cells": {
+        "SA": "CRU",
+        "SM": "—",
+        "HT": "—",
+        "PM": "R (a)",
+        "CD": "—",
+        "VC": "—",
+        "RG": "CRU (a)",
+        "HL": "CRU (a)",
+        "FA": "—"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [],
+        "HT": [],
+        "PM": [
+          {
+            "actions": ["read"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "CD": [],
+        "VC": [],
+        "RG": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "HL": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "FA": []
+      }
+    },
+    {
+      "section": "5.11",
+      "module": "rooms",
+      "resource": "vehicles_transfers_passengers",
+      "label": "Vehicles, transfers, passengers",
+      "provisional": true,
+      "cells": {
+        "SA": "CRUD",
+        "SM": "—",
+        "HT": "—",
+        "PM": "RU (a)",
+        "CD": "—",
+        "VC": "R (a) transport vendor",
+        "RG": "R (a)",
+        "HL": "CRUD (a)",
+        "FA": "—"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["create", "read", "update", "delete"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [],
+        "HT": [],
+        "PM": [
+          {
+            "actions": ["read", "update"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "CD": [],
+        "VC": [
+          {
+            "actions": ["read"],
+            "scope": "assigned",
+            "note": "transport vendor"
+          }
+        ],
+        "RG": [
+          {
+            "actions": ["read"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "HL": [
+          {
+            "actions": ["create", "read", "update", "delete"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "FA": []
+      }
+    },
+    {
+      "section": "5.11",
+      "module": "rooms",
+      "resource": "guest_departures",
+      "label": "Guest departures",
+      "provisional": true,
+      "cells": {
+        "SA": "CRU",
+        "SM": "—",
+        "HT": "—",
+        "PM": "R (a)",
+        "CD": "—",
+        "VC": "—",
+        "RG": "RU (a)",
+        "HL": "CRU (a)",
+        "FA": "—"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [],
+        "HT": [],
+        "PM": [
+          {
+            "actions": ["read"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "CD": [],
+        "VC": [],
+        "RG": [
+          {
+            "actions": ["read", "update"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "HL": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "FA": []
+      }
+    },
+    {
+      "section": "5.11",
+      "module": "rooms",
+      "resource": "lost_found",
+      "label": "Lost and found",
+      "provisional": true,
+      "cells": {
+        "SA": "CRU",
+        "SM": "—",
+        "HT": "—",
+        "PM": "RU (a)",
+        "CD": "—",
+        "VC": "—",
+        "RG": "R (a)",
+        "HL": "CRU (a)",
+        "FA": "—"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [],
+        "HT": [],
+        "PM": [
+          {
+            "actions": ["read", "update"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "CD": [],
+        "VC": [],
+        "RG": [
+          {
+            "actions": ["read"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "HL": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "FA": []
+      }
+    },
+    {
+      "section": "5.12",
+      "module": "menus",
+      "resource": "menus_versions_items",
+      "label": "Menus, versions, items",
+      "provisional": true,
+      "cells": {
+        "SA": "CRUDS",
+        "SM": "—",
+        "HT": "—",
+        "PM": "CRUS (a)",
+        "CD": "R (a)",
+        "VC": "CRU (a)",
+        "RG": "R (a)",
+        "HL": "R (a)",
+        "FA": "—"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["create", "read", "update", "delete", "share"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [],
+        "HT": [],
+        "PM": [
+          {
+            "actions": ["create", "read", "update", "share"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "CD": [
+          {
+            "actions": ["read"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "VC": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "RG": [
+          {
+            "actions": ["read"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "HL": [
+          {
+            "actions": ["read"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "FA": []
+      }
+    },
+    {
+      "section": "5.12",
+      "module": "menus",
+      "resource": "headcounts",
+      "label": "Headcounts",
+      "provisional": true,
+      "cells": {
+        "SA": "R",
+        "SM": "—",
+        "HT": "—",
+        "PM": "R (a)",
+        "CD": "—",
+        "VC": "R (a)",
+        "RG": "R (a)",
+        "HL": "R (a)",
+        "FA": "—"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [],
+        "HT": [],
+        "PM": [
+          {
+            "actions": ["read"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "CD": [],
+        "VC": [
+          {
+            "actions": ["read"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "RG": [
+          {
+            "actions": ["read"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "HL": [
+          {
+            "actions": ["read"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "FA": []
+      }
+    },
+    {
+      "section": "5.13",
+      "module": "tasks",
+      "resource": "tasks",
+      "label": "Tasks",
+      "provisional": true,
+      "cells": {
+        "SA": "CRUD",
+        "SM": "CRU (o)",
+        "HT": "CRU (o)",
+        "PM": "CRUD (a)",
+        "CD": "CRU (a)",
+        "VC": "CRU (a)",
+        "RG": "CRU (a)",
+        "HL": "CRU (a)",
+        "FA": "CRU (o)"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["create", "read", "update", "delete"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "own",
+            "note": null
+          }
+        ],
+        "HT": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "own",
+            "note": null
+          }
+        ],
+        "PM": [
+          {
+            "actions": ["create", "read", "update", "delete"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "CD": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "VC": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "RG": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "HL": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "FA": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "own",
+            "note": null
+          }
+        ]
+      }
+    },
+    {
+      "section": "5.13",
+      "module": "tasks",
+      "resource": "task_dependencies",
+      "label": "Task dependencies",
+      "provisional": true,
+      "cells": {
+        "SA": "CRUD",
+        "SM": "—",
+        "HT": "—",
+        "PM": "CRUD (a)",
+        "CD": "CR (a)",
+        "VC": "CR (a)",
+        "RG": "CR (a)",
+        "HL": "CR (a)",
+        "FA": "—"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["create", "read", "update", "delete"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [],
+        "HT": [],
+        "PM": [
+          {
+            "actions": ["create", "read", "update", "delete"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "CD": [
+          {
+            "actions": ["create", "read"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "VC": [
+          {
+            "actions": ["create", "read"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "RG": [
+          {
+            "actions": ["create", "read"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "HL": [
+          {
+            "actions": ["create", "read"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "FA": []
+      }
+    },
+    {
+      "section": "5.13",
+      "module": "tasks",
+      "resource": "staff_assignments",
+      "label": "Staff assignments",
+      "provisional": true,
+      "cells": {
+        "SA": "CRUD",
+        "SM": "—",
+        "HT": "—",
+        "PM": "CRUD (a)",
+        "CD": "R (o)",
+        "VC": "R (o)",
+        "RG": "R (o)",
+        "HL": "CRU (a)",
+        "FA": "—"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["create", "read", "update", "delete"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [],
+        "HT": [],
+        "PM": [
+          {
+            "actions": ["create", "read", "update", "delete"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "CD": [
+          {
+            "actions": ["read"],
+            "scope": "own",
+            "note": null
+          }
+        ],
+        "VC": [
+          {
+            "actions": ["read"],
+            "scope": "own",
+            "note": null
+          }
+        ],
+        "RG": [
+          {
+            "actions": ["read"],
+            "scope": "own",
+            "note": null
+          }
+        ],
+        "HL": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "FA": []
+      }
+    },
+    {
+      "section": "5.13",
+      "module": "tasks",
+      "resource": "incidents",
+      "label": "Incidents (report, assign, escalate, resolve, close)",
+      "provisional": true,
+      "cells": {
+        "SA": "CRUD",
+        "SM": "—",
+        "HT": "—",
+        "PM": "CRUA (a)",
+        "CD": "CR (a)",
+        "VC": "CR (a)",
+        "RG": "CR (a)",
+        "HL": "CRU (a)",
+        "FA": "—"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["create", "read", "update", "delete"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [],
+        "HT": [],
+        "PM": [
+          {
+            "actions": ["create", "read", "update", "approve"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "CD": [
+          {
+            "actions": ["create", "read"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "VC": [
+          {
+            "actions": ["create", "read"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "RG": [
+          {
+            "actions": ["create", "read"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "HL": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "FA": []
+      }
+    },
+    {
+      "section": "5.14",
+      "module": "documents",
+      "resource": "documents_on_records_role",
+      "label": "Documents on records the role can reach",
+      "provisional": true,
+      "cells": {
+        "SA": "CRUD",
+        "SM": "CRU",
+        "HT": "CRU",
+        "PM": "CRUD (a)",
+        "CD": "CRU (a)",
+        "VC": "CRU",
+        "RG": "CRU (a)",
+        "HL": "CRU (a)",
+        "FA": "CRU"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["create", "read", "update", "delete"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "HT": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "PM": [
+          {
+            "actions": ["create", "read", "update", "delete"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "CD": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "VC": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "RG": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "HL": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "FA": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "all",
+            "note": null
+          }
+        ]
+      }
+    },
+    {
+      "section": "5.14",
+      "module": "documents",
+      "resource": "set_client_visibility_on",
+      "label": "Set client visibility on a document",
+      "provisional": true,
+      "cells": {
+        "SA": "S",
+        "SM": "—",
+        "HT": "S hotel proposals",
+        "PM": "S (a)",
+        "CD": "S (a) designs",
+        "VC": "S proposals",
+        "RG": "—",
+        "HL": "—",
+        "FA": "S invoices, client contracts"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["share"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [],
+        "HT": [
+          {
+            "actions": ["share"],
+            "scope": "all",
+            "note": "hotel proposals"
+          }
+        ],
+        "PM": [
+          {
+            "actions": ["share"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "CD": [
+          {
+            "actions": ["share"],
+            "scope": "assigned",
+            "note": "designs"
+          }
+        ],
+        "VC": [
+          {
+            "actions": ["share"],
+            "scope": "all",
+            "note": "proposals"
+          }
+        ],
+        "RG": [],
+        "HL": [],
+        "FA": [
+          {
+            "actions": ["share"],
+            "scope": "all",
+            "note": "invoices client contracts"
+          }
+        ]
+      }
+    },
+    {
+      "section": "5.14",
+      "module": "documents",
+      "resource": "media_assets",
+      "label": "Media assets",
+      "provisional": true,
+      "cells": {
+        "SA": "CRUD",
+        "SM": "RU rights, showcase",
+        "HT": "CRUD hotels",
+        "PM": "R",
+        "CD": "CRUD (a) designs",
+        "VC": "CRUD vendors",
+        "RG": "—",
+        "HL": "—",
+        "FA": "—"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["create", "read", "update", "delete"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [
+          {
+            "actions": ["read", "update"],
+            "scope": "all",
+            "note": "rights showcase"
+          }
+        ],
+        "HT": [
+          {
+            "actions": ["create", "read", "update", "delete"],
+            "scope": "all",
+            "note": "hotels"
+          }
+        ],
+        "PM": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "CD": [
+          {
+            "actions": ["create", "read", "update", "delete"],
+            "scope": "assigned",
+            "note": "designs"
+          }
+        ],
+        "VC": [
+          {
+            "actions": ["create", "read", "update", "delete"],
+            "scope": "all",
+            "note": "vendors"
+          }
+        ],
+        "RG": [],
+        "HL": [],
+        "FA": []
+      }
+    },
+    {
+      "section": "5.14",
+      "module": "documents",
+      "resource": "expiring_access_links",
+      "label": "Expiring access links",
+      "provisional": true,
+      "cells": {
+        "SA": "CRUD",
+        "SM": "C (o)",
+        "HT": "C (o)",
+        "PM": "C (a)",
+        "CD": "C (a)",
+        "VC": "C (o)",
+        "RG": "C (a)",
+        "HL": "C (a)",
+        "FA": "C (o)"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["create", "read", "update", "delete"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [
+          {
+            "actions": ["create"],
+            "scope": "own",
+            "note": null
+          }
+        ],
+        "HT": [
+          {
+            "actions": ["create"],
+            "scope": "own",
+            "note": null
+          }
+        ],
+        "PM": [
+          {
+            "actions": ["create"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "CD": [
+          {
+            "actions": ["create"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "VC": [
+          {
+            "actions": ["create"],
+            "scope": "own",
+            "note": null
+          }
+        ],
+        "RG": [
+          {
+            "actions": ["create"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "HL": [
+          {
+            "actions": ["create"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "FA": [
+          {
+            "actions": ["create"],
+            "scope": "own",
+            "note": null
+          }
+        ]
+      }
+    },
+    {
+      "section": "5.15",
+      "module": "closure",
+      "resource": "closure_checklist_items",
+      "label": "Closure checklist items",
+      "provisional": true,
+      "cells": {
+        "SA": "CRU",
+        "SM": "—",
+        "HT": "—",
+        "PM": "CRU (a)",
+        "CD": "—",
+        "VC": "U vendor completion",
+        "RG": "—",
+        "HL": "U (a) departures, lost and found",
+        "FA": "U final accounts"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [],
+        "HT": [],
+        "PM": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "CD": [],
+        "VC": [
+          {
+            "actions": ["update"],
+            "scope": "all",
+            "note": "vendor completion"
+          }
+        ],
+        "RG": [],
+        "HL": [
+          {
+            "actions": ["update"],
+            "scope": "assigned",
+            "note": "departures lost and found"
+          }
+        ],
+        "FA": [
+          {
+            "actions": ["update"],
+            "scope": "all",
+            "note": "final accounts"
+          }
+        ]
+      }
+    },
+    {
+      "section": "5.15",
+      "module": "closure",
+      "resource": "close_project",
+      "label": "Close the project",
+      "provisional": true,
+      "cells": {
+        "SA": "A",
+        "SM": "—",
+        "HT": "—",
+        "PM": "A (a) when the checklist is complete and final accounts are approved",
+        "CD": "—",
+        "VC": "—",
+        "RG": "—",
+        "HL": "—",
+        "FA": "—"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["approve"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [],
+        "HT": [],
+        "PM": [
+          {
+            "actions": ["approve"],
+            "scope": "assigned",
+            "note": "when the checklist is complete and final accounts are approved"
+          }
+        ],
+        "CD": [],
+        "VC": [],
+        "RG": [],
+        "HL": [],
+        "FA": []
+      }
+    },
+    {
+      "section": "5.15",
+      "module": "closure",
+      "resource": "archive_project_after_window",
+      "label": "Archive the project after the window (Q23)",
+      "provisional": true,
+      "cells": {
+        "SA": "A",
+        "SM": "—",
+        "HT": "—",
+        "PM": "request only",
+        "CD": "—",
+        "VC": "—",
+        "RG": "—",
+        "HL": "—",
+        "FA": "—"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["approve"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [],
+        "HT": [],
+        "PM": [],
+        "CD": [],
+        "VC": [],
+        "RG": [],
+        "HL": [],
+        "FA": []
+      }
+    },
+    {
+      "section": "5.15",
+      "module": "closure",
+      "resource": "approve_retention_deletion_proposed",
+      "label": "Approve a retention deletion proposed by the retention job (Q17)",
+      "provisional": true,
+      "cells": {
+        "SA": "A",
+        "SM": "—",
+        "HT": "—",
+        "PM": "—",
+        "CD": "—",
+        "VC": "—",
+        "RG": "—",
+        "HL": "—",
+        "FA": "—"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["approve"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [],
+        "HT": [],
+        "PM": [],
+        "CD": [],
+        "VC": [],
+        "RG": [],
+        "HL": [],
+        "FA": []
+      }
+    },
+    {
+      "section": "5.15",
+      "module": "closure",
+      "resource": "client_feedback",
+      "label": "Client feedback",
+      "provisional": true,
+      "cells": {
+        "SA": "R",
+        "SM": "R",
+        "HT": "—",
+        "PM": "R (a)",
+        "CD": "—",
+        "VC": "—",
+        "RG": "—",
+        "HL": "—",
+        "FA": "—"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "HT": [],
+        "PM": [
+          {
+            "actions": ["read"],
+            "scope": "assigned",
+            "note": null
+          }
+        ],
+        "CD": [],
+        "VC": [],
+        "RG": [],
+        "HL": [],
+        "FA": []
+      }
+    },
+    {
+      "section": "5.15",
+      "module": "closure",
+      "resource": "cms_pages_showcase_items",
+      "label": "CMS pages and showcase items",
+      "provisional": true,
+      "cells": {
+        "SA": "CRUD",
+        "SM": "CRU",
+        "HT": "R",
+        "PM": "R",
+        "CD": "R",
+        "VC": "R",
+        "RG": "R",
+        "HL": "R",
+        "FA": "R"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": ["create", "read", "update", "delete"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "SM": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "HT": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "PM": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "CD": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "VC": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "RG": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "HL": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "FA": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ]
+      }
+    }
+  ],
+  "others": [
+    {
+      "section": "6",
+      "module": "client",
+      "resource": "hotel_discovery",
+      "label": "Hotel discovery (per entitlement §3)",
+      "provisional": true,
+      "cells": {
+        "CR": "R",
+        "GU": "—",
+        "DP": "R masked"
+      },
+      "grants": {
+        "CR": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "GU": [],
+        "DP": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": "masked"
+          }
+        ]
+      }
+    },
+    {
+      "section": "6",
+      "module": "client",
+      "resource": "saved_hotels_compare",
+      "label": "Saved hotels and compare",
+      "provisional": true,
+      "cells": {
+        "CR": "CRUD own account",
+        "GU": "—",
+        "DP": "CRUD demo"
+      },
+      "grants": {
+        "CR": [
+          {
+            "actions": ["create", "read", "update", "delete"],
+            "scope": "own",
+            "note": "account"
+          }
+        ],
+        "GU": [],
+        "DP": [
+          {
+            "actions": ["create", "read", "update", "delete"],
+            "scope": "all",
+            "note": "demo"
+          }
+        ]
+      }
+    },
+    {
+      "section": "6",
+      "module": "client",
+      "resource": "hotel_assistance_requests",
+      "label": "Hotel assistance requests",
+      "provisional": true,
+      "cells": {
+        "CR": "CRU own",
+        "GU": "—",
+        "DP": "C, routed to Sales"
+      },
+      "grants": {
+        "CR": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "own",
+            "note": null
+          }
+        ],
+        "GU": [],
+        "DP": [
+          {
+            "actions": ["create"],
+            "scope": "all",
+            "note": "routed to Sales"
+          }
+        ]
+      }
+    },
+    {
+      "section": "6",
+      "module": "client",
+      "resource": "enquiry_status_non_internal",
+      "label": "Enquiry status, non-internal events, site visit dates, client feedback",
+      "provisional": true,
+      "cells": {
+        "CR": "R, U feedback",
+        "GU": "—",
+        "DP": "R sample"
+      },
+      "grants": {
+        "CR": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": "feedback"
+          },
+          {
+            "actions": ["update"],
+            "scope": "all",
+            "note": "feedback"
+          }
+        ],
+        "GU": [],
+        "DP": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": "sample"
+          }
+        ]
+      }
+    },
+    {
+      "section": "6",
+      "module": "client",
+      "resource": "hotel_proposals_client_amounts",
+      "label": "Hotel proposals, client amounts",
+      "provisional": true,
+      "cells": {
+        "CR": "R, A",
+        "GU": "—",
+        "DP": "R sample"
+      },
+      "grants": {
+        "CR": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          },
+          {
+            "actions": ["approve"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "GU": [],
+        "DP": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": "sample"
+          }
+        ]
+      }
+    },
+    {
+      "section": "6",
+      "module": "client",
+      "resource": "wedding_dashboard_overview_milestones",
+      "label": "Wedding dashboard, overview, milestones",
+      "provisional": true,
+      "cells": {
+        "CR": "R",
+        "GU": "—",
+        "DP": "R sample"
+      },
+      "grants": {
+        "CR": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "GU": [],
+        "DP": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": "sample"
+          }
+        ]
+      }
+    },
+    {
+      "section": "6",
+      "module": "client",
+      "resource": "family_decision_maker_contacts",
+      "label": "Family and decision-maker contacts (`account_contacts`)",
+      "provisional": true,
+      "cells": {
+        "CR": "R; changes through a request",
+        "GU": "—",
+        "DP": "—"
+      },
+      "grants": {
+        "CR": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": "changes through a request"
+          }
+        ],
+        "GU": [],
+        "DP": []
+      }
+    },
+    {
+      "section": "6",
+      "module": "client",
+      "resource": "functions_shared_programme",
+      "label": "Functions and shared programme",
+      "provisional": true,
+      "cells": {
+        "CR": "R",
+        "GU": "R invited functions only",
+        "DP": "R sample"
+      },
+      "grants": {
+        "CR": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "GU": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": "invited functions only"
+          }
+        ],
+        "DP": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": "sample"
+          }
+        ]
+      }
+    },
+    {
+      "section": "6",
+      "module": "client",
+      "resource": "client_budget_estimate_approved",
+      "label": "Client budget: estimate, approved, actual amounts of client-visible lines",
+      "provisional": true,
+      "cells": {
+        "CR": "To confirm (Q4); internal data never",
+        "GU": "—",
+        "DP": "R sample masked"
+      },
+      "grants": {
+        "CR": [],
+        "GU": [],
+        "DP": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": "sample masked"
+          }
+        ]
+      }
+    },
+    {
+      "section": "6",
+      "module": "client",
+      "resource": "invoices_issued_client_inbound",
+      "label": "Invoices issued to the client, inbound payments, milestones",
+      "provisional": true,
+      "cells": {
+        "CR": "To confirm (Q4)",
+        "GU": "—",
+        "DP": "—"
+      },
+      "grants": {
+        "CR": [],
+        "GU": [],
+        "DP": []
+      }
+    },
+    {
+      "section": "6",
+      "module": "client",
+      "resource": "pay_milestone_online",
+      "label": "Pay a milestone online (A-2)",
+      "provisional": true,
+      "cells": {
+        "CR": "— (not in the first release, Q4)",
+        "GU": "—",
+        "DP": "—"
+      },
+      "grants": {
+        "CR": [],
+        "GU": [],
+        "DP": []
+      }
+    },
+    {
+      "section": "6",
+      "module": "client",
+      "resource": "vendor_options_client_descriptions",
+      "label": "Vendor options, client descriptions, portfolios",
+      "provisional": true,
+      "cells": {
+        "CR": "R",
+        "GU": "—",
+        "DP": "R sample"
+      },
+      "grants": {
+        "CR": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "GU": [],
+        "DP": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": "sample"
+          }
+        ]
+      }
+    },
+    {
+      "section": "6",
+      "module": "client",
+      "resource": "vendor_decision",
+      "label": "Vendor decision (interested, shortlisted, selected, declined)",
+      "provisional": true,
+      "cells": {
+        "CR": "U (either representative)",
+        "GU": "—",
+        "DP": "—"
+      },
+      "grants": {
+        "CR": [
+          {
+            "actions": ["update"],
+            "scope": "all",
+            "note": "(either representative)"
+          }
+        ],
+        "GU": [],
+        "DP": []
+      }
+    },
+    {
+      "section": "6",
+      "module": "client",
+      "resource": "vendor_proposals_client_amounts",
+      "label": "Vendor proposals, client amounts",
+      "provisional": true,
+      "cells": {
+        "CR": "R, A",
+        "GU": "—",
+        "DP": "R sample"
+      },
+      "grants": {
+        "CR": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          },
+          {
+            "actions": ["approve"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "GU": [],
+        "DP": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": "sample"
+          }
+        ]
+      }
+    },
+    {
+      "section": "6",
+      "module": "client",
+      "resource": "shared_design_versions",
+      "label": "Shared design versions",
+      "provisional": true,
+      "cells": {
+        "CR": "R, comment, A",
+        "GU": "—",
+        "DP": "R sample"
+      },
+      "grants": {
+        "CR": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": "comment"
+          },
+          {
+            "actions": ["approve"],
+            "scope": "all",
+            "note": "comment"
+          }
+        ],
+        "GU": [],
+        "DP": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": "sample"
+          }
+        ]
+      }
+    },
+    {
+      "section": "6",
+      "module": "client",
+      "resource": "invitations_save_dates_shared",
+      "label": "Invitations and save-the-dates, shared versions",
+      "provisional": true,
+      "cells": {
+        "CR": "R, A",
+        "GU": "—",
+        "DP": "—"
+      },
+      "grants": {
+        "CR": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          },
+          {
+            "actions": ["approve"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "GU": [],
+        "DP": []
+      }
+    },
+    {
+      "section": "6",
+      "module": "client",
+      "resource": "family_groups_guests_standard",
+      "label": "Family groups and guests, standard fields",
+      "provisional": true,
+      "cells": {
+        "CR": "R approved summaries only (Q7)",
+        "GU": "own group: R members, U attendance and dietary, C members up to allowance",
+        "DP": "—"
+      },
+      "grants": {
+        "CR": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": "approved summaries only (Q7)"
+          }
+        ],
+        "GU": [
+          {
+            "actions": ["read"],
+            "scope": "own",
+            "note": "group members attendance and dietary members up to allowance"
+          },
+          {
+            "actions": ["update"],
+            "scope": "own",
+            "note": "group members attendance and dietary members up to allowance"
+          },
+          {
+            "actions": ["create"],
+            "scope": "own",
+            "note": "group members attendance and dietary members up to allowance"
+          }
+        ],
+        "DP": []
+      }
+    },
+    {
+      "section": "6",
+      "module": "client",
+      "resource": "guest_sensitive_fields",
+      "label": "Guest sensitive fields (allergies, accessibility)",
+      "provisional": true,
+      "cells": {
+        "CR": "—",
+        "GU": "own row: RU",
+        "DP": "—"
+      },
+      "grants": {
+        "CR": [],
+        "GU": [
+          {
+            "actions": ["read", "update"],
+            "scope": "own",
+            "note": "row"
+          }
+        ],
+        "DP": []
+      }
+    },
+    {
+      "section": "6",
+      "module": "client",
+      "resource": "guest_internal_notes",
+      "label": "Guest internal notes",
+      "provisional": true,
+      "cells": {
+        "CR": "—",
+        "GU": "—",
+        "DP": "—"
+      },
+      "grants": {
+        "CR": [],
+        "GU": [],
+        "DP": []
+      }
+    },
+    {
+      "section": "6",
+      "module": "client",
+      "resource": "identity_documents",
+      "label": "Identity documents",
+      "provisional": true,
+      "cells": {
+        "CR": "—",
+        "GU": "own: C upload when the project requires it, R status only",
+        "DP": "—"
+      },
+      "grants": {
+        "CR": [],
+        "GU": [
+          {
+            "actions": ["create"],
+            "scope": "own",
+            "note": "upload when the project requires it status only"
+          },
+          {
+            "actions": ["read"],
+            "scope": "own",
+            "note": "upload when the project requires it status only"
+          }
+        ],
+        "DP": []
+      }
+    },
+    {
+      "section": "6",
+      "module": "client",
+      "resource": "attendance_rsvp_progress",
+      "label": "Attendance and RSVP progress",
+      "provisional": true,
+      "cells": {
+        "CR": "R summaries",
+        "GU": "own group: RU",
+        "DP": "R sample"
+      },
+      "grants": {
+        "CR": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": "summaries"
+          }
+        ],
+        "GU": [
+          {
+            "actions": ["read", "update"],
+            "scope": "own",
+            "note": "group"
+          }
+        ],
+        "DP": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": "sample"
+          }
+        ]
+      }
+    },
+    {
+      "section": "6",
+      "module": "client",
+      "resource": "rooming",
+      "label": "Rooming (own guests)",
+      "provisional": true,
+      "cells": {
+        "CR": "R summaries",
+        "GU": "own allocation once confirmed: R",
+        "DP": "—"
+      },
+      "grants": {
+        "CR": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": "summaries"
+          }
+        ],
+        "GU": [
+          {
+            "actions": ["read"],
+            "scope": "own",
+            "note": "allocation once confirmed"
+          }
+        ],
+        "DP": []
+      }
+    },
+    {
+      "section": "6",
+      "module": "client",
+      "resource": "travel_transport",
+      "label": "Travel and transport (own guests)",
+      "provisional": true,
+      "cells": {
+        "CR": "R summaries",
+        "GU": "own group: CRU travel details when requested",
+        "DP": "—"
+      },
+      "grants": {
+        "CR": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": "summaries"
+          }
+        ],
+        "GU": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "own",
+            "note": "group travel details when requested"
+          }
+        ],
+        "DP": []
+      }
+    },
+    {
+      "section": "6",
+      "module": "client",
+      "resource": "menus_shared_versions",
+      "label": "Menus, shared versions",
+      "provisional": true,
+      "cells": {
+        "CR": "R, A",
+        "GU": "—",
+        "DP": "R sample"
+      },
+      "grants": {
+        "CR": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          },
+          {
+            "actions": ["approve"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "GU": [],
+        "DP": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": "sample"
+          }
+        ]
+      }
+    },
+    {
+      "section": "6",
+      "module": "client",
+      "resource": "client_requests_questions_change",
+      "label": "Client requests: questions, change requests, support",
+      "provisional": true,
+      "cells": {
+        "CR": "CRU own",
+        "GU": "C support request",
+        "DP": "C, routed to Sales"
+      },
+      "grants": {
+        "CR": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "own",
+            "note": null
+          }
+        ],
+        "GU": [
+          {
+            "actions": ["create"],
+            "scope": "all",
+            "note": "support request"
+          }
+        ],
+        "DP": [
+          {
+            "actions": ["create"],
+            "scope": "all",
+            "note": "routed to Sales"
+          }
+        ]
+      }
+    },
+    {
+      "section": "6",
+      "module": "client",
+      "resource": "approval_decisions",
+      "label": "Approval decisions",
+      "provisional": true,
+      "cells": {
+        "CR": "A (either representative; P-9 on-behalf with a note)",
+        "GU": "—",
+        "DP": "—"
+      },
+      "grants": {
+        "CR": [
+          {
+            "actions": ["approve"],
+            "scope": "all",
+            "note": "(either representative P-9 on-behalf with a note)"
+          }
+        ],
+        "GU": [],
+        "DP": []
+      }
+    },
+    {
+      "section": "6",
+      "module": "client",
+      "resource": "shared_documents",
+      "label": "Shared documents",
+      "provisional": true,
+      "cells": {
+        "CR": "R, download",
+        "GU": "R documents shared to guests",
+        "DP": "R sample"
+      },
+      "grants": {
+        "CR": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": "download"
+          }
+        ],
+        "GU": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": "documents shared to guests"
+          }
+        ],
+        "DP": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": "sample"
+          }
+        ]
+      }
+    },
+    {
+      "section": "6",
+      "module": "client",
+      "resource": "upload_documents",
+      "label": "Upload documents (signed contract, guest list file)",
+      "provisional": true,
+      "cells": {
+        "CR": "C",
+        "GU": "—",
+        "DP": "—"
+      },
+      "grants": {
+        "CR": [
+          {
+            "actions": ["create"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "GU": [],
+        "DP": []
+      }
+    },
+    {
+      "section": "6",
+      "module": "client",
+      "resource": "tasks_flagged_client_visible",
+      "label": "Tasks flagged client-visible (pending decisions)",
+      "provisional": true,
+      "cells": {
+        "CR": "R",
+        "GU": "—",
+        "DP": "—"
+      },
+      "grants": {
+        "CR": [
+          {
+            "actions": ["read"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "GU": [],
+        "DP": []
+      }
+    },
+    {
+      "section": "6",
+      "module": "client",
+      "resource": "notification_preferences",
+      "label": "Notification preferences",
+      "provisional": true,
+      "cells": {
+        "CR": "own",
+        "GU": "—",
+        "DP": "own"
+      },
+      "grants": {
+        "CR": [],
+        "GU": [],
+        "DP": []
+      }
+    },
+    {
+      "section": "6",
+      "module": "client",
+      "resource": "feedback_after_wedding",
+      "label": "Feedback after the wedding",
+      "provisional": true,
+      "cells": {
+        "CR": "C",
+        "GU": "—",
+        "DP": "—"
+      },
+      "grants": {
+        "CR": [
+          {
+            "actions": ["create"],
+            "scope": "all",
+            "note": null
+          }
+        ],
+        "GU": [],
+        "DP": []
+      }
+    },
+    {
+      "section": "6",
+      "module": "client",
+      "resource": "exports",
+      "label": "Exports",
+      "provisional": true,
+      "cells": {
+        "CR": "To confirm (Q4); never guest data",
+        "GU": "—",
+        "DP": "—"
+      },
+      "grants": {
+        "CR": [],
+        "GU": [],
+        "DP": []
+      }
+    },
+    {
+      "section": "6",
+      "module": "client",
+      "resource": "live_chat",
+      "label": "Live chat (Q20)",
+      "provisional": true,
+      "cells": {
+        "CR": "CRU own conversations",
+        "GU": "—",
+        "DP": "C, routed to Sales"
+      },
+      "grants": {
+        "CR": [
+          {
+            "actions": ["create", "read", "update"],
+            "scope": "own",
+            "note": "conversations"
+          }
+        ],
+        "GU": [],
+        "DP": [
+          {
+            "actions": ["create"],
+            "scope": "all",
+            "note": "routed to Sales"
+          }
+        ]
+      }
+    }
+  ],
+  "transitions": [
+    {
+      "entity": "subscription",
+      "from": "pending_payment or trial",
+      "to": "active",
+      "who": "System on payment succeeded; FA or SA manually, with a payment record attached",
+      "roles": [
+        {
+          "role": "FA",
+          "assigned": false
+        },
+        {
+          "role": "SA",
+          "assigned": false
+        }
+      ],
+      "system": true,
+      "actors": [],
+      "condition": "with a payment record attached"
+    },
+    {
+      "entity": "subscription",
+      "from": "active",
+      "to": "expiring",
+      "who": "System, at `ends_at` minus the configured notice period",
+      "roles": [],
+      "system": true,
+      "actors": [],
+      "condition": "at `ends_at` minus the configured notice period"
+    },
+    {
+      "entity": "subscription",
+      "from": "expiring",
+      "to": "expired",
+      "who": "System, at `ends_at`",
+      "roles": [],
+      "system": true,
+      "actors": [],
+      "condition": "at `ends_at`"
+    },
+    {
+      "entity": "subscription",
+      "from": "active or expiring",
+      "to": "suspended",
+      "who": "SA, FA (non-payment, dispute) with reason",
+      "roles": [
+        {
+          "role": "SA",
+          "assigned": false
+        },
+        {
+          "role": "FA",
+          "assigned": false
+        }
+      ],
+      "system": false,
+      "actors": [],
+      "condition": null
+    },
+    {
+      "entity": "subscription",
+      "from": "suspended",
+      "to": "active",
+      "who": "SA, FA",
+      "roles": [
+        {
+          "role": "SA",
+          "assigned": false
+        },
+        {
+          "role": "FA",
+          "assigned": false
+        }
+      ],
+      "system": false,
+      "actors": [],
+      "condition": null
+    },
+    {
+      "entity": "subscription",
+      "from": "any",
+      "to": "cancelled",
+      "who": "SA, SM with reason; a client asks for cancellation through a client request",
+      "roles": [
+        {
+          "role": "SA",
+          "assigned": false
+        },
+        {
+          "role": "SM",
+          "assigned": false
+        }
+      ],
+      "system": false,
+      "actors": [],
+      "condition": null
+    },
+    {
+      "entity": "subscription",
+      "from": "expired or cancelled",
+      "to": "active",
+      "who": "New subscription row; the old one is never reactivated",
+      "roles": [],
+      "system": false,
+      "actors": [],
+      "condition": null
+    },
+    {
+      "entity": "hotel_enquiry",
+      "from": "draft",
+      "to": "submitted",
+      "who": "Either CR; SM or HT on the client's behalf",
+      "roles": [
+        {
+          "role": "CR",
+          "assigned": false
+        },
+        {
+          "role": "SM",
+          "assigned": false
+        },
+        {
+          "role": "HT",
+          "assigned": false
+        }
+      ],
+      "system": false,
+      "actors": [],
+      "condition": null
+    },
+    {
+      "entity": "hotel_enquiry",
+      "from": "submitted",
+      "to": "awaiting_hotel",
+      "who": "HT",
+      "roles": [
+        {
+          "role": "HT",
+          "assigned": false
+        }
+      ],
+      "system": false,
+      "actors": [],
+      "condition": null
+    },
+    {
+      "entity": "hotel_enquiry",
+      "from": "awaiting_hotel",
+      "to": "response_received",
+      "who": "HT",
+      "roles": [
+        {
+          "role": "HT",
+          "assigned": false
+        }
+      ],
+      "system": false,
+      "actors": [],
+      "condition": null
+    },
+    {
+      "entity": "hotel_enquiry",
+      "from": "response_received",
+      "to": "negotiating",
+      "who": "HT",
+      "roles": [
+        {
+          "role": "HT",
+          "assigned": false
+        }
+      ],
+      "system": false,
+      "actors": [],
+      "condition": null
+    },
+    {
+      "entity": "hotel_enquiry",
+      "from": "negotiating or response_received",
+      "to": "visit_scheduled",
+      "who": "HT, PM (a)",
+      "roles": [
+        {
+          "role": "HT",
+          "assigned": false
+        },
+        {
+          "role": "PM",
+          "assigned": true
+        }
+      ],
+      "system": false,
+      "actors": [],
+      "condition": null
+    },
+    {
+      "entity": "hotel_enquiry",
+      "from": "any active",
+      "to": "proposal_received",
+      "who": "HT",
+      "roles": [
+        {
+          "role": "HT",
+          "assigned": false
+        }
+      ],
+      "system": false,
+      "actors": [],
+      "condition": null
+    },
+    {
+      "entity": "hotel_enquiry",
+      "from": "proposal_received",
+      "to": "client_decision",
+      "who": "HT, PM (a), when a proposal is shared",
+      "roles": [
+        {
+          "role": "HT",
+          "assigned": false
+        },
+        {
+          "role": "PM",
+          "assigned": true
+        }
+      ],
+      "system": false,
+      "actors": [],
+      "condition": "when a proposal is shared"
+    },
+    {
+      "entity": "hotel_enquiry",
+      "from": "client_decision",
+      "to": "confirmed",
+      "who": "HT, SA, only when a booking milestone of type confirmed is done and a contract is signed",
+      "roles": [
+        {
+          "role": "HT",
+          "assigned": false
+        },
+        {
+          "role": "SA",
+          "assigned": false
+        }
+      ],
+      "system": false,
+      "actors": [],
+      "condition": "only when a booking milestone of type confirmed is done and a contract is signed"
+    },
+    {
+      "entity": "hotel_enquiry",
+      "from": "any",
+      "to": "closed",
+      "who": "HT, SA, PM (a), with an outcome",
+      "roles": [
+        {
+          "role": "HT",
+          "assigned": false
+        },
+        {
+          "role": "SA",
+          "assigned": false
+        },
+        {
+          "role": "PM",
+          "assigned": true
+        }
+      ],
+      "system": false,
+      "actors": [],
+      "condition": "with an outcome"
+    },
+    {
+      "entity": "wedding_project",
+      "from": "setup",
+      "to": "planning",
+      "who": "PM (a), SA",
+      "roles": [
+        {
+          "role": "PM",
+          "assigned": true
+        },
+        {
+          "role": "SA",
+          "assigned": false
+        }
+      ],
+      "system": false,
+      "actors": [],
+      "condition": null
+    },
+    {
+      "entity": "wedding_project",
+      "from": "planning",
+      "to": "approvals",
+      "who": "PM (a)",
+      "roles": [
+        {
+          "role": "PM",
+          "assigned": true
+        }
+      ],
+      "system": false,
+      "actors": [],
+      "condition": null
+    },
+    {
+      "entity": "wedding_project",
+      "from": "approvals",
+      "to": "pre_production",
+      "who": "PM (a), when the configured key approvals are approved",
+      "roles": [
+        {
+          "role": "PM",
+          "assigned": true
+        }
+      ],
+      "system": false,
+      "actors": [],
+      "condition": "when the configured key approvals are approved"
+    },
+    {
+      "entity": "wedding_project",
+      "from": "pre_production",
+      "to": "ready",
+      "who": "PM (a), when every confirmed function is ready",
+      "roles": [
+        {
+          "role": "PM",
+          "assigned": true
+        }
+      ],
+      "system": false,
+      "actors": [],
+      "condition": "when every confirmed function is ready"
+    },
+    {
+      "entity": "wedding_project",
+      "from": "ready",
+      "to": "live",
+      "who": "PM (a), SA",
+      "roles": [
+        {
+          "role": "PM",
+          "assigned": true
+        },
+        {
+          "role": "SA",
+          "assigned": false
+        }
+      ],
+      "system": false,
+      "actors": [],
+      "condition": null
+    },
+    {
+      "entity": "wedding_project",
+      "from": "live",
+      "to": "closure",
+      "who": "PM (a)",
+      "roles": [
+        {
+          "role": "PM",
+          "assigned": true
+        }
+      ],
+      "system": false,
+      "actors": [],
+      "condition": null
+    },
+    {
+      "entity": "wedding_project",
+      "from": "closure",
+      "to": "closed",
+      "who": "PM (a), SA, only when the closure checklist is complete and final accounts are approved by FA",
+      "roles": [
+        {
+          "role": "PM",
+          "assigned": true
+        },
+        {
+          "role": "SA",
+          "assigned": false
+        },
+        {
+          "role": "FA",
+          "assigned": false
+        }
+      ],
+      "system": false,
+      "actors": [],
+      "condition": "only when the closure checklist is complete and final accounts are approved by FA"
+    },
+    {
+      "entity": "wedding_project",
+      "from": "any",
+      "to": "on_hold",
+      "who": "PM (a), SA, with reason; approvals are paused",
+      "roles": [
+        {
+          "role": "PM",
+          "assigned": true
+        },
+        {
+          "role": "SA",
+          "assigned": false
+        }
+      ],
+      "system": false,
+      "actors": [],
+      "condition": "with reason; approvals are paused"
+    },
+    {
+      "entity": "wedding_project",
+      "from": "on_hold",
+      "to": "previous status",
+      "who": "PM (a), SA",
+      "roles": [
+        {
+          "role": "PM",
+          "assigned": true
+        },
+        {
+          "role": "SA",
+          "assigned": false
+        }
+      ],
+      "system": false,
+      "actors": [],
+      "condition": null
+    },
+    {
+      "entity": "wedding_project",
+      "from": "closed",
+      "to": "closure",
+      "who": "SA only, audited",
+      "roles": [
+        {
+          "role": "SA",
+          "assigned": false
+        }
+      ],
+      "system": false,
+      "actors": [],
+      "condition": null
+    },
+    {
+      "entity": "approval",
+      "from": "draft",
+      "to": "submitted",
+      "who": "The requester per §5.9",
+      "roles": [],
+      "system": false,
+      "actors": ["requester"],
+      "condition": null
+    },
+    {
+      "entity": "approval",
+      "from": "submitted",
+      "to": "approved, revision_requested or rejected",
+      "who": "Either CR; PM (a) or SA on the client's behalf with a note or record (P-9 confirmed). Approved needs `required_decisions` approvals, one by default; one rejection or revision request moves it immediately",
+      "roles": [
+        {
+          "role": "CR",
+          "assigned": false
+        },
+        {
+          "role": "PM",
+          "assigned": true
+        },
+        {
+          "role": "SA",
+          "assigned": false
+        }
+      ],
+      "system": false,
+      "actors": [],
+      "condition": null
+    },
+    {
+      "entity": "approval",
+      "from": "any",
+      "to": "superseded",
+      "who": "System, when a new version of the record is created",
+      "roles": [],
+      "system": true,
+      "actors": [],
+      "condition": "when a new version of the record is created"
+    },
+    {
+      "entity": "vendor_assignment",
+      "from": "option",
+      "to": "shortlisted or declined",
+      "who": "Either CR as a client decision; VC or PM (a) recording the client's decision",
+      "roles": [
+        {
+          "role": "CR",
+          "assigned": false
+        },
+        {
+          "role": "VC",
+          "assigned": false
+        },
+        {
+          "role": "PM",
+          "assigned": true
+        }
+      ],
+      "system": false,
+      "actors": [],
+      "condition": null
+    },
+    {
+      "entity": "vendor_assignment",
+      "from": "shortlisted",
+      "to": "selected",
+      "who": "Either CR; PM (a) on the client's behalf with evidence",
+      "roles": [
+        {
+          "role": "CR",
+          "assigned": false
+        },
+        {
+          "role": "PM",
+          "assigned": true
+        }
+      ],
+      "system": false,
+      "actors": [],
+      "condition": null
+    },
+    {
+      "entity": "vendor_assignment",
+      "from": "selected",
+      "to": "contracted",
+      "who": "VC, when the contract is signed",
+      "roles": [
+        {
+          "role": "VC",
+          "assigned": false
+        }
+      ],
+      "system": false,
+      "actors": [],
+      "condition": "when the contract is signed"
+    },
+    {
+      "entity": "vendor_assignment",
+      "from": "contracted",
+      "to": "delivering",
+      "who": "VC, PM (a)",
+      "roles": [
+        {
+          "role": "VC",
+          "assigned": false
+        },
+        {
+          "role": "PM",
+          "assigned": true
+        }
+      ],
+      "system": false,
+      "actors": [],
+      "condition": null
+    },
+    {
+      "entity": "vendor_assignment",
+      "from": "delivering",
+      "to": "completed",
+      "who": "PM (a), when every deliverable is accepted",
+      "roles": [
+        {
+          "role": "PM",
+          "assigned": true
+        }
+      ],
+      "system": false,
+      "actors": [],
+      "condition": "when every deliverable is accepted"
+    },
+    {
+      "entity": "vendor_assignment",
+      "from": "any",
+      "to": "cancelled",
+      "who": "PM (a), VC, SA, with reason",
+      "roles": [
+        {
+          "role": "PM",
+          "assigned": true
+        },
+        {
+          "role": "VC",
+          "assigned": false
+        },
+        {
+          "role": "SA",
+          "assigned": false
+        }
+      ],
+      "system": false,
+      "actors": [],
+      "condition": "with reason"
+    },
+    {
+      "entity": "function_status_readiness",
+      "from": "planned",
+      "to": "confirmed",
+      "who": "PM (a)",
+      "roles": [
+        {
+          "role": "PM",
+          "assigned": true
+        }
+      ],
+      "system": false,
+      "actors": [],
+      "condition": null
+    },
+    {
+      "entity": "function_status_readiness",
+      "from": "planned or confirmed",
+      "to": "cancelled",
+      "who": "PM (a), SA",
+      "roles": [
+        {
+          "role": "PM",
+          "assigned": true
+        },
+        {
+          "role": "SA",
+          "assigned": false
+        }
+      ],
+      "system": false,
+      "actors": [],
+      "condition": null
+    },
+    {
+      "entity": "function_status_readiness",
+      "from": "readiness: not_started, in_progress, blocked, ready",
+      "to": "derived",
+      "who": "System, from the readiness checklist; an exception needs SA, Eva's authorised personnel (P-8 changed by Q10)",
+      "roles": [
+        {
+          "role": "SA",
+          "assigned": false
+        }
+      ],
+      "system": true,
+      "actors": [],
+      "condition": null
+    },
+    {
+      "entity": "function_status_readiness",
+      "from": "ready",
+      "to": "live",
+      "who": "PM (a), HL (a) on the day",
+      "roles": [
+        {
+          "role": "PM",
+          "assigned": true
+        },
+        {
+          "role": "HL",
+          "assigned": true
+        }
+      ],
+      "system": false,
+      "actors": [],
+      "condition": null
+    },
+    {
+      "entity": "function_status_readiness",
+      "from": "live",
+      "to": "completed",
+      "who": "PM (a)",
+      "roles": [
+        {
+          "role": "PM",
+          "assigned": true
+        }
+      ],
+      "system": false,
+      "actors": [],
+      "condition": null
+    },
+    {
+      "entity": "incident",
+      "from": "open",
+      "to": "assigned",
+      "who": "PM (a), HL (a), SA",
+      "roles": [
+        {
+          "role": "PM",
+          "assigned": true
+        },
+        {
+          "role": "HL",
+          "assigned": true
+        },
+        {
+          "role": "SA",
+          "assigned": false
+        }
+      ],
+      "system": false,
+      "actors": [],
+      "condition": null
+    },
+    {
+      "entity": "incident",
+      "from": "assigned",
+      "to": "in_progress",
+      "who": "The assignee",
+      "roles": [],
+      "system": false,
+      "actors": ["assignee"],
+      "condition": null
+    },
+    {
+      "entity": "incident",
+      "from": "any open state",
+      "to": "escalated",
+      "who": "The assignee, PM (a), or System per the escalation rules",
+      "roles": [
+        {
+          "role": "PM",
+          "assigned": true
+        }
+      ],
+      "system": true,
+      "actors": ["assignee"],
+      "condition": null
+    },
+    {
+      "entity": "incident",
+      "from": "in_progress or escalated",
+      "to": "resolved",
+      "who": "The assignee, PM (a); a critical incident requires resolution notes",
+      "roles": [
+        {
+          "role": "PM",
+          "assigned": true
+        }
+      ],
+      "system": false,
+      "actors": ["assignee"],
+      "condition": null
+    },
+    {
+      "entity": "incident",
+      "from": "resolved",
+      "to": "closed",
+      "who": "PM (a), SA",
+      "roles": [
+        {
+          "role": "PM",
+          "assigned": true
+        },
+        {
+          "role": "SA",
+          "assigned": false
+        }
+      ],
+      "system": false,
+      "actors": [],
+      "condition": null
+    },
+    {
+      "entity": "task",
+      "from": "not_started",
+      "to": "in_progress, blocked, completed",
+      "who": "The owner, PM (a)",
+      "roles": [
+        {
+          "role": "PM",
+          "assigned": true
+        }
+      ],
+      "system": false,
+      "actors": ["owner"],
+      "condition": null
+    },
+    {
+      "entity": "task",
+      "from": "blocked",
+      "to": "in_progress",
+      "who": "The owner, PM (a)",
+      "roles": [
+        {
+          "role": "PM",
+          "assigned": true
+        }
+      ],
+      "system": false,
+      "actors": ["owner"],
+      "condition": null
+    },
+    {
+      "entity": "task",
+      "from": "any",
+      "to": "cancelled",
+      "who": "The creator, PM (a), SA",
+      "roles": [
+        {
+          "role": "PM",
+          "assigned": true
+        },
+        {
+          "role": "SA",
+          "assigned": false
+        }
+      ],
+      "system": false,
+      "actors": ["creator"],
+      "condition": null
+    },
+    {
+      "entity": "room_allocation",
+      "from": "requested",
+      "to": "proposed",
+      "who": "HL (a), RG (a)",
+      "roles": [
+        {
+          "role": "HL",
+          "assigned": true
+        },
+        {
+          "role": "RG",
+          "assigned": true
+        }
+      ],
+      "system": false,
+      "actors": [],
+      "condition": null
+    },
+    {
+      "entity": "room_allocation",
+      "from": "proposed",
+      "to": "confirmed",
+      "who": "HL (a)",
+      "roles": [
+        {
+          "role": "HL",
+          "assigned": true
+        }
+      ],
+      "system": false,
+      "actors": [],
+      "condition": null
+    },
+    {
+      "entity": "room_allocation",
+      "from": "confirmed",
+      "to": "checked_in",
+      "who": "HL (a)",
+      "roles": [
+        {
+          "role": "HL",
+          "assigned": true
+        }
+      ],
+      "system": false,
+      "actors": [],
+      "condition": null
+    },
+    {
+      "entity": "room_allocation",
+      "from": "checked_in",
+      "to": "checked_out",
+      "who": "HL (a)",
+      "roles": [
+        {
+          "role": "HL",
+          "assigned": true
+        }
+      ],
+      "system": false,
+      "actors": [],
+      "condition": null
+    },
+    {
+      "entity": "room_allocation",
+      "from": "any",
+      "to": "cancelled",
+      "who": "HL (a), PM (a)",
+      "roles": [
+        {
+          "role": "HL",
+          "assigned": true
+        },
+        {
+          "role": "PM",
+          "assigned": true
+        }
+      ],
+      "system": false,
+      "actors": [],
+      "condition": null
+    },
+    {
+      "entity": "client_request",
+      "from": "submitted",
+      "to": "under_review",
+      "who": "The assigned staff member",
+      "roles": [],
+      "system": false,
+      "actors": [],
+      "condition": null
+    },
+    {
+      "entity": "client_request",
+      "from": "under_review",
+      "to": "clarification_requested",
+      "who": "The assigned staff member",
+      "roles": [],
+      "system": false,
+      "actors": [],
+      "condition": null
+    },
+    {
+      "entity": "client_request",
+      "from": "under_review",
+      "to": "answered (question)",
+      "who": "The assigned staff member",
+      "roles": [],
+      "system": false,
+      "actors": [],
+      "condition": null
+    },
+    {
+      "entity": "client_request",
+      "from": "under_review",
+      "to": "accepted or rejected (change request)",
+      "who": "PM (a), SA",
+      "roles": [
+        {
+          "role": "PM",
+          "assigned": true
+        },
+        {
+          "role": "SA",
+          "assigned": false
+        }
+      ],
+      "system": false,
+      "actors": [],
+      "condition": null
+    },
+    {
+      "entity": "client_request",
+      "from": "accepted",
+      "to": "implemented",
+      "who": "PM (a)",
+      "roles": [
+        {
+          "role": "PM",
+          "assigned": true
+        }
+      ],
+      "system": false,
+      "actors": [],
+      "condition": null
+    },
+    {
+      "entity": "client_request",
+      "from": "any",
+      "to": "withdrawn",
+      "who": "The requester",
+      "roles": [],
+      "system": false,
+      "actors": ["requester"],
+      "condition": null
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "name": "@ampm/core",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Pure TypeScript: domain types, Zod schemas, business rules, constants, errors, logger, i18n keys. No React, no I/O (.claude/rules/api.md).",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run --passWithNoTests"
+  },
+  "devDependencies": {
+    "@ampm/config": "workspace:*",
+    "tsup": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  },
+  "dependencies": {
+    "i18next": "catalog:",
+    "zod": "catalog:"
+  },
+  "files": [
+    "dist"
+  ]
+}

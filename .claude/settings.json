@@ -22,6 +22,12 @@
         "hooks": [
           {
             "type": "command",
+            "command": "bash \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/typecheck.sh\"",
+            "timeout": 300,
+            "statusMessage": "AMPM: typecheck (inert until the monorepo exists)"
+          },
+          {
+            "type": "command",
             "command": "bash \"${CLAUDE_PROJECT_DIR:-.}/docs/tools/checkpoint.sh\" --hook",
             "timeout": 180,
             "statusMessage": "AMPM: committing the project and syncing the Obsidian vault"
@@ -74,6 +80,18 @@
             "type": "command",
             "command": "graphify hook-guard read",
             "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/check-file.sh\"",
+            "timeout": 60
           }
         ]
       }

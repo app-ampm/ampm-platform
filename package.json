@@ -1,0 +1,34 @@
+{
+  "name": "ampm-platform",
+  "private": true,
+  "description": "AMPM wedding platform: public website, client and team apps, API. Design package in docs/, code in apps/ and packages/.",
+  "packageManager": "pnpm@12.15.0",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "check": "turbo run lint typecheck test",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "tokens:build": "pnpm --filter @ampm/tokens build",
+    "db:generate": "pnpm --filter api exec prisma generate",
+    "db:migrate": "pnpm --filter api exec prisma migrate dev",
+    "authz:generate": "pnpm --filter @ampm/policy run authz:generate",
+    "prepare": "turbo run build --filter=@ampm/tokens --filter=@ampm/core --filter=@ampm/policy && lefthook install"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^21.2.4",
+    "@commitlint/config-conventional": "^21.2.4",
+    "eslint": "catalog:",
+    "lefthook": "^2.2.2",
+    "prettier": "catalog:",
+    "prettier-plugin-tailwindcss": "catalog:",
+    "turbo": "2.11.10",
+    "typescript": "catalog:"
+  }
+}

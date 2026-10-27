@@ -1,0 +1,11 @@
+/* Tailwind only; theme values come from @ampm/tokens through the preset (styling.md). */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Web: the page behind the screens follows the scheme through the tokens' variables (no JavaScript colour). */
+@layer base {
+  body {
+    background-color: rgb(var(--color-surface));
+  }
+}

@@ -34,7 +34,7 @@ def main():
             if not d:
                 return m.group(0)
             cell = MARK.sub("", m.group(3).rstrip())
-            marker = f" **AMPM ({DATE}): {LABEL[d['status']]}. {d['note']}** "
+            marker = f" **AMPM ({d.get('decided_on', DATE)}): {LABEL[d['status']]}. {d['note']}** "
             n += 1
             return f"{m.group(1)}{cell}{marker}{m.group(4)}"
 

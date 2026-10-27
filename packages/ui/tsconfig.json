@@ -1,0 +1,8 @@
+{
+  "extends": "@ampm/config/tsconfig.react.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "types": ["jest"]
+  },
+  "include": ["src", "nativewind-env.d.ts"]
+}

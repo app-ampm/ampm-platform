@@ -1,0 +1,48 @@
+# Every push to main and every pull request: install, generate, format check, lint + typecheck + test
+# (the API's e2e suite against a disposable PostgreSQL), the matrix drift check, then the builds.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: ampm
+          POSTGRES_PASSWORD: ampm
+          POSTGRES_DB: ampm_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U ampm" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      CI: true
+      # prisma generate reads prisma.config.ts; the e2e suite migrates and seeds the disposable database.
+      DATABASE_URL: postgresql://ampm:ampm@localhost:5432/ampm_test
+      DATABASE_URL_TEST: postgresql://ampm:ampm@localhost:5432/ampm_test
+      IDENTITY_PROVIDER: local
+      IDENTITY_LOCAL_SECRET: ci-local-secret-that-is-long-enough-for-hs256-ok
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm db:generate
+      - run: pnpm format:check
+      - run: pnpm check
+      - name: Permission matrix drift (docs/permission-matrix.md vs packages/policy/src/generated)
+        run: pnpm authz:generate && git diff --exit-code -- packages/policy/src/generated
+      - run: pnpm build --filter=web --filter=api

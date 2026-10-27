@@ -1,0 +1,33 @@
+{
+  "name": "@ampm/policy",
+  "version": "0.0.0",
+  "private": true,
+  "description": "The permission matrix as code: keys, scopes, visibility classes, transitions, and the authorisation test generator (docs/engineering/standards.md \u00a72.5).",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run --passWithNoTests",
+    "authz:generate": "node scripts/generate.ts"
+  },
+  "devDependencies": {
+    "@ampm/config": "workspace:*",
+    "@types/node": "catalog:",
+    "tsup": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  },
+  "dependencies": {
+    "@ampm/core": "workspace:*"
+  },
+  "files": [
+    "dist"
+  ]
+}
