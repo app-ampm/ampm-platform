@@ -50,10 +50,14 @@ const cases: readonly (readonly [string, Verdicts])[] = [
   ["hidden native:flex", { ios: false, android: false, web: true }],
   ["hidden web:md:flex", { ios: true, android: true, web: false }],
   ["native:hidden web:flex", { ios: true, android: true, web: false }],
-  // State variants (scheme, pointer, focus) do not display the view at rest.
-  ["hidden dark:flex", everywhere],
-  ["hidden hover:flex", everywhere],
-  ["hidden focus:flex", everywhere],
+  // A state variant can display the view: the tokens' preset sets darkMode "class", so
+  // `.dark\:flex:is(.dark *)` shows it in dark mode, and ui.md:13 wants errors announced. Like a
+  // breakpoint, the helper leaves it announced rather than silence a displayed surface.
+  ["hidden dark:flex", nowhere],
+  ["hidden hover:flex", nowhere],
+  ["hidden focus:flex", nowhere],
+  ["hidden aria-selected:flex", nowhere],
+  ["hidden [&:hover]:flex", nowhere],
   // Not breakpoints in this project: the class does nothing.
   ["hidden sm:flex", everywhere],
   ["hidden 2xl:flex", everywhere],

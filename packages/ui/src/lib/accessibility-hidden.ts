@@ -14,9 +14,12 @@ export interface VoiceOverHiding {
 // dist/tailwind/web.js), the operating systems and `native` only in the native one (native.js).
 const NATIVE_OSES: ReadonlySet<string> = new Set(["ios", "android", "windows", "macos"]);
 const PLATFORM_VARIANTS: ReadonlySet<string> = new Set(["web", "native", ...NATIVE_OSES]);
-// The tokens' preset replaces the screens, so only its breakpoints (and their max- forms) exist.
-const WIDTH_VARIANTS: ReadonlySet<string> = new Set(
-  Object.keys(breakpoints).flatMap((name) => [name, `max-${name}`]),
+// The tokens' preset replaces the screens, so only its breakpoints (and their max- forms) exist;
+// Tailwind's other default screen names generate no class at all.
+const withMax = (names: readonly string[]) => names.flatMap((name) => [name, `max-${name}`]);
+const WIDTH_VARIANTS: ReadonlySet<string> = new Set(withMax(Object.keys(breakpoints)));
+const MISSING_SCREENS: ReadonlySet<string> = new Set(
+  withMax(["sm", "md", "lg", "xl", "2xl"].filter((name) => !WIDTH_VARIANTS.has(name))),
 );
 const DISPLAY_UTILITIES: ReadonlySet<string> = new Set([
   "flex",
@@ -33,10 +36,11 @@ const DISPLAY_UTILITIES: ReadonlySet<string> = new Set([
 ]);
 
 /**
- * When a class applies here: at rest on this platform, at some widths only, or under a state
- * (dark scheme, hover, focus, an unknown variant) or on another platform, where it does not count.
+ * When a class applies here: at rest on this platform; only at some widths or under a state (dark
+ * scheme, hover, focus, an unknown variant), which may or may not hold now; or never (another
+ * platform, a screen the preset does not define).
  */
-type Reach = "always" | "width" | "other";
+type Reach = "always" | "conditional" | "other";
 
 interface ClassToken {
   readonly utility: string;
@@ -53,10 +57,10 @@ function reachOf(variants: readonly string[], os: string): Reach {
   for (const variant of variants) {
     if (PLATFORM_VARIANTS.has(variant)) {
       if (!platformMatches(variant, os)) return "other";
-    } else if (WIDTH_VARIANTS.has(variant)) {
-      reach = "width";
-    } else {
+    } else if (MISSING_SCREENS.has(variant)) {
       return "other";
+    } else {
+      reach = "conditional";
     }
   }
   return reach;
@@ -75,8 +79,8 @@ function isClassHidden(className: string | undefined, os: string): boolean {
     .filter(Boolean)
     .map((token) => parseClass(token, os));
   const hides = tokens.some((token) => token.utility === "hidden" && token.reach === "always");
-  // A platform or breakpoint variant comes after the bare class in the stylesheet, so its display
-  // wins over `hidden`; a bare `flex` does not (Tailwind orders `hidden` after it).
+  // A platform, breakpoint or state variant comes after the bare class in the stylesheet, so its
+  // display wins over `hidden`; a bare `flex` does not (Tailwind orders `hidden` after it).
   const shows = tokens.some(
     (token) =>
       DISPLAY_UTILITIES.has(token.utility) && token.variants.length > 0 && token.reach !== "other",
@@ -90,10 +94,10 @@ function isClassHidden(className: string | undefined, os: string): boolean {
  * the accessibility tree (`accessibilityElementsHidden`, `aria-hidden`) or not displayed (a
  * display-none style, or a `hidden` class that applies on this platform at rest). NativeWind's
  * variants are resolved against `Platform.OS`: `native:hidden` and `ios:hidden` hide on iOS,
- * `hidden web:flex` stays hidden there and shows on the web. State variants (`dark:`, `hover:`)
- * neither hide nor show. `importantForAccessibility` is Android-only and does not count. A hidden
- * ancestor, or a breakpoint that hides or shows (`md:hidden`, `hidden md:flex`), is not decided
- * here; render the surface conditionally instead.
+ * `hidden web:flex` stays hidden there and shows on the web. `importantForAccessibility` is
+ * Android-only and does not count. A hidden ancestor, or a breakpoint or state variant that hides
+ * or shows (`md:hidden`, `hidden md:flex`, `hidden dark:flex`), is not decided here: such a surface
+ * counts as reachable and announces, so render it conditionally instead.
  *
  *   useAnnounce(text, isLive && !isHiddenFromVoiceOver({ ...viewProps, className }));
  *   isHiddenFromVoiceOver({ className: "hidden web:flex" }); // true on iOS, false on the web
