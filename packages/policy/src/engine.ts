@@ -1,5 +1,6 @@
 import type { ConditionFacts } from "./conditions";
 import { decideGrants, type Decision, type Reach, type RoleGrant } from "./evaluate";
+import { documentResource } from "./document-keys";
 import { isAction, parsePermissionKey, permissionKey, type PermissionKey } from "./keys";
 import { MATRIX } from "./matrix";
 import { recordRowOf } from "./record-rows";
@@ -108,13 +109,17 @@ function outsideKey(key: string): string | null {
   return row ? `${row.module}.${row.resource}.${named.as}` : null;
 }
 
-/** The base key a key decides on: its own, or the §5 row a §10 key stands for. */
+/**
+ * The base key a key decides on: its own, or the §5 row a §10 key stands for, whether §10 names
+ * it from another module (OUTSIDE_KEYS) or by another resource name (DOCUMENT_RESOURCES).
+ */
 function baseKey(key: string): string | null {
   const outside = outsideKey(key);
   if (outside !== null) return outside;
   const parsed = parsePermissionKey(key);
   if (!parsed) return null;
-  const { module, resource, action } = parsed;
+  const { module, action } = parsed;
+  const resource = documentResource(module, parsed.resource);
   if (isAction(action)) return `${module}.${resource}.${action}`;
   for (const row of MATRIX.staff) {
     if (row.module !== module) continue;

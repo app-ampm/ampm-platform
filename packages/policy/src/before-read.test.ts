@@ -5,7 +5,7 @@
 import { describe, expect, it } from "vitest";
 
 import { admittedVisibilities } from "./classes";
-import { decideBeforeRead, readKeyFor } from "./engine";
+import { decide, decideBeforeRead, readKeyFor } from "./engine";
 
 const sa = { type: "staff", userId: "u-sa", roles: ["SA"] } as const;
 const fa = { type: "staff", userId: "u-fa", roles: ["FA"], projectIds: ["p-1"] } as const;
@@ -131,6 +131,29 @@ describe("readKeyFor", () => {
     );
     // §5.15 line 314: the retention job's proposal (§8 line 507) is no one row's record.
     expect(readKeyFor("closure.approve_retention_deletion_proposed.approve")).toBeNull();
+  });
+});
+
+describe("§10 line 549: functions.readiness.authorise_exception as the document spells it", () => {
+  const key = "functions.readiness.authorise_exception:assigned";
+  const hl = { type: "staff", userId: "u-hl", roles: ["HL"], projectIds: ["p-1"] } as const;
+
+  it("reads through the readiness checklist items it acts on (§5.6 lines 206-207)", () => {
+    expect(readKeyFor(key)).toBe("functions.readiness_checklist_items.read");
+    expect(readKeyFor("functions.readiness.authorise_exception")).toBe(
+      "functions.readiness_checklist_items.read",
+    );
+  });
+
+  it("§5.6 line 207 (Q10), AC-13.2: SA authorises; PM and HL hold no grant", () => {
+    expect(
+      decide(sa, "functions.readiness.authorise_exception", { projectId: "p-1" }),
+    ).toMatchObject({
+      allowed: true,
+      scope: "all",
+    });
+    expect(decide(pm, key, { projectId: "p-1" }).reason).toBe("no_grant");
+    expect(decide(hl, key, { projectId: "p-1" }).reason).toBe("no_grant");
   });
 });
 
