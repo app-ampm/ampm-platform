@@ -1,19 +1,8 @@
-import { unmetConditions, type Condition, type ConditionFacts } from "./conditions";
+import type { ConditionFacts } from "./conditions";
+import { decideGrants, type Decision, type Reach, type RoleGrant } from "./evaluate";
 import { isAction, parsePermissionKey, permissionKey, type PermissionKey } from "./keys";
 import { MATRIX } from "./matrix";
-import type { PrincipalType, Scope, StaffRole } from "./roles";
-
-/**
- * A role's hold on one key: the scope its cell reaches and the conditions its note sets.
- *
- * @example
- * grantsForRole("RG").get("guests.identity_documents.read");
- * // → [{ scope: "assigned", conditions: [{ kind: "explicit_grant" }] }]
- */
-export interface RoleGrant {
-  readonly scope: Scope;
-  readonly conditions: readonly Condition[];
-}
+import type { PrincipalType, StaffRole } from "./roles";
 
 /**
  * A key granted to one user on one wedding beyond their roles (P-5: identity documents).
@@ -58,39 +47,8 @@ export interface PolicyTarget extends ConditionFacts {
   readonly ownerId?: string | undefined;
 }
 
-/**
- * Why decide() refused.
- *
- * @example
- * if (decision.reason === "condition_unmet") logger.info("needs", { unmet: decision.unmet });
- */
-export type DenialReason =
-  | "not_staff"
-  | "no_grant"
-  | "not_assigned"
-  | "not_owner"
-  /** A grant reaches the target but its conditions are not met by the facts given. */
-  | "condition_unmet";
-
-/**
- * decide()'s answer.
- *
- * @example
- * const { allowed, scope, reason } = decide(principal, "tasks.tasks.read", target);
- */
-export interface Decision {
-  readonly allowed: boolean;
-  /** The scope of the grant that allowed the action. */
-  readonly scope?: Scope | undefined;
-  readonly reason: "granted" | "system" | DenialReason;
-  /** With condition_unmet: what the caller would have to establish. */
-  readonly unmet?: readonly Condition[] | undefined;
-}
-
 const SYSTEM: Decision = { allowed: true, scope: "all", reason: "system" };
 const NO_GRANT: Decision = { allowed: false, reason: "no_grant" };
-/** Widest first, so the scope returned is the widest that matched. */
-const WIDTH: readonly Scope[] = ["all", "assigned", "own"];
 const byRole = new Map<StaffRole, ReadonlyMap<string, readonly RoleGrant[]>>();
 
 function buildGrants(role: StaffRole): ReadonlyMap<string, readonly RoleGrant[]> {
@@ -153,14 +111,12 @@ function baseKey(key: string): string | null {
   return null;
 }
 
-function scopeMiss(scope: Scope, principal: PolicyPrincipal, target: PolicyTarget) {
-  if (scope === "all") return null;
-  if (scope === "assigned") {
-    const member =
-      target.projectId !== undefined && principal.projectIds?.includes(target.projectId);
-    return member ? null : "not_assigned";
-  }
-  return target.ownerId !== undefined && target.ownerId === principal.userId ? null : "not_owner";
+function reachOf(principal: PolicyPrincipal, target: PolicyTarget): Reach {
+  const { projectId, ownerId } = target;
+  return {
+    assigned: projectId !== undefined && principal.projectIds?.includes(projectId) === true,
+    owned: ownerId !== undefined && ownerId === principal.userId,
+  };
 }
 
 /** The grant is compared by the base key it decides on, so every spelling of the key counts. */
@@ -169,34 +125,6 @@ function holdsExplicitGrant(principal: PolicyPrincipal, base: string, projectId?
   return (principal.explicitGrants ?? []).some(
     (grant) => grant.projectId === projectId && baseKey(grant.key) === base,
   );
-}
-
-/**
- * §1 layer 2, permissions are the union of the roles: the first grant the target satisfies, widest
- * scope first. Otherwise the most useful denial: unmet conditions on a grant whose scope reached the
- * target, then the widest grant's scope failure.
- */
-function evaluate(
-  grants: readonly RoleGrant[],
-  principal: PolicyPrincipal,
-  base: string,
-  target: PolicyTarget,
-): Decision {
-  const explicit = holdsExplicitGrant(principal, base, target.projectId);
-  const ordered = [...grants].sort((a, b) => WIDTH.indexOf(a.scope) - WIDTH.indexOf(b.scope));
-  let unmetDenial: Decision | undefined;
-  let scopeDenial: Decision | undefined;
-  for (const grant of ordered) {
-    const miss = scopeMiss(grant.scope, principal, target);
-    if (miss !== null) {
-      scopeDenial ??= { allowed: false, reason: miss };
-      continue;
-    }
-    const unmet = unmetConditions(grant.conditions, target, explicit);
-    if (unmet.length === 0) return { allowed: true, scope: grant.scope, reason: "granted" };
-    unmetDenial ??= { allowed: false, reason: "condition_unmet", unmet };
-  }
-  return unmetDenial ?? scopeDenial ?? NO_GRANT;
 }
 
 /**
@@ -217,7 +145,9 @@ export function decide(
   const base = baseKey(key);
   if (base === null) return NO_GRANT;
   const grants = (principal.roles ?? []).flatMap((role) => grantsForRole(role).get(base) ?? []);
-  return grants.length === 0 ? NO_GRANT : evaluate(grants, principal, base, target);
+  if (grants.length === 0) return NO_GRANT;
+  const explicit = holdsExplicitGrant(principal, base, target.projectId);
+  return decideGrants(grants, reachOf(principal, target), target, explicit);
 }
 
 /**

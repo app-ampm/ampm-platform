@@ -1,5 +1,5 @@
 import { unmetConditions, type Condition, type ConditionFacts } from "./conditions";
-import type { Decision } from "./engine";
+import type { Decision } from "./evaluate";
 import { MATRIX, type Grant } from "./matrix";
 import type { Action } from "./roles";
 

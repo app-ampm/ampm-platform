@@ -46,14 +46,8 @@ export type { ClassAction, KeyAction, ParsedKey, PermissionKey, VerbAction } fro
 export { MATRIX } from "./matrix";
 export type { Actor, Grant, MatrixRow, ReportExclusion, RowAlias, Transition } from "./matrix";
 export { can, decide, grantsForRole, permissionKeysForRole } from "./engine";
-export type {
-  Decision,
-  DenialReason,
-  ExplicitGrant,
-  PolicyPrincipal,
-  PolicyTarget,
-  RoleGrant,
-} from "./engine";
+export type { ExplicitGrant, PolicyPrincipal, PolicyTarget } from "./engine";
+export type { Decision, DenialReason, Reach, RoleGrant } from "./evaluate";
 export { clientReach, decideReach } from "./reach";
 export type { ReachPrincipal } from "./reach";
 export { canTransition } from "./transitions";
