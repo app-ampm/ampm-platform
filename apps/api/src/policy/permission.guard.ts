@@ -14,6 +14,8 @@ import { toPolicyPrincipal } from "./principal.types.js";
  * request carries the scope the grant reached to the repository (step 5); an own-scope grant
  * passes as "own", so the repository reads only the principal's records. A refusal is a 404 unless
  * the principal may read the records the key acts on, then a 403 (test-cases.md, denial semantics).
+ * When the only read that shows those records is own-scope ("(o)"), the guard cannot tell before
+ * the record is read whether it is the principal's, so the refusal is a 404: denial equals absence.
  */
 @Injectable()
 export class PermissionGuard implements CanActivate {
@@ -53,8 +55,13 @@ function projectOf(request: Request, requirement: PermissionRequirement): string
   return typeof raw === "string" ? raw : undefined;
 }
 
-/** May the principal read the records the key acts on? Then a refusal says so (403). */
+/**
+ * May the principal read the records the key acts on? Then a refusal says so (403). A read that
+ * reaches only its own records shows none before one is read, so it does not count.
+ */
 function canSee(principal: PolicyPrincipal, key: string, projectId: string | undefined): boolean {
   const readKey = readKeyFor(key);
-  return readKey !== null && decideBeforeRead(principal, readKey, { projectId }).allowed;
+  if (readKey === null) return false;
+  const read = decideBeforeRead(principal, readKey, { projectId });
+  return read.allowed && read.scope !== "own";
 }

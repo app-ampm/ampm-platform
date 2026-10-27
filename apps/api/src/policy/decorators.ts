@@ -18,7 +18,8 @@ export interface PermissionRequirement {
 /**
  * Step 4: the permission key a handler needs, checked by PermissionGuard before any data is read.
  * A principal who may not see the records answers 404, as for a missing record; one who may see
- * them but not act answers 403 (architecture §6, denial equals absence).
+ * them but not act answers 403 (architecture §6, denial equals absence). One who sees only its own
+ * records ("(o)") answers 404 too: before the record is read, the guard cannot tell it is theirs.
  *
  * @example
  * \@RequirePermission("tasks.incidents.read", { projectParam: "projectId" })

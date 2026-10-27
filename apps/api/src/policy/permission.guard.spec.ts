@@ -24,6 +24,9 @@ class Routes {
   @RequirePermission("tasks.tasks.read", { projectParam: "projectId" })
   readTasks(): void {}
 
+  @RequirePermission("tasks.tasks.delete", { projectParam: "projectId" })
+  deleteTask(): void {}
+
   @RequirePermission("budget.budget_lines_client_facing.read_internal_cost", {
     projectParam: "projectId",
   })
@@ -145,6 +148,16 @@ describe("PermissionGuard (architecture §6 step 4)", () => {
       key: "tasks.tasks.read",
       scope: "own",
     });
+  });
+
+  it("§5.13 line 293, test-cases.md line 212: FA and SM see only their own tasks, so a delete is a 404", () => {
+    // Their read is "(o)": before the task is read the guard cannot tell theirs from Bob's.
+    expect(run(staff(["FA"], []), "deleteTask", OTHER).status).toBe(404);
+    expect(run(staff(["SM"], []), "deleteTask", OTHER).status).toBe(404);
+    expect(run(staff(["FA"]), "deleteTask").status).toBe(404);
+    // CD (a) reads every task of its wedding, so the same refusal is a 403 there.
+    expect(run(staff(["CD"]), "deleteTask").status).toBe(403);
+    expect(run(staff(["PM"]), "deleteTask").allowed).toBe(true);
   });
 
   it("§6 line 338: a client never holds a staff key and sees no staff records, a 404", () => {
