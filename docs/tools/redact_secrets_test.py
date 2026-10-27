@@ -36,6 +36,11 @@ def pem(body_lines: list[str], kind: str = "") -> str:
     return f"-----BEGIN {label}-----\n" + "\n".join(body_lines) + f"\n-----END {label}-----\n"
 
 
+def numbered(lines: list[str], separator: str = "\t") -> str:
+    """Lines as the Read tool shows a file: cat -n numbers, then a tab (or an arrow) before each line."""
+    return "".join(f"{n:6}{separator}{line}\n" for n, line in enumerate(lines, 1))
+
+
 def tool_use(command: str) -> str:
     """An assistant record running one Bash command, as a transcript line."""
     call = {"type": "tool_use", "id": "toolu_02ABCDEFGHJKLMNPQRSTUVWX", "name": "Bash", "input": {"command": command}}
@@ -104,6 +109,7 @@ def ops04_cases() -> list[Case]:
     s = samples()
     npm = "npm" + "_" + "Zx9" * 12
     encrypted = "-----BEGIN RSA PRIVATE KEY-----\nProc-Type: 4,ENCRYPTED\nDEK-Info: AES-128-CBC,0A1B\n\n"
+    head = ["-----BEGIN PRIVATE KEY-----", s["b64"], s["b64_2"]]  # a Read with a limit, or head | cat -n
     return [
         ("password-only url", tool_result(f"REDIS_URL=redis://:{s['pw']}@localhost:6379"), 1, [s["pw"]]),
         ("token after an ansi colour", tool_result(f"\x1b[32m{s['gh']}\x1b[0m"), 1, [s["gh"]]),
@@ -118,6 +124,9 @@ def ops04_cases() -> list[Case]:
         ("encrypted pem with no end", tool_result(f"{encrypted}{s['b64']}\n"), 1, [s["b64"]]),
         ("pgp key with no end", tool_result(f"-----BEGIN PGP PRIVATE KEY BLOCK-----\n\n{s['b64']}"), 1, [s["b64"]]),
         ("begin marker then prose", tool_result("-----BEGIN PRIVATE KEY-----\nnot a key here"), 0, []),
+        ("key cut short by the Read tool", tool_result(numbered(head)), 1, [s["b64"], s["b64_2"]]),
+        ("key cut short, arrow numbering", tool_result(numbered(head, "\u2192"), False), 1, [s["b64"], s["b64_2"]]),
+        ("key cut short, escaped arrow", tool_result(numbered(head, "\u2192")), 1, [s["b64"], s["b64_2"]]),
         ("basic auth header", tool_use(f"curl -H 'Authorization: Basic {s['b64_2']}' x"), 1, [s["b64_2"]]),
     ]
 

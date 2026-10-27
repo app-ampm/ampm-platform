@@ -44,7 +44,8 @@ JSON_CHAR = rb"(?:\\.|[^\"\\\n])"
 # PEM and PGP armour: the label after BEGIN or END, and the lines of a key as a JSON string holds them
 # (\n between lines, escaped again when the key sits in JSON a tool printed).
 KEY_LABEL = rb"(?:[A-Z0-9]+ )*PRIVATE KEY(?: BLOCK)?-----"
-NEXT_LINE = rb"(?:\\+r)?\\+n"
+# A line break, then the line number and tab (or arrow) the Read tool and cat -n print before each line.
+NEXT_LINE = rb"(?:\\+r)?\\+n(?:[ ]*[0-9]+(?:\\+t|\xe2\x86\x92|\\+u2192))?"
 HEADER_LINE = rb"[A-Za-z][A-Za-z0-9-]*:[^\\\"\n]*"  # Proc-Type: 4,ENCRYPTED, or Version: in PGP armour
 BASE64_LINE = rb"[A-Za-z0-9+/=]+(?=[\\\"\n]|\Z)"
 
