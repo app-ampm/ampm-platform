@@ -5,6 +5,8 @@
     python3 docs/tools/redact_secrets.py --check FILE...  count them only; exit 1 when any is found
     python3 docs/tools/redact_secrets.py --snapshot OUT FILE
                                    mask FILE in place and write the masked complete lines to OUT
+    python3 docs/tools/redact_secrets.py --snapshot-only OUT FILE
+                                   write the masked complete lines of FILE to OUT; FILE is only read
     python3 docs/tools/redact_secrets.py --self-test      run the pattern tests
 
 Called by docs/tools/memory_hook.sh before every mine (CLAUDE.md: never file secrets or tokens), which
@@ -15,14 +17,23 @@ and no match reaches past one JSON string, so every masked line still parses. Sa
 fixed offsets keep the file's size and every other byte, so a transcript Claude Code is still
 appending to is never truncated or reordered. A line still being written (no trailing newline yet) is
 left for the next run. Nothing matched is ever printed: the output is a count per file.
+
+MemPalace's global hooks (docs/tools/mempalace_global_hook.sh) run for every project's sessions, so
+they use --snapshot-only: another project's transcript is never edited, only its snapshot is masked.
+The in-place modes hold an exclusive flock(2) on FILE from the read to the last write; --snapshot-only
+and --check hold a shared one while they read, so a read never sees a mask half written. The lock is
+advisory and Claude Code takes none, so its appends are never held up.
 """
 
 from __future__ import annotations
 
 import contextlib
+import errno
 import fcntl
+import io
 import os
 import re
+import stat
 import sys
 
 KEEP = 4  # characters left readable at the start of a match
@@ -185,9 +196,8 @@ def find(data: bytes) -> list[tuple[int, bytes]]:
     return edits
 
 
-def _complete_part(path: str) -> bytes:
-    with open(path, "rb") as handle:
-        data = handle.read()
+def _complete_part(data: bytes) -> bytes:
+    """data up to and including its last newline: a line still being written is left for the next run."""
     cut = data.rfind(b"\n")
     return data[: cut + 1] if cut >= 0 else b""
 
@@ -230,24 +240,42 @@ def write_snapshot(out_path: str, data: bytes) -> None:
         os.close(lock)
 
 
-def redact_file(path: str, check_only: bool, snapshot: str | None = None) -> int:
+def _mask_in_place(path: str, handle: io.BufferedReader, edits: list[tuple[int, bytes]]) -> None:
+    """Writes the edits over the file handle has open (its exclusive lock held by the caller)."""
+    fd = os.open(path, os.O_RDWR)
+    try:
+        if not os.path.samestat(os.fstat(fd), os.fstat(handle.fileno())):
+            raise OSError(errno.ESTALE, "the file was replaced while it was being scanned", path)
+        for offset, replacement in edits:
+            os.pwrite(fd, replacement, offset)
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+
+
+def redact_file(path: str, check_only: bool, snapshot: str | None = None, in_place: bool = True) -> int:
     """Masks (or counts) the credentials in the file's complete lines; returns how many it found.
 
     With snapshot, also writes those masked complete lines there (write_snapshot), so a miner can read a
-    copy in which every byte has been scanned: redact_file("t.jsonl", False, "redacted/t.jsonl")
+    copy in which every byte has been scanned: redact_file("t.jsonl", False, "redacted/t.jsonl").
+    With in_place=False (--snapshot-only) the file is opened read-only and never written: only the
+    snapshot is masked. redact_file("other.jsonl", False, "redacted/other.jsonl", in_place=False)
     """
-    data = _complete_part(path)
-    edits = find(data)
+    writes = in_place and not check_only
+    # Non-blocking, so a FIFO put where a transcript was expected is refused instead of hanging the hook.
+    with os.fdopen(os.open(path, os.O_RDONLY | getattr(os, "O_NONBLOCK", 0)), "rb") as handle:
+        if not stat.S_ISREG(os.fstat(handle.fileno()).st_mode):
+            raise OSError(errno.EINVAL, "not a regular file", path)
+        # Exclusive while this run may write, shared while it only reads: a read never sees a half-written mask.
+        fcntl.flock(handle.fileno(), fcntl.LOCK_EX if writes else fcntl.LOCK_SH)
+        data = _complete_part(handle.read())
+        if not writes:
+            fcntl.flock(handle.fileno(), fcntl.LOCK_UN)  # what it needs is read: let a masker go on
+        edits = find(data)
+        if writes and edits:
+            _mask_in_place(path, handle, edits)
     if check_only:
         return len(edits)
-    if edits:
-        fd = os.open(path, os.O_RDWR)
-        try:
-            for offset, replacement in edits:
-                os.pwrite(fd, replacement, offset)
-            os.fsync(fd)
-        finally:
-            os.close(fd)
     if snapshot is not None:
         write_snapshot(snapshot, _apply(data, edits))
     return len(edits)
@@ -268,11 +296,13 @@ def main(argv: list[str]) -> int:
     """The command line in the module docstring; returns the exit status.
 
     main(["--snapshot", "redacted/t.jsonl", "t.jsonl"])  # 0, prints "t.jsonl: 1 credential(s) masked"
+    main(["--snapshot-only", "redacted/t.jsonl", "t.jsonl"])  # 0, "... masked in the snapshot"; t.jsonl as it was
     """
     if argv[:1] == ["--self-test"]:
         return self_test()
     check_only = argv[:1] == ["--check"]
-    snapshot = argv[1] if argv[:1] == ["--snapshot"] and len(argv) == 3 else None
+    in_place = argv[:1] != ["--snapshot-only"]
+    snapshot = argv[1] if argv[:1] in (["--snapshot"], ["--snapshot-only"]) and len(argv) == 3 else None
     paths = argv[1:] if check_only else argv[2:] if snapshot else argv
     if not paths or paths[0].startswith("--"):
         print(__doc__.strip())
@@ -280,12 +310,12 @@ def main(argv: list[str]) -> int:
     found_any = False
     for path in paths:
         try:
-            count = redact_file(path, check_only, snapshot)
+            count = redact_file(path, check_only, snapshot, in_place)
         except OSError as error:
             print(f"{os.path.basename(path)}: not redacted ({error.strerror})")
             return 2
         found_any = found_any or count > 0
-        verb = "found" if check_only else "masked"
+        verb = "found" if check_only else "masked" if in_place else "masked in the snapshot"
         print(f"{os.path.basename(path)}: {count} credential(s) {verb}")
     return 1 if check_only and found_any else 0
 

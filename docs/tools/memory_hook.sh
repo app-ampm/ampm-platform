@@ -15,9 +15,14 @@
 # copy; a failed redaction skips the mine. Drawers an earlier mine filed under the live transcript path
 # are left as they are (no longer refreshed): deleting memory is the developer's decision, not a hook's.
 #
-# MemPalace's own global hooks, when installed, file mid-session saves under a machine-wide wing. These
-# hooks always name the wing, so every session run in this folder or in one of its worktrees can be found
-# with  mempalace search "..." --wing ampm. Best effort throughout: a missing tool never fails the session.
+# MemPalace's own global hooks in ~/.claude/settings.json run for these sessions too. They mine the transcript into
+# the project wing MemPalace derives from the cwd the transcript records (ampm for this folder and its worktrees;
+# their diary checkpoints go to wing_ampm), and through docs/tools/mempalace_global_hook.sh (installed by
+# install_global_memory_hooks.py) they read a --snapshot-only copy at this same snapshot path, never the live
+# transcript, so both hooks' drawers share one source. The redactor
+# holds an exclusive lock on the transcript while it masks it here and the global hooks a shared one while they
+# read it. These hooks always name the wing, so every session run in this folder or in one of its worktrees can be
+# found with  mempalace search "..." --wing ampm. Best effort throughout: a missing tool never fails the session.
 set -u
 EVENT="${1:-}"
 WING="${AMPM_MEMORY_WING:-ampm}"

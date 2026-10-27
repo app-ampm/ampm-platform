@@ -13,7 +13,7 @@
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
     "check": "turbo run lint typecheck test && pnpm run test:tools",
-    "test:tools": "python3 docs/tools/redact_secrets.py --self-test && bash docs/tools/memory_hook_test.sh && bash docs/tools/setup_memory_test.sh",
+    "test:tools": "python3 docs/tools/redact_secrets.py --self-test && bash docs/tools/memory_hook_test.sh && bash docs/tools/setup_memory_test.sh && bash docs/tools/mempalace_global_hook_test.sh && python3 docs/tools/install_global_memory_hooks_test.py",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "tokens:build": "pnpm --filter @ampm/tokens build",

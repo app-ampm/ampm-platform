@@ -12,11 +12,14 @@ The rule under test is CLAUDE.md, "Session memory": never file secrets or tokens
 from __future__ import annotations
 
 import contextlib
+import fcntl
 import io
 import json
 import os
+import subprocess
 import sys
 import tempfile
+import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import redact_secrets as rs  # noqa: E402
@@ -222,10 +225,93 @@ def check_snapshot_only_grows() -> list[str]:
     return problems + ([f"snapshot: temporary files left: {left_over}"] if left_over else [])
 
 
+def check_snapshot_only() -> list[str]:
+    """--snapshot-only (MemPalace's global hooks, any project) writes the masked snapshot and never touches FILE."""
+    s = samples()
+    complete = (tool_result(f"token {s['gh']}") + "\n" + tool_result("plain") + "\n").encode()
+    partial = tool_result(f"still being written {s['pat']}").encode()
+    with tempfile.TemporaryDirectory() as scratch:
+        live, out = os.path.join(scratch, "t.jsonl"), os.path.join(scratch, "redacted", "t.jsonl")
+        with open(live, "wb") as handle:
+            handle.write(complete + partial)
+        os.utime(live, (1_000_000_000, 1_000_000_000))
+        printed = io.StringIO()
+        with contextlib.redirect_stdout(printed):
+            status = rs.main(["--snapshot-only", out, live])
+        problems = [] if status == 0 else [f"--snapshot-only exited {status}"]
+        if not os.path.isfile(out):
+            return problems + ["snapshot-only: no file written"]
+        with open(out, "rb") as handle:
+            snapshot = handle.read()
+        with open(live, "rb") as handle:
+            now = handle.read()
+        masked = apply(complete, rs.find(complete))
+        problems += [] if snapshot == masked and masked != complete else ["snapshot-only: not the masked complete lines"]
+        problems += [] if now == complete + partial else ["snapshot-only: the live file was edited"]
+        problems += [] if os.stat(live).st_mtime == 1_000_000_000 else ["snapshot-only: the live file was written to"]
+        problems += [] if os.stat(out).st_mode & 0o777 == 0o600 else ["snapshot-only: not created 0600"]
+        problems += [] if os.stat(os.path.dirname(out)).st_mode & 0o777 == 0o700 else ["snapshot-only: dir not 0700"]
+        problems += [] if "1 credential(s) masked in the snapshot" in printed.getvalue() else ["snapshot-only: no count"]
+        with contextlib.redirect_stdout(io.StringIO()):
+            rs.main(["--snapshot-only", out, live])  # nothing new: the snapshot stays as it was
+        with open(out, "rb") as handle:
+            problems += [] if handle.read() == snapshot else ["snapshot-only: a second run changed the snapshot"]
+    return problems
+
+
+def _held_while(live: str, held: int, argv: list[str], out: str) -> tuple[bool, bool]:
+    """Runs the redactor with argv while this process holds a flock on live: (it waited for the lock, it then finished)."""
+    script = os.path.join(os.path.dirname(os.path.abspath(__file__)), "redact_secrets.py")
+    with open(live, "rb") as handle:
+        fcntl.flock(handle.fileno(), held)
+        child = subprocess.Popen([sys.executable, script, *argv], stdout=subprocess.DEVNULL)
+        time.sleep(0.6)
+        waited = child.poll() is None and not os.path.exists(out)
+        fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+        finished = child.wait(timeout=30) == 0
+    return waited, finished
+
+
+def check_locks() -> list[str]:
+    """A read never sees a half-written mask: the in-place modes lock FILE exclusively, the read-only ones shared."""
+    s = samples()
+    problems = []
+    with tempfile.TemporaryDirectory() as scratch:
+        live, out = os.path.join(scratch, "t.jsonl"), os.path.join(scratch, "redacted", "t.jsonl")
+        with open(live, "wb") as handle:
+            handle.write((tool_result(f"token {s['gh']}") + "\n").encode())
+        waited, finished = _held_while(live, fcntl.LOCK_EX, ["--snapshot-only", out, live], out)
+        problems += [] if waited and finished else ["snapshot-only did not wait for an exclusive lock (a masker)"]
+        os.unlink(out)
+        waited, finished = _held_while(live, fcntl.LOCK_SH, ["--snapshot-only", out, live], out)
+        problems += [] if not waited and finished else ["snapshot-only waited for another reader"]
+        os.unlink(out)
+        waited, finished = _held_while(live, fcntl.LOCK_SH, ["--snapshot", out, live], out)
+        problems += [] if waited and finished else ["--snapshot masked in place while a reader held the file"]
+    return problems
+
+
+def check_fifo_refused() -> list[str]:
+    """A FIFO where a transcript should be is refused at once, never read (a blocking open would hang the hook)."""
+    script = os.path.join(os.path.dirname(os.path.abspath(__file__)), "redact_secrets.py")
+    with tempfile.TemporaryDirectory() as scratch:
+        fifo, out = os.path.join(scratch, "f.jsonl"), os.path.join(scratch, "redacted", "f.jsonl")
+        os.mkfifo(fifo)
+        try:
+            done = subprocess.run([sys.executable, script, "--snapshot-only", out, fifo], capture_output=True,
+                                  text=True, timeout=10)
+        except subprocess.TimeoutExpired:
+            return ["fifo: the redactor blocked on a FIFO"]
+    ok = done.returncode == 2 and "not a regular file" in done.stdout
+    return [] if ok else [f"fifo: exited {done.returncode} ({done.stdout.strip()})"]
+
+
 TOOL_TESTS = [
     "python3 docs/tools/redact_secrets.py --self-test",
     "bash docs/tools/memory_hook_test.sh",
     "bash docs/tools/setup_memory_test.sh",
+    "bash docs/tools/mempalace_global_hook_test.sh",
+    "python3 docs/tools/install_global_memory_hooks_test.py",
 ]
 
 
@@ -266,6 +352,7 @@ def run() -> int:
         failures += check_case(*case)
     failures += check_head_stops_at_prose() + check_lines_kept_apart() + check_nested_json_survives()
     failures += check_snapshot() + check_snapshot_only_grows() + check_wired_into_pnpm_check()
+    failures += check_snapshot_only() + check_locks() + check_fifo_refused()
     for failure in failures:
         print(f"FAIL: {failure}")
     print("self-test passed" if not failures else f"self-test: {len(failures)} failure(s)")
