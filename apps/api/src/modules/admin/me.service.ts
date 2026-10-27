@@ -16,6 +16,9 @@ const NO_ENTITLEMENTS = {
  * Step 7 for `/me`: the one view of a principal, parsed through its schema so nothing else leaks.
  * A client's entitlements go out whole (read-only modules and reaches included, §3), so the
  * portals show what the policy resolved rather than guessing it from the module list.
+ *
+ * @example
+ * return this.me.view(principal); // MeResponse, parsed through meResponse
  */
 @Injectable()
 export class MeService {

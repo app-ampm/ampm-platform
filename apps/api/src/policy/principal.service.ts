@@ -16,6 +16,9 @@ import type { Principal } from "./principal.types.js";
  * Steps 2 and 3 of the pipeline: a verified identity becomes a principal from the API's own
  * records; client and demo principals also get their entitlements (cached five minutes).
  * No account for the subject means no access: there is no self-registration (A-13).
+ *
+ * @example
+ * const principal = await this.principals.resolve(identity);
  */
 @Injectable()
 export class PrincipalService {
