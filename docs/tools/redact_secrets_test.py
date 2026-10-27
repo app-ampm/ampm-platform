@@ -11,9 +11,12 @@ The rule under test is CLAUDE.md, "Session memory": never file secrets or tokens
 
 from __future__ import annotations
 
+import contextlib
+import io
 import json
 import os
 import sys
+import tempfile
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import redact_secrets as rs  # noqa: E402
@@ -165,6 +168,48 @@ def check_nested_json_survives() -> list[str]:
     return []
 
 
+def check_snapshot() -> list[str]:
+    """OPS-03: --snapshot writes the masked complete lines it scanned (0600) and masks the live file too."""
+    s = samples()
+    complete = (tool_result(f"token {s['gh']}") + "\n" + tool_result("plain") + "\n").encode()
+    partial = tool_result(f"still being written {s['pat']}").encode()
+    with tempfile.TemporaryDirectory() as scratch:
+        live, out = os.path.join(scratch, "t.jsonl"), os.path.join(scratch, "redacted", "t.jsonl")
+        with open(live, "wb") as handle:
+            handle.write(complete + partial)
+        with contextlib.redirect_stdout(io.StringIO()):
+            status = rs.main(["--snapshot", out, live])
+        problems = [] if status == 0 else [f"--snapshot exited {status}"]
+        if not os.path.isfile(out):
+            return problems + ["snapshot: no file written"]
+        with open(out, "rb") as handle:
+            snapshot = handle.read()
+        with open(live, "rb") as handle:
+            now = handle.read()
+        problems += [] if snapshot == apply(complete, rs.find(complete)) else ["snapshot: not the masked complete lines"]
+        problems += [] if now == snapshot + partial else ["snapshot: the live file was not masked in place"]
+        problems += [] if os.stat(out).st_mode & 0o777 == 0o600 else ["snapshot: not created 0600"]
+        problems += [] if os.stat(os.path.dirname(out)).st_mode & 0o777 == 0o700 else ["snapshot: directory not 0700"]
+    return problems
+
+
+def check_snapshot_only_grows() -> list[str]:
+    """A mine whose scan finishes late never replaces a newer, longer snapshot with its shorter one."""
+    with tempfile.TemporaryDirectory() as scratch:
+        out = os.path.join(scratch, "redacted", "t.jsonl")
+        rs.write_snapshot(out, b"line 1\nline 2\n")
+        rs.write_snapshot(out, b"line 1\n")
+        with open(out, "rb") as handle:
+            kept = handle.read() == b"line 1\nline 2\n"
+        rs.write_snapshot(out, b"line 1\nline 2\nline 3\n")
+        with open(out, "rb") as handle:
+            grew = handle.read() == b"line 1\nline 2\nline 3\n"
+        left_over = [name for name in os.listdir(os.path.dirname(out)) if name.endswith(".tmp")]
+    problems = [] if kept else ["snapshot: a shorter copy replaced a longer one"]
+    problems += [] if grew else ["snapshot: a longer copy did not replace the snapshot"]
+    return problems + ([f"snapshot: temporary files left: {left_over}"] if left_over else [])
+
+
 def check_case(name: str, line: str, expected: int, fragments: list[str]) -> list[str]:
     """Problems with one case: count, byte length, JSON validity, idempotence and what stayed in clear."""
     data = line.encode()
@@ -191,6 +236,7 @@ def run() -> int:
     for case in baseline_cases() + ops01_cases() + ops04_cases() + ops05_cases():
         failures += check_case(*case)
     failures += check_head_stops_at_prose() + check_lines_kept_apart() + check_nested_json_survives()
+    failures += check_snapshot() + check_snapshot_only_grows()
     for failure in failures:
         print(f"FAIL: {failure}")
     print("self-test passed" if not failures else f"self-test: {len(failures)} failure(s)")

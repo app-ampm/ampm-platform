@@ -3,9 +3,12 @@
 
     python3 docs/tools/redact_secrets.py FILE...          mask every credential in place
     python3 docs/tools/redact_secrets.py --check FILE...  count them only; exit 1 when any is found
+    python3 docs/tools/redact_secrets.py --snapshot OUT FILE
+                                   mask FILE in place and write the masked complete lines to OUT
     python3 docs/tools/redact_secrets.py --self-test      run the pattern tests
 
-Called by docs/tools/memory_hook.sh before every mine (CLAUDE.md: never file secrets or tokens). A
+Called by docs/tools/memory_hook.sh before every mine (CLAUDE.md: never file secrets or tokens), which
+mines the --snapshot copy: lines appended after the scan never reach the miner unscanned. A
 credential is overwritten in place with the same number of bytes, its first characters kept so the
 kind stays readable and the rest turned to '*'; JSON escapes and UTF-8 characters are never split,
 and no match reaches past one JSON string, so every masked line still parses. Same-length writes at
@@ -16,6 +19,8 @@ left for the next run. Nothing matched is ever printed: the output is a count pe
 
 from __future__ import annotations
 
+import contextlib
+import fcntl
 import os
 import re
 import sys
@@ -184,19 +189,64 @@ def _complete_part(path: str) -> bytes:
     return data[: cut + 1] if cut >= 0 else b""
 
 
-def redact_file(path: str, check_only: bool) -> int:
-    """Masks (or counts) the credentials in the file's complete lines; returns how many it found."""
+def _apply(data: bytes, edits: list[tuple[int, bytes]]) -> bytes:
+    out = bytearray(data)
+    for offset, replacement in edits:
+        out[offset : offset + len(replacement)] = replacement
+    return bytes(out)
+
+
+def write_snapshot(out_path: str, data: bytes) -> None:
+    """Replaces out_path atomically with data, mode 0600 in a 0700 directory; never with a shorter copy.
+
+    A mine started earlier can finish its scan later; it then leaves the longer snapshot in place, so
+    the file at out_path only grows and every miner reads the newest redacted copy.
+    write_snapshot(os.path.expanduser("~/.mempalace/hook_state/redacted/<session>.jsonl"), masked)
+    """
+    directory = os.path.dirname(os.path.abspath(out_path))
+    os.makedirs(directory, mode=0o700, exist_ok=True)
+    os.chmod(directory, 0o700)
+    lock = os.open(out_path + ".lock", os.O_RDWR | os.O_CREAT | getattr(os, "O_NOFOLLOW", 0), 0o600)
+    try:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        if os.path.isfile(out_path) and os.path.getsize(out_path) > len(data):
+            return
+        temporary = f"{out_path}.{os.getpid()}.tmp"
+        fd = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        try:
+            with os.fdopen(fd, "wb") as handle:
+                handle.write(data)
+                handle.flush()
+                os.fsync(handle.fileno())
+            os.replace(temporary, out_path)
+        except BaseException:
+            with contextlib.suppress(FileNotFoundError):
+                os.unlink(temporary)
+            raise
+    finally:
+        os.close(lock)
+
+
+def redact_file(path: str, check_only: bool, snapshot: str | None = None) -> int:
+    """Masks (or counts) the credentials in the file's complete lines; returns how many it found.
+
+    With snapshot, also writes those masked complete lines there (write_snapshot), so a miner can read a
+    copy in which every byte has been scanned: redact_file("t.jsonl", False, "redacted/t.jsonl")
+    """
     data = _complete_part(path)
     edits = find(data)
-    if check_only or not edits:
+    if check_only:
         return len(edits)
-    fd = os.open(path, os.O_RDWR)
-    try:
-        for offset, replacement in edits:
-            os.pwrite(fd, replacement, offset)
-        os.fsync(fd)
-    finally:
-        os.close(fd)
+    if edits:
+        fd = os.open(path, os.O_RDWR)
+        try:
+            for offset, replacement in edits:
+                os.pwrite(fd, replacement, offset)
+            os.fsync(fd)
+        finally:
+            os.close(fd)
+    if snapshot is not None:
+        write_snapshot(snapshot, _apply(data, edits))
     return len(edits)
 
 
@@ -212,19 +262,24 @@ def self_test() -> int:
 
 
 def main(argv: list[str]) -> int:
+    """The command line in the module docstring; returns the exit status.
+
+    main(["--snapshot", "redacted/t.jsonl", "t.jsonl"])  # 0, prints "t.jsonl: 1 credential(s) masked"
+    """
     if argv[:1] == ["--self-test"]:
         return self_test()
     check_only = argv[:1] == ["--check"]
-    paths = argv[1:] if check_only else argv
-    if not paths:
+    snapshot = argv[1] if argv[:1] == ["--snapshot"] and len(argv) == 3 else None
+    paths = argv[1:] if check_only else argv[2:] if snapshot else argv
+    if not paths or paths[0].startswith("--"):
         print(__doc__.strip())
         return 2
     found_any = False
     for path in paths:
         try:
-            count = redact_file(path, check_only)
+            count = redact_file(path, check_only, snapshot)
         except OSError as error:
-            print(f"{os.path.basename(path)}: unreadable ({error.strerror})")
+            print(f"{os.path.basename(path)}: not redacted ({error.strerror})")
             return 2
         found_any = found_any or count > 0
         verb = "found" if check_only else "masked"

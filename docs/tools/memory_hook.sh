@@ -8,7 +8,11 @@
 #   session-end    final mine of the transcript (background)
 #
 # Every mine first runs docs/tools/redact_secrets.py on the transcript, which masks credentials in place
-# (same length, so a transcript still being written is not disturbed); a failed redaction skips the mine.
+# (same length, so a transcript still being written is not disturbed) and writes the complete lines it
+# scanned, masked, to a per-session snapshot in $STATE/redacted (0600 in a 0700 directory). The miner
+# reads only that snapshot, so a line the session appends after the scan is never filed unscanned. The
+# snapshot is reused by the session's next mine, which replaces it atomically and never with a shorter
+# copy; a failed redaction skips the mine.
 #
 # MemPalace's own global hooks, when installed, file mid-session saves under a machine-wide wing. These
 # hooks always name the wing, so every session run in this folder or in one of its worktrees can be found
@@ -43,18 +47,21 @@ valid_transcript() {
   [ -f "$1" ]
 }
 
-redact_transcript() {  # masks credentials in the transcript in place; non-zero means the file must not be mined
+redact_transcript() {  # transcript, snapshot: masks the transcript in place and writes the masked snapshot;
+  # non-zero means nothing may be mined
   local script="$PROJECT/docs/tools/redact_secrets.py"
   [ -f "$script" ] || { log "redact_secrets.py is missing from $PROJECT; not mining"; return 1; }
-  python3 "$script" "$1" >> "$LOG" 2>&1 || { log "secret redaction failed for $(basename "$1"); not mining"; return 1; }
+  ( umask 077; python3 "$script" --snapshot "$2" "$1" ) >> "$LOG" 2>&1 \
+    || { log "secret redaction failed for $(basename "$1"); not mining"; return 1; }
 }
 
-mine_transcript() {  # mines one transcript file into the wing; MemPalace skips a file it has already filed unchanged
+mine_transcript() {  # mines one transcript into the wing; MemPalace skips a file it has already filed unchanged
   command -v mempalace >/dev/null 2>&1 || { log "mempalace is not installed; nothing mined"; return 0; }
-  # CLAUDE.md: never file secrets or tokens. A masked transcript changes on disk, so the miner purges the
-  # source's earlier drawers and files clean ones in their place.
-  redact_transcript "$1" || return 0
-  if mempalace mine "$1" --mode convos --wing "$WING" >> "$LOG" 2>&1; then
+  # CLAUDE.md: never file secrets or tokens. The miner gets the redacted snapshot, never the live file; a
+  # snapshot that changed makes the miner purge its earlier drawers and file clean ones in their place.
+  local snapshot; snapshot="$STATE/redacted/$(basename "$1")"
+  redact_transcript "$1" "$snapshot" || return 0
+  if mempalace mine "$snapshot" --mode convos --wing "$WING" >> "$LOG" 2>&1; then
     log "mined $(basename "$1") into wing $WING"
   else
     log "mine of $(basename "$1") failed or the palace was busy (see above)"
