@@ -14,6 +14,7 @@ import { describe, expect, it } from "vitest";
 import { decide, type PolicyTarget } from "../engine";
 import { MATRIX, type Grant } from "../matrix";
 import { ACTION_LETTERS, STAFF_ROLE_CODES, type Action, type StaffRole } from "../roles";
+import { documentRows } from "./document";
 import { FOREIGN_PROJECT, ME, MEMBER_PROJECT, SOMEONE, factsFor, member } from "./fixtures";
 
 const ALL_ACTIONS: readonly Action[] = Object.values(ACTION_LETTERS);
@@ -59,8 +60,11 @@ function expectNoGrant(role: StaffRole, key: string): void {
 }
 
 describe("generated authorisation suite: §5 staff roles", () => {
-  it("covers every row of §5, the reports of §5.16 included", () => {
-    expect(MATRIX.staff.filter((row) => row.section !== "5.16").length).toBeGreaterThanOrEqual(105);
+  it("covers every row of §5, the reports of §5.16 included, as the document's text counts them", () => {
+    const rows = documentRows("## 5. Permission matrix: staff roles", "## 6. Permission matrix");
+    // 105 role rows and 11 reports when this was written; a new row also needs its golden case.
+    expect(rows).toBe(116);
+    expect(MATRIX.staff).toHaveLength(rows);
     expect(MATRIX.staff.filter((row) => row.section === "5.16")).toHaveLength(11);
   });
 

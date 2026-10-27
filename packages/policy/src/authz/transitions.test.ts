@@ -11,6 +11,7 @@ import { MATRIX, type Actor, type Transition } from "../matrix";
 import { STAFF_ROLE_CODES, type StaffRole } from "../roles";
 import { STATUS_MACHINES, type ActorPrincipal } from "../statuses";
 import { canTransition, type TransitionContext } from "../transitions";
+import { documentRows, transitionRows } from "./document";
 import { FOREIGN_PROJECT, ME, MEMBER_PROJECT, SOMEONE, member } from "./fixtures";
 
 const client: PolicyPrincipal = { type: "client", userId: ME, projectIds: [MEMBER_PROJECT] };
@@ -143,8 +144,11 @@ function expectNarrowing(rule: Transition, from: string, to: string): void {
 }
 
 describe("generated transition suite: §7", () => {
-  it("covers every §7 row", () => {
-    expect(MATRIX.transitions.length).toBeGreaterThanOrEqual(59);
+  it("covers every §7 row, as the document's text counts them, one rule per mover clause", () => {
+    const rows = documentRows("## 7. Status transitions", "## 8. Automation");
+    expect(rows).toBe(59);
+    expect(transitionRows(MATRIX.transitions)).toBe(rows);
+    expect(MATRIX.transitions).toHaveLength(64);
   });
 
   for (const rule of MATRIX.transitions) {

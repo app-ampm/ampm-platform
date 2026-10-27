@@ -42,6 +42,10 @@ function readTables(block: string, firstSection: string): Table[] {
   for (const line of block.split("\n")) {
     const heading = /^### (\d+\.\d+)/.exec(line);
     if (heading) section = heading[1] ?? section;
+    // GFM still renders an indented row in its table; read as text, it would vanish unseen.
+    if (/^\s+\|/.test(line)) {
+      throw new Error(`permission-matrix.md §${section}: an indented table line "${line.trim()}"`);
+    }
     if (!line.startsWith("|")) {
       table = null;
     } else if (/^\|\s*-/.test(line)) {

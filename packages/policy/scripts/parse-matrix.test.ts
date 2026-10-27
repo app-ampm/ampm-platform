@@ -82,6 +82,24 @@ describe("parseMatrix", () => {
     expect(() => parseMatrix(unknownHeader.join("\n"), "staff")).toThrow(/layout/);
   });
 
+  it("§5.15 line 316, §6 line 374: stops on an indented row, which GFM still renders in the table", () => {
+    const staffBlock = [
+      "### 5.15 Closure, feedback and public website",
+      ROLES,
+      "|---|---|---|---|---|---|---|---|---|---|",
+      "| Client feedback | R | R | — | R (a) | — | — | — | — | — |",
+      " | CMS pages and showcase items | CRUD | CRU | R | R | R | R | R | R | R |",
+    ].join("\n");
+    expect(() => parseMatrix(staffBlock, "staff")).toThrow(/indented/);
+    const othersBlock = [
+      "| Resource | CR (both representatives) | GU | DP |",
+      "|---|---|---|---|",
+      "| Exports | To confirm (Q4); never guest data | — | — |",
+      "  | Live chat (Q20) | CRU own conversations | — | C, routed to Sales |",
+    ].join("\n");
+    expect(() => parseMatrix(othersBlock, "others")).toThrow(/indented/);
+  });
+
   it("§6 line 371: the client, guest and demo table parses with its own columns", () => {
     const block = [
       "| Resource | CR (both representatives) | GU | DP |",

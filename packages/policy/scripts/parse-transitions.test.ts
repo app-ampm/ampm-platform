@@ -176,4 +176,29 @@ describe("parseTransitions", () => {
       parseTransitions(table("Room allocation", "| requested | proposed | The owner |")),
     ).toThrow(/owner/);
   });
+
+  it("§7 line 483: stops on an indented row instead of skipping it", () => {
+    const block = table(
+      "Client request",
+      "| accepted | implemented | PM (a) |",
+      " | any | withdrawn | The requester |",
+    );
+    expect(() => parseTransitions(block)).toThrow(/indented/);
+  });
+
+  it("§7 line 419: a role code left in a condition stops the generator unless it says who approves", () => {
+    expect(() =>
+      parseTransitions(table("Room allocation", "| proposed | confirmed | PM (a) and HL |")),
+    ).toThrow(/HL/);
+    expect(() =>
+      parseTransitions(table("Incident", "| resolved | closed | PM (a), later SA |")),
+    ).toThrow(/SA/);
+    const [closing] = parseTransitions(
+      table(
+        "Wedding project",
+        "| closure | closed | PM (a), SA, only when the closure checklist is complete and final accounts are approved by FA |",
+      ),
+    );
+    expect(closing?.roles.map((mover) => mover.role)).toEqual(["PM", "SA"]);
+  });
 });

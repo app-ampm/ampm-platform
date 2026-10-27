@@ -76,6 +76,14 @@ function readMover(text: string, movers: Movers): number {
   return actor[0].length;
 }
 
+/** A role code left in a condition, unless it says who approves ("approved by FA", line 419). */
+function strayRole(condition: string): string | undefined {
+  for (const match of condition.matchAll(/\b(SA|SM|HT|PM|CD|VC|RG|HL|FA|CR)\b/g)) {
+    if (!/\bby\s+$/.test(condition.slice(0, match.index))) return match[1];
+  }
+  return undefined;
+}
+
 /** The leading list of movers of a clause and the condition after it. */
 function parseMovers(clause: string): { movers: Movers; count: number; rest: string } {
   const movers: Movers = { roles: [], client: false, system: false, actors: [] };
@@ -94,6 +102,11 @@ function parseMovers(clause: string): { movers: Movers; count: number; rest: str
     .replace(/^[\s,]+/, "")
     .replace(/^only,\s*/, "")
     .trim();
+  // "PM (a) and HL" would make HL part of the condition: a mover the rules would never list.
+  const stray = count > 0 ? strayRole(condition) : undefined;
+  if (stray !== undefined) {
+    throw new Error(`§7 "${clause}": ${stray} is in the condition "${condition}", not a mover`);
+  }
   return { movers, count, rest: condition };
 }
 
@@ -236,6 +249,9 @@ export function parseTransitions(block: string): Transition[] {
   for (const line of block.split("\n")) {
     const match = /^### (.+)$/.exec(line);
     if (match) heading = (match[1] ?? "").trim();
+    // GFM still renders an indented row in its table; skipped as text, it would vanish unseen.
+    if (/^\s+\|/.test(line))
+      throw new Error(`§7 ${heading}: an indented table line "${line.trim()}"`);
     if (!line.startsWith("|") || /^\|\s*-/.test(line) || /^\|\s*From\s*\|/.test(line)) continue;
     const cells = line
       .trim()

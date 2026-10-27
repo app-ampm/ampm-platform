@@ -9,6 +9,7 @@ import { describe, expect, it } from "vitest";
 import { MATRIX } from "../matrix";
 import { clientReach, decideReach, type ReachPrincipal } from "../reach";
 import { ACTION_LETTERS, type Action } from "../roles";
+import { documentRows } from "./document";
 import { factsFor } from "./fixtures";
 
 const ALL_ACTIONS: readonly Action[] = Object.values(ACTION_LETTERS);
@@ -19,8 +20,10 @@ const COLUMNS: readonly [ReachPrincipal, string][] = [
 ];
 
 describe("generated authorisation suite: §6 client, guest and demo principals", () => {
-  it("covers every row of §6", () => {
-    expect(MATRIX.others.length).toBeGreaterThanOrEqual(33);
+  it("covers every row of §6, as the document's text counts them", () => {
+    const rows = documentRows("## 6. Permission matrix", "## 7. Status transitions");
+    expect(rows).toBe(33);
+    expect(MATRIX.others).toHaveLength(rows);
   });
 
   for (const row of MATRIX.others) {
