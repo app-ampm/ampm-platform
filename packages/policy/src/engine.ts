@@ -178,7 +178,8 @@ export function decide(
  * Step 4 as the guard runs it, before the record is read (architecture §6): decide() on what the
  * route names, the project. An own-scope grant cannot be checked yet, because the owner is on the
  * record, so it passes as scope "own" and the repository reads only the principal's own records;
- * someone else's is then absent, a 404 (permission-matrix §5 legend, "(o)").
+ * someone else's is then absent, a 404 (permission-matrix §5 legend, "(o)"). Only an owner the
+ * caller does not know passes so: one it names (`ownerId`) is decided as named, by decide().
  *
  * @example
  * const decision = decideBeforeRead(principal, "tasks.tasks.read", { projectId });
@@ -190,7 +191,9 @@ export function decideBeforeRead(
   target: PolicyTarget = {},
 ): Decision {
   const decision = decide(principal, key, target);
-  if (decision.allowed || principal.userId === undefined) return decision;
+  if (decision.allowed || target.ownerId !== undefined || principal.userId === undefined) {
+    return decision;
+  }
   const asOwner = decide(principal, key, { ...target, ownerId: principal.userId });
   return asOwner.allowed ? { ...asOwner, scope: "own" } : decision;
 }

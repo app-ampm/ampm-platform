@@ -36,6 +36,16 @@ describe("decideBeforeRead", () => {
     });
   });
 
+  it("§5 legend line 136, §5.13 line 293: an owner the caller names is decided as named", () => {
+    // "(o)" reaches records the user created or owns: Bob's task is not FA's, whoever asks.
+    expect(
+      decideBeforeRead(fa, "tasks.tasks.update", { projectId: "p-1", ownerId: "u-bob" }),
+    ).toMatchObject({ allowed: false, reason: "not_owner" });
+    expect(
+      decideBeforeRead(fa, "tasks.tasks.update", { projectId: "p-1", ownerId: "u-fa" }),
+    ).toMatchObject({ allowed: true, scope: "own" });
+  });
+
   it("§1 line 52, §5.13 line 296: assigned and unscoped grants decide as decide() does", () => {
     expect(decideBeforeRead(pm, "tasks.incidents.read", { projectId: "p-9" })).toMatchObject({
       allowed: false,
