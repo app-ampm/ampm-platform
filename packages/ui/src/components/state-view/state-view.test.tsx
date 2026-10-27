@@ -59,6 +59,14 @@ describe("state views", () => {
       );
     });
 
+    // Announcing (ui.md) a surface hidden from the tree makes VoiceOver speak what it cannot reach.
+    it("keeps a hidden error state and a hidden offline state silent", async () => {
+      await renderWithProviders(<ErrorState accessibilityElementsHidden />);
+      await renderWithProviders(<OfflineState importantForAccessibility="no-hide-descendants" />);
+      await renderWithProviders(<ErrorState aria-hidden />);
+      expect(announce).not.toHaveBeenCalled();
+    });
+
     it("keeps the empty state silent", async () => {
       await renderWithProviders(
         <EmptyState title="No requests yet" description="They appear here." />,

@@ -7,6 +7,8 @@ export const UI_VERSION = "0.2.0";
 export { cn } from "./lib/cn";
 export type { ClassValue } from "./lib/cn";
 export { variants } from "./lib/variants";
+export { isHiddenFromAccessibility } from "./lib/accessibility-hidden";
+export type { AccessibilityHiding } from "./lib/accessibility-hidden";
 export type { VariantProps } from "./lib/variants";
 
 export { ThemeProvider, useTheme } from "./theme/theme-provider";
