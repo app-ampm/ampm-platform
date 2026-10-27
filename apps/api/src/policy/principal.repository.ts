@@ -36,7 +36,8 @@ export class PrismaPrincipalRepository extends PrincipalRepository {
     const user = await this.prisma.user.findFirst({
       where: { identitySubject: subject, deletedAt: null },
       include: {
-        roles: { include: { role: true } },
+        // A soft-deleted role grants nothing (architecture §8: deleted rows are excluded from every read).
+        roles: { where: { role: { deletedAt: null } }, include: { role: true } },
         memberships: { where: { status: "active", deletedAt: null } },
       },
     });

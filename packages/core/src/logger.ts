@@ -28,17 +28,47 @@ export type LogSink = (entry: LogEntry) => void;
 
 const LEVEL_ORDER: Record<LogLevel, number> = { debug: 10, info: 20, warn: 30, error: 40 };
 
-const REDACTED_KEYS =
-  /^(authorization|cookie|set-cookie|password|password_hash|token|access_token|refresh_token|id_token|secret|api_key|apikey|mfa_secret_ref|token_hash|otp|email|phone|phone_number|ip_address|identity_subject)$/i;
+// Compared after normalisation, so the column name (token_hash), the Prisma field (tokenHash) and the
+// header (Set-Cookie) of the same value are all caught.
+const REDACTED_KEYS: ReadonlySet<string> = new Set([
+  "authorization",
+  "cookie",
+  "setcookie",
+  "password",
+  "passwordhash",
+  "token",
+  "accesstoken",
+  "refreshtoken",
+  "idtoken",
+  "secret",
+  "apikey",
+  "mfasecretref",
+  "tokenhash",
+  "otp",
+  "email",
+  "phone",
+  "phonenumber",
+  "ipaddress",
+  "identitysubject",
+]);
 
-/** Replaces the values of keys that must never be logged, at any depth. */
+const normaliseKey = (key: string): string => key.toLowerCase().replace(/[^a-z0-9]/g, "");
+
+/**
+ * Replaces the values of keys that must never be logged or audited, at any depth, whatever their
+ * case or separator.
+ *
+ * @example
+ * redact({ tokenHash: "abc", nested: { email: "a@b.c", ok: 1 } });
+ * // { tokenHash: "[redacted]", nested: { email: "[redacted]", ok: 1 } }
+ */
 export function redact(value: unknown, depth = 0): unknown {
   if (depth > 6) return "[depth]";
   if (Array.isArray(value)) return value.map((item) => redact(item, depth + 1));
   if (value && typeof value === "object" && !(value instanceof Date)) {
     const out: Record<string, unknown> = {};
     for (const [key, item] of Object.entries(value as Record<string, unknown>)) {
-      out[key] = REDACTED_KEYS.test(key) ? "[redacted]" : redact(item, depth + 1);
+      out[key] = REDACTED_KEYS.has(normaliseKey(key)) ? "[redacted]" : redact(item, depth + 1);
     }
     return out;
   }

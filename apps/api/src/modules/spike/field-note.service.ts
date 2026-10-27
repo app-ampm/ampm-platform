@@ -6,6 +6,18 @@ import {
   type FieldNoteUpsertResult,
   type FieldNoteView,
 } from "@ampm/core";
+import { decide, type PolicyPrincipal } from "@ampm/policy";
+
+import { isInScope, type RecordScope } from "../../db/scoping.js";
+import { refusalFor } from "../../policy/refusal.js";
+
+// The route's guard checks the create key; changing a note that exists needs this one as well.
+const UPDATE = "tasks.incidents.update";
+
+/** Who wrote, for the replay key: the user, or the principal type of a job without one. */
+function writerOf(writer: PolicyPrincipal): string {
+  return writer.userId ?? writer.type;
+}
 
 /**
  * SPIKE STAND-IN — sprint 2 offline spike (docs/review/build-plan.md §11.4). The server half of the
@@ -15,36 +27,61 @@ import {
  * offline.md). Production replaces the Map with a project-scoped Prisma repository and an
  * idempotency-keys table and adds the conflict log; the rules below move to it unchanged.
  *
- * Key = (projectId, record id, baseVersion). This recognises a single device replaying its own
- * queue, which is what the wedding-day reconnection needs. Two devices editing the same record from
- * the same base would share a key; production narrows the key with a per-write client id and keeps
- * the losing free text in the conflict log — out of scope for this thin spike.
+ * Key = (projectId, record id, baseVersion, writer). This recognises a single device replaying
+ * its own queue, which is what the wedding-day reconnection needs; another writer's change from
+ * the same base is a write of its own, decided and refused or conflicted, never answered as a
+ * replay of someone else's (offline.md: a rejected change is never dropped silently). Two devices
+ * of the same writer editing from the same base would still share a key; production narrows the
+ * key with a per-write client id and keeps the losing free text in the conflict log (out of scope).
  */
 @Injectable()
 export class FieldNoteService {
   private readonly notes = new Map<string, FieldNoteView>();
   private readonly applied = new Map<string, FieldNoteView>();
 
-  /** Reads the app refreshes into its local store, oldest first by the device's own timestamp. */
-  list(projectId: string): FieldNoteList {
+  /**
+   * Reads the app refreshes into its local store, oldest first by the device's own timestamp, inside
+   * the request's scope (step 5): a note the scope does not reach is never returned. A wedding the
+   * principal may not reach never gets here: PermissionGuard answers it first with the 404 of a
+   * missing record (test-cases.md AC-12.2, architecture §6).
+   *
+   * @example
+   * this.notes.list(params.projectId, recordScope(principal, access.scope)); // { items, nextCursor }
+   */
+  list(projectId: string, scope: RecordScope): FieldNoteList {
     const items = [...this.notes.values()]
-      .filter((note) => note.projectId === projectId)
+      .filter((note) => note.projectId === projectId && isInScope(note, scope))
       .sort((a, b) => a.clientTimestamp.localeCompare(b.clientTimestamp));
     return { items, nextCursor: null };
   }
 
   /**
-   * One offline-capable write. A replay of the same (id, baseVersion) returns the stored record with
-   * no second apply; an in-order write applies and bumps the version; a stale base loses to the
-   * server and comes back as a conflict, surfaced to the user and never dropped (offline.md).
+   * One offline-capable write. The same writer's replay of the same (id, baseVersion) returns the
+   * stored record with no second apply; an in-order write applies and bumps the version; a stale
+   * base loses to the server and comes back as a conflict, surfaced to the user and never dropped
+   * (offline.md). A write to a note that exists needs the writer to hold the update key
+   * (permission-matrix §5.13 line 296: CD, VC and RG create and read incidents only): without it,
+   * a 403, or the 404 of a missing record for a writer who may not see the notes, and nothing
+   * changes.
+   *
+   * @example
+   * this.notes.upsert(params.projectId, body, toPolicyPrincipal(principal));
    */
-  upsert(projectId: string, input: FieldNoteUpsert): FieldNoteUpsertResult {
-    const idempotencyKey = `${projectId}:${input.id}:${input.baseVersion}`;
+  upsert(
+    projectId: string,
+    input: FieldNoteUpsert,
+    writer: PolicyPrincipal,
+  ): FieldNoteUpsertResult {
+    const idempotencyKey = `${projectId}:${input.id}:${input.baseVersion}:${writerOf(writer)}`;
     const replayed = this.applied.get(idempotencyKey);
     if (replayed) return fieldNoteUpsertResult.parse({ outcome: "duplicate", note: replayed });
 
     const recordKey = `${projectId}:${input.id}`;
-    const result = this.resolve(projectId, input, this.notes.get(recordKey));
+    const current = this.notes.get(recordKey);
+    if (current && !decide(writer, UPDATE, { projectId }).allowed) {
+      throw refusalFor(writer, UPDATE, projectId);
+    }
+    const result = this.resolve(projectId, input, current);
 
     this.notes.set(recordKey, result.note);
     this.applied.set(idempotencyKey, result.note);

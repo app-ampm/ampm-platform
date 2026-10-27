@@ -4,7 +4,7 @@
   "description": "AMPM wedding platform: public website, client and team apps, API. Design package in docs/, code in apps/ and packages/.",
   "packageManager": "pnpm@12.15.0",
   "engines": {
-    "node": ">=22.13.0"
+    "node": ">=24.0.0"
   },
   "scripts": {
     "dev": "turbo run dev",
@@ -12,7 +12,8 @@
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
-    "check": "turbo run lint typecheck test",
+    "check": "turbo run lint typecheck test && pnpm run test:tools",
+    "test:tools": "python3 docs/tools/redact_secrets.py --self-test && bash docs/tools/memory_hook_test.sh && bash docs/tools/setup_memory_test.sh",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "tokens:build": "pnpm --filter @ampm/tokens build",

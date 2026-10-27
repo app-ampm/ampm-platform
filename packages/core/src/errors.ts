@@ -9,6 +9,10 @@ export const ERROR_CODES = {
   forbidden: 403,
   not_found: 404,
   conflict: 409,
+  /** The request body is over the API's limit (the body parser refuses it before any handler). */
+  payload_too_large: 413,
+  /** The request body's media type or charset is not one the API reads. */
+  unsupported_media_type: 415,
   rate_limited: 429,
   internal: 500,
   unavailable: 503,
@@ -80,6 +84,10 @@ export const errors = {
   /** The same answer for a missing record and a record the principal may not see. */
   notFound: (message = "Not found") => new AppError("not_found", message),
   conflict: (message: string) => new AppError("conflict", message),
+  payloadTooLarge: (message = "Request body too large") =>
+    new AppError("payload_too_large", message),
+  unsupportedMediaType: (message = "Unsupported media type") =>
+    new AppError("unsupported_media_type", message),
   rateLimited: (message = "Too many requests") => new AppError("rate_limited", message),
   internal: (message = "Something went wrong") => new AppError("internal", message),
   unavailable: (message = "Service unavailable") => new AppError("unavailable", message),
