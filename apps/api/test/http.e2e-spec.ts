@@ -11,6 +11,31 @@ const NOTES = `/spike/projects/${PROJECT}/field-notes`;
 const OVERSIZED = JSON.stringify({ body: "x".repeat(200 * 1024) });
 // The seeded wedding (prisma/seed.ts), of which the project manager is a member.
 const SEEDED_NOTES = "/spike/projects/0192f3a0-7d3e-7b1a-9c2f-0000000000a1/field-notes";
+const JSON_TYPE = "application/json";
+const MALFORMED = { code: "validation_failed", message: "Malformed request body" };
+const PARSER_REFUSALS = [
+  {
+    refusal: "a truncated body",
+    type: JSON_TYPE,
+    body: '{"body": ',
+    status: 400,
+    error: MALFORMED,
+  },
+  {
+    refusal: "a bare string",
+    type: JSON_TYPE,
+    body: '"just a string"',
+    status: 400,
+    error: MALFORMED,
+  },
+  {
+    refusal: "a charset the API does not read",
+    type: `${JSON_TYPE}; charset=iso-8859-1`,
+    body: "{}",
+    status: 415,
+    error: { code: "unsupported_media_type", message: "Unsupported media type" },
+  },
+];
 
 /** What every request meets before any guard: the request id, the body parser, the headers. */
 describe("the HTTP edge (e2e)", () => {
@@ -36,15 +61,18 @@ describe("the HTTP edge (e2e)", () => {
     });
   });
 
-  it("answers a malformed JSON body as validation_failed", async () => {
-    // Nest turns the parser's SyntaxError into a BadRequestException carrying the parser's message.
-    const response = await request(app.getHttpServer())
-      .post(NOTES)
-      .set("content-type", "application/json")
-      .send('{"body": ')
-      .expect(400);
-    expect(response.body.error.code).toBe("validation_failed");
-  });
+  // The parser's own text describes the parser, and V8's quotes the body ('"just a string"').
+  it.each(PARSER_REFUSALS)(
+    "answers $refusal with the parser's fixed wording only",
+    async ({ type, body, status, error }) => {
+      const response = await request(app.getHttpServer())
+        .post(NOTES)
+        .set("content-type", type)
+        .send(body)
+        .expect(status);
+      expect(response.body).toEqual({ error });
+    },
+  );
 
   it("does not name the framework in its headers", async () => {
     const response = await request(app.getHttpServer()).get("/health").expect(200);

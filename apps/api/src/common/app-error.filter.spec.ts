@@ -1,9 +1,9 @@
 import { HttpException, NotFoundException } from "@nestjs/common";
-import { errors } from "@ampm/core";
+import { errors, isAppError } from "@ampm/core";
 import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
-import { AppErrorFilter } from "./app-error.filter.js";
+import { AppErrorFilter, answerParserRefusal } from "./app-error.filter.js";
 import type { AppLogger } from "./logger.service.js";
 
 function run(exception: unknown) {
@@ -67,6 +67,36 @@ describe("AppErrorFilter", () => {
     const charset = run(parserError('unsupported charset "UTF-7"', 415, "charset.unsupported"));
     expect(charset.status).toBe(415);
     expect(charset.body.error.code).toBe("unsupported_media_type");
+  });
+
+  it("answers a parser refusal before Nest rewrites it, by its type and never with its text", () => {
+    // As body-parser raises invalid JSON: V8's SyntaxError, quoting the body, with the http-errors
+    // fields. Nest would turn a SyntaxError into a BadRequestException carrying that message.
+    const quoted = Object.assign(new SyntaxError(`Unexpected token '"', ""secret"" is not JSON`), {
+      status: 400,
+      statusCode: 400,
+      type: "entity.parse.failed",
+      body: '"secret"',
+    });
+    const passed: unknown[] = [];
+    answerParserRefusal(quoted, {} as never, {} as never, (error?: unknown) => passed.push(error));
+    expect(passed).toHaveLength(1);
+    expect(isAppError(passed[0]) && passed[0].toEnvelope()).toEqual({
+      error: { code: "validation_failed", message: "Malformed request body" },
+    });
+
+    const tooLarge = parserError("request entity too large", 413, "entity.too.large");
+    answerParserRefusal(tooLarge, {} as never, {} as never, (error?: unknown) =>
+      passed.push(error),
+    );
+    expect(isAppError(passed[1]) && passed[1].status).toBe(413);
+
+    // Anything that is not a client error passes on unchanged, for the filter to log as internal.
+    const unexpected = new Error("stream encoding should not be set");
+    answerParserRefusal(unexpected, {} as never, {} as never, (error?: unknown) =>
+      passed.push(error),
+    );
+    expect(passed[2]).toBe(unexpected);
   });
 
   it("maps framework exceptions by status and hides unexpected errors", () => {
