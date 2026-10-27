@@ -37,8 +37,14 @@ function statusesOf(entity: string): readonly string[] {
   return STATUS_MACHINES[entity]?.statuses ?? [];
 }
 
+/** "previous status" restores what a hold saved, and a terminal status is never put on hold. */
+function restorable(entity: string): readonly string[] {
+  const terminal = STATUS_MACHINES[entity]?.terminal ?? [];
+  return statusesOf(entity).filter((status) => !terminal.includes(status));
+}
+
 function covers(row: GoldenTransition, from: string, to: string, kind?: string): boolean {
-  const reaches = row.to === "previous" || row.to.includes(to);
+  const reaches = row.to === "previous" ? restorable(row.entity).includes(to) : row.to.includes(to);
   return row.from.includes(from) && reaches && (row.kind === undefined || row.kind === kind);
 }
 
@@ -124,13 +130,13 @@ function expectKind({ row, from, to, context }: Move, rows: readonly GoldenTrans
 }
 
 /**
- * Asserts every move one row covers: each From to each To but itself, "previous" to every status.
+ * Asserts every move one row covers: each From to each To but itself, "previous" to every non-terminal status.
  *
  * @example
  * it("§7 line 422", () => expectRowMoves(row, TRANSITION_ROWS));
  */
 export function expectRowMoves(row: GoldenTransition, rows: readonly GoldenTransition[]): void {
-  const targets = row.to === "previous" ? statusesOf(row.entity) : row.to;
+  const targets = row.to === "previous" ? restorable(row.entity) : row.to;
   for (const from of row.from) {
     for (const to of targets.filter((status) => status !== from)) {
       const context: TransitionContext = {

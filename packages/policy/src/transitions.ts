@@ -14,7 +14,7 @@ import { STATUS_MACHINES, type StatusMachine } from "./statuses";
 export interface TransitionContext {
   /** The record's wedding: an assigned mover, "PM (a)", or a client must be a member of it. */
   readonly projectId?: string | undefined;
-  /** The record's client account, for a record that has no wedding yet (§7 line 400). */
+  /** The record's client account, for a record that has no wedding yet (§7 line 400); ignored once projectId is set. */
   readonly accountId?: string | undefined;
   /** The record's people, compared with the principal's userId for "The assignee" and the rest. */
   readonly assigneeId?: string | undefined;
@@ -40,10 +40,19 @@ function actorId(context: TransitionContext, actor: Actor): string | undefined {
   }
 }
 
-function reaches(rule: Transition, from: string, to: string, context: TransitionContext): boolean {
+function reaches(
+  rule: Transition,
+  machine: StatusMachine,
+  from: string,
+  to: string,
+  context: TransitionContext,
+): boolean {
   if (!rule.from.includes(from)) return false;
   if (rule.kind !== null && rule.kind !== context.kind) return false;
-  return rule.restore ? context.previousStatus === to : rule.to.includes(to);
+  if (!rule.restore) return rule.to.includes(to);
+  // A terminal status is never put on hold, so a saved one is bad data and must not skip the row
+  // that reaches it ("closure → closed" needs the checklist and FA's approval, §7 line 420).
+  return context.previousStatus === to && !machine.terminal.includes(to);
 }
 
 /**
@@ -69,13 +78,14 @@ function isMember(principal: PolicyPrincipal, context: TransitionContext): boole
   );
 }
 
-/** §1 line 52: a client, guest or demo principal reaches only its own wedding or account. */
+/**
+ * §1 line 52: a client, guest or demo principal reaches only its own wedding or account. A record
+ * on a wedding is decided by membership alone; the account counts only before there is a wedding.
+ */
 function ownsRecord(principal: PolicyPrincipal, context: TransitionContext): boolean {
-  const { accountId } = context;
-  return (
-    isMember(principal, context) ||
-    (accountId !== undefined && principal.accountIds?.includes(accountId) === true)
-  );
+  const { projectId, accountId } = context;
+  if (projectId !== undefined) return isMember(principal, context);
+  return accountId !== undefined && principal.accountIds?.includes(accountId) === true;
 }
 
 function moves(
@@ -121,7 +131,7 @@ export function canTransition(
   const rule = MATRIX.transitions.find(
     (candidate) =>
       candidate.entity === entity &&
-      reaches(candidate, from, to, context) &&
+      reaches(candidate, machine, from, to, context) &&
       moves(candidate, machine, principal, context),
   );
   return rule ?? null;

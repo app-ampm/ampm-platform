@@ -35,9 +35,15 @@ function statusesOf(entity: string): readonly string[] {
   return STATUS_MACHINES[entity]?.statuses ?? [];
 }
 
+/** "previous status" restores what a hold saved, and a terminal status is never put on hold. */
+function restorable(entity: string): readonly string[] {
+  const terminal = STATUS_MACHINES[entity]?.terminal ?? [];
+  return statusesOf(entity).filter((status) => !terminal.includes(status));
+}
+
 /** The moves a rule covers; staying in a status is no move ("derived" lists every readiness state). */
 function movesOf(rule: Transition): [string, string][] {
-  const targets = rule.restore ? statusesOf(rule.entity) : rule.to;
+  const targets = rule.restore ? restorable(rule.entity) : rule.to;
   return rule.from.flatMap((from) =>
     targets.filter((to) => to !== from).map((to): [string, string] => [from, to]),
   );
@@ -70,7 +76,9 @@ function rulesFor(rule: Transition, from: string, to: string): Transition[] {
     (other) =>
       other.entity === rule.entity &&
       other.from.includes(from) &&
-      (other.restore ? rule.restore : other.to.includes(to)) &&
+      (other.restore
+        ? rule.restore && restorable(other.entity).includes(to)
+        : other.to.includes(to)) &&
       (other.kind === null || other.kind === rule.kind),
   );
 }

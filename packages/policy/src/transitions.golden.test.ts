@@ -45,6 +45,16 @@ describe("§7 wedding project", () => {
     ).not.toBeNull();
   });
 
+  it("§7 lines 420-422: a hold never restores a wedding to closed, whatever status was saved", () => {
+    const savedClosed = { ...onProject, previousStatus: "closed" };
+    expect(canTransition(staff(["PM"]), "wedding_project", "on_hold", "closed", savedClosed)).toBe(
+      null,
+    );
+    expect(canTransition(staff(["SA"]), "wedding_project", "on_hold", "closed", savedClosed)).toBe(
+      null,
+    );
+  });
+
   it("§7 line 422: only the Super Admin reopens a closed wedding", () => {
     expect(canTransition(staff(["SA"]), "wedding_project", "closed", "closure")).not.toBeNull();
     expect(

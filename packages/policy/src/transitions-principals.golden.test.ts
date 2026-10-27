@@ -103,4 +103,25 @@ describe("§7 'Either CR' means the representatives of that wedding or account",
       null,
     );
   });
+
+  it("§1 line 52: an account opens no wedding record its holder is not a member of", () => {
+    const accountClient: PolicyPrincipal = { type: "client", userId: "c-1", accountIds: ["a-1"] };
+    const weddingOfAccount = { projectId: "p-9", accountId: "a-1" };
+    expect(
+      canTransition(accountClient, "approval", "submitted", "approved", weddingOfAccount),
+    ).toBeNull();
+    expect(
+      canTransition(
+        accountClient,
+        "vendor_assignment",
+        "shortlisted",
+        "selected",
+        weddingOfAccount,
+      ),
+    ).toBeNull();
+    const member: PolicyPrincipal = { ...accountClient, projectIds: ["p-9"] };
+    expect(
+      canTransition(member, "approval", "submitted", "approved", weddingOfAccount),
+    ).not.toBeNull();
+  });
 });
