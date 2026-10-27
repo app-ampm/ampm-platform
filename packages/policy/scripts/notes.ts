@@ -186,8 +186,32 @@ export const REPORT_EXCLUSIONS: Readonly<Record<string, ReportExclusion>> = {
 };
 
 /**
+ * Cells that update or delete records their own read does not reach, as the document writes them
+ * on purpose (POL-19). The generator stops on any other such cell: an edit wider than the read,
+ * an assigned edit beside an own read or the reverse, or an edit with no read at all.
+ *
+ * @example
+ * EDITS_BEYOND_READ.includes("U (a) mark delivered"); // true
+ */
+export const EDITS_BEYOND_READ: readonly string[] = [
+  // §5.9 line 248 (PM, CD, VC, RG, HL): their own internal comments, written through C (a).
+  "CR (a) UD (o)",
+  // §5.6 line 208: function status; the function itself is read through its row (line 203).
+  "U",
+  "U (a)",
+  // §5.8 line 238: HL marks a deliverable delivered on the assignment it reads (line 235).
+  "U (a) mark delivered",
+  // §5.15 line 311: each role completes its own item of the closure checklist.
+  "U vendor completion",
+  "U (a) departures, lost and found",
+  "U final accounts",
+  // §6 line 354: the representatives record the vendor decision on the options of line 353.
+  "U (either representative)",
+];
+
+/**
  * Cells whose letters the document leaves ambiguous, with the reading adopted until AMPM confirms.
- * The generator stops on any other cell that edits wider than it reads.
+ * The generator stops on any other cell that edits wider than it reads (EDITS_BEYOND_READ).
  *
  * @example
  * lookup(READINGS, "CR (o) UD"); // "CR (o) UD (o)"

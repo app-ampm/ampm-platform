@@ -3,13 +3,15 @@
  * semicolons outside parentheses; a segment is runs of action letters, each with an optional (a) or
  * (o), followed by a note. A letterless segment continues the note before it, unless it is a §6 verb
  * ("comment"). Each note is looked up in scripts/notes.ts and becomes the grant's conditions; an
- * unknown note, a duplicate action or a cell that edits wider than it reads stops the generator.
+ * unknown note, a duplicate action or a cell that edits records its read does not reach stops the
+ * generator, unless notes.ts confirms the cell.
  */
 import type { Condition } from "../src/conditions.ts";
 import type { Grant } from "../src/matrix.ts";
 import { ACTION_LETTERS, type Action, type Scope } from "../src/roles.ts";
 import { lookup } from "./lookup.ts";
 import {
+  EDITS_BEYOND_READ,
   NO_GRANT_CELLS,
   OTHER_NOTES,
   OTHER_PREFIXES,
@@ -126,13 +128,25 @@ function collect(body: string, kind: CellKind, cell: string): (Group | Grant)[] 
   return parts;
 }
 
-function checkCell(grants: readonly Grant[], cell: string): void {
+/** An edit at this scope reaches records a read at that scope does not; assigned and own differ. */
+function reachesBeyond(edit: Scope, read: Scope): boolean {
+  return read !== "all" && edit !== read;
+}
+
+/** Each action once, and no update or delete beyond the cell's read unless notes.ts says so. */
+function checkCell(grants: readonly Grant[], reading: string, cell: string): void {
   const actions = grants.flatMap((grant) => grant.actions);
   const twice = actions.find((action, index) => actions.indexOf(action) !== index);
   if (twice) throw new Error(`"${twice}" twice in the cell "${cell}"`);
-  const read = grants.find((grant) => grant.actions.includes("read"));
-  const edit = grants.find((grant) => grant.actions.some((a) => a === "update" || a === "delete"));
-  if (read && edit && read.scope !== "all" && edit.scope === "all") {
+  if (EDITS_BEYOND_READ.includes(reading)) return;
+  const reads = grants.filter((grant) => grant.actions.includes("read"));
+  const edits = grants.filter((grant) =>
+    grant.actions.some((a) => a === "update" || a === "delete"),
+  );
+  if (edits.length > 0 && reads.length === 0) {
+    throw new Error(`the cell "${cell}" edits records it does not read: confirm it in notes.ts`);
+  }
+  if (edits.some((edit) => reads.some((read) => reachesBeyond(edit.scope, read.scope)))) {
     throw new Error(`the cell "${cell}" edits wider than its read: add a reading to notes.ts`);
   }
 }
@@ -162,6 +176,6 @@ export function parseCell(cell: string, kind: CellKind): Grant[] {
       conditions,
     }));
   });
-  checkCell(grants, cell);
+  checkCell(grants, reading, cell);
   return grants;
 }

@@ -82,6 +82,34 @@ describe("parseCell, §5 staff cells", () => {
     expect(() => parseCell("R (o) U", "staff")).toThrow(/wider than its read/);
     expect(() => parseCell("RR", "staff")).toThrow(/twice/);
   });
+
+  it("POL-19: refuses every edit that reaches records the cell does not read", () => {
+    // Each probe edits records it cannot read: a later grant, an assigned against an own read, or
+    // no read at all.
+    expect(() => parseCell("RU (o), D", "staff")).toThrow(/wider than its read/);
+    expect(() => parseCell("CR (o) U (a)", "staff")).toThrow(/wider than its read/);
+    expect(() => parseCell("R (o) D (a)", "staff")).toThrow(/wider than its read/);
+    expect(() => parseCell("R (a) U (o)", "staff")).toThrow(/wider than its read/);
+    expect(() => parseCell("C (o) UD", "staff")).toThrow(/does not read/);
+    expect(() => parseCell("UD", "staff")).toThrow(/does not read/);
+    expect(() => parseCell("U", "others")).not.toThrow();
+    expect(() => parseCell("D", "others")).toThrow(/does not read/);
+  });
+
+  it("§5.6 line 208, §5.8 line 238, §5.9 line 248, §5.15 line 311: the document's own edit-beyond-read cells parse", () => {
+    for (const cell of [
+      "U",
+      "U (a)",
+      "U (a) mark delivered",
+      "U vendor completion",
+      "U (a) departures, lost and found",
+      "U final accounts",
+      "CR (a) UD (o)",
+    ]) {
+      expect(() => parseCell(cell, "staff"), cell).not.toThrow();
+    }
+    expect(() => parseCell("U (either representative)", "others")).not.toThrow();
+  });
 });
 
 describe("parseCell, §6 client, guest and demo cells", () => {
