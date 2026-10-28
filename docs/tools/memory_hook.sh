@@ -15,9 +15,18 @@
 # copy; a failed redaction skips the mine. Drawers an earlier mine filed under the live transcript path
 # are left as they are (no longer refreshed): deleting memory is the developer's decision, not a hook's.
 #
-# MemPalace's own global hooks, when installed, file mid-session saves under a machine-wide wing. These
-# hooks always name the wing, so every session run in this folder or in one of its worktrees can be found
-# with  mempalace search "..." --wing ampm. Best effort throughout: a missing tool never fails the session.
+# MemPalace's own global hooks in ~/.claude/settings.json run for these sessions too. They mine the transcript into
+# the project wing MemPalace derives from the cwd the transcript records (ampm for this folder and its worktrees;
+# their diary checkpoints go to wing_ampm), and through docs/tools/mempalace_global_hook.sh (installed by
+# install_global_memory_hooks.py) they read a --snapshot-only copy at this same snapshot path, never the live
+# transcript. Where that wrapper is wired for the event (install_global_memory_hooks.py --wired), this hook still
+# masks the transcript in place and writes the snapshot, but leaves the mine to MemPalace's hook: two mines of one
+# snapshot at once made MemPalace's diary checkpoint fail ("palace is held"), and its ingest files the same snapshot
+# into the same wing. Elsewhere this hook mines, naming the wing, so every session run in this folder or in one of
+# its worktrees can be found with  mempalace search "..." --wing ampm. The redactor holds an exclusive lock on the
+# transcript while it masks it here and the global hooks a shared one while they read it. session-start warns in
+# the context while the global hooks are not fully masked (install_global_memory_hooks.py --check fails): an
+# installed copy older than this checkout, say. Best effort throughout: a missing tool never fails the session.
 set -u
 EVENT="${1:-}"
 WING="${AMPM_MEMORY_WING:-ampm}"
@@ -61,12 +70,20 @@ palace_python() {  # the interpreter MemPalace runs under (its command's shebang
   [ -n "$py" ] && [ -x "$py" ] && printf '%s' "$py"
 }
 
+global_hook_mines() {  # MemPalace's own hook for this event mines the masked snapshot, through the installed wrapper
+  python3 -I "$PROJECT/docs/tools/install_global_memory_hooks.py" --wired "$EVENT" >/dev/null 2>&1
+}
+
 mine_transcript() {  # mines one transcript into the wing; MemPalace skips a file it has already filed unchanged
   command -v mempalace >/dev/null 2>&1 || { log "mempalace is not installed; nothing mined"; return 0; }
   # CLAUDE.md: never file secrets or tokens. The miner gets the redacted snapshot, never the live file; a
   # snapshot that changed makes the miner purge its earlier drawers and file clean ones in their place.
   local snapshot; snapshot="$STATE/redacted/$(basename "$1")"
   redact_transcript "$1" "$snapshot" || return 0
+  if global_hook_mines; then
+    log "$(basename "$1") masked; MemPalace's global hook mines its snapshot (wing from the session folder), not this hook"
+    return 0
+  fi
   if mempalace mine "$snapshot" --mode convos --wing "$WING" >> "$LOG" 2>&1; then
     log "mined $(basename "$1") into wing $WING"
   else
@@ -98,6 +115,11 @@ case "$EVENT" in
     if command -v mempalace >/dev/null 2>&1; then
       wing=$(mempalace status 2>/dev/null | awk -v w="  WING: $WING" '$0==w{f=1;next} /WING:/{f=0} f && /ROOM:/{d+=$3; r=r (r?", ":"") $2 " " $3} END{if(d) printf "%d drawers (%s)", d, r; else printf "empty so far"}')
       ctx+="- MemPalace wing \"$WING\": ${wing:-unavailable}. Every session here is mined into it. Before answering about earlier sessions or past decisions, search it and quote what it returns: mempalace search \"<words>\" --wing $WING (MCP: palace_query FIND \"<words>\" IN $WING LIMIT 5); mempalace wake-up --wing $WING gives the short briefing."$'\n'
+      if ! masked=$(python3 -I "$PROJECT/docs/tools/install_global_memory_hooks.py" --check 2>&1); then
+        masked=$(printf '%s\n' "$masked" | grep -v -e ': matches the repository$' -e ': runs the masked wrapper$' \
+          -e ': no MemPalace hook$' | head -4 | sed "s#$HOME#~#g" | tr '\n' ';' | sed 's/;$//; s/;/; /g')
+        ctx+="- WARNING: MemPalace's global hooks (every project's sessions) are not fully masked on this machine: ${masked:-see install_global_memory_hooks.py --check}. Tell the developer; python3 docs/tools/install_global_memory_hooks.py, run from the checkout whose redactor should apply (normally main), fixes it."$'\n'
+      fi
     else
       ctx+="- MemPalace is not installed on this machine (bash docs/tools/setup_memory.sh installs it); session memory is off."$'\n'
     fi
