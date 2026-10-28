@@ -9,6 +9,7 @@ import { ConfigModule } from "./modules/admin/config/config.module.js";
 import { NotificationModule } from "./modules/admin/notification/notification.module.js";
 import { PermissionSetsModule } from "./modules/admin/permission-sets/permission-sets.module.js";
 import { RolesModule } from "./modules/admin/roles/roles.module.js";
+import { StaffUsersModule } from "./modules/admin/staff-users/staff-users.module.js";
 import { HealthModule } from "./modules/health/health.module.js";
 import { SpikeModule } from "./modules/spike/spike.module.js";
 import { AuditModule } from "./policy/audit.module.js";
@@ -29,6 +30,7 @@ import { PolicyModule } from "./policy/policy.module.js";
     RolesModule,
     PermissionSetsModule,
     AuditLogModule,
+    StaffUsersModule,
     SpikeModule,
   ],
 })

@@ -67,6 +67,24 @@ export type {
 export { healthResponse } from "./health";
 export type { HealthResponse } from "./health";
 export {
+  staffUserCreateRequest,
+  staffUserPage,
+  staffUserQuery,
+  staffUserStatusRequest,
+  staffUserUpdateRequest,
+  staffUserView,
+  userStatus,
+} from "./staff-users";
+export type {
+  StaffUserCreateRequest,
+  StaffUserPage,
+  StaffUserQuery,
+  StaffUserStatusRequest,
+  StaffUserUpdateRequest,
+  StaffUserView,
+  UserStatus,
+} from "./staff-users";
+export {
   clientSide,
   entitlementModule,
   entitlements,
