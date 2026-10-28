@@ -1,5 +1,18 @@
 export { cursorQuery, isoDateTime, page, uuid } from "./common";
 export type { CursorQuery } from "./common";
+export {
+  CONFIG_REGISTRY,
+  featureFlags,
+  notificationChannelDefaults,
+  sessionIdleTimeouts,
+} from "./config";
+export type {
+  ConfigKey,
+  ConfigValue,
+  FeatureFlags,
+  NotificationChannelDefaults,
+  SessionIdleTimeouts,
+} from "./config";
 export { healthResponse } from "./health";
 export type { HealthResponse } from "./health";
 export {
@@ -25,6 +38,18 @@ export type {
   RequestType,
   StaffRoleCode,
 } from "./identity";
+export {
+  notificationChannel,
+  notificationStatus,
+  notificationView,
+  recipientType,
+} from "./notification";
+export type {
+  NotificationChannel,
+  NotificationStatus,
+  NotificationView,
+  RecipientType,
+} from "./notification";
 export {
   fieldNoteList,
   fieldNoteOutcome,

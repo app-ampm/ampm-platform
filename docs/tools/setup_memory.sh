@@ -1,11 +1,13 @@
 #!/bin/bash
 # One-time setup per machine for session memory (MemPalace) and the knowledge graph (graphify). Safe to re-run.
-# Installs both CLIs with uv, then backfills the project's memory wing with every Claude Code transcript of this
-# folder (worktrees included) and with the design docs. Like the hooks (docs/tools/memory_hook.sh), it never
-# mines a live transcript: each one is masked by redact_secrets.py, which writes a redacted snapshot to
-# ~/.mempalace/hook_state/redacted (the hooks' paths), and only those snapshots are mined; drawers an earlier
-# backfill filed under the live paths are left as they are. The memory notes beside the transcripts are mined
-# as before. The project files that use them are committed:
+# Installs both CLIs with uv, points MemPalace's global hooks (every project's sessions) at the credential-masking
+# wrapper (install_global_memory_hooks.py), then backfills the project's memory wing with every Claude Code
+# transcript of this folder (worktrees included) and with the design docs. Like the hooks
+# (docs/tools/memory_hook.sh), it never mines a live transcript: each one is masked by redact_secrets.py, which
+# writes a redacted snapshot to ~/.mempalace/hook_state/redacted (the hooks' paths), and only those snapshots are
+# mined, one by one, since that folder also holds the global hooks' snapshots of other projects; drawers an
+# earlier backfill filed under the live paths are left as they are. The memory notes beside the transcripts are
+# mined as before. The project files that use them are committed:
 # .claude/settings.json (hooks), .mcp.json (MCP servers), .claude/skills/graphify (the /graphify skill),
 # CLAUDE.md (rules) and graphify-out/ (the graph itself).
 set -e
@@ -19,17 +21,24 @@ uv tool install "mempalace==$MEMPALACE_VERSION"
 uv tool install "graphifyy[pdf,office,mcp,leiden]==$GRAPHIFY_VERSION"
 echo "mempalace $(mempalace --version 2>&1 | tail -1) / $(graphify --version 2>&1 | tail -1) installed under ~/.local/bin"
 
+# MemPalace's own Stop, PreCompact and SessionEnd hooks in ~/.claude/settings.json run for every project and mined
+# the live transcript; the installer makes them mine a masked snapshot (it rewrites MemPalace's older shell hooks too).
+LEGACY_HOOKS=no; grep -q "mempal_save_hook.sh" "$HOME/.claude/settings.json" 2>/dev/null && LEGACY_HOOKS=yes
+echo "== masking MemPalace's global hooks"
+python3 docs/tools/install_global_memory_hooks.py \
+  || echo "   (not installed: see above; python3 docs/tools/install_global_memory_hooks.py --check reports the state)"
+
 # The folder whose sessions belong to this project: the main checkout, not a worktree under .claude/worktrees/
 MAIN="$PWD"; case "$MAIN" in */.claude/worktrees/*) MAIN="${MAIN%%/.claude/worktrees/*}" ;; esac
 ENC=$(printf '%s' "$MAIN" | sed 's#[/. ]#-#g')      # Claude Code's transcript folder name for a project path
-REDACTED="$HOME/.mempalace/hook_state/redacted"; SNAPSHOTS=0
+REDACTED="$HOME/.mempalace/hook_state/redacted"; SNAPSHOTS=()
 for d in "$HOME/.claude/projects/$ENC" "$HOME/.claude/projects/$ENC--claude-worktrees-"*; do
   [ -d "$d" ] || continue
   echo "== redacting the transcripts in $d"
   while IFS= read -r -d '' f; do
     snapshot="$REDACTED/$(basename "$f")"
     if ( umask 077; python3 docs/tools/redact_secrets.py --snapshot "$snapshot" "$f" ) >/dev/null; then
-      SNAPSHOTS=$((SNAPSHOTS + 1))
+      SNAPSHOTS+=("$snapshot")
     else
       echo "   (not mined: redaction failed for $(basename "$f"))"
     fi
@@ -39,9 +48,13 @@ for d in "$HOME/.claude/projects/$ENC" "$HOME/.claude/projects/$ENC--claude-work
     mempalace mine "$d/memory" --mode convos --wing "$WING" || echo "   (skipped: palace busy or mine failed)"
   fi
 done
-if [ "$SNAPSHOTS" -gt 0 ]; then
-  echo "== mining the redacted transcripts into wing $WING"
-  mempalace mine "$REDACTED" --mode convos --wing "$WING" || echo "   (skipped: palace busy or mine failed)"
+if [ "${#SNAPSHOTS[@]}" -gt 0 ]; then
+  # One file at a time, the hooks' way: the folder also holds other projects' snapshots, which belong to their wings.
+  echo "== mining the ${#SNAPSHOTS[@]} redacted transcript(s) into wing $WING"
+  for snapshot in "${SNAPSHOTS[@]}"; do
+    mempalace mine "$snapshot" --mode convos --wing "$WING" \
+      || echo "   (skipped $(basename "$snapshot"): palace busy or mine failed)"
+  done
 fi
 echo "== mining docs/ into wing $WING"
 mempalace mine docs --mode projects --wing "$WING" || echo "   (skipped: palace busy or mine failed)"
@@ -49,20 +62,18 @@ mempalace mine docs --mode projects --wing "$WING" || echo "   (skipped: palace 
 if [ ! -f graphify-out/graph.json ]; then
   echo "No knowledge graph in graphify-out/: in a Claude Code session here run  /graphify .  and commit graphify-out/."
 fi
-if grep -q "mempal_save_hook.sh" "$HOME/.claude/settings.json" 2>/dev/null; then
+if [ "$LEGACY_HOOKS" = yes ]; then
   cat <<EOT
 
-Note: ~/.claude/settings.json runs MemPalace's own shell hooks (mempal_save_hook.sh / mempal_precompact_hook.sh). They file a
-running session under the shared wing wing_api and overwrite the wing set by this project's hooks until the session ends.
-To keep AMPM sessions in wing $WING while they run, change those two global hook commands to
-  mempalace hook run --hook stop --harness claude-code      (Stop)
-  mempalace hook run --hook precompact --harness claude-code (PreCompact)
-and re-key the shared wing with: mempalace wings split --wing wing_api  (then --yes to apply the plan),
-then rebuild the hallway index: mempalace hallways --rebuild
+Note: ~/.claude/settings.json ran MemPalace's own shell hooks (mempal_save_hook.sh / mempal_precompact_hook.sh), now
+replaced by the masked wrapper, which runs MemPalace's project-aware runner (mempalace hook run). The shell hooks filed
+running sessions under the shared wing wing_api; re-key it with: mempalace wings split --wing wing_api  (then --yes to
+apply the plan), then rebuild the hallway index: mempalace hallways --rebuild
 EOT
 fi
 cat <<EOT
 
 Done. In Claude Code, approve the project MCP servers "mempalace" and "graphify" (.mcp.json) when asked.
-Logs: ~/Library/Logs/ampm-memory-hooks.log (hooks), ~/.mempalace/hook_state/hook.log (MemPalace).
+Logs: ~/Library/Logs/ampm-memory-hooks.log (project hooks), ~/Library/Logs/mempalace-global-hooks.log (global hooks),
+~/.mempalace/hook_state/hook.log (MemPalace).
 EOT
