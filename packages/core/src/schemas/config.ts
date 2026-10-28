@@ -63,3 +63,16 @@ export type ConfigKey = keyof typeof CONFIG_REGISTRY;
 
 /** The typed value behind a configuration key. */
 export type ConfigValue<K extends ConfigKey> = z.infer<(typeof CONFIG_REGISTRY)[K]["schema"]>;
+
+/** Whether a string names a configuration key in the registry (so an unknown key is refused). */
+export function isConfigKey(key: string): key is ConfigKey {
+  return Object.hasOwn(CONFIG_REGISTRY, key);
+}
+
+/** The body of a configuration write; `value` is validated against the key's own schema in the service. */
+export const configWriteRequest = z.object({ value: z.unknown() });
+export type ConfigWriteRequest = z.infer<typeof configWriteRequest>;
+
+/** A configuration key and its current value, returned by a read or a write. */
+export const configView = z.object({ key: z.string(), value: z.unknown() });
+export type ConfigView = z.infer<typeof configView>;

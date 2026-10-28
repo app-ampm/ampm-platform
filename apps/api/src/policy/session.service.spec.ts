@@ -20,6 +20,9 @@ class FakeConfigRepository extends ConfigRepository {
   async findByKey(): Promise<ConfigRecord | null> {
     return null;
   }
+  async upsert(): Promise<{ id: string }> {
+    return { id: "cfg-1" };
+  }
 }
 
 /** Captures audit calls; `super(...)` is given a dummy because `record` is overridden (test-only). */
@@ -108,7 +111,7 @@ function makeService() {
   const audit = new FakeAudit();
   const service = new SessionService(
     repository,
-    new ConfigService(new FakeConfigRepository()),
+    new ConfigService(new FakeConfigRepository(), new FakeAudit()),
     audit,
   );
   return { service, repository, audit };
@@ -183,7 +186,7 @@ describe("SessionService", () => {
     const repository = new RaceLoserRepository(session({ id: "s-win" }));
     const service = new SessionService(
       repository,
-      new ConfigService(new FakeConfigRepository()),
+      new ConfigService(new FakeConfigRepository(), new FakeAudit()),
       audit,
     );
     await service.touch(identity("tok-1"), staff, new Date("2026-10-28T00:00:10.000Z"));
@@ -196,7 +199,7 @@ describe("SessionService", () => {
     );
     const service = new SessionService(
       repository,
-      new ConfigService(new FakeConfigRepository()),
+      new ConfigService(new FakeConfigRepository(), new FakeAudit()),
       new FakeAudit(),
     );
     await expect(service.touch(identity("tok-x"), staff, T0)).rejects.toMatchObject({
