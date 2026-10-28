@@ -136,7 +136,7 @@ erDiagram
 
 ## 3. Module A — Identity, access and administration
 
-Covers SPEC §3 "Administration" (user, role, permission, notification, audit event, configuration) and adds `auth_tokens`, `notification_preferences` and `import_jobs`.
+Covers SPEC §3 "Administration" (user, role, permission, notification, audit event, configuration) and adds `auth_tokens`, `notification_preferences`, `import_jobs` and `sessions`.
 
 ```mermaid
 erDiagram
@@ -151,6 +151,7 @@ erDiagram
     users ||--o{ notification_preferences : sets
     users ||--o{ audit_events : performs
     users ||--o{ import_jobs : runs
+    users ||--o{ sessions : has
 
     users {
         uuid id PK
@@ -251,6 +252,15 @@ erDiagram
         int row_count
         json error_report_json
     }
+    sessions {
+        uuid id PK
+        uuid user_id FK
+        string token_id UK "the access token's jti (Cognito or the local adapter); one session per token"
+        int idle_timeout_minutes "staff 720 / client 43200 from configurations session.idle_timeouts"
+        datetime last_seen_at
+        datetime revoked_at "set on sign-out or a role or membership change; idle is enforced against last_seen_at, not written"
+        string revoked_reason
+    }
 ```
 
 Notes:
@@ -259,6 +269,7 @@ Notes:
 - `permissions.permission_key` follows `module.resource.action` and optionally `.scope`; the permission matrix lists them.
 - `audit_events.project_id` is denormalised so a project manager can read the history of their own project without scanning everything.
 - **26 October 2026 (T-6, D-022):** credentials, OTP and authenticator codes live in Amazon Cognito; `users` keeps `identity_subject` instead of `password_hash` and `mfa_secret_ref`, and `auth_tokens` remains for the invitation and link tokens the API still mints. Implemented in `apps/api/prisma/schema.prisma` (bootstrap step 5).
+- **`sessions` (28 October 2026, D-033):** the server-side session security.md requires. The access token proves identity; a `sessions` row, keyed by the token's `jti`, is what the API can expire (staff 12 h / client 30 d idle, from `configurations`) and revoke (on sign-out or a role or membership change). Added here because the original model left it to the identity service, which cannot revoke on an AMPM role change.
 
 ---
 

@@ -42,10 +42,10 @@
     "semantic_hash": "5e69f809a3a1e7c2f16d446883317f45"
   },
   "docs/tools/field_rules.py": {
-    "mtime": 1793123760.8828237,
-    "seen": 1793125717.376853,
-    "ast_hash": "366ba527f851a721b11fb20a33ac7a9e",
-    "semantic_hash": "366ba527f851a721b11fb20a33ac7a9e"
+    "mtime": 1793158036.360215,
+    "seen": 1793158099.6194592,
+    "ast_hash": "b4f3fdc0eefab70be16a4fab14a9855c",
+    "semantic_hash": ""
   },
   "docs/tools/git-credential-ampm.sh": {
     "mtime": 1793123760.883466,
@@ -102,10 +102,10 @@
     "semantic_hash": "30a8b09b668770eca341fe31e14b2929"
   },
   "docs/data-model.md": {
-    "mtime": 1793123760.9172328,
-    "seen": 1793125717.377002,
-    "ast_hash": "71a69571bd55f593d166862b94190250",
-    "semantic_hash": "71a69571bd55f593d166862b94190250"
+    "mtime": 1793158034.9111264,
+    "seen": 1793158099.625334,
+    "ast_hash": "478f73424b40a845d90acbb4be9add05",
+    "semantic_hash": ""
   },
   "docs/decision-log.md": {
     "mtime": 1793123760.9175906,
@@ -504,9 +504,9 @@
     "semantic_hash": "a4d9bce765949eb52d8e58cbe4913b8e"
   },
   "pnpm-workspace.yaml": {
-    "mtime": 1793123760.9168243,
-    "seen": 1793125717.376996,
-    "ast_hash": "388a9229b356bcffc36f7d3af05568cd",
+    "mtime": 1793156312.2169905,
+    "seen": 1793158099.625191,
+    "ast_hash": "7625b14275146912f68c5ecc62060b30",
     "semantic_hash": ""
   },
   "turbo.json": {
@@ -1476,10 +1476,10 @@
     "semantic_hash": ""
   },
   "apps/api/src/identity/cognito.adapter.ts": {
-    "mtime": 1793123760.8926742,
-    "seen": 1793125717.3767931,
-    "ast_hash": "7dbcc6a2b2c086a29c5a1c31c7fc5d3e",
-    "semantic_hash": "7dbcc6a2b2c086a29c5a1c31c7fc5d3e"
+    "mtime": 1793156931.874033,
+    "seen": 1793158099.617544,
+    "ast_hash": "1d378278b27cd7e10b96f830a55eb8f1",
+    "semantic_hash": ""
   },
   "apps/api/src/identity/identity.module.ts": {
     "mtime": 1793123760.893399,
@@ -1488,22 +1488,22 @@
     "semantic_hash": "5918eaaf9f70ae9cc54a078869570a39"
   },
   "apps/api/src/identity/identity.spec.ts": {
-    "mtime": 1793123760.8939486,
-    "seen": 1793125717.376794,
-    "ast_hash": "9ea45e09369fe37dcc73cd5f4eae70c7",
-    "semantic_hash": "9ea45e09369fe37dcc73cd5f4eae70c7"
+    "mtime": 1793156947.298023,
+    "seen": 1793158099.617565,
+    "ast_hash": "df3d2672fa00dff11160689acdc03c7a",
+    "semantic_hash": ""
   },
   "apps/api/src/identity/identity.types.ts": {
-    "mtime": 1793123760.89425,
-    "seen": 1793125717.3767948,
-    "ast_hash": "d5d172f38165bc9b4109dda26c330155",
-    "semantic_hash": "d5d172f38165bc9b4109dda26c330155"
+    "mtime": 1793158029.7291758,
+    "seen": 1793158099.6175659,
+    "ast_hash": "3e7e5c20cdc74b1ea20b99e885da66e8",
+    "semantic_hash": ""
   },
   "apps/api/src/identity/local.adapter.ts": {
-    "mtime": 1793123760.8947034,
-    "seen": 1793125717.376796,
-    "ast_hash": "58112b36cd89ccd091e45707d67e55ff",
-    "semantic_hash": "58112b36cd89ccd091e45707d67e55ff"
+    "mtime": 1793156927.4297907,
+    "seen": 1793158099.617567,
+    "ast_hash": "d6a898560b28964130efcf4aa3c0fc2d",
+    "semantic_hash": ""
   },
   "apps/api/src/modules/admin/admin.module.ts": {
     "mtime": 1793123760.8953938,
@@ -1548,10 +1548,10 @@
     "semantic_hash": "3e90a4147186b767c65a9cb87c2b0fc4"
   },
   "apps/api/src/policy/auth.guard.ts": {
-    "mtime": 1793123760.9005358,
-    "seen": 1793125717.37681,
-    "ast_hash": "299f0bf6ed07414f9117a1fe9e76070b",
-    "semantic_hash": "299f0bf6ed07414f9117a1fe9e76070b"
+    "mtime": 1793157029.7270749,
+    "seen": 1793158099.6182,
+    "ast_hash": "253d77002e0783d970b8a408675242ee",
+    "semantic_hash": ""
   },
   "apps/api/src/policy/decorators.ts": {
     "mtime": 1793123760.900635,
@@ -1572,10 +1572,10 @@
     "semantic_hash": ""
   },
   "apps/api/src/policy/policy.module.ts": {
-    "mtime": 1793123760.9012263,
-    "seen": 1793125717.3768141,
-    "ast_hash": "1968d9906f9846c5efcd63021bae913a",
-    "semantic_hash": "1968d9906f9846c5efcd63021bae913a"
+    "mtime": 1793157037.0789866,
+    "seen": 1793158099.618301,
+    "ast_hash": "0931a7f94254629887ee61dbc4263d7a",
+    "semantic_hash": ""
   },
   "apps/api/src/policy/principal.repository.ts": {
     "mtime": 1793123760.901363,
@@ -1584,10 +1584,10 @@
     "semantic_hash": ""
   },
   "apps/api/src/policy/principal.service.spec.ts": {
-    "mtime": 1793123760.9014819,
-    "seen": 1793125717.376815,
-    "ast_hash": "d1a8c13a6aad3a6922f3e3cee6b1c1b1",
-    "semantic_hash": "d1a8c13a6aad3a6922f3e3cee6b1c1b1"
+    "mtime": 1793157079.760301,
+    "seen": 1793158099.618322,
+    "ast_hash": "062cd01f955f28f1a7a9b576411ea0c4",
+    "semantic_hash": ""
   },
   "apps/api/src/policy/principal.service.ts": {
     "mtime": 1793123760.9016433,
@@ -2454,9 +2454,9 @@
     "semantic_hash": ""
   },
   "apps/api/src/modules/admin/config/config.service.spec.ts": {
-    "mtime": 1793125481.1150334,
-    "seen": 1793125717.376801,
-    "ast_hash": "fb08000d09806fafb2efb8ba57c9fb4f",
+    "mtime": 1793155738.7376184,
+    "seen": 1793158099.617863,
+    "ast_hash": "99267b7c65b77c0a808a5a45fc6ba5ff",
     "semantic_hash": ""
   },
   "apps/api/src/modules/admin/config/config.service.ts": {
@@ -2466,9 +2466,9 @@
     "semantic_hash": ""
   },
   "packages/core/src/schemas/config.ts": {
-    "mtime": 1793125406.1257634,
-    "seen": 1793125717.3768818,
-    "ast_hash": "efbb76eb87d9e7a7c334ea8f440d2d5b",
+    "mtime": 1793155738.7897186,
+    "seen": 1793158099.620703,
+    "ast_hash": "488e49a83ee6d0824682b4b0f975239a",
     "semantic_hash": ""
   },
   "docs/planning/sprint-3-module-a-kernel-brief.md": {
@@ -2556,33 +2556,33 @@
     "semantic_hash": ""
   },
   "apps/api/src/modules/admin/notification/notification.module.ts": {
-    "mtime": 1793127256.3834014,
-    "seen": 1793127514.480588,
-    "ast_hash": "6dc4855f9a4e3b54dd828b931c6c2eed",
+    "mtime": 1793155738.7504997,
+    "seen": 1793158099.618013,
+    "ast_hash": "fb3b075259e125231deac76bcea224c7",
     "semantic_hash": ""
   },
   "apps/api/src/modules/admin/notification/notification.repository.ts": {
-    "mtime": 1793127162.4802666,
-    "seen": 1793127514.480588,
-    "ast_hash": "24be4f595185b13e246016a8b1f663e9",
+    "mtime": 1793155738.7562914,
+    "seen": 1793158099.6180139,
+    "ast_hash": "e3c510b34ac992a8f65613220f854691",
     "semantic_hash": ""
   },
   "apps/api/src/modules/admin/notification/notification.service.spec.ts": {
-    "mtime": 1793127353.8418238,
-    "seen": 1793127514.4805892,
-    "ast_hash": "ef8022e8cb9b94b7604354d24c65ba17",
+    "mtime": 1793155738.7614229,
+    "seen": 1793158099.618015,
+    "ast_hash": "42ce6e6989c42afc32f32ebb88e869a5",
     "semantic_hash": ""
   },
   "apps/api/src/modules/admin/notification/notification.service.ts": {
-    "mtime": 1793127428.3640385,
-    "seen": 1793127514.48059,
-    "ast_hash": "3055402a32e573abb59543dd0a487663",
+    "mtime": 1793155738.7665415,
+    "seen": 1793158099.618016,
+    "ast_hash": "9dcc9dedb201d8d3019a3a41da565f69",
     "semantic_hash": ""
   },
   "apps/api/test/notifications.e2e-spec.ts": {
-    "mtime": 1793127363.263289,
-    "seen": 1793127514.481051,
-    "ast_hash": "0280ce50e0a1125a84cf58dbfa96876c",
+    "mtime": 1793155738.7741938,
+    "seen": 1793158099.618507,
+    "ast_hash": "4c271e1c568ad55a54b41e4722906947",
     "semantic_hash": ""
   },
   "packages/api-client/src/hooks/use-notifications.ts": {
@@ -2595,6 +2595,30 @@
     "mtime": 1793127133.5659695,
     "seen": 1793127514.4826381,
     "ast_hash": "cfeb6c24c1d92d60bc3d635ede130ac8",
+    "semantic_hash": ""
+  },
+  "apps/api/src/policy/session.repository.ts": {
+    "mtime": 1793157853.4675126,
+    "seen": 1793158099.6184058,
+    "ast_hash": "2e8ac66140953a33d0c7e1a807369325",
+    "semantic_hash": ""
+  },
+  "apps/api/src/policy/session.service.spec.ts": {
+    "mtime": 1793157968.058167,
+    "seen": 1793158099.618407,
+    "ast_hash": "32ae084edd2044cdfaaf4758af03c7aa",
+    "semantic_hash": ""
+  },
+  "apps/api/src/policy/session.service.ts": {
+    "mtime": 1793158031.6302407,
+    "seen": 1793158099.618408,
+    "ast_hash": "13267e6fa56522489fd694e9557beb19",
+    "semantic_hash": ""
+  },
+  "apps/api/test/sessions.e2e-spec.ts": {
+    "mtime": 1793158033.3779728,
+    "seen": 1793158099.618507,
+    "ast_hash": "71623dab76390bf35e55ca8479ab4897",
     "semantic_hash": ""
   }
 }

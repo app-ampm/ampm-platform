@@ -7,10 +7,12 @@ import { requestContext } from "../common/request-context.js";
 import { IDENTITY_ADAPTER, type IdentityAdapter } from "../identity/identity.types.js";
 import { IS_PUBLIC } from "./decorators.js";
 import { PrincipalService } from "./principal.service.js";
+import { SessionService } from "./session.service.js";
 
 /**
  * Steps 1 to 3 for every route that is not @Public(): bearer token → verified identity →
- * principal (with entitlements), placed on the request context for guards, services and logs.
+ * principal (with entitlements), placed on the request context for guards, services and logs; then
+ * step 3b, the server-side session (SessionService) that expires on idle and revokes on change.
  */
 @Injectable()
 export class AuthGuard implements CanActivate {
@@ -18,6 +20,7 @@ export class AuthGuard implements CanActivate {
     private readonly reflector: Reflector,
     @Inject(IDENTITY_ADAPTER) private readonly identity: IdentityAdapter,
     private readonly principals: PrincipalService,
+    private readonly sessions: SessionService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -32,8 +35,10 @@ export class AuthGuard implements CanActivate {
     if (scheme?.toLowerCase() !== "bearer" || !token) throw errors.unauthenticated();
     const verified = await this.identity.verifyAccessToken(token);
     const principal = await this.principals.resolve(verified);
+    // Set the principal before touching the session, so the session-create audit has its actor.
     const store = requestContext.get();
     if (store) store.principal = principal;
+    await this.sessions.touch(verified, principal, new Date());
     return true;
   }
 }

@@ -8,10 +8,14 @@ const SECRET = "a-development-secret-that-is-long-enough-32";
 describe("LocalIdentityAdapter", () => {
   it("verifies the tokens it mints and rejects others", async () => {
     const adapter = new LocalIdentityAdapter(SECRET);
-    const token = await adapter.mint("local:admin", { email: "admin@example.com" });
+    const token = await adapter.mint("local:admin", {
+      email: "admin@example.com",
+      jti: "jti-local",
+    });
     await expect(adapter.verifyAccessToken(token)).resolves.toMatchObject({
       subject: "local:admin",
       provider: "local",
+      tokenId: "jti-local",
       email: "admin@example.com",
     });
     await expect(adapter.verifyAccessToken(`${token}x`)).rejects.toMatchObject({
@@ -28,6 +32,7 @@ describe("cognitoIdentityFromClaims", () => {
     sub: "c0gn1t0-sub",
     token_use: "access",
     client_id: "client-1",
+    jti: "jti-cognito",
     email: "x@example.com",
   };
 
@@ -35,14 +40,16 @@ describe("cognitoIdentityFromClaims", () => {
     expect(cognitoIdentityFromClaims(claims, "client-1")).toEqual({
       subject: "c0gn1t0-sub",
       provider: "cognito",
+      tokenId: "jti-cognito",
       email: "x@example.com",
       phone: null,
     });
   });
 
-  it("rejects id tokens, other clients and empty subjects", () => {
+  it("rejects id tokens, other clients, empty subjects and a missing token id", () => {
     expect(() => cognitoIdentityFromClaims({ ...claims, token_use: "id" }, "client-1")).toThrow();
     expect(() => cognitoIdentityFromClaims(claims, "client-2")).toThrow();
     expect(() => cognitoIdentityFromClaims({ ...claims, sub: "" }, "client-1")).toThrow();
+    expect(() => cognitoIdentityFromClaims({ ...claims, jti: undefined }, "client-1")).toThrow();
   });
 });

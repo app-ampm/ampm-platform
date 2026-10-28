@@ -1,5 +1,4 @@
 {
-  "0": "Acceptance Tests and Traceability",
   "3": "AMPM's Answers and Business Rules",
   "4": "peerDependencies",
   "6": "Vault and Decision Generators",
@@ -22,7 +21,6 @@
   "30": "PNPM Workspace Catalog",
   "31": "CI Workflow (GitHub Actions)",
   "34": "Tokens Package Manifest",
-  "36": "Business Process and Account States",
   "37": "Guest and RSVP Tables",
   "38": "API Client Package Manifest",
   "39": "Decision Log and Source Documents",
@@ -40,7 +38,6 @@
   "58": "Budget, Invoices and Closure Tables",
   "59": "Mobile Expo App Config",
   "60": "API Modules and Build Phases",
-  "61": "Upgraded team app flowchart",
   "62": "Core Package Manifest",
   "64": "Technology and Operations Decisions",
   "65": "Client Portal Approvals and Requests",

@@ -5,9 +5,8 @@ A,users,Account setup,name,string,,,"string, up to 255 characters",SA; SM and PM
 A,users,Account setup,email,string,UK,,"valid email address, stored lowercase; unique",SA; SM and PM (a) for client logins,INTERNAL,At creation,Invite or activation email on creation,"A-13 (Q13), P-6 (Q13)"
 A,users,Account setup,phone,string,,,"E.164 format, default +91; required when OTP is enabled",SA; SM and PM (a) for client logins,INTERNAL,Optional,—,"A-13 (Q13), P-6 (Q13)"
 A,users,Account setup,status,string,,"invited, active, disabled, locked",one of the listed options,SA; SM and PM (a) for client logins,INTERNAL,At creation,disabled or locked refuses sign-in at once and revokes sessions,"A-13 (Q13), P-6 (Q13)"
-A,users,Account setup,password_hash,string,,,"string, up to 255 characters; nullable for OTP-only",SYS,SECRET,Optional,—,"A-13 (Q13), P-6 (Q13)"
-A,users,Account setup,mfa_enabled,bool,,,true or false; mandatory true for staff (A-13),SYS; must be true for staff before first sign-in,INTERNAL,At creation for staff,—,"A-13 (Q13), P-6 (Q13)"
-A,users,Account setup,mfa_secret_ref,string,,,"string, up to 255 characters",SYS,SECRET,Optional,—,"A-13 (Q13), P-6 (Q13)"
+A,users,Account setup,identity_subject,string,UK,,"string, up to 255 characters; the identity service's subject (Cognito sub, T-6); null until activated",SA; SM and PM (a) for client logins,INTERNAL,Optional,—,"A-13 (Q13), P-6 (Q13)"
+A,users,Account setup,mfa_enabled,bool,,,"true or false; mandatory true for staff (A-13); enforced by the identity service, mirrored here",SYS; must be true for staff before first sign-in,INTERNAL,At creation for staff,—,"A-13 (Q13), P-6 (Q13)"
 A,users,Account setup,last_login_at,datetime,,,timestamp (UTC),SYS,INTERNAL,System,Inactive accounts reported for review,"A-13 (Q13), P-6 (Q13)"
 A,roles,Configuration,id,uuid,PK,,"UUID v7, generated",SYS,INTERNAL,System,—,
 A,roles,Configuration,role_key,string,UK,,"lowercase snake_case; unique; super_admin, sales, hotel_team, project_manager, creative, vendor_coordinator, rsvp_team, hospitality, finance",SA,INTERNAL,At creation,—,
@@ -75,6 +74,13 @@ A,import_jobs,Any (import),file_document_id,uuid,FK,,references documents,SA; HT
 A,import_jobs,Any (import),status,string,,"uploaded, validating, failed, applied",one of the listed options,SA; HT (hotels); VC (vendors); RG and PM (a) (guests),INTERNAL,At creation,validating runs in a worker; applied writes rows plus audit events; failed keeps the error report,"A-9 (Q9), GP-22"
 A,import_jobs,Any (import),row_count,int,,,"integer, 0 or more",SYS,INTERNAL,Optional,—,"A-9 (Q9), GP-22"
 A,import_jobs,Any (import),error_report_json,json,,,valid JSON matching the registered schema,SYS,INTERNAL,Optional,—,"A-9 (Q9), GP-22"
+A,sessions,System,id,uuid,PK,,"UUID v7, generated",SYS,INTERNAL,System,—,D-033; security.md server-side sessions
+A,sessions,System,user_id,uuid,FK,,references see data model,SYS,INTERNAL,At creation,—,D-033; security.md server-side sessions
+A,sessions,System,token_id,string,UK,,the access token's jti; unique per session,SYS,INTERNAL,System,—,D-033; security.md server-side sessions
+A,sessions,System,idle_timeout_minutes,int,,,"integer, 0 or more; staff 720 / client 43200 from configurations session.idle_timeouts",SYS,INTERNAL,At creation,"Staff 720, client 43200, from configurations session.idle_timeouts",D-033; security.md server-side sessions
+A,sessions,System,last_seen_at,datetime,,,timestamp (UTC),SYS,INTERNAL,At creation,Advanced on each authenticated request,D-033; security.md server-side sessions
+A,sessions,System,revoked_at,datetime,,,"timestamp (UTC); set on sign-out or a role or membership change; idle is enforced against last_seen_at, not written",SYS,INTERNAL,System,"Set on sign-out or a role or membership change; idle is enforced against last_seen_at, not written",D-033; security.md server-side sessions
+A,sessions,System,revoked_reason,string,,,"string, up to 255 characters",SYS,INTERNAL,Optional,—,D-033; security.md server-side sessions
 B,lead_sources,Configuration,id,uuid,PK,,"UUID v7, generated",SYS,INTERNAL,System,—,
 B,lead_sources,Configuration,source_key,string,UK,,"lowercase snake_case; unique; website, instagram, advertisement, referral, call, other",SA,INTERNAL,At creation,—,
 B,lead_sources,Configuration,name,string,,,"string, up to 255 characters",SA,INTERNAL,At creation,—,
