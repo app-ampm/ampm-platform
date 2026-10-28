@@ -20,7 +20,7 @@ Global conventions that apply to every row: money is `numeric(14,2)` with a sibl
 
 | Module | Tables | Fields | Required at creation | Client or public visible | Restricted, sensitive or secret |
 |---|---|---|---|---|---|
-| A — Identity, access and administration | 13 | 82 | 42 | 10 | 1 |
+| A — Identity, access and administration | 18 | 107 | 56 | 10 | 1 |
 | B — CRM, subscriptions and commercial agreements | 12 | 127 | 49 | 90 | 4 |
 | C — Hotel intelligence | 10 | 100 | 38 | 82 | 11 |
 | D — Hotel consultancy | 6 | 70 | 28 | 65 | 3 |
@@ -37,9 +37,9 @@ Global conventions that apply to every row: money is `numeric(14,2)` with a sibl
 | O — Checklists, closure and feedback | 4 | 30 | 17 | 7 | 0 |
 | P — Public website content (dormant) | 2 | 17 | 8 | 17 | 0 |
 | Q — Live chat | 2 | 16 | 6 | 16 | 0 |
-| **Total** | **109** | **1103** | **475** | **646** | **103** |
+| **Total** | **114** | **1128** | **489** | **646** | **103** |
 
-Fields by visibility class: CLIENT 613, INTERNAL 302, Other (per record, recipient or parent) 52, RESTRICTED-NOTES 34, PUBLIC 33, RESTRICTED-FINANCE 31, RESTRICTED-CONTACT 13, RESTRICTED-IDENTITY 13, SECRET 6, RESTRICTED-BANK 4, SENSITIVE-GUEST 2.
+Fields by visibility class: CLIENT 613, INTERNAL 327, Other (per record, recipient or parent) 52, RESTRICTED-NOTES 34, PUBLIC 33, RESTRICTED-FINANCE 31, RESTRICTED-CONTACT 13, RESTRICTED-IDENTITY 13, SECRET 6, RESTRICTED-BANK 4, SENSITIVE-GUEST 2.
 
 ---
 
@@ -99,6 +99,66 @@ Created at stage: **Configuration** · Default editor: SA · Default visibility:
 |---|---|---|---|---|---|---|
 | `user_id` (FK) | references see data model |  | SA | INTERNAL | At creation | — |
 | `role_id` (FK) | references roles |  | SA | INTERNAL | At creation | Change recomputes effective permissions; audited |
+
+### `grantable_capabilities`
+
+Created at stage: **Configuration** · Default editor: SYS · Default visibility: INTERNAL · code-generated from packages/policy capabilities.json (D-036); not hand-edited
+
+| Field | Type and validation | Options | Edited by | Visibility | Required | Automation and report impact |
+|---|---|---|---|---|---|---|
+| `id` (PK) | UUID v7, generated |  | SYS | INTERNAL | System | — |
+| `capability_key` (unique) | module.resource.action:scope, with #<condition-signature> when conditioned; unique |  | SYS | INTERNAL | At creation | — |
+| `module` | string, up to 255 characters |  | SYS | INTERNAL | At creation | — |
+| `resource` | string, up to 255 characters |  | SYS | INTERNAL | At creation | — |
+| `action` | string, up to 255 characters |  | SYS | INTERNAL | At creation | — |
+| `scope` | one of the listed options | all, assigned, own | SYS | INTERNAL | At creation | — |
+| `conditions` | valid JSON matching the registered schema; packages/policy Condition[]; empty is a plain grant |  | SYS | INTERNAL | Optional | — |
+| `source_roles` | valid JSON matching the registered schema; the StaffRole codes that hold this grant, for the class ceiling |  | SYS | INTERNAL | Optional | — |
+| `is_staff_only` | true or false |  | SYS | INTERNAL | Optional | — |
+| `is_escalation_locked` | true or false; role/account admin and identity: never assignable to a custom role |  | SYS | INTERNAL | Optional | Escalation-locked capabilities are never offered to a custom role |
+| `label` | string, up to 255 characters |  | SYS | INTERNAL | At creation | — |
+
+### `permission_sets`
+
+Created at stage: **Configuration** · Default editor: SA · Default visibility: INTERNAL
+
+| Field | Type and validation | Options | Edited by | Visibility | Required | Automation and report impact |
+|---|---|---|---|---|---|---|
+| `id` (PK) | UUID v7, generated |  | SYS | INTERNAL | System | — |
+| `set_key` (unique) | lowercase snake_case; unique |  | SA | INTERNAL | At creation | — |
+| `name` | string, up to 255 characters |  | SA | INTERNAL | At creation | — |
+| `description` | string, up to 255 characters |  | SA | INTERNAL | Optional | — |
+| `is_system` | true or false |  | SA | INTERNAL | Optional | System sets cannot be deleted or renamed |
+
+### `role_grants`
+
+Created at stage: **Configuration** · Default editor: SA · Default visibility: INTERNAL · unique pair
+
+| Field | Type and validation | Options | Edited by | Visibility | Required | Automation and report impact |
+|---|---|---|---|---|---|---|
+| `role_id` (FK) | references roles |  | SA | INTERNAL | At creation | Change recomputes effective permissions; audited; revokes sessions |
+| `grantable_capability_id` (FK) | references see data model |  | SA | INTERNAL | At creation | — |
+| `created_by` | UUID; who granted it |  | SA | INTERNAL | Optional | — |
+
+### `permission_set_grants`
+
+Created at stage: **Configuration** · Default editor: SA · Default visibility: INTERNAL · unique pair
+
+| Field | Type and validation | Options | Edited by | Visibility | Required | Automation and report impact |
+|---|---|---|---|---|---|---|
+| `permission_set_id` (FK) | references see data model |  | SA | INTERNAL | At creation | — |
+| `grantable_capability_id` (FK) | references see data model |  | SA | INTERNAL | At creation | — |
+| `created_by` | UUID |  | SA | INTERNAL | Optional | — |
+
+### `role_permission_sets`
+
+Created at stage: **Configuration** · Default editor: SA · Default visibility: INTERNAL · unique pair
+
+| Field | Type and validation | Options | Edited by | Visibility | Required | Automation and report impact |
+|---|---|---|---|---|---|---|
+| `role_id` (FK) | references roles |  | SA | INTERNAL | At creation | Change recomputes effective permissions; audited; revokes sessions |
+| `permission_set_id` (FK) | references see data model |  | SA | INTERNAL | At creation | — |
+| `created_by` | UUID |  | SA | INTERNAL | Optional | — |
 
 ### `project_members`
 

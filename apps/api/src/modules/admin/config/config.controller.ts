@@ -3,7 +3,7 @@ import { configWriteRequest, type ConfigView, type ConfigWriteRequest } from "@a
 import { z } from "zod";
 
 import { ZodBody, ZodParams } from "../../../common/zod.js";
-import { RequirePermission } from "../../../policy/decorators.js";
+import { RequirePermission, SelfAudited } from "../../../policy/decorators.js";
 import { ConfigService } from "./config.service.js";
 
 const keyParams = z.object({ key: z.string().min(1) });
@@ -21,6 +21,7 @@ export class ConfigController {
 
   @Put(":key")
   @RequirePermission("admin.configurations.update")
+  @SelfAudited()
   set(
     @ZodParams(keyParams) params: KeyParams,
     @ZodBody(configWriteRequest) body: ConfigWriteRequest,

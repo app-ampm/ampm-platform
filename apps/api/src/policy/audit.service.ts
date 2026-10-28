@@ -3,10 +3,12 @@ import { redact } from "@ampm/core";
 
 import { requestContext } from "../common/request-context.js";
 import { PrismaService } from "../db/prisma.service.js";
-import { Prisma } from "../generated/prisma/client.js";
+import { Prisma, type AuditAction } from "../generated/prisma/client.js";
 
-export type AuditAction =
-  "create" | "update" | "delete" | "approve" | "share" | "export" | "restricted_read";
+// The audit actions are the AuditAction enum of schema.prisma (via the generated client), so the TS
+// type cannot drift from the database (§9). Re-exported for the services and interceptor that build
+// an AuditInput.
+export type { AuditAction };
 
 export interface AuditInput {
   readonly action: AuditAction;

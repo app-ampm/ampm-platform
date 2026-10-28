@@ -20,6 +20,15 @@ const schema = z
       .enum(["true", "false"])
       .default("false")
       .transform((value) => value === "true"),
+    /**
+     * Enables Super-Admin custom roles (D-036): the principal resolves `role_grants` into the engine's
+     * `resolvedGrants`. Off by default until the admin surface and its tests are proven; while it is
+     * off custom roles grant nothing, exactly as before, and come only from the seed.
+     */
+    DYNAMIC_ROLES: z
+      .enum(["true", "false"])
+      .default("false")
+      .transform((value) => value === "true"),
     /** Browser origins allowed to call the API (the client portals' web build), comma-separated. */
     CORS_ORIGINS: z
       .string()
