@@ -83,4 +83,19 @@ export class AuthTokenService {
     });
     return result.count === 1;
   }
+
+  /**
+   * Retires every live invite for a user, so one can no longer be redeemed — e.g. when a client login
+   * is removed before activation, which must not leave the invitee able to activate into a membership-
+   * less account.
+   */
+  async invalidateInvitesFor(
+    userId: string,
+    client: Prisma.TransactionClient = this.prisma,
+  ): Promise<void> {
+    await client.authToken.updateMany({
+      where: { userId, purpose: "invite", usedAt: null },
+      data: { usedAt: new Date() },
+    });
+  }
 }

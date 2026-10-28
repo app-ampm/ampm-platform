@@ -80,9 +80,9 @@ export class StaffUsersService {
       throw errors.conflict("A user with that email already exists");
     }
     const id = await this.insertInvited(request, actorId);
-    // Delivery is after the user+invite are committed, so a queue failure cannot be mistaken for a
-    // duplicate-email conflict and cannot roll back the created account.
-    await this.queueInvite(id);
+    // Best-effort delivery after commit: the user and its invite token are already saved, so a queue
+    // failure cannot be mistaken for a duplicate-email conflict, roll back the account, or fail create.
+    await this.queueInvite(id).catch(() => undefined);
     return this.get(id);
   }
 
