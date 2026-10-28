@@ -42,6 +42,20 @@ TABLES["role_permissions"] = T("Configuration", "SA", required=["role_id", "perm
                                role_id=F(automation="Change recomputes effective permissions; audited"))
 TABLES["user_roles"] = T("Configuration", "SA", required=["user_id", "role_id"], note="unique pair",
                          role_id=F(automation="Change recomputes effective permissions; audited"))
+TABLES["grantable_capabilities"] = T(
+    "Configuration", SYS, required=["capability_key", "module", "resource", "action", "scope", "label"],
+    note="code-generated from packages/policy capabilities.json (D-036); not hand-edited",
+    capability_key=F(validation="module.resource.action:scope, with #<condition-signature> when conditioned; unique"),
+    is_escalation_locked=F(automation="Escalation-locked capabilities are never offered to a custom role"),
+)
+TABLES["permission_sets"] = T("Configuration", "SA", required=["set_key", "name"],
+                              is_system=F(automation="System sets cannot be deleted or renamed"))
+TABLES["role_grants"] = T("Configuration", "SA", required=["role_id", "grantable_capability_id"], note="unique pair",
+                          role_id=F(automation="Change recomputes effective permissions; audited; revokes sessions"))
+TABLES["permission_set_grants"] = T("Configuration", "SA",
+                                    required=["permission_set_id", "grantable_capability_id"], note="unique pair")
+TABLES["role_permission_sets"] = T("Configuration", "SA", required=["role_id", "permission_set_id"], note="unique pair",
+                                   role_id=F(automation="Change recomputes effective permissions; audited; revokes sessions"))
 TABLES["project_members"] = T(
     "Project setup", "SA; PM (a); SM for client members", "CLIENT",
     required=["project_id", "user_id", "project_role", "status"], assumptions="A-5 (Q5), P-2 (Q5)",

@@ -1,4 +1,4 @@
-import type { Entitlements, PolicyPrincipal, StaffRole } from "@ampm/policy";
+import type { Entitlements, PolicyPrincipal, RoleGrant, StaffRole } from "@ampm/policy";
 import type { Membership } from "@ampm/core";
 
 /** Step 2 of the pipeline: who is calling, from the API's records (architecture §6). */
@@ -14,7 +14,10 @@ interface UserPrincipalBase {
 
 export interface StaffPrincipal extends UserPrincipalBase {
   readonly type: "staff";
+  /** The system roles the user holds (the nine), matrix-driven. */
   readonly roles: readonly StaffRole[];
+  /** Grants resolved from the user's custom roles (D-036), keyed by base key; set only when DYNAMIC_ROLES is on. */
+  readonly resolvedGrants?: ReadonlyMap<string, readonly RoleGrant[]> | undefined;
 }
 
 export interface ClientPrincipal extends UserPrincipalBase {
@@ -41,6 +44,7 @@ export function toPolicyPrincipal(principal: Principal): PolicyPrincipal {
     type: principal.type,
     userId: principal.userId,
     roles: principal.type === "staff" ? principal.roles : undefined,
+    resolvedGrants: principal.type === "staff" ? principal.resolvedGrants : undefined,
     projectIds: principal.memberships.map((m) => m.projectId),
   };
 }
