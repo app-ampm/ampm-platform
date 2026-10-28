@@ -13,6 +13,13 @@ const schema = z
     COGNITO_REGION: z.string().min(1).optional(),
     COGNITO_USER_POOL_ID: z.string().min(1).optional(),
     COGNITO_CLIENT_ID: z.string().min(1).optional(),
+    /** The job queue's Redis; absent in development and tests, where jobs run inline (D-031). */
+    REDIS_URL: z.string().url().optional(),
+    /** `true` in the worker process only; the API process enqueues but does not consume (D-031). */
+    JOB_WORKER: z
+      .enum(["true", "false"])
+      .default("false")
+      .transform((value) => value === "true"),
     /** Browser origins allowed to call the API (the client portals' web build), comma-separated. */
     CORS_ORIGINS: z
       .string()
