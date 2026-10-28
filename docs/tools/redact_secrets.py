@@ -93,14 +93,16 @@ KEY_OWNER = re.compile(rb"(?:api|access|private|client|encryption|signing|master
 # A pass that ends another word is not a password (bypass, compass), unless that word names what it opens: DBPASS.
 PASS_OWNER = re.compile(rb"(?:db|sql|smtp|mail|ftp|ldap|root|admin|user|redis)\Z")
 FLAG = re.compile(rb"(?:\A|[\s\"'=(])--(?:[a-z0-9]+-)*\Z")  # --password, --db-password, --api-token
-# The start of a .env or YAML line up to the secret's name: a line break, the start of a JSON string or the Read
-# tool's line number, then indentation, "export " or a YAML "- ", and the UPPER_SNAKE words of the key before the
-# name (DB_PASSWORD=, POSTGRES_PASSWORD:, PGPASSWORD=).
+# The start of a .env or YAML line up to the secret's name: a line break, the start of a JSON string, the Read
+# tool's line number or a shell command separator (cd api && PGPASSWORD=...), then indentation, "export " or a YAML
+# "- ", and the UPPER_SNAKE words of the key before the name (DB_PASSWORD=, POSTGRES_PASSWORD:, PGPASSWORD=).
 ENV_LINE = re.compile(
-    rb"(?:\A|\n|\\+n|\")(?:[ ]*[0-9]+(?:\\+t|\t|\xe2\x86\x92|\\+u2192))?(?:[ \t]|\\+t)*"
+    rb"(?:\A|\n|\\+n|\"|&&|\|\||[;|])(?:[ ]*[0-9]+(?:\\+t|\t|\xe2\x86\x92|\\+u2192))?(?:[ \t]|\\+t)*"
     rb"(?:export[ \t]+|-[ \t]+)?[A-Z0-9_]*\Z"
 )
-LOWER_CAMEL = re.compile(rb"[a-z]+[A-Z][A-Za-z]*")  # dbPassword: an identifier, not a password
+# dbPasswordValue, hashedPassword: an identifier, not a password; words of three letters or more, so a random
+# mixed-case value (qWeRtYuIoPaS) is not taken for one.
+LOWER_CAMEL = re.compile(rb"[a-z]{2,}(?:[A-Z][a-z]{2,})+")
 ALNUM = frozenset(b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789")
 LETTERS = frozenset(b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz")
 DIGITS = frozenset(b"0123456789")
@@ -115,8 +117,9 @@ WRAP = re.compile(rb"(?:\\+r)?\\+n")  # a line break inside a JSON string, escap
 class Prefiltered:
     """A pattern tried only where one of its words occurs, in any case: re is slow at a case-insensitive
     alternation over a whole transcript, bytes.find is not. Prefiltered(SECRET_WORDS, NAMED_SECRET).finditer(data,
-    accept) yields the matches that start at one of those words and that accept takes, in order and never
-    overlapping. A match accept refuses hides no word inside it: in "key": "password=...", the password is tried."""
+    accept) yields the matches that start at one of those words and that accept takes, in order. Every word is tried,
+    also one inside an earlier match, so a match hides no credential after it ("key": "password=...", or the value
+    of API_KEY= swallowing the next name in API_KEY= DB_SECRET= ...); _spans merges the matches that overlap."""
 
     CHUNK = 1 << 23  # lower-cased a piece at a time, so a large transcript is never copied whole
 
@@ -133,11 +136,9 @@ class Prefiltered:
                 while found >= 0:
                     starts.add(offset + found)
                     found = piece.find(word, found + 1)
-        end = 0
         for start in sorted(starts):
-            match = self.pattern.match(data, start) if start >= end else None
-            if match and accept(match):  # checked before it hides the starts inside it
-                end = match.end()
+            match = self.pattern.match(data, start)
+            if match and accept(match):
                 yield match
 
 
@@ -213,12 +214,15 @@ PATTERNS: list[tuple[str, re.Pattern[bytes] | Prefiltered, frozenset[int]]] = [
         ),
         ANY,
     ),
-    # A session cookie in a Cookie or Set-Cookie header: sessionid=, PHPSESSID=, connect.sid=, _app_session=.
+    # A session cookie in a Cookie or Set-Cookie header: sessionid=, PHPSESSID=, connect.sid=, _app_session=, whose
+    # value mixes letters and digits, as a generated session id does. The lookaheads keep that test inside the
+    # pattern, so a session-named cookie holding a word (ui_session=compact) does not hide the next one.
     (
         "cookie-session",
         re.compile(
             rb"ookie(?:\\{0,7}[\"'])?[ \t]*:[ \t]*(?:\\{0,7}[\"'])?(?:[^\n;\"\\]{0,256};[ \t]*){0,16}?"
-            rb"[A-Za-z0-9_.-]*(?i:sess(?:ion)?(?:[_.-]?id)?|sid)=(?P<secret>[A-Za-z0-9%._~+/-]{16,512})"
+            rb"[A-Za-z0-9_.-]*(?i:sess(?:ion)?(?:[_.-]?id)?|sid)="
+            rb"(?P<secret>(?=[A-Za-z%._~+/-]*[0-9])(?=[0-9%._~+/-]*[A-Za-z])[A-Za-z0-9%._~+/-]{16,512})"
         ),
         ANY,
     ),
@@ -315,11 +319,22 @@ def _env_line_word(data: bytes, match: re.Match[bytes]) -> bool:
     return ENV_LINE.search(data, max(0, match.start("name") - 200), match.start("name")) is not None
 
 
+def _flag_word(data: bytes, match: re.Match[bytes]) -> bool:
+    """True for a letters-only value given to a --flag with '=': --password=Hunterxyz, --db-password=Hunterxyz. After
+    a space it stays (--password interactively is prose), and so does a lower-camel-case identifier."""
+    value, start = match.group("secret"), match.start("name")
+    if match.group("space") is not None or not value.isalpha() or LOWER_CAMEL.fullmatch(value):
+        return False
+    equals = data[match.end("name") : match.end("name") + 1] == b"="
+    return equals and FLAG.search(data, max(0, start - 40), start) is not None
+
+
 def _named_secret_value(data: bytes, match: re.Match[bytes]) -> bool:
     """True when the value of a secret-named key looks like a credential, not code, a type, an expansion or a word.
 
     A password may be a plain word, so a quoted value of a password or secret is masked as it is, and so is a
-    letters-only value on a .env or YAML line (_env_line_word); any other value must hold a digit or a symbol, or be
+    letters-only value of an UPPER_SNAKE key on a .env or YAML line (_env_line_word) or of a --flag= (_flag_word);
+    any other value must hold a digit or a symbol, or be
     20 characters or more, as a generated token or key does. A key whose owner is not a secret's (MSG91_AUTH_KEY,
     Ocp-Apim-Subscription-Key, AccountKey) is masked only when its value looks generated (_generated).
     _named_secret_value(b"PASSWORD=hashed_password,", m) is False; DATABASE_PASSWORD=Pw9Pw9Pw9x is True.
@@ -348,7 +363,7 @@ def _named_secret_value(data: bytes, match: re.Match[bytes]) -> bool:
         return False
     if len(value) >= 20 or any(byte in RANDOM_BYTES for byte in value):
         return True
-    return name != b"key" and _env_line_word(data, match)
+    return name != b"key" and (_env_line_word(data, match) or _flag_word(data, match))
 
 
 def _wrapped_token(data: bytes, match: re.Match[bytes]) -> bool:
@@ -356,16 +371,9 @@ def _wrapped_token(data: bytes, match: re.Match[bytes]) -> bool:
     return len(WRAP.sub(b"", match.group("secret")[4:])) >= 36
 
 
-def _session_cookie(data: bytes, match: re.Match[bytes]) -> bool:
-    """True when a session cookie's value mixes letters and digits, as a generated session id does."""
-    value = match.group("secret")
-    return any(byte in DIGITS for byte in value) and any(byte in LETTERS for byte in value)
-
-
 CHECKS = {
     "named-secret": _named_secret_value,
     "github-token-wrapped": _wrapped_token,
-    "cookie-session": _session_cookie,
 }
 
 

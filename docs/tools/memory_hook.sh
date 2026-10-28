@@ -26,7 +26,9 @@
 # its worktrees can be found with  mempalace search "..." --wing ampm. The redactor holds an exclusive lock on the
 # transcript while it masks it here and the global hooks a shared one while they read it. session-start warns in
 # the context while the global hooks are not fully masked (install_global_memory_hooks.py --check fails): an
-# installed copy older than this checkout, say. Best effort throughout: a missing tool never fails the session.
+# installed copy older than this checkout, say. MemPalace's off switch is removing ~/.mempalace: while it is gone this
+# hook masks, writes and mines nothing and never makes the folder again (setup_memory.sh turns memory back on). Best
+# effort throughout: a missing tool never fails the session.
 set -u
 EVENT="${1:-}"
 WING="${AMPM_MEMORY_WING:-ampm}"
@@ -36,7 +38,9 @@ LOG="$HOME/Library/Logs/ampm-memory-hooks.log"
 STATE="$HOME/.mempalace/hook_state"
 export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
 INPUT=$(cat)
-mkdir -p "$(dirname "$LOG")" "$STATE" 2>/dev/null
+mkdir -p "$(dirname "$LOG")" 2>/dev/null
+switched_off() { [ ! -d "$HOME/.mempalace" ]; }  # MemPalace's off switch: nothing here makes ~/.mempalace again
+switched_off || mkdir -p "$STATE" 2>/dev/null
 
 log() { printf '%s [%s] %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$EVENT" "$*" >> "$LOG"; }
 field() {  # string field of the hook JSON, empty when absent
@@ -76,6 +80,7 @@ global_hook_mines() {  # MemPalace's own hook for this event mines the masked sn
 
 mine_transcript() {  # mines one transcript into the wing; MemPalace skips a file it has already filed unchanged
   command -v mempalace >/dev/null 2>&1 || { log "mempalace is not installed; nothing mined"; return 0; }
+  switched_off && { log "~/.mempalace is gone (MemPalace is switched off): nothing masked or mined"; return 0; }
   # CLAUDE.md: never file secrets or tokens. The miner gets the redacted snapshot, never the live file; a
   # snapshot that changed makes the miner purge its earlier drawers and file clean ones in their place.
   local snapshot; snapshot="$STATE/redacted/$(basename "$1")"
@@ -109,10 +114,16 @@ print(n)
 PY
 }
 
+if [ "$EVENT" != session-start ] && switched_off; then
+  log "~/.mempalace is gone (MemPalace is switched off): nothing masked or mined"; printf '{}\n'; exit 0
+fi
+
 case "$EVENT" in
   session-start)
     ctx="AMPM project memory and knowledge graph (hooks in .claude/settings.json, rules in CLAUDE.md)."$'\n'
-    if command -v mempalace >/dev/null 2>&1; then
+    if command -v mempalace >/dev/null 2>&1 && switched_off; then
+      ctx+="- MemPalace is switched off on this machine (~/.mempalace is gone): no session is mined and wing \"$WING\" cannot be searched; bash docs/tools/setup_memory.sh turns it back on."$'\n'
+    elif command -v mempalace >/dev/null 2>&1; then
       wing=$(mempalace status 2>/dev/null | awk -v w="  WING: $WING" '$0==w{f=1;next} /WING:/{f=0} f && /ROOM:/{d+=$3; r=r (r?", ":"") $2 " " $3} END{if(d) printf "%d drawers (%s)", d, r; else printf "empty so far"}')
       ctx+="- MemPalace wing \"$WING\": ${wing:-unavailable}. Every session here is mined into it. Before answering about earlier sessions or past decisions, search it and quote what it returns: mempalace search \"<words>\" --wing $WING (MCP: palace_query FIND \"<words>\" IN $WING LIMIT 5); mempalace wake-up --wing $WING gives the short briefing."$'\n'
       if ! masked=$(python3 -I "$PROJECT/docs/tools/install_global_memory_hooks.py" --check 2>&1); then

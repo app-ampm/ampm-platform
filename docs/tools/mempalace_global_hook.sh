@@ -13,8 +13,10 @@
 # a session of its own so a closing terminal does not end it, then
 #
 #   1. stops when ~/.mempalace is gone, and drops MEMPAL_DIR, with which MemPalace would mine a folder unmasked. It
-#      makes its folders only inside an existing ~/.mempalace (so does the redactor), and checks again after the
-#      scan and just before MemPalace runs: a ~/.mempalace removed mid-run stays removed and MemPalace is not run;
+#      makes its folders only inside an existing ~/.mempalace (so does the redactor), and checks again, for the
+#      folder and for this installed copy, after the scan and just before MemPalace runs: a ~/.mempalace removed
+#      before MemPalace starts stays removed and MemPalace is not run. Once MemPalace has started, its own run and
+#      the mine it detaches can make ~/.mempalace again, as its unwrapped hooks always could;
 #   2. takes a per-session lock, a flock(2) on $STATE/global_hooks/<session>.lock: a Stop worker skips when one for
 #      the session is still running; PreCompact and SessionEnd wait for it, at most $WAIT seconds, and then run anyway,
 #      so a final save is never skipped. The kernel drops the lock of a worker that died, and a worker that locked a

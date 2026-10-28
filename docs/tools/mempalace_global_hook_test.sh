@@ -491,6 +491,30 @@ test_mempalace_removed_before_the_snapshot_or_the_call() {
   done
 }
 
+test_mempalace_made_again_while_the_redactor_scans() {  # the installed wrapper goes with ~/.mempalace, even when
+  # another tool makes the folder again before the worker looks (an older memory_hook.sh did, on every event)
+  local bin="$H/.mempalace/bin"
+  mkdir -p "$bin"; cp "$HOOK" "$bin/"
+  cat > "$bin/redact_secrets.py" <<PY
+import os, subprocess, sys, time
+open(os.path.expanduser("~/scanning"), "w").close()
+for _ in range(100):  # until the test has removed ~/.mempalace and made a bare one again
+    if os.path.exists(os.path.expanduser("~/go")):
+        break
+    time.sleep(0.1)
+sys.exit(subprocess.call([sys.executable, "-I", "$REPO/docs/tools/redact_secrets.py"] + sys.argv[1:]))
+PY
+  record "made again mid-scan $(token R)" > "$PROJECTS/remade.jsonl"
+  read -r _ _ _ < <(H="$H" python3 "$SCRATCH/timed.py" "$bin/mempalace_global_hook.sh" stop \
+    "$(payload remade "$PROJECTS/remade.jsonl")")
+  for _ in $(seq 1 50); do [ -e "$H/scanning" ] && break; sleep 0.1; done
+  rm -rf "$H/.mempalace"; mkdir -p "$H/.mempalace/hook_state"; touch "$H/go"
+  wait_for_runs remade 1 && log_of remade | grep -q "not run: ~/.mempalace is gone" \
+    || fail "a worker whose installed copy was removed with ~/.mempalace went on: $(log_of remade)"
+  [ -z "$(calls_of remade)" ] || fail "MemPalace ran after ~/.mempalace was removed and made again mid-scan"
+  rm -f "$H/scanning" "$H/go"
+}
+
 test_mempalace_off_switch_is_honoured() {  # last: it removes the scratch ~/.mempalace
   record "switched off" > "$PROJECTS/off.jsonl"
   rm -rf "$H/.mempalace"
@@ -519,6 +543,7 @@ test_block_mode_is_reported
 test_only_hook_run_is_called_and_one_line_per_run
 test_mempalace_removed_while_the_redactor_scans
 test_mempalace_removed_before_the_snapshot_or_the_call
+test_mempalace_made_again_while_the_redactor_scans
 test_mempalace_off_switch_is_honoured
 [ -n "${SHOW_LOG:-}" ] && cat "$LOG"  # SHOW_LOG=1 bash docs/tools/mempalace_global_hook_test.sh prints what the hooks logged
 [ "$FAILURES" -eq 0 ] && echo "global hook tests passed" || echo "global hook tests: $FAILURES failure(s)"
