@@ -15,6 +15,18 @@ export type {
   RoleView,
 } from "./admin-roles";
 export {
+  attachPermissionSetRequest,
+  permissionSetCreateRequest,
+  permissionSetUpdateRequest,
+  permissionSetView,
+} from "./permission-sets";
+export type {
+  AttachPermissionSetRequest,
+  PermissionSetCreateRequest,
+  PermissionSetUpdateRequest,
+  PermissionSetView,
+} from "./permission-sets";
+export {
   CONFIG_REGISTRY,
   configView,
   configWriteRequest,
