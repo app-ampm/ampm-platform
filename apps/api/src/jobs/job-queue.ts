@@ -32,6 +32,15 @@ export class JobQueue implements OnModuleDestroy {
     await this.driver.enqueue(job.name, job.schema.parse(payload), options);
   }
 
+  /** Schedules a job to run on a cron pattern; the worker process runs it (no-op without Redis). */
+  async scheduleRepeatable<T>(
+    job: JobDefinition<T>,
+    cronPattern: string,
+    payload: T,
+  ): Promise<void> {
+    await this.driver.scheduleRepeatable(job.name, cronPattern, job.schema.parse(payload));
+  }
+
   async onModuleDestroy(): Promise<void> {
     await this.driver.close();
   }

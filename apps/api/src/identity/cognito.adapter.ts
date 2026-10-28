@@ -44,9 +44,11 @@ export function cognitoIdentityFromClaims(payload: JWTPayload, clientId: string)
   if (claims.token_use !== "access") throw errors.unauthenticated();
   if (claims.client_id !== clientId) throw errors.unauthenticated();
   if (typeof claims.sub !== "string" || claims.sub.length === 0) throw errors.unauthenticated();
+  if (typeof claims.jti !== "string" || claims.jti.length === 0) throw errors.unauthenticated();
   return {
     subject: claims.sub,
     provider: "cognito",
+    tokenId: claims.jti,
     email: typeof claims.email === "string" ? claims.email : null,
     phone: typeof claims.phone_number === "string" ? claims.phone_number : null,
   };

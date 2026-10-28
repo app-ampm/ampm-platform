@@ -6,7 +6,13 @@
  */
 import { PrismaPg } from "@prisma/adapter-pg";
 import { CONFIG_REGISTRY } from "@ampm/core";
-import { permissionKeysForRole, STAFF_ROLE_CODES, STAFF_ROLES, type StaffRole } from "@ampm/policy";
+import {
+  GRANTABLE_CAPABILITIES,
+  permissionKeysForRole,
+  STAFF_ROLE_CODES,
+  STAFF_ROLES,
+  type StaffRole,
+} from "@ampm/policy";
 
 import { Prisma, PrismaClient } from "../src/generated/prisma/client.js";
 
@@ -172,12 +178,45 @@ async function seedConfigurations(): Promise<void> {
   }
 }
 
+/**
+ * The code-defined capability catalog (D-036) from @ampm/policy — the same set serialised to
+ * packages/policy/src/generated/capabilities.json. Each capability is upserted by its stable key and
+ * rows no longer in the catalog are removed, so the table mirrors the matrix. Dormant: nothing reads
+ * it yet, and no `role_grants` reference it, so the reconciling delete is safe.
+ */
+async function seedGrantableCapabilities(): Promise<void> {
+  for (const capability of GRANTABLE_CAPABILITIES) {
+    const data = {
+      module: capability.module,
+      resource: capability.resource,
+      action: capability.action,
+      scope: capability.scope,
+      conditions: [...capability.conditions] as Prisma.InputJsonValue,
+      sourceRoles: [...capability.sourceRoles] as Prisma.InputJsonValue,
+      isStaffOnly: capability.isStaffOnly,
+      isEscalationLocked: capability.isEscalationLocked,
+      label: capability.label,
+    };
+    await prisma.grantableCapability.upsert({
+      where: { capabilityKey: capability.id },
+      update: data,
+      create: { capabilityKey: capability.id, ...data },
+    });
+  }
+  const current = GRANTABLE_CAPABILITIES.map((capability) => capability.id);
+  await prisma.grantableCapability.deleteMany({ where: { capabilityKey: { notIn: current } } });
+}
+
 async function main(): Promise<void> {
   const roleIds = await seedRoles();
   await seedStaff(roleIds);
   await seedClient();
   await seedConfigurations();
-  console.log("seeded roles, permissions, five synthetic accounts and the baseline configuration");
+  await seedGrantableCapabilities();
+  console.log(
+    "seeded roles, permissions, five synthetic accounts, the baseline configuration " +
+      `and ${GRANTABLE_CAPABILITIES.length} grantable capabilities`,
+  );
 }
 
 try {

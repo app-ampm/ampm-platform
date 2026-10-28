@@ -131,6 +131,7 @@ model User {
   preferences   NotificationPreference[]
   auditEvents   AuditEvent[]
   importJobs    ImportJob[]
+  sessions      Session[]
 
   @@index([userType, status])
   @@index([deletedAt])
@@ -149,8 +150,10 @@ model Role {
   updatedBy String?   @map("updated_by") @db.Uuid
   deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
 
-  permissions RolePermission[]
-  users       UserRole[]
+  permissions    RolePermission[]
+  users          UserRole[]
+  grants         RoleGrant[]
+  permissionSets RolePermissionSet[]
 
   @@map("roles")
 }
@@ -191,6 +194,108 @@ model UserRole {
   @@id([userId, roleId])
   @@index([roleId])
   @@map("user_roles")
+}
+
+/// The code-defined capability catalog (D-036), seeded from packages/policy
+/// src/generated/capabilities.json: every (key, scope, conditions) grant variant a system role
+/// holds. Both the Super-Admin pick-list and the server-side allow-list for a custom role's grants.
+/// Rewritten by the seed, so the matrix stays the source. Dormant: nothing reads it yet.
+model GrantableCapability {
+  id            String @id @default(uuid(7)) @db.Uuid
+  /// Stable id `module.resource.action:scope`, with `#<condition-signature>` when conditioned.
+  capabilityKey String @unique @map("capability_key") @db.VarChar(255)
+  module        String @db.VarChar(64)
+  resource      String @db.VarChar(128)
+  action        String @db.VarChar(32)
+  scope         String @db.VarChar(16)
+  /// The grant's conditions (packages/policy `Condition[]`); an empty array is a plain grant.
+  conditions    Json
+  /// The system role codes that hold this exact grant (`StaffRole[]`), for the class ceiling.
+  sourceRoles   Json    @map("source_roles")
+  isStaffOnly   Boolean @default(true) @map("is_staff_only")
+  /// Role/account administration and identity documents: never assignable to a custom role.
+  isEscalationLocked Boolean @default(false) @map("is_escalation_locked")
+  label         String  @db.VarChar(255)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  roleGrants          RoleGrant[]
+  permissionSetGrants PermissionSetGrant[]
+
+  @@index([module, resource])
+  @@map("grantable_capabilities")
+}
+
+/// A reusable bundle of capabilities a Super Admin assembles once and attaches to many custom roles
+/// (D-036). Its effective grants are the capabilities in `permission_set_grants`.
+model PermissionSet {
+  id          String  @id @default(uuid(7)) @db.Uuid
+  setKey      String  @unique @map("set_key") @db.VarChar(64)
+  name        String  @db.VarChar(255)
+  description String? @db.VarChar(255)
+  isSystem    Boolean @default(false) @map("is_system")
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  grants PermissionSetGrant[]
+  roles  RolePermissionSet[]
+
+  @@index([deletedAt])
+  @@map("permission_sets")
+}
+
+/// A custom role's direct grant of one catalog capability (D-036). A role's effective grants are its
+/// `role_grants` plus the grants of every attached permission set. Immutable: created and removed.
+model RoleGrant {
+  roleId                String @map("role_id") @db.Uuid
+  grantableCapabilityId String @map("grantable_capability_id") @db.Uuid
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy String?  @map("created_by") @db.Uuid
+
+  role       Role                @relation(fields: [roleId], references: [id])
+  capability GrantableCapability @relation(fields: [grantableCapabilityId], references: [id])
+
+  @@id([roleId, grantableCapabilityId])
+  @@index([grantableCapabilityId])
+  @@map("role_grants")
+}
+
+/// One capability in a permission set (D-036).
+model PermissionSetGrant {
+  permissionSetId       String @map("permission_set_id") @db.Uuid
+  grantableCapabilityId String @map("grantable_capability_id") @db.Uuid
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy String?  @map("created_by") @db.Uuid
+
+  permissionSet PermissionSet       @relation(fields: [permissionSetId], references: [id])
+  capability    GrantableCapability @relation(fields: [grantableCapabilityId], references: [id])
+
+  @@id([permissionSetId, grantableCapabilityId])
+  @@index([grantableCapabilityId])
+  @@map("permission_set_grants")
+}
+
+/// Attaches a permission set to a custom role (D-036). Editing the set fans out to every role here.
+model RolePermissionSet {
+  roleId          String @map("role_id") @db.Uuid
+  permissionSetId String @map("permission_set_id") @db.Uuid
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy String?  @map("created_by") @db.Uuid
+
+  role          Role          @relation(fields: [roleId], references: [id])
+  permissionSet PermissionSet @relation(fields: [permissionSetId], references: [id])
+
+  @@id([roleId, permissionSetId])
+  @@index([permissionSetId])
+  @@map("role_permission_sets")
 }
 
 /// Membership of a wedding project: staff reach for assigned roles, the client representatives
@@ -239,9 +344,34 @@ model AuthToken {
   @@map("auth_tokens")
 }
 
-/// Partitioned by month in production (raw SQL migration, data.md); the Prisma model stays flat.
+/// A server-side session keyed by the access token's `jti` (security.md, D-033): the token proves
+/// identity, this row is what the API can expire (staff 12h / client 30d idle, from configurations)
+/// and revoke (sign-out, or a role or membership change). Operational, so no soft-delete columns.
+model Session {
+  id                 String    @id @default(uuid(7)) @db.Uuid
+  userId             String    @map("user_id") @db.Uuid
+  /// The access token's `jti`; one session per token.
+  tokenId            String    @unique @map("token_id") @db.VarChar(255)
+  idleTimeoutMinutes Int       @map("idle_timeout_minutes")
+  lastSeenAt         DateTime  @map("last_seen_at") @db.Timestamptz(6)
+  revokedAt          DateTime? @map("revoked_at") @db.Timestamptz(6)
+  revokedReason      String?   @map("revoked_reason") @db.VarChar(255)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  // Support the reaper's sweep for dead rows (revoked, or idle past the timeout).
+  @@index([revokedAt])
+  @@index([lastSeenAt])
+  @@map("sessions")
+}
+
+/// Partitioned by month on `created_at` (raw SQL migration, data.md); the composite primary key
+/// includes the partition key, so reads/updates by id alone use findFirst / updateMany.
 model Notification {
-  id            String              @id @default(uuid(7)) @db.Uuid
+  id            String              @default(uuid(7)) @db.Uuid
   recipientType RecipientType       @map("recipient_type")
   recipientId   String              @map("recipient_id") @db.Uuid
   channel       NotificationChannel
@@ -255,6 +385,7 @@ model Notification {
   createdAt     DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt     DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
 
+  @@id([id, createdAt])
   @@index([recipientType, recipientId, status])
   @@index([entityType, entityId])
   @@map("notifications")
@@ -276,10 +407,11 @@ model NotificationPreference {
   @@map("notification_preferences")
 }
 
-/// Append-only. Partitioned by month in production (raw SQL migration); restricted and secret
-/// fields are masked before the before/after images are stored.
+/// Append-only, partitioned by month on `occurred_at` (raw SQL migration, data.md); the composite
+/// primary key includes the partition key. Restricted and secret fields are masked before the
+/// before/after images are stored.
 model AuditEvent {
-  id          String      @id @default(uuid(7)) @db.Uuid
+  id          String      @default(uuid(7)) @db.Uuid
   actorUserId String?     @map("actor_user_id") @db.Uuid
   actorType   ActorType   @map("actor_type")
   action      AuditAction
@@ -294,6 +426,7 @@ model AuditEvent {
 
   actor User? @relation(fields: [actorUserId], references: [id])
 
+  @@id([id, occurredAt])
   @@index([entityType, entityId, occurredAt])
   @@index([projectId, occurredAt])
   @@index([actorUserId, occurredAt])

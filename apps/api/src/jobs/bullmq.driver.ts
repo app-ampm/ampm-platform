@@ -58,6 +58,16 @@ export class BullMqJobDriver implements JobDriver {
     });
   }
 
+  async scheduleRepeatable(name: string, cronPattern: string, payload: unknown): Promise<void> {
+    // BullMQ v6 job scheduler: upsert is idempotent on the scheduler id, so scheduling from each
+    // process (API and worker) is safe; the worker runs the enqueued instances.
+    await this.queue(name).upsertJobScheduler(
+      name,
+      { pattern: cronPattern },
+      { name, data: payload },
+    );
+  }
+
   async close(): Promise<void> {
     await Promise.all(this.workers.map((worker) => worker.close()));
     await Promise.all([...this.queues.values()].map((queue) => queue.close()));

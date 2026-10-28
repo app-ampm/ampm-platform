@@ -34,6 +34,8 @@ jobs:
       DATABASE_URL_TEST: postgresql://ampm:ampm@localhost:5432/ampm_test
       IDENTITY_PROVIDER: local
       IDENTITY_LOCAL_SECRET: ci-local-secret-that-is-long-enough-for-hs256-ok
+      # The e2e proves the custom-role path; production leaves this off until the admin surface lands (D-036).
+      DYNAMIC_ROLES: "true"
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
