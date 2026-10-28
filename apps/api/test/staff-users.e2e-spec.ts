@@ -24,6 +24,7 @@ describe("Staff users (e2e)", () => {
       select: { id: true },
     });
     for (const user of users) {
+      await prisma.authToken.deleteMany({ where: { userId: user.id } });
       await prisma.session.deleteMany({ where: { userId: user.id } });
       await prisma.userRole.deleteMany({ where: { userId: user.id } });
       await prisma.user.delete({ where: { id: user.id } });

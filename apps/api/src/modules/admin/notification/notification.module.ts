@@ -28,5 +28,6 @@ import { NotificationService } from "./notification.service.js";
     },
     NotificationService,
   ],
+  exports: [NotificationService],
 })
 export class NotificationModule {}

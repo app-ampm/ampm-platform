@@ -64,6 +64,8 @@ export type {
   NotificationChannelDefaults,
   SessionIdleTimeouts,
 } from "./config";
+export { activateRequest, activateResponse } from "./auth";
+export type { ActivateRequest, ActivateResponse } from "./auth";
 export { healthResponse } from "./health";
 export type { HealthResponse } from "./health";
 export {
