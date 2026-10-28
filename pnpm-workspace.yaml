@@ -47,6 +47,9 @@ allowBuilds:
   "@parcel/watcher": false
   # esbuild (tsup) checks its platform binary on postinstall.
   esbuild: true
+  # bullmq's msgpackr pulls in msgpackr-extract for a native-accelerated encode path; the pure-JS
+  # fallback is used instead, so its build is declined (D-031).
+  msgpackr-extract: false
 
 # Expo's default for pnpm monorepos (docs.expo.dev/guides/monorepos): a flat node_modules so Metro and the native
 # tooling resolve one copy of everything. pnpm 12 reads this here, not from .npmrc.

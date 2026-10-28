@@ -9,3 +9,4 @@ export type { ApiClient, ApiClientOptions, RequestOptions } from "./client";
 export { ApiProvider, createQueryClient, useApiClient } from "./provider";
 export type { ApiProviderProps } from "./provider";
 export { ME_QUERY_KEY, useMe } from "./hooks/use-me";
+export { NOTIFICATIONS_QUERY_KEY, useNotifications } from "./hooks/use-notifications";

@@ -5,9 +5,10 @@
  * people. Every write is an upsert, so the seed runs again without duplicating anything.
  */
 import { PrismaPg } from "@prisma/adapter-pg";
+import { CONFIG_REGISTRY } from "@ampm/core";
 import { permissionKeysForRole, STAFF_ROLE_CODES, STAFF_ROLES, type StaffRole } from "@ampm/policy";
 
-import { PrismaClient } from "../src/generated/prisma/client.js";
+import { Prisma, PrismaClient } from "../src/generated/prisma/client.js";
 
 const url = process.env["DATABASE_URL"];
 if (!url) throw new Error("DATABASE_URL is required to seed");
@@ -159,11 +160,24 @@ async function seedClient(): Promise<void> {
   });
 }
 
+/** The baseline configuration rows from the registry; the Super Admin edits them later. */
+async function seedConfigurations(): Promise<void> {
+  for (const [configKey, { default: value }] of Object.entries(CONFIG_REGISTRY)) {
+    await prisma.configuration.upsert({
+      where: { configKey },
+      // Re-seeding never clobbers a value the Super Admin has edited.
+      update: {},
+      create: { configKey, valueJson: value as Prisma.InputJsonValue, scope: "global" },
+    });
+  }
+}
+
 async function main(): Promise<void> {
   const roleIds = await seedRoles();
   await seedStaff(roleIds);
   await seedClient();
-  console.log("seeded roles, permissions and five synthetic accounts");
+  await seedConfigurations();
+  console.log("seeded roles, permissions, five synthetic accounts and the baseline configuration");
 }
 
 try {
