@@ -118,8 +118,8 @@ class Prefiltered:
     """A pattern tried only where one of its words occurs, in any case: re is slow at a case-insensitive
     alternation over a whole transcript, bytes.find is not. Prefiltered(SECRET_WORDS, NAMED_SECRET).finditer(data,
     accept) yields the matches that start at one of those words and that accept takes, in order. Every word is tried,
-    also one inside an earlier match, so a match hides no credential after it ("key": "password=...", or the value
-    of API_KEY= swallowing the next name in API_KEY= DB_SECRET= ...); _spans merges the matches that overlap."""
+    also one inside an earlier match, so a match hides no credential after it ("key": "password=...", or an empty
+    KEY= whose value swallows the next variable's name); _spans merges the matches that overlap."""
 
     CHUNK = 1 << 23  # lower-cased a piece at a time, so a large transcript is never copied whole
 
@@ -320,8 +320,8 @@ def _env_line_word(data: bytes, match: re.Match[bytes]) -> bool:
 
 
 def _flag_word(data: bytes, match: re.Match[bytes]) -> bool:
-    """True for a letters-only value given to a --flag with '=': --password=Hunterxyz, --db-password=Hunterxyz. After
-    a space it stays (--password interactively is prose), and so does a lower-camel-case identifier."""
+    """True for a letters-only value given to a --flag with '=': --password=<word>, --db-password=<word>. After a
+    space it stays (--password interactively is prose), and so does a lower-camel-case identifier."""
     value, start = match.group("secret"), match.start("name")
     if match.group("space") is not None or not value.isalpha() or LOWER_CAMEL.fullmatch(value):
         return False

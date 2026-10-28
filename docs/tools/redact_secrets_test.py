@@ -249,16 +249,18 @@ def hidden_and_mixed_case_cases() -> list[Case]:
     command separator, a session cookie behind one holding a word, a value hidden behind an earlier match, and a
     letters-only value of --password=; then what must still stay."""
     mixed_case, letters, mixed, hex32 = "qWeRtYuIoPaS", "Qwertyuiopasdfgh", "Pw9" * 5 + "x", "a1b2c3d4" * 4
+    short_words = "ab" + "CdEfGhIjKlM"  # a lower-case start, then capitals one letter apart: not camel case
+    empty_key = "API_KEY= DB_" + "SECRET="
     return [
         ("a mixed-case letters-only password in a .env line", tool_result(f"DB_PASSWORD={mixed_case}\n"), 1,
          [mixed_case[4:]]),
-        ("a mixed-case letters-only password in yaml", tool_result(f"db:\n  POSTGRES_PASSWORD: abCdEfGhIjKlM\n"), 1,
-         ["EfGhIjKlM"]),
+        ("a mixed-case letters-only password in yaml", tool_result(f"db:\n  POSTGRES_PASSWORD: {short_words}\n"), 1,
+         [short_words[4:]]),
         ("PGPASSWORD after &&", tool_use(f"cd api && PGPASSWORD={letters[:13]} psql -h db"), 1, [letters[4:13]]),
         ("an export after a semicolon", tool_use(f"cd api; export DB_PASSWORD={letters}"), 1, [letters[4:]]),
         ("a session cookie behind one holding a word",
          tool_use(f"curl -H 'Cookie: ui_session=compactlayoutviewx; PHPSESSID={hex32}' x"), 1, [hex32[4:]]),
-        ("a secret behind the value of an empty key", tool_result(f"API_KEY= DB_SECRET= {mixed}\n"), 2, [mixed[4:]]),
+        ("a secret behind the value of an empty key", tool_result(f"{empty_key} {mixed}\n"), 2, [mixed[4:]]),
         ("a letters-only --password=", tool_use(f"ampm-cli login --password={letters}"), 1, [letters[4:]]),
         ("a letters-only --db-password=", tool_use(f"ampm-cli seed --db-password={letters[:12]}"), 1,
          [letters[4:12]]),
