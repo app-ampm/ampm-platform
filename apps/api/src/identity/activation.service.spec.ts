@@ -4,10 +4,12 @@ import type { PrismaService } from "../db/prisma.service.js";
 import type { AuditService } from "../policy/audit.service.js";
 import { ActivationService } from "./activation.service.js";
 import type { AuthTokenService } from "./auth-token.service.js";
-import type { IdentityAdapter } from "./identity.types.js";
+import { cognitoIdentityFromClaims } from "./cognito.adapter.js";
+import type { IdentityAdapter, VerifiedIdentity } from "./identity.types.js";
 
 interface Config {
   verifiedEmail?: string | null;
+  identity?: VerifiedIdentity;
   invite?: { id: string; userId: string } | null;
   user?: { id: string; email: string; status: string } | null;
   linkedElsewhere?: { id: string } | null;
@@ -15,13 +17,16 @@ interface Config {
 }
 
 function build(cfg: Config = {}) {
-  const verifyAccessToken = vi.fn(async () => ({
-    subject: "sub-1",
-    provider: "local" as const,
-    tokenId: "jti",
-    email: cfg.verifiedEmail === undefined ? "u@x.com" : cfg.verifiedEmail,
-    phone: null,
-  }));
+  const verifyAccessToken = vi.fn(
+    async (): Promise<VerifiedIdentity> =>
+      cfg.identity ?? {
+        subject: "sub-1",
+        provider: "local",
+        tokenId: "jti",
+        email: cfg.verifiedEmail === undefined ? "u@x.com" : cfg.verifiedEmail,
+        phone: null,
+      },
+  );
   const findValidInvite = vi.fn(async () =>
     cfg.invite === undefined ? { id: "t1", userId: "u1" } : cfg.invite,
   );
@@ -105,5 +110,40 @@ describe("ActivationService", () => {
     const { service, txUserUpdate } = build({ claimed: false });
     await expect(service.activate("raw", "access")).rejects.toMatchObject({ code: "conflict" });
     expect(txUserUpdate).not.toHaveBeenCalled();
+  });
+
+  // The adapter -> service seam for the D-041 gate: a VerifiedIdentity produced by the real Cognito
+  // claim mapping, so a regression in either the email_verified gate or the guard is caught together.
+  it("activates when a verified Cognito email matches the invitation", async () => {
+    const identity = cognitoIdentityFromClaims(
+      {
+        sub: "cog-sub",
+        token_use: "access",
+        client_id: "c",
+        jti: "jti-cog",
+        email: "u@x.com",
+        email_verified: true,
+      },
+      "c",
+    );
+    const { service } = build({ identity });
+    await expect(service.activate("raw", "access")).resolves.toMatchObject({ status: "active" });
+  });
+
+  it("fails closed when the Cognito token's email is present but not verified", async () => {
+    const identity = cognitoIdentityFromClaims(
+      {
+        sub: "cog-sub",
+        token_use: "access",
+        client_id: "c",
+        jti: "jti-cog",
+        email: "u@x.com",
+        email_verified: false,
+      },
+      "c",
+    );
+    const { service, markUsedIfLive } = build({ identity });
+    await expect(service.activate("raw", "access")).rejects.toMatchObject({ code: "forbidden" });
+    expect(markUsedIfLive).not.toHaveBeenCalled();
   });
 });

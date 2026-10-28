@@ -102,9 +102,9 @@
     "semantic_hash": "30a8b09b668770eca341fe31e14b2929"
   },
   "docs/data-model.md": {
-    "mtime": 1793175650.8685148,
-    "seen": 1793175842.975994,
-    "ast_hash": "c8264cfdd9967c26974e884e0e343903",
+    "mtime": 1793204668.0101478,
+    "seen": 1793204959.2182841,
+    "ast_hash": "e1cf339412a68185b3e074479e5195b3",
     "semantic_hash": ""
   },
   "docs/decision-log.md": {
@@ -2898,9 +2898,9 @@
     "semantic_hash": ""
   },
   "apps/api/src/modules/admin/staff-users/staff-users.service.ts": {
-    "mtime": 1793200225.0833213,
-    "seen": 1793200505.232675,
-    "ast_hash": "c7a3fecdac1ca4bd2a3d1c964ceac156",
+    "mtime": 1793204713.959728,
+    "seen": 1793204959.212163,
+    "ast_hash": "5b81fb700e3a65ef53686687526920cc",
     "semantic_hash": ""
   },
   "apps/api/test/staff-users.e2e-spec.ts": {
@@ -2940,9 +2940,9 @@
     "semantic_hash": ""
   },
   "apps/api/src/identity/auth-token.service.ts": {
-    "mtime": 1793200196.504475,
-    "seen": 1793200505.231744,
-    "ast_hash": "13ca7b6829ee10b6e6525110f4fc03d0",
+    "mtime": 1793204675.2733068,
+    "seen": 1793204959.211055,
+    "ast_hash": "142a5f09b47a5ac5054bdb76502c4c70",
     "semantic_hash": ""
   },
   "apps/api/src/modules/auth/activation.controller.ts": {
@@ -2994,21 +2994,21 @@
     "semantic_hash": ""
   },
   "apps/api/src/modules/admin/client-logins/client-logins.service.spec.ts": {
-    "mtime": 1793203268.750316,
-    "seen": 1793203753.3729029,
-    "ast_hash": "073b0159f25f3453a3c2ba1c766ee060",
+    "mtime": 1793204738.5472767,
+    "seen": 1793204959.211526,
+    "ast_hash": "a24f0627d445befe50222388faf82ec6",
     "semantic_hash": ""
   },
   "apps/api/src/modules/admin/client-logins/client-logins.service.ts": {
-    "mtime": 1793203501.1373231,
-    "seen": 1793203753.3729038,
-    "ast_hash": "fe8aca437b2689c08ff78cddc16e40d1",
+    "mtime": 1793204702.820597,
+    "seen": 1793204959.2115269,
+    "ast_hash": "eba43c3e37daafbb2a0158f482a64b66",
     "semantic_hash": ""
   },
   "apps/api/test/client-logins.e2e-spec.ts": {
-    "mtime": 1793203347.418339,
-    "seen": 1793203753.374142,
-    "ast_hash": "3c9d35a94936ba68909975ff368caee0",
+    "mtime": 1793204756.0292008,
+    "seen": 1793204959.212793,
+    "ast_hash": "1a8b9ac587e56bc709d67084648e2289",
     "semantic_hash": ""
   },
   "docs/tools/monday_board_map.json": {

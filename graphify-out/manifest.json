@@ -1476,9 +1476,9 @@
     "semantic_hash": ""
   },
   "apps/api/src/identity/cognito.adapter.ts": {
-    "mtime": 1793156931.874033,
-    "seen": 1793162216.3284621,
-    "ast_hash": "1d378278b27cd7e10b96f830a55eb8f1",
+    "mtime": 1793210100.2087684,
+    "seen": 1793210290.502319,
+    "ast_hash": "5a0e5ee367cb4e97583dcab8dfbea54c",
     "semantic_hash": ""
   },
   "apps/api/src/identity/identity.module.ts": {
@@ -1488,9 +1488,9 @@
     "semantic_hash": ""
   },
   "apps/api/src/identity/identity.spec.ts": {
-    "mtime": 1793158108.3988714,
-    "seen": 1793162216.328463,
-    "ast_hash": "8699d1d80116472c195c6b3d487588eb",
+    "mtime": 1793210107.5672925,
+    "seen": 1793210290.502336,
+    "ast_hash": "2383121992741470ca23b0cefffb9041",
     "semantic_hash": ""
   },
   "apps/api/src/identity/identity.types.ts": {
@@ -1500,9 +1500,9 @@
     "semantic_hash": ""
   },
   "apps/api/src/identity/local.adapter.ts": {
-    "mtime": 1793156927.4297907,
-    "seen": 1793162216.3284638,
-    "ast_hash": "d6a898560b28964130efcf4aa3c0fc2d",
+    "mtime": 1793210103.4316857,
+    "seen": 1793210290.502354,
+    "ast_hash": "443682bfa17e8801f9c22192065d2451",
     "semantic_hash": ""
   },
   "apps/api/src/modules/admin/admin.module.ts": {
@@ -2922,9 +2922,9 @@
     "semantic_hash": ""
   },
   "apps/api/src/identity/activation.service.spec.ts": {
-    "mtime": 1793200269.838027,
-    "seen": 1793200505.231741,
-    "ast_hash": "52a7fd2afbf374410be16423d58bcf8d",
+    "mtime": 1793210132.5581784,
+    "seen": 1793210290.502263,
+    "ast_hash": "cc510123ca257340e4e5989c0536da8f",
     "semantic_hash": ""
   },
   "apps/api/src/identity/activation.service.ts": {
@@ -3006,9 +3006,9 @@
     "semantic_hash": ""
   },
   "apps/api/test/client-logins.e2e-spec.ts": {
-    "mtime": 1793204756.0292008,
-    "seen": 1793204959.212793,
-    "ast_hash": "1a8b9ac587e56bc709d67084648e2289",
+    "mtime": 1793204977.9134042,
+    "seen": 1793210290.504145,
+    "ast_hash": "f6904d34ebb3b63f845f9d2397b044c5",
     "semantic_hash": ""
   },
   "docs/tools/monday_board_map.json": {
@@ -3033,6 +3033,24 @@
     "mtime": 1793202830.033704,
     "seen": 1793203753.379808,
     "ast_hash": "67a26c14f74af45c84ca4e1c41d30e6e",
+    "semantic_hash": ""
+  },
+  "apps/api/src/identity/cognito.adapter.contract.spec.ts": {
+    "mtime": 1793210117.5856173,
+    "seen": 1793210290.5023181,
+    "ast_hash": "265f8138cc6a7fdac204088aaa00231e",
+    "semantic_hash": ""
+  },
+  "docs/engineering/cognito-setup.md": {
+    "mtime": 1793209346.4118073,
+    "seen": 1793210290.5095758,
+    "ast_hash": "97f8e91cd704eee7e65bec50f271050b",
+    "semantic_hash": ""
+  },
+  "docs/planning/sprint-5-kernel-finish-brief.md": {
+    "mtime": 1793208675.7506828,
+    "seen": 1793210290.509686,
+    "ast_hash": "3e9d7065e70a58885c691da13a246179",
     "semantic_hash": ""
   }
 }
