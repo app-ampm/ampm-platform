@@ -1,7 +1,7 @@
 # Graph Report - local-dev-roadmap-8b3bd1  (2026-10-28)
 
 ## Corpus Check
-- 442 files · ~356,956 words
+- 443 files · ~357,407 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 14 file(s) not represented in the graph (top: (none) 8, .example 2, .css 2)
 
@@ -11,7 +11,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `ddb17ced`
+- Built from commit: `d8fa9a1f`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -296,8 +296,8 @@
   reference_docs/Why AMPM App.pdf → graphify-out/converted/AMPM_Developer_Technical_Specification_v1_4babf6ee.md
 - `AMPM as a Private, Paid, Client-Based Platform` --semantically_similar_to--> `Product Definition — connected wedding-planning and management platform from enquiry and paid hotel discovery through consultancy, planning, guest management, execution and closure (not merely a public hotel or vendor directory)`  [INFERRED] [semantically similar]
   reference_docs/Why AMPM App.pdf → graphify-out/converted/AMPM_Developer_Technical_Specification_v1_4babf6ee.md
-- `Five Main Navigation Tabs (Home, Clients, Weddings, Tasks, More)` --semantically_similar_to--> `Team Workspace Areas (Home, Leads/Clients, Hotels, Weddings, Guests, Vendors, Tasks/Operations, Finance/Reports, Settings)`  [INFERRED] [semantically similar]
-  reference_docs/AMPM_App_Visual_Flowchart-for team.pdf → graphify-out/converted/AMPM_Developer_Technical_Specification_v1_4babf6ee.md
+- `Rule 4 — Show Clear Statuses (pending, in progress, awaiting approval, confirmed, completed)` --semantically_similar_to--> `Statuses and Workflow Rules (lead, subscription, hotel enquiry, wedding project, approval, task, room allocation, function readiness, incident, wedding closure)`  [INFERRED] [semantically similar]
+  reference_docs/AMPM Website & App —  Business Explanation for Developer.pdf → graphify-out/converted/AMPM_Developer_Technical_Specification_v1_4babf6ee.md
 
 ## Import Cycles
 - None detected.
@@ -1155,7 +1155,7 @@ Nodes (6): ampm-vault repository, app-ampm GitHub account, post-commit hook, git
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `Recording a confirmation from AMPM` connect `Vault and Decision Generators` to `open-decisions.md`, `Package Index and Vault`, `Shared Page Builder`, `checkpoint.sh`?**
-  _High betweenness centrality (0.170) - this node is a cross-community bridge._
+  _High betweenness centrality (0.169) - this node is a cross-community bridge._
 - **Are the 2 inferred relationships involving `AMPM Platform Data Model and ER Diagrams` (e.g. with `AM-5: room category capacity - number of rooms or people per room (now two fields)` and `Seasonal rate card with verification date`) actually correct?**
   _`AMPM Platform Data Model and ER Diagrams` has 2 INFERRED edges - model-reasoned connections that need verification._
 - **What connects `./tsconfig.json`, `expo/tsconfig.base`, `PATH` to the rest of the system?**
@@ -1163,7 +1163,7 @@ _Questions this graph is uniquely positioned to answer:_
 - **Should `AMPM Developer Technical Specification v1.0 (SPEC)` be split into smaller, more focused modules?**
   _Cohesion score 0.10384615384615385 - nodes in this community are weakly interconnected._
 - **Why does `AMPM Platform Data Model and ER Diagrams` connect `architecture.md` to `AMPM Developer Technical Specification v1.0 (SPEC)`, `Round-Two Open Questions (R1 to R19)`, `Role and Permission Matrix`, `AMPM Technical Architecture and Integration Plan (DRAFT v0.2)`, `Decision Brief Open Areas`, `Package Index and Vault`, `AMPM Developer Technical Specification v1.0 (20 October 2026)`, `test-cases.md`, `User Flows and Status Transitions`, `Sign-in and RSVP Portal Screens`, `Functions, Vendors and Tasks Tables`, `Guest and RSVP Tables`, `documents`, `wireframes.md`, `requirements-audit.md`, `wedding projects`, `AMPM Developer Technical Specification v1.0 (20 October 2026)`, `hotels`, `open-decisions.md`, `CRM, Subscription and Payment Tables`, `Decisions AMPM must confirm (specification §13)`, `users`, `hotel proposals`?**
-  _High betweenness centrality (0.125) - this node is a cross-community bridge._
+  _High betweenness centrality (0.121) - this node is a cross-community bridge._
 
 ### Low-confidence Hints
 _AMBIGUOUS edges — the extractor was unsure. Verify before acting on these._

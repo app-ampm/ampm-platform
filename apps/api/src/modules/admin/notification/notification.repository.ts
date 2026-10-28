@@ -76,11 +76,12 @@ export class PrismaNotificationRepository extends NotificationRepository {
   }
 
   async findById(id: string): Promise<NotificationRow | null> {
-    return this.prisma.notification.findUnique({ where: { id } });
+    // notifications is partitioned (composite PK id + created_at), so id alone is not a findUnique key.
+    return this.prisma.notification.findFirst({ where: { id } });
   }
 
   async updateStatus(id: string, patch: StatusPatch): Promise<void> {
-    await this.prisma.notification.update({
+    await this.prisma.notification.updateMany({
       where: { id },
       data: {
         status: patch.status,
@@ -99,15 +100,17 @@ export class PrismaNotificationRepository extends NotificationRepository {
     // Notifications are recipient-owned, not project-owned: only the own-scope `ownerId` applies
     // (mapped to recipient_id); there is no project, demo or soft-delete column to scope by. SA holds
     // scope "all" (no ownerId) and reads the whole user log (permission-matrix §5.1 "Notifications log").
+    // Keyset pagination on the time-ordered uuid v7 id: notifications is partitioned (composite PK
+    // id + created_at), so id alone is not a Prisma `cursor`; an id range uses the PK's leading column.
     const where = {
       recipientType: "user" as const,
       ...(scope.ownerId !== undefined ? { recipientId: scope.ownerId } : {}),
+      ...(cursor ? { id: { lt: cursor } } : {}),
     };
     const rows = await this.prisma.notification.findMany({
       where,
-      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      orderBy: { id: "desc" },
       take: limit + 1,
-      ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
     });
     const hasMore = rows.length > limit;
     const page = hasMore ? rows.slice(0, limit) : rows;

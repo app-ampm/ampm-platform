@@ -264,9 +264,10 @@ model Session {
   @@map("sessions")
 }
 
-/// Partitioned by month in production (raw SQL migration, data.md); the Prisma model stays flat.
+/// Partitioned by month on `created_at` (raw SQL migration, data.md); the composite primary key
+/// includes the partition key, so reads/updates by id alone use findFirst / updateMany.
 model Notification {
-  id            String              @id @default(uuid(7)) @db.Uuid
+  id            String              @default(uuid(7)) @db.Uuid
   recipientType RecipientType       @map("recipient_type")
   recipientId   String              @map("recipient_id") @db.Uuid
   channel       NotificationChannel
@@ -280,6 +281,7 @@ model Notification {
   createdAt     DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt     DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
 
+  @@id([id, createdAt])
   @@index([recipientType, recipientId, status])
   @@index([entityType, entityId])
   @@map("notifications")
@@ -301,10 +303,11 @@ model NotificationPreference {
   @@map("notification_preferences")
 }
 
-/// Append-only. Partitioned by month in production (raw SQL migration); restricted and secret
-/// fields are masked before the before/after images are stored.
+/// Append-only, partitioned by month on `occurred_at` (raw SQL migration, data.md); the composite
+/// primary key includes the partition key. Restricted and secret fields are masked before the
+/// before/after images are stored.
 model AuditEvent {
-  id          String      @id @default(uuid(7)) @db.Uuid
+  id          String      @default(uuid(7)) @db.Uuid
   actorUserId String?     @map("actor_user_id") @db.Uuid
   actorType   ActorType   @map("actor_type")
   action      AuditAction
@@ -319,6 +322,7 @@ model AuditEvent {
 
   actor User? @relation(fields: [actorUserId], references: [id])
 
+  @@id([id, occurredAt])
   @@index([entityType, entityId, occurredAt])
   @@index([projectId, occurredAt])
   @@index([actorUserId, occurredAt])
