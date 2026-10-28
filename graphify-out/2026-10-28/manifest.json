@@ -276,9 +276,9 @@
     "semantic_hash": ""
   },
   "apps/api/src/app.module.ts": {
-    "mtime": 1793188125.9304998,
-    "seen": 1793189688.6072152,
-    "ast_hash": "a634f9a357c4add02d84e03a79caa80f",
+    "mtime": 1793192491.5135036,
+    "seen": 1793193711.699863,
+    "ast_hash": "51b87a27c4e7bab3808ad7d62cfa6def",
     "semantic_hash": ""
   },
   "apps/api/src/main.ts": {
@@ -1752,9 +1752,9 @@
     "semantic_hash": ""
   },
   "packages/core/src/schemas/index.ts": {
-    "mtime": 1793187934.0383947,
-    "seen": 1793189688.6104598,
-    "ast_hash": "b81db9a548b67365c789d87d7593dc38",
+    "mtime": 1793192343.1480405,
+    "seen": 1793193711.703155,
+    "ast_hash": "1afe04bf86ea7378197609dc3c1c3ec2",
     "semantic_hash": ""
   },
   "packages/core/tsup.config.ts": {
@@ -2766,9 +2766,9 @@
     "semantic_hash": ""
   },
   "apps/api/src/modules/admin/capability-grants.ts": {
-    "mtime": 1793187849.740041,
-    "seen": 1793189688.6077209,
-    "ast_hash": "4f44843cfe26680d985a61bd4ebdf3f8",
+    "mtime": 1793189707.62323,
+    "seen": 1793193711.700366,
+    "ast_hash": "6e332c8e56328b392417e043bab94948",
     "semantic_hash": ""
   },
   "apps/api/src/modules/admin/permission-sets/permission-sets.controller.ts": {
@@ -2790,21 +2790,21 @@
     "semantic_hash": ""
   },
   "apps/api/src/modules/admin/permission-sets/permission-sets.repository.ts": {
-    "mtime": 1793189377.2171974,
-    "seen": 1793189688.6080482,
-    "ast_hash": "4e0bf2686d694f1fa3feafd567832e47",
+    "mtime": 1793189707.6525605,
+    "seen": 1793193711.700733,
+    "ast_hash": "845be6e6ad7a801f3c40083f97a48d26",
     "semantic_hash": ""
   },
   "apps/api/src/modules/admin/permission-sets/permission-sets.service.spec.ts": {
-    "mtime": 1793189594.2216477,
-    "seen": 1793189688.608049,
-    "ast_hash": "329a9900f898e528b5962416a3c50fee",
+    "mtime": 1793189707.664956,
+    "seen": 1793193711.700733,
+    "ast_hash": "5b9662efb4d9600ba8c34e549d0bf76f",
     "semantic_hash": ""
   },
   "apps/api/src/modules/admin/permission-sets/permission-sets.service.ts": {
-    "mtime": 1793189413.3758855,
-    "seen": 1793189688.608049,
-    "ast_hash": "7d11876d633d4430faebabfb42cf8674",
+    "mtime": 1793189707.6785967,
+    "seen": 1793193711.700734,
+    "ast_hash": "62740fc1cddf707bb2e66356dbc0737f",
     "semantic_hash": ""
   },
   "apps/api/test/permission-sets.e2e-spec.ts": {
@@ -2817,6 +2817,54 @@
     "mtime": 1793187917.750229,
     "seen": 1793189688.610477,
     "ast_hash": "0a8cd54508cf9e3e3a6429b3c224b0ea",
+    "semantic_hash": ""
+  },
+  "apps/api/src/modules/admin/audit-log/audit-log.controller.ts": {
+    "mtime": 1793192471.5935225,
+    "seen": 1793193711.700362,
+    "ast_hash": "258627258223fb6c26858193b8037a21",
+    "semantic_hash": ""
+  },
+  "apps/api/src/modules/admin/audit-log/audit-log.module.ts": {
+    "mtime": 1793192476.867901,
+    "seen": 1793193711.700363,
+    "ast_hash": "2697cfe3068550e805ffa5fb1a4a4a7b",
+    "semantic_hash": ""
+  },
+  "apps/api/src/modules/admin/audit-log/audit-log.repository.spec.ts": {
+    "mtime": 1793193623.2725475,
+    "seen": 1793193711.700364,
+    "ast_hash": "61ac23f1fd55fe4106936dcda8938954",
+    "semantic_hash": ""
+  },
+  "apps/api/src/modules/admin/audit-log/audit-log.repository.ts": {
+    "mtime": 1793192393.15706,
+    "seen": 1793193711.700364,
+    "ast_hash": "7ddbd7228c8eeef324105150984b2142",
+    "semantic_hash": ""
+  },
+  "apps/api/src/modules/admin/audit-log/audit-log.service.spec.ts": {
+    "mtime": 1793192557.3338892,
+    "seen": 1793193711.700365,
+    "ast_hash": "1e9c668c4f6c06270ee0c830ab5bfdca",
+    "semantic_hash": ""
+  },
+  "apps/api/src/modules/admin/audit-log/audit-log.service.ts": {
+    "mtime": 1793192769.7237816,
+    "seen": 1793193711.700366,
+    "ast_hash": "f88a8f6f73b697953cf655c037129aa3",
+    "semantic_hash": ""
+  },
+  "apps/api/test/audit-log.e2e-spec.ts": {
+    "mtime": 1793193547.0882945,
+    "seen": 1793193711.701362,
+    "ast_hash": "2eaf9d2561680571ccfd88cc30f62df2",
+    "semantic_hash": ""
+  },
+  "packages/core/src/schemas/audit-log.ts": {
+    "mtime": 1793193541.0459182,
+    "seen": 1793193711.7030451,
+    "ast_hash": "7ff9a3ea0f9e3a75aa2cb96bbfa7e53d",
     "semantic_hash": ""
   }
 }

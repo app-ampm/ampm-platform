@@ -276,9 +276,9 @@
     "semantic_hash": ""
   },
   "apps/api/src/app.module.ts": {
-    "mtime": 1793192491.5135036,
-    "seen": 1793193711.699863,
-    "ast_hash": "51b87a27c4e7bab3808ad7d62cfa6def",
+    "mtime": 1793196208.4303985,
+    "seen": 1793197326.565186,
+    "ast_hash": "431c3fc2faed75b76662853dab1003ba",
     "semantic_hash": ""
   },
   "apps/api/src/main.ts": {
@@ -1752,9 +1752,9 @@
     "semantic_hash": ""
   },
   "packages/core/src/schemas/index.ts": {
-    "mtime": 1793192343.1480405,
-    "seen": 1793193711.703155,
-    "ast_hash": "1afe04bf86ea7378197609dc3c1c3ec2",
+    "mtime": 1793196079.907846,
+    "seen": 1793197326.568595,
+    "ast_hash": "a40cf477bde8a26b724dd50b6b2ce406",
     "semantic_hash": ""
   },
   "packages/core/tsup.config.ts": {
@@ -2826,9 +2826,9 @@
     "semantic_hash": ""
   },
   "apps/api/src/modules/admin/audit-log/audit-log.module.ts": {
-    "mtime": 1793192476.867901,
-    "seen": 1793193711.700363,
-    "ast_hash": "2697cfe3068550e805ffa5fb1a4a4a7b",
+    "mtime": 1793193736.931737,
+    "seen": 1793197326.565691,
+    "ast_hash": "825c94f0b76b94ae088369ad5c109ec4",
     "semantic_hash": ""
   },
   "apps/api/src/modules/admin/audit-log/audit-log.repository.spec.ts": {
@@ -2838,9 +2838,9 @@
     "semantic_hash": ""
   },
   "apps/api/src/modules/admin/audit-log/audit-log.repository.ts": {
-    "mtime": 1793192393.15706,
-    "seen": 1793193711.700364,
-    "ast_hash": "7ddbd7228c8eeef324105150984b2142",
+    "mtime": 1793193736.9506664,
+    "seen": 1793197326.565711,
+    "ast_hash": "c21f39e1735ae7cf72f651a919d174b9",
     "semantic_hash": ""
   },
   "apps/api/src/modules/admin/audit-log/audit-log.service.spec.ts": {
@@ -2850,21 +2850,75 @@
     "semantic_hash": ""
   },
   "apps/api/src/modules/admin/audit-log/audit-log.service.ts": {
-    "mtime": 1793192769.7237816,
-    "seen": 1793193711.700366,
-    "ast_hash": "f88a8f6f73b697953cf655c037129aa3",
+    "mtime": 1793193736.9611166,
+    "seen": 1793197326.56573,
+    "ast_hash": "3e29aae6ba0c0d5900da30ed47de44bd",
     "semantic_hash": ""
   },
   "apps/api/test/audit-log.e2e-spec.ts": {
-    "mtime": 1793193547.0882945,
-    "seen": 1793193711.701362,
-    "ast_hash": "2eaf9d2561680571ccfd88cc30f62df2",
+    "mtime": 1793193736.9699736,
+    "seen": 1793197326.5667992,
+    "ast_hash": "d78a530e31f466fbaf621071cd203c4e",
     "semantic_hash": ""
   },
   "packages/core/src/schemas/audit-log.ts": {
     "mtime": 1793193541.0459182,
     "seen": 1793193711.7030451,
     "ast_hash": "7ff9a3ea0f9e3a75aa2cb96bbfa7e53d",
+    "semantic_hash": ""
+  },
+  "apps/api/src/modules/admin/staff-users/staff-users.controller.ts": {
+    "mtime": 1793196195.2222428,
+    "seen": 1793197326.566259,
+    "ast_hash": "de924552ccdd5887534bb3677d8b7835",
+    "semantic_hash": ""
+  },
+  "apps/api/src/modules/admin/staff-users/staff-users.module.ts": {
+    "mtime": 1793196200.8041713,
+    "seen": 1793197326.5662599,
+    "ast_hash": "8ab8972b64eee1073dbd4138637b7bc4",
+    "semantic_hash": ""
+  },
+  "apps/api/src/modules/admin/staff-users/staff-users.repository.spec.ts": {
+    "mtime": 1793197205.453275,
+    "seen": 1793197326.5662599,
+    "ast_hash": "16deb03ca4dbc9cf7599b36abbec330f",
+    "semantic_hash": ""
+  },
+  "apps/api/src/modules/admin/staff-users/staff-users.repository.ts": {
+    "mtime": 1793196119.4947615,
+    "seen": 1793197326.566261,
+    "ast_hash": "0c8208660737c7a31ab4974a94145716",
+    "semantic_hash": ""
+  },
+  "apps/api/src/modules/admin/staff-users/staff-users.service.spec.ts": {
+    "mtime": 1793197191.7561183,
+    "seen": 1793197326.566262,
+    "ast_hash": "11bc01b7e5947bf7477537f049212e73",
+    "semantic_hash": ""
+  },
+  "apps/api/src/modules/admin/staff-users/staff-users.service.ts": {
+    "mtime": 1793197132.8953133,
+    "seen": 1793197326.566262,
+    "ast_hash": "b78669544d640a29709d7f311585a348",
+    "semantic_hash": ""
+  },
+  "apps/api/test/staff-users.e2e-spec.ts": {
+    "mtime": 1793197165.8037663,
+    "seen": 1793197326.566931,
+    "ast_hash": "67a8e0567e2899bd284faab272a84b00",
+    "semantic_hash": ""
+  },
+  "packages/core/src/schemas/staff-users.ts": {
+    "mtime": 1793196074.5248356,
+    "seen": 1793197326.5686269,
+    "ast_hash": "17025432ffee8bef571b830f29069656",
+    "semantic_hash": ""
+  },
+  "docs/planning/sprint-4-module-a-admin-brief.md": {
+    "mtime": 1793197315.1443586,
+    "seen": 1793197326.5720441,
+    "ast_hash": "a2811b9b113c4ac2e87b3d8eec1466f4",
     "semantic_hash": ""
   }
 }
