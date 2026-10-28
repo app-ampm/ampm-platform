@@ -271,6 +271,34 @@ mempalace_command() {  # $HOME/.local/bin/mempalace, else the one on PATH; fails
   [ -n "$found" ] && [ -x "$found" ] && printf '%s' "$found"
 }
 
+stop_gate() {  # resolved transcript, mempalace command: prints the skip line and returns 0 when a Stop save cannot be
+  # due yet, else returns non-zero so the worker goes on to the snapshot and the mine. MemPalace's hook_stop
+  # (hooks_cli.py) saves only every SAVE_INTERVAL human messages, counted from the {session_id}_last_save marker it
+  # keeps per session in hook_state; below that it files nothing, so the snapshot (a ~5 s scan and up to a 141 MB
+  # write) and the mine would be wasted. Only Stop is gated; PreCompact and SessionEnd always run. The count is
+  # MemPalace's own counter (~0.13 s even on the largest transcript). Any failure (no interpreter, a MemPalace whose
+  # SAVE_INTERVAL or counter this does not recognise, an unreadable marker) returns non-zero, so a save MemPalace
+  # would make is never skipped: its counter screens fewer command-messages than its saver, so this count is an upper
+  # bound on the saver's, and "below SAVE_INTERVAL by this count" means "below it by the saver's count" too.
+  local transcript="$1" ppy interval count marker last since
+  ppy=$(sed -n '1s/^#!//p' "$2" 2>/dev/null)                        # the interpreter MemPalace runs under
+  [ -n "$ppy" ] && [ -x "$ppy" ] || return 1
+  interval=$("$ppy" -I -c 'import mempalace.hooks_cli as h; print(int(h.SAVE_INTERVAL))' 2>/dev/null)
+  case "$interval" in '' | *[!0-9]*) return 1 ;; esac               # a MemPalace without the SAVE_INTERVAL we read
+  [ "$interval" -gt 0 ] || return 1
+  count=$("$ppy" -I -m mempalace.hook_shell count-human-messages "$transcript" 2>/dev/null)
+  case "$count" in '' | *[!0-9]*) return 1 ;; esac                  # the counter is missing or gave no number
+  marker="$STATE/${SESSION}_last_save"; last=0                      # MemPalace: STATE_DIR/{session_id}_last_save
+  if [ -e "$marker" ]; then                                         # absent is MemPalace's last_save = 0, not a failure
+    last=$(cat "$marker" 2>/dev/null) || return 1
+    last="${last#"${last%%[![:space:]]*}"}"; last="${last%"${last##*[![:space:]]}"}"  # int(text.strip()), as MemPalace
+    case "$last" in '' | *[!0-9]*) return 1 ;; esac
+  fi
+  since=$((count - last))
+  [ "$since" -lt "$interval" ] || return 1                          # at or over the threshold: a save may be due
+  printf '%s\n' "skipped: $since of $interval human messages since MemPalace's last save"
+}
+
 take_lock() {  # sets locked=yes, or lock_problem to why not ("held" when another worker has it)
   local tries rc
   { make_dir "$STATE" && make_dir "$STATE/global_hooks" && chmod 700 "$STATE/global_hooks"; } 2>/dev/null \
@@ -288,7 +316,7 @@ take_lock() {  # sets locked=yes, or lock_problem to why not ("held" when anothe
 }
 
 work() {  # the detached worker: lock, validate, snapshot, then MemPalace on the snapshot
-  local input transcript resolved snapshot mp out status payload reason offset outcome note="" locked=no
+  local input transcript resolved snapshot mp out status payload reason offset outcome note="" locked=no skip=""
   local lock_file lock_problem=""
   input=$(cat)
   command -v python3 >/dev/null 2>&1 || { log_run "not run: python3 is not installed"; return; }
@@ -320,6 +348,12 @@ work() {  # the detached worker: lock, validate, snapshot, then MemPalace on the
     || { log_run "not run: ${resolved:-transcript_path refused}$note"; return; }
   [ -f "$HERE/redact_secrets.py" ] || { log_run "not run: redact_secrets.py is missing from $HERE$note"; return; }
   mp=$(mempalace_command) || { log_run "not run: mempalace is not installed$note"; return; }
+
+  # Stop files nothing until SAVE_INTERVAL human messages have built up since MemPalace's last save; below that, skip
+  # the snapshot and the mine. PreCompact and SessionEnd always go on, so a final save is never gated.
+  if [ "$EVENT" = stop ] && skip=$(stop_gate "$resolved" "$mp"); then
+    log_run "$skip$note"; return
+  fi
 
   # CLAUDE.md: never file secrets or tokens. MemPalace reads only this masked copy, never the live transcript.
   snapshot="$STATE/redacted/$(basename "$resolved")"
