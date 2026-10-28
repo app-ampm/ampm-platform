@@ -4,6 +4,7 @@ import { PlatformModule } from "./common/platform.module.js";
 import { DbModule } from "./db/db.module.js";
 import { JobsModule } from "./jobs/jobs.module.js";
 import { AdminModule } from "./modules/admin/admin.module.js";
+import { AuditLogModule } from "./modules/admin/audit-log/audit-log.module.js";
 import { ConfigModule } from "./modules/admin/config/config.module.js";
 import { NotificationModule } from "./modules/admin/notification/notification.module.js";
 import { PermissionSetsModule } from "./modules/admin/permission-sets/permission-sets.module.js";
@@ -27,6 +28,7 @@ import { PolicyModule } from "./policy/policy.module.js";
     NotificationModule,
     RolesModule,
     PermissionSetsModule,
+    AuditLogModule,
     SpikeModule,
   ],
 })

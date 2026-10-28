@@ -276,9 +276,9 @@
     "semantic_hash": ""
   },
   "apps/api/src/app.module.ts": {
-    "mtime": 1793184215.4807632,
-    "seen": 1793186094.38847,
-    "ast_hash": "8201bf64a3461504f35a16f4404157b3",
+    "mtime": 1793188125.9304998,
+    "seen": 1793189688.6072152,
+    "ast_hash": "a634f9a357c4add02d84e03a79caa80f",
     "semantic_hash": ""
   },
   "apps/api/src/main.ts": {
@@ -1752,9 +1752,9 @@
     "semantic_hash": ""
   },
   "packages/core/src/schemas/index.ts": {
-    "mtime": 1793184052.847712,
-    "seen": 1793186094.391652,
-    "ast_hash": "e44481d4ffd9b6fd29fae3422c1565bb",
+    "mtime": 1793187934.0383947,
+    "seen": 1793189688.6104598,
+    "ast_hash": "b81db9a548b67365c789d87d7593dc38",
     "semantic_hash": ""
   },
   "packages/core/tsup.config.ts": {
@@ -2616,15 +2616,15 @@
     "semantic_hash": ""
   },
   "docs/tools/mempalace_global_hook.sh": {
-    "mtime": 1793162112.1475825,
-    "seen": 1793162216.3285382,
-    "ast_hash": "83afacc0f89af91c4bf147c1d4dada69",
+    "mtime": 1793186808.6525507,
+    "seen": 1793189688.6096509,
+    "ast_hash": "1794eb88f65e6c7d24e1435fd5eb8a67",
     "semantic_hash": ""
   },
   "docs/tools/mempalace_global_hook_test.sh": {
-    "mtime": 1793162112.1480498,
-    "seen": 1793162216.3285382,
-    "ast_hash": "63978dbf614222b578738fc78efc9042",
+    "mtime": 1793186808.6527948,
+    "seen": 1793189688.6096509,
+    "ast_hash": "f149bd637a97ea371ac459e5741f726e",
     "semantic_hash": ""
   },
   "apps/api/src/modules/admin/config/config.controller.ts": {
@@ -2736,21 +2736,21 @@
     "semantic_hash": ""
   },
   "apps/api/src/modules/admin/roles/roles.repository.ts": {
-    "mtime": 1793185936.0443947,
-    "seen": 1793186094.389332,
-    "ast_hash": "15e34be0902cac5a2b3b2beba8fa787b",
+    "mtime": 1793186621.5261965,
+    "seen": 1793189688.608088,
+    "ast_hash": "ac654722ba9bb2dabcf4cab9770ba7b5",
     "semantic_hash": ""
   },
   "apps/api/src/modules/admin/roles/roles.service.spec.ts": {
-    "mtime": 1793185967.967681,
-    "seen": 1793186094.389333,
-    "ast_hash": "86a510aa81831acdfd9f45b3877d3ba5",
+    "mtime": 1793186621.537184,
+    "seen": 1793189688.608089,
+    "ast_hash": "f2032af04a36516b21ea4460baebe7e0",
     "semantic_hash": ""
   },
   "apps/api/src/modules/admin/roles/roles.service.ts": {
-    "mtime": 1793185919.2562392,
-    "seen": 1793186094.389334,
-    "ast_hash": "76d7fdb2713fc836943f2a7398549396",
+    "mtime": 1793189436.4742997,
+    "seen": 1793189688.6080902,
+    "ast_hash": "e200e401f744ea29327103a5762f6bc0",
     "semantic_hash": ""
   },
   "apps/api/test/admin-roles.e2e-spec.ts": {
@@ -2763,6 +2763,60 @@
     "mtime": 1793184049.9709496,
     "seen": 1793186094.3915331,
     "ast_hash": "3a98698ede62634c8c712dd8cf57b6e8",
+    "semantic_hash": ""
+  },
+  "apps/api/src/modules/admin/capability-grants.ts": {
+    "mtime": 1793187849.740041,
+    "seen": 1793189688.6077209,
+    "ast_hash": "4f44843cfe26680d985a61bd4ebdf3f8",
+    "semantic_hash": ""
+  },
+  "apps/api/src/modules/admin/permission-sets/permission-sets.controller.ts": {
+    "mtime": 1793188109.305014,
+    "seen": 1793189688.608046,
+    "ast_hash": "c769950907534ffea3159f2664fb890a",
+    "semantic_hash": ""
+  },
+  "apps/api/src/modules/admin/permission-sets/permission-sets.module.ts": {
+    "mtime": 1793188118.3196118,
+    "seen": 1793189688.608047,
+    "ast_hash": "f8acc69435c4a019a79a765be4d07ac0",
+    "semantic_hash": ""
+  },
+  "apps/api/src/modules/admin/permission-sets/permission-sets.repository.spec.ts": {
+    "mtime": 1793189558.226326,
+    "seen": 1793189688.6080482,
+    "ast_hash": "3153bcc7c0c894b6c5ba8ca04a2d4736",
+    "semantic_hash": ""
+  },
+  "apps/api/src/modules/admin/permission-sets/permission-sets.repository.ts": {
+    "mtime": 1793189377.2171974,
+    "seen": 1793189688.6080482,
+    "ast_hash": "4e0bf2686d694f1fa3feafd567832e47",
+    "semantic_hash": ""
+  },
+  "apps/api/src/modules/admin/permission-sets/permission-sets.service.spec.ts": {
+    "mtime": 1793189594.2216477,
+    "seen": 1793189688.608049,
+    "ast_hash": "329a9900f898e528b5962416a3c50fee",
+    "semantic_hash": ""
+  },
+  "apps/api/src/modules/admin/permission-sets/permission-sets.service.ts": {
+    "mtime": 1793189413.3758855,
+    "seen": 1793189688.608049,
+    "ast_hash": "7d11876d633d4430faebabfb42cf8674",
+    "semantic_hash": ""
+  },
+  "apps/api/test/permission-sets.e2e-spec.ts": {
+    "mtime": 1793188274.3003206,
+    "seen": 1793189688.608732,
+    "ast_hash": "1c930c38e66e843832420751cbeaa67b",
+    "semantic_hash": ""
+  },
+  "packages/core/src/schemas/permission-sets.ts": {
+    "mtime": 1793187917.750229,
+    "seen": 1793189688.610477,
+    "ast_hash": "0a8cd54508cf9e3e3a6429b3c224b0ea",
     "semantic_hash": ""
   }
 }

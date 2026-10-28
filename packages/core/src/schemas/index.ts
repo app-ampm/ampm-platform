@@ -1,6 +1,26 @@
 export { cursorQuery, isoDateTime, page, uuid } from "./common";
 export type { CursorQuery } from "./common";
 export {
+  auditAction,
+  auditActorType,
+  auditEventPage,
+  auditEventQuery,
+  auditEventView,
+  auditExport,
+  auditExportQuery,
+  auditFilters,
+} from "./audit-log";
+export type {
+  AuditActionName,
+  AuditActorType,
+  AuditEventPage,
+  AuditEventQuery,
+  AuditEventView,
+  AuditExport,
+  AuditExportQuery,
+  AuditFilters,
+} from "./audit-log";
+export {
   assignRoleRequest,
   capabilityView,
   roleCreateRequest,
