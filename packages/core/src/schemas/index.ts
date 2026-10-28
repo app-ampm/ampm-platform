@@ -1,6 +1,20 @@
 export { cursorQuery, isoDateTime, page, uuid } from "./common";
 export type { CursorQuery } from "./common";
 export {
+  assignRoleRequest,
+  capabilityView,
+  roleCreateRequest,
+  roleUpdateRequest,
+  roleView,
+} from "./admin-roles";
+export type {
+  AssignRoleRequest,
+  CapabilityView,
+  RoleCreateRequest,
+  RoleUpdateRequest,
+  RoleView,
+} from "./admin-roles";
+export {
   CONFIG_REGISTRY,
   configView,
   configWriteRequest,

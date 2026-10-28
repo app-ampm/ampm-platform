@@ -276,9 +276,9 @@
     "semantic_hash": ""
   },
   "apps/api/src/app.module.ts": {
-    "mtime": 1793158422.9524505,
-    "seen": 1793162216.3284512,
-    "ast_hash": "da73f1358e1f15cf4efe5dc214efafd0",
+    "mtime": 1793184215.4807632,
+    "seen": 1793186094.38847,
+    "ast_hash": "8201bf64a3461504f35a16f4404157b3",
     "semantic_hash": ""
   },
   "apps/api/src/main.ts": {
@@ -1578,15 +1578,15 @@
     "semantic_hash": ""
   },
   "apps/api/src/policy/principal.repository.ts": {
-    "mtime": 1793178469.2325163,
-    "seen": 1793179384.350799,
-    "ast_hash": "620338669d0deb936df5de9fab6839c3",
+    "mtime": 1793182045.553898,
+    "seen": 1793186094.3896441,
+    "ast_hash": "96d0f9c711ea7816c36d3a210a88c7a4",
     "semantic_hash": ""
   },
   "apps/api/src/policy/principal.service.spec.ts": {
-    "mtime": 1793179297.8834307,
-    "seen": 1793179384.3507998,
-    "ast_hash": "f442241967a735341ab87d0fa0abf115",
+    "mtime": 1793182045.560756,
+    "seen": 1793186094.3896441,
+    "ast_hash": "8a614ce8f52511da1c8e4a13006f6879",
     "semantic_hash": ""
   },
   "apps/api/src/policy/principal.service.ts": {
@@ -1752,9 +1752,9 @@
     "semantic_hash": ""
   },
   "packages/core/src/schemas/index.ts": {
-    "mtime": 1793158434.958215,
-    "seen": 1793162216.3285692,
-    "ast_hash": "a5dfa35d08d85a0614a1d59c8ad11265",
+    "mtime": 1793184052.847712,
+    "seen": 1793186094.391652,
+    "ast_hash": "e44481d4ffd9b6fd29fae3422c1565bb",
     "semantic_hash": ""
   },
   "packages/core/tsup.config.ts": {
@@ -1794,8 +1794,8 @@
     "semantic_hash": ""
   },
   "packages/policy/src/generated/matrix.json": {
-    "mtime": 1793173500.9403067,
-    "seen": 1793173630.6573162,
+    "mtime": 1793182950.8434415,
+    "seen": 1793186094.392203,
     "ast_hash": "70799dc07b8bc3f8efd212b88bd5f4cd",
     "semantic_hash": ""
   },
@@ -2676,15 +2676,15 @@
     "semantic_hash": ""
   },
   "packages/policy/src/capabilities.ts": {
-    "mtime": 1793173154.4726222,
-    "seen": 1793173630.657109,
-    "ast_hash": "687e057df4eb47ee3081f667f97448c9",
+    "mtime": 1793182030.3746827,
+    "seen": 1793186094.3919702,
+    "ast_hash": "28f9a316b9d81b5bb27254ec28fa0fc7",
     "semantic_hash": ""
   },
   "packages/policy/src/catalog.test.ts": {
-    "mtime": 1793173393.1301937,
-    "seen": 1793173630.657109,
-    "ast_hash": "f88ee075665eae171a27f4a6785ac7e2",
+    "mtime": 1793182030.386496,
+    "seen": 1793186094.391971,
+    "ast_hash": "dfe94534aceec2c846bd8cfe112d6cee",
     "semantic_hash": ""
   },
   "packages/policy/src/catalog.ts": {
@@ -2694,8 +2694,8 @@
     "semantic_hash": ""
   },
   "packages/policy/src/generated/capabilities.json": {
-    "mtime": 1793173500.9433937,
-    "seen": 1793173630.657315,
+    "mtime": 1793182950.8451674,
+    "seen": 1793186094.392203,
     "ast_hash": "f63bcdae1565f6867750fa2a53e4b374",
     "semantic_hash": ""
   },
@@ -2706,21 +2706,63 @@
     "semantic_hash": ""
   },
   "apps/api/src/policy/audit.interceptor.spec.ts": {
-    "mtime": 1793177867.5350323,
-    "seen": 1793177975.609379,
-    "ast_hash": "5531181b99520f797b73d36f75d9f865",
+    "mtime": 1793182045.5284078,
+    "seen": 1793186094.389476,
+    "ast_hash": "d4803e7fbfde635b3478f6c12bb2cc3b",
     "semantic_hash": ""
   },
   "apps/api/src/policy/audit.interceptor.ts": {
-    "mtime": 1793177754.5193264,
-    "seen": 1793177975.60938,
-    "ast_hash": "ad597e95adcb75e6e2330410d7db4a7a",
+    "mtime": 1793182045.5345752,
+    "seen": 1793186094.389477,
+    "ast_hash": "0b940a23289953da2daacd8b1220d226",
     "semantic_hash": ""
   },
   "apps/api/test/dynamic-roles.e2e-spec.ts": {
     "mtime": 1793178844.1116512,
     "seen": 1793179384.350966,
     "ast_hash": "84a73aba37e53952cafc0f7ce920123f",
+    "semantic_hash": ""
+  },
+  "apps/api/src/modules/admin/roles/roles.controller.ts": {
+    "mtime": 1793185925.2526276,
+    "seen": 1793186094.3893309,
+    "ast_hash": "feb38d84540791c0c8c39ee8002c8f71",
+    "semantic_hash": ""
+  },
+  "apps/api/src/modules/admin/roles/roles.module.ts": {
+    "mtime": 1793184209.0504916,
+    "seen": 1793186094.389332,
+    "ast_hash": "5e7d79c0ebdd6145f59f407c49442288",
+    "semantic_hash": ""
+  },
+  "apps/api/src/modules/admin/roles/roles.repository.ts": {
+    "mtime": 1793185936.0443947,
+    "seen": 1793186094.389332,
+    "ast_hash": "15e34be0902cac5a2b3b2beba8fa787b",
+    "semantic_hash": ""
+  },
+  "apps/api/src/modules/admin/roles/roles.service.spec.ts": {
+    "mtime": 1793185967.967681,
+    "seen": 1793186094.389333,
+    "ast_hash": "86a510aa81831acdfd9f45b3877d3ba5",
+    "semantic_hash": ""
+  },
+  "apps/api/src/modules/admin/roles/roles.service.ts": {
+    "mtime": 1793185919.2562392,
+    "seen": 1793186094.389334,
+    "ast_hash": "76d7fdb2713fc836943f2a7398549396",
+    "semantic_hash": ""
+  },
+  "apps/api/test/admin-roles.e2e-spec.ts": {
+    "mtime": 1793185979.7225564,
+    "seen": 1793186094.389798,
+    "ast_hash": "c62ea2155a461b641acb54696f31668b",
+    "semantic_hash": ""
+  },
+  "packages/core/src/schemas/admin-roles.ts": {
+    "mtime": 1793184049.9709496,
+    "seen": 1793186094.3915331,
+    "ast_hash": "3a98698ede62634c8c712dd8cf57b6e8",
     "semantic_hash": ""
   }
 }
