@@ -2,13 +2,18 @@ export { cursorQuery, isoDateTime, page, uuid } from "./common";
 export type { CursorQuery } from "./common";
 export {
   CONFIG_REGISTRY,
+  configView,
+  configWriteRequest,
   featureFlags,
+  isConfigKey,
   notificationChannelDefaults,
   sessionIdleTimeouts,
 } from "./config";
 export type {
   ConfigKey,
   ConfigValue,
+  ConfigView,
+  ConfigWriteRequest,
   FeatureFlags,
   NotificationChannelDefaults,
   SessionIdleTimeouts,

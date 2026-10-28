@@ -8,6 +8,7 @@ import { ConfigModule } from "./modules/admin/config/config.module.js";
 import { NotificationModule } from "./modules/admin/notification/notification.module.js";
 import { HealthModule } from "./modules/health/health.module.js";
 import { SpikeModule } from "./modules/spike/spike.module.js";
+import { AuditModule } from "./policy/audit.module.js";
 import { PolicyModule } from "./policy/policy.module.js";
 
 @Module({
@@ -15,6 +16,7 @@ import { PolicyModule } from "./policy/policy.module.js";
   imports: [
     PlatformModule,
     DbModule,
+    AuditModule,
     ConfigModule,
     JobsModule,
     PolicyModule,

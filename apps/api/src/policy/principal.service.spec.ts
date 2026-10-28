@@ -36,6 +36,7 @@ describe("PrincipalService", () => {
     const principal = await new PrincipalService(repo).resolve({
       subject: "admin",
       provider: "local",
+      tokenId: "jti-test",
       email: null,
       phone: null,
     });
@@ -62,6 +63,7 @@ describe("PrincipalService", () => {
     const principal = await new PrincipalService(repo).resolve({
       subject: "client",
       provider: "local",
+      tokenId: "jti-test",
       email: null,
       phone: null,
     });
@@ -76,10 +78,22 @@ describe("PrincipalService", () => {
     ]);
     const service = new PrincipalService(repo);
     await expect(
-      service.resolve({ subject: "nobody", provider: "local", email: null, phone: null }),
+      service.resolve({
+        subject: "nobody",
+        provider: "local",
+        tokenId: "jti-test",
+        email: null,
+        phone: null,
+      }),
     ).rejects.toMatchObject({ code: "unauthenticated" });
     await expect(
-      service.resolve({ subject: "disabled", provider: "local", email: null, phone: null }),
+      service.resolve({
+        subject: "disabled",
+        provider: "local",
+        tokenId: "jti-test",
+        email: null,
+        phone: null,
+      }),
     ).rejects.toMatchObject({ code: "unauthenticated" });
   });
 });
