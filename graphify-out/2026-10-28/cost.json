@@ -1,0 +1,45 @@
+{
+  "runs": [
+    {
+      "date": "2026-10-25T20:58:55.661598+00:00",
+      "input_tokens": 1646194,
+      "output_tokens": 0,
+      "files": 35
+    },
+    {
+      "date": "2026-10-25T21:07:21.443710+00:00",
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "files": 5,
+      "note": "incremental, code only (AST)"
+    },
+    {
+      "date": "2026-10-25T21:30:28.018431+00:00",
+      "input_tokens": 105976,
+      "output_tokens": 0,
+      "files": 2,
+      "note": "incremental: docs/README.md re-extracted by one subagent, setup_memory.sh by AST"
+    },
+    {
+      "date": "2026-10-26T07:29:45.984392+00:00",
+      "input_tokens": 420766,
+      "output_tokens": 0,
+      "files": 6
+    },
+    {
+      "date": "2026-10-26T14:42:37.251866+00:00",
+      "input_tokens": 1207759,
+      "output_tokens": 0,
+      "files": 88,
+      "note": "incremental --update: 7 semantic subagents (combined tokens); AST free"
+    },
+    {
+      "date": "2026-10-26T00:00:00+00:00",
+      "input_tokens": 309797,
+      "output_tokens": 0,
+      "files": 247
+    }
+  ],
+  "total_input_tokens": 3690492,
+  "total_output_tokens": 0
+}
