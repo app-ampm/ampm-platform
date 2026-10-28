@@ -10,6 +10,7 @@ import {
   type SessionIdleTimeouts,
 } from "@ampm/core";
 
+import { PrismaService } from "../../../db/prisma.service.js";
 import { AuditService } from "../../../policy/audit.service.js";
 import { ConfigCache } from "./config.cache.js";
 import { ConfigRepository } from "./config.repository.js";
@@ -30,6 +31,7 @@ export class ConfigService {
   constructor(
     private readonly repository: ConfigRepository,
     private readonly audit: AuditService,
+    private readonly prisma: PrismaService,
   ) {}
 
   get(key: "session.idle_timeouts"): Promise<SessionIdleTimeouts>;
@@ -61,19 +63,26 @@ export class ConfigService {
         })),
       );
     }
-    const before = await this.repository.findByKey(key);
-    const row = await this.repository.upsert(key, parsed.data);
-    this.cache.invalidate(key);
-    await this.audit.record({
-      action: before ? "update" : "create",
-      entityType: "configuration",
-      entityId: row.id,
-      // No prior value means no before image (a create); config values are not PII, so do not mask.
-      before: before ? before.valueJson : undefined,
-      after: parsed.data,
-      maskImages: false,
+    // The write and its audit commit together; the cache is dropped only after the transaction commits.
+    const result = await this.prisma.$transaction(async (tx) => {
+      const before = await this.repository.findByKey(key, tx);
+      const row = await this.repository.upsert(key, parsed.data, tx);
+      await this.audit.record(
+        {
+          action: before ? "update" : "create",
+          entityType: "configuration",
+          entityId: row.id,
+          // No prior value means no before image (a create); config values are not PII, so do not mask.
+          before: before ? before.valueJson : undefined,
+          after: parsed.data,
+          maskImages: false,
+        },
+        tx,
+      );
+      return { key, value: parsed.data };
     });
-    return { key, value: parsed.data };
+    this.cache.invalidate(key);
+    return result;
   }
 
   /** Drops a key from the cache; the write path calls this after a change. */

@@ -31,11 +31,12 @@ export interface AuditInput {
 export class AuditService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async record(input: AuditInput): Promise<void> {
+  /** `client` lets a caller record inside its own transaction, so a mutation and its audit commit together. */
+  async record(input: AuditInput, client: Prisma.TransactionClient = this.prisma): Promise<void> {
     const context = requestContext.get();
     const principal = context?.principal ?? null;
     const mask = input.maskImages ?? true;
-    await this.prisma.auditEvent.create({
+    await client.auditEvent.create({
       data: {
         actorUserId: principal && principal.type !== "system" ? principal.userId : null,
         actorType: principal?.type === "system" ? "system" : "user",

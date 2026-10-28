@@ -40,7 +40,11 @@ class FakeAudit extends AuditService {
 function build(rows?: Map<string, ConfigRecord>) {
   const repository = new FakeConfigRepository(rows);
   const audit = new FakeAudit();
-  return { service: new ConfigService(repository, audit), repository, audit };
+  // The fake transaction just runs the callback; the repo and audit fakes ignore the tx client.
+  const prisma = {
+    $transaction: <T>(fn: (tx: unknown) => Promise<T>): Promise<T> => fn({}),
+  } as unknown as PrismaService;
+  return { service: new ConfigService(repository, audit, prisma), repository, audit };
 }
 
 describe("ConfigService", () => {

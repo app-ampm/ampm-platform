@@ -67,6 +67,9 @@ class FakeSessionRepository extends SessionRepository {
     }
     return ids;
   }
+  async reap(): Promise<number> {
+    return 0;
+  }
 }
 
 /** A repository that always loses the create race: the token has no row to find, but openSession conflicts. */
@@ -87,6 +90,9 @@ class RaceLoserRepository extends SessionRepository {
   async revokeAllForUser(): Promise<string[]> {
     return [];
   }
+  async reap(): Promise<number> {
+    return 0;
+  }
 }
 
 /** A repository whose session for the token belongs to a different user. */
@@ -104,6 +110,9 @@ class ForeignRepository extends SessionRepository {
   async revokeAllForUser(): Promise<string[]> {
     return [];
   }
+  async reap(): Promise<number> {
+    return 0;
+  }
 }
 
 function makeService() {
@@ -111,7 +120,7 @@ function makeService() {
   const audit = new FakeAudit();
   const service = new SessionService(
     repository,
-    new ConfigService(new FakeConfigRepository(), new FakeAudit()),
+    new ConfigService(new FakeConfigRepository(), new FakeAudit(), {} as unknown as PrismaService),
     audit,
   );
   return { service, repository, audit };
@@ -186,7 +195,11 @@ describe("SessionService", () => {
     const repository = new RaceLoserRepository(session({ id: "s-win" }));
     const service = new SessionService(
       repository,
-      new ConfigService(new FakeConfigRepository(), new FakeAudit()),
+      new ConfigService(
+        new FakeConfigRepository(),
+        new FakeAudit(),
+        {} as unknown as PrismaService,
+      ),
       audit,
     );
     await service.touch(identity("tok-1"), staff, new Date("2026-10-28T00:00:10.000Z"));
@@ -199,7 +212,11 @@ describe("SessionService", () => {
     );
     const service = new SessionService(
       repository,
-      new ConfigService(new FakeConfigRepository(), new FakeAudit()),
+      new ConfigService(
+        new FakeConfigRepository(),
+        new FakeAudit(),
+        {} as unknown as PrismaService,
+      ),
       new FakeAudit(),
     );
     await expect(service.touch(identity("tok-x"), staff, T0)).rejects.toMatchObject({

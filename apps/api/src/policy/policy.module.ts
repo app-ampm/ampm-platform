@@ -6,6 +6,7 @@ import { AuthGuard } from "./auth.guard.js";
 import { PermissionGuard } from "./permission.guard.js";
 import { PrincipalRepository, PrismaPrincipalRepository } from "./principal.repository.js";
 import { PrincipalService } from "./principal.service.js";
+import { SessionReaperService } from "./session-reaper.service.js";
 import { PrismaSessionRepository, SessionRepository } from "./session.repository.js";
 import { SessionService } from "./session.service.js";
 
@@ -20,6 +21,7 @@ import { SessionService } from "./session.service.js";
     PrincipalService,
     { provide: SessionRepository, useClass: PrismaSessionRepository },
     SessionService,
+    SessionReaperService,
     { provide: APP_GUARD, useClass: AuthGuard },
     { provide: APP_GUARD, useClass: PermissionGuard },
   ],

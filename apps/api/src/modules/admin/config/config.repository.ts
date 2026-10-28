@@ -9,9 +9,13 @@ export interface ConfigRecord {
 }
 
 export abstract class ConfigRepository {
-  abstract findByKey(key: string): Promise<ConfigRecord | null>;
+  abstract findByKey(key: string, client?: Prisma.TransactionClient): Promise<ConfigRecord | null>;
   /** Inserts or replaces the global value of a key; returns the row id for the audit trail. */
-  abstract upsert(key: string, valueJson: unknown): Promise<{ id: string }>;
+  abstract upsert(
+    key: string,
+    valueJson: unknown,
+    client?: Prisma.TransactionClient,
+  ): Promise<{ id: string }>;
 }
 
 @Injectable()
@@ -20,14 +24,21 @@ export class PrismaConfigRepository extends ConfigRepository {
     super();
   }
 
-  async findByKey(key: string): Promise<ConfigRecord | null> {
+  async findByKey(
+    key: string,
+    client: Prisma.TransactionClient = this.prisma,
+  ): Promise<ConfigRecord | null> {
     // `config_key` is globally unique; project-scoped configuration arrives with module E.
-    const row = await this.prisma.configuration.findUnique({ where: { configKey: key } });
+    const row = await client.configuration.findUnique({ where: { configKey: key } });
     return row ? { valueJson: row.valueJson } : null;
   }
 
-  async upsert(key: string, valueJson: unknown): Promise<{ id: string }> {
-    const row = await this.prisma.configuration.upsert({
+  async upsert(
+    key: string,
+    valueJson: unknown,
+    client: Prisma.TransactionClient = this.prisma,
+  ): Promise<{ id: string }> {
+    const row = await client.configuration.upsert({
       where: { configKey: key },
       create: { configKey: key, valueJson: valueJson as Prisma.InputJsonValue, scope: "global" },
       update: { valueJson: valueJson as Prisma.InputJsonValue },

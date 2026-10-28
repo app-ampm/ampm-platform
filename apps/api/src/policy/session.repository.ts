@@ -32,6 +32,8 @@ export abstract class SessionRepository {
   abstract touchLastSeen(id: string, at: Date): Promise<void>;
   /** Revokes every live session of a user; returns the ids this call revoked, for the audit trail. */
   abstract revokeAllForUser(userId: string, reason: string, at: Date): Promise<string[]>;
+  /** Deletes dead sessions (revoked, or idle past their own timeout); returns the number removed. */
+  abstract reap(): Promise<number>;
 }
 
 @Injectable()
@@ -74,5 +76,15 @@ export class PrismaSessionRepository extends SessionRepository {
       select: { id: true },
     });
     return revoked.map((row) => row.id);
+  }
+
+  async reap(): Promise<number> {
+    // All identifiers are literal; "now" is the database clock. A row is dead when it is revoked or
+    // has been idle longer than its own stored timeout.
+    return this.prisma.$executeRaw`
+      DELETE FROM sessions
+      WHERE revoked_at IS NOT NULL
+         OR last_seen_at < now() - make_interval(mins => idle_timeout_minutes)
+    `;
   }
 }

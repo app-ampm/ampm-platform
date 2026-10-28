@@ -3,6 +3,7 @@ import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { PrismaService } from "../src/db/prisma.service.js";
+import { SessionReaperService } from "../src/policy/session-reaper.service.js";
 import { SessionService } from "../src/policy/session.service.js";
 import { startApi } from "./start-api.js";
 
@@ -50,6 +51,28 @@ describe("Sessions (e2e)", () => {
     for (const response of responses) expect(response.status).toBe(200);
     const rows = await prisma.session.findMany({ where: { tokenId: jtiOf(token) } });
     expect(rows).toHaveLength(1);
+  });
+
+  it("reaps revoked and idle-expired sessions while keeping live ones", async () => {
+    const pm = await prisma.user.findFirstOrThrow({ where: { identitySubject: "local:pm" } });
+    const base = { userId: pm.id, idleTimeoutMinutes: 720, lastSeenAt: new Date() };
+    await prisma.session.create({ data: { ...base, tokenId: "reap-live" } });
+    await prisma.session.create({
+      data: { ...base, tokenId: "reap-revoked", revokedAt: new Date() },
+    });
+    await prisma.session.create({
+      data: {
+        userId: pm.id,
+        idleTimeoutMinutes: 1,
+        tokenId: "reap-idle",
+        lastSeenAt: new Date(Date.now() - 5 * 60 * 1000),
+      },
+    });
+    const removed = await app.get(SessionReaperService).reap();
+    expect(removed).toBeGreaterThanOrEqual(2);
+    expect(await prisma.session.findUnique({ where: { tokenId: "reap-live" } })).not.toBeNull();
+    expect(await prisma.session.findUnique({ where: { tokenId: "reap-revoked" } })).toBeNull();
+    expect(await prisma.session.findUnique({ where: { tokenId: "reap-idle" } })).toBeNull();
   });
 
   it("refuses the token once the user's sessions are revoked", async () => {

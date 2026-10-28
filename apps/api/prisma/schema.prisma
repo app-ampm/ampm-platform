@@ -258,6 +258,9 @@ model Session {
   user User @relation(fields: [userId], references: [id])
 
   @@index([userId])
+  // Support the reaper's sweep for dead rows (revoked, or idle past the timeout).
+  @@index([revokedAt])
+  @@index([lastSeenAt])
   @@map("sessions")
 }
 
