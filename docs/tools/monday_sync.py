@@ -78,7 +78,7 @@ def gql(token: str, query: str, variables: dict) -> dict:
     return body["data"]
 
 
-def build_update_body(state: str, note: str, pr: dict, now: datetime) -> str:
+def build_update_body(state: str, note: str, pr: dict, now_ist: datetime) -> str:
     head = f'{STATE_EMOJI.get(state, "")} <b>{STATE_LABEL.get(state, "Progress")}</b>'
     if note:
         head += f" — {note}"
@@ -88,7 +88,7 @@ def build_update_body(state: str, note: str, pr: dict, now: datetime) -> str:
     if pr.get("url"):
         label = f'PR #{pr["number"]}' if pr.get("number") else "PR"
         meta.append(f'<a href="{pr["url"]}">{label}</a>')
-    meta.append(now.strftime("%d %b %Y %H:%M IST"))
+    meta.append(now_ist.strftime("%d %b %Y %H:%M IST"))
     return head + "<br>" + " · ".join(meta)
 
 
@@ -98,17 +98,21 @@ def sync_card(cfg, token, key, state, note, pr, dry_run) -> bool:
         print(f"  !! unknown card key {key!r} (skipped)", file=sys.stderr)
         return False
     item, board = str(cards[key]), str(cfg["board_id"])
-    now = datetime.now(IST)
+    # monday stores a date column's time as UTC and shows it in the viewer's
+    # profile timezone, so write the real UTC instant (not the IST wall clock)
+    # and render the human-readable note in IST.
+    now_utc = datetime.now(timezone.utc)
+    now_ist = now_utc.astimezone(IST)
 
     vals: dict = {}
     if state in STATE_LABEL:
         vals[cfg["columns"]["status"]] = {"label": STATE_LABEL[state]}
     if state == "done":
         vals[cfg["columns"]["completed"]] = {
-            "date": now.strftime("%Y-%m-%d"),
-            "time": now.strftime("%H:%M:%S"),
+            "date": now_utc.strftime("%Y-%m-%d"),
+            "time": now_utc.strftime("%H:%M:%S"),
         }
-    body = build_update_body(state, note, pr, now)
+    body = build_update_body(state, note, pr, now_ist)
 
     if dry_run:
         print(f"  [dry-run] {key} ({item}) state={state}")
