@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 import {
   errors,
   type ClientLoginCreateRequest,
@@ -8,6 +8,7 @@ import {
 } from "@ampm/core";
 
 import { PrismaService } from "../../../db/prisma.service.js";
+import { ENV, type Env } from "../../../env.js";
 import { Prisma } from "../../../generated/prisma/client.js";
 import { AuthTokenService } from "../../../identity/auth-token.service.js";
 import { AuditService } from "../../../policy/audit.service.js";
@@ -50,6 +51,7 @@ export class ClientLoginsService {
     private readonly sessions: SessionService,
     private readonly authTokens: AuthTokenService,
     private readonly notifications: NotificationService,
+    @Inject(ENV) private readonly env: Env,
   ) {}
 
   async list(projectId: string): Promise<ClientLoginList> {
@@ -76,10 +78,10 @@ export class ClientLoginsService {
     if (await this.repository.emailExists(request.email)) {
       throw errors.conflict("A user with that email already exists");
     }
-    const userId = await this.insertClientLogin(projectId, request, actorId);
+    const { userId, inviteToken } = await this.insertClientLogin(projectId, request, actorId);
     // Delivery is best-effort and after commit: the login and its invite token are already saved, so a
     // transient queue failure must not fail the create or be mistaken for a conflict (it can be re-sent).
-    await this.queueInvite(userId).catch(() => undefined);
+    await this.queueInvite(userId, request.name, inviteToken).catch(() => undefined);
     return this.get(projectId, userId);
   }
 
@@ -135,7 +137,7 @@ export class ClientLoginsService {
     projectId: string,
     request: ClientLoginCreateRequest,
     actorId: string,
-  ): Promise<string> {
+  ): Promise<{ userId: string; inviteToken: string }> {
     try {
       return await this.createWithInvite(projectId, request, actorId);
     } catch (error) {
@@ -154,12 +156,12 @@ export class ClientLoginsService {
     }
   }
 
-  /** The client user + membership + invite + audit, in one transaction; returns the new user id. */
+  /** The client user + membership + invite + audit, in one transaction; returns the user id + token. */
   private createWithInvite(
     projectId: string,
     request: ClientLoginCreateRequest,
     actorId: string,
-  ): Promise<string> {
+  ): Promise<{ userId: string; inviteToken: string }> {
     const flags = {
       canViewFinance: request.canViewFinance ?? false,
       canApprove: request.canApprove ?? false,
@@ -177,7 +179,7 @@ export class ClientLoginsService {
         },
         tx,
       );
-      await this.authTokens.issueInvite(userId, tx);
+      const inviteToken = await this.authTokens.issueInvite(userId, tx);
       await this.audit.record(
         {
           action: "create",
@@ -188,11 +190,11 @@ export class ClientLoginsService {
         },
         tx,
       );
-      return userId;
+      return { userId, inviteToken };
     });
   }
 
-  private async queueInvite(userId: string): Promise<void> {
+  private async queueInvite(userId: string, name: string, inviteToken: string): Promise<void> {
     await this.notifications.queue({
       recipientType: "user",
       recipientId: userId,
@@ -201,6 +203,10 @@ export class ClientLoginsService {
       templateKey: "client.invite",
       entityType: "user",
       entityId: userId,
+      variables: {
+        name,
+        activationUrl: `${this.env.WEB_APP_URL}/activate?token=${encodeURIComponent(inviteToken)}`,
+      },
     });
   }
 

@@ -53,6 +53,8 @@ export {
   featureFlags,
   isConfigKey,
   notificationChannelDefaults,
+  notificationTemplate,
+  notificationTemplates,
   sessionIdleTimeouts,
 } from "./config";
 export type {
@@ -62,6 +64,8 @@ export type {
   ConfigWriteRequest,
   FeatureFlags,
   NotificationChannelDefaults,
+  NotificationTemplate,
+  NotificationTemplates,
   SessionIdleTimeouts,
 } from "./config";
 export { activateRequest, activateResponse } from "./auth";

@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { AuditService } from "../../../policy/audit.service.js";
 import type { PrismaService } from "../../../db/prisma.service.js";
+import type { Env } from "../../../env.js";
 import type { AuthTokenService } from "../../../identity/auth-token.service.js";
 import type { SessionService } from "../../../policy/session.service.js";
 import type { NotificationService } from "../notification/notification.service.js";
@@ -41,8 +42,9 @@ function harness(repo: FakeRepository) {
   const sessions = { revokeAllForUser } as unknown as SessionService;
   const authTokens = { issueInvite, invalidateInvitesFor } as unknown as AuthTokenService;
   const notifications = { queue } as unknown as NotificationService;
+  const env = { WEB_APP_URL: "https://app.example" } as unknown as Env;
   return {
-    service: new ClientLoginsService(repo, prisma, audit, sessions, authTokens, notifications),
+    service: new ClientLoginsService(repo, prisma, audit, sessions, authTokens, notifications, env),
     record,
     revokeAllForUser,
     issueInvite,
@@ -101,7 +103,14 @@ describe("ClientLoginsService", () => {
     expect(repo.createClientWithMembership).toHaveBeenCalled();
     expect(issueInvite).toHaveBeenCalledWith("client-new", expect.anything());
     expect(queue).toHaveBeenCalledWith(
-      expect.objectContaining({ recipientId: "client-new", templateKey: "client.invite" }),
+      expect.objectContaining({
+        recipientId: "client-new",
+        templateKey: "client.invite",
+        variables: expect.objectContaining({
+          name: "Rep",
+          activationUrl: expect.stringContaining("raw-token"),
+        }),
+      }),
     );
     expect(record).toHaveBeenCalledWith(
       expect.objectContaining({ action: "create", entityType: "client_login" }),

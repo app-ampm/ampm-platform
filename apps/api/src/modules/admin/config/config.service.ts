@@ -7,6 +7,7 @@ import {
   type ConfigView,
   type FeatureFlags,
   type NotificationChannelDefaults,
+  type NotificationTemplates,
   type SessionIdleTimeouts,
 } from "@ampm/core";
 
@@ -36,6 +37,7 @@ export class ConfigService {
 
   get(key: "session.idle_timeouts"): Promise<SessionIdleTimeouts>;
   get(key: "notification.default_channels"): Promise<NotificationChannelDefaults>;
+  get(key: "notification.templates"): Promise<NotificationTemplates>;
   get(key: "feature.flags"): Promise<FeatureFlags>;
   async get(key: ConfigKey): Promise<unknown> {
     const cached = this.cache.get(key);

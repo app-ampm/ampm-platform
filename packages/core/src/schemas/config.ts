@@ -33,6 +33,27 @@ export type NotificationChannelDefaults = z.infer<typeof notificationChannelDefa
 export const featureFlags = z.record(z.string(), z.boolean());
 export type FeatureFlags = z.infer<typeof featureFlags>;
 
+/**
+ * Per-channel content for one notification template; `{{var}}` placeholders are filled at delivery.
+ * Only the channels the service renders through the adapter are modelled; in-app is rendered by the
+ * client from the templateKey and entity, so it has no block here.
+ */
+export const notificationTemplate = z.object({
+  email: z.object({ subject: z.string(), html: z.string(), text: z.string() }).optional(),
+  sms: z.object({ text: z.string() }).optional(),
+  whatsapp: z.object({ providerTemplateId: z.string(), params: z.array(z.string()) }).optional(),
+  push: z.object({ title: z.string(), body: z.string() }).optional(),
+});
+export type NotificationTemplate = z.infer<typeof notificationTemplate>;
+
+/**
+ * Notification templates by `templateKey` (e.g. `staff.invite`); editable configuration (api.md).
+ * English-only for now; a locale dimension is deferred (sprint-5 brief 5.2) — add a per-locale layer
+ * when a second locale lands.
+ */
+export const notificationTemplates = z.record(z.string(), notificationTemplate);
+export type NotificationTemplates = z.infer<typeof notificationTemplates>;
+
 /** One registry entry; the helper makes the compiler check the baseline against its own schema. */
 function entry<S extends z.ZodType>(
   schema: S,
@@ -56,6 +77,22 @@ export const CONFIG_REGISTRY = {
     push: false,
   }),
   "feature.flags": entry(featureFlags, {}),
+  "notification.templates": entry(notificationTemplates, {
+    "staff.invite": {
+      email: {
+        subject: "Your AMPM invitation",
+        html: '<p>Hi {{name}},</p>\n<p>You have been invited to join the AMPM team. <a href="{{activationUrl}}">Activate your account</a> to get started.</p>\n<p>This invitation expires in 7 days.</p>',
+        text: "Hi {{name}},\n\nYou have been invited to join the AMPM team. Activate your account:\n{{activationUrl}}\n\nThis invitation expires in 7 days.",
+      },
+    },
+    "client.invite": {
+      email: {
+        subject: "Your AMPM wedding portal invitation",
+        html: '<p>Hi {{name}},</p>\n<p>You have been invited to your wedding portal on AMPM. <a href="{{activationUrl}}">Activate your account</a> to view your plans.</p>\n<p>This invitation expires in 7 days.</p>',
+        text: "Hi {{name}},\n\nYou have been invited to your wedding portal on AMPM. Activate your account:\n{{activationUrl}}\n\nThis invitation expires in 7 days.",
+      },
+    },
+  }),
 };
 
 /** A known configuration key. */
