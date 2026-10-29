@@ -21,7 +21,11 @@ import { JobQueue } from "../../../jobs/job-queue.js";
 import { defineJob } from "../../../jobs/job.types.js";
 import type { Principal } from "../../../policy/principal.types.js";
 import { ConfigService } from "../config/config.service.js";
-import { NOTIFICATION_ADAPTER, type NotificationAdapter } from "./notification.adapter.js";
+import {
+  NOTIFICATION_ADAPTERS,
+  type NotificationAdapters,
+  type NotificationResult,
+} from "./notification.adapter.js";
 import {
   NotificationRepository,
   type NotificationRow,
@@ -109,7 +113,7 @@ export class NotificationService implements OnModuleInit {
     private readonly jobs: JobQueue,
     private readonly config: ConfigService,
     private readonly logger: AppLogger,
-    @Inject(NOTIFICATION_ADAPTER) private readonly adapter: NotificationAdapter,
+    @Inject(NOTIFICATION_ADAPTERS) private readonly adapters: NotificationAdapters,
   ) {}
 
   onModuleInit(): void {
@@ -172,13 +176,41 @@ export class NotificationService implements OnModuleInit {
       await this.advance(row, { status: "failed", clearData: true });
       return;
     }
-    const result = await this.adapter.send({
-      channel,
-      recipientType: row.recipientType,
-      recipientId: row.recipientId,
-      templateKey: row.templateKey,
-      content,
-    });
+    await this.dispatch(row, channel, content);
+  }
+
+  /** Resolves the address, dispatches through the channel's adapter, and advances the row (5.3). */
+  private async dispatch(
+    row: NotificationRow,
+    channel: ExternalChannel,
+    content: RenderedContent,
+  ): Promise<void> {
+    // Email needs a delivery address; resolve it here (adapters never read persistence) and fail
+    // closed when the recipient has none, rather than hand the adapter an unsendable message.
+    const address =
+      channel === "email" ? await this.repository.recipientEmail(row.recipientId) : null;
+    if (channel === "email" && !address) {
+      this.logger.warn("notification.no_address", { templateKey: row.templateKey, channel });
+      await this.advance(row, { status: "failed", clearData: true });
+      return;
+    }
+    let result: NotificationResult;
+    try {
+      result = await this.adapters.for(channel).send({
+        channel,
+        recipientType: row.recipientType,
+        recipientId: row.recipientId,
+        address,
+        templateKey: row.templateKey,
+        content,
+      });
+    } catch {
+      // A failed external send is terminal here (email delivery is best-effort and re-sendable): mark
+      // the row failed and clear its render variables rather than leave it queued with the token at rest.
+      this.logger.warn("notification.send_failed", { templateKey: row.templateKey, channel });
+      await this.advance(row, { status: "failed", clearData: true });
+      return;
+    }
     await this.advance(row, {
       status: "sent",
       providerRef: result.providerRef,

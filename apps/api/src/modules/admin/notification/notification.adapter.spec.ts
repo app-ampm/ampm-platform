@@ -11,6 +11,7 @@ describe("ConsoleNotificationAdapter", () => {
       channel: "email",
       recipientType: "user",
       recipientId: "user-1",
+      address: "recipient@example.com",
       templateKey: "welcome",
       content: {
         kind: "email",
