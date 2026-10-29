@@ -256,6 +256,7 @@ erDiagram
         string provider_ref
         datetime sent_at
         datetime delivered_at
+        json data "server-only render variables e.g. the activation link (5.2); never in a view"
     }
     notification_preferences {
         uuid id PK

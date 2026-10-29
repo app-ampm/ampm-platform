@@ -1,4 +1,4 @@
-import type { LogFields, Logger } from "@ampm/core";
+import type { LogFields, Logger, RenderedContent } from "@ampm/core";
 
 /** A provider-neutral delivery request for an external channel (in-app is delivered by the service). */
 export interface NotificationDelivery {
@@ -7,8 +7,8 @@ export interface NotificationDelivery {
   /** The recipient's id; the live adapter resolves the address (email, phone, token) from it. */
   readonly recipientId: string;
   readonly templateKey: string;
-  /** The rendered message; sprint 3 renders a trivial string, real templates land in sprint 5. */
-  readonly body: string;
+  /** The rendered, per-channel content (feature 5.2); the live adapter sends it, the stub ignores it. */
+  readonly content: RenderedContent;
 }
 
 export interface NotificationResult {

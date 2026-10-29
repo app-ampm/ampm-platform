@@ -3,19 +3,24 @@ import {
   errors,
   notificationView,
   page,
+  renderTemplate,
   uuid,
+  type ExternalChannel,
   type NotificationChannel,
   type NotificationStatus,
   type NotificationView,
   type RecipientType,
+  type RenderedContent,
 } from "@ampm/core";
 import type { Scope } from "@ampm/policy";
 import { z } from "zod";
 
+import { AppLogger } from "../../../common/logger.service.js";
 import { recordScope } from "../../../db/scoping.js";
 import { JobQueue } from "../../../jobs/job-queue.js";
 import { defineJob } from "../../../jobs/job.types.js";
 import type { Principal } from "../../../policy/principal.types.js";
+import { ConfigService } from "../config/config.service.js";
 import { NOTIFICATION_ADAPTER, type NotificationAdapter } from "./notification.adapter.js";
 import {
   NotificationRepository,
@@ -38,6 +43,8 @@ export interface QueueNotification {
   readonly templateKey: string;
   readonly entityType?: string | null;
   readonly entityId?: string | null;
+  /** Per-notification render variables (e.g. the activation link); stored server-only on the row. */
+  readonly variables?: Readonly<Record<string, string>>;
 }
 
 export type QueueResult = { suppressed: true } | { suppressed: false; notificationId: string };
@@ -60,9 +67,14 @@ function canAdvance(from: NotificationStatus, to: NotificationStatus): boolean {
   return ADVANCES[from].includes(to);
 }
 
-function renderBody(templateKey: string): string {
-  // Sprint 3: a trivial renderer; per-channel, localised templates land in sprint 5.
-  return `[${templateKey}]`;
+/** The render variables a caller may attach to a notification (e.g. the activation link); all strings. */
+const renderVariables = z.record(z.string(), z.string());
+
+/** The channels delivered through the adapter; in-app is delivered by the service, so it maps to null. */
+function externalChannel(channel: NotificationChannel): ExternalChannel | null {
+  return channel === "email" || channel === "sms" || channel === "whatsapp" || channel === "push"
+    ? channel
+    : null;
 }
 
 function toView(row: NotificationRow): NotificationView {
@@ -95,6 +107,8 @@ export class NotificationService implements OnModuleInit {
   constructor(
     private readonly repository: NotificationRepository,
     private readonly jobs: JobQueue,
+    private readonly config: ConfigService,
+    private readonly logger: AppLogger,
     @Inject(NOTIFICATION_ADAPTER) private readonly adapter: NotificationAdapter,
   ) {}
 
@@ -116,6 +130,7 @@ export class NotificationService implements OnModuleInit {
       templateKey: input.templateKey,
       entityType: input.entityType ?? null,
       entityId: input.entityId ?? null,
+      data: input.variables,
     });
     await this.jobs.enqueue(
       sendNotificationJob,
@@ -144,22 +159,54 @@ export class NotificationService implements OnModuleInit {
   private async deliver(notificationId: string): Promise<void> {
     const row = await this.repository.findById(notificationId);
     if (!row || row.status !== "queued") return;
+    // Leaving `queued` also clears the row's render variables: they may carry a single-use invite
+    // link, and are only needed while the row is still queued and re-renderable. A replay runs only on
+    // a queued row, so this stays deterministic while holding the token at rest for sub-seconds (D-044).
     if (row.channel === "in_app") {
-      await this.advance(row, { status: "delivered", deliveredAt: new Date() });
+      await this.advance(row, { status: "delivered", deliveredAt: new Date(), clearData: true });
+      return;
+    }
+    const channel = externalChannel(row.channel);
+    const content = channel ? await this.render(row.templateKey, channel, row.data) : null;
+    if (!channel || !content) {
+      await this.advance(row, { status: "failed", clearData: true });
       return;
     }
     const result = await this.adapter.send({
-      channel: row.channel,
+      channel,
       recipientType: row.recipientType,
       recipientId: row.recipientId,
       templateKey: row.templateKey,
-      body: renderBody(row.templateKey),
+      content,
     });
     await this.advance(row, {
       status: "sent",
       providerRef: result.providerRef,
       sentAt: new Date(),
+      clearData: true,
     });
+  }
+
+  /** Renders the channel's content; returns null (and logs the names) when it is absent or incomplete. */
+  private async render(
+    templateKey: string,
+    channel: ExternalChannel,
+    data: unknown,
+  ): Promise<RenderedContent | null> {
+    const templates = await this.config.get("notification.templates");
+    const template = templates[templateKey];
+    const rendered = template
+      ? renderTemplate(template, channel, renderVariables.catch({}).parse(data))
+      : null;
+    if (!rendered || !rendered.content || rendered.missing.length > 0) {
+      this.logger.warn("notification.render_failed", {
+        templateKey,
+        channel,
+        missing: rendered ? rendered.missing.join(",") : "<template>",
+      });
+      return null;
+    }
+    return rendered.content;
   }
 
   private async advance(row: NotificationRow, patch: StatusPatch): Promise<void> {

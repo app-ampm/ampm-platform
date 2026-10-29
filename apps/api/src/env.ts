@@ -39,6 +39,8 @@ const schema = z
           .map((origin) => origin.trim())
           .filter(Boolean),
       ),
+    /** Public web app base URL for links in notifications, e.g. the activation link (feature 5.2). */
+    WEB_APP_URL: z.string().url().default("http://localhost:8082"),
   })
   .superRefine((value, ctx) => {
     if (value.IDENTITY_PROVIDER === "local") {
@@ -65,6 +67,13 @@ const schema = z
             message: "required with the Cognito identity provider",
           });
       }
+    }
+    if (value.NODE_ENV === "production" && /\/\/(localhost|127\.0\.0\.1)/.test(value.WEB_APP_URL)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["WEB_APP_URL"],
+        message: "a non-localhost WEB_APP_URL is required in production (invite links point to it)",
+      });
     }
   });
 

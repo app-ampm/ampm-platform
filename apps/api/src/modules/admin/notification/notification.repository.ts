@@ -3,6 +3,7 @@ import type { NotificationChannel, NotificationStatus, RecipientType } from "@am
 
 import { PrismaService } from "../../../db/prisma.service.js";
 import type { RecordScope } from "../../../db/scoping.js";
+import { Prisma } from "../../../generated/prisma/client.js";
 
 export interface NotificationRow {
   readonly id: string;
@@ -16,6 +17,8 @@ export interface NotificationRow {
   readonly providerRef: string | null;
   readonly sentAt: Date | null;
   readonly deliveredAt: Date | null;
+  /** Server-only render variables; opaque here, parsed where it is rendered. Never in a view (5.2). */
+  readonly data: unknown;
   readonly createdAt: Date;
 }
 
@@ -26,6 +29,7 @@ export interface NewNotification {
   readonly templateKey: string;
   readonly entityType?: string | null;
   readonly entityId?: string | null;
+  readonly data?: Readonly<Record<string, string>> | null;
 }
 
 export interface StatusPatch {
@@ -33,6 +37,8 @@ export interface StatusPatch {
   readonly providerRef?: string;
   readonly sentAt?: Date;
   readonly deliveredAt?: Date;
+  /** Clears the server-only render variables; set when the row leaves `queued` (5.2, D-044). */
+  readonly clearData?: boolean;
 }
 
 export interface NotificationPage {
@@ -70,6 +76,7 @@ export class PrismaNotificationRepository extends NotificationRepository {
         entityType: data.entityType ?? null,
         entityId: data.entityId ?? null,
         status: "queued",
+        ...(data.data ? { data: data.data } : {}),
       },
     });
     return row;
@@ -88,6 +95,7 @@ export class PrismaNotificationRepository extends NotificationRepository {
         ...(patch.providerRef !== undefined ? { providerRef: patch.providerRef } : {}),
         ...(patch.sentAt !== undefined ? { sentAt: patch.sentAt } : {}),
         ...(patch.deliveredAt !== undefined ? { deliveredAt: patch.deliveredAt } : {}),
+        ...(patch.clearData ? { data: Prisma.DbNull } : {}),
       },
     });
   }

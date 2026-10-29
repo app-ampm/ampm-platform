@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { AuditService } from "../../../policy/audit.service.js";
 import type { PrismaService } from "../../../db/prisma.service.js";
+import type { Env } from "../../../env.js";
 import { Prisma } from "../../../generated/prisma/client.js";
 import type { AuthTokenService } from "../../../identity/auth-token.service.js";
 import type { SessionService } from "../../../policy/session.service.js";
@@ -40,8 +41,9 @@ function harness(repo: FakeRepository) {
   const sessions = { revokeAllForUser } as unknown as SessionService;
   const authTokens = { issueInvite } as unknown as AuthTokenService;
   const notifications = { queue } as unknown as NotificationService;
+  const env = { WEB_APP_URL: "https://app.example" } as unknown as Env;
   return {
-    service: new StaffUsersService(repo, prisma, audit, sessions, authTokens, notifications),
+    service: new StaffUsersService(repo, prisma, audit, sessions, authTokens, notifications, env),
     record,
     revokeAllForUser,
     issueInvite,
@@ -97,6 +99,10 @@ describe("StaffUsersService", () => {
         recipientId: "user-new",
         channel: "email",
         templateKey: "staff.invite",
+        variables: expect.objectContaining({
+          name: "New Staff",
+          activationUrl: expect.stringContaining("raw-invite-token"),
+        }),
       }),
     );
     expect(record).toHaveBeenCalledWith(

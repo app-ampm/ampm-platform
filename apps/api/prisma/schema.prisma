@@ -382,6 +382,8 @@ model Notification {
   providerRef   String?             @map("provider_ref") @db.VarChar(255)
   sentAt        DateTime?           @map("sent_at") @db.Timestamptz(6)
   deliveredAt   DateTime?           @map("delivered_at") @db.Timestamptz(6)
+  // Server-only render variables (e.g. the activation link) consumed at delivery; never in a view (5.2).
+  data          Json?               @db.JsonB
   createdAt     DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt     DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
 
