@@ -9,6 +9,7 @@ import type { ConfigService } from "../config/config.service.js";
 import {
   ConsoleNotificationAdapter,
   type NotificationAdapter,
+  type NotificationAdapters,
   type NotificationDelivery,
 } from "./notification.adapter.js";
 import {
@@ -25,6 +26,7 @@ const TEMPLATES = CONFIG_REGISTRY["notification.templates"].default;
 class FakeNotificationRepository extends NotificationRepository {
   readonly rows = new Map<string, NotificationRow>();
   readonly disabled = new Set<string>();
+  recipientEmailValue: string | null = "recipient@example.com";
   private seq = 0;
 
   async create(data: NewNotification): Promise<NotificationRow> {
@@ -73,6 +75,10 @@ class FakeNotificationRepository extends NotificationRepository {
   async isChannelEnabled(userId: string, eventType: string, channel: string): Promise<boolean> {
     return !this.disabled.has(`${userId}|${eventType}|${channel}`);
   }
+
+  async recipientEmail(): Promise<string | null> {
+    return this.recipientEmailValue;
+  }
 }
 
 function makeService(
@@ -82,12 +88,14 @@ function makeService(
   const { logger } = createMemoryLogger();
   const jobs = new JobQueue(new InlineJobDriver(logger));
   const config = { get: async () => options.templates ?? TEMPLATES } as unknown as ConfigService;
+  const adapter = options.adapter ?? new ConsoleNotificationAdapter(logger);
+  const adapters: NotificationAdapters = { for: () => adapter };
   const service = new NotificationService(
     repo,
     jobs,
     config,
     logger as unknown as AppLogger,
-    options.adapter ?? new ConsoleNotificationAdapter(logger),
+    adapters,
   );
   service.onModuleInit();
   return service;
@@ -149,6 +157,7 @@ describe("NotificationService", () => {
     expect(row?.status).toBe("sent");
     expect(row?.providerRef).toBe("provider-ref-1");
     expect(sent).toHaveLength(1);
+    expect(sent[0]?.address).toBe("recipient@example.com");
     const content = sent[0]?.content;
     if (content?.kind !== "email") throw new Error("expected rendered email content");
     expect(content.subject).toContain("AMPM");
@@ -253,5 +262,53 @@ describe("NotificationService", () => {
     const list = await service.listOwn(principal, "own", { limit: 10 });
     expect(JSON.stringify(list)).not.toContain("SECRET");
     expect(list.items.every((item) => !("data" in item))).toBe(true);
+  });
+
+  it("fails closed when the email recipient has no resolvable address", async () => {
+    const repo = new FakeNotificationRepository();
+    repo.recipientEmailValue = null;
+    const sent: NotificationDelivery[] = [];
+    const service = makeService(repo, {
+      adapter: {
+        async send(delivery) {
+          sent.push(delivery);
+          return { providerRef: "nope" };
+        },
+      },
+    });
+    const result = await service.queue({
+      recipientType: "user",
+      recipientId: "user-1",
+      channel: "email",
+      eventType: "staff.invited",
+      templateKey: "staff.invite",
+      variables: { name: "Pat", activationUrl: "https://app.example/activate?token=abc" },
+    });
+    if (result.suppressed) throw new Error("unexpected suppression");
+    expect(repo.rows.get(result.notificationId)?.status).toBe("failed");
+    expect(sent).toHaveLength(0);
+  });
+
+  it("marks the notification failed and clears its data when the adapter send throws", async () => {
+    const repo = new FakeNotificationRepository();
+    const service = makeService(repo, {
+      adapter: {
+        async send() {
+          throw new Error("smtp boom");
+        },
+      },
+    });
+    const result = await service.queue({
+      recipientType: "user",
+      recipientId: "user-1",
+      channel: "email",
+      eventType: "staff.invited",
+      templateKey: "staff.invite",
+      variables: { name: "Pat", activationUrl: "https://app.example/activate?token=abc" },
+    });
+    if (result.suppressed) throw new Error("unexpected suppression");
+    const row = repo.rows.get(result.notificationId);
+    expect(row?.status).toBe("failed");
+    expect(row?.data).toBeNull();
   });
 });

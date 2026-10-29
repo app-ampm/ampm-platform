@@ -264,9 +264,9 @@
     "semantic_hash": "b6c9c4b64b7092bea720263a47b574cf"
   },
   "apps/api/package.json": {
-    "mtime": 1793126488.4328165,
-    "seen": 1793162216.3284469,
-    "ast_hash": "6ba5c9699320fcf9b41fe6a118b1e093",
+    "mtime": 1793259808.3361583,
+    "seen": 1793260375.684963,
+    "ast_hash": "a6a1e2d8c1af016091f213326a445294",
     "semantic_hash": ""
   },
   "apps/api/prisma.config.ts": {
@@ -438,9 +438,9 @@
     "semantic_hash": "e9f794876d725a7d044d809b6f470d76"
   },
   "packages/core/src/index.ts": {
-    "mtime": 1793256654.3705986,
-    "seen": 1793257487.0678048,
-    "ast_hash": "fc9e585305fa9d70210af69710f95be6",
+    "mtime": 1793258676.1720235,
+    "seen": 1793260375.688662,
+    "ast_hash": "27bdafc695114e99a6e7cbbff36d7f19",
     "semantic_hash": ""
   },
   "packages/core/tsconfig.json": {
@@ -1470,9 +1470,9 @@
     "semantic_hash": ""
   },
   "apps/api/src/env.ts": {
-    "mtime": 1793258316.193525,
-    "seen": 1793258647.914423,
-    "ast_hash": "5f11254f8c628bc85d34aaee7ce561e7",
+    "mtime": 1793261131.3147826,
+    "seen": 1793261507.332468,
+    "ast_hash": "7965b97602c48f26143c5b2deacb431b",
     "semantic_hash": ""
   },
   "apps/api/src/identity/cognito.adapter.ts": {
@@ -2538,15 +2538,15 @@
     "semantic_hash": ""
   },
   "apps/api/src/modules/admin/notification/notification.adapter.spec.ts": {
-    "mtime": 1793257400.1639342,
-    "seen": 1793257487.065245,
-    "ast_hash": "f302dd0768de8d7510d9d6630e019539",
+    "mtime": 1793260094.084669,
+    "seen": 1793260375.6860569,
+    "ast_hash": "0c986743aae75620260878dd38f161d5",
     "semantic_hash": ""
   },
   "apps/api/src/modules/admin/notification/notification.adapter.ts": {
-    "mtime": 1793256879.5936313,
-    "seen": 1793257487.065245,
-    "ast_hash": "33c990f6899d3ce2b753ee6c5cba9a98",
+    "mtime": 1793259970.3672993,
+    "seen": 1793260375.686058,
+    "ast_hash": "696ec7dba45a2482c99573c1552b8111",
     "semantic_hash": ""
   },
   "apps/api/src/modules/admin/notification/notification.controller.ts": {
@@ -2556,27 +2556,27 @@
     "semantic_hash": ""
   },
   "apps/api/src/modules/admin/notification/notification.module.ts": {
-    "mtime": 1793198822.7888904,
-    "seen": 1793200505.2323709,
-    "ast_hash": "2a707d77ba2a1388d3c48ddc755b0219",
+    "mtime": 1793261271.0700955,
+    "seen": 1793261507.333306,
+    "ast_hash": "d2521a63107b407d4e003f071a81caa7",
     "semantic_hash": ""
   },
   "apps/api/src/modules/admin/notification/notification.repository.ts": {
-    "mtime": 1793258312.9914255,
-    "seen": 1793258647.915245,
-    "ast_hash": "a8ec3b8bb7ab5d29c998c62efc677367",
+    "mtime": 1793260001.4793167,
+    "seen": 1793260375.686084,
+    "ast_hash": "c3711264d982bf9a88e5f14013f286cd",
     "semantic_hash": ""
   },
   "apps/api/src/modules/admin/notification/notification.service.spec.ts": {
-    "mtime": 1793258565.5083466,
-    "seen": 1793258647.915246,
-    "ast_hash": "cacf0d12f2bae4572387dad1bcac493e",
+    "mtime": 1793261309.1589823,
+    "seen": 1793261507.33333,
+    "ast_hash": "454967bf40e74d0383162de9efb9c48b",
     "semantic_hash": ""
   },
   "apps/api/src/modules/admin/notification/notification.service.ts": {
-    "mtime": 1793258303.1357164,
-    "seen": 1793258647.915246,
-    "ast_hash": "5a817d04fb7eda777656e9e9471b0670",
+    "mtime": 1793261426.6493886,
+    "seen": 1793261507.3333309,
+    "ast_hash": "5f27e0b6cd258ee42cd7379eaf955825",
     "semantic_hash": ""
   },
   "apps/api/test/notifications.e2e-spec.ts": {
@@ -3060,9 +3060,39 @@
     "semantic_hash": ""
   },
   "packages/core/src/notification/render.ts": {
-    "mtime": 1793258319.2403584,
-    "seen": 1793258647.917824,
-    "ast_hash": "d358c7f6faf47db8e235ace024256437",
+    "mtime": 1793258676.1869628,
+    "seen": 1793260375.68874,
+    "ast_hash": "921e2f9a9dbdc62bfd2a98cb75bfb130",
+    "semantic_hash": ""
+  },
+  "apps/api/src/modules/admin/notification/smtp-email.adapter.ts": {
+    "mtime": 1793261115.2702816,
+    "seen": 1793261507.333332,
+    "ast_hash": "0a4a1cef5b5966f105a96ad838daff00",
+    "semantic_hash": ""
+  },
+  "apps/api/src/env.spec.ts": {
+    "mtime": 1793261300.9020734,
+    "seen": 1793261507.3324668,
+    "ast_hash": "99cfed815b64150ce83d5e97b921313e",
+    "semantic_hash": ""
+  },
+  "apps/api/src/modules/admin/notification/notification.module.spec.ts": {
+    "mtime": 1793261291.1336946,
+    "seen": 1793261507.3333051,
+    "ast_hash": "a67e15168540ab0c7d6f947d559fd708",
+    "semantic_hash": ""
+  },
+  "apps/api/src/modules/admin/notification/notification.repository.spec.ts": {
+    "mtime": 1793261305.2950337,
+    "seen": 1793261507.3333068,
+    "ast_hash": "43ba0365171ac36005958e3c2849b565",
+    "semantic_hash": ""
+  },
+  "apps/api/src/modules/admin/notification/smtp-email.adapter.contract.spec.ts": {
+    "mtime": 1793261284.8144073,
+    "seen": 1793261507.3333309,
+    "ast_hash": "2abe0d30a0e9349366010b64aba1c078",
     "semantic_hash": ""
   }
 }

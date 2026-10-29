@@ -58,6 +58,8 @@ export abstract class NotificationRepository {
   ): Promise<NotificationPage>;
   /** A user's channel preference; the default is enabled, so only a row set to `false` suppresses. */
   abstract isChannelEnabled(userId: string, eventType: string, channel: string): Promise<boolean>;
+  /** The recipient user's email, for the email channel's delivery address; null if there is none. */
+  abstract recipientEmail(userId: string): Promise<string | null>;
 }
 
 @Injectable()
@@ -130,5 +132,13 @@ export class PrismaNotificationRepository extends NotificationRepository {
       where: { userId_eventType_channel: { userId, eventType, channel } },
     });
     return preference ? preference.enabled : true;
+  }
+
+  async recipientEmail(userId: string): Promise<string | null> {
+    const user = await this.prisma.user.findFirst({
+      where: { id: userId, deletedAt: null },
+      select: { email: true },
+    });
+    return user ? user.email : null;
   }
 }
