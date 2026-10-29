@@ -136,7 +136,7 @@ erDiagram
 
 ## 3. Module A — Identity, access and administration
 
-Covers SPEC §3 "Administration" (user, role, permission, notification, audit event, configuration) and adds `auth_tokens`, `notification_preferences`, `import_jobs` and `sessions`. The dynamic-RBAC catalog (`grantable_capabilities`, `permission_sets`, `role_grants`, `permission_set_grants`, `role_permission_sets`; D-036) is added for Super-Admin-defined custom roles.
+Covers SPEC §3 "Administration" (user, role, permission, notification, audit event, configuration) and adds `auth_tokens`, `notification_preferences`, `import_jobs`, `sessions` and `job_runs`. The dynamic-RBAC catalog (`grantable_capabilities`, `permission_sets`, `role_grants`, `permission_set_grants`, `role_permission_sets`; D-036) is added for Super-Admin-defined custom roles.
 
 ```mermaid
 erDiagram
@@ -303,6 +303,16 @@ erDiagram
         datetime revoked_at "set on sign-out or a role or membership change; idle is enforced against last_seen_at, not written"
         string revoked_reason
     }
+    job_runs {
+        uuid id PK
+        string job_name "e.g. demo.restore"
+        string idempotency_key "the run's key; correlates retries"
+        string status "enum running / succeeded / failed"
+        json detail_json "per-table counts or other outcome detail"
+        string error "nullable; the sanitised failure message"
+        datetime started_at
+        datetime finished_at "nullable until the run ends"
+    }
 ```
 
 Notes:
@@ -314,6 +324,7 @@ Notes:
 - **28 October 2026 (D-036, dormant):** dynamic RBAC. `grantable_capabilities` is the code-defined capability catalog, seeded from `packages/policy/src/generated/capabilities.json` (every grant variant a system role holds; the matrix stays the source). A Super Admin builds custom roles from it: `role_grants` are a role's direct capabilities, `permission_sets` are reusable bundles attached through `role_permission_sets`, and a set's capabilities are `permission_set_grants`. The nine system roles stay matrix-authoritative and golden-pinned; these tables add custom roles *on top*. The engine does not read them yet — the API resolves a custom role's capabilities and injects them as `PolicyPrincipal.resolvedGrants`, validated against the catalog, once custom roles are wired (supersedes A-6/P-1). FKs are `ON DELETE RESTRICT`, so a capability, role or set in use cannot be removed.
 - **`sessions` (28 October 2026, D-033):** the server-side session security.md requires. The access token proves identity; a `sessions` row, keyed by the token's `jti`, is what the API can expire (staff 12 h / client 30 d idle, from `configurations`) and revoke (on sign-out or a role or membership change). Added here because the original model left it to the identity service, which cannot revoke on an AMPM role change.
 - **Client-login cap (28 October 2026, feature 5.3):** the Q5 "two client logins per wedding, one per side" rule is enforced at the database by a partial unique index on `project_members (project_id, client_side)` where `deleted_at IS NULL AND status <> 'removed' AND client_side IS NOT NULL` (raw migration; partial indexes are not expressible in the Prisma schema). The service also pre-checks it for a friendly error, but the index is the race-safe backstop. Staff memberships (`client_side` NULL) are unconstrained.
+- **`job_runs` (29 October 2026, feature 5.5):** the recorded outcome api.md requires for a background job — the session reaper only logs. Append-only: one row per run with its `job_name`, `idempotency_key`, `status`, a `detail_json` of per-table counts and a sanitised `error`. The nightly demo-restore job writes one; other scheduled jobs reuse it. No soft-delete columns (operational, like `sessions`). Not partitioned yet — volume is a handful of rows a day; revisit with the other operational tables if it grows.
 
 ---
 

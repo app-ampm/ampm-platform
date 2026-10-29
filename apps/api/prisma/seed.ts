@@ -15,6 +15,7 @@ import {
 } from "@ampm/policy";
 
 import { Prisma, PrismaClient } from "../src/generated/prisma/client.js";
+import { upsertDemoUser } from "../src/modules/demo/demo-baseline.js";
 
 const url = process.env["DATABASE_URL"];
 if (!url) throw new Error("DATABASE_URL is required to seed");
@@ -211,10 +212,12 @@ async function main(): Promise<void> {
   const roleIds = await seedRoles();
   await seedStaff(roleIds);
   await seedClient();
+  // The canonical demo account, defined once in the demo baseline the nightly restore also rebuilds (5.5).
+  await upsertDemoUser(prisma);
   await seedConfigurations();
   await seedGrantableCapabilities();
   console.log(
-    "seeded roles, permissions, five synthetic accounts, the baseline configuration " +
+    "seeded roles, permissions, six synthetic accounts, the baseline configuration " +
       `and ${GRANTABLE_CAPABILITIES.length} grantable capabilities`,
   );
 }
