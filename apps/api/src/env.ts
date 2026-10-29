@@ -52,6 +52,8 @@ const fields = z.object({
   SMTP_PASSWORD: z.string().min(1).optional(),
   /** The From address for outgoing email; set to a verified sender in staging/production. */
   EMAIL_FROM: z.string().min(1).default("AMPM <no-reply@localhost>"),
+  /** Trusted proxy hops (Caddy) so `req.ip` is the real client for rate limits and audit; 0 trusts none. */
+  TRUST_PROXY: z.coerce.number().int().min(0).default(0),
 });
 
 type EnvFields = z.infer<typeof fields>;
@@ -116,8 +118,23 @@ function deliveryIssues(value: EnvFields): EnvIssue[] {
   return issues;
 }
 
+/** Behind Caddy in production, `req.ip` must be the real client, so an untrusted proxy is refused. */
+function proxyIssues(value: EnvFields): EnvIssue[] {
+  if (value.NODE_ENV === "production" && value.TRUST_PROXY === 0) {
+    return [
+      {
+        path: ["TRUST_PROXY"],
+        message:
+          "a proxy hop count is required in production: the API runs behind Caddy, and 0 keys every " +
+          "rate limit and audit event to the proxy's address instead of the client's",
+      },
+    ];
+  }
+  return [];
+}
+
 const schema = fields.superRefine((value, ctx) => {
-  for (const issue of [...identityIssues(value), ...deliveryIssues(value)]) {
+  for (const issue of [...identityIssues(value), ...deliveryIssues(value), ...proxyIssues(value)]) {
     ctx.addIssue({ code: "custom", path: issue.path, message: issue.message });
   }
 });
