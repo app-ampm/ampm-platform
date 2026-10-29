@@ -1,0 +1,122 @@
+# The staging stack (vps-setup.md §1–2, D-048): a separate Compose project on the same KVM 4 during the
+# build, with its own database, its own domain, and smaller limits. Co-locating its edge with production
+# on one host — one shared Caddy routing by domain, or a second small VPS (vps-setup §1–2, §17) — is
+# resolved in feature 6.2 / the deploy design; this file publishes 80/443 as the single-edge default.
+# AMPM_IMAGE is an interpolation-time variable (shell/.env set by the deploy, 6.6), not a container env
+# var, and has no default so an unpinned `up` fails loudly. Secrets come from the sops-decrypted
+# staging.env (feature 6.4); the image is pushed on merge to main (feature 6.6). Same hardening as prod.
+name: ampm-staging
+
+x-app: &app
+  image: ${AMPM_IMAGE:?set AMPM_IMAGE to the released tag@sha256 digest (the deploy workflow sets it)}
+  env_file:
+    - path: ./staging.env
+      required: false
+  read_only: true
+  tmpfs: ["/tmp"]
+  security_opt: ["no-new-privileges:true"]
+  restart: unless-stopped
+
+services:
+  postgres:
+    image: postgres:16-bookworm
+    env_file:
+      - path: ./staging.env
+        required: false
+    volumes: ["pgdata:/var/lib/postgresql/data"]
+    networks: [internal]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-ampm} -d $${POSTGRES_DB:-ampm}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits: { cpus: "1", memory: 3g }
+
+  redis:
+    image: redis:7-alpine
+    command:
+      - sh
+      - -c
+      - exec redis-server --save "" --appendonly no --requirepass "$${REDIS_PASSWORD:?REDIS_PASSWORD is required}"
+    env_file:
+      - path: ./staging.env
+        required: false
+    networks: [internal]
+    healthcheck:
+      test: ["CMD-SHELL", 'redis-cli -a "$${REDIS_PASSWORD}" ping | grep -q PONG']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits: { cpus: "0.25", memory: 256m }
+
+  api:
+    <<: *app
+    command: ["node", "dist/main.js"]
+    environment:
+      NODE_ENV: production
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    networks: [internal, edge]
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://localhost:3900/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 15s
+      timeout: 5s
+      retries: 6
+      start_period: 30s
+    deploy:
+      resources:
+        limits: { cpus: "1", memory: 1g }
+
+  worker:
+    <<: *app
+    command: ["node", "dist/worker.js"]
+    environment:
+      NODE_ENV: production
+      JOB_WORKER: "true"
+    networks: [internal]
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    deploy:
+      resources:
+        limits: { cpus: "0.5", memory: 512m }
+
+  caddy:
+    image: caddy:2-alpine
+    depends_on: [api]
+    ports: ["80:80", "443:443"]
+    env_file:
+      - path: ./staging.env
+        required: false
+    volumes:
+      - ../../caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks: [edge]
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits: { cpus: "0.25", memory: 256m }
+
+volumes:
+  pgdata:
+  caddy-data:
+  caddy-config:
+
+networks:
+  internal: { internal: true }
+  edge: {}

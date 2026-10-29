@@ -1,0 +1,102 @@
+# The local smoke stack: builds the image from source and brings the whole stack up so a developer (or
+# CI) can prove it runs before the real box exists (feature 6.1). It mirrors the production topology —
+# Postgres and Redis on an internal network, only Caddy publishing a port, every service hardened — but
+# uses throwaway, non-secret credentials and development mode (production refuses the local identity
+# provider). The production and staging stacks (image-based, sops secrets) are the sibling directories.
+name: ampm-local
+
+x-app-env: &app-env
+  NODE_ENV: development
+  PORT: "3900"
+  DATABASE_URL: postgresql://ampm:ampm@postgres:5432/ampm
+  REDIS_URL: redis://redis:6379
+  IDENTITY_PROVIDER: local
+  # A throwaway development secret, never a real one; long enough for the local HS256 adapter.
+  IDENTITY_LOCAL_SECRET: local-compose-secret-not-a-real-secret-0123456789
+
+services:
+  postgres:
+    image: postgres:16-bookworm
+    environment:
+      POSTGRES_USER: ampm
+      POSTGRES_PASSWORD: ampm
+      POSTGRES_DB: ampm
+    networks: [internal]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ampm -d ampm"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    # No persistence: nothing in Redis is the only copy of anything (D-031).
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    networks: [internal]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+
+  api:
+    build:
+      context: ../../..
+      dockerfile: infra/docker/Dockerfile
+    command: ["node", "dist/main.js"]
+    environment: *app-env
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    networks: [internal, edge]
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://localhost:3900/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    read_only: true
+    tmpfs: ["/tmp"]
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: ../../..
+      dockerfile: infra/docker/Dockerfile
+    command: ["node", "dist/worker.js"]
+    environment:
+      <<: *app-env
+      JOB_WORKER: "true"
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    networks: [internal]
+    read_only: true
+    tmpfs: ["/tmp"]
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2-alpine
+    depends_on: [api]
+    # The one published port of the stack, matching the production invariant "only Caddy publishes".
+    ports: ["8080:8080"]
+    volumes:
+      - ../../caddy/Caddyfile.local:/etc/caddy/Caddyfile:ro
+    networks: [edge]
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+
+networks:
+  # Postgres and Redis are never reachable from outside the stack.
+  internal: { internal: true }
+  edge: {}

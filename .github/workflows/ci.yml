@@ -54,3 +54,23 @@ jobs:
       # modules, so a module Metro cannot bundle (expo-sqlite's web worker, 27 Oct 2026) passes them.
       - name: Mobile bundles (web, iOS, Android)
         run: pnpm --filter mobile bundle:check
+
+  # Infrastructure as code (feature 6.1+): validate the Compose stacks on every change. Docker is
+  # preinstalled on the runner, so this needs no Node/pnpm setup.
+  infra:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      # A dummy AMPM_IMAGE so the production/staging stacks (which require it, with no default) validate.
+      - name: Validate Compose files (local, production, staging)
+        env:
+          AMPM_IMAGE: config-check
+        run: |
+          docker compose -f infra/compose/local/compose.yml config -q
+          docker compose -f infra/compose/production/compose.yml config -q
+          docker compose -f infra/compose/staging/compose.yml config -q
+      # Build the actual deploy artifact so a Dockerfile/build regression cannot ship green (the image
+      # is not otherwise exercised by CI; the registry push and digest pin are feature 6.6).
+      - name: Build the server image
+        run: docker build -f infra/docker/Dockerfile -t ampm:ci .

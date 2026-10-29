@@ -1,6 +1,6 @@
 # AMPM Platform — The VPS: Setup Specification and Runbooks
 
-**Status:** version 0.1, 26 October 2026 · **Decision:** R13 locked as G2, everything on AMPM's dedicated VPS, with pgBackRest archives to an S3 bucket in Mumbai and rehearsed restores (D-015). This document is what sprint 2 builds and what the operator keeps to. It sets aside the architecture's principle 7 ("nothing hand-built on a server") deliberately: the server is built from code in this repository and can be rebuilt from it.
+**Status:** version 0.1, 26 October 2026 · **Decision:** R13 locked as G2, everything on AMPM's dedicated VPS, with pgBackRest archives to an S3 bucket in Mumbai and rehearsed restores (D-015). This document is what sprints 6–7 build (build-plan §3; the v0.1 "sprint 2" reference predates the locked execution plan) and what the operator keeps to. It sets aside the architecture's principle 7 ("nothing hand-built on a server") deliberately: the server is built from code in this repository and can be rebuilt from it.
 
 ## 0. The facts (recorded 26 October 2026; confirm the items marked so at purchase)
 
@@ -69,9 +69,11 @@ Twenty concurrent weddings, two hundred hotels and a few thousand users are smal
 
 | Path | Contents |
 |---|---|
+| `infra/docker/Dockerfile` | The single multi-stage image that runs api, worker or the migration job by command (feature 6.1, D-048); non-root, the built `dist` plus the installed workspace |
 | `infra/bootstrap.sh` | One-shot host preparation: users, SSH hardening, firewall, Docker, unattended upgrades, time sync, swap, log rotation, fail2ban |
 | `infra/compose/production/compose.yml` | caddy, api, worker, postgres, redis, pgbackrest, node-exporter; pinned image tags; healthchecks; `restart: unless-stopped`; memory and CPU limits; read-only root filesystems where possible; non-root users; internal network for postgres and redis; only caddy publishes ports |
 | `infra/compose/staging/compose.yml` | The same, own project name, own database, own domain, smaller limits |
+| `infra/compose/local/compose.yml` | The local smoke stack: builds the image from source with throwaway creds, for `pnpm infra:smoke` and CI (feature 6.1) |
 | `infra/caddy/Caddyfile` | Domains, automatic TLS, HSTS, security headers, rate limits on sign-in, OTP and public forms, static public site, reverse proxy to the API with WebSocket support |
 | `infra/pgbackrest/pgbackrest.conf` | Repository on S3 Mumbai with repo encryption, `archive_timeout` 60 seconds, full backup weekly, differential daily, retention 2 full sets and 14 days of archives, `process-max` 2 |
 | `infra/postgres/` | `postgresql.conf` tuned to the box (shared buffers a quarter of memory, WAL level replica, archive command to pgBackRest, logging), `pg_hba.conf` internal only |
