@@ -1,6 +1,7 @@
 import { Controller, Headers, HttpCode, Post } from "@nestjs/common";
 import { activateRequest, errors, type ActivateRequest, type ActivateResponse } from "@ampm/core";
 
+import { RateLimit } from "../../common/rate-limit/rate-limit.decorator.js";
 import { ZodBody } from "../../common/zod.js";
 import { Public, SelfAudited } from "../../policy/decorators.js";
 import { ActivationService } from "../../identity/activation.service.js";
@@ -16,6 +17,7 @@ export class ActivationController {
 
   @Post("activate")
   @Public()
+  @RateLimit({ name: "auth.activate", limit: 10, windowMs: 60_000 })
   @HttpCode(200)
   @SelfAudited()
   activate(

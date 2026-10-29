@@ -12,6 +12,7 @@ const prodValid = {
   SMTP_HOST: "smtp.example.com",
   EMAIL_FROM: "AMPM <no-reply@ampm.example>",
   WEB_APP_URL: "https://app.ampm.example",
+  TRUST_PROXY: "1",
 };
 
 describe("loadEnv", () => {
@@ -53,6 +54,11 @@ describe("loadEnv", () => {
     expect(() => loadEnv({ ...prodValid, WEB_APP_URL: "http://localhost:8082" })).toThrow(
       /WEB_APP_URL/,
     );
+  });
+
+  it("refuses an untrusted proxy in production", () => {
+    const { TRUST_PROXY: _omit, ...withoutProxy } = prodValid;
+    expect(() => loadEnv(withoutProxy)).toThrow(/TRUST_PROXY/);
   });
 
   it("refuses the local identity provider in production", () => {
