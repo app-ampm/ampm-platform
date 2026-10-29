@@ -53,6 +53,8 @@ export {
   featureFlags,
   isConfigKey,
   notificationChannelDefaults,
+  notificationTemplate,
+  notificationTemplates,
   sessionIdleTimeouts,
 } from "./config";
 export type {
@@ -62,8 +64,27 @@ export type {
   ConfigWriteRequest,
   FeatureFlags,
   NotificationChannelDefaults,
+  NotificationTemplate,
+  NotificationTemplates,
   SessionIdleTimeouts,
 } from "./config";
+export { activateRequest, activateResponse } from "./auth";
+export type { ActivateRequest, ActivateResponse } from "./auth";
+export {
+  clientLoginCreateRequest,
+  clientLoginList,
+  clientLoginUpdateRequest,
+  clientLoginView,
+  membershipStatus,
+} from "./client-logins";
+export type {
+  ClientLoginCreateRequest,
+  ClientLoginList,
+  ClientLoginUpdateRequest,
+  ClientLoginView,
+  ClientSide,
+  MembershipStatus,
+} from "./client-logins";
 export { healthResponse } from "./health";
 export type { HealthResponse } from "./health";
 export {

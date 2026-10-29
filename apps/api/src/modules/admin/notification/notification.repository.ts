@@ -3,6 +3,7 @@ import type { NotificationChannel, NotificationStatus, RecipientType } from "@am
 
 import { PrismaService } from "../../../db/prisma.service.js";
 import type { RecordScope } from "../../../db/scoping.js";
+import { Prisma } from "../../../generated/prisma/client.js";
 
 export interface NotificationRow {
   readonly id: string;
@@ -16,6 +17,8 @@ export interface NotificationRow {
   readonly providerRef: string | null;
   readonly sentAt: Date | null;
   readonly deliveredAt: Date | null;
+  /** Server-only render variables; opaque here, parsed where it is rendered. Never in a view (5.2). */
+  readonly data: unknown;
   readonly createdAt: Date;
 }
 
@@ -26,6 +29,7 @@ export interface NewNotification {
   readonly templateKey: string;
   readonly entityType?: string | null;
   readonly entityId?: string | null;
+  readonly data?: Readonly<Record<string, string>> | null;
 }
 
 export interface StatusPatch {
@@ -33,6 +37,8 @@ export interface StatusPatch {
   readonly providerRef?: string;
   readonly sentAt?: Date;
   readonly deliveredAt?: Date;
+  /** Clears the server-only render variables; set when the row leaves `queued` (5.2, D-044). */
+  readonly clearData?: boolean;
 }
 
 export interface NotificationPage {
@@ -52,6 +58,8 @@ export abstract class NotificationRepository {
   ): Promise<NotificationPage>;
   /** A user's channel preference; the default is enabled, so only a row set to `false` suppresses. */
   abstract isChannelEnabled(userId: string, eventType: string, channel: string): Promise<boolean>;
+  /** The recipient user's email, for the email channel's delivery address; null if there is none. */
+  abstract recipientEmail(userId: string): Promise<string | null>;
 }
 
 @Injectable()
@@ -70,6 +78,7 @@ export class PrismaNotificationRepository extends NotificationRepository {
         entityType: data.entityType ?? null,
         entityId: data.entityId ?? null,
         status: "queued",
+        ...(data.data ? { data: data.data } : {}),
       },
     });
     return row;
@@ -88,6 +97,7 @@ export class PrismaNotificationRepository extends NotificationRepository {
         ...(patch.providerRef !== undefined ? { providerRef: patch.providerRef } : {}),
         ...(patch.sentAt !== undefined ? { sentAt: patch.sentAt } : {}),
         ...(patch.deliveredAt !== undefined ? { deliveredAt: patch.deliveredAt } : {}),
+        ...(patch.clearData ? { data: Prisma.DbNull } : {}),
       },
     });
   }
@@ -122,5 +132,13 @@ export class PrismaNotificationRepository extends NotificationRepository {
       where: { userId_eventType_channel: { userId, eventType, channel } },
     });
     return preference ? preference.enabled : true;
+  }
+
+  async recipientEmail(userId: string): Promise<string | null> {
+    const user = await this.prisma.user.findFirst({
+      where: { id: userId, deletedAt: null },
+      select: { email: true },
+    });
+    return user ? user.email : null;
   }
 }

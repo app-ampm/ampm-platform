@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 import {
   errors,
   type StaffUserCreateRequest,
@@ -11,9 +11,12 @@ import {
 } from "@ampm/core";
 
 import { PrismaService } from "../../../db/prisma.service.js";
+import { ENV, type Env } from "../../../env.js";
 import { Prisma } from "../../../generated/prisma/client.js";
+import { AuthTokenService } from "../../../identity/auth-token.service.js";
 import { AuditService } from "../../../policy/audit.service.js";
 import { SessionService } from "../../../policy/session.service.js";
+import { NotificationService } from "../notification/notification.service.js";
 import { StaffUsersRepository, type StaffUserRow } from "./staff-users.repository.js";
 
 /**
@@ -56,6 +59,9 @@ export class StaffUsersService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly sessions: SessionService,
+    private readonly authTokens: AuthTokenService,
+    private readonly notifications: NotificationService,
+    @Inject(ENV) private readonly env: Env,
   ) {}
 
   async list(query: StaffUserQuery): Promise<StaffUserPage> {
@@ -75,12 +81,28 @@ export class StaffUsersService {
     if (await this.repository.emailExists(request.email)) {
       throw errors.conflict("A user with that email already exists");
     }
+    const { id, inviteToken } = await this.insertInvited(request, actorId);
+    // Best-effort delivery after commit: the user and its invite token are already saved, so a queue
+    // failure cannot be mistaken for a duplicate-email conflict, roll back the account, or fail create.
+    await this.queueInvite(id, request.name, inviteToken).catch(() => undefined);
+    return this.get(id);
+  }
+
+  /** Creates the invited user and its invite in one transaction; a lost unique-email race maps to 409. */
+  private async insertInvited(
+    request: StaffUserCreateRequest,
+    actorId: string,
+  ): Promise<{ id: string; inviteToken: string }> {
     try {
-      const { id } = await this.prisma.$transaction(async (tx) => {
+      return await this.prisma.$transaction(async (tx) => {
         const created = await this.repository.create(
           { name: request.name, email: request.email, phone: request.phone, createdBy: actorId },
           tx,
         );
+        // Mint the invite in the same transaction so it commits with the user (feature 5.2). The raw
+        // token is held server-only on the notification row's `data` until delivery, then cleared, and
+        // never appears in a view (D-044); otherwise it is stored only as its hash.
+        const inviteToken = await this.authTokens.issueInvite(created.id, tx);
         await this.audit.record(
           {
             action: "create",
@@ -95,11 +117,9 @@ export class StaffUsersService {
           },
           tx,
         );
-        return created;
+        return { id: created.id, inviteToken };
       });
-      return await this.get(id);
     } catch (error) {
-      // A concurrent create won the insert on the unique email, which the pre-check could not see.
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
         throw errors.conflict("A user with that email already exists");
       }
@@ -175,6 +195,23 @@ export class StaffUsersService {
       );
     });
     await this.revoke(id, "account_deleted");
+  }
+
+  /** Queues the out-of-band invite delivery (feature 5.2; console stub in dev, email in sprint 5). */
+  private async queueInvite(userId: string, name: string, inviteToken: string): Promise<void> {
+    await this.notifications.queue({
+      recipientType: "user",
+      recipientId: userId,
+      channel: "email",
+      eventType: "staff.invited",
+      templateKey: "staff.invite",
+      entityType: "user",
+      entityId: userId,
+      variables: {
+        name,
+        activationUrl: `${this.env.WEB_APP_URL}/activate?token=${encodeURIComponent(inviteToken)}`,
+      },
+    });
   }
 
   private async require(id: string): Promise<StaffUserRow> {

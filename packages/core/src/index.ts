@@ -20,3 +20,11 @@ export * from "./offline";
 
 export { createI18n, en } from "./i18n";
 export type { Locale } from "./i18n";
+
+export { renderString, renderTemplate } from "./notification/render";
+export type {
+  ExternalChannel,
+  Rendered,
+  RenderedContent,
+  RenderResult,
+} from "./notification/render";

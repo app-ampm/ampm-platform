@@ -2,8 +2,11 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { AuditService } from "../../../policy/audit.service.js";
 import type { PrismaService } from "../../../db/prisma.service.js";
+import type { Env } from "../../../env.js";
 import { Prisma } from "../../../generated/prisma/client.js";
+import type { AuthTokenService } from "../../../identity/auth-token.service.js";
 import type { SessionService } from "../../../policy/session.service.js";
+import type { NotificationService } from "../notification/notification.service.js";
 import { StaffUsersRepository, type StaffUserRow } from "./staff-users.repository.js";
 import { StaffUsersService } from "./staff-users.service.js";
 
@@ -32,12 +35,19 @@ function harness(repo: FakeRepository) {
   } as unknown as PrismaService;
   const record = vi.fn(async () => undefined);
   const revokeAllForUser = vi.fn(async () => undefined);
+  const issueInvite = vi.fn(async () => "raw-invite-token");
+  const queue = vi.fn(async () => ({ suppressed: false, notificationId: "n1" }));
   const audit = { record } as unknown as AuditService;
   const sessions = { revokeAllForUser } as unknown as SessionService;
+  const authTokens = { issueInvite } as unknown as AuthTokenService;
+  const notifications = { queue } as unknown as NotificationService;
+  const env = { WEB_APP_URL: "https://app.example" } as unknown as Env;
   return {
-    service: new StaffUsersService(repo, prisma, audit, sessions),
+    service: new StaffUsersService(repo, prisma, audit, sessions, authTokens, notifications, env),
     record,
     revokeAllForUser,
+    issueInvite,
+    queue,
   };
 }
 
@@ -77,12 +87,24 @@ describe("StaffUsersService", () => {
     ).rejects.toMatchObject({ code: "conflict" });
   });
 
-  it("creates an invited staff user and audits it", async () => {
+  it("creates an invited staff user, mints an invite, queues the delivery, and audits it", async () => {
     const repo = new FakeRepository({ "user-new": row("user-new", "invited") });
-    const { service, record } = harness(repo);
+    const { service, record, issueInvite, queue } = harness(repo);
     const view = await service.create({ name: "New Staff", email: "new@example.com" }, "sa");
     expect(repo.create).toHaveBeenCalled();
     expect(view.status).toBe("invited");
+    expect(issueInvite).toHaveBeenCalledWith("user-new", expect.anything());
+    expect(queue).toHaveBeenCalledWith(
+      expect.objectContaining({
+        recipientId: "user-new",
+        channel: "email",
+        templateKey: "staff.invite",
+        variables: expect.objectContaining({
+          name: "New Staff",
+          activationUrl: expect.stringContaining("raw-invite-token"),
+        }),
+      }),
+    );
     expect(record).toHaveBeenCalledWith(
       expect.objectContaining({ action: "create", entityType: "user" }),
       expect.anything(),

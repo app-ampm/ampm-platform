@@ -34,9 +34,10 @@ describe("cognitoIdentityFromClaims", () => {
     client_id: "client-1",
     jti: "jti-cognito",
     email: "x@example.com",
+    email_verified: true,
   };
 
-  it("accepts an access token for the app client", () => {
+  it("accepts an access token for the app client and surfaces its verified email", () => {
     expect(cognitoIdentityFromClaims(claims, "client-1")).toEqual({
       subject: "c0gn1t0-sub",
       provider: "cognito",
@@ -44,6 +45,40 @@ describe("cognitoIdentityFromClaims", () => {
       email: "x@example.com",
       phone: null,
     });
+  });
+
+  it('accepts email_verified as the boolean true or the string "true"', () => {
+    expect(cognitoIdentityFromClaims({ ...claims, email_verified: "true" }, "client-1").email).toBe(
+      "x@example.com",
+    );
+  });
+
+  it("treats an unverified or absent email as no email (D-041 fails closed)", () => {
+    expect(
+      cognitoIdentityFromClaims({ ...claims, email_verified: false }, "client-1").email,
+    ).toBeNull();
+    expect(
+      cognitoIdentityFromClaims({ ...claims, email_verified: undefined }, "client-1").email,
+    ).toBeNull();
+    const withoutEmail = {
+      sub: "c0gn1t0-sub",
+      token_use: "access",
+      client_id: "client-1",
+      jti: "jti-cognito",
+      email_verified: true,
+    };
+    expect(cognitoIdentityFromClaims(withoutEmail, "client-1").email).toBeNull();
+  });
+
+  it("surfaces phone only when phone_number_verified is true", () => {
+    const withPhone = { ...claims, phone_number: "+15550001111" };
+    expect(
+      cognitoIdentityFromClaims({ ...withPhone, phone_number_verified: true }, "client-1").phone,
+    ).toBe("+15550001111");
+    expect(
+      cognitoIdentityFromClaims({ ...withPhone, phone_number_verified: false }, "client-1").phone,
+    ).toBeNull();
+    expect(cognitoIdentityFromClaims(withPhone, "client-1").phone).toBeNull();
   });
 
   it("rejects id tokens, other clients, empty subjects and a missing token id", () => {

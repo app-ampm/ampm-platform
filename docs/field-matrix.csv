@@ -71,6 +71,7 @@ A,notifications,System,status,string,,"queued, sent, delivered, failed, read",on
 A,notifications,System,provider_ref,string,,,provider message identifier,SYS,Recipient only,Optional,—,A-11 (Q11)
 A,notifications,System,sent_at,datetime,,,timestamp (UTC),SYS (when the action happens),Recipient only,System,—,A-11 (Q11)
 A,notifications,System,delivered_at,datetime,,,timestamp (UTC),SYS (when the action happens),Recipient only,System,—,A-11 (Q11)
+A,notifications,System,data,json,,,valid JSON matching the registered schema; server-only render variables e.g. the activation link (5.2); never in a view,SYS,Recipient only,Optional,—,A-11 (Q11)
 A,notification_preferences,User self-service,id,uuid,PK,,"UUID v7, generated",SYS,Owner only,System,—,
 A,notification_preferences,User self-service,user_id,uuid,FK,,references see data model,Owner user,Owner only,At creation,—,
 A,notification_preferences,User self-service,event_type,string,,,"string, up to 255 characters",Owner user,Owner only,At creation,—,

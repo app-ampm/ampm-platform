@@ -1,6 +1,6 @@
 # AMPM Platform — Field Matrix
 
-**Status:** DRAFT v0.1, generated 2026-10-28 from [data-model.md](data-model.md) by `docs/tools/field_matrix_build.py`. Do not edit by hand; change the data model or `docs/tools/field_rules.py` and rebuild.
+**Status:** DRAFT v0.1, generated 2026-10-29 from [data-model.md](data-model.md) by `docs/tools/field_matrix_build.py`. Do not edit by hand; change the data model or `docs/tools/field_rules.py` and rebuild.
 **Companions:** [requirements-audit.md](requirements-audit.md) (Q numbers), [data-model.md](data-model.md) (assumptions A-1 to A-30), [permission-matrix.md](permission-matrix.md) (role codes, visibility classes, assumptions P-1 to P-11).
 **Spreadsheet version:** [field-matrix.csv](field-matrix.csv) has the same rows for filtering.
 
@@ -20,7 +20,7 @@ Global conventions that apply to every row: money is `numeric(14,2)` with a sibl
 
 | Module | Tables | Fields | Required at creation | Client or public visible | Restricted, sensitive or secret |
 |---|---|---|---|---|---|
-| A — Identity, access and administration | 18 | 107 | 56 | 10 | 1 |
+| A — Identity, access and administration | 18 | 108 | 56 | 10 | 1 |
 | B — CRM, subscriptions and commercial agreements | 12 | 127 | 49 | 90 | 4 |
 | C — Hotel intelligence | 10 | 100 | 38 | 82 | 11 |
 | D — Hotel consultancy | 6 | 70 | 28 | 65 | 3 |
@@ -37,9 +37,9 @@ Global conventions that apply to every row: money is `numeric(14,2)` with a sibl
 | O — Checklists, closure and feedback | 4 | 30 | 17 | 7 | 0 |
 | P — Public website content (dormant) | 2 | 17 | 8 | 17 | 0 |
 | Q — Live chat | 2 | 16 | 6 | 16 | 0 |
-| **Total** | **114** | **1128** | **489** | **646** | **103** |
+| **Total** | **114** | **1129** | **489** | **646** | **103** |
 
-Fields by visibility class: CLIENT 613, INTERNAL 327, Other (per record, recipient or parent) 52, RESTRICTED-NOTES 34, PUBLIC 33, RESTRICTED-FINANCE 31, RESTRICTED-CONTACT 13, RESTRICTED-IDENTITY 13, SECRET 6, RESTRICTED-BANK 4, SENSITIVE-GUEST 2.
+Fields by visibility class: CLIENT 613, INTERNAL 327, Other (per record, recipient or parent) 53, RESTRICTED-NOTES 34, PUBLIC 33, RESTRICTED-FINANCE 31, RESTRICTED-CONTACT 13, RESTRICTED-IDENTITY 13, SECRET 6, RESTRICTED-BANK 4, SENSITIVE-GUEST 2.
 
 ---
 
@@ -207,6 +207,7 @@ Created at stage: **System** · Default editor: SYS · Default visibility: Recip
 | `provider_ref` | provider message identifier |  | SYS | Recipient only | Optional | — |
 | `sent_at` | timestamp (UTC) |  | SYS (when the action happens) | Recipient only | System | — |
 | `delivered_at` | timestamp (UTC) |  | SYS (when the action happens) | Recipient only | System | — |
+| `data` | valid JSON matching the registered schema; server-only render variables e.g. the activation link (5.2); never in a view |  | SYS | Recipient only | Optional | — |
 
 ### `notification_preferences`
 

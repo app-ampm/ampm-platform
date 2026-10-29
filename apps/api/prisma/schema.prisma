@@ -104,6 +104,12 @@ enum ImportStatus {
   applied
 }
 
+enum JobRunStatus {
+  running
+  succeeded
+  failed
+}
+
 /// Staff, client and demo accounts. Credentials live in the identity service (Cognito, T-6): the
 /// API keeps the identity subject that maps a verified token to this row; it never stores a password.
 model User {
@@ -382,6 +388,8 @@ model Notification {
   providerRef   String?             @map("provider_ref") @db.VarChar(255)
   sentAt        DateTime?           @map("sent_at") @db.Timestamptz(6)
   deliveredAt   DateTime?           @map("delivered_at") @db.Timestamptz(6)
+  // Server-only render variables (e.g. the activation link) consumed at delivery; never in a view (5.2).
+  data          Json?               @db.JsonB
   createdAt     DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt     DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
 
@@ -469,4 +477,24 @@ model ImportJob {
 
   @@index([projectId, status])
   @@map("import_jobs")
+}
+
+/// The recorded outcome of a background job run (api.md): the session reaper only logs, but the
+/// nightly demo-restore (feature 5.5) and later jobs write one row per run here. Append-only, so no
+/// soft-delete columns; `detail_json` holds per-table counts, `error` the sanitised failure message.
+model JobRun {
+  id             String       @id @default(uuid(7)) @db.Uuid
+  jobName        String       @map("job_name") @db.VarChar(128)
+  /// The run's idempotency key (e.g. `demo.restore:2026-10-29`); correlates a retry to its attempts.
+  idempotencyKey String       @map("idempotency_key") @db.VarChar(255)
+  status         JobRunStatus @default(running)
+  detailJson     Json?        @map("detail_json")
+  error          String?      @db.VarChar(1024)
+  startedAt      DateTime     @map("started_at") @db.Timestamptz(6)
+  finishedAt     DateTime?    @map("finished_at") @db.Timestamptz(6)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([jobName, createdAt])
+  @@map("job_runs")
 }

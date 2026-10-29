@@ -8,8 +8,10 @@ import type { IdentityAdapter, VerifiedIdentity } from "./identity.types.js";
 export const LOCAL_ISSUER = "ampm-local";
 
 /**
- * Development and tests only (refused in production by env.ts): HS256 tokens with the same claims
- * a Cognito access token carries, including a `jti`, minted by `pnpm --filter api dev:token`.
+ * Development and tests only (refused in production by env.ts): HS256 tokens carrying the same shape
+ * of claims as a Cognito access token (`sub`, `jti`, `email`), minted by `pnpm --filter api dev:token`.
+ * A minted email is trusted as verified — there is no `email_verified` gate as in the Cognito adapter
+ * (D-041), so that gate is covered by cognito.adapter.contract.spec.ts, not by the local e2e path.
  */
 export class LocalIdentityAdapter implements IdentityAdapter {
   private readonly key: Uint8Array;
