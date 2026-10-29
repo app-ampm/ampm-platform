@@ -1,0 +1,10 @@
+{
+	# Placeholder edge config so the production and staging stacks are complete and config-valid from
+	# feature 6.1. Feature 6.2 completes it: automatic TLS, HSTS, the security headers, edge rate limits
+	# on sign-in / OTP / public forms, the static public site, and the WebSocket upgrade to the API.
+	admin off
+}
+
+{$AMPM_DOMAIN:localhost} {
+	reverse_proxy api:3900
+}

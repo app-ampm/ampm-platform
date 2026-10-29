@@ -1,0 +1,25 @@
+# Keep the build context to source only: node_modules and build outputs are recreated in the image,
+# secrets never enter it, and large generated trees do not bloat it.
+**/node_modules
+.git
+**/dist
+**/.next
+**/.expo
+**/.turbo
+**/.cache
+# The Prisma client is regenerated in the build stage (pnpm db:generate).
+apps/api/src/generated
+# Never copy environment files or decrypted secrets into an image.
+**/.env
+**/.env.*
+infra/secrets/*.decrypted*
+# The decrypted Compose secret files are named production.env / staging.env, which the **/.env* globs
+# above do NOT match — exclude them explicitly (mirrors .gitignore), keeping the *.env.example files.
+infra/compose/*/*.env
+!infra/compose/*/*.env.example
+# Not needed at runtime.
+graphify-out
+vault
+**/*.log
+**/coverage
+.DS_Store

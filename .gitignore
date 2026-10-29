@@ -47,6 +47,9 @@ web-build/
 .env
 .env.*
 !.env.example
+# Decrypted secret env files for the Compose stacks (sops produces these at deploy; never commit them).
+infra/compose/*/*.env
+!infra/compose/*/*.env.example
 prisma/*.db
 
 # Per-machine dev-server launch config for the Claude desktop app (absolute paths, local ports)

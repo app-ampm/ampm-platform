@@ -384,9 +384,9 @@
     "semantic_hash": "ee17fd1c97c735e9f3564e3f5251f125"
   },
   "package.json": {
-    "mtime": 1793162112.1784976,
-    "seen": 1793162216.328546,
-    "ast_hash": "5521db8c2f7caab017a1ad517b2537e5",
+    "mtime": 1793279111.9619787,
+    "seen": 1793279241.433876,
+    "ast_hash": "8ef0827c2ebe43e2b45801b757e7b719",
     "semantic_hash": ""
   },
   "packages/api-client/package.json": {
@@ -546,10 +546,10 @@
     "semantic_hash": ""
   },
   "docs/engineering/vps-setup.md": {
-    "mtime": 1793123760.9199166,
-    "seen": 1793162216.3286898,
-    "ast_hash": "17dacb3a435993c111605ceec2e6b17e",
-    "semantic_hash": "17dacb3a435993c111605ceec2e6b17e"
+    "mtime": 1793279095.8820822,
+    "seen": 1793279241.438232,
+    "ast_hash": "a0fdca4a4cf963acf7a44ac1ccff5b68",
+    "semantic_hash": ""
   },
   "docs/planning/risk-questions.md": {
     "mtime": 1793123760.9214582,
@@ -726,9 +726,9 @@
     "semantic_hash": "6b1313a9afe9757365d0e4ab0e201b60"
   },
   ".github/workflows/ci.yml": {
-    "mtime": 1793178652.264821,
-    "seen": 1793179384.349516,
-    "ast_hash": "449a80489cc048a84aa293f321d0bcbe",
+    "mtime": 1793279117.7263663,
+    "seen": 1793279241.4299788,
+    "ast_hash": "1db1f3c16906c8e675a05d4fbb9b679d",
     "semantic_hash": ""
   },
   "apps/web/vitest.config.ts": {
@@ -3150,15 +3150,15 @@
     "semantic_hash": ""
   },
   "apps/api/src/modules/demo/demo-baseline.ts": {
-    "mtime": 1793272574.0686069,
-    "seen": 1793272803.056607,
-    "ast_hash": "b690b2544beb2d52ad04710b015b6dc3",
+    "mtime": 1793272872.1453094,
+    "seen": 1793278339.375927,
+    "ast_hash": "7e49d0253a85240ce4f90d804a6b41de",
     "semantic_hash": ""
   },
   "apps/api/src/modules/demo/demo-restore.service.spec.ts": {
-    "mtime": 1793272588.70184,
-    "seen": 1793272803.056607,
-    "ast_hash": "a91bce23cb5cd632811ba6ebc0444d63",
+    "mtime": 1793272872.1521165,
+    "seen": 1793278339.375927,
+    "ast_hash": "f130acaa70e1b39c3744d8986f5faedc",
     "semantic_hash": ""
   },
   "apps/api/src/modules/demo/demo-restore.service.ts": {
@@ -3174,9 +3174,39 @@
     "semantic_hash": ""
   },
   "apps/api/test/demo-restore.e2e-spec.ts": {
-    "mtime": 1793272662.444852,
-    "seen": 1793272803.0571961,
-    "ast_hash": "a573e94bd25d4b0ca76b29686b3849a8",
+    "mtime": 1793272872.1688073,
+    "seen": 1793278339.376561,
+    "ast_hash": "0d4ae9bc4059e6fbd75940192504ca0c",
+    "semantic_hash": ""
+  },
+  "infra/compose/local/compose.yml": {
+    "mtime": 1793276664.045767,
+    "seen": 1793278339.377816,
+    "ast_hash": "1700c9b3f869871249c84aba6afcc8a7",
+    "semantic_hash": ""
+  },
+  "infra/compose/production/compose.yml": {
+    "mtime": 1793278950.944453,
+    "seen": 1793279241.433861,
+    "ast_hash": "889a8f856c47c0f4953b0f2ca1236bcf",
+    "semantic_hash": ""
+  },
+  "infra/compose/staging/compose.yml": {
+    "mtime": 1793278967.304677,
+    "seen": 1793279241.433862,
+    "ast_hash": "1c2385c19a636c3bd5306310bb89e576",
+    "semantic_hash": ""
+  },
+  "docs/planning/sprint-6-7-vps-as-code-brief.md": {
+    "mtime": 1793275883.0098972,
+    "seen": 1793278339.3820522,
+    "ast_hash": "74b9bfeb9fa4a336174ee2098b4f2ddc",
+    "semantic_hash": ""
+  },
+  "infra/scripts/smoke.sh": {
+    "mtime": 1793279087.2193353,
+    "seen": 1793279241.433863,
+    "ast_hash": "d4076122df512ed1c51ef7f991568ff1",
     "semantic_hash": ""
   }
 }
