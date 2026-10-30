@@ -20,7 +20,7 @@ command -v sops >/dev/null 2>&1 || {
 	exit 1
 }
 
-repo_root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
+repo_root=$(CDPATH='' cd -- "$(dirname -- "$0")/../.." && pwd)
 src_dir="$repo_root/infra/secrets"
 out_dir="$repo_root/infra/compose/$ENVIRONMENT"
 

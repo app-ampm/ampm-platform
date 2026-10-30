@@ -73,12 +73,10 @@ jobs:
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v7
-      # Fast gate: the backup scripts are shell, so a syntax error must not wait for the smoke to surface.
-      - name: Check the infra shell scripts parse
-        run: |
-          for f in infra/scripts/smoke.sh infra/pgbackrest/backup.sh infra/pgbackrest/scheduler.sh; do
-            sh -n "$f"
-          done
+      # Lint every infra shell script (feature 6.5 requires bootstrap.sh shellcheck-green). shellcheck is
+      # preinstalled on ubuntu-latest and supersedes a bare `sh -n` syntax check.
+      - name: shellcheck the infra scripts
+        run: find infra -type f -name '*.sh' -print0 | xargs -0r shellcheck
       # Dummy values so the production/staging stacks (which require AMPM_IMAGE/AMPM_POSTGRES_IMAGE/
       # AMPM_DOMAIN/ACME_EMAIL with no default) validate.
       - name: Validate Compose files (local, production, staging)

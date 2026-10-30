@@ -20,7 +20,16 @@ trap cleanup EXIT
 $COMPOSE up -d --build --wait --wait-timeout 300
 
 # --- the edge (feature 6.2) ---
-code=$(curl -fsSk -o /dev/null -w '%{http_code}' https://localhost:8443/health)
+# Caddy can briefly 502/503 while it establishes the upstream just after `up --wait` returns; retry the
+# edge health check for up to ~60s so a startup race does not flake the smoke (a real outage still fails).
+code=000
+i=0
+while [ "$i" -lt 30 ]; do
+	code=$(curl -sSk -o /dev/null -w '%{http_code}' https://localhost:8443/health 2>/dev/null || echo 000)
+	[ "$code" = "200" ] && break
+	i=$((i + 1))
+	sleep 2
+done
 echo "smoke: /health over HTTPS through Caddy -> HTTP $code"
 [ "$code" = "200" ] || { echo "smoke FAILED: health $code"; exit 1; }
 
