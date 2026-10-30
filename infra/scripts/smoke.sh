@@ -1,34 +1,49 @@
 #!/usr/bin/env sh
-# Local smoke for the container stack (features 6.1, 6.2): build the image, bring the whole stack up, and
-# assert the real edge works -- /health 200 over HTTPS through Caddy (its internal CA on localhost), the
-# HTTP->HTTPS redirect, the transport headers, and the stripped server identity. Then tear everything
-# down. A repeatable proof the deploy artifact builds and the edge serves it. Needs a running Docker daemon.
+# Local smoke for the container stack (features 6.1-6.3): build the images, bring the whole stack up, and
+# prove it works end to end -- the Caddy edge serves /health 200 over HTTPS with the edge headers and the
+# HTTP->HTTPS redirect, and pgBackRest takes an encrypted backup that passes `check` and records a
+# job_runs row. Then tear everything down. Needs a running Docker daemon.
 set -eu
 
 COMPOSE="docker compose -f infra/compose/local/compose.yml"
 
-cleanup() { $COMPOSE down -v >/dev/null 2>&1 || true; }
+# Preserve the real exit status: capture $? first and re-exit with it, so the teardown's own success does
+# not mask a failed build/check (a false green here would ship broken infra through CI).
+cleanup() {
+	rc=$?
+	$COMPOSE down -v >/dev/null 2>&1 || true
+	trap - EXIT
+	exit "$rc"
+}
 trap cleanup EXIT
 
-$COMPOSE up -d --build --wait --wait-timeout 180
+$COMPOSE up -d --build --wait --wait-timeout 300
 
-# HTTPS /health through Caddy's internal CA (-k accepts the local cert).
+# --- the edge (feature 6.2) ---
 code=$(curl -fsSk -o /dev/null -w '%{http_code}' https://localhost:8443/health)
 echo "smoke: /health over HTTPS through Caddy -> HTTP $code"
 [ "$code" = "200" ] || { echo "smoke FAILED: health $code"; exit 1; }
 
-# Caddy redirects plain HTTP to HTTPS -- an edge-only behaviour the API itself does not do.
 redirect=$(curl -sk -o /dev/null -w '%{http_code}' http://localhost:8080/health)
 echo "smoke: http://:8080 -> $redirect (expect 308)"
 [ "$redirect" = "308" ] || { echo "smoke FAILED: no HTTP->HTTPS redirect ($redirect)"; exit 1; }
 
 headers=$(curl -fsSk -D - -o /dev/null https://localhost:8443/health)
-# HSTS is gated to the public domain (never localhost), so it is not asserted here.
 for h in "x-content-type-options: *nosniff" "x-frame-options: *DENY" "referrer-policy:" "permissions-policy:"; do
 	echo "$headers" | grep -iqE "^$h" || { echo "smoke FAILED: missing edge header matching '$h'"; exit 1; }
 done
-# The edge strips what names the server software (an edge-only signal).
 for h in "server:" "x-powered-by:"; do
 	echo "$headers" | grep -iqE "^$h" && { echo "smoke FAILED: '$h' should be stripped at the edge"; exit 1; }
 done
-echo "smoke OK: HTTPS + /health 200 + HTTP->HTTPS redirect + transport headers + server identity stripped"
+echo "smoke: edge OK (HTTPS + redirect + headers + server identity stripped)"
+
+# --- backups (feature 6.3): migrate so job_runs exists, then run the real pgBackRest entrypoint once
+# (scheduler.sh bootstrap: stanza-create + an initial full on the empty repo + check + job_runs record).
+$COMPOSE exec -T -w /repo/apps/api api node /repo/node_modules/.bin/prisma migrate deploy >/dev/null
+$COMPOSE exec -T pgbackrest sh /usr/local/bin/scheduler.sh bootstrap >/dev/null
+row=$($COMPOSE exec -T -e PGPASSWORD=ampm postgres \
+	psql -U ampm -d ampm -Atc "select status from job_runs where job_name='backup.pgbackrest' order by created_at desc limit 1;")
+echo "smoke: pgbackrest bootstrap full backup + check -> job_runs status='$row'"
+[ "$row" = "succeeded" ] || { echo "smoke FAILED: backup not recorded succeeded"; exit 1; }
+
+echo "smoke OK: edge serves HTTPS with headers, and pgBackRest backs up + checks + records job_runs"

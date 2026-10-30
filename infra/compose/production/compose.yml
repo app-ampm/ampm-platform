@@ -1,11 +1,14 @@
 # The production stack on the VPS (vps-setup.md §1, D-048). Image-based: the image is built and pushed
-# by the deploy workflow (feature 6.6) and pinned there by tag and digest. AMPM_IMAGE is an
-# interpolation-time variable (the shell env or a compose-dir .env the deploy sets) — NOT a container
-# env var, so it is not in production.env. It has no default: an unpinned `up` fails loudly rather than
-# silently pulling a mutable tag. Secrets come from the sops-decrypted production.env at deploy (feature
+# by the deploy workflow (feature 6.6) and pinned there by tag and digest. AMPM_IMAGE (the app) and
+# AMPM_POSTGRES_IMAGE (the postgres+pgBackRest image, feature 6.3) are interpolation-time variables (the
+# shell env or a compose-dir .env the deploy sets) — NOT container env vars, so they are not in
+# production.env. Neither has a default: an unpinned `up` fails loudly rather than silently pulling a
+# mutable tag. Secrets come from the sops-decrypted production.env at deploy (feature
 # 6.4; production.env.example lists the keys). The full Caddyfile — TLS, HSTS, security headers, edge
-# rate limits, static site — is feature 6.2; pgBackRest (6.3) and node-exporter (6.7) are added as their
-# features land. Postgres and Redis stay on the internal network; only Caddy publishes ports.
+# rate limits, static site — is feature 6.2; pgBackRest (6.3) archives WAL and backs up to the encrypted
+# S3 repo in Mumbai; node-exporter (6.7) lands later. Postgres and Redis take no inbound (internal
+# network, no published ports); only Caddy publishes ports. Postgres and pgBackRest also join an
+# outbound-only egress network (no published ports -> no inbound) so they can reach the S3 backup repo.
 name: ampm
 
 x-app: &app
@@ -20,24 +23,68 @@ x-app: &app
 
 services:
   postgres:
-    image: postgres:16-bookworm
-    # POSTGRES_USER / POSTGRES_PASSWORD / POSTGRES_DB come from the sops-decrypted env (feature 6.4);
-    # postgresql.conf tuning and the pgBackRest archive command are feature 6.3.
+    image: ${AMPM_POSTGRES_IMAGE:?set AMPM_POSTGRES_IMAGE to the released postgres+pgbackrest image tag@sha256 digest (the deploy workflow sets it)}
+    # Load the tuned config + restrictive pg_hba (feature 6.3). The archive_command runs pgbackrest, so
+    # the image bundles it and the PGBACKREST_* env (repo type, S3 target, cipher pass) comes from the
+    # sops-decrypted env; POSTGRES_USER / POSTGRES_PASSWORD / POSTGRES_DB come from that env too.
+    command:
+      - postgres
+      - -c
+      - config_file=/etc/postgresql/postgresql.conf
+      - -c
+      - hba_file=/etc/postgresql/pg_hba.conf
     env_file:
       - path: ./production.env
         required: false
-    volumes: ["pgdata:/var/lib/postgresql/data"]
-    networks: [internal]
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - pg-run:/var/run/postgresql
+      - ../../postgres/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+      - ../../postgres/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro
+      - ../../pgbackrest/pgbackrest.conf:/etc/pgbackrest/pgbackrest.conf:ro
+    networks: [internal, egress]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-ampm} -d $${POSTGRES_DB:-ampm}"]
       interval: 10s
       timeout: 5s
       retries: 10
+    # PG16 parallel queries allocate in /dev/shm; the 64MB Docker default overflows under load.
+    shm_size: 256m
     security_opt: ["no-new-privileges:true"]
     restart: unless-stopped
     deploy:
       resources:
         limits: { cpus: "2", memory: 6g }
+
+  # Backups (feature 6.3, D-050): the same image as postgres, sharing PGDATA (read-only), the postgres
+  # socket (pg-run) and — over the egress network — the encrypted S3 repo. It runs the schedule (full on
+  # Sunday, differential on other days, each ~03:00 UTC, a repository check after every backup) and
+  # records each outcome to job_runs (D-047). It legitimately holds the backup secrets (DATABASE_URL for
+  # the record, PGBACKREST_* for the repo), so it takes the env_file; it publishes no port.
+  pgbackrest:
+    image: ${AMPM_POSTGRES_IMAGE:?set AMPM_POSTGRES_IMAGE to the released postgres+pgbackrest image tag@sha256 digest (the deploy workflow sets it)}
+    user: postgres
+    depends_on:
+      postgres: { condition: service_healthy }
+    env_file:
+      - path: ./production.env
+        required: false
+    volumes:
+      - pgdata:/var/lib/postgresql/data:ro
+      - pg-run:/var/run/postgresql
+      - ../../pgbackrest/pgbackrest.conf:/etc/pgbackrest/pgbackrest.conf:ro
+      - ../../pgbackrest/backup.sh:/usr/local/bin/backup.sh:ro
+      - ../../pgbackrest/scheduler.sh:/usr/local/bin/scheduler.sh:ro
+    networks: [internal, egress]
+    command: ["sh", "/usr/local/bin/scheduler.sh"]
+    # PGDATA is :ro, the repo is remote S3, and the scripts are :ro mounts — only scratch needs writing.
+    read_only: true
+    tmpfs: ["/tmp", "/var/spool/pgbackrest"]
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits: { cpus: "0.5", memory: 512m }
 
   redis:
     image: redis:7-alpine
@@ -123,9 +170,14 @@ services:
 
 volumes:
   pgdata:
+  pg-run:
   caddy-data:
   caddy-config:
 
 networks:
   internal: { internal: true }
   edge: {}
+  # Outbound-only: Postgres and pgBackRest reach the S3 backup repo in Mumbai. Nothing publishes a port
+  # on it, so it grants no inbound access from outside the host (unlike `internal`, it is not sealed off
+  # from the internet, which WAL archive-push and the backups require).
+  egress: {}

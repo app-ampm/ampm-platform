@@ -59,14 +59,22 @@ jobs:
   # preinstalled on the runner, so this needs no Node/pnpm setup.
   infra:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # The smoke builds both images and runs the stack, so this is heavier than a config check.
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v7
-      # Dummy values so the production/staging stacks (which require AMPM_IMAGE/AMPM_DOMAIN/ACME_EMAIL
-      # with no default) validate.
+      # Fast gate: the backup scripts are shell, so a syntax error must not wait for the smoke to surface.
+      - name: Check the infra shell scripts parse
+        run: |
+          for f in infra/scripts/smoke.sh infra/pgbackrest/backup.sh infra/pgbackrest/scheduler.sh; do
+            sh -n "$f"
+          done
+      # Dummy values so the production/staging stacks (which require AMPM_IMAGE/AMPM_POSTGRES_IMAGE/
+      # AMPM_DOMAIN/ACME_EMAIL with no default) validate.
       - name: Validate Compose files (local, production, staging)
         env:
           AMPM_IMAGE: config-check
+          AMPM_POSTGRES_IMAGE: config-check
           AMPM_DOMAIN: config-check
           ACME_EMAIL: ops@example.com
         run: |
@@ -79,7 +87,10 @@ jobs:
           docker run --rm -e AMPM_DOMAIN=localhost \
             -v "$PWD/infra/caddy/Caddyfile:/etc/caddy/Caddyfile:ro" \
             caddy:2-alpine caddy validate --adapter caddyfile --config /etc/caddy/Caddyfile
-      # Build the actual deploy artifact so a Dockerfile/build regression cannot ship green (the image
-      # is not otherwise exercised by CI; the registry push and digest pin are feature 6.6).
-      - name: Build the server image
-        run: docker build -f infra/docker/Dockerfile -t ampm:ci .
+      # Build both images, bring the whole local stack up, and exercise the edge (HTTPS + headers) and the
+      # pgBackRest runtime (scheduler bootstrap -> stanza-create + full backup + check + job_runs) end to
+      # end, then tear down. This also covers both Dockerfile builds (a build regression fails `up --build`)
+      # and the backup scripts' real behaviour. The S3 repo needs secrets, so only the posix path runs here;
+      # the registry push and digest pin are feature 6.6.
+      - name: Smoke the container stack (edge + backups)
+        run: sh infra/scripts/smoke.sh
