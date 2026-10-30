@@ -1,10 +1,41 @@
 {
-	# Placeholder edge config so the production and staging stacks are complete and config-valid from
-	# feature 6.1. Feature 6.2 completes it: automatic TLS, HSTS, the security headers, edge rate limits
-	# on sign-in / OTP / public forms, the static public site, and the WebSocket upgrade to the API.
+	# One config for every environment (feature 6.2, D-049). Automatic TLS: Caddy's internal CA for
+	# `localhost` (the local smoke exercises real HTTPS), Let's Encrypt for a public domain in production.
+	# AMPM_DOMAIN and ACME_EMAIL are required in prod/staging (the compose `:?` guard fails the deploy if
+	# unset); the defaults here only serve the local smoke, where Caddy's internal CA ignores the email.
 	admin off
+	email {$ACME_EMAIL:ops@localhost}
 }
 
+# The API edge. The client/team apps reach the API only through here (vps-setup §1); the static marketing
+# site (T-5: static, no CMS) is a separate domain block added in the website sprint. Edge rate limiting
+# (a custom Caddy image with the caddy-ratelimit plugin) is deferred to the image-push pipeline / the
+# public forms (D-049); the API's own per-IP/principal limiter already guards /auth/activate (5.4).
 {$AMPM_DOMAIN:localhost} {
+	# JSON access log to stdout, picked up by the daemon's log driver + rotation (vps-setup §5 / 6.5).
+	log {
+		output stdout
+		format json
+	}
+
+	# HSTS only on the real public domain, never on localhost: a browser pins localhost (and, with
+	# includeSubDomains, every *.localhost) to HTTPS for a year, which would break other plain-HTTP dev
+	# servers on this machine. The smoke runs on localhost, so it does not assert HSTS.
+	@public not host localhost 127.0.0.1 ::1
+	header @public Strict-Transport-Security "max-age=31536000; includeSubDomains"
+
+	# Transport headers are unconditional defence-in-depth — the API sets them too (5.4), and `header`
+	# sets (not appends), so a proxied response carries one value, not duplicates. The per-request
+	# Content-Security-Policy stays the web app's (Next middleware), so it is deliberately not set here.
+	header {
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "no-referrer"
+		X-Frame-Options "DENY"
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		# Do not advertise the server software.
+		-Server
+	}
+
+	# reverse_proxy upgrades WebSocket connections automatically (the chat/notification gateway).
 	reverse_proxy api:3900
 }

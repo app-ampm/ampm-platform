@@ -20,7 +20,7 @@
     "db:generate": "pnpm --filter api exec prisma generate",
     "db:migrate": "pnpm --filter api exec prisma migrate dev",
     "authz:generate": "pnpm --filter @ampm/policy run authz:generate",
-    "infra:config": "docker compose -f infra/compose/local/compose.yml config -q && AMPM_IMAGE=config-check docker compose -f infra/compose/production/compose.yml config -q && AMPM_IMAGE=config-check docker compose -f infra/compose/staging/compose.yml config -q",
+    "infra:config": "docker compose -f infra/compose/local/compose.yml config -q && AMPM_IMAGE=config-check AMPM_DOMAIN=config-check ACME_EMAIL=ops@example.com docker compose -f infra/compose/production/compose.yml config -q && AMPM_IMAGE=config-check AMPM_DOMAIN=config-check ACME_EMAIL=ops@example.com docker compose -f infra/compose/staging/compose.yml config -q",
     "infra:smoke": "sh infra/scripts/smoke.sh",
     "prepare": "turbo run build --filter=@ampm/tokens --filter=@ampm/core --filter=@ampm/policy && (if git rev-parse --git-dir >/dev/null 2>&1; then lefthook install; fi)"
   },
