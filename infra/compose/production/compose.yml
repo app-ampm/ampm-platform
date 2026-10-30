@@ -104,9 +104,12 @@ services:
     depends_on: [api]
     # The only published ports of the stack (vps-setup §5: firewall allows 80 and 443).
     ports: ["80:80", "443:443"]
-    env_file:
-      - path: ./production.env
-        required: false
+    # The public edge gets ONLY the two non-secret vars it needs (no env_file, so none of the backend
+    # secrets reach the most-attackable container). `:?` fails the deploy loudly if either is unset, so
+    # the edge never silently falls back to a localhost/internal-CA certificate in production.
+    environment:
+      AMPM_DOMAIN: ${AMPM_DOMAIN:?AMPM_DOMAIN must be set (the public domain)}
+      ACME_EMAIL: ${ACME_EMAIL:?ACME_EMAIL must be set (the Let's Encrypt contact)}
     volumes:
       - ../../caddy/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-data:/data

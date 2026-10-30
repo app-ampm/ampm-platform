@@ -88,10 +88,14 @@ services:
   caddy:
     image: caddy:2-alpine
     depends_on: [api]
-    # The one published port of the stack, matching the production invariant "only Caddy publishes".
-    ports: ["8080:8080"]
+    # The only published ports of the stack, matching the production invariant "only Caddy publishes".
+    # AMPM_DOMAIN=localhost makes Caddy serve HTTPS with its internal CA, so the smoke exercises the real
+    # edge config (TLS, HSTS, headers) — the same Caddyfile uses Let's Encrypt for a public domain.
+    environment:
+      AMPM_DOMAIN: localhost
+    ports: ["8080:80", "8443:443"]
     volumes:
-      - ../../caddy/Caddyfile.local:/etc/caddy/Caddyfile:ro
+      - ../../caddy/Caddyfile:/etc/caddy/Caddyfile:ro
     networks: [edge]
     security_opt: ["no-new-privileges:true"]
     restart: unless-stopped

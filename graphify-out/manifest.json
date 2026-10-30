@@ -384,9 +384,9 @@
     "semantic_hash": "ee17fd1c97c735e9f3564e3f5251f125"
   },
   "package.json": {
-    "mtime": 1793279111.9619787,
-    "seen": 1793279241.433876,
-    "ast_hash": "8ef0827c2ebe43e2b45801b757e7b719",
+    "mtime": 1793346520.062097,
+    "seen": 1793346741.301952,
+    "ast_hash": "258d212b4e0ff77df3fa705587f1e15b",
     "semantic_hash": ""
   },
   "packages/api-client/package.json": {
@@ -726,9 +726,9 @@
     "semantic_hash": "6b1313a9afe9757365d0e4ab0e201b60"
   },
   ".github/workflows/ci.yml": {
-    "mtime": 1793279117.7263663,
-    "seen": 1793279241.4299788,
-    "ast_hash": "1db1f3c16906c8e675a05d4fbb9b679d",
+    "mtime": 1793346530.8009975,
+    "seen": 1793346741.298275,
+    "ast_hash": "b8232e4e469aaa1d691ba9ce519bdb20",
     "semantic_hash": ""
   },
   "apps/web/vitest.config.ts": {
@@ -852,10 +852,10 @@
     "semantic_hash": "061fc7fe0b8bf2ee4188e921d59a7191"
   },
   "packages/ui/jest.config.mjs": {
-    "mtime": 1793123760.897885,
-    "seen": 1793162216.32862,
-    "ast_hash": "601248cc2ce2fec85363f411805ea9e5",
-    "semantic_hash": "601248cc2ce2fec85363f411805ea9e5"
+    "mtime": 1793280906.9540603,
+    "seen": 1793346741.304079,
+    "ast_hash": "2ab3d5101598c79a3130300f847269f0",
+    "semantic_hash": ""
   },
   "packages/ui/jest.setup.cjs": {
     "mtime": 1793123760.8983748,
@@ -3018,9 +3018,9 @@
     "semantic_hash": ""
   },
   "docs/tools/monday_sync.py": {
-    "mtime": 1793202830.034049,
-    "seen": 1793203753.375176,
-    "ast_hash": "77dabe4fb5d00bb87ff5c486b2350e3b",
+    "mtime": 1793343150.3069198,
+    "seen": 1793346741.301776,
+    "ast_hash": "3d416951a499c278b6dcfdc846f14f7f",
     "semantic_hash": ""
   },
   "packages/core/src/schemas/client-logins.ts": {
@@ -3180,21 +3180,21 @@
     "semantic_hash": ""
   },
   "infra/compose/local/compose.yml": {
-    "mtime": 1793276664.045767,
-    "seen": 1793278339.377816,
-    "ast_hash": "1700c9b3f869871249c84aba6afcc8a7",
+    "mtime": 1793343438.4749398,
+    "seen": 1793346741.3019369,
+    "ast_hash": "6da783568e5bc3d31fcd74fed6519969",
     "semantic_hash": ""
   },
   "infra/compose/production/compose.yml": {
-    "mtime": 1793278950.944453,
-    "seen": 1793279241.433861,
-    "ast_hash": "889a8f856c47c0f4953b0f2ca1236bcf",
+    "mtime": 1793346467.8689938,
+    "seen": 1793346741.3019378,
+    "ast_hash": "57603a02956a227fd314b1cd52bb71d2",
     "semantic_hash": ""
   },
   "infra/compose/staging/compose.yml": {
-    "mtime": 1793278967.304677,
-    "seen": 1793279241.433862,
-    "ast_hash": "1c2385c19a636c3bd5306310bb89e576",
+    "mtime": 1793346492.7669404,
+    "seen": 1793346741.301939,
+    "ast_hash": "188b68041e7a713a2f49492f6797de4c",
     "semantic_hash": ""
   },
   "docs/planning/sprint-6-7-vps-as-code-brief.md": {
@@ -3204,9 +3204,9 @@
     "semantic_hash": ""
   },
   "infra/scripts/smoke.sh": {
-    "mtime": 1793279087.2193353,
-    "seen": 1793279241.433863,
-    "ast_hash": "d4076122df512ed1c51ef7f991568ff1",
+    "mtime": 1793346553.5312798,
+    "seen": 1793346741.301939,
+    "ast_hash": "9c441eec8bf611be99d15b33b7cc0e4e",
     "semantic_hash": ""
   }
 }

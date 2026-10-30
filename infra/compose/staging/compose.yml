@@ -1,7 +1,8 @@
 # The staging stack (vps-setup.md §1–2, D-048): a separate Compose project on the same KVM 4 during the
 # build, with its own database, its own domain, and smaller limits. Co-locating its edge with production
-# on one host — one shared Caddy routing by domain, or a second small VPS (vps-setup §1–2, §17) — is
-# resolved in feature 6.2 / the deploy design; this file publishes 80/443 as the single-edge default.
+# on one host — one shared Caddy routing by domain, or a second small VPS (vps-setup §1–2) — is NOT
+# resolved here; it is deferred to the deploy design (feature 6.6). This file publishes 80/443 as the
+# single-edge default, which cannot co-exist with production's 80/443 on one host until 6.6 settles it.
 # AMPM_IMAGE is an interpolation-time variable (shell/.env set by the deploy, 6.6), not a container env
 # var, and has no default so an unpinned `up` fails loudly. Secrets come from the sops-decrypted
 # staging.env (feature 6.4); the image is pushed on merge to main (feature 6.6). Same hardening as prod.
@@ -98,9 +99,11 @@ services:
     image: caddy:2-alpine
     depends_on: [api]
     ports: ["80:80", "443:443"]
-    env_file:
-      - path: ./staging.env
-        required: false
+    # Only the two non-secret vars the edge needs (no env_file -> no backend secrets on the public
+    # container); `:?` fails the deploy loudly if either is unset.
+    environment:
+      AMPM_DOMAIN: ${AMPM_DOMAIN:?AMPM_DOMAIN must be set (the public domain)}
+      ACME_EMAIL: ${ACME_EMAIL:?ACME_EMAIL must be set (the Let's Encrypt contact)}
     volumes:
       - ../../caddy/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-data:/data
