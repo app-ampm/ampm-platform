@@ -55,8 +55,18 @@ jobs:
       - name: Mobile bundles (web, iOS, Android)
         run: pnpm --filter mobile bundle:check
 
-  # Infrastructure as code (feature 6.1+): validate the Compose stacks on every change. Docker is
-  # preinstalled on the runner, so this needs no Node/pnpm setup.
+  secrets-scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      # No plaintext secret may ever be committed (feature 6.4): reuse the transcript redactor's detector
+      # over every tracked file, and refuse any plaintext-secret file by location.
+      - name: Scan for committed plaintext secrets
+        run: |
+          python3 docs/tools/scan_secrets.py --self-test
+          python3 docs/tools/scan_secrets.py
+
   infra:
     runs-on: ubuntu-latest
     # The smoke builds both images and runs the stack, so this is heavier than a config check.

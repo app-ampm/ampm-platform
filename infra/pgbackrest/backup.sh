@@ -23,6 +23,13 @@ esac
 # crash visibly than to run a backup to an unencrypted/unauthenticated target or skip it silently.
 : "${PGPASSWORD:?PGPASSWORD is required so pgBackRest can authenticate to Postgres (pg_hba is scram-only)}"
 : "${PGBACKREST_REPO1_CIPHER_PASS:?PGBACKREST_REPO1_CIPHER_PASS is required (the repository is always encrypted)}"
+: "${DATABASE_URL:?DATABASE_URL is required (the job_runs recorder needs the database name)}"
+
+# Record over the shared Unix socket as the ampm role; PGPASSWORD (env, guarded above) authenticates and
+# keeps the password off the command line, which any process in the container can read. The database name
+# is the last path segment of DATABASE_URL (strip any ?query).
+DB="${DATABASE_URL##*/}"
+DB="${DB%%\?*}"
 
 # One key per day + type, mirroring the app's dailyKey idiom (demo-restore.service.ts): a retry of the
 # same night's backup reuses it, so the attempts correlate on the job_runs table.
@@ -36,7 +43,7 @@ RUN_ID=""
 # is harmless; PG16 has no built-in uuidv7() and the sidecar has no app/Prisma path. Recording failures are
 # logged loudly but never abort the backup — the backup matters more than its audit row.
 start_run() {
-	RUN_ID=$(psql "$DATABASE_URL" -X -At -q -c \
+	RUN_ID=$(psql -h /var/run/postgresql -U ampm -d "$DB" -X -At -q -c \
 		"INSERT INTO job_runs (id, job_name, idempotency_key, status, started_at, created_at)
 		 VALUES (gen_random_uuid(), 'backup.pgbackrest', '$KEY', 'running', now(), now())
 		 RETURNING id" 2>/dev/null) || RUN_ID=""
@@ -50,7 +57,7 @@ finish_run() { # $1 = succeeded|failed   $2 = error text ("" for none)
 	}
 	errsql="NULL"
 	[ -n "$2" ] && errsql="'$2'"
-	psql "$DATABASE_URL" -X -q -c \
+	psql -h /var/run/postgresql -U ampm -d "$DB" -X -q -c \
 		"UPDATE job_runs
 		    SET status = '$1', detail_json = jsonb_build_object('type', '$TYPE'),
 		        error = $errsql, finished_at = now()

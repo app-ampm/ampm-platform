@@ -3,8 +3,9 @@
 # AMPM_POSTGRES_IMAGE (the postgres+pgBackRest image, feature 6.3) are interpolation-time variables (the
 # shell env or a compose-dir .env the deploy sets) — NOT container env vars, so they are not in
 # production.env. Neither has a default: an unpinned `up` fails loudly rather than silently pulling a
-# mutable tag. Secrets come from the sops-decrypted production.env at deploy (feature
-# 6.4; production.env.example lists the keys). The full Caddyfile — TLS, HSTS, security headers, edge
+# mutable tag. Secrets come from the sops-decrypted, per-zone env files (feature 6.4): postgres.env
+# (postgres + pgbackrest), redis.env (redis) and app.env (api + worker), produced on the host by
+# infra/scripts/decrypt-secrets.sh; infra/secrets/examples/ lists the keys. The full Caddyfile — TLS, HSTS, security headers, edge
 # rate limits, static site — is feature 6.2; pgBackRest (6.3) archives WAL and backs up to the encrypted
 # S3 repo in Mumbai; node-exporter (6.7) lands later. Postgres and Redis take no inbound (internal
 # network, no published ports); only Caddy publishes ports. Postgres and pgBackRest also join an
@@ -14,7 +15,7 @@ name: ampm
 x-app: &app
   image: ${AMPM_IMAGE:?set AMPM_IMAGE to the released tag@sha256 digest (the deploy workflow sets it)}
   env_file:
-    - path: ./production.env
+    - path: ./app.env
       required: false
   read_only: true
   tmpfs: ["/tmp"]
@@ -34,7 +35,7 @@ services:
       - -c
       - hba_file=/etc/postgresql/pg_hba.conf
     env_file:
-      - path: ./production.env
+      - path: ./postgres.env
         required: false
     volumes:
       - pgdata:/var/lib/postgresql/data
@@ -67,7 +68,7 @@ services:
     depends_on:
       postgres: { condition: service_healthy }
     env_file:
-      - path: ./production.env
+      - path: ./postgres.env
         required: false
     volumes:
       - pgdata:/var/lib/postgresql/data:ro
@@ -95,7 +96,7 @@ services:
       - -c
       - exec redis-server --save "" --appendonly no --requirepass "$${REDIS_PASSWORD:?REDIS_PASSWORD is required}"
     env_file:
-      - path: ./production.env
+      - path: ./redis.env
         required: false
     networks: [internal]
     healthcheck:
