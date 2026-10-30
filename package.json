@@ -13,7 +13,7 @@
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
     "check": "turbo run lint typecheck test && pnpm run test:tools",
-    "test:tools": "python3 docs/tools/redact_secrets.py --self-test && bash docs/tools/memory_hook_test.sh && bash docs/tools/setup_memory_test.sh && bash docs/tools/mempalace_global_hook_test.sh && python3 docs/tools/install_global_memory_hooks_test.py && bash docs/tools/checkpoint_test.sh",
+    "test:tools": "python3 docs/tools/redact_secrets.py --self-test && python3 docs/tools/scan_secrets.py --self-test && bash docs/tools/memory_hook_test.sh && bash docs/tools/setup_memory_test.sh && bash docs/tools/mempalace_global_hook_test.sh && python3 docs/tools/install_global_memory_hooks_test.py && bash docs/tools/checkpoint_test.sh",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "tokens:build": "pnpm --filter @ampm/tokens build",
@@ -22,6 +22,7 @@
     "authz:generate": "pnpm --filter @ampm/policy run authz:generate",
     "infra:config": "docker compose -f infra/compose/local/compose.yml config -q && AMPM_IMAGE=config-check AMPM_POSTGRES_IMAGE=config-check AMPM_DOMAIN=config-check ACME_EMAIL=ops@example.com docker compose -f infra/compose/production/compose.yml config -q && AMPM_IMAGE=config-check AMPM_POSTGRES_IMAGE=config-check AMPM_DOMAIN=config-check ACME_EMAIL=ops@example.com docker compose -f infra/compose/staging/compose.yml config -q",
     "infra:smoke": "sh infra/scripts/smoke.sh",
+    "secrets:scan": "python3 docs/tools/scan_secrets.py",
     "prepare": "turbo run build --filter=@ampm/tokens --filter=@ampm/core --filter=@ampm/policy && (if git rev-parse --git-dir >/dev/null 2>&1; then lefthook install; fi)"
   },
   "devDependencies": {

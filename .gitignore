@@ -48,8 +48,19 @@ web-build/
 .env.*
 !.env.example
 # Decrypted secret env files for the Compose stacks (sops produces these at deploy; never commit them).
-infra/compose/*/*.env
-!infra/compose/*/*.env.example
+infra/compose/**/*.env
+# sops secrets (feature 6.4): commit only the encrypted *.enc.yaml and the examples/ templates — never a
+# plaintext secret source, an age private key, or any private key (at any depth).
+infra/secrets/**/*.yaml
+!infra/secrets/**/*.enc.yaml
+!infra/secrets/examples/*.yaml
+age.key
+*.agekey
+*.age
+*.key
+age-key*.txt
+key.txt
+keys.txt
 prisma/*.db
 
 # Per-machine dev-server launch config for the Claude desktop app (absolute paths, local ports)

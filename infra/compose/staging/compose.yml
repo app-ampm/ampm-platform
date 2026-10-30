@@ -5,15 +5,16 @@
 # single-edge default, which cannot co-exist with production's 80/443 on one host until 6.6 settles it.
 # AMPM_IMAGE (the app) and AMPM_POSTGRES_IMAGE (the postgres+pgBackRest image, feature 6.3) are
 # interpolation-time variables (shell/.env set by the deploy, 6.6), not container env vars, with no
-# default so an unpinned `up` fails loudly. Secrets come from the sops-decrypted staging.env (feature
-# 6.4); the images are pushed on merge to main (feature 6.6). Same hardening and backups as prod:
+# default so an unpinned `up` fails loudly. Secrets come from the sops-decrypted, per-zone env files
+# (feature 6.4: postgres.env, redis.env, app.env via infra/scripts/decrypt-secrets.sh; keys in
+# infra/secrets/examples/); the images are pushed on merge to main (feature 6.6). Same hardening and backups as prod:
 # Postgres and pgBackRest join an outbound-only egress network to reach the encrypted S3 backup repo.
 name: ampm-staging
 
 x-app: &app
   image: ${AMPM_IMAGE:?set AMPM_IMAGE to the released tag@sha256 digest (the deploy workflow sets it)}
   env_file:
-    - path: ./staging.env
+    - path: ./app.env
       required: false
   read_only: true
   tmpfs: ["/tmp"]
@@ -40,7 +41,7 @@ services:
       - -c
       - maintenance_work_mem=128MB
     env_file:
-      - path: ./staging.env
+      - path: ./postgres.env
         required: false
     volumes:
       - pgdata:/var/lib/postgresql/data
@@ -71,7 +72,7 @@ services:
     depends_on:
       postgres: { condition: service_healthy }
     env_file:
-      - path: ./staging.env
+      - path: ./postgres.env
         required: false
     volumes:
       - pgdata:/var/lib/postgresql/data:ro
@@ -97,7 +98,7 @@ services:
       - -c
       - exec redis-server --save "" --appendonly no --requirepass "$${REDIS_PASSWORD:?REDIS_PASSWORD is required}"
     env_file:
-      - path: ./staging.env
+      - path: ./redis.env
         required: false
     networks: [internal]
     healthcheck:
