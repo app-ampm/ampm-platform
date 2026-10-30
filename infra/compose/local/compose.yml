@@ -16,17 +16,66 @@ x-app-env: &app-env
 
 services:
   postgres:
-    image: postgres:16-bookworm
+    build:
+      context: ../../..
+      dockerfile: infra/docker/postgres.Dockerfile
+    command:
+      - postgres
+      - -c
+      - config_file=/etc/postgresql/postgresql.conf
+      - -c
+      - hba_file=/etc/postgresql/pg_hba.conf
     environment:
       POSTGRES_USER: ampm
       POSTGRES_PASSWORD: ampm
       POSTGRES_DB: ampm
+      # The repo passphrase the archive_command needs to write encrypted WAL (a throwaway local value).
+      PGBACKREST_REPO1_CIPHER_PASS: local-smoke-cipher-not-a-secret
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - pg-run:/var/run/postgresql
+      - pgbackrest-repo:/var/lib/pgbackrest
+      - ../../postgres/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+      - ../../postgres/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro
+      - ../../pgbackrest/pgbackrest.conf:/etc/pgbackrest/pgbackrest.conf:ro
     networks: [internal]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ampm -d ampm"]
       interval: 5s
       timeout: 5s
       retries: 10
+    # PG16 parallel queries allocate in /dev/shm; the 64MB Docker default overflows under load.
+    shm_size: 256m
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+
+  # Backups: shares PGDATA (read), the postgres socket and the posix repo with the postgres container;
+  # runs the scheduled backup + daily check and records each outcome to job_runs (D-050). In production
+  # the repo is the encrypted S3 bucket (PGBACKREST_* env, feature 6.4). Locally it idles so the smoke
+  # can invoke backup.sh on demand.
+  pgbackrest:
+    build:
+      context: ../../..
+      dockerfile: infra/docker/postgres.Dockerfile
+    user: postgres
+    depends_on:
+      postgres: { condition: service_healthy }
+    environment:
+      DATABASE_URL: postgresql://ampm:ampm@postgres:5432/ampm
+      PGBACKREST_REPO1_CIPHER_PASS: local-smoke-cipher-not-a-secret
+      PGPASSWORD: ampm
+    volumes:
+      - pgdata:/var/lib/postgresql/data:ro
+      - pg-run:/var/run/postgresql
+      - pgbackrest-repo:/var/lib/pgbackrest
+      - ../../pgbackrest/pgbackrest.conf:/etc/pgbackrest/pgbackrest.conf:ro
+      - ../../pgbackrest/backup.sh:/usr/local/bin/backup.sh:ro
+      - ../../pgbackrest/scheduler.sh:/usr/local/bin/scheduler.sh:ro
+    networks: [internal]
+    # Idles so the smoke can drive `scheduler.sh bootstrap` deterministically (prod runs scheduler.sh).
+    command: ["sh", "-c", "while true; do sleep 3600; done"]
+    read_only: true
+    tmpfs: ["/tmp", "/var/spool/pgbackrest"]
     security_opt: ["no-new-privileges:true"]
     restart: unless-stopped
 
@@ -99,6 +148,11 @@ services:
     networks: [edge]
     security_opt: ["no-new-privileges:true"]
     restart: unless-stopped
+
+volumes:
+  pgdata:
+  pg-run:
+  pgbackrest-repo:
 
 networks:
   # Postgres and Redis are never reachable from outside the stack.
