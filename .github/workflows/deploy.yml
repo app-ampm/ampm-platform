@@ -1,0 +1,217 @@
+# Deploy pipeline (vps-setup.md §1/§6, feature 6.6, D-053). Build the app + postgres images to GHCR and
+# deploy them: staging on merge to main, production on a published release, and a manual run for a
+# rollback (redeploy a previous tag, resolved to its digest). The migration job (expand steps only) runs
+# before the new API; `up --wait` plus an edge probe is the health gate; a failed gate rolls back to the
+# previous images (infra/scripts/deploy.sh). Production forward-deploys are refused while DEPLOY_FREEZE is
+# set (a wedding is live); a rollback may still proceed. Until the VPS is wired the deploy step runs
+# deploy.sh in DRY_RUN on the runner so the pipeline is exercised end to end.
+#
+# All external text (the dispatch input, the release tag) is bound to the step env and validated before
+# use — never interpolated into a run/ssh command — to prevent template injection.
+name: Deploy
+
+on:
+  push:
+    branches: [main] # -> build + deploy staging
+  release:
+    types: [published] # -> build + deploy production (the release tag)
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Target environment
+        type: choice
+        options: [staging, production]
+        default: staging
+      image_tag:
+        description: "Existing image tag to redeploy (a previous release, for rollback); blank = build this ref"
+        required: false
+        default: ""
+
+concurrency:
+  # Never run two deploys to the same environment at once, and never cancel one mid-flight.
+  group: deploy-${{ github.event_name == 'release' && 'production' || github.event_name == 'workflow_dispatch' && inputs.environment || 'staging' }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    # Skip the build when a manual run redeploys an existing tag (rollback).
+    if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.image_tag != '') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    outputs:
+      app_ref: ${{ steps.refs.outputs.app_ref }}
+      postgres_ref: ${{ steps.refs.outputs.postgres_ref }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Image prefix (GHCR requires lowercase)
+        run: echo "IMAGE_PREFIX=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
+      - name: Validate the release tag
+        if: ${{ github.event_name == 'release' }}
+        env:
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          case "$REF_NAME" in
+          v[0-9]*) : ;;
+          *)
+            echo "::error::release tag '$REF_NAME' must look like v<major>... (got something else)"
+            exit 1
+            ;;
+          esac
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Compute the app image tags
+        id: appmeta
+        env:
+          EVENT: ${{ github.event_name }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          sha="sha-${GITHUB_SHA::12}"
+          tags="${IMAGE_PREFIX}/app:${sha}"
+          if [ "$EVENT" = release ]; then
+            tags="${tags}"$'\n'"${IMAGE_PREFIX}/app:${REF_NAME}"
+          fi
+          { echo "tags<<EOF"; echo "$tags"; echo "EOF"; } >> "$GITHUB_OUTPUT"
+      - name: Build + push the app image
+        id: app
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infra/docker/Dockerfile
+          push: true
+          tags: ${{ steps.appmeta.outputs.tags }}
+      # Postgres is content-addressed by the hash of its Dockerfile and built only when that tag is not
+      # already in GHCR. An unchanged postgres image therefore keeps the same digest across deploys, so
+      # `up` does not recreate the database container on an app-only release.
+      - name: Compute the postgres content tag
+        id: pgmeta
+        run: |
+          h=$(sha256sum infra/docker/postgres.Dockerfile | cut -c1-16)
+          echo "ref=${IMAGE_PREFIX}/postgres:pg-${h}" >> "$GITHUB_OUTPUT"
+      - name: Build + push the postgres image if absent
+        env:
+          PG_REF: ${{ steps.pgmeta.outputs.ref }}
+        run: |
+          if docker manifest inspect "$PG_REF" >/dev/null 2>&1; then
+            echo "postgres image $PG_REF already present — reusing"
+          else
+            docker build -f infra/docker/postgres.Dockerfile -t "$PG_REF" .
+            docker push "$PG_REF"
+          fi
+      - name: Pin both images by digest
+        id: refs
+        env:
+          APP_DIGEST: ${{ steps.app.outputs.digest }}
+          PG_REF: ${{ steps.pgmeta.outputs.ref }}
+        run: |
+          pg_digest=$(docker buildx imagetools inspect "$PG_REF" --format '{{json .Manifest.Digest}}' | tr -d '"')
+          {
+            echo "app_ref=${IMAGE_PREFIX}/app@${APP_DIGEST}"
+            echo "postgres_ref=${IMAGE_PREFIX}/postgres@${pg_digest}"
+          } >> "$GITHUB_OUTPUT"
+
+  deploy:
+    needs: [build]
+    # Run after a successful build, or on a rollback that skipped the build (manual tag redeploy).
+    if: ${{ always() && (needs.build.result == 'success' || (github.event_name == 'workflow_dispatch' && inputs.image_tag != '')) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: ${{ github.event_name == 'release' && 'production' || github.event_name == 'workflow_dispatch' && inputs.environment || 'staging' }}
+    env:
+      ENVIRONMENT: ${{ github.event_name == 'release' && 'production' || github.event_name == 'workflow_dispatch' && inputs.environment || 'staging' }}
+      IMAGE_TAG: ${{ inputs.image_tag }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Image prefix (GHCR requires lowercase)
+        run: echo "IMAGE_PREFIX=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
+      # Fail CLOSED: refuse a production FORWARD deploy unless DEPLOY_FREEZE is empty or an explicit falsey
+      # value — any other value (true, 1, a typo) is treated as frozen. A rollback (IMAGE_TAG set) is exempt
+      # so a bad release can always be recovered, even during a live wedding.
+      - name: Refuse production forward deploys while frozen
+        if: ${{ env.ENVIRONMENT == 'production' && env.IMAGE_TAG == '' && !contains(fromJSON('["", "false", "False", "FALSE", "0", "no", "off"]'), vars.DEPLOY_FREEZE) }}
+        run: |
+          echo "::error::DEPLOY_FREEZE is set (a wedding is live) — refusing to forward-deploy to production. Roll back by tag if needed."
+          exit 1
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Resolve the image refs (digest-pinned, incl. rollback)
+        id: img
+        env:
+          APP_BUILD_REF: ${{ needs.build.outputs.app_ref }}
+          PG_BUILD_REF: ${{ needs.build.outputs.postgres_ref }}
+        run: |
+          # Postgres is content-addressed; its digest is the same on a forward deploy or a rollback, so
+          # (re)resolve it from the current Dockerfile either way.
+          h=$(sha256sum infra/docker/postgres.Dockerfile | cut -c1-16)
+          pg_ref=$(docker buildx imagetools inspect "${IMAGE_PREFIX}/postgres:pg-${h}" --format '{{json .Manifest.Digest}}' | tr -d '"')
+          pg_ref="${IMAGE_PREFIX}/postgres@${pg_ref}"
+          if [ -n "$IMAGE_TAG" ]; then
+            case "$IMAGE_TAG" in *[!A-Za-z0-9._-]*)
+              echo "::error::image_tag '$IMAGE_TAG' has invalid characters"
+              exit 1
+              ;;
+            esac
+            # Resolve the requested app tag to its digest so even a rollback is pinned by digest.
+            app_digest=$(docker buildx imagetools inspect "${IMAGE_PREFIX}/app:${IMAGE_TAG}" --format '{{json .Manifest.Digest}}' | tr -d '"')
+            app_ref="${IMAGE_PREFIX}/app@${app_digest}"
+          else
+            app_ref="$APP_BUILD_REF"
+          fi
+          # Belt-and-braces: the refs feed a remote shell; reject anything but the expected characters.
+          for r in "$app_ref" "$pg_ref"; do
+            case "$r" in *[!a-z0-9./:@_-]*)
+              echo "::error::resolved image ref '$r' has unexpected characters"
+              exit 1
+              ;;
+            esac
+          done
+          {
+            echo "app_ref=$app_ref"
+            echo "postgres_ref=$pg_ref"
+          } >> "$GITHUB_OUTPUT"
+      - name: Deploy (real host, or DRY_RUN until the host is wired)
+        env:
+          APP_REF: ${{ steps.img.outputs.app_ref }}
+          POSTGRES_REF: ${{ steps.img.outputs.postgres_ref }}
+          SKIP_MIGRATE: ${{ env.IMAGE_TAG != '' && '1' || '' }}
+          SSH_HOST: ${{ secrets.DEPLOY_SSH_HOST }}
+          SSH_USER: ${{ secrets.DEPLOY_SSH_USER }}
+          SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          SSH_PORT: ${{ secrets.DEPLOY_SSH_PORT || vars.DEPLOY_SSH_PORT || '22' }}
+          SSH_KNOWN_HOSTS: ${{ secrets.DEPLOY_SSH_KNOWN_HOSTS }}
+          AMPM_DOMAIN: ${{ vars.AMPM_DOMAIN }}
+          ACME_EMAIL: ${{ vars.ACME_EMAIL }}
+        run: |
+          if [ -z "$SSH_HOST" ]; then
+            echo "::notice::DEPLOY_SSH_HOST is not set — the VPS is not wired yet; running deploy.sh in DRY_RUN to exercise the plan."
+            DRY_RUN=1 SKIP_MIGRATE="$SKIP_MIGRATE" \
+              AMPM_IMAGE="$APP_REF" AMPM_POSTGRES_IMAGE="$POSTGRES_REF" \
+              AMPM_DOMAIN="${AMPM_DOMAIN:-example.com}" ACME_EMAIL="${ACME_EMAIL:-ops@example.com}" \
+              bash infra/scripts/deploy.sh "$ENVIRONMENT"
+            exit 0
+          fi
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          if [ -n "$SSH_KNOWN_HOSTS" ]; then
+            printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts   # pinned host key (preferred)
+          else
+            echo "::warning::DEPLOY_SSH_KNOWN_HOSTS not set — trusting the host key on first use (set it to pin)."
+            ssh-keyscan -p "$SSH_PORT" -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          fi
+          # The host holds the repo at /opt/ampm; check out this commit, then deploy the pinned images. The
+          # refs/vars were validated above, so interpolating them into the remote command is safe.
+          ssh -i ~/.ssh/id_deploy -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" \
+            "set -e; cd /opt/ampm; git fetch --all --quiet; git checkout --quiet ${{ github.sha }}; \
+             SKIP_MIGRATE='$SKIP_MIGRATE' AMPM_IMAGE='$APP_REF' AMPM_POSTGRES_IMAGE='$POSTGRES_REF' \
+             AMPM_DOMAIN='$AMPM_DOMAIN' ACME_EMAIL='$ACME_EMAIL' \
+             bash infra/scripts/deploy.sh '$ENVIRONMENT'"

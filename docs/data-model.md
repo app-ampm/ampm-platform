@@ -24,7 +24,7 @@ Each assumption states the default adopted in this draft and what changes if AMP
 | A-3 | Q3 | `plans` supports one-time fixed-term and recurring billing. v1 is configured as one-time fixed-term with manual renewal. Trial is a subscription status (`trial`) on a plan with `trial_days`. Demo is a plan flagged `is_demo` on an account flagged `is_demo`. Module entitlements come from `plan_modules`. **AMPM (2026-10-25): Confirmed. Rs 50,000, one-time, one month, configurable; renewal is a new purchase; no separate trial plan, the demo serves that purpose.** | Recurring billing needs an additional `subscription_invoices` cycle and dunning states; the tables here already carry `auto_renew` and `ends_at`. |
 | A-4 | Q4 | AMPM may earn a margin on vendor and hotel pricing. Every commercial record therefore stores client-facing amounts and internal cost in separate columns (`vendor_proposals`, `hotel_proposals`, `budget_lines`, `room_blocks`, `project_final_accounts`). Clients see estimates, approved amounts, invoices issued to them, their own payments and outstanding milestones. Clients never see vendor quotes, internal cost, margin, vendor invoices or vendor contracts. **AMPM (2026-10-25): Partly decided. Internal cost and margin never shown: confirmed. Wedding management fee set outside the app. Online milestone payment is out of the first release. Which client-facing amounts the wedding portal shows is still to be confirmed.** | Transparent fee model: internal cost columns equal client amounts and an explicit AMPM fee budget line is added. No structural change. |
 | A-5 | Q5 | Several client users per wedding through `project_members` with `project_role` in {client_owner, client_approver, client_viewer}. Finance visibility is a separate flag `can_view_finance`. Approvals need one decision by default; `approvals.required_decisions` allows more. **AMPM (2026-10-26): Changed. Two family representatives, one per side, with equal rights; no viewer role and no finance flag; working decision two individually authenticated accounts, each verified by email and mobile, to be countersigned.** | Single client login: only `client_owner` is used. Multiple mandatory approvers: set `required_decisions` per approval type in configuration. |
-| A-6 | Q6 | The eleven roles in SPEC §6 are adopted as global staff roles plus external roles (client roles via project membership, guest via token, demo prospect). Internal cost and margin are readable by Super Admin and Finance everywhere, by the Wedding Project Manager on assigned projects, by the Vendor Coordinator for vendor-side cost and by the Hotel team for hotel-side cost. **AMPM (2026-10-25): Partly decided. Department-based access confirmed; the final role list and who may see hotel and vendor costs are to be confirmed by AMPM.** | Role changes alter `roles` and `role_permissions` seed data only. |
+| A-6 | Q6 | The eleven roles in SPEC §6 are adopted as global staff roles plus external roles (client roles via project membership, guest via token, demo prospect). Internal cost and margin are readable by Super Admin and Finance everywhere, by the Wedding Project Manager on assigned projects, by the Vendor Coordinator for vendor-side cost and by the Hotel team for hotel-side cost. **AMPM (2026-10-25): Partly decided. Department-based access confirmed; the final role list and who may see hotel and vendor costs are to be confirmed by AMPM.** | Role changes alter `roles`/`role_permissions` seed data. **Superseded 28 Oct 2026 (D-036):** the nine system roles stay seed/code and golden-pinned; a Super Admin may add custom roles as runtime data (`grantable_capabilities`, `role_grants`, `permission_sets`). |
 | A-7 | Q7 | The guest list is loaded first (client upload or AMPM entry). Each family group receives a unique tokenised RSVP link. Guests respond per person per function. A group may add accompanying members up to `family_groups.max_additional_guests` (default 0). There is no open registration. Dietary preference is collected for everyone; allergies and accessibility needs are optional and SENSITIVE. The client sees their own guest list except RESTRICTED and identity fields. **AMPM (2026-10-25): Changed. Links per side or one combined link (final structure open); guests identify themselves against the loaded list; no editing after submission; corrections through the RSVP team. Per-person counting, meal preference and allergies confirmed. Family representatives see summaries only and cannot edit the list.** | One shared wedding link would require a guest self-identification step and a de-duplication queue; `rsvp_tokens.family_group_id` would become nullable. |
 | A-8 | Q8 | Identity documents are collected only when a project enables it for a defined purpose (hotel check-in). Aadhaar numbers are never stored. Accepted types: passport, voter ID, driving licence. Files live in a separate restricted bucket. `retention_until` defaults to checkout plus 30 days. Every read is audited. **AMPM (2026-10-25): Partly decided. Per wedding, no Aadhaar, restricted storage: confirmed. Automatic deletion removed; retention follows AMPM-approved policy, to be confirmed.** | If AMPM needs Aadhaar for a legal reason, add `document_type = aadhaar_masked` storing only the last four digits and the UIDAI-compliant masked image, after legal review. |
 | A-9 | Q9 | Hotel commercials are modelled as indicative rate cards with line items (room rate by category, venue rental, per-plate minimums, taxes), client-visible once verified. Negotiated rates for a specific client live in `hotel_proposals` with client and internal amounts. Availability is checked manually per enquiry; there is no availability calendar. Media carry per-asset rights status. Hotels are bulk-imported from spreadsheets through `import_jobs`. **AMPM (2026-10-25): Confirmed. Confirmed and extended: prices are indicative ranges including wedding package ranges and per-plate pricing, menu grids, street view; Eva updates about three times a year; about 200 hotels at the start.** | A live availability calendar adds `hotel_availability_days`; different price structures change `hotel_rate_items.item_type` values only. |
@@ -136,7 +136,7 @@ erDiagram
 
 ## 3. Module A — Identity, access and administration
 
-Covers SPEC §3 "Administration" (user, role, permission, notification, audit event, configuration) and adds `auth_tokens`, `notification_preferences` and `import_jobs`.
+Covers SPEC §3 "Administration" (user, role, permission, notification, audit event, configuration) and adds `auth_tokens`, `notification_preferences`, `import_jobs`, `sessions` and `job_runs`. The dynamic-RBAC catalog (`grantable_capabilities`, `permission_sets`, `role_grants`, `permission_set_grants`, `role_permission_sets`; D-036) is added for Super-Admin-defined custom roles.
 
 ```mermaid
 erDiagram
@@ -144,6 +144,12 @@ erDiagram
     roles ||--o{ user_roles : grants
     roles ||--o{ role_permissions : includes
     permissions ||--o{ role_permissions : in
+    roles ||--o{ role_grants : grants
+    grantable_capabilities ||--o{ role_grants : granted_as
+    permission_sets ||--o{ permission_set_grants : bundles
+    grantable_capabilities ||--o{ permission_set_grants : bundled_as
+    roles ||--o{ role_permission_sets : attaches
+    permission_sets ||--o{ role_permission_sets : attached_to
     users ||--o{ project_members : member_of
     wedding_projects ||--o{ project_members : has
     users ||--o{ auth_tokens : issued
@@ -151,6 +157,7 @@ erDiagram
     users ||--o{ notification_preferences : sets
     users ||--o{ audit_events : performs
     users ||--o{ import_jobs : runs
+    users ||--o{ sessions : has
 
     users {
         uuid id PK
@@ -181,6 +188,41 @@ erDiagram
     user_roles {
         uuid user_id FK
         uuid role_id FK
+    }
+    grantable_capabilities {
+        uuid id PK
+        string capability_key UK "module.resource.action:scope, with #<condition-signature> when conditioned (D-036)"
+        string module
+        string resource
+        string action
+        string scope "enum all / assigned / own"
+        json conditions "packages/policy Condition[]; empty is a plain grant"
+        json source_roles "the StaffRole codes that hold this grant, for the class ceiling"
+        bool is_staff_only
+        bool is_escalation_locked "role/account admin and identity: never assignable to a custom role"
+        string label
+    }
+    permission_sets {
+        uuid id PK
+        string set_key UK
+        string name
+        string description
+        bool is_system
+    }
+    role_grants {
+        uuid role_id FK
+        uuid grantable_capability_id FK
+        uuid created_by "who granted it"
+    }
+    permission_set_grants {
+        uuid permission_set_id FK
+        uuid grantable_capability_id FK
+        uuid created_by
+    }
+    role_permission_sets {
+        uuid role_id FK
+        uuid permission_set_id FK
+        uuid created_by
     }
     project_members {
         uuid id PK
@@ -214,6 +256,7 @@ erDiagram
         string provider_ref
         datetime sent_at
         datetime delivered_at
+        json data "server-only render variables e.g. the activation link (5.2); never in a view"
     }
     notification_preferences {
         uuid id PK
@@ -251,6 +294,25 @@ erDiagram
         int row_count
         json error_report_json
     }
+    sessions {
+        uuid id PK
+        uuid user_id FK
+        string token_id UK "the access token's jti (Cognito or the local adapter); one session per token"
+        int idle_timeout_minutes "staff 720 / client 43200 from configurations session.idle_timeouts"
+        datetime last_seen_at
+        datetime revoked_at "set on sign-out or a role or membership change; idle is enforced against last_seen_at, not written"
+        string revoked_reason
+    }
+    job_runs {
+        uuid id PK
+        string job_name "e.g. demo.restore"
+        string idempotency_key "the run's key; correlates retries"
+        string status "enum running / succeeded / failed"
+        json detail_json "per-table counts or other outcome detail"
+        string error "nullable; the sanitised failure message"
+        datetime started_at
+        datetime finished_at "nullable until the run ends"
+    }
 ```
 
 Notes:
@@ -259,6 +321,10 @@ Notes:
 - `permissions.permission_key` follows `module.resource.action` and optionally `.scope`; the permission matrix lists them.
 - `audit_events.project_id` is denormalised so a project manager can read the history of their own project without scanning everything.
 - **26 October 2026 (T-6, D-022):** credentials, OTP and authenticator codes live in Amazon Cognito; `users` keeps `identity_subject` instead of `password_hash` and `mfa_secret_ref`, and `auth_tokens` remains for the invitation and link tokens the API still mints. Implemented in `apps/api/prisma/schema.prisma` (bootstrap step 5).
+- **28 October 2026 (D-036, dormant):** dynamic RBAC. `grantable_capabilities` is the code-defined capability catalog, seeded from `packages/policy/src/generated/capabilities.json` (every grant variant a system role holds; the matrix stays the source). A Super Admin builds custom roles from it: `role_grants` are a role's direct capabilities, `permission_sets` are reusable bundles attached through `role_permission_sets`, and a set's capabilities are `permission_set_grants`. The nine system roles stay matrix-authoritative and golden-pinned; these tables add custom roles *on top*. The engine does not read them yet — the API resolves a custom role's capabilities and injects them as `PolicyPrincipal.resolvedGrants`, validated against the catalog, once custom roles are wired (supersedes A-6/P-1). FKs are `ON DELETE RESTRICT`, so a capability, role or set in use cannot be removed.
+- **`sessions` (28 October 2026, D-033):** the server-side session security.md requires. The access token proves identity; a `sessions` row, keyed by the token's `jti`, is what the API can expire (staff 12 h / client 30 d idle, from `configurations`) and revoke (on sign-out or a role or membership change). Added here because the original model left it to the identity service, which cannot revoke on an AMPM role change.
+- **Client-login cap (28 October 2026, feature 5.3):** the Q5 "two client logins per wedding, one per side" rule is enforced at the database by a partial unique index on `project_members (project_id, client_side)` where `deleted_at IS NULL AND status <> 'removed' AND client_side IS NOT NULL` (raw migration; partial indexes are not expressible in the Prisma schema). The service also pre-checks it for a friendly error, but the index is the race-safe backstop. Staff memberships (`client_side` NULL) are unconstrained.
+- **`job_runs` (29 October 2026, feature 5.5):** the recorded outcome api.md requires for a background job — the session reaper only logs. Append-only: one row per run with its `job_name`, `idempotency_key`, `status`, a `detail_json` of per-table counts and a sanitised `error`. The nightly demo-restore job writes one; other scheduled jobs reuse it. No soft-delete columns (operational, like `sessions`). Not partitioned yet — volume is a handful of rows a day; revisit with the other operational tables if it grows.
 
 ---
 
@@ -270,6 +336,7 @@ Covers SPEC §3 "CRM/subscriptions" and resolves audit GP-2 (trial), GP-3 (plans
 erDiagram
     lead_sources ||--o{ leads : classifies
     leads ||--o{ lead_activities : logs
+    leads |o--o| leads : duplicate_of
     users ||--o{ leads : owns
     leads ||--o| client_accounts : converts_to
     client_accounts ||--o{ account_contacts : lists
@@ -305,11 +372,13 @@ erDiagram
         text requirements
         bool consent_marketing
         datetime consent_at
+        string consent_notice_version "privacy-notice version shown when consent was captured (AC-27.1)"
         bool requested_demo
         uuid owner_user_id FK
         uuid converted_account_id FK
         datetime converted_at
         string closed_reason
+        uuid duplicate_of_lead_id FK "nullable, suspected original when flagged on capture (AC-01.6); never auto-merged"
     }
     lead_activities {
         uuid id PK
@@ -439,6 +508,8 @@ erDiagram
 Notes:
 
 - **Lead to account.** A lead converts into a `client_accounts` row; the lead keeps its history. A demo request is a lead with `requested_demo = true` and a `lead_activities` row of type `demo` once access is granted.
+- **Consent and privacy (Q17, AC-27.1).** The public enquiry form captures `consent_marketing`, `consent_at` and the `consent_notice_version` shown; changing the notice never alters a historical lead. The consent/privacy wording and the lead retention period are AMPM's to confirm and are held as configuration; leads are never hard-deleted — a retention job proposes deletions for a Super Admin to approve.
+- **Duplicates (AC-01.6).** A new enquiry whose email or phone matches an existing lead or client account is accepted and flagged (`duplicate_of_lead_id` names the suspected original), never refused to the visitor and never auto-merged; Sales merges, choosing the survivor, and the duplicate is closed with reason `merged`.
 - **Entitlements** (audit GP-1) are resolved as: active or trial subscription gives the `plan_modules` of its plan; an active `service_agreements` row gives its service's module; an active `project_members` row gives `wedding_workspace` for that project regardless of subscription state. Expiry removes the subscription modules and nothing else. The permission matrix §3 has the full table.
 - **Hotel assistance** (GP-5): the client's request creates a `hotel_enquiries` row (module D). If AMPM charges for it, Sales creates a `service_agreements` row that points back to the enquiry; work beyond availability checking waits for `status = active`.
 - **Payments** carry a direction and a counterparty so one table serves subscription receipts, milestone receipts, vendor payouts and refunds. `client_visible` is true only for inbound client payments.
@@ -1931,6 +2002,7 @@ Phase numbers follow SPEC §11 as adjusted by A-10. "Restricted" lists the field
 |---|---|---|---|---|
 | users | A | 1 | Staff, client and demo logins | password_hash, mfa_secret_ref |
 | roles, permissions, role_permissions, user_roles | A | 1 | Role-based access | — |
+| grantable_capabilities, role_grants, permission_sets, permission_set_grants, role_permission_sets | A | 1 | Dynamic RBAC: Super-Admin custom roles and permission sets (D-036) | — |
 | project_members | A | 2 | Per-wedding staff and client membership | — |
 | auth_tokens | A | 1 | Invites, resets, OTP | token_hash |
 | notifications, notification_preferences | A | 1 | Delivery log and preferences | — |

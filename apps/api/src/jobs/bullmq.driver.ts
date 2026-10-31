@@ -58,6 +58,29 @@ export class BullMqJobDriver implements JobDriver {
     });
   }
 
+  async scheduleRepeatable(name: string, cronPattern: string, payload: unknown): Promise<void> {
+    const registration = this.registrations.get(name);
+    if (!registration) throw new Error(`No handler registered for job "${name}"`);
+    // BullMQ v6 job scheduler: upsert is idempotent on the scheduler id, so scheduling from each
+    // process (API and worker) is safe; the worker runs the enqueued instances. The scheduled instances
+    // carry the job's retry policy, exactly as enqueue() does, so a failed run retries with backoff
+    // then dead-letters rather than failing on the first attempt.
+    await this.queue(name).upsertJobScheduler(
+      name,
+      { pattern: cronPattern },
+      {
+        name,
+        data: payload,
+        opts: {
+          attempts: registration.policy.attempts,
+          backoff: { type: "exponential", delay: registration.policy.backoffMs },
+          removeOnComplete: true,
+          removeOnFail: false,
+        },
+      },
+    );
+  }
+
   async close(): Promise<void> {
     await Promise.all(this.workers.map((worker) => worker.close()));
     await Promise.all([...this.queues.values()].map((queue) => queue.close()));

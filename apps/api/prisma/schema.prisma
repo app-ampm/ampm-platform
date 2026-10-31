@@ -104,6 +104,42 @@ enum ImportStatus {
   applied
 }
 
+enum JobRunStatus {
+  running
+  succeeded
+  failed
+}
+
+/// Module B CRM. Statuses are enumerations fixed in code; their labels are configuration (data.md).
+enum LeadStatus {
+  new
+  contacted
+  introduction_shared
+  demo_offered
+  demo_accessed
+  follow_up
+  converted
+  closed
+}
+
+enum ContactPreference {
+  phone
+  whatsapp
+  email
+}
+
+enum LeadActivityType {
+  call
+  email
+  whatsapp
+  meeting
+  consultation
+  demo
+  questionnaire
+  call_request
+  note
+}
+
 /// Staff, client and demo accounts. Credentials live in the identity service (Cognito, T-6): the
 /// API keeps the identity subject that maps a verified token to this row; it never stores a password.
 model User {
@@ -131,6 +167,9 @@ model User {
   preferences   NotificationPreference[]
   auditEvents   AuditEvent[]
   importJobs    ImportJob[]
+  sessions      Session[]
+  leadsOwned     Lead[]
+  leadActivities LeadActivity[]
 
   @@index([userType, status])
   @@index([deletedAt])
@@ -149,8 +188,10 @@ model Role {
   updatedBy String?   @map("updated_by") @db.Uuid
   deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
 
-  permissions RolePermission[]
-  users       UserRole[]
+  permissions    RolePermission[]
+  users          UserRole[]
+  grants         RoleGrant[]
+  permissionSets RolePermissionSet[]
 
   @@map("roles")
 }
@@ -191,6 +232,108 @@ model UserRole {
   @@id([userId, roleId])
   @@index([roleId])
   @@map("user_roles")
+}
+
+/// The code-defined capability catalog (D-036), seeded from packages/policy
+/// src/generated/capabilities.json: every (key, scope, conditions) grant variant a system role
+/// holds. Both the Super-Admin pick-list and the server-side allow-list for a custom role's grants.
+/// Rewritten by the seed, so the matrix stays the source. Dormant: nothing reads it yet.
+model GrantableCapability {
+  id            String @id @default(uuid(7)) @db.Uuid
+  /// Stable id `module.resource.action:scope`, with `#<condition-signature>` when conditioned.
+  capabilityKey String @unique @map("capability_key") @db.VarChar(255)
+  module        String @db.VarChar(64)
+  resource      String @db.VarChar(128)
+  action        String @db.VarChar(32)
+  scope         String @db.VarChar(16)
+  /// The grant's conditions (packages/policy `Condition[]`); an empty array is a plain grant.
+  conditions    Json
+  /// The system role codes that hold this exact grant (`StaffRole[]`), for the class ceiling.
+  sourceRoles   Json    @map("source_roles")
+  isStaffOnly   Boolean @default(true) @map("is_staff_only")
+  /// Role/account administration and identity documents: never assignable to a custom role.
+  isEscalationLocked Boolean @default(false) @map("is_escalation_locked")
+  label         String  @db.VarChar(255)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  roleGrants          RoleGrant[]
+  permissionSetGrants PermissionSetGrant[]
+
+  @@index([module, resource])
+  @@map("grantable_capabilities")
+}
+
+/// A reusable bundle of capabilities a Super Admin assembles once and attaches to many custom roles
+/// (D-036). Its effective grants are the capabilities in `permission_set_grants`.
+model PermissionSet {
+  id          String  @id @default(uuid(7)) @db.Uuid
+  setKey      String  @unique @map("set_key") @db.VarChar(64)
+  name        String  @db.VarChar(255)
+  description String? @db.VarChar(255)
+  isSystem    Boolean @default(false) @map("is_system")
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  grants PermissionSetGrant[]
+  roles  RolePermissionSet[]
+
+  @@index([deletedAt])
+  @@map("permission_sets")
+}
+
+/// A custom role's direct grant of one catalog capability (D-036). A role's effective grants are its
+/// `role_grants` plus the grants of every attached permission set. Immutable: created and removed.
+model RoleGrant {
+  roleId                String @map("role_id") @db.Uuid
+  grantableCapabilityId String @map("grantable_capability_id") @db.Uuid
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy String?  @map("created_by") @db.Uuid
+
+  role       Role                @relation(fields: [roleId], references: [id])
+  capability GrantableCapability @relation(fields: [grantableCapabilityId], references: [id])
+
+  @@id([roleId, grantableCapabilityId])
+  @@index([grantableCapabilityId])
+  @@map("role_grants")
+}
+
+/// One capability in a permission set (D-036).
+model PermissionSetGrant {
+  permissionSetId       String @map("permission_set_id") @db.Uuid
+  grantableCapabilityId String @map("grantable_capability_id") @db.Uuid
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy String?  @map("created_by") @db.Uuid
+
+  permissionSet PermissionSet       @relation(fields: [permissionSetId], references: [id])
+  capability    GrantableCapability @relation(fields: [grantableCapabilityId], references: [id])
+
+  @@id([permissionSetId, grantableCapabilityId])
+  @@index([grantableCapabilityId])
+  @@map("permission_set_grants")
+}
+
+/// Attaches a permission set to a custom role (D-036). Editing the set fans out to every role here.
+model RolePermissionSet {
+  roleId          String @map("role_id") @db.Uuid
+  permissionSetId String @map("permission_set_id") @db.Uuid
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy String?  @map("created_by") @db.Uuid
+
+  role          Role          @relation(fields: [roleId], references: [id])
+  permissionSet PermissionSet @relation(fields: [permissionSetId], references: [id])
+
+  @@id([roleId, permissionSetId])
+  @@index([permissionSetId])
+  @@map("role_permission_sets")
 }
 
 /// Membership of a wedding project: staff reach for assigned roles, the client representatives
@@ -239,9 +382,34 @@ model AuthToken {
   @@map("auth_tokens")
 }
 
-/// Partitioned by month in production (raw SQL migration, data.md); the Prisma model stays flat.
+/// A server-side session keyed by the access token's `jti` (security.md, D-033): the token proves
+/// identity, this row is what the API can expire (staff 12h / client 30d idle, from configurations)
+/// and revoke (sign-out, or a role or membership change). Operational, so no soft-delete columns.
+model Session {
+  id                 String    @id @default(uuid(7)) @db.Uuid
+  userId             String    @map("user_id") @db.Uuid
+  /// The access token's `jti`; one session per token.
+  tokenId            String    @unique @map("token_id") @db.VarChar(255)
+  idleTimeoutMinutes Int       @map("idle_timeout_minutes")
+  lastSeenAt         DateTime  @map("last_seen_at") @db.Timestamptz(6)
+  revokedAt          DateTime? @map("revoked_at") @db.Timestamptz(6)
+  revokedReason      String?   @map("revoked_reason") @db.VarChar(255)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  // Support the reaper's sweep for dead rows (revoked, or idle past the timeout).
+  @@index([revokedAt])
+  @@index([lastSeenAt])
+  @@map("sessions")
+}
+
+/// Partitioned by month on `created_at` (raw SQL migration, data.md); the composite primary key
+/// includes the partition key, so reads/updates by id alone use findFirst / updateMany.
 model Notification {
-  id            String              @id @default(uuid(7)) @db.Uuid
+  id            String              @default(uuid(7)) @db.Uuid
   recipientType RecipientType       @map("recipient_type")
   recipientId   String              @map("recipient_id") @db.Uuid
   channel       NotificationChannel
@@ -252,9 +420,12 @@ model Notification {
   providerRef   String?             @map("provider_ref") @db.VarChar(255)
   sentAt        DateTime?           @map("sent_at") @db.Timestamptz(6)
   deliveredAt   DateTime?           @map("delivered_at") @db.Timestamptz(6)
+  // Server-only render variables (e.g. the activation link) consumed at delivery; never in a view (5.2).
+  data          Json?               @db.JsonB
   createdAt     DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt     DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
 
+  @@id([id, createdAt])
   @@index([recipientType, recipientId, status])
   @@index([entityType, entityId])
   @@map("notifications")
@@ -276,10 +447,11 @@ model NotificationPreference {
   @@map("notification_preferences")
 }
 
-/// Append-only. Partitioned by month in production (raw SQL migration); restricted and secret
-/// fields are masked before the before/after images are stored.
+/// Append-only, partitioned by month on `occurred_at` (raw SQL migration, data.md); the composite
+/// primary key includes the partition key. Restricted and secret fields are masked before the
+/// before/after images are stored.
 model AuditEvent {
-  id          String      @id @default(uuid(7)) @db.Uuid
+  id          String      @default(uuid(7)) @db.Uuid
   actorUserId String?     @map("actor_user_id") @db.Uuid
   actorType   ActorType   @map("actor_type")
   action      AuditAction
@@ -294,6 +466,7 @@ model AuditEvent {
 
   actor User? @relation(fields: [actorUserId], references: [id])
 
+  @@id([id, occurredAt])
   @@index([entityType, entityId, occurredAt])
   @@index([projectId, occurredAt])
   @@index([actorUserId, occurredAt])
@@ -336,4 +509,128 @@ model ImportJob {
 
   @@index([projectId, status])
   @@map("import_jobs")
+}
+
+/// The recorded outcome of a background job run (api.md): the session reaper only logs, but the
+/// nightly demo-restore (feature 5.5) and later jobs write one row per run here. Append-only, so no
+/// soft-delete columns; `detail_json` holds per-table counts, `error` the sanitised failure message.
+model JobRun {
+  id             String       @id @default(uuid(7)) @db.Uuid
+  jobName        String       @map("job_name") @db.VarChar(128)
+  /// The run's idempotency key (e.g. `demo.restore:2026-10-29`); correlates a retry to its attempts.
+  idempotencyKey String       @map("idempotency_key") @db.VarChar(255)
+  status         JobRunStatus @default(running)
+  detailJson     Json?        @map("detail_json")
+  error          String?      @db.VarChar(1024)
+  startedAt      DateTime     @map("started_at") @db.Timestamptz(6)
+  finishedAt     DateTime?    @map("finished_at") @db.Timestamptz(6)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([jobName, createdAt])
+  @@map("job_runs")
+}
+
+// --- Module B: CRM (docs/data-model.md §4). Lead capture: the enquiry pipeline and follow-up. ---
+
+/// Where a lead came from (reference table, Super-Admin editable, data.md §1): the enquiry form and
+/// manual entry classify every lead through one of these. Seeded with the SPEC §2.1 sources.
+model LeadSource {
+  id        String  @id @default(uuid(7)) @db.Uuid
+  sourceKey String  @unique @map("source_key") @db.VarChar(64)
+  name      String  @db.VarChar(255)
+  isActive  Boolean @default(true) @map("is_active")
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  leads Lead[]
+
+  @@index([deletedAt])
+  @@map("lead_sources")
+}
+
+/// The enquiry/pipeline record the public form (PUB-06) creates and Sales works through the funnel.
+/// Every field is INTERNAL: no lead field is ever serialised to a client, guest or demo principal
+/// (permission-matrix §4). Converts into a client_accounts row (feature 8.2) and keeps its history;
+/// never hard-deleted (retention is a Super-Admin-approved proposal, Q17/AC-27).
+model Lead {
+  id                   String             @id @default(uuid(7)) @db.Uuid
+  sourceId             String             @map("source_id") @db.Uuid
+  status               LeadStatus         @default(new)
+  name                 String             @db.VarChar(255)
+  email                String?            @db.VarChar(255)
+  phone                String?            @db.VarChar(32)
+  contactPreference    ContactPreference? @map("contact_preference")
+  tentativeDateFrom    DateTime?          @map("tentative_date_from") @db.Date
+  tentativeDateTo      DateTime?          @map("tentative_date_to") @db.Date
+  /// Gains its relation when module C (destinations) lands; free text in destination_text meanwhile.
+  destinationId        String?            @map("destination_id") @db.Uuid
+  destinationText      String?            @map("destination_text") @db.VarChar(255)
+  guestEstimate        Int?               @map("guest_estimate")
+  requirements         String?            @db.Text
+  consentMarketing     Boolean            @default(false) @map("consent_marketing")
+  consentAt            DateTime?          @map("consent_at") @db.Timestamptz(6)
+  consentNoticeVersion String?            @map("consent_notice_version") @db.VarChar(32)
+  requestedDemo        Boolean            @default(false) @map("requested_demo")
+  ownerUserId          String?            @map("owner_user_id") @db.Uuid
+  /// Gains its relation when client_accounts lands (feature 8.2); set by the system on conversion.
+  convertedAccountId   String?            @map("converted_account_id") @db.Uuid
+  convertedAt          DateTime?          @map("converted_at") @db.Timestamptz(6)
+  closedReason         String?            @map("closed_reason") @db.VarChar(255)
+  /// The suspected original when an enquiry matches an existing lead/account on capture (AC-01.6):
+  /// a flag for Sales to merge, never an auto-merge.
+  duplicateOfLeadId    String?            @map("duplicate_of_lead_id") @db.Uuid
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  source      LeadSource     @relation(fields: [sourceId], references: [id])
+  owner       User?          @relation(fields: [ownerUserId], references: [id])
+  duplicateOf Lead?          @relation("LeadDuplicate", fields: [duplicateOfLeadId], references: [id])
+  duplicates  Lead[]         @relation("LeadDuplicate")
+  activities  LeadActivity[]
+
+  @@index([status])
+  @@index([sourceId])
+  @@index([ownerUserId, status])
+  @@index([email])
+  @@index([phone])
+  @@index([duplicateOfLeadId])
+  @@index([deletedAt])
+  @@map("leads")
+}
+
+/// The append log of every touch on a lead (calls, emails, demos, a questionnaire) and the next
+/// follow-up time; `next_follow_up_at` drives the reminder job (reuses the job_runs model, D-047).
+model LeadActivity {
+  id                String           @id @default(uuid(7)) @db.Uuid
+  leadId            String           @map("lead_id") @db.Uuid
+  activityType      LeadActivityType @map("activity_type")
+  occurredAt        DateTime         @map("occurred_at") @db.Timestamptz(6)
+  userId            String           @map("user_id") @db.Uuid
+  summary           String?          @db.Text
+  questionnaireJson Json?            @map("questionnaire_json")
+  nextFollowUpAt    DateTime?        @map("next_follow_up_at") @db.Timestamptz(6)
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  lead Lead @relation(fields: [leadId], references: [id])
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([leadId, occurredAt])
+  @@index([nextFollowUpAt])
+  @@index([userId])
+  @@index([deletedAt])
+  @@map("lead_activities")
 }

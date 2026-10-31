@@ -1,6 +1,6 @@
 # AMPM Platform — Field Matrix
 
-**Status:** DRAFT v0.1, generated 2026-10-25 from [data-model.md](data-model.md) by `docs/tools/field_matrix_build.py`. Do not edit by hand; change the data model or `docs/tools/field_rules.py` and rebuild.
+**Status:** DRAFT v0.1, generated 2026-10-31 from [data-model.md](data-model.md) by `docs/tools/field_matrix_build.py`. Do not edit by hand; change the data model or `docs/tools/field_rules.py` and rebuild.
 **Companions:** [requirements-audit.md](requirements-audit.md) (Q numbers), [data-model.md](data-model.md) (assumptions A-1 to A-30), [permission-matrix.md](permission-matrix.md) (role codes, visibility classes, assumptions P-1 to P-11).
 **Spreadsheet version:** [field-matrix.csv](field-matrix.csv) has the same rows for filtering.
 
@@ -20,8 +20,8 @@ Global conventions that apply to every row: money is `numeric(14,2)` with a sibl
 
 | Module | Tables | Fields | Required at creation | Client or public visible | Restricted, sensitive or secret |
 |---|---|---|---|---|---|
-| A — Identity, access and administration | 12 | 76 | 39 | 10 | 3 |
-| B — CRM, subscriptions and commercial agreements | 12 | 127 | 49 | 90 | 4 |
+| A — Identity, access and administration | 19 | 116 | 59 | 10 | 1 |
+| B — CRM, subscriptions and commercial agreements | 12 | 129 | 49 | 90 | 4 |
 | C — Hotel intelligence | 10 | 100 | 38 | 82 | 11 |
 | D — Hotel consultancy | 6 | 70 | 28 | 65 | 3 |
 | E — Wedding project | 3 | 36 | 13 | 29 | 3 |
@@ -37,9 +37,9 @@ Global conventions that apply to every row: money is `numeric(14,2)` with a sibl
 | O — Checklists, closure and feedback | 4 | 30 | 17 | 7 | 0 |
 | P — Public website content (dormant) | 2 | 17 | 8 | 17 | 0 |
 | Q — Live chat | 2 | 16 | 6 | 16 | 0 |
-| **Total** | **108** | **1097** | **472** | **646** | **105** |
+| **Total** | **115** | **1139** | **492** | **646** | **103** |
 
-Fields by visibility class: CLIENT 613, INTERNAL 294, Other (per record, recipient or parent) 52, RESTRICTED-NOTES 34, PUBLIC 33, RESTRICTED-FINANCE 31, RESTRICTED-CONTACT 13, RESTRICTED-IDENTITY 13, SECRET 8, RESTRICTED-BANK 4, SENSITIVE-GUEST 2.
+Fields by visibility class: CLIENT 613, INTERNAL 337, Other (per record, recipient or parent) 53, RESTRICTED-NOTES 34, PUBLIC 33, RESTRICTED-FINANCE 31, RESTRICTED-CONTACT 13, RESTRICTED-IDENTITY 13, SECRET 6, RESTRICTED-BANK 4, SENSITIVE-GUEST 2.
 
 ---
 
@@ -57,9 +57,8 @@ Created at stage: **Account setup** · Default editor: SA; SM and PM (a) for cli
 | `email` (unique) | valid email address, stored lowercase; unique |  | SA; SM and PM (a) for client logins | INTERNAL | At creation | Invite or activation email on creation |
 | `phone` | E.164 format, default +91; required when OTP is enabled |  | SA; SM and PM (a) for client logins | INTERNAL | Optional | — |
 | `status` | one of the listed options | invited, active, disabled, locked | SA; SM and PM (a) for client logins | INTERNAL | At creation | disabled or locked refuses sign-in at once and revokes sessions |
-| `password_hash` | string, up to 255 characters; nullable for OTP-only |  | SYS | SECRET | Optional | — |
-| `mfa_enabled` | true or false; mandatory true for staff (A-13) |  | SYS; must be true for staff before first sign-in | INTERNAL | At creation for staff | — |
-| `mfa_secret_ref` | string, up to 255 characters |  | SYS | SECRET | Optional | — |
+| `identity_subject` (unique) | string, up to 255 characters; the identity service's subject (Cognito sub, T-6); null until activated |  | SA; SM and PM (a) for client logins | INTERNAL | Optional | — |
+| `mfa_enabled` | true or false; mandatory true for staff (A-13); enforced by the identity service, mirrored here |  | SYS; must be true for staff before first sign-in | INTERNAL | At creation for staff | — |
 | `last_login_at` | timestamp (UTC) |  | SYS | INTERNAL | System | Inactive accounts reported for review |
 
 ### `roles`
@@ -100,6 +99,66 @@ Created at stage: **Configuration** · Default editor: SA · Default visibility:
 |---|---|---|---|---|---|---|
 | `user_id` (FK) | references see data model |  | SA | INTERNAL | At creation | — |
 | `role_id` (FK) | references roles |  | SA | INTERNAL | At creation | Change recomputes effective permissions; audited |
+
+### `grantable_capabilities`
+
+Created at stage: **Configuration** · Default editor: SYS · Default visibility: INTERNAL · code-generated from packages/policy capabilities.json (D-036); not hand-edited
+
+| Field | Type and validation | Options | Edited by | Visibility | Required | Automation and report impact |
+|---|---|---|---|---|---|---|
+| `id` (PK) | UUID v7, generated |  | SYS | INTERNAL | System | — |
+| `capability_key` (unique) | module.resource.action:scope, with #<condition-signature> when conditioned; unique |  | SYS | INTERNAL | At creation | — |
+| `module` | string, up to 255 characters |  | SYS | INTERNAL | At creation | — |
+| `resource` | string, up to 255 characters |  | SYS | INTERNAL | At creation | — |
+| `action` | string, up to 255 characters |  | SYS | INTERNAL | At creation | — |
+| `scope` | one of the listed options | all, assigned, own | SYS | INTERNAL | At creation | — |
+| `conditions` | valid JSON matching the registered schema; packages/policy Condition[]; empty is a plain grant |  | SYS | INTERNAL | Optional | — |
+| `source_roles` | valid JSON matching the registered schema; the StaffRole codes that hold this grant, for the class ceiling |  | SYS | INTERNAL | Optional | — |
+| `is_staff_only` | true or false |  | SYS | INTERNAL | Optional | — |
+| `is_escalation_locked` | true or false; role/account admin and identity: never assignable to a custom role |  | SYS | INTERNAL | Optional | Escalation-locked capabilities are never offered to a custom role |
+| `label` | string, up to 255 characters |  | SYS | INTERNAL | At creation | — |
+
+### `permission_sets`
+
+Created at stage: **Configuration** · Default editor: SA · Default visibility: INTERNAL
+
+| Field | Type and validation | Options | Edited by | Visibility | Required | Automation and report impact |
+|---|---|---|---|---|---|---|
+| `id` (PK) | UUID v7, generated |  | SYS | INTERNAL | System | — |
+| `set_key` (unique) | lowercase snake_case; unique |  | SA | INTERNAL | At creation | — |
+| `name` | string, up to 255 characters |  | SA | INTERNAL | At creation | — |
+| `description` | string, up to 255 characters |  | SA | INTERNAL | Optional | — |
+| `is_system` | true or false |  | SA | INTERNAL | Optional | System sets cannot be deleted or renamed |
+
+### `role_grants`
+
+Created at stage: **Configuration** · Default editor: SA · Default visibility: INTERNAL · unique pair
+
+| Field | Type and validation | Options | Edited by | Visibility | Required | Automation and report impact |
+|---|---|---|---|---|---|---|
+| `role_id` (FK) | references roles |  | SA | INTERNAL | At creation | Change recomputes effective permissions; audited; revokes sessions |
+| `grantable_capability_id` (FK) | references see data model |  | SA | INTERNAL | At creation | — |
+| `created_by` | UUID; who granted it |  | SA | INTERNAL | Optional | — |
+
+### `permission_set_grants`
+
+Created at stage: **Configuration** · Default editor: SA · Default visibility: INTERNAL · unique pair
+
+| Field | Type and validation | Options | Edited by | Visibility | Required | Automation and report impact |
+|---|---|---|---|---|---|---|
+| `permission_set_id` (FK) | references see data model |  | SA | INTERNAL | At creation | — |
+| `grantable_capability_id` (FK) | references see data model |  | SA | INTERNAL | At creation | — |
+| `created_by` | UUID |  | SA | INTERNAL | Optional | — |
+
+### `role_permission_sets`
+
+Created at stage: **Configuration** · Default editor: SA · Default visibility: INTERNAL · unique pair
+
+| Field | Type and validation | Options | Edited by | Visibility | Required | Automation and report impact |
+|---|---|---|---|---|---|---|
+| `role_id` (FK) | references roles |  | SA | INTERNAL | At creation | Change recomputes effective permissions; audited; revokes sessions |
+| `permission_set_id` (FK) | references see data model |  | SA | INTERNAL | At creation | — |
+| `created_by` | UUID |  | SA | INTERNAL | Optional | — |
 
 ### `project_members`
 
@@ -148,6 +207,7 @@ Created at stage: **System** · Default editor: SYS · Default visibility: Recip
 | `provider_ref` | provider message identifier |  | SYS | Recipient only | Optional | — |
 | `sent_at` | timestamp (UTC) |  | SYS (when the action happens) | Recipient only | System | — |
 | `delivered_at` | timestamp (UTC) |  | SYS (when the action happens) | Recipient only | System | — |
+| `data` | valid JSON matching the registered schema; server-only render variables e.g. the activation link (5.2); never in a view |  | SYS | Recipient only | Optional | — |
 
 ### `notification_preferences`
 
@@ -205,6 +265,35 @@ Created at stage: **Any (import)** · Default editor: SA; HT (hotels); VC (vendo
 | `row_count` | integer, 0 or more |  | SYS | INTERNAL | Optional | — |
 | `error_report_json` | valid JSON matching the registered schema |  | SYS | INTERNAL | Optional | — |
 
+### `sessions`
+
+Created at stage: **System** · Default editor: SYS · Default visibility: INTERNAL · Assumptions: D-033; security.md server-side sessions
+
+| Field | Type and validation | Options | Edited by | Visibility | Required | Automation and report impact |
+|---|---|---|---|---|---|---|
+| `id` (PK) | UUID v7, generated |  | SYS | INTERNAL | System | — |
+| `user_id` (FK) | references see data model |  | SYS | INTERNAL | At creation | — |
+| `token_id` (unique) | the access token's jti; unique per session |  | SYS | INTERNAL | System | — |
+| `idle_timeout_minutes` | integer, 0 or more; staff 720 / client 43200 from configurations session.idle_timeouts |  | SYS | INTERNAL | At creation | Staff 720, client 43200, from configurations session.idle_timeouts |
+| `last_seen_at` | timestamp (UTC) |  | SYS | INTERNAL | At creation | Advanced on each authenticated request |
+| `revoked_at` | timestamp (UTC); set on sign-out or a role or membership change; idle is enforced against last_seen_at, not written |  | SYS | INTERNAL | System | Set on sign-out or a role or membership change; idle is enforced against last_seen_at, not written |
+| `revoked_reason` | string, up to 255 characters |  | SYS | INTERNAL | Optional | — |
+
+### `job_runs`
+
+Created at stage: **Operational** · Default editor: SYS · Default visibility: INTERNAL · append-only; the recorded outcome of a background job run (D-047)
+
+| Field | Type and validation | Options | Edited by | Visibility | Required | Automation and report impact |
+|---|---|---|---|---|---|---|
+| `id` (PK) | UUID v7, generated |  | SYS | INTERNAL | System | — |
+| `job_name` | string, up to 255 characters; e.g. demo.restore |  | SYS | INTERNAL | At creation | — |
+| `idempotency_key` | unique within the job; correlates a retry to its attempts |  | SYS | INTERNAL | At creation | — |
+| `status` | one of the listed options | running, succeeded, failed | SYS | INTERNAL | At creation | running then succeeded or failed; alerts on failure or stale age |
+| `detail_json` | valid JSON matching the registered schema; per-table counts or other outcome detail |  | SYS | INTERNAL | Optional | — |
+| `error` | string, up to 255 characters; nullable; the sanitised failure message |  | SYS | INTERNAL | Optional | — |
+| `started_at` | timestamp (UTC) |  | SYS (when the action happens) | INTERNAL | System | — |
+| `finished_at` | timestamp (UTC); nullable until the run ends |  | SYS (when the action happens) | INTERNAL | System | Set when the run ends |
+
 ---
 
 ## 3. Module B — CRM, subscriptions and commercial agreements
@@ -241,11 +330,13 @@ Created at stage: **Lead** · Default editor: SM; SA; SYS from the public enquir
 | `requirements` | text, up to 10,000 characters |  | SM; SA; SYS from the public enquiry form | INTERNAL | Optional | — |
 | `consent_marketing` | true or false |  | SM; SA; SYS from the public enquiry form | INTERNAL | At creation from the form | Marketing messages suppressed when false |
 | `consent_at` | timestamp (UTC) |  | SYS (when the action happens) | INTERNAL | System | — |
+| `consent_notice_version` | string, up to 32 characters |  | SYS | INTERNAL | Optional | Captured with consent; a notice change never alters a historical lead (AC-27.1) |
 | `requested_demo` | true or false |  | SM; SA; SYS from the public enquiry form | INTERNAL | Optional | Creates a demo task for the lead owner |
 | `owner_user_id` (FK) | references users |  | SM; SA | INTERNAL | Before status contacted | Owner receives follow-up reminders |
 | `converted_account_id` (FK) | references client_accounts |  | SYS | INTERNAL | Optional | Set on conversion; the lead becomes read-only |
 | `converted_at` | timestamp (UTC) |  | SYS (when the action happens) | INTERNAL | System | — |
 | `closed_reason` | string, up to 255 characters |  | SM; SA; SYS from the public enquiry form | INTERNAL | Before status closed | — |
+| `duplicate_of_lead_id` (FK) | references leads |  | SYS | INTERNAL | Optional | Set when an enquiry matches an existing lead or account; flagged for a Sales merge, never auto-merged (AC-01.6) |
 
 ### `lead_activities`
 

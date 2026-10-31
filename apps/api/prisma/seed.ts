@@ -6,9 +6,16 @@
  */
 import { PrismaPg } from "@prisma/adapter-pg";
 import { CONFIG_REGISTRY } from "@ampm/core";
-import { permissionKeysForRole, STAFF_ROLE_CODES, STAFF_ROLES, type StaffRole } from "@ampm/policy";
+import {
+  GRANTABLE_CAPABILITIES,
+  permissionKeysForRole,
+  STAFF_ROLE_CODES,
+  STAFF_ROLES,
+  type StaffRole,
+} from "@ampm/policy";
 
 import { Prisma, PrismaClient } from "../src/generated/prisma/client.js";
+import { upsertDemoUser } from "../src/modules/demo/demo-baseline.js";
 
 const url = process.env["DATABASE_URL"];
 if (!url) throw new Error("DATABASE_URL is required to seed");
@@ -25,6 +32,7 @@ export const SEED = {
   projectManager: { email: "pm@example.com", name: "Priya Manager", subject: "local:pm" },
   // Creative: create and read only on the wedding's incidents (permission-matrix §5.13 line 296).
   creative: { email: "creative@example.com", name: "Chitra Creative", subject: "local:cd" },
+  sales: { email: "sales@example.com", name: "Sameer Sales", subject: "local:sm" },
   client: { email: "client@example.com", name: "Rhea Client", subject: "local:client" },
   disabled: { email: "disabled@example.com", name: "Dev Disabled", subject: "local:disabled" },
   projectId: "0192f3a0-7d3e-7b1a-9c2f-0000000000a1",
@@ -138,6 +146,8 @@ async function seedStaff(roleIds: ReadonlyMap<StaffRole, string>): Promise<void>
   });
   await assignRole(creative.id, roleId(roleIds, "CD"));
   await joinProject(creative.id, "staff");
+  const sales = await upsertAccount(SEED.sales, { userType: "staff", mfaEnabled: true });
+  await assignRole(sales.id, roleId(roleIds, "SM"));
   await upsertAccount(SEED.disabled, { userType: "staff", status: "disabled" });
 }
 
@@ -172,12 +182,67 @@ async function seedConfigurations(): Promise<void> {
   }
 }
 
+/**
+ * The code-defined capability catalog (D-036) from @ampm/policy — the same set serialised to
+ * packages/policy/src/generated/capabilities.json. Each capability is upserted by its stable key and
+ * rows no longer in the catalog are removed, so the table mirrors the matrix. Dormant: nothing reads
+ * it yet, and no `role_grants` reference it, so the reconciling delete is safe.
+ */
+async function seedGrantableCapabilities(): Promise<void> {
+  for (const capability of GRANTABLE_CAPABILITIES) {
+    const data = {
+      module: capability.module,
+      resource: capability.resource,
+      action: capability.action,
+      scope: capability.scope,
+      conditions: [...capability.conditions] as Prisma.InputJsonValue,
+      sourceRoles: [...capability.sourceRoles] as Prisma.InputJsonValue,
+      isStaffOnly: capability.isStaffOnly,
+      isEscalationLocked: capability.isEscalationLocked,
+      label: capability.label,
+    };
+    await prisma.grantableCapability.upsert({
+      where: { capabilityKey: capability.id },
+      update: data,
+      create: { capabilityKey: capability.id, ...data },
+    });
+  }
+  const current = GRANTABLE_CAPABILITIES.map((capability) => capability.id);
+  await prisma.grantableCapability.deleteMany({ where: { capabilityKey: { notIn: current } } });
+}
+
+/** The lead sources the enquiry form and the Sales workspace classify leads by (SA-editable reference). */
+async function seedLeadSources(): Promise<void> {
+  const sources: ReadonlyArray<{ sourceKey: string; name: string }> = [
+    { sourceKey: "website", name: "Website" },
+    { sourceKey: "instagram", name: "Instagram" },
+    { sourceKey: "advertisement", name: "Advertisement" },
+    { sourceKey: "referral", name: "Referral" },
+    { sourceKey: "call", name: "Phone call" },
+    { sourceKey: "other", name: "Other" },
+  ];
+  for (const source of sources) {
+    await prisma.leadSource.upsert({
+      where: { sourceKey: source.sourceKey },
+      update: { name: source.name },
+      create: { sourceKey: source.sourceKey, name: source.name },
+    });
+  }
+}
+
 async function main(): Promise<void> {
   const roleIds = await seedRoles();
   await seedStaff(roleIds);
   await seedClient();
+  // The canonical demo account, defined once in the demo baseline the nightly restore also rebuilds (5.5).
+  await upsertDemoUser(prisma);
   await seedConfigurations();
-  console.log("seeded roles, permissions, five synthetic accounts and the baseline configuration");
+  await seedLeadSources();
+  await seedGrantableCapabilities();
+  console.log(
+    "seeded roles, permissions, six synthetic accounts, the baseline configuration " +
+      `and ${GRANTABLE_CAPABILITIES.length} grantable capabilities`,
+  );
 }
 
 try {

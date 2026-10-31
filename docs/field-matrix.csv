@@ -5,9 +5,8 @@ A,users,Account setup,name,string,,,"string, up to 255 characters",SA; SM and PM
 A,users,Account setup,email,string,UK,,"valid email address, stored lowercase; unique",SA; SM and PM (a) for client logins,INTERNAL,At creation,Invite or activation email on creation,"A-13 (Q13), P-6 (Q13)"
 A,users,Account setup,phone,string,,,"E.164 format, default +91; required when OTP is enabled",SA; SM and PM (a) for client logins,INTERNAL,Optional,—,"A-13 (Q13), P-6 (Q13)"
 A,users,Account setup,status,string,,"invited, active, disabled, locked",one of the listed options,SA; SM and PM (a) for client logins,INTERNAL,At creation,disabled or locked refuses sign-in at once and revokes sessions,"A-13 (Q13), P-6 (Q13)"
-A,users,Account setup,password_hash,string,,,"string, up to 255 characters; nullable for OTP-only",SYS,SECRET,Optional,—,"A-13 (Q13), P-6 (Q13)"
-A,users,Account setup,mfa_enabled,bool,,,true or false; mandatory true for staff (A-13),SYS; must be true for staff before first sign-in,INTERNAL,At creation for staff,—,"A-13 (Q13), P-6 (Q13)"
-A,users,Account setup,mfa_secret_ref,string,,,"string, up to 255 characters",SYS,SECRET,Optional,—,"A-13 (Q13), P-6 (Q13)"
+A,users,Account setup,identity_subject,string,UK,,"string, up to 255 characters; the identity service's subject (Cognito sub, T-6); null until activated",SA; SM and PM (a) for client logins,INTERNAL,Optional,—,"A-13 (Q13), P-6 (Q13)"
+A,users,Account setup,mfa_enabled,bool,,,"true or false; mandatory true for staff (A-13); enforced by the identity service, mirrored here",SYS; must be true for staff before first sign-in,INTERNAL,At creation for staff,—,"A-13 (Q13), P-6 (Q13)"
 A,users,Account setup,last_login_at,datetime,,,timestamp (UTC),SYS,INTERNAL,System,Inactive accounts reported for review,"A-13 (Q13), P-6 (Q13)"
 A,roles,Configuration,id,uuid,PK,,"UUID v7, generated",SYS,INTERNAL,System,—,
 A,roles,Configuration,role_key,string,UK,,"lowercase snake_case; unique; super_admin, sales, hotel_team, project_manager, creative, vendor_coordinator, rsvp_team, hospitality, finance",SA,INTERNAL,At creation,—,
@@ -20,6 +19,31 @@ A,role_permissions,Configuration,role_id,uuid,FK,,references roles,SA,INTERNAL,A
 A,role_permissions,Configuration,permission_id,uuid,FK,,references permissions,SA,INTERNAL,At creation,—,
 A,user_roles,Configuration,user_id,uuid,FK,,references see data model,SA,INTERNAL,At creation,—,
 A,user_roles,Configuration,role_id,uuid,FK,,references roles,SA,INTERNAL,At creation,Change recomputes effective permissions; audited,
+A,grantable_capabilities,Configuration,id,uuid,PK,,"UUID v7, generated",SYS,INTERNAL,System,—,
+A,grantable_capabilities,Configuration,capability_key,string,UK,,"module.resource.action:scope, with #<condition-signature> when conditioned; unique",SYS,INTERNAL,At creation,—,
+A,grantable_capabilities,Configuration,module,string,,,"string, up to 255 characters",SYS,INTERNAL,At creation,—,
+A,grantable_capabilities,Configuration,resource,string,,,"string, up to 255 characters",SYS,INTERNAL,At creation,—,
+A,grantable_capabilities,Configuration,action,string,,,"string, up to 255 characters",SYS,INTERNAL,At creation,—,
+A,grantable_capabilities,Configuration,scope,string,,"all, assigned, own",one of the listed options,SYS,INTERNAL,At creation,—,
+A,grantable_capabilities,Configuration,conditions,json,,,valid JSON matching the registered schema; packages/policy Condition[]; empty is a plain grant,SYS,INTERNAL,Optional,—,
+A,grantable_capabilities,Configuration,source_roles,json,,,"valid JSON matching the registered schema; the StaffRole codes that hold this grant, for the class ceiling",SYS,INTERNAL,Optional,—,
+A,grantable_capabilities,Configuration,is_staff_only,bool,,,true or false,SYS,INTERNAL,Optional,—,
+A,grantable_capabilities,Configuration,is_escalation_locked,bool,,,true or false; role/account admin and identity: never assignable to a custom role,SYS,INTERNAL,Optional,Escalation-locked capabilities are never offered to a custom role,
+A,grantable_capabilities,Configuration,label,string,,,"string, up to 255 characters",SYS,INTERNAL,At creation,—,
+A,permission_sets,Configuration,id,uuid,PK,,"UUID v7, generated",SYS,INTERNAL,System,—,
+A,permission_sets,Configuration,set_key,string,UK,,lowercase snake_case; unique,SA,INTERNAL,At creation,—,
+A,permission_sets,Configuration,name,string,,,"string, up to 255 characters",SA,INTERNAL,At creation,—,
+A,permission_sets,Configuration,description,string,,,"string, up to 255 characters",SA,INTERNAL,Optional,—,
+A,permission_sets,Configuration,is_system,bool,,,true or false,SA,INTERNAL,Optional,System sets cannot be deleted or renamed,
+A,role_grants,Configuration,role_id,uuid,FK,,references roles,SA,INTERNAL,At creation,Change recomputes effective permissions; audited; revokes sessions,
+A,role_grants,Configuration,grantable_capability_id,uuid,FK,,references see data model,SA,INTERNAL,At creation,—,
+A,role_grants,Configuration,created_by,uuid,,,UUID; who granted it,SA,INTERNAL,Optional,—,
+A,permission_set_grants,Configuration,permission_set_id,uuid,FK,,references see data model,SA,INTERNAL,At creation,—,
+A,permission_set_grants,Configuration,grantable_capability_id,uuid,FK,,references see data model,SA,INTERNAL,At creation,—,
+A,permission_set_grants,Configuration,created_by,uuid,,,UUID,SA,INTERNAL,Optional,—,
+A,role_permission_sets,Configuration,role_id,uuid,FK,,references roles,SA,INTERNAL,At creation,Change recomputes effective permissions; audited; revokes sessions,
+A,role_permission_sets,Configuration,permission_set_id,uuid,FK,,references see data model,SA,INTERNAL,At creation,—,
+A,role_permission_sets,Configuration,created_by,uuid,,,UUID,SA,INTERNAL,Optional,—,
 A,project_members,Project setup,id,uuid,PK,,"UUID v7, generated",SYS,CLIENT,System,—,"A-5 (Q5), P-2 (Q5)"
 A,project_members,Project setup,project_id,uuid,FK,,references wedding_projects,SA; PM (a); SM for client members,CLIENT,At creation,—,"A-5 (Q5), P-2 (Q5)"
 A,project_members,Project setup,user_id,uuid,FK,,references see data model,SA; PM (a); SM for client members,CLIENT,At creation,—,"A-5 (Q5), P-2 (Q5)"
@@ -47,6 +71,7 @@ A,notifications,System,status,string,,"queued, sent, delivered, failed, read",on
 A,notifications,System,provider_ref,string,,,provider message identifier,SYS,Recipient only,Optional,—,A-11 (Q11)
 A,notifications,System,sent_at,datetime,,,timestamp (UTC),SYS (when the action happens),Recipient only,System,—,A-11 (Q11)
 A,notifications,System,delivered_at,datetime,,,timestamp (UTC),SYS (when the action happens),Recipient only,System,—,A-11 (Q11)
+A,notifications,System,data,json,,,valid JSON matching the registered schema; server-only render variables e.g. the activation link (5.2); never in a view,SYS,Recipient only,Optional,—,A-11 (Q11)
 A,notification_preferences,User self-service,id,uuid,PK,,"UUID v7, generated",SYS,Owner only,System,—,
 A,notification_preferences,User self-service,user_id,uuid,FK,,references see data model,Owner user,Owner only,At creation,—,
 A,notification_preferences,User self-service,event_type,string,,,"string, up to 255 characters",Owner user,Owner only,At creation,—,
@@ -75,6 +100,21 @@ A,import_jobs,Any (import),file_document_id,uuid,FK,,references documents,SA; HT
 A,import_jobs,Any (import),status,string,,"uploaded, validating, failed, applied",one of the listed options,SA; HT (hotels); VC (vendors); RG and PM (a) (guests),INTERNAL,At creation,validating runs in a worker; applied writes rows plus audit events; failed keeps the error report,"A-9 (Q9), GP-22"
 A,import_jobs,Any (import),row_count,int,,,"integer, 0 or more",SYS,INTERNAL,Optional,—,"A-9 (Q9), GP-22"
 A,import_jobs,Any (import),error_report_json,json,,,valid JSON matching the registered schema,SYS,INTERNAL,Optional,—,"A-9 (Q9), GP-22"
+A,sessions,System,id,uuid,PK,,"UUID v7, generated",SYS,INTERNAL,System,—,D-033; security.md server-side sessions
+A,sessions,System,user_id,uuid,FK,,references see data model,SYS,INTERNAL,At creation,—,D-033; security.md server-side sessions
+A,sessions,System,token_id,string,UK,,the access token's jti; unique per session,SYS,INTERNAL,System,—,D-033; security.md server-side sessions
+A,sessions,System,idle_timeout_minutes,int,,,"integer, 0 or more; staff 720 / client 43200 from configurations session.idle_timeouts",SYS,INTERNAL,At creation,"Staff 720, client 43200, from configurations session.idle_timeouts",D-033; security.md server-side sessions
+A,sessions,System,last_seen_at,datetime,,,timestamp (UTC),SYS,INTERNAL,At creation,Advanced on each authenticated request,D-033; security.md server-side sessions
+A,sessions,System,revoked_at,datetime,,,"timestamp (UTC); set on sign-out or a role or membership change; idle is enforced against last_seen_at, not written",SYS,INTERNAL,System,"Set on sign-out or a role or membership change; idle is enforced against last_seen_at, not written",D-033; security.md server-side sessions
+A,sessions,System,revoked_reason,string,,,"string, up to 255 characters",SYS,INTERNAL,Optional,—,D-033; security.md server-side sessions
+A,job_runs,Operational,id,uuid,PK,,"UUID v7, generated",SYS,INTERNAL,System,—,
+A,job_runs,Operational,job_name,string,,,"string, up to 255 characters; e.g. demo.restore",SYS,INTERNAL,At creation,—,
+A,job_runs,Operational,idempotency_key,string,,,unique within the job; correlates a retry to its attempts,SYS,INTERNAL,At creation,—,
+A,job_runs,Operational,status,string,,"running, succeeded, failed",one of the listed options,SYS,INTERNAL,At creation,running then succeeded or failed; alerts on failure or stale age,
+A,job_runs,Operational,detail_json,json,,,valid JSON matching the registered schema; per-table counts or other outcome detail,SYS,INTERNAL,Optional,—,
+A,job_runs,Operational,error,string,,,"string, up to 255 characters; nullable; the sanitised failure message",SYS,INTERNAL,Optional,—,
+A,job_runs,Operational,started_at,datetime,,,timestamp (UTC),SYS (when the action happens),INTERNAL,System,—,
+A,job_runs,Operational,finished_at,datetime,,,timestamp (UTC); nullable until the run ends,SYS (when the action happens),INTERNAL,System,Set when the run ends,
 B,lead_sources,Configuration,id,uuid,PK,,"UUID v7, generated",SYS,INTERNAL,System,—,
 B,lead_sources,Configuration,source_key,string,UK,,"lowercase snake_case; unique; website, instagram, advertisement, referral, call, other",SA,INTERNAL,At creation,—,
 B,lead_sources,Configuration,name,string,,,"string, up to 255 characters",SA,INTERNAL,At creation,—,
@@ -94,11 +134,13 @@ B,leads,Lead,guest_estimate,int,,,"integer, 0 or more",SM; SA; SYS from the publ
 B,leads,Lead,requirements,text,,,"text, up to 10,000 characters",SM; SA; SYS from the public enquiry form,INTERNAL,Optional,—,"A-12 (Q12), GP-39 consent (Q17)"
 B,leads,Lead,consent_marketing,bool,,,true or false,SM; SA; SYS from the public enquiry form,INTERNAL,At creation from the form,Marketing messages suppressed when false,"A-12 (Q12), GP-39 consent (Q17)"
 B,leads,Lead,consent_at,datetime,,,timestamp (UTC),SYS (when the action happens),INTERNAL,System,—,"A-12 (Q12), GP-39 consent (Q17)"
+B,leads,Lead,consent_notice_version,string,,,"string, up to 32 characters",SYS,INTERNAL,Optional,Captured with consent; a notice change never alters a historical lead (AC-27.1),"A-12 (Q12), GP-39 consent (Q17)"
 B,leads,Lead,requested_demo,bool,,,true or false,SM; SA; SYS from the public enquiry form,INTERNAL,Optional,Creates a demo task for the lead owner,"A-12 (Q12), GP-39 consent (Q17)"
 B,leads,Lead,owner_user_id,uuid,FK,,references users,SM; SA,INTERNAL,Before status contacted,Owner receives follow-up reminders,"A-12 (Q12), GP-39 consent (Q17)"
 B,leads,Lead,converted_account_id,uuid,FK,,references client_accounts,SYS,INTERNAL,Optional,Set on conversion; the lead becomes read-only,"A-12 (Q12), GP-39 consent (Q17)"
 B,leads,Lead,converted_at,datetime,,,timestamp (UTC),SYS (when the action happens),INTERNAL,System,—,"A-12 (Q12), GP-39 consent (Q17)"
 B,leads,Lead,closed_reason,string,,,"string, up to 255 characters",SM; SA; SYS from the public enquiry form,INTERNAL,Before status closed,—,"A-12 (Q12), GP-39 consent (Q17)"
+B,leads,Lead,duplicate_of_lead_id,uuid,FK,,references leads,SYS,INTERNAL,Optional,"Set when an enquiry matches an existing lead or account; flagged for a Sales merge, never auto-merged (AC-01.6)","A-12 (Q12), GP-39 consent (Q17)"
 B,lead_activities,Lead,id,uuid,PK,,"UUID v7, generated",SYS,INTERNAL,System,—,AM-15
 B,lead_activities,Lead,lead_id,uuid,FK,,references leads,SM; SA,INTERNAL,At creation,—,AM-15
 B,lead_activities,Lead,activity_type,string,,"call, email, whatsapp, meeting, consultation, demo, questionnaire, call_request, note","one of the listed options; (AM-15; call_request for the pre-purchase Zoom call, Q3)",SM; SA,INTERNAL,At creation,—,AM-15

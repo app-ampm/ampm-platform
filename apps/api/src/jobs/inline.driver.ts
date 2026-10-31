@@ -38,6 +38,12 @@ export class InlineJobDriver implements JobDriver {
     await this.run(name, registration, payload);
   }
 
+  async scheduleRepeatable(name: string): Promise<void> {
+    // Development and tests have no scheduler; repeatable jobs (e.g. the session reaper) run only
+    // under the BullMQ worker. Flag it so a missing reap in dev is not a mystery.
+    this.logger.info("job.schedule_skipped", { job: name });
+  }
+
   async close(): Promise<void> {
     // Nothing to release in-process.
   }

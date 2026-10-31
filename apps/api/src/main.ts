@@ -13,6 +13,9 @@ async function bootstrap(): Promise<void> {
   app.useLogger(logger);
   app.enableShutdownHooks();
   const env = app.get<Env>(ENV);
+  // Trust the configured number of proxy hops (Caddy) so req.ip — the rate-limit and audit key — is the
+  // real client, not the reverse proxy. 0 (dev/test, no proxy) leaves Express reading the socket address.
+  if (env.TRUST_PROXY > 0) app.set("trust proxy", env.TRUST_PROXY);
   // The native apps need no CORS; the web build of the client portals does. Development allows the
   // local Metro and Next origins when none are configured.
   const origins =

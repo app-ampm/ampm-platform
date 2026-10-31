@@ -11,7 +11,7 @@
  * @example
  * logger.info("policy.loaded", { version: POLICY_VERSION });
  */
-export const POLICY_VERSION = "0.3.0";
+export const POLICY_VERSION = "0.4.0";
 
 export {
   ACTION_LETTERS,
@@ -49,6 +49,21 @@ export { CLASS_ACTIONS, VERB_ACTIONS, isAction, parsePermissionKey, permissionKe
 export type { ClassAction, KeyAction, ParsedKey, PermissionKey, VerbAction } from "./keys";
 export { MATRIX } from "./matrix";
 export type { Actor, Grant, MatrixRow, ReportExclusion, RowAlias, Transition } from "./matrix";
+export {
+  buildGrantableCapabilities,
+  capabilityId,
+  compileGrants,
+  conditionSignature,
+  isEscalationLocked,
+} from "./catalog";
+export type { GrantableCapability } from "./catalog";
+export {
+  GRANTABLE_CAPABILITIES,
+  assignableCapabilities,
+  capabilityById,
+  resolveCustomGrants,
+} from "./capabilities";
+export type { ResolvedCustomGrants } from "./capabilities";
 export {
   can,
   decide,

@@ -3,6 +3,8 @@ export interface VerifiedIdentity {
   /** The provider's stable subject (`sub`), stored on `users.identity_subject`. */
   readonly subject: string;
   readonly provider: "cognito" | "local";
+  /** The access token's `jti`; the key of the server-side session (D-033). */
+  readonly tokenId: string;
   readonly email: string | null;
   readonly phone: string | null;
 }
