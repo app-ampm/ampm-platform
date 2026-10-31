@@ -37,6 +37,12 @@ export interface PolicyPrincipal {
   /** Client accounts a client principal belongs to: "own" is its wedding or account (§6 line 338). */
   readonly accountIds?: readonly string[] | undefined;
   readonly explicitGrants?: readonly ExplicitGrant[] | undefined;
+  /**
+   * Grants the API resolved from the principal's custom (non-system) roles, keyed by the base key
+   * `module.resource.action` (D-036). decide() unions them with the system roles' grants, so a
+   * custom role only ever adds grants the matrix already defines. Built with resolveCustomGrants().
+   */
+  readonly resolvedGrants?: ReadonlyMap<string, readonly RoleGrant[]> | undefined;
 }
 
 /**
@@ -174,7 +180,10 @@ export function decide(
   if (principal.type !== "staff") return { allowed: false, reason: "not_staff" };
   const base = baseKey(key);
   if (base === null) return NO_GRANT;
-  const grants = (principal.roles ?? []).flatMap((role) => grantsForRole(role).get(base) ?? []);
+  const grants = [
+    ...(principal.roles ?? []).flatMap((role) => grantsForRole(role).get(base) ?? []),
+    ...(principal.resolvedGrants?.get(base) ?? []),
+  ];
   if (grants.length === 0) return NO_GRANT;
   const explicit = holdsExplicitGrant(principal, base, target.projectId);
   return decideGrants(grants, reachOf(principal, target), target, explicit);

@@ -43,6 +43,8 @@ export interface EnqueueOptions {
 export interface JobDriver {
   register(name: string, policy: JobPolicy, run: (payload: unknown) => Promise<void>): void;
   enqueue(name: string, payload: unknown, options: EnqueueOptions): Promise<void>;
+  /** Schedules a job on a cron pattern (a BullMQ repeatable); a no-op inline, where there is no scheduler. */
+  scheduleRepeatable(name: string, cronPattern: string, payload: unknown): Promise<void>;
   /** Releases resources (the BullMQ/Redis connections); a no-op for the inline driver. */
   close(): Promise<void>;
 }

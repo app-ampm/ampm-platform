@@ -3,6 +3,7 @@ import type { NotificationChannel, NotificationStatus, RecipientType } from "@am
 
 import { PrismaService } from "../../../db/prisma.service.js";
 import type { RecordScope } from "../../../db/scoping.js";
+import { Prisma } from "../../../generated/prisma/client.js";
 
 export interface NotificationRow {
   readonly id: string;
@@ -16,6 +17,8 @@ export interface NotificationRow {
   readonly providerRef: string | null;
   readonly sentAt: Date | null;
   readonly deliveredAt: Date | null;
+  /** Server-only render variables; opaque here, parsed where it is rendered. Never in a view (5.2). */
+  readonly data: unknown;
   readonly createdAt: Date;
 }
 
@@ -26,6 +29,7 @@ export interface NewNotification {
   readonly templateKey: string;
   readonly entityType?: string | null;
   readonly entityId?: string | null;
+  readonly data?: Readonly<Record<string, string>> | null;
 }
 
 export interface StatusPatch {
@@ -33,6 +37,8 @@ export interface StatusPatch {
   readonly providerRef?: string;
   readonly sentAt?: Date;
   readonly deliveredAt?: Date;
+  /** Clears the server-only render variables; set when the row leaves `queued` (5.2, D-044). */
+  readonly clearData?: boolean;
 }
 
 export interface NotificationPage {
@@ -52,6 +58,8 @@ export abstract class NotificationRepository {
   ): Promise<NotificationPage>;
   /** A user's channel preference; the default is enabled, so only a row set to `false` suppresses. */
   abstract isChannelEnabled(userId: string, eventType: string, channel: string): Promise<boolean>;
+  /** The recipient user's email, for the email channel's delivery address; null if there is none. */
+  abstract recipientEmail(userId: string): Promise<string | null>;
 }
 
 @Injectable()
@@ -70,23 +78,26 @@ export class PrismaNotificationRepository extends NotificationRepository {
         entityType: data.entityType ?? null,
         entityId: data.entityId ?? null,
         status: "queued",
+        ...(data.data ? { data: data.data } : {}),
       },
     });
     return row;
   }
 
   async findById(id: string): Promise<NotificationRow | null> {
-    return this.prisma.notification.findUnique({ where: { id } });
+    // notifications is partitioned (composite PK id + created_at), so id alone is not a findUnique key.
+    return this.prisma.notification.findFirst({ where: { id } });
   }
 
   async updateStatus(id: string, patch: StatusPatch): Promise<void> {
-    await this.prisma.notification.update({
+    await this.prisma.notification.updateMany({
       where: { id },
       data: {
         status: patch.status,
         ...(patch.providerRef !== undefined ? { providerRef: patch.providerRef } : {}),
         ...(patch.sentAt !== undefined ? { sentAt: patch.sentAt } : {}),
         ...(patch.deliveredAt !== undefined ? { deliveredAt: patch.deliveredAt } : {}),
+        ...(patch.clearData ? { data: Prisma.DbNull } : {}),
       },
     });
   }
@@ -99,15 +110,17 @@ export class PrismaNotificationRepository extends NotificationRepository {
     // Notifications are recipient-owned, not project-owned: only the own-scope `ownerId` applies
     // (mapped to recipient_id); there is no project, demo or soft-delete column to scope by. SA holds
     // scope "all" (no ownerId) and reads the whole user log (permission-matrix §5.1 "Notifications log").
+    // Keyset pagination on the time-ordered uuid v7 id: notifications is partitioned (composite PK
+    // id + created_at), so id alone is not a Prisma `cursor`; an id range uses the PK's leading column.
     const where = {
       recipientType: "user" as const,
       ...(scope.ownerId !== undefined ? { recipientId: scope.ownerId } : {}),
+      ...(cursor ? { id: { lt: cursor } } : {}),
     };
     const rows = await this.prisma.notification.findMany({
       where,
-      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      orderBy: { id: "desc" },
       take: limit + 1,
-      ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
     });
     const hasMore = rows.length > limit;
     const page = hasMore ? rows.slice(0, limit) : rows;
@@ -119,5 +132,13 @@ export class PrismaNotificationRepository extends NotificationRepository {
       where: { userId_eventType_channel: { userId, eventType, channel } },
     });
     return preference ? preference.enabled : true;
+  }
+
+  async recipientEmail(userId: string): Promise<string | null> {
+    const user = await this.prisma.user.findFirst({
+      where: { id: userId, deletedAt: null },
+      select: { email: true },
+    });
+    return user ? user.email : null;
   }
 }

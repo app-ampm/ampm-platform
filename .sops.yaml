@@ -1,0 +1,11 @@
+# sops creation rules (feature 6.4, D-051). Every infra/secrets/*.enc.yaml is encrypted to the AMPM age
+# recipient below; the matching age PRIVATE key lives only on the host and in the password manager, never
+# in the repo. Edit a secret file with `sops infra/secrets/<env>.<zone>.enc.yaml` (it decrypts in your
+# editor and re-encrypts on save); the deploy decrypts with the host key via infra/scripts/decrypt-secrets.sh.
+#
+# Set `age:` to your real age PUBLIC key (safe to commit; begins "age1"), generated with `age-keygen` on
+# the host. Keep the private key out of the repo. Full procedure: infra/runbooks/secrets.md.
+creation_rules:
+  - path_regex: infra/secrets/.*\.enc\.yaml$
+    # PLACEHOLDER — replace with your real age public key before encrypting anything.
+    age: age1placeholder0000000000000000000000000000000000000000000000r0wvn8

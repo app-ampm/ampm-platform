@@ -11,7 +11,12 @@ import { z } from "zod";
 import type { Access } from "../../common/request-context.js";
 import { ZodBody, ZodParams } from "../../common/zod.js";
 import { recordScope } from "../../db/scoping.js";
-import { CurrentAccess, CurrentPrincipal, RequirePermission } from "../../policy/decorators.js";
+import {
+  AuditExempt,
+  CurrentAccess,
+  CurrentPrincipal,
+  RequirePermission,
+} from "../../policy/decorators.js";
 import { toPolicyPrincipal, type Principal } from "../../policy/principal.types.js";
 import { FieldNoteService } from "./field-note.service.js";
 
@@ -55,6 +60,9 @@ export class FieldNoteController {
    */
   @Post()
   @RequirePermission("tasks.incidents.create", { projectParam: "projectId" })
+  // An idempotent upsert (applied / duplicate / conflict), so the verb-inferred backstop would audit
+  // phantom creates on a replay; the real incidents module audits in its service. Exempt as a spike.
+  @AuditExempt("spike stand-in; the real operational records audit incidents in their own service")
   upsert(
     @ZodParams(projectParams) params: ProjectParams,
     @ZodBody(fieldNoteUpsert) body: FieldNoteUpsert,

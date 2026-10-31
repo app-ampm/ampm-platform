@@ -1,0 +1,160 @@
+# The local smoke stack: builds the image from source and brings the whole stack up so a developer (or
+# CI) can prove it runs before the real box exists (feature 6.1). It mirrors the production topology —
+# Postgres and Redis on an internal network, only Caddy publishing a port, every service hardened — but
+# uses throwaway, non-secret credentials and development mode (production refuses the local identity
+# provider). The production and staging stacks (image-based, sops secrets) are the sibling directories.
+name: ampm-local
+
+x-app-env: &app-env
+  NODE_ENV: development
+  PORT: "3900"
+  DATABASE_URL: postgresql://ampm:ampm@postgres:5432/ampm
+  REDIS_URL: redis://redis:6379
+  IDENTITY_PROVIDER: local
+  # A throwaway development secret, never a real one; long enough for the local HS256 adapter.
+  IDENTITY_LOCAL_SECRET: local-compose-secret-not-a-real-secret-0123456789
+
+services:
+  postgres:
+    build:
+      context: ../../..
+      dockerfile: infra/docker/postgres.Dockerfile
+    command:
+      - postgres
+      - -c
+      - config_file=/etc/postgresql/postgresql.conf
+      - -c
+      - hba_file=/etc/postgresql/pg_hba.conf
+    environment:
+      POSTGRES_USER: ampm
+      POSTGRES_PASSWORD: ampm
+      POSTGRES_DB: ampm
+      # The repo passphrase the archive_command needs to write encrypted WAL (a throwaway local value).
+      PGBACKREST_REPO1_CIPHER_PASS: local-smoke-cipher-not-a-secret
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - pg-run:/var/run/postgresql
+      - pgbackrest-repo:/var/lib/pgbackrest
+      - ../../postgres/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+      - ../../postgres/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro
+      - ../../pgbackrest/pgbackrest.conf:/etc/pgbackrest/pgbackrest.conf:ro
+    networks: [internal]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ampm -d ampm"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    # PG16 parallel queries allocate in /dev/shm; the 64MB Docker default overflows under load.
+    shm_size: 256m
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+
+  # Backups: shares PGDATA (read), the postgres socket and the posix repo with the postgres container;
+  # runs the scheduled backup + daily check and records each outcome to job_runs (D-050). In production
+  # the repo is the encrypted S3 bucket (PGBACKREST_* env, feature 6.4). Locally it idles so the smoke
+  # can invoke backup.sh on demand.
+  pgbackrest:
+    build:
+      context: ../../..
+      dockerfile: infra/docker/postgres.Dockerfile
+    user: postgres
+    depends_on:
+      postgres: { condition: service_healthy }
+    environment:
+      DATABASE_URL: postgresql://ampm:ampm@postgres:5432/ampm
+      PGBACKREST_REPO1_CIPHER_PASS: local-smoke-cipher-not-a-secret
+      PGPASSWORD: ampm
+    volumes:
+      - pgdata:/var/lib/postgresql/data:ro
+      - pg-run:/var/run/postgresql
+      - pgbackrest-repo:/var/lib/pgbackrest
+      - ../../pgbackrest/pgbackrest.conf:/etc/pgbackrest/pgbackrest.conf:ro
+      - ../../pgbackrest/backup.sh:/usr/local/bin/backup.sh:ro
+      - ../../pgbackrest/scheduler.sh:/usr/local/bin/scheduler.sh:ro
+    networks: [internal]
+    # Idles so the smoke can drive `scheduler.sh bootstrap` deterministically (prod runs scheduler.sh).
+    command: ["sh", "-c", "while true; do sleep 3600; done"]
+    read_only: true
+    tmpfs: ["/tmp", "/var/spool/pgbackrest"]
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    # No persistence: nothing in Redis is the only copy of anything (D-031).
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    networks: [internal]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+
+  api:
+    build:
+      context: ../../..
+      dockerfile: infra/docker/Dockerfile
+    command: ["node", "dist/main.js"]
+    environment: *app-env
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    networks: [internal, edge]
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://localhost:3900/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    read_only: true
+    tmpfs: ["/tmp"]
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: ../../..
+      dockerfile: infra/docker/Dockerfile
+    command: ["node", "dist/worker.js"]
+    environment:
+      <<: *app-env
+      JOB_WORKER: "true"
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    networks: [internal]
+    read_only: true
+    tmpfs: ["/tmp"]
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2-alpine
+    depends_on: [api]
+    # The only published ports of the stack, matching the production invariant "only Caddy publishes".
+    # AMPM_DOMAIN=localhost makes Caddy serve HTTPS with its internal CA, so the smoke exercises the real
+    # edge config (TLS, HSTS, headers) — the same Caddyfile uses Let's Encrypt for a public domain.
+    environment:
+      AMPM_DOMAIN: localhost
+    ports: ["8080:80", "8443:443"]
+    volumes:
+      - ../../caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+    networks: [edge]
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  pg-run:
+  pgbackrest-repo:
+
+networks:
+  # Postgres and Redis are never reachable from outside the stack.
+  internal: { internal: true }
+  edge: {}

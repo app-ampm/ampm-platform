@@ -1,0 +1,198 @@
+# The staging stack (vps-setup.md §1–2, D-048): a separate Compose project on the same KVM 4 during the
+# build, with its own database, its own domain, and smaller limits. Co-locating its edge with production
+# on one host — one shared Caddy routing by domain, or a second small VPS (vps-setup §1–2) — is NOT
+# resolved here; it is deferred to the deploy design (feature 6.6). This file publishes 80/443 as the
+# single-edge default, which cannot co-exist with production's 80/443 on one host until 6.6 settles it.
+# AMPM_IMAGE (the app) and AMPM_POSTGRES_IMAGE (the postgres+pgBackRest image, feature 6.3) are
+# interpolation-time variables (shell/.env set by the deploy, 6.6), not container env vars, with no
+# default so an unpinned `up` fails loudly. Secrets come from the sops-decrypted, per-zone env files
+# (feature 6.4: postgres.env, redis.env, app.env via infra/scripts/decrypt-secrets.sh; keys in
+# infra/secrets/examples/); the images are pushed on merge to main (feature 6.6). Same hardening and backups as prod:
+# Postgres and pgBackRest join an outbound-only egress network to reach the encrypted S3 backup repo.
+name: ampm-staging
+
+x-app: &app
+  image: ${AMPM_IMAGE:?set AMPM_IMAGE to the released tag@sha256 digest (the deploy workflow sets it)}
+  env_file:
+    - path: ./app.env
+      required: false
+  read_only: true
+  tmpfs: ["/tmp"]
+  security_opt: ["no-new-privileges:true"]
+  restart: unless-stopped
+
+services:
+  postgres:
+    image: ${AMPM_POSTGRES_IMAGE:?set AMPM_POSTGRES_IMAGE to the released postgres+pgbackrest image tag@sha256 digest (the deploy workflow sets it)}
+    # Tuned config + restrictive pg_hba + the pgBackRest archive command (feature 6.3). PGBACKREST_* and
+    # the POSTGRES_* credentials come from the sops-decrypted env.
+    command:
+      - postgres
+      - -c
+      - config_file=/etc/postgresql/postgresql.conf
+      - -c
+      - hba_file=/etc/postgresql/pg_hba.conf
+      # The shared postgresql.conf is sized for prod's 6g budget; override for staging's 3g so
+      # shared_buffers stays ~25% and effective_cache_size is below the container limit (no OOM / bad plans).
+      - -c
+      - shared_buffers=768MB
+      - -c
+      - effective_cache_size=2GB
+      - -c
+      - maintenance_work_mem=128MB
+    env_file:
+      - path: ./postgres.env
+        required: false
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - pg-run:/var/run/postgresql
+      - ../../postgres/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+      - ../../postgres/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro
+      - ../../pgbackrest/pgbackrest.conf:/etc/pgbackrest/pgbackrest.conf:ro
+    networks: [internal, egress]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-ampm} -d $${POSTGRES_DB:-ampm}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    # PG16 parallel queries allocate in /dev/shm; the 64MB Docker default overflows under load.
+    shm_size: 256m
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits: { cpus: "1", memory: 3g }
+
+  # Backups (feature 6.3, D-050): see ../production/compose.yml for the full note. Same image, schedule
+  # (full Sunday / differential daily, check after each) and job_runs recording, with staging's smaller
+  # limits and its own encrypted S3 repo via the sops-decrypted env.
+  pgbackrest:
+    image: ${AMPM_POSTGRES_IMAGE:?set AMPM_POSTGRES_IMAGE to the released postgres+pgbackrest image tag@sha256 digest (the deploy workflow sets it)}
+    user: postgres
+    depends_on:
+      postgres: { condition: service_healthy }
+    env_file:
+      - path: ./postgres.env
+        required: false
+    volumes:
+      - pgdata:/var/lib/postgresql/data:ro
+      - pg-run:/var/run/postgresql
+      - ../../pgbackrest/pgbackrest.conf:/etc/pgbackrest/pgbackrest.conf:ro
+      - ../../pgbackrest/backup.sh:/usr/local/bin/backup.sh:ro
+      - ../../pgbackrest/scheduler.sh:/usr/local/bin/scheduler.sh:ro
+    networks: [internal, egress]
+    command: ["sh", "/usr/local/bin/scheduler.sh"]
+    # PGDATA is :ro, the repo is remote S3, and the scripts are :ro mounts — only scratch needs writing.
+    read_only: true
+    tmpfs: ["/tmp", "/var/spool/pgbackrest"]
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits: { cpus: "0.25", memory: 256m }
+
+  redis:
+    image: redis:7-alpine
+    command:
+      - sh
+      - -c
+      - exec redis-server --save "" --appendonly no --requirepass "$${REDIS_PASSWORD:?REDIS_PASSWORD is required}"
+    env_file:
+      - path: ./redis.env
+        required: false
+    networks: [internal]
+    healthcheck:
+      test: ["CMD-SHELL", 'redis-cli -a "$${REDIS_PASSWORD}" ping | grep -q PONG']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits: { cpus: "0.25", memory: 256m }
+
+  api:
+    <<: *app
+    command: ["node", "dist/main.js"]
+    environment:
+      NODE_ENV: production
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    networks: [internal, edge]
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://localhost:3900/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 15s
+      timeout: 5s
+      retries: 6
+      start_period: 30s
+    deploy:
+      resources:
+        limits: { cpus: "1", memory: 1g }
+
+  worker:
+    <<: *app
+    command: ["node", "dist/worker.js"]
+    environment:
+      NODE_ENV: production
+      JOB_WORKER: "true"
+    networks: [internal]
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    deploy:
+      resources:
+        limits: { cpus: "0.5", memory: 512m }
+
+  # The expand-only migration job (feature 6.6): the deploy runs it to completion BEFORE the new API
+  # starts (`docker compose --profile migrate run --rm migrate`). Not started by `up` (profile); one-shot
+  # (restart: no). Uses the app image + app.env (DATABASE_URL), run from apps/api so the schema resolves.
+  migrate:
+    <<: *app
+    command: ["node", "/repo/node_modules/.bin/prisma", "migrate", "deploy"]
+    working_dir: /repo/apps/api
+    environment:
+      NODE_ENV: production
+    depends_on:
+      postgres: { condition: service_healthy }
+    networks: [internal]
+    profiles: [migrate]
+    restart: "no"
+
+  caddy:
+    image: caddy:2-alpine
+    depends_on: [api]
+    ports: ["80:80", "443:443"]
+    # Only the two non-secret vars the edge needs (no env_file -> no backend secrets on the public
+    # container); `:?` fails the deploy loudly if either is unset.
+    environment:
+      AMPM_DOMAIN: ${AMPM_DOMAIN:?AMPM_DOMAIN must be set (the public domain)}
+      ACME_EMAIL: ${ACME_EMAIL:?ACME_EMAIL must be set (the Let's Encrypt contact)}
+    volumes:
+      - ../../caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks: [edge]
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits: { cpus: "0.25", memory: 256m }
+
+volumes:
+  pgdata:
+  pg-run:
+  caddy-data:
+  caddy-config:
+
+networks:
+  internal: { internal: true }
+  edge: {}
+  # Outbound-only (no published ports -> no inbound): lets Postgres and pgBackRest reach the S3 backup
+  # repo, which the sealed-off `internal` network cannot.
+  egress: {}

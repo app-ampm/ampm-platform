@@ -2,6 +2,13 @@ import { Injectable } from "@nestjs/common";
 
 import { PrismaService } from "../db/prisma.service.js";
 
+/** A role the user holds: its key and id, and whether it is one of the nine matrix-driven system roles. */
+export interface PrincipalRole {
+  readonly roleKey: string;
+  readonly roleId: string;
+  readonly isSystem: boolean;
+}
+
 /** The one query the pipeline needs: the account behind an identity subject, with roles and memberships. */
 export interface PrincipalRecord {
   readonly id: string;
@@ -11,7 +18,7 @@ export interface PrincipalRecord {
   readonly phone: string | null;
   readonly status: "invited" | "active" | "disabled" | "locked";
   readonly lastLoginAt: Date | null;
-  readonly roleKeys: readonly string[];
+  readonly roles: readonly PrincipalRole[];
   readonly memberships: readonly {
     readonly projectId: string;
     readonly projectRole: "project_lead" | "staff" | "client_representative";
@@ -24,6 +31,8 @@ export interface PrincipalRecord {
 export abstract class PrincipalRepository {
   abstract findByIdentitySubject(subject: string): Promise<PrincipalRecord | null>;
   abstract touchLastLogin(userId: string, at: Date): Promise<void>;
+  /** The capability keys a custom role grants, directly and through its permission sets (D-036). */
+  abstract capabilityKeysForRoles(roleIds: readonly string[]): Promise<string[]>;
 }
 
 @Injectable()
@@ -50,7 +59,11 @@ export class PrismaPrincipalRepository extends PrincipalRepository {
       phone: user.phone,
       status: user.status,
       lastLoginAt: user.lastLoginAt,
-      roleKeys: user.roles.map((entry) => entry.role.roleKey),
+      roles: user.roles.map((entry) => ({
+        roleKey: entry.role.roleKey,
+        roleId: entry.role.id,
+        isSystem: entry.role.isSystem,
+      })),
       memberships: user.memberships.map((m) => ({
         projectId: m.projectId,
         projectRole: m.projectRole,
@@ -63,5 +76,31 @@ export class PrismaPrincipalRepository extends PrincipalRepository {
 
   async touchLastLogin(userId: string, at: Date): Promise<void> {
     await this.prisma.user.update({ where: { id: userId }, data: { lastLoginAt: at } });
+  }
+
+  async capabilityKeysForRoles(roleIds: readonly string[]): Promise<string[]> {
+    if (roleIds.length === 0) return [];
+    const ids = [...roleIds];
+    const [direct, viaSets] = await Promise.all([
+      this.prisma.roleGrant.findMany({
+        where: { roleId: { in: ids } },
+        select: { capability: { select: { capabilityKey: true } } },
+      }),
+      this.prisma.rolePermissionSet.findMany({
+        // A soft-deleted set grants nothing (architecture §8).
+        where: { roleId: { in: ids }, permissionSet: { deletedAt: null } },
+        select: {
+          permissionSet: {
+            select: { grants: { select: { capability: { select: { capabilityKey: true } } } } },
+          },
+        },
+      }),
+    ]);
+    const keys = new Set<string>();
+    for (const grant of direct) keys.add(grant.capability.capabilityKey);
+    for (const link of viaSets) {
+      for (const grant of link.permissionSet.grants) keys.add(grant.capability.capabilityKey);
+    }
+    return [...keys];
   }
 }

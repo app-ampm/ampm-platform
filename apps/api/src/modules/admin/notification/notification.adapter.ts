@@ -1,14 +1,15 @@
-import type { LogFields, Logger } from "@ampm/core";
+import type { ExternalChannel, LogFields, Logger, RenderedContent } from "@ampm/core";
 
 /** A provider-neutral delivery request for an external channel (in-app is delivered by the service). */
 export interface NotificationDelivery {
   readonly channel: "email" | "whatsapp" | "sms" | "push";
   readonly recipientType: "user" | "guest";
-  /** The recipient's id; the live adapter resolves the address (email, phone, token) from it. */
   readonly recipientId: string;
+  /** The recipient's delivery address (the email for the email channel), resolved by the service. */
+  readonly address: string | null;
   readonly templateKey: string;
-  /** The rendered message; sprint 3 renders a trivial string, real templates land in sprint 5. */
-  readonly body: string;
+  /** The rendered, per-channel content (feature 5.2); the live adapter sends it, the stub ignores it. */
+  readonly content: RenderedContent;
 }
 
 export interface NotificationResult {
@@ -20,7 +21,12 @@ export interface NotificationAdapter {
   send(delivery: NotificationDelivery): Promise<NotificationResult>;
 }
 
-export const NOTIFICATION_ADAPTER = Symbol("NOTIFICATION_ADAPTER");
+/** The adapter chosen per channel; an unconfigured channel falls back to the console stub (5.3). */
+export interface NotificationAdapters {
+  for(channel: ExternalChannel): NotificationAdapter;
+}
+
+export const NOTIFICATION_ADAPTERS = Symbol("NOTIFICATION_ADAPTERS");
 
 type AdapterLogger = Pick<Logger, "info">;
 

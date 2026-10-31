@@ -33,6 +33,13 @@ token() { printf 'gh%s_%s' p "$(printf 'Zq%.0s' $(seq 1 18))$1"; }  # assembled 
 record() { python3 -c 'import json,sys; print(json.dumps({"type": "user", "message": {"content": sys.argv[1]}}))' "$1"; }
 record_cwd() { python3 -c 'import json,sys
 print(json.dumps({"type": "user", "cwd": "/Users/dev/code/other", "message": {"content": sys.argv[1]}}))' "$1"; }
+human_turns() { python3 - "$1" "$2" <<'PY'
+import json, sys  # a transcript of N messages the human-message counter counts: role "user", no command-message
+with open(sys.argv[1], "w") as out:
+    for i in range(int(sys.argv[2])):
+        out.write(json.dumps({"type": "user", "message": {"role": "user", "content": "turn %d" % i}}) + "\n")
+PY
+}
 mode() { python3 -c 'import os,sys; print(oct(os.stat(sys.argv[1]).st_mode & 0o777))' "$1" 2>/dev/null; }
 links() { python3 -c 'import os,sys; i = os.lstat(sys.argv[1]); print(os.path.islink(sys.argv[1]), i.st_nlink)' "$1"; }
 payload() {  # session, transcript path: a hook payload with fields MemPalace never reads, which must not reach it
@@ -440,6 +447,95 @@ test_block_mode_is_reported() {
   rm -f "$H/.mempalace/config.json"
 }
 
+test_stop_gate_skips_below_mempalace_save_interval() {  # Stop does the snapshot and the mine only when a save is due
+  # MemPalace's hook_stop saves every SAVE_INTERVAL (15) human messages, counted from its {session_id}_last_save
+  # marker; below that it files nothing, so the Stop worker should skip the ~5 s snapshot and the mine. PreCompact and
+  # SessionEnd are never gated. The gate reads SAVE_INTERVAL and counts with MemPalace's own interpreter under
+  # python -I, so a stand-in MemPalace must live in real site-packages: a throwaway venv, pointed to for this test.
+  local venv="$SCRATCH/palace-venv" vpy site orig="$SCRATCH/mempalace.recorder"
+  local state="$H/.mempalace/hook_state" live session event
+  "$PYTHON3" -m venv --without-pip "$venv" >/dev/null 2>&1 || { fail "gate: could not make the test venv"; return; }
+  vpy="$venv/bin/python"
+  site=$("$vpy" -c 'import sysconfig; print(sysconfig.get_path("purelib"))')
+  mkdir -p "$site/mempalace"; : > "$site/mempalace/__init__.py"
+  printf 'SAVE_INTERVAL = 15\n' > "$site/mempalace/hooks_cli.py"   # as mempalace.hooks_cli.SAVE_INTERVAL
+  cat > "$site/mempalace/hook_shell.py" <<'PY'
+import json, os, sys  # the count-human-messages contract the gate calls: role "user", command-messages skipped
+def count_human_messages(path):
+    n = 0
+    if os.path.exists(path) and not os.path.isfile(path):
+        return 0
+    with open(path, encoding="utf-8", errors="ignore") as fh:
+        for line in fh:
+            try:
+                e = json.loads(line)
+            except Exception:
+                continue
+            m = e.get("message", {})
+            if not isinstance(m, dict) or m.get("role") != "user":
+                continue
+            c = m.get("content", "")
+            if isinstance(c, str) and "<command-message>" in c:
+                continue
+            n += 1
+    return n
+if __name__ == "__main__":
+    a = sys.argv[1:]
+    if len(a) == 2 and a[0] == "count-human-messages":
+        try:
+            print(count_human_messages(a[1]))
+        except Exception:
+            print(0)
+        raise SystemExit(0)
+    raise SystemExit(2)
+PY
+  mkdir -p "$state"
+  # Point the stand-in mempalace's interpreter at the venv (keeping its recorder body); restore before returning.
+  cp "$H/.local/bin/mempalace" "$orig"
+  { printf '#!%s\n' "$vpy"; tail -n +2 "$orig"; } > "$H/.local/bin/mempalace"
+  chmod +x "$H/.local/bin/mempalace"
+
+  # (a) Stop below the threshold, no marker (last save = 0): skip the snapshot and the mine.
+  live="$PROJECTS/gate-below.jsonl"; human_turns "$live" 3
+  run_hook stop "$(payload g-below "$live")"
+  wait_for_runs g-below 1
+  log_of g-below | grep -q "skipped: 3 of 15 human messages since MemPalace's last save" \
+    || fail "Stop below the threshold did not skip: $(log_of g-below)"
+  [ -z "$(calls_of g-below)" ] || fail "Stop below the threshold still called MemPalace"
+  [ -e "$REDACTED/gate-below.jsonl" ] && fail "Stop below the threshold still wrote a snapshot"
+
+  # (b) Stop below the threshold measured from MemPalace's marker (count 20, last 10 -> 10 < 15): skip.
+  live="$PROJECTS/gate-marker.jsonl"; human_turns "$live" 20; printf '10' > "$state/g-marker_last_save"
+  run_hook stop "$(payload g-marker "$live")"
+  wait_for_runs g-marker 1
+  log_of g-marker | grep -q "skipped: 10 of 15 human messages since MemPalace's last save" \
+    || fail "Stop did not measure from MemPalace's last-save marker: $(log_of g-marker)"
+  [ -z "$(calls_of g-marker)" ] || fail "Stop below the marker threshold still called MemPalace"
+
+  # (c) Stop at the threshold (count 15, no marker -> 15 >= 15): run the snapshot and the mine.
+  live="$PROJECTS/gate-at.jsonl"; human_turns "$live" 15
+  run_hook stop "$(payload g-at "$live")"
+  wait_for_runs g-at 1
+  log_of g-at | grep -q "ran mempalace hook run on the snapshot" \
+    || fail "Stop at the threshold did not run MemPalace: $(log_of g-at)"
+  [ -n "$(calls_of g-at)" ] || fail "Stop at the threshold did not call MemPalace"
+  log_of g-at | grep -q "skipped:" && fail "Stop at the threshold logged a skip"
+
+  # (d, e) PreCompact and SessionEnd are never gated: they run even far below the threshold.
+  for session in g-precompact g-sessionend; do
+    event=precompact; [ "$session" = g-sessionend ] && event=session-end
+    live="$PROJECTS/$session.jsonl"; human_turns "$live" 2
+    run_hook "$event" "$(payload "$session" "$live")"
+    wait_for_runs "$session" 1
+    log_of "$session" | grep -q "skipped:" \
+      && fail "$event skipped below the threshold (only Stop is gated): $(log_of "$session")"
+    [ -n "$(calls_of "$session")" ] || fail "$event did not run MemPalace below the threshold: $(log_of "$session")"
+  done
+
+  cp "$orig" "$H/.local/bin/mempalace"; chmod +x "$H/.local/bin/mempalace"  # restore for the tests that follow
+  rm -f "$state/g-marker_last_save"
+}
+
 test_only_hook_run_is_called_and_one_line_per_run() {
   local argv bad=0
   for argv in "$CALLS"/call-*/argv; do
@@ -540,6 +636,7 @@ test_the_worker_outlives_the_hook_and_has_a_fallback
 test_mempalace_outcome_is_logged
 test_session_end_sweeps_snapshots_of_deleted_transcripts
 test_block_mode_is_reported
+test_stop_gate_skips_below_mempalace_save_interval
 test_only_hook_run_is_called_and_one_line_per_run
 test_mempalace_removed_while_the_redactor_scans
 test_mempalace_removed_before_the_snapshot_or_the_call
