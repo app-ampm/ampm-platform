@@ -112,7 +112,12 @@ export class LeadActivitiesRepository {
       where: {
         nextFollowUpAt: { not: null, lte: now },
         deletedAt: null,
-        lead: { deletedAt: null, ownerUserId: { not: null } },
+        // Skip leads that are done: a reminder must never fire for a closed or converted lead.
+        lead: {
+          deletedAt: null,
+          ownerUserId: { not: null },
+          status: { notIn: ["closed", "converted"] },
+        },
       },
       select: { id: true, leadId: true, lead: { select: { name: true, ownerUserId: true } } },
     });

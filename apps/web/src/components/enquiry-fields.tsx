@@ -113,17 +113,17 @@ interface CheckboxProps {
 function Checkbox({ id, label, help, checked, onChange }: CheckboxProps) {
   return (
     <div className="flex flex-col gap-1">
-      <label htmlFor={id} className="flex items-center gap-2 text-sm text-primary">
+      <label htmlFor={id} className="flex min-h-11 items-center gap-3 text-sm text-primary">
         <input
           id={id}
           type="checkbox"
           checked={checked}
           onChange={onChange}
-          className="size-4 rounded border-subtle"
+          className="size-5 rounded border-subtle"
         />
         {label}
       </label>
-      {help ? <p className="pl-6 text-sm text-muted">{help}</p> : null}
+      {help ? <p className="pl-8 text-sm text-muted">{help}</p> : null}
     </div>
   );
 }

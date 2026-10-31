@@ -240,7 +240,13 @@ export class LeadsRepository {
   async funnel(from: Date | null, to: Date | null): Promise<FunnelCounts> {
     const where: Prisma.LeadWhereInput = { deletedAt: null };
     if (from || to) {
-      where.createdAt = { ...(from ? { gte: from } : {}), ...(to ? { lte: to } : {}) };
+      // The window is whole UTC days: `to` is inclusive, so filter strictly before the day after it,
+      // never with `lte` on its midnight (a wedding-time-zone funnel is a later refinement).
+      const dayAfterTo = to ? new Date(to.getTime() + 24 * 60 * 60 * 1000) : null;
+      where.createdAt = {
+        ...(from ? { gte: from } : {}),
+        ...(dayAfterTo ? { lt: dayAfterTo } : {}),
+      };
     }
     const [byStatusRaw, bySourceRaw, sources] = await Promise.all([
       this.prisma.lead.groupBy({ by: ["status"], where, _count: { _all: true } }),

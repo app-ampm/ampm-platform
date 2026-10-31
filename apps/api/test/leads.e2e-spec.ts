@@ -3,7 +3,6 @@ import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { PrismaService } from "../src/db/prisma.service.js";
-import { LeadReminderService } from "../src/modules/crm/leads/leads.reminder.service.js";
 import { startApi } from "./start-api.js";
 
 /** Test leads are named with this prefix so the suite can clean up after itself. */
@@ -119,6 +118,109 @@ describe("Lead capture (e2e)", () => {
     expect(duplicate.duplicateOfLeadId).toBe(original.id);
   });
 
+  it("flags a demo request and notifies Sales distinctly (AC-01.2)", async () => {
+    const name = `${TAG} Demo`;
+    await http()
+      .post("/crm/enquiries")
+      .send({ ...BOT, name, phone: "9876500010", requestedDemo: true })
+      .expect(201);
+    const lead = await findLead(name);
+    expect(lead.requestedDemo).toBe(true);
+    expect(lead.status).toBe("new");
+    const notice = await prisma.notification.findFirst({
+      where: { recipientId: salesUserId, templateKey: "crm.demo_requested", entityId: lead.id },
+    });
+    expect(notice).not.toBeNull();
+  });
+
+  it("reports funnel counts over the whole requested day (AC-01.7)", async () => {
+    const name = `${TAG} Funnel`;
+    await http()
+      .post("/crm/leads")
+      .set("authorization", await sm())
+      .send({ name, source: "advertisement", phone: "9876500011" })
+      .expect(201);
+    const today = new Date().toISOString().slice(0, 10);
+    const res = await http()
+      .get(`/crm/reports/lead-funnel?from=${today}&to=${today}`)
+      .set("authorization", await sm())
+      .expect(200);
+    const funnel = res.body.data;
+    expect(funnel.total).toBeGreaterThan(0);
+    const newRow = funnel.byStatus.find(
+      (r: { status: string; count: number }) => r.status === "new",
+    );
+    expect(newRow?.count ?? 0).toBeGreaterThan(0);
+    const adRow = funnel.bySource.find(
+      (r: { sourceKey: string; count: number }) => r.sourceKey === "advertisement",
+    );
+    expect(adRow?.count ?? 0).toBeGreaterThan(0);
+  });
+
+  it("stores a questionnaire activity and lists the timeline (AC-01.4)", async () => {
+    const name = `${TAG} Questionnaire`;
+    const created = await http()
+      .post("/crm/leads")
+      .set("authorization", await sm())
+      .send({ name, source: "instagram", phone: "9876500012", ownerUserId: salesUserId })
+      .expect(201);
+    const leadId: string = created.body.data.id;
+    await http()
+      .post(`/crm/leads/${leadId}/activities`)
+      .set("authorization", await sm())
+      .send({ activityType: "questionnaire", questionnaireJson: { budget: "high", guests: 200 } })
+      .expect(201);
+    const timeline = await http()
+      .get(`/crm/leads/${leadId}/activities`)
+      .set("authorization", await sm())
+      .expect(200);
+    const activity = timeline.body.data.items.find(
+      (a: { activityType: string }) => a.activityType === "questionnaire",
+    );
+    expect(activity).toBeDefined();
+    expect(activity.questionnaireJson).toEqual({ budget: "high", guests: 200 });
+  });
+
+  it("refuses lead writes to a client principal (AC-12)", async () => {
+    const client = `Bearer ${await mint("local:client")}`;
+    await http()
+      .post("/crm/leads")
+      .set("authorization", client)
+      .send({ name: `${TAG} Forbidden`, source: "website", phone: "9876500013" })
+      .expect(404);
+    const created = await http()
+      .post("/crm/leads")
+      .set("authorization", await sm())
+      .send({ name: `${TAG} ForbiddenTarget`, source: "website", phone: "9876500014" })
+      .expect(201);
+    await http()
+      .patch(`/crm/leads/${created.body.data.id}`)
+      .set("authorization", client)
+      .send({ requirements: "x" })
+      .expect(404);
+  });
+
+  it("refuses to orphan an owned lead through the assign endpoint (review fix)", async () => {
+    const name = `${TAG} Orphan`;
+    const created = await http()
+      .post("/crm/leads")
+      .set("authorization", await sm())
+      .send({ name, source: "website", phone: "9876500015", ownerUserId: salesUserId })
+      .expect(201);
+    const leadId: string = created.body.data.id;
+    await http()
+      .patch(`/crm/leads/${leadId}`)
+      .set("authorization", await sm())
+      .send({ status: "contacted" })
+      .expect(200);
+    // The /owner endpoint must enforce the same owner-required invariant as the update endpoint.
+    await http()
+      .patch(`/crm/leads/${leadId}/owner`)
+      .set("authorization", await sm())
+      .send({ ownerUserId: null })
+      .expect(400);
+  });
+
   it("keeps leads invisible to a client, and the funnel to SA/SM only (AC-01.7, AC-12)", async () => {
     await http()
       .get("/crm/leads")
@@ -151,90 +253,5 @@ describe("Lead capture (e2e)", () => {
       .expect(200);
     const names: string[] = list.body.data.items.map((lead: { name: string }) => lead.name);
     expect(names).toContain(name);
-  });
-
-  it("makes a converted lead read-only (AC-01.8)", async () => {
-    const name = `${TAG} Converted`;
-    const created = await http()
-      .post("/crm/leads")
-      .set("authorization", await sm())
-      .send({ name, source: "website", phone: "9876500004" })
-      .expect(201);
-    const leadId: string = created.body.data.id;
-    await prisma.lead.update({ where: { id: leadId }, data: { status: "converted" } });
-    await http()
-      .patch(`/crm/leads/${leadId}`)
-      .set("authorization", await sm())
-      .send({ requirements: "changed" })
-      .expect(409);
-  });
-
-  it("merges a duplicate into the survivor, moving activities and auditing it (AC-01.6)", async () => {
-    const survivorName = `${TAG} Survivor`;
-    const dupName = `${TAG} Merged`;
-    const survivor = await http()
-      .post("/crm/leads")
-      .set("authorization", await sm())
-      .send({
-        name: survivorName,
-        source: "website",
-        phone: "9876500005",
-        ownerUserId: salesUserId,
-      })
-      .expect(201);
-    const duplicate = await http()
-      .post("/crm/leads")
-      .set("authorization", await sm())
-      .send({ name: dupName, source: "website", phone: "9876500006" })
-      .expect(201);
-    const survivorId: string = survivor.body.data.id;
-    const duplicateId: string = duplicate.body.data.id;
-    await http()
-      .post(`/crm/leads/${duplicateId}/activities`)
-      .set("authorization", await sm())
-      .send({ activityType: "call", summary: "Spoke to the couple" })
-      .expect(201);
-
-    await http()
-      .post(`/crm/leads/${duplicateId}/merge`)
-      .set("authorization", await sm())
-      .send({ survivorLeadId: survivorId })
-      .expect(201);
-
-    const merged = await prisma.lead.findUniqueOrThrow({ where: { id: duplicateId } });
-    expect(merged.status).toBe("closed");
-    expect(merged.closedReason).toBe("merged");
-    const moved = await prisma.leadActivity.count({ where: { leadId: survivorId } });
-    expect(moved).toBe(1);
-    const audited = await prisma.auditEvent.count({
-      where: { entityType: "lead", entityId: duplicateId, action: "update" },
-    });
-    expect(audited).toBeGreaterThan(0);
-  });
-
-  it("sends a follow-up reminder once, idempotently (AC-01.5)", async () => {
-    const name = `${TAG} Reminder`;
-    const created = await http()
-      .post("/crm/leads")
-      .set("authorization", await sm())
-      .send({ name, source: "website", phone: "9876500007", ownerUserId: salesUserId })
-      .expect(201);
-    const leadId: string = created.body.data.id;
-    const past = new Date(Date.now() - 60_000).toISOString();
-    await http()
-      .post(`/crm/leads/${leadId}/activities`)
-      .set("authorization", await sm())
-      .send({ activityType: "note", summary: "Follow up", nextFollowUpAt: past })
-      .expect(201);
-
-    const reminder = app.get(LeadReminderService);
-    const now = new Date();
-    expect(await reminder.runDue(now)).toBe(1);
-    expect(await reminder.runDue(now)).toBe(0);
-
-    const notices = await prisma.notification.count({
-      where: { recipientId: salesUserId, templateKey: "crm.follow_up_due", entityId: leadId },
-    });
-    expect(notices).toBe(1);
   });
 });

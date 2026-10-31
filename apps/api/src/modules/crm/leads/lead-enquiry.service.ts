@@ -4,14 +4,8 @@ import { errors, type LeadEnquiryRequest, type LeadEnquiryResponse } from "@ampm
 import { AppLogger } from "../../../common/logger.service.js";
 import { NotificationService } from "../../admin/notification/notification.service.js";
 import { BOT_CHECK_ADAPTER, type BotCheckAdapter } from "./bot-check.adapter.js";
+import { DEFAULT_SOURCE_KEY, PRIVACY_NOTICE_VERSION } from "./lead-constants.js";
 import { LeadsRepository, type LeadSourceRef, type LeadWriteData } from "./leads.repository.js";
-
-/**
- * The privacy-notice version recorded with every enquiry (AC-27.1). It becomes a `configurations`
- * value once AMPM confirms the consent wording and retention policy (Q17); a dated placeholder meanwhile.
- */
-const PRIVACY_NOTICE_VERSION = "2026-10";
-const DEFAULT_SOURCE_KEY = "website";
 
 /**
  * The public enquiry form (PUB-06, AC-01). A system-principal write: the visitor has no account, the

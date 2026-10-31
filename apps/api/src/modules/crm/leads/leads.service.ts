@@ -18,9 +18,9 @@ import { PrismaService } from "../../../db/prisma.service.js";
 import { AuditService } from "../../../policy/audit.service.js";
 import { LeadActivitiesRepository } from "./lead-activities.repository.js";
 import { LeadsRepository, type LeadRow, type LeadUpdatePatch } from "./leads.repository.js";
+import { CLOSED_LEAD_STATUSES, PRIVACY_NOTICE_VERSION } from "./lead-constants.js";
 import { toActivityView, toLeadView } from "./leads.view.js";
 
-const PRIVACY_NOTICE_VERSION = "2026-10";
 /** Past `new`, a lead must have an owner to receive follow-up reminders (field-matrix leads.owner_user_id). */
 const OWNED_STATUSES: readonly LeadStatus[] = [
   "contacted",
@@ -60,6 +60,8 @@ export class LeadsService {
     return view;
   }
 
+  // A lead's timeline is bounded by its sales lifecycle (a handful to a few dozen touches), so it is
+  // returned whole rather than cursor-paginated, as the client-login list is for its own bound (api.md).
   async getActivities(leadId: string): Promise<LeadActivityList> {
     await this.require(leadId);
     const rows = await this.activities.listByLead(leadId);
@@ -109,6 +111,13 @@ export class LeadsService {
   async assign(leadId: string, ownerUserId: string | null, actorId: string): Promise<LeadView> {
     const current = await this.require(leadId);
     if (current.status === "converted") throw errors.conflict("A converted lead is read-only");
+    if (ownerUserId === null && OWNED_STATUSES.includes(current.status)) {
+      // Clearing the owner here would orphan the lead and silence its reminders — the same invariant
+      // update() guards (field-matrix leads.owner_user_id: required before status `contacted`).
+      throw errors.validation([
+        { path: "ownerUserId", message: "Keep an owner while the lead is past new" },
+      ]);
+    }
     await this.leads.update(leadId, { ownerUserId }, actorId);
     return this.get(leadId);
   }
@@ -142,9 +151,15 @@ export class LeadsService {
       throw errors.validation([{ path: "survivorLeadId", message: "Pick a different survivor" }]);
     }
     const duplicate = await this.require(duplicateId);
-    await this.require(survivorLeadId);
-    if (duplicate.status === "converted")
-      throw errors.conflict("A converted lead cannot be merged");
+    const survivor = await this.require(survivorLeadId);
+    // Both ends must be open: re-merging a closed/merged duplicate would corrupt its pointer, and a
+    // closed/converted survivor would receive history it can no longer act on (AC-01.6).
+    if (duplicate.status === "converted" || duplicate.status === "closed") {
+      throw errors.conflict("Only an open lead can be merged");
+    }
+    if (survivor.status === "converted" || survivor.status === "closed") {
+      throw errors.conflict("The survivor must be an open lead");
+    }
     await this.prisma.$transaction(async (tx) => {
       await this.activities.reassignLead(duplicateId, survivorLeadId, actorId, tx);
       await this.leads.closeAsDuplicate(duplicateId, survivorLeadId, actorId, tx);
@@ -185,7 +200,13 @@ export class LeadsService {
 
   private async decorate(rows: LeadRow[]): Promise<LeadView[]> {
     const followUps = await this.activities.nextFollowUpByLead(rows.map((row) => row.id));
-    return rows.map((row) => toLeadView(row, followUps.get(row.id) ?? null));
+    return rows.map((row) => {
+      // A closed or converted lead has no pending follow-up, even if an old activity still carries one.
+      const pending = CLOSED_LEAD_STATUSES.includes(row.status)
+        ? null
+        : (followUps.get(row.id) ?? null);
+      return toLeadView(row, pending);
+    });
   }
 
   private async require(leadId: string): Promise<LeadRow> {
