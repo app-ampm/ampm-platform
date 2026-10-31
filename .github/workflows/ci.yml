@@ -27,6 +27,13 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+# Least-privilege, read-only token. `pull-requests: read` lets dorny/paths-filter call the PR
+# listFiles API on pull_request events; without it the changes job fails with "Resource not
+# accessible by integration". No job writes, so nothing else is granted.
+permissions:
+  contents: read
+  pull-requests: read
+
 env:
   TURBO_TELEMETRY_DISABLED: 1
   # Base/head for `turbo run --affected`. PRs diff against the target branch; pushes against the
