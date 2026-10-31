@@ -1,6 +1,6 @@
 # AMPM Platform — Field Matrix
 
-**Status:** DRAFT v0.1, generated 2026-10-29 from [data-model.md](data-model.md) by `docs/tools/field_matrix_build.py`. Do not edit by hand; change the data model or `docs/tools/field_rules.py` and rebuild.
+**Status:** DRAFT v0.1, generated 2026-10-31 from [data-model.md](data-model.md) by `docs/tools/field_matrix_build.py`. Do not edit by hand; change the data model or `docs/tools/field_rules.py` and rebuild.
 **Companions:** [requirements-audit.md](requirements-audit.md) (Q numbers), [data-model.md](data-model.md) (assumptions A-1 to A-30), [permission-matrix.md](permission-matrix.md) (role codes, visibility classes, assumptions P-1 to P-11).
 **Spreadsheet version:** [field-matrix.csv](field-matrix.csv) has the same rows for filtering.
 
@@ -20,8 +20,8 @@ Global conventions that apply to every row: money is `numeric(14,2)` with a sibl
 
 | Module | Tables | Fields | Required at creation | Client or public visible | Restricted, sensitive or secret |
 |---|---|---|---|---|---|
-| A — Identity, access and administration | 18 | 108 | 56 | 10 | 1 |
-| B — CRM, subscriptions and commercial agreements | 12 | 127 | 49 | 90 | 4 |
+| A — Identity, access and administration | 19 | 116 | 59 | 10 | 1 |
+| B — CRM, subscriptions and commercial agreements | 12 | 129 | 49 | 90 | 4 |
 | C — Hotel intelligence | 10 | 100 | 38 | 82 | 11 |
 | D — Hotel consultancy | 6 | 70 | 28 | 65 | 3 |
 | E — Wedding project | 3 | 36 | 13 | 29 | 3 |
@@ -37,9 +37,9 @@ Global conventions that apply to every row: money is `numeric(14,2)` with a sibl
 | O — Checklists, closure and feedback | 4 | 30 | 17 | 7 | 0 |
 | P — Public website content (dormant) | 2 | 17 | 8 | 17 | 0 |
 | Q — Live chat | 2 | 16 | 6 | 16 | 0 |
-| **Total** | **114** | **1129** | **489** | **646** | **103** |
+| **Total** | **115** | **1139** | **492** | **646** | **103** |
 
-Fields by visibility class: CLIENT 613, INTERNAL 327, Other (per record, recipient or parent) 53, RESTRICTED-NOTES 34, PUBLIC 33, RESTRICTED-FINANCE 31, RESTRICTED-CONTACT 13, RESTRICTED-IDENTITY 13, SECRET 6, RESTRICTED-BANK 4, SENSITIVE-GUEST 2.
+Fields by visibility class: CLIENT 613, INTERNAL 337, Other (per record, recipient or parent) 53, RESTRICTED-NOTES 34, PUBLIC 33, RESTRICTED-FINANCE 31, RESTRICTED-CONTACT 13, RESTRICTED-IDENTITY 13, SECRET 6, RESTRICTED-BANK 4, SENSITIVE-GUEST 2.
 
 ---
 
@@ -279,6 +279,21 @@ Created at stage: **System** · Default editor: SYS · Default visibility: INTER
 | `revoked_at` | timestamp (UTC); set on sign-out or a role or membership change; idle is enforced against last_seen_at, not written |  | SYS | INTERNAL | System | Set on sign-out or a role or membership change; idle is enforced against last_seen_at, not written |
 | `revoked_reason` | string, up to 255 characters |  | SYS | INTERNAL | Optional | — |
 
+### `job_runs`
+
+Created at stage: **Operational** · Default editor: SYS · Default visibility: INTERNAL · append-only; the recorded outcome of a background job run (D-047)
+
+| Field | Type and validation | Options | Edited by | Visibility | Required | Automation and report impact |
+|---|---|---|---|---|---|---|
+| `id` (PK) | UUID v7, generated |  | SYS | INTERNAL | System | — |
+| `job_name` | string, up to 255 characters; e.g. demo.restore |  | SYS | INTERNAL | At creation | — |
+| `idempotency_key` | unique within the job; correlates a retry to its attempts |  | SYS | INTERNAL | At creation | — |
+| `status` | one of the listed options | running, succeeded, failed | SYS | INTERNAL | At creation | running then succeeded or failed; alerts on failure or stale age |
+| `detail_json` | valid JSON matching the registered schema; per-table counts or other outcome detail |  | SYS | INTERNAL | Optional | — |
+| `error` | string, up to 255 characters; nullable; the sanitised failure message |  | SYS | INTERNAL | Optional | — |
+| `started_at` | timestamp (UTC) |  | SYS (when the action happens) | INTERNAL | System | — |
+| `finished_at` | timestamp (UTC); nullable until the run ends |  | SYS (when the action happens) | INTERNAL | System | Set when the run ends |
+
 ---
 
 ## 3. Module B — CRM, subscriptions and commercial agreements
@@ -315,11 +330,13 @@ Created at stage: **Lead** · Default editor: SM; SA; SYS from the public enquir
 | `requirements` | text, up to 10,000 characters |  | SM; SA; SYS from the public enquiry form | INTERNAL | Optional | — |
 | `consent_marketing` | true or false |  | SM; SA; SYS from the public enquiry form | INTERNAL | At creation from the form | Marketing messages suppressed when false |
 | `consent_at` | timestamp (UTC) |  | SYS (when the action happens) | INTERNAL | System | — |
+| `consent_notice_version` | string, up to 32 characters |  | SYS | INTERNAL | Optional | Captured with consent; a notice change never alters a historical lead (AC-27.1) |
 | `requested_demo` | true or false |  | SM; SA; SYS from the public enquiry form | INTERNAL | Optional | Creates a demo task for the lead owner |
 | `owner_user_id` (FK) | references users |  | SM; SA | INTERNAL | Before status contacted | Owner receives follow-up reminders |
 | `converted_account_id` (FK) | references client_accounts |  | SYS | INTERNAL | Optional | Set on conversion; the lead becomes read-only |
 | `converted_at` | timestamp (UTC) |  | SYS (when the action happens) | INTERNAL | System | — |
 | `closed_reason` | string, up to 255 characters |  | SM; SA; SYS from the public enquiry form | INTERNAL | Before status closed | — |
+| `duplicate_of_lead_id` (FK) | references leads |  | SYS | INTERNAL | Optional | Set when an enquiry matches an existing lead or account; flagged for a Sales merge, never auto-merged (AC-01.6) |
 
 ### `lead_activities`
 

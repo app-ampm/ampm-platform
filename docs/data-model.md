@@ -336,6 +336,7 @@ Covers SPEC §3 "CRM/subscriptions" and resolves audit GP-2 (trial), GP-3 (plans
 erDiagram
     lead_sources ||--o{ leads : classifies
     leads ||--o{ lead_activities : logs
+    leads |o--o| leads : duplicate_of
     users ||--o{ leads : owns
     leads ||--o| client_accounts : converts_to
     client_accounts ||--o{ account_contacts : lists
@@ -371,11 +372,13 @@ erDiagram
         text requirements
         bool consent_marketing
         datetime consent_at
+        string consent_notice_version "privacy-notice version shown when consent was captured (AC-27.1)"
         bool requested_demo
         uuid owner_user_id FK
         uuid converted_account_id FK
         datetime converted_at
         string closed_reason
+        uuid duplicate_of_lead_id FK "nullable, suspected original when flagged on capture (AC-01.6); never auto-merged"
     }
     lead_activities {
         uuid id PK
@@ -505,6 +508,8 @@ erDiagram
 Notes:
 
 - **Lead to account.** A lead converts into a `client_accounts` row; the lead keeps its history. A demo request is a lead with `requested_demo = true` and a `lead_activities` row of type `demo` once access is granted.
+- **Consent and privacy (Q17, AC-27.1).** The public enquiry form captures `consent_marketing`, `consent_at` and the `consent_notice_version` shown; changing the notice never alters a historical lead. The consent/privacy wording and the lead retention period are AMPM's to confirm and are held as configuration; leads are never hard-deleted — a retention job proposes deletions for a Super Admin to approve.
+- **Duplicates (AC-01.6).** A new enquiry whose email or phone matches an existing lead or client account is accepted and flagged (`duplicate_of_lead_id` names the suspected original), never refused to the visitor and never auto-merged; Sales merges, choosing the survivor, and the duplicate is closed with reason `merged`.
 - **Entitlements** (audit GP-1) are resolved as: active or trial subscription gives the `plan_modules` of its plan; an active `service_agreements` row gives its service's module; an active `project_members` row gives `wedding_workspace` for that project regardless of subscription state. Expiry removes the subscription modules and nothing else. The permission matrix §3 has the full table.
 - **Hotel assistance** (GP-5): the client's request creates a `hotel_enquiries` row (module D). If AMPM charges for it, Sales creates a `service_agreements` row that points back to the enquiry; work beyond availability checking waits for `status = active`.
 - **Payments** carry a direction and a counterparty so one table serves subscription receipts, milestone receipts, vendor payouts and refunds. `client_visible` is true only for inbound client payments.

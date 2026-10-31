@@ -108,6 +108,14 @@ TABLES["sessions"] = T(
     revoked_at=F(editor=SYS, automation="Set on sign-out or a role or membership change; idle is enforced against last_seen_at, not written"),
 )
 
+TABLES["job_runs"] = T(
+    "Operational", SYS, required=["job_name", "idempotency_key", "status"],
+    note="append-only; the recorded outcome of a background job run (D-047)",
+    idempotency_key=F(validation="unique within the job; correlates a retry to its attempts"),
+    status=F(automation="running then succeeded or failed; alerts on failure or stale age"),
+    finished_at=F(automation="Set when the run ends"),
+)
+
 # ---------------------------------------------------------------- Module B — CRM, subscriptions, commercial
 TABLES["lead_sources"] = T("Configuration", "SA", required=["source_key", "name"])
 TABLES["leads"] = T(
@@ -122,6 +130,10 @@ TABLES["leads"] = T(
     status=F(automation="Lead funnel report (SPEC §9); converted creates the client account"),
     guest_estimate=F(automation="Carried into the account and project"),
     closed_reason=F(required="Before status closed"),
+    consent_notice_version=F(editor=SYS, validation="string, up to 32 characters",
+                             automation="Captured with consent; a notice change never alters a historical lead (AC-27.1)"),
+    duplicate_of_lead_id=F(editor=SYS, validation="references leads",
+                           automation="Set when an enquiry matches an existing lead or account; flagged for a Sales merge, never auto-merged (AC-01.6)"),
 )
 TABLES["lead_activities"] = T(
     "Lead", "SM; SA", required=["lead_id", "activity_type", "occurred_at", "user_id"], assumptions="AM-15",
