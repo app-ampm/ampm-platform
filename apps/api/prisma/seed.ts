@@ -32,6 +32,7 @@ export const SEED = {
   projectManager: { email: "pm@example.com", name: "Priya Manager", subject: "local:pm" },
   // Creative: create and read only on the wedding's incidents (permission-matrix §5.13 line 296).
   creative: { email: "creative@example.com", name: "Chitra Creative", subject: "local:cd" },
+  sales: { email: "sales@example.com", name: "Sameer Sales", subject: "local:sm" },
   client: { email: "client@example.com", name: "Rhea Client", subject: "local:client" },
   disabled: { email: "disabled@example.com", name: "Dev Disabled", subject: "local:disabled" },
   projectId: "0192f3a0-7d3e-7b1a-9c2f-0000000000a1",
@@ -145,6 +146,8 @@ async function seedStaff(roleIds: ReadonlyMap<StaffRole, string>): Promise<void>
   });
   await assignRole(creative.id, roleId(roleIds, "CD"));
   await joinProject(creative.id, "staff");
+  const sales = await upsertAccount(SEED.sales, { userType: "staff", mfaEnabled: true });
+  await assignRole(sales.id, roleId(roleIds, "SM"));
   await upsertAccount(SEED.disabled, { userType: "staff", status: "disabled" });
 }
 
@@ -208,6 +211,25 @@ async function seedGrantableCapabilities(): Promise<void> {
   await prisma.grantableCapability.deleteMany({ where: { capabilityKey: { notIn: current } } });
 }
 
+/** The lead sources the enquiry form and the Sales workspace classify leads by (SA-editable reference). */
+async function seedLeadSources(): Promise<void> {
+  const sources: ReadonlyArray<{ sourceKey: string; name: string }> = [
+    { sourceKey: "website", name: "Website" },
+    { sourceKey: "instagram", name: "Instagram" },
+    { sourceKey: "advertisement", name: "Advertisement" },
+    { sourceKey: "referral", name: "Referral" },
+    { sourceKey: "call", name: "Phone call" },
+    { sourceKey: "other", name: "Other" },
+  ];
+  for (const source of sources) {
+    await prisma.leadSource.upsert({
+      where: { sourceKey: source.sourceKey },
+      update: { name: source.name },
+      create: { sourceKey: source.sourceKey, name: source.name },
+    });
+  }
+}
+
 async function main(): Promise<void> {
   const roleIds = await seedRoles();
   await seedStaff(roleIds);
@@ -215,6 +237,7 @@ async function main(): Promise<void> {
   // The canonical demo account, defined once in the demo baseline the nightly restore also rebuilds (5.5).
   await upsertDemoUser(prisma);
   await seedConfigurations();
+  await seedLeadSources();
   await seedGrantableCapabilities();
   console.log(
     "seeded roles, permissions, six synthetic accounts, the baseline configuration " +

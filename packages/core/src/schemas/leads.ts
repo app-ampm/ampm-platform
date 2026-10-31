@@ -38,6 +38,20 @@ export const leadActivityType = z.enum([
 ]);
 export type LeadActivityType = z.infer<typeof leadActivityType>;
 
+/** A JSON value, so a stored questionnaire type-checks as JSON for persistence, not `unknown`. */
+type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
+const jsonValue: z.ZodType<JsonValue> = z.lazy(() =>
+  z.union([
+    z.string(),
+    z.number(),
+    z.boolean(),
+    z.null(),
+    z.array(jsonValue),
+    z.record(z.string(), jsonValue),
+  ]),
+);
+const jsonObject = z.record(z.string(), jsonValue);
+
 /**
  * A phone number normalised to E.164 with an Indian (+91) default (AC-01.3): a bare ten-digit number,
  * a leading zero, or a `91`/`+91` prefix all resolve to `+91XXXXXXXXXX`; anything else must already be
@@ -159,7 +173,7 @@ export const leadActivityCreateRequest = z
     activityType: leadActivityType,
     occurredAt: isoDateTime.optional(),
     summary: z.string().trim().max(10_000).optional(),
-    questionnaireJson: z.record(z.string(), z.unknown()).optional(),
+    questionnaireJson: jsonObject.optional(),
     nextFollowUpAt: isoDateTime.optional(),
   })
   .refine(
@@ -179,7 +193,7 @@ export const leadActivityView = z.object({
   occurredAt: isoDateTime,
   userId: uuid,
   summary: z.string().nullable(),
-  questionnaireJson: z.record(z.string(), z.unknown()).nullable(),
+  questionnaireJson: z.unknown(),
   nextFollowUpAt: isoDateTime.nullable(),
   createdAt: isoDateTime,
 });
