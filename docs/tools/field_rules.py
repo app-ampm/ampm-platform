@@ -42,6 +42,20 @@ TABLES["role_permissions"] = T("Configuration", "SA", required=["role_id", "perm
                                role_id=F(automation="Change recomputes effective permissions; audited"))
 TABLES["user_roles"] = T("Configuration", "SA", required=["user_id", "role_id"], note="unique pair",
                          role_id=F(automation="Change recomputes effective permissions; audited"))
+TABLES["grantable_capabilities"] = T(
+    "Configuration", SYS, required=["capability_key", "module", "resource", "action", "scope", "label"],
+    note="code-generated from packages/policy capabilities.json (D-036); not hand-edited",
+    capability_key=F(validation="module.resource.action:scope, with #<condition-signature> when conditioned; unique"),
+    is_escalation_locked=F(automation="Escalation-locked capabilities are never offered to a custom role"),
+)
+TABLES["permission_sets"] = T("Configuration", "SA", required=["set_key", "name"],
+                              is_system=F(automation="System sets cannot be deleted or renamed"))
+TABLES["role_grants"] = T("Configuration", "SA", required=["role_id", "grantable_capability_id"], note="unique pair",
+                          role_id=F(automation="Change recomputes effective permissions; audited; revokes sessions"))
+TABLES["permission_set_grants"] = T("Configuration", "SA",
+                                    required=["permission_set_id", "grantable_capability_id"], note="unique pair")
+TABLES["role_permission_sets"] = T("Configuration", "SA", required=["role_id", "permission_set_id"], note="unique pair",
+                                   role_id=F(automation="Change recomputes effective permissions; audited; revokes sessions"))
 TABLES["project_members"] = T(
     "Project setup", "SA; PM (a); SM for client members", "CLIENT",
     required=["project_id", "user_id", "project_role", "status"], assumptions="A-5 (Q5), P-2 (Q5)",
@@ -84,6 +98,14 @@ TABLES["import_jobs"] = T(
     status=F(automation="validating runs in a worker; applied writes rows plus audit events; failed keeps the error report"),
     row_count=F(editor=SYS), error_report_json=F(editor=SYS),
     project_id=F(validation="references wedding_projects; required when import_type is guests", required="At creation for guest imports"),
+)
+TABLES["sessions"] = T(
+    "System", SYS, required=["user_id", "token_id", "idle_timeout_minutes", "last_seen_at"],
+    assumptions="D-033; security.md server-side sessions",
+    token_id=F(editor=SYS, validation="the access token's jti; unique per session", required="System"),
+    idle_timeout_minutes=F(editor=SYS, automation="Staff 720, client 43200, from configurations session.idle_timeouts"),
+    last_seen_at=F(editor=SYS, automation="Advanced on each authenticated request"),
+    revoked_at=F(editor=SYS, automation="Set on sign-out or a role or membership change; idle is enforced against last_seen_at, not written"),
 )
 
 # ---------------------------------------------------------------- Module B — CRM, subscriptions, commercial

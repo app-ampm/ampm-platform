@@ -27,7 +27,8 @@
         "DATABASE_URL_TEST",
         "IDENTITY_PROVIDER",
         "IDENTITY_LOCAL_SECRET",
-        "LOG_LEVEL"
+        "LOG_LEVEL",
+        "DYNAMIC_ROLES"
       ]
     }
   }

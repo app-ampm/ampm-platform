@@ -1,0 +1,357 @@
+# The production stack on the VPS (vps-setup.md §1, D-048). Image-based: the image is built and pushed
+# by the deploy workflow (feature 6.6) and pinned there by tag and digest. AMPM_IMAGE (the app) and
+# AMPM_POSTGRES_IMAGE (the postgres+pgBackRest image, feature 6.3) are interpolation-time variables (the
+# shell env or a compose-dir .env the deploy sets) — NOT container env vars, so they are not in
+# production.env. Neither has a default: an unpinned `up` fails loudly rather than silently pulling a
+# mutable tag. Secrets come from the sops-decrypted, per-zone env files (feature 6.4): postgres.env
+# (postgres + pgbackrest), redis.env (redis) and app.env (api + worker), produced on the host by
+# infra/scripts/decrypt-secrets.sh; infra/secrets/examples/ lists the keys. The full Caddyfile — TLS, HSTS, security headers, edge
+# rate limits, static site — is feature 6.2; pgBackRest (6.3) archives WAL and backs up to the encrypted
+# S3 repo in Mumbai; the monitoring stack (node-exporter, blackbox, Prometheus, Alertmanager, db-metrics)
+# is feature 6.7. Postgres and Redis take no inbound (internal network, no published ports); only Caddy
+# publishes PUBLIC ports. Prometheus and Alertmanager bind 127.0.0.1 only (loopback, reached via `ssh -L`),
+# so nothing but Caddy faces the internet. Postgres and pgBackRest also join an outbound-only egress
+# network (no published ports -> no inbound) so they can reach the S3 backup repo; Alertmanager joins it
+# to POST pages to the external webhook.
+name: ampm
+
+x-app: &app
+  image: ${AMPM_IMAGE:?set AMPM_IMAGE to the released tag@sha256 digest (the deploy workflow sets it)}
+  env_file:
+    - path: ./app.env
+      required: false
+  read_only: true
+  tmpfs: ["/tmp"]
+  security_opt: ["no-new-privileges:true"]
+  restart: unless-stopped
+
+services:
+  postgres:
+    image: ${AMPM_POSTGRES_IMAGE:?set AMPM_POSTGRES_IMAGE to the released postgres+pgbackrest image tag@sha256 digest (the deploy workflow sets it)}
+    # Load the tuned config + restrictive pg_hba (feature 6.3). The archive_command runs pgbackrest, so
+    # the image bundles it and the PGBACKREST_* env (repo type, S3 target, cipher pass) comes from the
+    # sops-decrypted env; POSTGRES_USER / POSTGRES_PASSWORD / POSTGRES_DB come from that env too.
+    command:
+      - postgres
+      - -c
+      - config_file=/etc/postgresql/postgresql.conf
+      - -c
+      - hba_file=/etc/postgresql/pg_hba.conf
+    env_file:
+      - path: ./postgres.env
+        required: false
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - pg-run:/var/run/postgresql
+      - ../../postgres/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+      - ../../postgres/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro
+      - ../../pgbackrest/pgbackrest.conf:/etc/pgbackrest/pgbackrest.conf:ro
+    networks: [internal, egress]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-ampm} -d $${POSTGRES_DB:-ampm}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    # PG16 parallel queries allocate in /dev/shm; the 64MB Docker default overflows under load.
+    shm_size: 256m
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits: { cpus: "2", memory: 6g }
+
+  # Backups (feature 6.3, D-050): the same image as postgres, sharing PGDATA (read-only), the postgres
+  # socket (pg-run) and — over the egress network — the encrypted S3 repo. It runs the schedule (full on
+  # Sunday, differential on other days, each ~03:00 UTC, a repository check after every backup) and
+  # records each outcome to job_runs (D-047). It legitimately holds the backup secrets (DATABASE_URL for
+  # the record, PGBACKREST_* for the repo), so it takes the env_file; it publishes no port.
+  pgbackrest:
+    image: ${AMPM_POSTGRES_IMAGE:?set AMPM_POSTGRES_IMAGE to the released postgres+pgbackrest image tag@sha256 digest (the deploy workflow sets it)}
+    user: postgres
+    depends_on:
+      postgres: { condition: service_healthy }
+    env_file:
+      - path: ./postgres.env
+        required: false
+    volumes:
+      - pgdata:/var/lib/postgresql/data:ro
+      - pg-run:/var/run/postgresql
+      - ../../pgbackrest/pgbackrest.conf:/etc/pgbackrest/pgbackrest.conf:ro
+      - ../../pgbackrest/backup.sh:/usr/local/bin/backup.sh:ro
+      - ../../pgbackrest/scheduler.sh:/usr/local/bin/scheduler.sh:ro
+    networks: [internal, egress]
+    command: ["sh", "/usr/local/bin/scheduler.sh"]
+    # PGDATA is :ro, the repo is remote S3, and the scripts are :ro mounts — only scratch needs writing.
+    read_only: true
+    tmpfs: ["/tmp", "/var/spool/pgbackrest"]
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits: { cpus: "0.5", memory: 512m }
+
+  # Restore engine (feature 6.8, D-056): a ONE-OFF that mounts PGDATA read-WRITE (unlike the pgbackrest
+  # sidecar) and runs pgbackrest restore. profiles:[restore] so `up` never starts it; restart:"no". Driven
+  # by the restore-the-database-only and rebuild-from-nothing runbooks with Postgres stopped (set
+  # RESTORE_TARGET_TIME for PITR). It takes postgres.env (cipher + S3 repo creds) and the egress network to
+  # read the Mumbai repo; recovery itself (WAL replay via archive-get) then runs in the postgres service.
+  restore:
+    image: ${AMPM_POSTGRES_IMAGE:?set AMPM_POSTGRES_IMAGE to the released postgres+pgbackrest image tag@sha256 digest (the deploy workflow sets it)}
+    user: postgres
+    profiles: [restore]
+    env_file:
+      - path: ./postgres.env
+        required: false
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ../../pgbackrest/pgbackrest.conf:/etc/pgbackrest/pgbackrest.conf:ro
+      - ../../pgbackrest/restore.sh:/usr/local/bin/restore.sh:ro
+    networks: [internal, egress]
+    command: ["sh", "/usr/local/bin/restore.sh"]
+    read_only: true
+    tmpfs: ["/tmp", "/var/spool/pgbackrest"]
+    security_opt: ["no-new-privileges:true"]
+    restart: "no"
+    deploy:
+      resources:
+        limits: { cpus: "1", memory: 1g }
+
+  redis:
+    image: redis:7-alpine
+    # Password required at start (fail closed): an empty/unset REDIS_PASSWORD must not disable auth.
+    # No persistence (nothing in Redis is the only copy, D-031).
+    command:
+      - sh
+      - -c
+      - exec redis-server --save "" --appendonly no --requirepass "$${REDIS_PASSWORD:?REDIS_PASSWORD is required}"
+    env_file:
+      - path: ./redis.env
+        required: false
+    networks: [internal]
+    healthcheck:
+      test: ["CMD-SHELL", 'redis-cli -a "$${REDIS_PASSWORD}" ping | grep -q PONG']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits: { cpus: "0.5", memory: 512m }
+
+  api:
+    <<: *app
+    command: ["node", "dist/main.js"]
+    environment:
+      NODE_ENV: production
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    networks: [internal, edge]
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://localhost:3900/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 15s
+      timeout: 5s
+      retries: 6
+      start_period: 30s
+    deploy:
+      resources:
+        limits: { cpus: "2", memory: 2g }
+
+  worker:
+    <<: *app
+    command: ["node", "dist/worker.js"]
+    environment:
+      NODE_ENV: production
+      JOB_WORKER: "true"
+    networks: [internal]
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    deploy:
+      resources:
+        limits: { cpus: "1", memory: 1g }
+
+  # The expand-only migration job (feature 6.6): the deploy runs it to completion BEFORE the new API
+  # starts (`docker compose --profile migrate run --rm migrate`). Not started by `up` (profile); one-shot
+  # (restart: no). Uses the app image + app.env (DATABASE_URL), run from apps/api so the schema resolves.
+  migrate:
+    <<: *app
+    command: ["node", "/repo/node_modules/.bin/prisma", "migrate", "deploy"]
+    working_dir: /repo/apps/api
+    environment:
+      NODE_ENV: production
+    depends_on:
+      postgres: { condition: service_healthy }
+    networks: [internal]
+    profiles: [migrate]
+    restart: "no"
+
+  caddy:
+    image: caddy:2-alpine
+    depends_on: [api]
+    # The only published ports of the stack (vps-setup §5: firewall allows 80 and 443).
+    ports: ["80:80", "443:443"]
+    # The public edge gets ONLY the two non-secret vars it needs (no env_file, so none of the backend
+    # secrets reach the most-attackable container). `:?` fails the deploy loudly if either is unset, so
+    # the edge never silently falls back to a localhost/internal-CA certificate in production.
+    environment:
+      AMPM_DOMAIN: ${AMPM_DOMAIN:?AMPM_DOMAIN must be set (the public domain)}
+      ACME_EMAIL: ${ACME_EMAIL:?ACME_EMAIL must be set (the Let's Encrypt contact)}
+    volumes:
+      - ../../caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks:
+      # The domain alias lets blackbox-exporter reach the edge as the real hostname (so Caddy serves the
+      # right vhost + cert and the probe reads the true certificate expiry) without leaving the host.
+      edge:
+        aliases: ["${AMPM_DOMAIN}"]
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits: { cpus: "0.5", memory: 256m }
+
+  # --- Monitoring and alerts (feature 6.7, D-054; vps-setup §7) ---------------------------------------
+  # node-exporter (host CPU/memory/disk/load + the db-metrics textfile), blackbox-exporter (an in-box probe
+  # of the public edge: reachability + TLS cert expiry), Prometheus (scrape + the alert thresholds in
+  # infra/monitoring/rules), Alertmanager (pages the developer over a sops-managed webhook), and db-metrics
+  # (writes backup + WAL-archive health from Postgres into node-exporter's textfile dir). The alert
+  # thresholds live in infra/monitoring/rules; each alert points at a step in infra/runbooks/monitoring.md.
+  node-exporter:
+    image: prom/node-exporter:v1.9.1
+    command:
+      - --path.procfs=/host/proc
+      - --path.sysfs=/host/sys
+      - --path.rootfs=/rootfs
+      - --collector.textfile.directory=/var/lib/node-metrics
+      - --collector.filesystem.mount-points-exclude=^/(dev|proc|sys|run|var/lib/docker/.+)($|/)
+      - --no-collector.wifi
+      - --web.listen-address=:9100
+    # Start after db-metrics so the shared node-metrics volume is seeded by the postgres image (owned by
+    # the postgres user the collector runs as); node-exporter then only reads it.
+    depends_on:
+      db-metrics: { condition: service_started }
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+      - node-metrics:/var/lib/node-metrics:ro
+    networks: [internal]
+    read_only: true
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits: { cpus: "0.3", memory: 128m }
+
+  blackbox-exporter:
+    image: prom/blackbox-exporter:v0.27.0
+    command: ["--config.file=/etc/blackbox/blackbox.yml"]
+    volumes:
+      - ../../monitoring/blackbox.yml:/etc/blackbox/blackbox.yml:ro
+    # internal: Prometheus scrapes it. edge: it reaches Caddy (via the AMPM_DOMAIN alias) to probe the edge.
+    networks: [internal, edge]
+    read_only: true
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits: { cpus: "0.2", memory: 64m }
+
+  prometheus:
+    image: prom/prometheus:v3.15.1
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=15d
+      - --web.listen-address=:9090
+      - --web.external-url=http://localhost:9090
+    volumes:
+      - ../../monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ../../monitoring/rules:/etc/prometheus/rules:ro
+      # The blackbox edge-probe target, rendered with the real domain by deploy.sh (Prometheus cannot
+      # env-expand its own config, and Compose inline `content` configs are incompatible with read_only).
+      # The directory is mounted (not the single file), so a not-yet-rendered target degrades to "no
+      # blackbox target" instead of a failed mount.
+      - ./monitoring-targets:/etc/prometheus/targets:ro
+      - prometheus-data:/prometheus
+    # Loopback only (see the section header): reach the UI with `ssh -L 9090:localhost:9090 <host>`.
+    ports: ["127.0.0.1:9090:9090"]
+    networks: [internal]
+    read_only: true
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits: { cpus: "0.5", memory: 768m }
+
+  alertmanager:
+    image: prom/alertmanager:v0.28.1
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --storage.path=/alertmanager
+      - --web.listen-address=:9093
+    volumes:
+      - ../../monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      # The paging webhook URL, produced by decrypt-secrets.sh from the sops `monitoring` zone; gitignored.
+      - ./monitoring-secrets:/etc/alertmanager/secrets:ro
+      - alertmanager-data:/alertmanager
+    # egress: POST pages to the external webhook. internal: Prometheus pushes alerts to it.
+    networks: [internal, egress]
+    # Loopback only (see the section header): reach the UI with `ssh -L 9093:localhost:9093 <host>`.
+    ports: ["127.0.0.1:9093:9093"]
+    read_only: true
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits: { cpus: "0.2", memory: 128m }
+
+  # Writes backup + WAL-archive health from Postgres into node-exporter's textfile dir. The same image as
+  # postgres (for psql + the socket), the postgres user, and dbmetrics.env — ONLY DATABASE_URL + PGPASSWORD
+  # (least privilege: NOT the pgBackRest S3 keys / cipher pass in postgres.env). It reads job_runs +
+  # pg_stat_archiver over the socket only — no repo, no egress.
+  db-metrics:
+    image: ${AMPM_POSTGRES_IMAGE:?set AMPM_POSTGRES_IMAGE to the released postgres+pgbackrest image tag@sha256 digest (the deploy workflow sets it)}
+    user: postgres
+    depends_on:
+      postgres: { condition: service_healthy }
+    env_file:
+      - path: ./dbmetrics.env
+        required: false
+    volumes:
+      - pg-run:/var/run/postgresql
+      - node-metrics:/var/lib/node-metrics
+      - ../../monitoring/collect-metrics.sh:/usr/local/bin/collect-metrics.sh:ro
+    networks: [internal]
+    command: ["sh", "/usr/local/bin/collect-metrics.sh"]
+    read_only: true
+    tmpfs: ["/tmp"]
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits: { cpus: "0.2", memory: 128m }
+
+volumes:
+  pgdata:
+  pg-run:
+  caddy-data:
+  caddy-config:
+  node-metrics: # the db-metrics collector writes here; node-exporter reads it (feature 6.7)
+  prometheus-data:
+  alertmanager-data:
+
+networks:
+  internal: { internal: true }
+  edge: {}
+  # Outbound-only: Postgres and pgBackRest reach the S3 backup repo in Mumbai. Nothing publishes a port
+  # on it, so it grants no inbound access from outside the host (unlike `internal`, it is not sealed off
+  # from the internet, which WAL archive-push and the backups require).
+  egress: {}

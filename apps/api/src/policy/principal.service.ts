@@ -1,20 +1,27 @@
-import { Injectable } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 import { errors } from "@ampm/core";
 import {
   resolveClientEntitlements,
+  resolveCustomGrants,
   roleFromKey,
   type Entitlements,
+  type RoleGrant,
   type StaffRole,
 } from "@ampm/policy";
 
+import { AppLogger } from "../common/logger.service.js";
+import { ENV, type Env } from "../env.js";
 import type { VerifiedIdentity } from "../identity/identity.types.js";
 import { EntitlementCache } from "./entitlement.cache.js";
 import { PrincipalRepository, type PrincipalRecord } from "./principal.repository.js";
 import type { Principal } from "./principal.types.js";
 
+type ResolvedGrants = ReadonlyMap<string, readonly RoleGrant[]>;
+
 /**
  * Steps 2 and 3 of the pipeline: a verified identity becomes a principal from the API's own
- * records; client and demo principals also get their entitlements (cached five minutes).
+ * records; client and demo principals also get their entitlements (cached five minutes). A staff
+ * user's custom roles (D-036) resolve to the engine's `resolvedGrants` when DYNAMIC_ROLES is on.
  * No account for the subject means no access: there is no self-registration (A-13).
  *
  * @example
@@ -22,9 +29,13 @@ import type { Principal } from "./principal.types.js";
  */
 @Injectable()
 export class PrincipalService {
-  private readonly cache = new EntitlementCache();
+  private readonly entitlements = new EntitlementCache();
 
-  constructor(private readonly repository: PrincipalRepository) {}
+  constructor(
+    private readonly repository: PrincipalRepository,
+    @Inject(ENV) private readonly env: Env,
+    private readonly logger: AppLogger,
+  ) {}
 
   async resolve(identity: VerifiedIdentity, now: Date = new Date()): Promise<Principal> {
     const record = await this.repository.findByIdentitySubject(identity.subject);
@@ -41,21 +52,54 @@ export class PrincipalService {
       memberships: record.memberships,
     };
     if (record.userType === "staff") {
-      const roles = record.roleKeys
-        .map(roleFromKey)
-        .filter((role): role is StaffRole => role !== undefined);
-      return { type: "staff", roles, ...base };
+      const roles: StaffRole[] = [];
+      const customRoleIds: string[] = [];
+      for (const role of record.roles) {
+        const code = roleFromKey(role.roleKey);
+        // One of the nine only when it is both a known code AND flagged system; a non-system role that
+        // reused a reserved key resolves fail-closed through its own grants, never the matrix role's.
+        if (code !== undefined && role.isSystem) roles.push(code);
+        else customRoleIds.push(role.roleId);
+      }
+      const resolvedGrants = await this.customGrantsFor(record.id, customRoleIds);
+      return { type: "staff", roles, resolvedGrants, ...base };
     }
     const entitlements = this.entitlementsFor(record);
     return { type: record.userType, entitlements, ...base };
   }
 
   invalidateEntitlements(userId: string): void {
-    this.cache.invalidate(userId);
+    this.entitlements.invalidate(userId);
+  }
+
+  /**
+   * The grants a staff user's custom roles contribute to `decide()` (D-036), resolved fresh each
+   * request from `role_grants` through the code catalog (fail-closed). Off unless DYNAMIC_ROLES is on,
+   * and a user with no custom roles costs no extra query. Resolving per request — rather than caching —
+   * keeps a demotion effective at once: a role change revokes the user's sessions, and their next
+   * request re-reads the grants, so there is nothing stale to invalidate.
+   *
+   * Phase 5 (D-037): these grants drive key-level authorization only, not field visibility, which is
+   * still role-switch-based. So a custom role granted a classified-field read passes `decide()` but the
+   * serialiser still strips the field (fail-safe); reading restricted classes through a custom role
+   * awaits the capability-driven visibility step.
+   */
+  private async customGrantsFor(
+    userId: string,
+    customRoleIds: readonly string[],
+  ): Promise<ResolvedGrants | undefined> {
+    if (!this.env.DYNAMIC_ROLES || customRoleIds.length === 0) return undefined;
+    const keys = await this.repository.capabilityKeysForRoles(customRoleIds);
+    const { grants, rejected } = resolveCustomGrants(keys);
+    if (rejected.length > 0) {
+      // A stored grant outside the catalog is dropped, never enforced; surface it rather than hide it.
+      this.logger.warn("principal.custom_grants.rejected", { userId, count: rejected.length });
+    }
+    return grants.size > 0 ? grants : undefined;
   }
 
   private entitlementsFor(record: PrincipalRecord): Entitlements {
-    const cached = this.cache.get(record.id);
+    const cached = this.entitlements.get(record.id);
     if (cached) return cached;
     // Subscriptions and agreements arrive with module B; until then membership is the only source.
     // A project's status (on hold, closed within the window) lives in wedding_projects, which
@@ -68,7 +112,7 @@ export class PrincipalService {
       hotelAssistanceAgreement: false,
       project: record.memberships.length > 0 ? "active" : "none",
     });
-    this.cache.set(record.id, entitlements);
+    this.entitlements.set(record.id, entitlements);
     return entitlements;
   }
 }

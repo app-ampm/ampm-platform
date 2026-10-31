@@ -11,6 +11,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { buildGrantableCapabilities } from "../src/catalog.ts";
 import { parseMatrix } from "./parse-matrix.ts";
 import { parseTransitions } from "./parse-transitions.ts";
 
@@ -40,6 +41,14 @@ writeFileSync(
   `${JSON.stringify(output, null, 2)}\n`,
 );
 
+// The code-defined capability catalog (D-036), derived from the same staff rows: the Super-Admin
+// pick-list and the server-side allow-list for custom roles. Covered by the matrix-drift CI check.
+const capabilities = buildGrantableCapabilities(staff);
+writeFileSync(
+  join(here, "..", "src", "generated", "capabilities.json"),
+  `${JSON.stringify(capabilities, null, 2)}\n`,
+);
+
 const provisional = staff.filter((row) => row.provisional).length;
 const conditioned = [...staff, ...others].flatMap((row) =>
   Object.values(row.grants).flatMap((grants) => grants.filter((g) => g.conditions.length > 0)),
@@ -47,5 +56,6 @@ const conditioned = [...staff, ...others].flatMap((row) =>
 console.log(
   `policy: ${staff.length} staff rows (${provisional} provisional names, reports included), ` +
     `${others.length} client/guest/demo rows, ${conditioned} conditioned grants, ` +
-    `${transitions.length} transition rules -> src/generated/matrix.json`,
+    `${transitions.length} transition rules, ${capabilities.length} grantable capabilities ` +
+    `-> src/generated/matrix.json, src/generated/capabilities.json`,
 );

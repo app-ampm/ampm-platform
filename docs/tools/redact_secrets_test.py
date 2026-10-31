@@ -72,6 +72,7 @@ def samples() -> dict[str, str]:
         "pw": "S3cr3t" + "-Value-99",
         "b64": "MIIEvQIBADANBgkqhkiG9w0BAQEFAASC" * 2,
         "b64_2": "BKcwggSjAgEAAoIBAQC7" * 3,
+        "age": "AGE-SECRET-KEY-1" + "ACDEFGHJKLMNPQRSTUVWXYZ023456789" * 2,
     }
 
 
@@ -88,6 +89,7 @@ def baseline_cases() -> list[Case]:
         ("url password", tool_result(f"postgresql://svc:{s['pw']}@db.internal:5432/ampm"), 1, [s["pw"]]),
         ("ordinary text", tool_result("ordinary text about gho_ prefixes and eyJ examples"), 0, []),
         ("token-shaped tail of an identifier", tool_result(f"const x{s['gh']} = 1"), 0, []),
+        ("age secret key", tool_result(f"found key {s['age']} here"), 1, [s["age"][16:]]),
     ]
 
 

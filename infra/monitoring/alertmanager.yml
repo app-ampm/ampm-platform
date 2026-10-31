@@ -1,0 +1,31 @@
+# Alertmanager routing for one AMPM VPS environment (feature 6.7, D-054). It groups firing alerts and
+# pages the developer over a single webhook receiver. The webhook URL is a SECRET (anyone holding it can
+# post to the pager), so it is NOT written here — the receiver reads it from a file that
+# infra/scripts/decrypt-secrets.sh produces from the sops `monitoring` zone (url_file; infra rule D-015,
+# never a secret in a config file). Prometheus and Alertmanager are per-environment, so production's and
+# staging's webhooks point at whatever channels that environment should page.
+route:
+  receiver: pager
+  group_by: ["alertname", "severity"]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  routes:
+    # Critical alerts re-page more often until resolved.
+    - matchers: ['severity="critical"']
+      receiver: pager
+      repeat_interval: 1h
+
+receivers:
+  - name: pager
+    webhook_configs:
+      - send_resolved: true
+        # The URL is written by decrypt-secrets.sh from the sops `monitoring` zone; the file is mounted
+        # read-only at this path and is gitignored on the host.
+        url_file: /etc/alertmanager/secrets/webhook_url
+
+inhibit_rules:
+  # When something is already critical for an alertname, do not also page its warning twin.
+  - source_matchers: ['severity="critical"']
+    target_matchers: ['severity="warning"']
+    equal: ["alertname"]

@@ -1,0 +1,286 @@
+# The local smoke stack: builds the image from source and brings the whole stack up so a developer (or
+# CI) can prove it runs before the real box exists (feature 6.1). It mirrors the production topology —
+# Postgres and Redis on an internal network, only Caddy publishing a port, every service hardened — but
+# uses throwaway, non-secret credentials and development mode (production refuses the local identity
+# provider). The production and staging stacks (image-based, sops secrets) are the sibling directories.
+name: ampm-local
+
+x-app-env: &app-env
+  NODE_ENV: development
+  PORT: "3900"
+  DATABASE_URL: postgresql://ampm:ampm@postgres:5432/ampm
+  REDIS_URL: redis://redis:6379
+  IDENTITY_PROVIDER: local
+  # A throwaway development secret, never a real one; long enough for the local HS256 adapter.
+  IDENTITY_LOCAL_SECRET: local-compose-secret-not-a-real-secret-0123456789
+
+services:
+  postgres:
+    build:
+      context: ../../..
+      dockerfile: infra/docker/postgres.Dockerfile
+    command:
+      - postgres
+      - -c
+      - config_file=/etc/postgresql/postgresql.conf
+      - -c
+      - hba_file=/etc/postgresql/pg_hba.conf
+    environment:
+      POSTGRES_USER: ampm
+      POSTGRES_PASSWORD: ampm
+      POSTGRES_DB: ampm
+      # The repo passphrase the archive_command needs to write encrypted WAL (a throwaway local value).
+      PGBACKREST_REPO1_CIPHER_PASS: local-smoke-cipher-not-a-secret
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - pg-run:/var/run/postgresql
+      - pgbackrest-repo:/var/lib/pgbackrest
+      - ../../postgres/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+      - ../../postgres/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro
+      - ../../pgbackrest/pgbackrest.conf:/etc/pgbackrest/pgbackrest.conf:ro
+    networks: [internal]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ampm -d ampm"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    # PG16 parallel queries allocate in /dev/shm; the 64MB Docker default overflows under load.
+    shm_size: 256m
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+
+  # Backups: shares PGDATA (read), the postgres socket and the posix repo with the postgres container;
+  # runs the scheduled backup + daily check and records each outcome to job_runs (D-050). In production
+  # the repo is the encrypted S3 bucket (PGBACKREST_* env, feature 6.4). Locally it idles so the smoke
+  # can invoke backup.sh on demand.
+  pgbackrest:
+    build:
+      context: ../../..
+      dockerfile: infra/docker/postgres.Dockerfile
+    user: postgres
+    depends_on:
+      postgres: { condition: service_healthy }
+    environment:
+      DATABASE_URL: postgresql://ampm:ampm@postgres:5432/ampm
+      PGBACKREST_REPO1_CIPHER_PASS: local-smoke-cipher-not-a-secret
+      PGPASSWORD: ampm
+    volumes:
+      - pgdata:/var/lib/postgresql/data:ro
+      - pg-run:/var/run/postgresql
+      - pgbackrest-repo:/var/lib/pgbackrest
+      - ../../pgbackrest/pgbackrest.conf:/etc/pgbackrest/pgbackrest.conf:ro
+      - ../../pgbackrest/backup.sh:/usr/local/bin/backup.sh:ro
+      - ../../pgbackrest/scheduler.sh:/usr/local/bin/scheduler.sh:ro
+    networks: [internal]
+    # Idles so the smoke can drive `scheduler.sh bootstrap` deterministically (prod runs scheduler.sh).
+    command: ["sh", "-c", "while true; do sleep 3600; done"]
+    read_only: true
+    tmpfs: ["/tmp", "/var/spool/pgbackrest"]
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+
+  # Restore engine (feature 6.8): a ONE-OFF that mounts PGDATA read-WRITE (unlike pgbackrest, which mounts
+  # it :ro for backups) and runs pgbackrest restore. profiles:[restore] so `up` never starts it;
+  # restart:"no". Postgres must be stopped first. smoke-restore.sh and the restore/rebuild runbooks drive it
+  # (optionally RESTORE_TARGET_TIME for PITR).
+  restore:
+    build:
+      context: ../../..
+      dockerfile: infra/docker/postgres.Dockerfile
+    profiles: [restore]
+    user: postgres
+    environment:
+      PGBACKREST_REPO1_CIPHER_PASS: local-smoke-cipher-not-a-secret
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - pgbackrest-repo:/var/lib/pgbackrest
+      - ../../pgbackrest/pgbackrest.conf:/etc/pgbackrest/pgbackrest.conf:ro
+      - ../../pgbackrest/restore.sh:/usr/local/bin/restore.sh:ro
+    networks: [internal]
+    command: ["sh", "/usr/local/bin/restore.sh"]
+    read_only: true
+    tmpfs: ["/tmp", "/var/spool/pgbackrest"]
+    security_opt: ["no-new-privileges:true"]
+    restart: "no"
+
+  redis:
+    image: redis:7-alpine
+    # No persistence: nothing in Redis is the only copy of anything (D-031).
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    networks: [internal]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+
+  api:
+    build:
+      context: ../../..
+      dockerfile: infra/docker/Dockerfile
+    command: ["node", "dist/main.js"]
+    environment: *app-env
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    networks: [internal, edge]
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://localhost:3900/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    read_only: true
+    tmpfs: ["/tmp"]
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: ../../..
+      dockerfile: infra/docker/Dockerfile
+    command: ["node", "dist/worker.js"]
+    environment:
+      <<: *app-env
+      JOB_WORKER: "true"
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    networks: [internal]
+    read_only: true
+    tmpfs: ["/tmp"]
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2-alpine
+    depends_on: [api]
+    # The only published ports of the stack, matching the production invariant "only Caddy publishes".
+    # AMPM_DOMAIN=localhost makes Caddy serve HTTPS with its internal CA, so the smoke exercises the real
+    # edge config (TLS, HSTS, headers) — the same Caddyfile uses Let's Encrypt for a public domain.
+    environment:
+      AMPM_DOMAIN: localhost
+    ports: ["8080:80", "8443:443"]
+    volumes:
+      - ../../caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+    networks: [edge]
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+
+  # --- Monitoring and alerts (feature 6.7) under the `monitoring` profile -------------------------------
+  # The same configs as production (infra/monitoring/*), so infra/scripts/smoke-monitoring.sh can prove
+  # the stack actually runs — Prometheus loads the rules, scrapes node-exporter, discovers Alertmanager,
+  # and sees the db-metrics textfile — before the real box exists. Excluded from the default `up` (so the
+  # plain smoke is unaffected); publishes no port (the smoke execs promtool inside the prometheus
+  # container). db-metrics builds the postgres image and uses throwaway local credentials.
+  node-exporter:
+    image: prom/node-exporter:v1.9.1
+    profiles: [monitoring]
+    command:
+      - --path.procfs=/host/proc
+      - --path.sysfs=/host/sys
+      - --path.rootfs=/rootfs
+      - --collector.textfile.directory=/var/lib/node-metrics
+      - --collector.filesystem.mount-points-exclude=^/(dev|proc|sys|run|var/lib/docker/.+)($|/)
+      - --no-collector.wifi
+      - --web.listen-address=:9100
+    depends_on:
+      db-metrics: { condition: service_started }
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+      - node-metrics:/var/lib/node-metrics:ro
+    networks: [internal]
+    read_only: true
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+
+  blackbox-exporter:
+    image: prom/blackbox-exporter:v0.27.0
+    profiles: [monitoring]
+    command: ["--config.file=/etc/blackbox/blackbox.yml"]
+    volumes:
+      - ../../monitoring/blackbox.yml:/etc/blackbox/blackbox.yml:ro
+    networks: [internal, edge]
+    read_only: true
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:v3.15.1
+    profiles: [monitoring]
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=3d
+      - --web.listen-address=:9090
+    volumes:
+      - ../../monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ../../monitoring/rules:/etc/prometheus/rules:ro
+      # smoke-monitoring.sh renders ./monitoring-targets/edge.yml before `up`; mounted as a dir.
+      - ./monitoring-targets:/etc/prometheus/targets:ro
+      - prometheus-data:/prometheus
+    networks: [internal]
+    read_only: true
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+
+  alertmanager:
+    image: prom/alertmanager:v0.28.1
+    profiles: [monitoring]
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --storage.path=/alertmanager
+      - --web.listen-address=:9093
+    volumes:
+      - ../../monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      # smoke-monitoring.sh writes a throwaway webhook_url here before `up`.
+      - ./monitoring-secrets:/etc/alertmanager/secrets:ro
+      - alertmanager-data:/alertmanager
+    networks: [internal]
+    read_only: true
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+
+  db-metrics:
+    build:
+      context: ../../..
+      dockerfile: infra/docker/postgres.Dockerfile
+    profiles: [monitoring]
+    user: postgres
+    depends_on:
+      postgres: { condition: service_healthy }
+    environment:
+      DATABASE_URL: postgresql://ampm:ampm@postgres:5432/ampm
+      PGPASSWORD: ampm
+      COLLECT_INTERVAL: "15"
+    volumes:
+      - pg-run:/var/run/postgresql
+      - node-metrics:/var/lib/node-metrics
+      - ../../monitoring/collect-metrics.sh:/usr/local/bin/collect-metrics.sh:ro
+    networks: [internal]
+    command: ["sh", "/usr/local/bin/collect-metrics.sh"]
+    read_only: true
+    tmpfs: ["/tmp"]
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  pg-run:
+  pgbackrest-repo:
+  node-metrics:
+  prometheus-data:
+  alertmanager-data:
+
+networks:
+  # Postgres and Redis are never reachable from outside the stack.
+  internal: { internal: true }
+  edge: {}
