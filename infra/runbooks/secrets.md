@@ -7,17 +7,18 @@ host and in the password manager — never in the repo, a log, an image or a tes
 ## Layout
 
 - `.sops.yaml` — creation rules; the age **public** key (recipient) every `infra/secrets/*.enc.yaml` is encrypted to.
-- `infra/secrets/<env>.<zone>.enc.yaml` — the encrypted secrets, committed. `<env>` ∈ {production, staging}, `<zone>` ∈ {postgres, redis, app}.
+- `infra/secrets/<env>.<zone>.enc.yaml` — the encrypted secrets, committed. `<env>` ∈ {production, staging}, `<zone>` ∈ {postgres, redis, app, monitoring}.
 - `infra/secrets/examples/<zone>.yaml` — plaintext templates listing the keys (placeholders only).
-- `infra/scripts/decrypt-secrets.sh <env>` — run on the host at deploy; writes `infra/compose/<env>/{postgres,redis,app}.env` (gitignored).
+- `infra/scripts/decrypt-secrets.sh <env>` — run on the host at deploy; writes `infra/compose/<env>/{postgres,redis,app}.env`, the minimal `dbmetrics.env` (only `DATABASE_URL` + `PGPASSWORD`, for the db-metrics collector, feature 6.7), and `monitoring-secrets/webhook_url` (the Alertmanager paging URL, chowned to the container uid) — all gitignored.
 
 One file per **trust zone**, so each container loads only the secrets it needs:
 
-| Zone     | Encrypted file            | Consumed by          | Why separate                                                                |
-| -------- | ------------------------- | -------------------- | --------------------------------------------------------------------------- |
-| postgres | `<env>.postgres.enc.yaml` | postgres, pgbackrest | DB + backup tier; must not hold app/provider keys                           |
-| redis    | `<env>.redis.enc.yaml`    | redis                | a cache compromise must not leak DB, S3 or app keys                         |
-| app      | `<env>.app.enc.yaml`      | api, worker          | app + provider keys; must not hold the raw DB password or the backup cipher |
+| Zone       | Encrypted file              | Consumed by          | Why separate                                                                   |
+| ---------- | --------------------------- | -------------------- | ------------------------------------------------------------------------------ |
+| postgres   | `<env>.postgres.enc.yaml`   | postgres, pgbackrest | DB + backup tier; must not hold app/provider keys                              |
+| redis      | `<env>.redis.enc.yaml`      | redis                | a cache compromise must not leak DB, S3 or app keys                            |
+| app        | `<env>.app.enc.yaml`        | api, worker          | app + provider keys; must not hold the raw DB password or the backup cipher    |
+| monitoring | `<env>.monitoring.enc.yaml` | Alertmanager         | the paging webhook only (optional; a missing zone never blocks the app deploy) |
 
 ## Secret registry
 
@@ -31,6 +32,8 @@ One file per **trust zone**, so each container loads only the secrets it needs:
 | `COGNITO_*`                               | app                     | identity verification                             | managed in Cognito; update on pool/client change                              |
 | `SMTP_USER` / `SMTP_PASSWORD`             | app                     | transactional email (SES)                         | yearly; immediately on exposure                                               |
 | `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` | app                     | payments (when they land)                         | per Razorpay policy; test keys on staging only                                |
+| `SENTRY_DSN`                              | app                     | api/worker error reporting (feature 6.7)          | on Sentry project change; separate DSN per environment                        |
+| `ALERT_WEBHOOK_URL`                       | monitoring              | Alertmanager paging (feature 6.7)                 | on channel change or exposure; separate URL per environment                   |
 | age private key                           | host + password manager | sops decrypt at deploy                            | on operator change or exposure (re-encrypt every file)                        |
 
 Keep this table current: every new secret gets a row before it ships.

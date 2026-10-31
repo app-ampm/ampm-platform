@@ -90,6 +90,32 @@ services:
       resources:
         limits: { cpus: "0.5", memory: 512m }
 
+  # Restore engine (feature 6.8, D-056): a ONE-OFF that mounts PGDATA read-WRITE (unlike the pgbackrest
+  # sidecar) and runs pgbackrest restore. profiles:[restore] so `up` never starts it; restart:"no". Driven
+  # by the restore-the-database-only and rebuild-from-nothing runbooks with Postgres stopped (set
+  # RESTORE_TARGET_TIME for PITR). It takes postgres.env (cipher + S3 repo creds) and the egress network to
+  # read the Mumbai repo; recovery itself (WAL replay via archive-get) then runs in the postgres service.
+  restore:
+    image: ${AMPM_POSTGRES_IMAGE:?set AMPM_POSTGRES_IMAGE to the released postgres+pgbackrest image tag@sha256 digest (the deploy workflow sets it)}
+    user: postgres
+    profiles: [restore]
+    env_file:
+      - path: ./postgres.env
+        required: false
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ../../pgbackrest/pgbackrest.conf:/etc/pgbackrest/pgbackrest.conf:ro
+      - ../../pgbackrest/restore.sh:/usr/local/bin/restore.sh:ro
+    networks: [internal, egress]
+    command: ["sh", "/usr/local/bin/restore.sh"]
+    read_only: true
+    tmpfs: ["/tmp", "/var/spool/pgbackrest"]
+    security_opt: ["no-new-privileges:true"]
+    restart: "no"
+    deploy:
+      resources:
+        limits: { cpus: "1", memory: 1g }
+
   redis:
     image: redis:7-alpine
     # Password required at start (fail closed): an empty/unset REDIS_PASSWORD must not disable auth.

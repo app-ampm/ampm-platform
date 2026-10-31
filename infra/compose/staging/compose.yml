@@ -91,6 +91,30 @@ services:
       resources:
         limits: { cpus: "0.25", memory: 256m }
 
+  # Restore engine (feature 6.8, D-056): one-off, PGDATA read-WRITE, profile:[restore], restart:"no". See
+  # ../production/compose.yml for the full note. Driven by the restore/rebuild runbooks with Postgres
+  # stopped; postgres.env (cipher + S3 creds) + egress to read the repo; set RESTORE_TARGET_TIME for PITR.
+  restore:
+    image: ${AMPM_POSTGRES_IMAGE:?set AMPM_POSTGRES_IMAGE to the released postgres+pgbackrest image tag@sha256 digest (the deploy workflow sets it)}
+    user: postgres
+    profiles: [restore]
+    env_file:
+      - path: ./postgres.env
+        required: false
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ../../pgbackrest/pgbackrest.conf:/etc/pgbackrest/pgbackrest.conf:ro
+      - ../../pgbackrest/restore.sh:/usr/local/bin/restore.sh:ro
+    networks: [internal, egress]
+    command: ["sh", "/usr/local/bin/restore.sh"]
+    read_only: true
+    tmpfs: ["/tmp", "/var/spool/pgbackrest"]
+    security_opt: ["no-new-privileges:true"]
+    restart: "no"
+    deploy:
+      resources:
+        limits: { cpus: "0.5", memory: 512m }
+
   redis:
     image: redis:7-alpine
     command:

@@ -79,6 +79,30 @@ services:
     security_opt: ["no-new-privileges:true"]
     restart: unless-stopped
 
+  # Restore engine (feature 6.8): a ONE-OFF that mounts PGDATA read-WRITE (unlike pgbackrest, which mounts
+  # it :ro for backups) and runs pgbackrest restore. profiles:[restore] so `up` never starts it;
+  # restart:"no". Postgres must be stopped first. smoke-restore.sh and the restore/rebuild runbooks drive it
+  # (optionally RESTORE_TARGET_TIME for PITR).
+  restore:
+    build:
+      context: ../../..
+      dockerfile: infra/docker/postgres.Dockerfile
+    profiles: [restore]
+    user: postgres
+    environment:
+      PGBACKREST_REPO1_CIPHER_PASS: local-smoke-cipher-not-a-secret
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - pgbackrest-repo:/var/lib/pgbackrest
+      - ../../pgbackrest/pgbackrest.conf:/etc/pgbackrest/pgbackrest.conf:ro
+      - ../../pgbackrest/restore.sh:/usr/local/bin/restore.sh:ro
+    networks: [internal]
+    command: ["sh", "/usr/local/bin/restore.sh"]
+    read_only: true
+    tmpfs: ["/tmp", "/var/spool/pgbackrest"]
+    security_opt: ["no-new-privileges:true"]
+    restart: "no"
+
   redis:
     image: redis:7-alpine
     # No persistence: nothing in Redis is the only copy of anything (D-031).
