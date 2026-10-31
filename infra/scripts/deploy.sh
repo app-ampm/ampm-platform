@@ -67,8 +67,14 @@ rollback() {
 	die "deploy of $ENVIRONMENT failed its health gate AND the rollback did not become healthy — investigate now"
 }
 
-# 1. Secrets: sops -> the per-zone .env files in the compose directory (feature 6.4).
+# 1. Secrets: sops -> the per-zone .env files + the Alertmanager webhook (feature 6.4 / 6.7).
 run "$repo_root/infra/scripts/decrypt-secrets.sh" "$ENVIRONMENT"
+
+# 1b. Render the Prometheus blackbox edge-probe target with the real domain (feature 6.7). Prometheus
+#     cannot env-expand its own config, so this one per-environment value is written into the directory
+#     bind-mounted into prometheus. The domain is passed as a positional arg, never interpolated into code.
+targets_dir="$repo_root/infra/compose/$ENVIRONMENT/monitoring-targets"
+run sh -c 'mkdir -p "$1" && printf -- "- targets: [\"https://%s/health\"]\n" "$2" > "$1/edge.yml"' sh "$targets_dir" "$AMPM_DOMAIN"
 
 # 2. Pull the pinned images so the migration + the new containers use exactly the released digests.
 run "${COMPOSE[@]}" pull

@@ -49,6 +49,10 @@ web-build/
 !.env.example
 # Decrypted secret env files for the Compose stacks (sops produces these at deploy; never commit them).
 infra/compose/**/*.env
+# Decrypted monitoring secret (the Alertmanager paging webhook URL, feature 6.7); produced at deploy.
+infra/compose/**/monitoring-secrets/
+# Rendered Prometheus blackbox edge-probe target (holds the env's domain); produced at deploy.
+infra/compose/**/monitoring-targets/
 # sops secrets (feature 6.4): commit only the encrypted *.enc.yaml and the examples/ templates — never a
 # plaintext secret source, an age private key, or any private key (at any depth).
 infra/secrets/**/*.yaml

@@ -1,0 +1,20 @@
+# blackbox-exporter modules (feature 6.7, D-054). Prometheus drives one module, https_2xx, against the
+# public edge from inside the box (see the `blackbox` job in prometheus.yml). It gives three signals:
+# probe_success (is the edge serving 200), probe_http_status_code, and probe_ssl_earliest_cert_expiry
+# (the TLS cert's expiry, which the CertificateExpiringSoon alert watches).
+modules:
+  https_2xx:
+    prober: http
+    timeout: 10s
+    http:
+      method: GET
+      valid_status_codes: [200]
+      fail_if_not_ssl: true
+      preferred_ip_protocol: ip4
+      ip_protocol_fallback: false
+      tls_config:
+        # The probe runs inside the box against our own edge; we measure reachability + cert expiry, not
+        # chain trust (the external uptime monitor validates the public chain). Skipping verification lets
+        # the probe still read probe_ssl_earliest_cert_expiry while a cert is mid-issuance or (locally)
+        # signed by Caddy's internal CA.
+        insecure_skip_verify: true
