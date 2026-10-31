@@ -107,6 +107,14 @@ A,sessions,System,idle_timeout_minutes,int,,,"integer, 0 or more; staff 720 / cl
 A,sessions,System,last_seen_at,datetime,,,timestamp (UTC),SYS,INTERNAL,At creation,Advanced on each authenticated request,D-033; security.md server-side sessions
 A,sessions,System,revoked_at,datetime,,,"timestamp (UTC); set on sign-out or a role or membership change; idle is enforced against last_seen_at, not written",SYS,INTERNAL,System,"Set on sign-out or a role or membership change; idle is enforced against last_seen_at, not written",D-033; security.md server-side sessions
 A,sessions,System,revoked_reason,string,,,"string, up to 255 characters",SYS,INTERNAL,Optional,—,D-033; security.md server-side sessions
+A,job_runs,Operational,id,uuid,PK,,"UUID v7, generated",SYS,INTERNAL,System,—,
+A,job_runs,Operational,job_name,string,,,"string, up to 255 characters; e.g. demo.restore",SYS,INTERNAL,At creation,—,
+A,job_runs,Operational,idempotency_key,string,,,unique within the job; correlates a retry to its attempts,SYS,INTERNAL,At creation,—,
+A,job_runs,Operational,status,string,,"running, succeeded, failed",one of the listed options,SYS,INTERNAL,At creation,running then succeeded or failed; alerts on failure or stale age,
+A,job_runs,Operational,detail_json,json,,,valid JSON matching the registered schema; per-table counts or other outcome detail,SYS,INTERNAL,Optional,—,
+A,job_runs,Operational,error,string,,,"string, up to 255 characters; nullable; the sanitised failure message",SYS,INTERNAL,Optional,—,
+A,job_runs,Operational,started_at,datetime,,,timestamp (UTC),SYS (when the action happens),INTERNAL,System,—,
+A,job_runs,Operational,finished_at,datetime,,,timestamp (UTC); nullable until the run ends,SYS (when the action happens),INTERNAL,System,Set when the run ends,
 B,lead_sources,Configuration,id,uuid,PK,,"UUID v7, generated",SYS,INTERNAL,System,—,
 B,lead_sources,Configuration,source_key,string,UK,,"lowercase snake_case; unique; website, instagram, advertisement, referral, call, other",SA,INTERNAL,At creation,—,
 B,lead_sources,Configuration,name,string,,,"string, up to 255 characters",SA,INTERNAL,At creation,—,
@@ -126,11 +134,13 @@ B,leads,Lead,guest_estimate,int,,,"integer, 0 or more",SM; SA; SYS from the publ
 B,leads,Lead,requirements,text,,,"text, up to 10,000 characters",SM; SA; SYS from the public enquiry form,INTERNAL,Optional,—,"A-12 (Q12), GP-39 consent (Q17)"
 B,leads,Lead,consent_marketing,bool,,,true or false,SM; SA; SYS from the public enquiry form,INTERNAL,At creation from the form,Marketing messages suppressed when false,"A-12 (Q12), GP-39 consent (Q17)"
 B,leads,Lead,consent_at,datetime,,,timestamp (UTC),SYS (when the action happens),INTERNAL,System,—,"A-12 (Q12), GP-39 consent (Q17)"
+B,leads,Lead,consent_notice_version,string,,,"string, up to 32 characters",SYS,INTERNAL,Optional,Captured with consent; a notice change never alters a historical lead (AC-27.1),"A-12 (Q12), GP-39 consent (Q17)"
 B,leads,Lead,requested_demo,bool,,,true or false,SM; SA; SYS from the public enquiry form,INTERNAL,Optional,Creates a demo task for the lead owner,"A-12 (Q12), GP-39 consent (Q17)"
 B,leads,Lead,owner_user_id,uuid,FK,,references users,SM; SA,INTERNAL,Before status contacted,Owner receives follow-up reminders,"A-12 (Q12), GP-39 consent (Q17)"
 B,leads,Lead,converted_account_id,uuid,FK,,references client_accounts,SYS,INTERNAL,Optional,Set on conversion; the lead becomes read-only,"A-12 (Q12), GP-39 consent (Q17)"
 B,leads,Lead,converted_at,datetime,,,timestamp (UTC),SYS (when the action happens),INTERNAL,System,—,"A-12 (Q12), GP-39 consent (Q17)"
 B,leads,Lead,closed_reason,string,,,"string, up to 255 characters",SM; SA; SYS from the public enquiry form,INTERNAL,Before status closed,—,"A-12 (Q12), GP-39 consent (Q17)"
+B,leads,Lead,duplicate_of_lead_id,uuid,FK,,references leads,SYS,INTERNAL,Optional,"Set when an enquiry matches an existing lead or account; flagged for a Sales merge, never auto-merged (AC-01.6)","A-12 (Q12), GP-39 consent (Q17)"
 B,lead_activities,Lead,id,uuid,PK,,"UUID v7, generated",SYS,INTERNAL,System,—,AM-15
 B,lead_activities,Lead,lead_id,uuid,FK,,references leads,SM; SA,INTERNAL,At creation,—,AM-15
 B,lead_activities,Lead,activity_type,string,,"call, email, whatsapp, meeting, consultation, demo, questionnaire, call_request, note","one of the listed options; (AM-15; call_request for the pre-purchase Zoom call, Q3)",SM; SA,INTERNAL,At creation,—,AM-15

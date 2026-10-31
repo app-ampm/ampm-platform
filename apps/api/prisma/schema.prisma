@@ -110,6 +110,36 @@ enum JobRunStatus {
   failed
 }
 
+/// Module B CRM. Statuses are enumerations fixed in code; their labels are configuration (data.md).
+enum LeadStatus {
+  new
+  contacted
+  introduction_shared
+  demo_offered
+  demo_accessed
+  follow_up
+  converted
+  closed
+}
+
+enum ContactPreference {
+  phone
+  whatsapp
+  email
+}
+
+enum LeadActivityType {
+  call
+  email
+  whatsapp
+  meeting
+  consultation
+  demo
+  questionnaire
+  call_request
+  note
+}
+
 /// Staff, client and demo accounts. Credentials live in the identity service (Cognito, T-6): the
 /// API keeps the identity subject that maps a verified token to this row; it never stores a password.
 model User {
@@ -138,6 +168,8 @@ model User {
   auditEvents   AuditEvent[]
   importJobs    ImportJob[]
   sessions      Session[]
+  leadsOwned     Lead[]
+  leadActivities LeadActivity[]
 
   @@index([userType, status])
   @@index([deletedAt])
@@ -497,4 +529,108 @@ model JobRun {
 
   @@index([jobName, createdAt])
   @@map("job_runs")
+}
+
+// --- Module B: CRM (docs/data-model.md §4). Lead capture: the enquiry pipeline and follow-up. ---
+
+/// Where a lead came from (reference table, Super-Admin editable, data.md §1): the enquiry form and
+/// manual entry classify every lead through one of these. Seeded with the SPEC §2.1 sources.
+model LeadSource {
+  id        String  @id @default(uuid(7)) @db.Uuid
+  sourceKey String  @unique @map("source_key") @db.VarChar(64)
+  name      String  @db.VarChar(255)
+  isActive  Boolean @default(true) @map("is_active")
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  leads Lead[]
+
+  @@index([deletedAt])
+  @@map("lead_sources")
+}
+
+/// The enquiry/pipeline record the public form (PUB-06) creates and Sales works through the funnel.
+/// Every field is INTERNAL: no lead field is ever serialised to a client, guest or demo principal
+/// (permission-matrix §4). Converts into a client_accounts row (feature 8.2) and keeps its history;
+/// never hard-deleted (retention is a Super-Admin-approved proposal, Q17/AC-27).
+model Lead {
+  id                   String             @id @default(uuid(7)) @db.Uuid
+  sourceId             String             @map("source_id") @db.Uuid
+  status               LeadStatus         @default(new)
+  name                 String             @db.VarChar(255)
+  email                String?            @db.VarChar(255)
+  phone                String?            @db.VarChar(32)
+  contactPreference    ContactPreference? @map("contact_preference")
+  tentativeDateFrom    DateTime?          @map("tentative_date_from") @db.Date
+  tentativeDateTo      DateTime?          @map("tentative_date_to") @db.Date
+  /// Gains its relation when module C (destinations) lands; free text in destination_text meanwhile.
+  destinationId        String?            @map("destination_id") @db.Uuid
+  destinationText      String?            @map("destination_text") @db.VarChar(255)
+  guestEstimate        Int?               @map("guest_estimate")
+  requirements         String?            @db.Text
+  consentMarketing     Boolean            @default(false) @map("consent_marketing")
+  consentAt            DateTime?          @map("consent_at") @db.Timestamptz(6)
+  consentNoticeVersion String?            @map("consent_notice_version") @db.VarChar(32)
+  requestedDemo        Boolean            @default(false) @map("requested_demo")
+  ownerUserId          String?            @map("owner_user_id") @db.Uuid
+  /// Gains its relation when client_accounts lands (feature 8.2); set by the system on conversion.
+  convertedAccountId   String?            @map("converted_account_id") @db.Uuid
+  convertedAt          DateTime?          @map("converted_at") @db.Timestamptz(6)
+  closedReason         String?            @map("closed_reason") @db.VarChar(255)
+  /// The suspected original when an enquiry matches an existing lead/account on capture (AC-01.6):
+  /// a flag for Sales to merge, never an auto-merge.
+  duplicateOfLeadId    String?            @map("duplicate_of_lead_id") @db.Uuid
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  source      LeadSource     @relation(fields: [sourceId], references: [id])
+  owner       User?          @relation(fields: [ownerUserId], references: [id])
+  duplicateOf Lead?          @relation("LeadDuplicate", fields: [duplicateOfLeadId], references: [id])
+  duplicates  Lead[]         @relation("LeadDuplicate")
+  activities  LeadActivity[]
+
+  @@index([status])
+  @@index([sourceId])
+  @@index([ownerUserId, status])
+  @@index([email])
+  @@index([phone])
+  @@index([duplicateOfLeadId])
+  @@index([deletedAt])
+  @@map("leads")
+}
+
+/// The append log of every touch on a lead (calls, emails, demos, a questionnaire) and the next
+/// follow-up time; `next_follow_up_at` drives the reminder job (reuses the job_runs model, D-047).
+model LeadActivity {
+  id                String           @id @default(uuid(7)) @db.Uuid
+  leadId            String           @map("lead_id") @db.Uuid
+  activityType      LeadActivityType @map("activity_type")
+  occurredAt        DateTime         @map("occurred_at") @db.Timestamptz(6)
+  userId            String           @map("user_id") @db.Uuid
+  summary           String?          @db.Text
+  questionnaireJson Json?            @map("questionnaire_json")
+  nextFollowUpAt    DateTime?        @map("next_follow_up_at") @db.Timestamptz(6)
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  lead Lead @relation(fields: [leadId], references: [id])
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([leadId, occurredAt])
+  @@index([nextFollowUpAt])
+  @@index([userId])
+  @@index([deletedAt])
+  @@map("lead_activities")
 }
