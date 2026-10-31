@@ -77,7 +77,10 @@ echo "smoke-mon: collector textfile metric is in Prometheus (end-to-end path wor
 rules=$(pqval 'sum(prometheus_rule_group_rules)')
 echo "smoke-mon: Prometheus loaded ${rules:-0} rules (expect >= $EXPECTED_RULES)"
 case "${rules:-0}" in *.*) rules=${rules%%.*} ;; esac # promtool may print 18 or 18.0
-[ -n "$rules" ] && [ "$rules" -ge "$EXPECTED_RULES" ] || { echo "smoke-mon FAILED: expected >= $EXPECTED_RULES rules loaded, got '${rules:-0}'"; exit 1; }
+if ! { [ -n "$rules" ] && [ "$rules" -ge "$EXPECTED_RULES" ]; }; then
+	echo "smoke-mon FAILED: expected >= $EXPECTED_RULES rules loaded, got '${rules:-0}'"
+	exit 1
+fi
 
 # node-exporter is being scraped, and the blackbox job + its relabeling are wired (blackbox answers even
 # when its probe target is down, so up{job=blackbox}=1 proves the scrape config, not the edge).
@@ -87,7 +90,10 @@ echo "smoke-mon: node + blackbox scrape targets are up"
 
 # Prometheus found Alertmanager (the alerting wiring).
 amd=$(pqval 'prometheus_notifications_alertmanagers_discovered')
-[ -n "$amd" ] && [ "${amd%%.*}" -ge 1 ] || { echo "smoke-mon FAILED: Prometheus discovered no Alertmanager (got '${amd:-}')"; exit 1; }
+if ! { [ -n "$amd" ] && [ "${amd%%.*}" -ge 1 ]; }; then
+	echo "smoke-mon FAILED: Prometheus discovered no Alertmanager (got '${amd:-}')"
+	exit 1
+fi
 echo "smoke-mon: Alertmanager discovered by Prometheus"
 
 echo "smoke-mon OK: rules loaded, node+blackbox scraped, Alertmanager discovered, collector metric flows end to end"
