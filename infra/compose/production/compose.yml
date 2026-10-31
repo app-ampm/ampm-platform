@@ -7,9 +7,12 @@
 # (postgres + pgbackrest), redis.env (redis) and app.env (api + worker), produced on the host by
 # infra/scripts/decrypt-secrets.sh; infra/secrets/examples/ lists the keys. The full Caddyfile — TLS, HSTS, security headers, edge
 # rate limits, static site — is feature 6.2; pgBackRest (6.3) archives WAL and backs up to the encrypted
-# S3 repo in Mumbai; node-exporter (6.7) lands later. Postgres and Redis take no inbound (internal
-# network, no published ports); only Caddy publishes ports. Postgres and pgBackRest also join an
-# outbound-only egress network (no published ports -> no inbound) so they can reach the S3 backup repo.
+# S3 repo in Mumbai; the monitoring stack (node-exporter, blackbox, Prometheus, Alertmanager, db-metrics)
+# is feature 6.7. Postgres and Redis take no inbound (internal network, no published ports); only Caddy
+# publishes PUBLIC ports. Prometheus and Alertmanager bind 127.0.0.1 only (loopback, reached via `ssh -L`),
+# so nothing but Caddy faces the internet. Postgres and pgBackRest also join an outbound-only egress
+# network (no published ports -> no inbound) so they can reach the S3 backup repo; Alertmanager joins it
+# to POST pages to the external webhook.
 name: ampm
 
 x-app: &app
@@ -177,18 +180,147 @@ services:
       - ../../caddy/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-data:/data
       - caddy-config:/config
-    networks: [edge]
+    networks:
+      # The domain alias lets blackbox-exporter reach the edge as the real hostname (so Caddy serves the
+      # right vhost + cert and the probe reads the true certificate expiry) without leaving the host.
+      edge:
+        aliases: ["${AMPM_DOMAIN}"]
     security_opt: ["no-new-privileges:true"]
     restart: unless-stopped
     deploy:
       resources:
         limits: { cpus: "0.5", memory: 256m }
 
+  # --- Monitoring and alerts (feature 6.7, D-054; vps-setup §7) ---------------------------------------
+  # node-exporter (host CPU/memory/disk/load + the db-metrics textfile), blackbox-exporter (an in-box probe
+  # of the public edge: reachability + TLS cert expiry), Prometheus (scrape + the alert thresholds in
+  # infra/monitoring/rules), Alertmanager (pages the developer over a sops-managed webhook), and db-metrics
+  # (writes backup + WAL-archive health from Postgres into node-exporter's textfile dir). The alert
+  # thresholds live in infra/monitoring/rules; each alert points at a step in infra/runbooks/monitoring.md.
+  node-exporter:
+    image: prom/node-exporter:v1.9.1
+    command:
+      - --path.procfs=/host/proc
+      - --path.sysfs=/host/sys
+      - --path.rootfs=/rootfs
+      - --collector.textfile.directory=/var/lib/node-metrics
+      - --collector.filesystem.mount-points-exclude=^/(dev|proc|sys|run|var/lib/docker/.+)($|/)
+      - --no-collector.wifi
+      - --web.listen-address=:9100
+    # Start after db-metrics so the shared node-metrics volume is seeded by the postgres image (owned by
+    # the postgres user the collector runs as); node-exporter then only reads it.
+    depends_on:
+      db-metrics: { condition: service_started }
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+      - node-metrics:/var/lib/node-metrics:ro
+    networks: [internal]
+    read_only: true
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits: { cpus: "0.3", memory: 128m }
+
+  blackbox-exporter:
+    image: prom/blackbox-exporter:v0.27.0
+    command: ["--config.file=/etc/blackbox/blackbox.yml"]
+    volumes:
+      - ../../monitoring/blackbox.yml:/etc/blackbox/blackbox.yml:ro
+    # internal: Prometheus scrapes it. edge: it reaches Caddy (via the AMPM_DOMAIN alias) to probe the edge.
+    networks: [internal, edge]
+    read_only: true
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits: { cpus: "0.2", memory: 64m }
+
+  prometheus:
+    image: prom/prometheus:v3.15.1
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=15d
+      - --web.listen-address=:9090
+      - --web.external-url=http://localhost:9090
+    volumes:
+      - ../../monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ../../monitoring/rules:/etc/prometheus/rules:ro
+      # The blackbox edge-probe target, rendered with the real domain by deploy.sh (Prometheus cannot
+      # env-expand its own config, and Compose inline `content` configs are incompatible with read_only).
+      # The directory is mounted (not the single file), so a not-yet-rendered target degrades to "no
+      # blackbox target" instead of a failed mount.
+      - ./monitoring-targets:/etc/prometheus/targets:ro
+      - prometheus-data:/prometheus
+    # Loopback only (see the section header): reach the UI with `ssh -L 9090:localhost:9090 <host>`.
+    ports: ["127.0.0.1:9090:9090"]
+    networks: [internal]
+    read_only: true
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits: { cpus: "0.5", memory: 768m }
+
+  alertmanager:
+    image: prom/alertmanager:v0.28.1
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --storage.path=/alertmanager
+      - --web.listen-address=:9093
+    volumes:
+      - ../../monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      # The paging webhook URL, produced by decrypt-secrets.sh from the sops `monitoring` zone; gitignored.
+      - ./monitoring-secrets:/etc/alertmanager/secrets:ro
+      - alertmanager-data:/alertmanager
+    # egress: POST pages to the external webhook. internal: Prometheus pushes alerts to it.
+    networks: [internal, egress]
+    # Loopback only (see the section header): reach the UI with `ssh -L 9093:localhost:9093 <host>`.
+    ports: ["127.0.0.1:9093:9093"]
+    read_only: true
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits: { cpus: "0.2", memory: 128m }
+
+  # Writes backup + WAL-archive health from Postgres into node-exporter's textfile dir. The same image as
+  # postgres (for psql + the socket), the postgres user, and dbmetrics.env — ONLY DATABASE_URL + PGPASSWORD
+  # (least privilege: NOT the pgBackRest S3 keys / cipher pass in postgres.env). It reads job_runs +
+  # pg_stat_archiver over the socket only — no repo, no egress.
+  db-metrics:
+    image: ${AMPM_POSTGRES_IMAGE:?set AMPM_POSTGRES_IMAGE to the released postgres+pgbackrest image tag@sha256 digest (the deploy workflow sets it)}
+    user: postgres
+    depends_on:
+      postgres: { condition: service_healthy }
+    env_file:
+      - path: ./dbmetrics.env
+        required: false
+    volumes:
+      - pg-run:/var/run/postgresql
+      - node-metrics:/var/lib/node-metrics
+      - ../../monitoring/collect-metrics.sh:/usr/local/bin/collect-metrics.sh:ro
+    networks: [internal]
+    command: ["sh", "/usr/local/bin/collect-metrics.sh"]
+    read_only: true
+    tmpfs: ["/tmp"]
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits: { cpus: "0.2", memory: 128m }
+
 volumes:
   pgdata:
   pg-run:
   caddy-data:
   caddy-config:
+  node-metrics: # the db-metrics collector writes here; node-exporter reads it (feature 6.7)
+  prometheus-data:
+  alertmanager-data:
 
 networks:
   internal: { internal: true }

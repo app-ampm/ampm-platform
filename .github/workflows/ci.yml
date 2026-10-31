@@ -13,7 +13,7 @@
 #   matrix        policy or the doc   regenerate packages/policy/src/generated and fail on drift
 #   tools         docs/tools changed  the redactor, memory-hook and checkpoint self-tests
 #   secrets-scan  always              refuse any committed plaintext secret (feature 6.4)
-#   infra         infra changed       shellcheck + Compose/Caddy validation + the container-stack smoke (heavy)
+#   infra         infra changed       shellcheck + Compose/Caddy/monitoring validation + two stack smokes (heavy)
 # `ci-ok` is a single stable status (green when every job that ran passed; skipped jobs are fine) so
 # branch protection can require one check regardless of which jobs a given change triggers.
 name: CI
@@ -323,7 +323,9 @@ jobs:
     needs: changes
     if: ${{ needs.changes.outputs.infra == 'true' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    # Two smokes build both images and run the stack (app+edge+backups, then monitoring), so this is
+    # heavier than a config check.
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v7
       # Lint every infra shell script (feature 6.5 requires bootstrap.sh shellcheck-green). shellcheck is
@@ -348,6 +350,17 @@ jobs:
           docker run --rm -e AMPM_DOMAIN=localhost \
             -v "$PWD/infra/caddy/Caddyfile:/etc/caddy/Caddyfile:ro" \
             caddy:2-alpine caddy validate --adapter caddyfile --config /etc/caddy/Caddyfile
+      # Validate the monitoring config as code (feature 6.7): the Prometheus config + the alert
+      # thresholds (promtool) and the Alertmanager routing (amtool), via the pinned exporter images.
+      # Mounting infra/monitoring at /etc/prometheus lets the rule_files glob resolve during the check.
+      - name: Validate the monitoring config (Prometheus rules + Alertmanager)
+        run: |
+          docker run --rm --entrypoint promtool -v "$PWD/infra/monitoring:/etc/prometheus:ro" \
+            prom/prometheus:v3.15.1 check config /etc/prometheus/prometheus.yml
+          docker run --rm --entrypoint promtool -v "$PWD/infra/monitoring:/etc/prometheus:ro" \
+            prom/prometheus:v3.15.1 check rules /etc/prometheus/rules/alerts.yml
+          docker run --rm --entrypoint amtool -v "$PWD/infra/monitoring/alertmanager.yml:/am.yml:ro" \
+            prom/alertmanager:v0.28.1 check-config /am.yml
       # Build both images, bring the whole local stack up, and exercise the edge (HTTPS + headers) and the
       # pgBackRest runtime (scheduler bootstrap -> stanza-create + full backup + check + job_runs) end to
       # end, then tear down. This also covers both Dockerfile builds (a build regression fails `up --build`)
@@ -355,6 +368,11 @@ jobs:
       # the registry push and digest pin are feature 6.6.
       - name: Smoke the container stack (edge + backups)
         run: sh infra/scripts/smoke.sh
+      # Bring the monitoring stack up and prove it runs (feature 6.7): Prometheus loads the rules, scrapes
+      # node-exporter, discovers Alertmanager, and sees the db-metrics textfile end to end. The app-image
+      # layers are cached from the smoke above, so this build is fast.
+      - name: Smoke the monitoring stack
+        run: sh infra/scripts/smoke-monitoring.sh
 
   # One required status for branch protection: green when every job that ran passed. Skipped jobs are
   # expected (that is the whole point), so only failure/cancellation fails the gate. `needs.*.result`

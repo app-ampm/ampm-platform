@@ -149,10 +149,112 @@ services:
     security_opt: ["no-new-privileges:true"]
     restart: unless-stopped
 
+  # --- Monitoring and alerts (feature 6.7) under the `monitoring` profile -------------------------------
+  # The same configs as production (infra/monitoring/*), so infra/scripts/smoke-monitoring.sh can prove
+  # the stack actually runs — Prometheus loads the rules, scrapes node-exporter, discovers Alertmanager,
+  # and sees the db-metrics textfile — before the real box exists. Excluded from the default `up` (so the
+  # plain smoke is unaffected); publishes no port (the smoke execs promtool inside the prometheus
+  # container). db-metrics builds the postgres image and uses throwaway local credentials.
+  node-exporter:
+    image: prom/node-exporter:v1.9.1
+    profiles: [monitoring]
+    command:
+      - --path.procfs=/host/proc
+      - --path.sysfs=/host/sys
+      - --path.rootfs=/rootfs
+      - --collector.textfile.directory=/var/lib/node-metrics
+      - --collector.filesystem.mount-points-exclude=^/(dev|proc|sys|run|var/lib/docker/.+)($|/)
+      - --no-collector.wifi
+      - --web.listen-address=:9100
+    depends_on:
+      db-metrics: { condition: service_started }
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+      - node-metrics:/var/lib/node-metrics:ro
+    networks: [internal]
+    read_only: true
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+
+  blackbox-exporter:
+    image: prom/blackbox-exporter:v0.27.0
+    profiles: [monitoring]
+    command: ["--config.file=/etc/blackbox/blackbox.yml"]
+    volumes:
+      - ../../monitoring/blackbox.yml:/etc/blackbox/blackbox.yml:ro
+    networks: [internal, edge]
+    read_only: true
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:v3.15.1
+    profiles: [monitoring]
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=3d
+      - --web.listen-address=:9090
+    volumes:
+      - ../../monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ../../monitoring/rules:/etc/prometheus/rules:ro
+      # smoke-monitoring.sh renders ./monitoring-targets/edge.yml before `up`; mounted as a dir.
+      - ./monitoring-targets:/etc/prometheus/targets:ro
+      - prometheus-data:/prometheus
+    networks: [internal]
+    read_only: true
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+
+  alertmanager:
+    image: prom/alertmanager:v0.28.1
+    profiles: [monitoring]
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --storage.path=/alertmanager
+      - --web.listen-address=:9093
+    volumes:
+      - ../../monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      # smoke-monitoring.sh writes a throwaway webhook_url here before `up`.
+      - ./monitoring-secrets:/etc/alertmanager/secrets:ro
+      - alertmanager-data:/alertmanager
+    networks: [internal]
+    read_only: true
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+
+  db-metrics:
+    build:
+      context: ../../..
+      dockerfile: infra/docker/postgres.Dockerfile
+    profiles: [monitoring]
+    user: postgres
+    depends_on:
+      postgres: { condition: service_healthy }
+    environment:
+      DATABASE_URL: postgresql://ampm:ampm@postgres:5432/ampm
+      PGPASSWORD: ampm
+      COLLECT_INTERVAL: "15"
+    volumes:
+      - pg-run:/var/run/postgresql
+      - node-metrics:/var/lib/node-metrics
+      - ../../monitoring/collect-metrics.sh:/usr/local/bin/collect-metrics.sh:ro
+    networks: [internal]
+    command: ["sh", "/usr/local/bin/collect-metrics.sh"]
+    read_only: true
+    tmpfs: ["/tmp"]
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+
 volumes:
   pgdata:
   pg-run:
   pgbackrest-repo:
+  node-metrics:
+  prometheus-data:
+  alertmanager-data:
 
 networks:
   # Postgres and Redis are never reachable from outside the stack.

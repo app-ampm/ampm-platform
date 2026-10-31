@@ -9,4 +9,7 @@ RUN apt-get update \
 	&& apt-get install -y --no-install-recommends pgbackrest \
 	&& rm -rf /var/lib/apt/lists/*
 # The spool (archive-async) and the local repo live under directories pgBackRest owns as the postgres user.
-RUN install -d -o postgres -g postgres /var/spool/pgbackrest /var/lib/pgbackrest
+# /var/lib/node-metrics is the textfile directory the db-metrics collector (feature 6.7) writes; owned by
+# postgres here so the shared node-metrics volume is seeded with that ownership (the collector runs as the
+# postgres user), and node-exporter reads it read-only.
+RUN install -d -o postgres -g postgres /var/spool/pgbackrest /var/lib/pgbackrest /var/lib/node-metrics

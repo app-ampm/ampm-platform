@@ -177,22 +177,134 @@ services:
       - ../../caddy/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-data:/data
       - caddy-config:/config
-    networks: [edge]
+    networks:
+      # Alias so blackbox-exporter reaches the edge as the real hostname (right vhost + cert expiry).
+      edge:
+        aliases: ["${AMPM_DOMAIN}"]
     security_opt: ["no-new-privileges:true"]
     restart: unless-stopped
     deploy:
       resources:
         limits: { cpus: "0.25", memory: 256m }
 
+  # --- Monitoring and alerts (feature 6.7, D-054; vps-setup §7) ---------------------------------------
+  # Same stack as ../production/compose.yml (see its section note), with staging's smaller limits. Its own
+  # Prometheus + Alertmanager; the per-environment paging webhook (sops) decides how loudly staging pages.
+  node-exporter:
+    image: prom/node-exporter:v1.9.1
+    command:
+      - --path.procfs=/host/proc
+      - --path.sysfs=/host/sys
+      - --path.rootfs=/rootfs
+      - --collector.textfile.directory=/var/lib/node-metrics
+      - --collector.filesystem.mount-points-exclude=^/(dev|proc|sys|run|var/lib/docker/.+)($|/)
+      - --no-collector.wifi
+      - --web.listen-address=:9100
+    depends_on:
+      db-metrics: { condition: service_started }
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+      - node-metrics:/var/lib/node-metrics:ro
+    networks: [internal]
+    read_only: true
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits: { cpus: "0.2", memory: 96m }
+
+  blackbox-exporter:
+    image: prom/blackbox-exporter:v0.27.0
+    command: ["--config.file=/etc/blackbox/blackbox.yml"]
+    volumes:
+      - ../../monitoring/blackbox.yml:/etc/blackbox/blackbox.yml:ro
+    networks: [internal, edge]
+    read_only: true
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits: { cpus: "0.1", memory: 48m }
+
+  prometheus:
+    image: prom/prometheus:v3.15.1
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=15d
+      - --web.listen-address=:9090
+      - --web.external-url=http://localhost:9090
+    volumes:
+      - ../../monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ../../monitoring/rules:/etc/prometheus/rules:ro
+      # Edge-probe target rendered by deploy.sh; mounted as a dir so an unrendered target degrades safely.
+      - ./monitoring-targets:/etc/prometheus/targets:ro
+      - prometheus-data:/prometheus
+    ports: ["127.0.0.1:9090:9090"]
+    networks: [internal]
+    read_only: true
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits: { cpus: "0.4", memory: 512m }
+
+  alertmanager:
+    image: prom/alertmanager:v0.28.1
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --storage.path=/alertmanager
+      - --web.listen-address=:9093
+    volumes:
+      - ../../monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - ./monitoring-secrets:/etc/alertmanager/secrets:ro
+      - alertmanager-data:/alertmanager
+    networks: [internal, egress]
+    ports: ["127.0.0.1:9093:9093"]
+    read_only: true
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits: { cpus: "0.1", memory: 96m }
+
+  # Least privilege: dbmetrics.env holds ONLY DATABASE_URL + PGPASSWORD, not postgres.env's S3/cipher keys.
+  db-metrics:
+    image: ${AMPM_POSTGRES_IMAGE:?set AMPM_POSTGRES_IMAGE to the released postgres+pgbackrest image tag@sha256 digest (the deploy workflow sets it)}
+    user: postgres
+    depends_on:
+      postgres: { condition: service_healthy }
+    env_file:
+      - path: ./dbmetrics.env
+        required: false
+    volumes:
+      - pg-run:/var/run/postgresql
+      - node-metrics:/var/lib/node-metrics
+      - ../../monitoring/collect-metrics.sh:/usr/local/bin/collect-metrics.sh:ro
+    networks: [internal]
+    command: ["sh", "/usr/local/bin/collect-metrics.sh"]
+    read_only: true
+    tmpfs: ["/tmp"]
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits: { cpus: "0.2", memory: 96m }
+
 volumes:
   pgdata:
   pg-run:
   caddy-data:
   caddy-config:
+  node-metrics: # db-metrics writes here; node-exporter reads it (feature 6.7)
+  prometheus-data:
+  alertmanager-data:
 
 networks:
   internal: { internal: true }
   edge: {}
   # Outbound-only (no published ports -> no inbound): lets Postgres and pgBackRest reach the S3 backup
-  # repo, which the sealed-off `internal` network cannot.
+  # repo, which the sealed-off `internal` network cannot; Alertmanager joins it to POST pages out.
   egress: {}
