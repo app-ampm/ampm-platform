@@ -149,6 +149,21 @@ services:
       resources:
         limits: { cpus: "0.5", memory: 512m }
 
+  # The expand-only migration job (feature 6.6): the deploy runs it to completion BEFORE the new API
+  # starts (`docker compose --profile migrate run --rm migrate`). Not started by `up` (profile); one-shot
+  # (restart: no). Uses the app image + app.env (DATABASE_URL), run from apps/api so the schema resolves.
+  migrate:
+    <<: *app
+    command: ["node", "/repo/node_modules/.bin/prisma", "migrate", "deploy"]
+    working_dir: /repo/apps/api
+    environment:
+      NODE_ENV: production
+    depends_on:
+      postgres: { condition: service_healthy }
+    networks: [internal]
+    profiles: [migrate]
+    restart: "no"
+
   caddy:
     image: caddy:2-alpine
     depends_on: [api]
