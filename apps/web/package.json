@@ -11,9 +11,13 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@ampm/api-client": "workspace:*",
+    "@ampm/core": "workspace:*",
+    "@tanstack/react-query": "catalog:",
     "next": "16.4.3",
     "react": "catalog:",
-    "react-dom": "catalog:"
+    "react-dom": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@ampm/tokens": "workspace:*",
