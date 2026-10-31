@@ -29,6 +29,7 @@ JOURNAL_MAX_USE="${JOURNAL_MAX_USE:-500M}"
 DOCKER_LOG_MAX_SIZE="${DOCKER_LOG_MAX_SIZE:-20m}"
 DOCKER_LOG_MAX_FILE="${DOCKER_LOG_MAX_FILE:-5}"
 LOG_UPLOAD_URL="${LOG_UPLOAD_URL:-}"            # systemd-journal-upload target (feature 6.7); empty = installed, inactive
+BOOTSTRAP_REPO_URL="${BOOTSTRAP_REPO_URL:-}"    # optional: clone this repo to /opt/ampm for deploys (feature 6.6)
 DRY_RUN="${DRY_RUN:-}"
 
 export DEBIAN_FRONTEND=noninteractive
@@ -106,7 +107,7 @@ apt_base() {
 	# python3-systemd is only a Recommends of fail2ban but its systemd backend needs it, so install it
 	# explicitly (works even on images with Install-Recommends off).
 	run apt-get install -y -qq \
-		ca-certificates curl gnupg ufw fail2ban python3-systemd unattended-upgrades chrony logrotate
+		ca-certificates curl git gnupg ufw fail2ban python3-systemd unattended-upgrades chrony logrotate
 }
 
 setup_user() {
@@ -336,10 +337,32 @@ EOF
 	fi
 }
 
+# The deploy pipeline (feature 6.6) checks out the repo at /opt/ampm and runs infra/scripts/deploy.sh over
+# SSH, and the Compose files bind-mount config from that tree — so the host needs the repo there, owned by
+# the deploy user. Clone it when BOOTSTRAP_REPO_URL is given; otherwise the operator clones it once (see
+# infra/runbooks/deploy.md).
+setup_repo() {
+	if [[ -z "$BOOTSTRAP_REPO_URL" ]]; then
+		warn "BOOTSTRAP_REPO_URL unset — clone the deploy repo to /opt/ampm by hand (infra/runbooks/deploy.md)"
+		return 0
+	fi
+	log "deploy checkout at /opt/ampm"
+	if [[ -n "$DRY_RUN" ]]; then
+		printf '[dry-run] would clone %s to /opt/ampm owned by %s\n' "$BOOTSTRAP_REPO_URL" "$BOOTSTRAP_USER"
+		return 0
+	fi
+	if [[ ! -d /opt/ampm/.git ]]; then
+		install -d -o "$BOOTSTRAP_USER" -g "$BOOTSTRAP_USER" /opt/ampm
+		sudo -u "$BOOTSTRAP_USER" git clone "$BOOTSTRAP_REPO_URL" /opt/ampm
+	fi
+	chown -R "$BOOTSTRAP_USER:$BOOTSTRAP_USER" /opt/ampm
+}
+
 main() {
 	check_preconditions
 	apt_base
 	setup_user
+	setup_repo
 	harden_ssh
 	setup_firewall
 	install_docker
