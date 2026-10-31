@@ -13,7 +13,7 @@
 #   matrix        policy or the doc   regenerate packages/policy/src/generated and fail on drift
 #   tools         docs/tools changed  the redactor, memory-hook and checkpoint self-tests
 #   secrets-scan  always              refuse any committed plaintext secret (feature 6.4)
-#   infra         infra changed       shellcheck + Compose/Caddy/monitoring validation + two stack smokes (heavy)
+#   infra         infra changed       shellcheck + Compose/Caddy/monitoring validation + three stack smokes (heavy)
 # `ci-ok` is a single stable status (green when every job that ran passed; skipped jobs are fine) so
 # branch protection can require one check regardless of which jobs a given change triggers.
 name: CI
@@ -323,9 +323,9 @@ jobs:
     needs: changes
     if: ${{ needs.changes.outputs.infra == 'true' }}
     runs-on: ubuntu-latest
-    # Two smokes build both images and run the stack (app+edge+backups, then monitoring), so this is
-    # heavier than a config check.
-    timeout-minutes: 35
+    # Three smokes build images and run the stack (app+edge+backups, monitoring, then backup→restore), so
+    # this is heavier than a config check.
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v7
       # Lint every infra shell script (feature 6.5 requires bootstrap.sh shellcheck-green). shellcheck is
@@ -373,6 +373,11 @@ jobs:
       # layers are cached from the smoke above, so this build is fast.
       - name: Smoke the monitoring stack
         run: sh infra/scripts/smoke-monitoring.sh
+      # Prove the full backup -> restore cycle (feature 6.8): back up, DESTROY the PGDATA volume, restore
+      # from the repo with point-in-time recovery, and verify a post-backup commit survived (WAL replay)
+      # while a post-target commit was excluded. The capstone proving 6.3's backups are actually restorable.
+      - name: Smoke the backup/restore cycle
+        run: sh infra/scripts/smoke-restore.sh
 
   # One required status for branch protection: green when every job that ran passed. Skipped jobs are
   # expected (that is the whole point), so only failure/cancellation fails the gate. `needs.*.result`
