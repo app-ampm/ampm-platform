@@ -98,3 +98,24 @@ export type SubscriptionListQuery = z.infer<typeof subscriptionListQuery>;
 
 export const subscriptionPage = page(subscriptionView);
 export type SubscriptionPage = z.infer<typeof subscriptionPage>;
+
+/**
+ * The client self-purchase (CP-11 portal): a signed-in client buys a plan for their own account. The
+ * account is derived from the principal server-side (never the body), so the request carries only the
+ * plan; the response is the same gateway order the staff purchase returns.
+ */
+export const portalSubscriptionCreateRequest = z.object({ planId: uuid }).strict();
+export type PortalSubscriptionCreateRequest = z.infer<typeof portalSubscriptionCreateRequest>;
+
+/**
+ * Development-only: complete the stub gateway payment for a pending subscription, running the real
+ * activation (no Razorpay UI). Refused unless PAYMENT_PROVIDER is the stub and NODE_ENV is not production.
+ */
+export const devCompletePaymentRequest = z.object({ subscriptionId: uuid }).strict();
+export type DevCompletePaymentRequest = z.infer<typeof devCompletePaymentRequest>;
+
+export const devCompletePaymentResponse = z.object({
+  subscriptionId: uuid,
+  status: subscriptionStatus,
+});
+export type DevCompletePaymentResponse = z.infer<typeof devCompletePaymentResponse>;

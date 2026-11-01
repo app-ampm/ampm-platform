@@ -6,8 +6,9 @@ import { ENV, type Env } from "../env.js";
 import { LocalIdentityAdapter } from "./local.adapter.js";
 
 /**
- * Development sign-in (feature TW-11 demo). Exchanges a seeded, active staff user's email for a freshly
- * minted local access token, so the Sales workspace signs in against the real API without Cognito.
+ * Development sign-in (features TW-11 + CP-11 demo). Exchanges a seeded, active staff or client user's
+ * email for a freshly minted local access token, so the Sales workspace and the client portal sign in
+ * against the real API without Cognito.
  *
  * Fail-closed: refused unless the local identity provider is active AND NODE_ENV is not production (and
  * the local secret is set). `env.ts` already refuses `IDENTITY_PROVIDER=local` in production, so there
@@ -29,8 +30,9 @@ export class DevLoginService {
       throw errors.notFound();
     }
     // email is not unique (a soft-deleted row may share it): findFirst, never findUnique.
+    // Staff sign into the Sales workspace; an active client signs into the portal (both dev-only).
     const user = await this.prisma.user.findFirst({
-      where: { email, userType: "staff", status: "active", deletedAt: null },
+      where: { email, userType: { in: ["staff", "client"] }, status: "active", deletedAt: null },
       select: { id: true, name: true, email: true, identitySubject: true },
     });
     if (!user?.identitySubject) {

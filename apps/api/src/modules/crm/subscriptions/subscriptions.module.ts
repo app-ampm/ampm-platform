@@ -17,6 +17,8 @@ import { PaymentsRepository } from "./payments.repository.js";
 import { PlansController } from "./plans.controller.js";
 import { PlansRepository } from "./plans.repository.js";
 import { PlansService } from "./plans.service.js";
+import { PortalController } from "./portal.controller.js";
+import { PortalService } from "./portal.service.js";
 import { SubscriptionActivationService } from "./subscription-activation.service.js";
 import { SubscriptionExpiryService } from "./subscription-expiry.service.js";
 import { SubscriptionsController } from "./subscriptions.controller.js";
@@ -34,12 +36,18 @@ import { WebhookEventsRepository } from "./webhook-events.repository.js";
  */
 @Module({
   imports: [NotificationModule, PolicyModule, ConfigModule],
-  controllers: [PlansController, SubscriptionsController, PaymentWebhookController],
+  controllers: [
+    PlansController,
+    SubscriptionsController,
+    PaymentWebhookController,
+    PortalController,
+  ],
   providers: [
     PlansService,
     PlansRepository,
     SubscriptionsService,
     SubscriptionsRepository,
+    PortalService,
     SubscriptionActivationService,
     SubscriptionExpiryService,
     PaymentsRepository,

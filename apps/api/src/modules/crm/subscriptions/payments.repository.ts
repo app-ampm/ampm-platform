@@ -100,6 +100,21 @@ export class PaymentsRepository {
     await client.payment.update({ where: { id }, data: { status: "succeeded", paidAt } });
   }
 
+  /** The gateway order reference recorded for a subscription's purchase — the dev stub completion anchor. */
+  async gatewayRefForSubscription(subscriptionId: string): Promise<string | null> {
+    const payment = await this.prisma.payment.findFirst({
+      where: {
+        relatedType: "subscription",
+        relatedId: subscriptionId,
+        method: "gateway",
+        deletedAt: null,
+      },
+      orderBy: { createdAt: "desc" },
+      select: { providerRef: true },
+    });
+    return payment?.providerRef ?? null;
+  }
+
   async markFailed(id: string, client: Prisma.TransactionClient): Promise<void> {
     await client.payment.update({ where: { id }, data: { status: "failed" } });
   }
