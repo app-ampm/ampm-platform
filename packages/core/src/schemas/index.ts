@@ -195,3 +195,25 @@ export type {
   LeadUpdateRequest,
   LeadView,
 } from "./leads";
+export {
+  accountClientView,
+  accountContactView,
+  accountDetailView,
+  accountListQuery,
+  accountPage,
+  accountView,
+  clientAccountStatus,
+  leadConvertRequest,
+  leadConvertResponse,
+} from "./accounts";
+export type {
+  AccountClientView,
+  AccountContactView,
+  AccountDetailView,
+  AccountListQuery,
+  AccountPage,
+  AccountView,
+  ClientAccountStatus,
+  LeadConvertRequest,
+  LeadConvertResponse,
+} from "./accounts";

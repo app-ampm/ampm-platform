@@ -140,6 +140,14 @@ enum LeadActivityType {
   note
 }
 
+/// The account lifecycle after a lead converts (feature 8.2); labels are configuration (data.md).
+enum ClientAccountStatus {
+  prospect
+  active
+  suspended
+  closed
+}
+
 /// Staff, client and demo accounts. Credentials live in the identity service (Cognito, T-6): the
 /// API keeps the identity subject that maps a verified token to this row; it never stores a password.
 model User {
@@ -173,6 +181,8 @@ model User {
   sessions      Session[]
   leadsOwned     Lead[]
   leadActivities LeadActivity[]
+  clientAccountsPrimary ClientAccount[]
+  accountContacts       AccountContact[]
 
   @@index([userType, status])
   @@index([deletedAt])
@@ -581,7 +591,8 @@ model Lead {
   consentNoticeVersion String?            @map("consent_notice_version") @db.VarChar(32)
   requestedDemo        Boolean            @default(false) @map("requested_demo")
   ownerUserId          String?            @map("owner_user_id") @db.Uuid
-  /// Gains its relation when client_accounts lands (feature 8.2); set by the system on conversion.
+  /// Denormalised pointer to the account this lead became, set by the convert action (feature 8.2)
+  /// for the lead's read model; the navigable relation is `convertedAccount` (client_accounts.lead_id).
   convertedAccountId   String?            @map("converted_account_id") @db.Uuid
   convertedAt          DateTime?          @map("converted_at") @db.Timestamptz(6)
   closedReason         String?            @map("closed_reason") @db.VarChar(255)
@@ -600,6 +611,7 @@ model Lead {
   duplicateOf Lead?          @relation("LeadDuplicate", fields: [duplicateOfLeadId], references: [id])
   duplicates  Lead[]         @relation("LeadDuplicate")
   activities  LeadActivity[]
+  convertedAccount ClientAccount?
 
   @@index([status])
   @@index([sourceId])
@@ -637,4 +649,67 @@ model LeadActivity {
   @@index([userId])
   @@index([deletedAt])
   @@map("lead_activities")
+}
+
+/// The subscriber/client account a lead converts into (feature 8.2, AC-01.8). Created as `prospect`;
+/// becomes `active` when a subscription is paid (feature 8.3). Billing fields are RESTRICTED-BANK and
+/// `internal_notes` is RESTRICTED-NOTES (field-matrix §4): neither is ever serialised to a client.
+/// Never hard-deleted — retention is a Super-Admin-approved proposal (Q17/AC-27).
+model ClientAccount {
+  id                   String              @id @default(uuid(7)) @db.Uuid
+  name                 String              @db.VarChar(255)
+  coupleNames          String?             @map("couple_names") @db.VarChar(255)
+  preferredLocations   String?             @map("preferred_locations") @db.Text
+  isDemo               Boolean             @default(false) @map("is_demo")
+  status               ClientAccountStatus @default(prospect)
+  primaryContactUserId String?             @map("primary_contact_user_id") @db.Uuid
+  /// Unique, so a lead converts into at most one account; owns the lead<->account relation.
+  leadId               String?             @unique @map("lead_id") @db.Uuid
+  billingName          String?             @map("billing_name") @db.VarChar(255)
+  billingAddress       String?             @map("billing_address") @db.Text
+  gstin                String?             @db.VarChar(15)
+  internalNotes        String?             @map("internal_notes") @db.Text
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  lead           Lead?            @relation(fields: [leadId], references: [id])
+  primaryContact User?            @relation(fields: [primaryContactUserId], references: [id])
+  contacts       AccountContact[]
+
+  @@index([status])
+  @@index([primaryContactUserId])
+  @@index([deletedAt])
+  @@map("client_accounts")
+}
+
+/// A person attached to a client account: the primary contact at conversion (feature 8.2), more at
+/// project setup. `user_id` is set when a client login is created for the contact (the invited user).
+/// Every field is CLIENT-class (field-matrix §4).
+model AccountContact {
+  id              String  @id @default(uuid(7)) @db.Uuid
+  accountId       String  @map("account_id") @db.Uuid
+  name            String  @db.VarChar(255)
+  relation        String  @db.VarChar(255)
+  phone           String? @db.VarChar(32)
+  email           String? @db.VarChar(255)
+  isDecisionMaker Boolean @default(false) @map("is_decision_maker")
+  userId          String? @map("user_id") @db.Uuid
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  account ClientAccount @relation(fields: [accountId], references: [id])
+  user    User?         @relation(fields: [userId], references: [id])
+
+  @@index([accountId])
+  @@index([userId])
+  @@index([deletedAt])
+  @@map("account_contacts")
 }

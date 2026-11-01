@@ -238,6 +238,25 @@ export class LeadsRepository {
     });
   }
 
+  /** Mark a lead converted and point it at its new account; runs inside the convert transaction (8.2).
+   *  The lead is read-only afterwards (the service guards every mutator on `status === "converted"`). */
+  markConverted(
+    leadId: string,
+    accountId: string,
+    actorId: string,
+    client: Prisma.TransactionClient,
+  ): Promise<unknown> {
+    return client.lead.update({
+      where: { id: leadId },
+      data: {
+        status: "converted",
+        convertedAccountId: accountId,
+        convertedAt: new Date(),
+        updatedBy: actorId,
+      },
+    });
+  }
+
   async salesRecipientIds(): Promise<string[]> {
     const users = await this.prisma.user.findMany({
       where: {
