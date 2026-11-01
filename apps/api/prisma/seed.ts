@@ -230,6 +230,38 @@ async function seedLeadSources(): Promise<void> {
   }
 }
 
+/**
+ * The v1 subscription catalogue (feature 8.3): the Hotel Discovery plan, Rs 50,000 one-time for one
+ * month, granting hotel discovery and hotel assistance. The price is data in the `plans` reference
+ * table, never a code literal (AC-02.9/AC-25.4) — the seed is the one place a currency amount appears.
+ */
+async function seedPlans(): Promise<void> {
+  const plan = await prisma.plan.upsert({
+    where: { planKey: "discovery" },
+    update: {},
+    create: {
+      planKey: "discovery",
+      name: "Hotel Discovery",
+      planType: "hotel_discovery",
+      billingType: "one_time",
+      priceAmount: new Prisma.Decimal("50000.00"),
+      currency: "INR",
+      termDays: 30,
+      isDemo: false,
+      status: "active",
+      termsVersion: "2026-11",
+    },
+    select: { id: true },
+  });
+  for (const moduleKey of ["hotel_discovery", "hotel_assistance"]) {
+    await prisma.planModule.upsert({
+      where: { planId_moduleKey: { planId: plan.id, moduleKey } },
+      update: { accessLevel: "full" },
+      create: { planId: plan.id, moduleKey, accessLevel: "full" },
+    });
+  }
+}
+
 async function main(): Promise<void> {
   const roleIds = await seedRoles();
   await seedStaff(roleIds);
@@ -238,6 +270,7 @@ async function main(): Promise<void> {
   await upsertDemoUser(prisma);
   await seedConfigurations();
   await seedLeadSources();
+  await seedPlans();
   await seedGrantableCapabilities();
   console.log(
     "seeded roles, permissions, six synthetic accounts, the baseline configuration " +

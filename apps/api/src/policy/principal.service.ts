@@ -11,6 +11,7 @@ import {
 
 import { AppLogger } from "../common/logger.service.js";
 import { ENV, type Env } from "../env.js";
+import type { SubscriptionStatus } from "../generated/prisma/client.js";
 import type { VerifiedIdentity } from "../identity/identity.types.js";
 import { EntitlementCache } from "./entitlement.cache.js";
 import { PrincipalRepository, type PrincipalRecord } from "./principal.repository.js";
@@ -64,7 +65,7 @@ export class PrincipalService {
       const resolvedGrants = await this.customGrantsFor(record.id, customRoleIds);
       return { type: "staff", roles, resolvedGrants, ...base };
     }
-    const entitlements = this.entitlementsFor(record);
+    const entitlements = await this.entitlementsFor(record);
     return { type: record.userType, entitlements, ...base };
   }
 
@@ -98,21 +99,45 @@ export class PrincipalService {
     return grants.size > 0 ? grants : undefined;
   }
 
-  private entitlementsFor(record: PrincipalRecord): Entitlements {
+  private async entitlementsFor(record: PrincipalRecord): Promise<Entitlements> {
     const cached = this.entitlements.get(record.id);
     if (cached) return cached;
-    // Subscriptions and agreements arrive with module B; until then membership is the only source.
-    // A project's status (on hold, closed within the window) lives in wedding_projects, which
-    // arrives with module E: until then no membership can be on hold or closed, so an active one
-    // is an active project. Derive the strongest project state here when that table exists.
+    // The subscription dimension now comes from module B (feature 8.3): a client's account subscription
+    // status. Agreements still await module C/D. A project's status (on hold, closed) lives in
+    // wedding_projects (module E); until then an active membership is an active project.
+    const subscription =
+      record.userType === "client"
+        ? effectiveSubscription(await this.repository.accountSubscriptionStatuses(record.id))
+        : "none";
     const entitlements = resolveClientEntitlements({
       isDemo: record.userType === "demo",
       suspended: false,
-      subscription: "none",
+      subscription,
       hotelAssistanceAgreement: false,
       project: record.memberships.length > 0 ? "active" : "none",
     });
     this.entitlements.set(record.id, entitlements);
     return entitlements;
   }
+}
+
+/** The subscription state the entitlement engine reads (permission-matrix §3). */
+type SubscriptionEntitlementState =
+  "none" | "active" | "expired" | "cancelled" | "suspended" | "trial";
+
+/**
+ * Reduce an account's subscription rows to the single state §3 scores. An active (or expiring, still
+ * within term) subscription grants its modules; a lapsed one (expired/cancelled/suspended) keeps only
+ * the read-only lapsed set; a `pending_payment` (unpaid) or no subscription grants nothing (AC-02.3).
+ * A renewal is a new row, so the strongest state across the account's subscriptions wins (AC-02.11).
+ */
+function effectiveSubscription(
+  statuses: readonly SubscriptionStatus[],
+): SubscriptionEntitlementState {
+  if (statuses.some((status) => status === "active" || status === "expiring")) return "active";
+  if (statuses.includes("trial")) return "trial";
+  if (statuses.includes("suspended")) return "suspended";
+  if (statuses.includes("cancelled")) return "cancelled";
+  if (statuses.includes("expired")) return "expired";
+  return "none";
 }
