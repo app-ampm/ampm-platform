@@ -70,8 +70,8 @@ export type {
   SessionIdleTimeouts,
   SubscriptionPolicy,
 } from "./config";
-export { activateRequest, activateResponse } from "./auth";
-export type { ActivateRequest, ActivateResponse } from "./auth";
+export { activateRequest, activateResponse, devLoginRequest, devLoginResponse } from "./auth";
+export type { ActivateRequest, ActivateResponse, DevLoginRequest, DevLoginResponse } from "./auth";
 export {
   clientLoginCreateRequest,
   clientLoginList,
