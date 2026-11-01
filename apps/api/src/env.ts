@@ -54,6 +54,14 @@ const fields = z.object({
   EMAIL_FROM: z.string().min(1).default("AMPM <no-reply@localhost>"),
   /** Trusted proxy hops (Caddy) so `req.ip` is the real client for rate limits and audit; 0 trusts none. */
   TRUST_PROXY: z.coerce.number().int().min(0).default(0),
+  /**
+   * The public-form bot check (C1, security.md). `stub` accepts any non-empty token — development and
+   * staging only; production is refused below. `siteverify` posts the token to a provider's verify
+   * endpoint (Cloudflare Turnstile / reCAPTCHA share the shape), with the URL and secret below.
+   */
+  BOT_CHECK_PROVIDER: z.enum(["stub", "siteverify"]).default("stub"),
+  BOT_CHECK_URL: z.string().url().optional(),
+  BOT_CHECK_SECRET: z.string().min(1).optional(),
 });
 
 type EnvFields = z.infer<typeof fields>;
@@ -137,6 +145,35 @@ function jobIssues(value: EnvFields): EnvIssue[] {
   return [];
 }
 
+/**
+ * Bot check: production must use a real provider, not the accept-anything stub (C1); the siteverify
+ * provider needs its verify URL and secret. Without this guard a no-op bot check ships to production.
+ */
+function botCheckIssues(value: EnvFields): EnvIssue[] {
+  const issues: EnvIssue[] = [];
+  if (value.NODE_ENV === "production" && value.BOT_CHECK_PROVIDER === "stub") {
+    issues.push({
+      path: ["BOT_CHECK_PROVIDER"],
+      message: "the stub bot check (accepts any token) is refused in production; use siteverify",
+    });
+  }
+  if (value.BOT_CHECK_PROVIDER === "siteverify") {
+    if (!value.BOT_CHECK_URL) {
+      issues.push({
+        path: ["BOT_CHECK_URL"],
+        message: "required when BOT_CHECK_PROVIDER is siteverify",
+      });
+    }
+    if (!value.BOT_CHECK_SECRET) {
+      issues.push({
+        path: ["BOT_CHECK_SECRET"],
+        message: "required when BOT_CHECK_PROVIDER is siteverify",
+      });
+    }
+  }
+  return issues;
+}
+
 /** Behind Caddy in production, `req.ip` must be the real client, so an untrusted proxy is refused. */
 function proxyIssues(value: EnvFields): EnvIssue[] {
   if (value.NODE_ENV === "production" && value.TRUST_PROXY === 0) {
@@ -157,6 +194,7 @@ const schema = fields.superRefine((value, ctx) => {
     ...identityIssues(value),
     ...deliveryIssues(value),
     ...jobIssues(value),
+    ...botCheckIssues(value),
     ...proxyIssues(value),
   ]) {
     ctx.addIssue({ code: "custom", path: issue.path, message: issue.message });

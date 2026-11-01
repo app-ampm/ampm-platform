@@ -15,20 +15,13 @@ import {
 } from "@ampm/core";
 
 import { PrismaService } from "../../../db/prisma.service.js";
+import { Prisma } from "../../../generated/prisma/client.js";
 import { AuditService } from "../../../policy/audit.service.js";
 import { LeadActivitiesRepository } from "./lead-activities.repository.js";
 import { LeadsRepository, type LeadRow, type LeadUpdatePatch } from "./leads.repository.js";
 import { CLOSED_LEAD_STATUSES, PRIVACY_NOTICE_VERSION } from "./lead-constants.js";
+import { isLeadTransitionAllowed, isTerminalLead, OWNED_STATUSES } from "./lead-status.js";
 import { toActivityView, toLeadView } from "./leads.view.js";
-
-/** Past `new`, a lead must have an owner to receive follow-up reminders (field-matrix leads.owner_user_id). */
-const OWNED_STATUSES: readonly LeadStatus[] = [
-  "contacted",
-  "introduction_shared",
-  "demo_offered",
-  "demo_accessed",
-  "follow_up",
-];
 
 /**
  * The Sales lead workspace (TW-10/TW-11). Reads are gated by `crm.leads.read`, writes by
@@ -71,6 +64,7 @@ export class LeadsService {
   async create(request: LeadCreateRequest, actorId: string): Promise<LeadView> {
     const source = await this.leads.findActiveSourceByKey(request.source);
     if (!source) throw errors.validation([{ path: "source", message: "Unknown lead source" }]);
+    if (request.ownerUserId != null) await this.assertOwnerIsActiveStaff(request.ownerUserId);
     const leadId = await this.leads.create({
       sourceId: source.id,
       status: "new",
@@ -97,20 +91,27 @@ export class LeadsService {
 
   async update(leadId: string, request: LeadUpdateRequest, actorId: string): Promise<LeadView> {
     const current = await this.require(leadId);
-    if (current.status === "converted") throw errors.conflict("A converted lead is read-only");
+    this.assertEditable(current);
     if (request.status === "converted") {
       throw errors.validation([
         { path: "status", message: "Convert a lead through the convert action" },
       ]);
     }
+    this.assertTransitionAllowed(current, request.status);
     this.guardTransition(current, request);
-    await this.leads.update(leadId, buildPatch(request), actorId);
+    this.assertContactable(current, request);
+    this.assertDateOrder(current, request);
+    if (request.ownerUserId != null) await this.assertOwnerIsActiveStaff(request.ownerUserId);
+    await this.prisma.$transaction(async (tx) => {
+      await this.leads.update(leadId, buildPatch(request), actorId, tx);
+      await this.auditChange(leadId, current, request, tx);
+    });
     return this.get(leadId);
   }
 
   async assign(leadId: string, ownerUserId: string | null, actorId: string): Promise<LeadView> {
     const current = await this.require(leadId);
-    if (current.status === "converted") throw errors.conflict("A converted lead is read-only");
+    this.assertEditable(current);
     if (ownerUserId === null && OWNED_STATUSES.includes(current.status)) {
       // Clearing the owner here would orphan the lead and silence its reminders — the same invariant
       // update() guards (field-matrix leads.owner_user_id: required before status `contacted`).
@@ -118,7 +119,21 @@ export class LeadsService {
         { path: "ownerUserId", message: "Keep an owner while the lead is past new" },
       ]);
     }
-    await this.leads.update(leadId, { ownerUserId }, actorId);
+    if (ownerUserId !== null) await this.assertOwnerIsActiveStaff(ownerUserId);
+    await this.prisma.$transaction(async (tx) => {
+      await this.leads.update(leadId, { ownerUserId }, actorId, tx);
+      await this.audit.record(
+        {
+          action: "update",
+          entityType: "lead",
+          entityId: leadId,
+          before: { ownerUserId: current.ownerUserId },
+          after: { ownerUserId },
+          maskImages: false,
+        },
+        tx,
+      );
+    });
     return this.get(leadId);
   }
 
@@ -128,7 +143,7 @@ export class LeadsService {
     userId: string,
   ): Promise<LeadActivityView> {
     const current = await this.require(leadId);
-    if (current.status === "converted") throw errors.conflict("A converted lead is read-only");
+    this.assertEditable(current);
     const row = await this.activities.create(
       {
         leadId,
@@ -198,6 +213,83 @@ export class LeadsService {
     }
   }
 
+  /** A closed or converted lead is terminal — no edit, owner change, activity or reopen (C3, AC-01.8). */
+  private assertEditable(current: LeadRow): void {
+    if (isTerminalLead(current.status)) {
+      throw errors.conflict(`A ${current.status} lead is read-only`);
+    }
+  }
+
+  /** Refuses a status move the lead's lifecycle does not allow (C3); a 409, not a silent any-to-any jump. */
+  private assertTransitionAllowed(current: LeadRow, nextStatus: LeadStatus | undefined): void {
+    if (nextStatus === undefined) return;
+    if (!isLeadTransitionAllowed(current.status, nextStatus)) {
+      throw errors.conflict(`A lead cannot move from ${current.status} to ${nextStatus}`);
+    }
+  }
+
+  /** The merged lead must still be reachable: an update may not remove its last email/phone (C7, AC-01.3). */
+  private assertContactable(current: LeadRow, request: LeadUpdateRequest): void {
+    const email = request.email !== undefined ? request.email : current.email;
+    const phone = request.phone !== undefined ? request.phone : current.phone;
+    if (!email && !phone) {
+      throw errors.validation([
+        { path: "email", message: "A lead must keep an email or a phone number" },
+      ]);
+    }
+  }
+
+  /** The merged tentative dates must not run backwards, as the create schema enforces (C7). */
+  private assertDateOrder(current: LeadRow, request: LeadUpdateRequest): void {
+    const from = mergedDate(request.tentativeDateFrom, current.tentativeDateFrom);
+    const to = mergedDate(request.tentativeDateTo, current.tentativeDateTo);
+    if (from && to && to.getTime() < from.getTime()) {
+      throw errors.validation([
+        { path: "tentativeDateTo", message: "The end date is before the start date" },
+      ]);
+    }
+  }
+
+  /** A lead may be owned only by a live, active staff member; an unknown or inactive id is a 400 (C4). */
+  private async assertOwnerIsActiveStaff(ownerUserId: string): Promise<void> {
+    if (!(await this.leads.isActiveStaff(ownerUserId))) {
+      throw errors.validation([
+        { path: "ownerUserId", message: "The owner must be an active staff member" },
+      ]);
+    }
+  }
+
+  /** Records the before/after of the governed fields of an edit (owner, status, reason, name) (A4, C6). */
+  private async auditChange(
+    leadId: string,
+    current: LeadRow,
+    request: LeadUpdateRequest,
+    tx: Prisma.TransactionClient,
+  ): Promise<void> {
+    await this.audit.record(
+      {
+        action: "update",
+        entityType: "lead",
+        entityId: leadId,
+        before: {
+          status: current.status,
+          ownerUserId: current.ownerUserId,
+          closedReason: current.closedReason,
+          name: current.name,
+        },
+        after: {
+          status: request.status ?? current.status,
+          ownerUserId:
+            request.ownerUserId !== undefined ? request.ownerUserId : current.ownerUserId,
+          closedReason: request.closedReason ?? current.closedReason,
+          name: request.name ?? current.name,
+        },
+        maskImages: false,
+      },
+      tx,
+    );
+  }
+
   private async decorate(rows: LeadRow[]): Promise<LeadView[]> {
     const followUps = await this.activities.nextFollowUpByLead(rows.map((row) => row.id));
     return rows.map((row) => {
@@ -238,4 +330,10 @@ function buildPatch(request: LeadUpdateRequest): LeadUpdatePatch {
 
 function toDate(value: string | null | undefined): Date | null {
   return value ? new Date(value) : null;
+}
+
+/** The effective value of a date field after a patch: the request's when present, else the current row's. */
+function mergedDate(patched: string | null | undefined, current: Date | null): Date | null {
+  if (patched === undefined) return current;
+  return patched ? new Date(patched) : null;
 }
