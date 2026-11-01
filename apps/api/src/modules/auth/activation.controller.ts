@@ -1,19 +1,33 @@
 import { Controller, Headers, HttpCode, Post } from "@nestjs/common";
-import { activateRequest, errors, type ActivateRequest, type ActivateResponse } from "@ampm/core";
+import {
+  activateRequest,
+  devLoginRequest,
+  errors,
+  type ActivateRequest,
+  type ActivateResponse,
+  type DevLoginRequest,
+  type DevLoginResponse,
+} from "@ampm/core";
 
 import { RateLimit } from "../../common/rate-limit/rate-limit.decorator.js";
 import { ZodBody } from "../../common/zod.js";
-import { Public, SelfAudited } from "../../policy/decorators.js";
+import { AuditExempt, Public, SelfAudited } from "../../policy/decorators.js";
 import { ActivationService } from "../../identity/activation.service.js";
+import { DevLoginService } from "../../identity/dev-login.service.js";
 
 /**
- * Invitation activation (Module A, feature 5.2). Public because the activating user has no linked
- * identity yet, so the principal-resolving guard would reject them; the handler verifies the provider
- * access token itself (via ActivationService → IdentityAdapter) and the invite token. Self-audits.
+ * The public auth flows the API owns. `activate` (Module A, feature 5.2) is public because the
+ * activating user has no linked identity yet; it verifies the provider access token and the invite
+ * token itself and self-audits. `dev-login` (feature TW-11 demo) is a dev-only local sign-in: it mints
+ * a token for a seeded staff account so the Sales workspace can authenticate without Cognito, and is
+ * refused outside a local, non-production config (DevLoginService).
  */
 @Controller("auth")
 export class ActivationController {
-  constructor(private readonly activation: ActivationService) {}
+  constructor(
+    private readonly activation: ActivationService,
+    private readonly devLogin: DevLoginService,
+  ) {}
 
   @Post("activate")
   @Public()
@@ -29,5 +43,16 @@ export class ActivationController {
       throw errors.unauthenticated("A provider access token is required to activate");
     }
     return this.activation.activate(body.token, token);
+  }
+
+  @Post("dev-login")
+  @Public()
+  @RateLimit({ name: "auth.dev_login", limit: 10, windowMs: 60_000 })
+  @HttpCode(200)
+  @AuditExempt(
+    "dev-only local sign-in; mints a token for an existing active staff account and writes nothing; the API refuses it unless IDENTITY_PROVIDER=local and NODE_ENV is not production",
+  )
+  devLoginHandler(@ZodBody(devLoginRequest) body: DevLoginRequest): Promise<DevLoginResponse> {
+    return this.devLogin.signIn(body.email);
   }
 }
