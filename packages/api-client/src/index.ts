@@ -16,3 +16,6 @@ export { leadQueryKey, useLead } from "./hooks/use-lead";
 export { useLeadActivities } from "./hooks/use-lead-activities";
 export { useConvertLead } from "./hooks/use-convert-lead";
 export { useDevLogin } from "./hooks/use-dev-login";
+export { PLANS_QUERY_KEY, usePlans } from "./hooks/use-plans";
+export { usePortalSubscribe } from "./hooks/use-portal-subscribe";
+export { useCompletePayment } from "./hooks/use-complete-payment";

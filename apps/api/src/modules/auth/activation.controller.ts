@@ -50,7 +50,7 @@ export class ActivationController {
   @RateLimit({ name: "auth.dev_login", limit: 10, windowMs: 60_000 })
   @HttpCode(200)
   @AuditExempt(
-    "dev-only local sign-in; mints a token for an existing active staff account and writes nothing; the API refuses it unless IDENTITY_PROVIDER=local and NODE_ENV is not production",
+    "dev-only local sign-in; mints a token for an existing active staff or client account and writes nothing; the API refuses it unless IDENTITY_PROVIDER=local and NODE_ENV is not production",
   )
   devLoginHandler(@ZodBody(devLoginRequest) body: DevLoginRequest): Promise<DevLoginResponse> {
     return this.devLogin.signIn(body.email);

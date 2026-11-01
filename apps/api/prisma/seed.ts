@@ -170,6 +170,45 @@ async function seedClient(): Promise<void> {
   });
 }
 
+/**
+ * An active prospect client for the portal demo (CP-11): an account-contact on a prospect account with
+ * NO subscription and NO project membership, so their entitlements start empty (hotel discovery locked)
+ * and the subscription purchase is what opens it. Distinct from Rhea, whose project membership already
+ * grants project-scoped discovery.
+ */
+async function seedPortalDemoClient(): Promise<void> {
+  const user = await upsertAccount(
+    { email: "prospect@example.com", name: "Prasad Prospect", subject: "local:prospect" },
+    { userType: "client", phone: "+911234567010" },
+  );
+  const account = await prisma.clientAccount.upsert({
+    where: { id: "0192f3a0-7d3e-7b1a-9c2f-0000000000c1" },
+    update: { primaryContactUserId: user.id },
+    create: {
+      id: "0192f3a0-7d3e-7b1a-9c2f-0000000000c1",
+      name: "Prasad & Partner",
+      status: "prospect",
+      primaryContactUserId: user.id,
+      createdBy: user.id,
+    },
+    select: { id: true },
+  });
+  await prisma.accountContact.upsert({
+    where: { id: "0192f3a0-7d3e-7b1a-9c2f-0000000000c2" },
+    update: { userId: user.id },
+    create: {
+      id: "0192f3a0-7d3e-7b1a-9c2f-0000000000c2",
+      accountId: account.id,
+      name: user.name,
+      relation: "self",
+      email: user.email,
+      isDecisionMaker: true,
+      userId: user.id,
+      createdBy: user.id,
+    },
+  });
+}
+
 /** The baseline configuration rows from the registry; the Super Admin edits them later. */
 async function seedConfigurations(): Promise<void> {
   for (const [configKey, { default: value }] of Object.entries(CONFIG_REGISTRY)) {
@@ -266,6 +305,7 @@ async function main(): Promise<void> {
   const roleIds = await seedRoles();
   await seedStaff(roleIds);
   await seedClient();
+  await seedPortalDemoClient();
   // The canonical demo account, defined once in the demo baseline the nightly restore also rebuilds (5.5).
   await upsertDemoUser(prisma);
   await seedConfigurations();
@@ -273,7 +313,7 @@ async function main(): Promise<void> {
   await seedPlans();
   await seedGrantableCapabilities();
   console.log(
-    "seeded roles, permissions, six synthetic accounts, the baseline configuration " +
+    "seeded roles, permissions, seven synthetic accounts, the baseline configuration " +
       `and ${GRANTABLE_CAPABILITIES.length} grantable capabilities`,
   );
 }

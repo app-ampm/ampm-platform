@@ -237,6 +237,9 @@ export type {
 } from "./plans";
 export {
   activationSource,
+  devCompletePaymentRequest,
+  devCompletePaymentResponse,
+  portalSubscriptionCreateRequest,
   subscriptionClientView,
   subscriptionCreateRequest,
   subscriptionCreateResponse,
@@ -248,6 +251,9 @@ export {
 } from "./subscriptions";
 export type {
   ActivationSource,
+  DevCompletePaymentRequest,
+  DevCompletePaymentResponse,
+  PortalSubscriptionCreateRequest,
   SubscriptionClientView,
   SubscriptionCreateRequest,
   SubscriptionCreateResponse,
