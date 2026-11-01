@@ -10,6 +10,7 @@ import { ClientLoginsModule } from "./modules/admin/client-logins/client-logins.
 import { ConfigModule } from "./modules/admin/config/config.module.js";
 import { NotificationModule } from "./modules/admin/notification/notification.module.js";
 import { CrmModule } from "./modules/crm/crm.module.js";
+import { SubscriptionsModule } from "./modules/crm/subscriptions/subscriptions.module.js";
 import { DemoModule } from "./modules/demo/demo.module.js";
 import { PermissionSetsModule } from "./modules/admin/permission-sets/permission-sets.module.js";
 import { RolesModule } from "./modules/admin/roles/roles.module.js";
@@ -38,6 +39,7 @@ import { PolicyModule } from "./policy/policy.module.js";
     StaffUsersModule,
     ClientLoginsModule,
     CrmModule,
+    SubscriptionsModule,
     DemoModule,
     SpikeModule,
   ],

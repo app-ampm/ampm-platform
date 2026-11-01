@@ -148,6 +148,96 @@ enum ClientAccountStatus {
   closed
 }
 
+/// Module B commercial tables (plans, subscriptions, payments) — feature 8.3. Statuses are
+/// enumerations fixed in code; labels are configuration (data.md). Values follow docs/data-model.md §4.
+enum PlanType {
+  hotel_discovery
+  trial
+  demo
+  package
+}
+
+enum BillingType {
+  one_time
+  recurring
+}
+
+enum PlanStatus {
+  draft
+  active
+  retired
+}
+
+/// A plan module's access depth (docs/field-matrix §3). The module key itself is a plain column
+/// validated against @ampm/core `entitlementModule`, so the catalogue and the policy engine share one
+/// source of truth and a new module needs no migration.
+enum PlanModuleAccess {
+  read
+  full
+}
+
+/// Mirrors packages/policy STATUS_MACHINES["subscription"] exactly (§7); terminal: expired, cancelled.
+enum SubscriptionStatus {
+  trial
+  pending_payment
+  active
+  expiring
+  expired
+  suspended
+  cancelled
+}
+
+enum ActivationSource {
+  gateway_webhook
+  manual
+}
+
+enum PaymentDirection {
+  inbound
+  outbound
+}
+
+enum PaymentCounterpartyType {
+  client
+  vendor
+  hotel
+  other
+}
+
+enum PaymentPurpose {
+  subscription
+  service_fee
+  milestone
+  vendor_payment
+  hotel_payment
+  refund
+}
+
+enum PaymentMethod {
+  gateway
+  bank_transfer
+  upi
+  cheque
+  cash
+}
+
+enum PaymentStatus {
+  initiated
+  pending
+  succeeded
+  failed
+  refunded
+  cancelled
+}
+
+/// A received provider webhook's lifecycle (feature 8.3). Append-only like job_runs: no soft-delete.
+enum WebhookEventStatus {
+  received
+  processed
+  failed
+  ignored
+}
+
 /// Staff, client and demo accounts. Credentials live in the identity service (Cognito, T-6): the
 /// API keeps the identity subject that maps a verified token to this row; it never stores a password.
 model User {
@@ -679,6 +769,8 @@ model ClientAccount {
   lead           Lead?            @relation(fields: [leadId], references: [id])
   primaryContact User?            @relation(fields: [primaryContactUserId], references: [id])
   contacts       AccountContact[]
+  subscriptions  Subscription[]
+  payments       Payment[]
 
   @@index([status])
   @@index([primaryContactUserId])
@@ -712,4 +804,164 @@ model AccountContact {
   @@index([userId])
   @@index([deletedAt])
   @@map("account_contacts")
+}
+
+// --- Module B: CRM commercial tables (docs/data-model.md §4). Plans, subscriptions and payments:
+// the hotel-discovery subscription a converted account buys through Razorpay (feature 8.3). ---
+
+/// A sellable plan (reference table, Super-Admin editable, data.md §1): PUBLIC when `active`, so the
+/// public website and portal show its price and inclusions. `price_amount` is the single source of the
+/// price — never a code literal (AC-02.9/AC-25.4). v1 is the Rs 50,000 one-month Discovery plan.
+model Plan {
+  id           String      @id @default(uuid(7)) @db.Uuid
+  planKey      String      @unique @map("plan_key") @db.VarChar(64)
+  name         String      @db.VarChar(255)
+  planType     PlanType    @map("plan_type")
+  billingType  BillingType @map("billing_type")
+  priceAmount  Decimal     @map("price_amount") @db.Decimal(14, 2)
+  currency     String      @default("INR") @db.VarChar(3)
+  termDays     Int?        @map("term_days")
+  trialDays    Int?        @map("trial_days")
+  isDemo       Boolean     @default(false) @map("is_demo")
+  status       PlanStatus  @default(draft)
+  termsVersion String?     @map("terms_version") @db.VarChar(255)
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  modules       PlanModule[]
+  subscriptions Subscription[]
+
+  @@index([status])
+  @@index([deletedAt])
+  @@map("plans")
+}
+
+/// A module a plan grants. `module_key` holds an @ampm/core `entitlementModule` value (validated in the
+/// contract, not a drifting enum); `access_level` is the grant depth. PUBLIC — shown in the catalogue.
+model PlanModule {
+  id          String           @id @default(uuid(7)) @db.Uuid
+  planId      String           @map("plan_id") @db.Uuid
+  moduleKey   String           @map("module_key") @db.VarChar(64)
+  accessLevel PlanModuleAccess @map("access_level")
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  plan Plan @relation(fields: [planId], references: [id])
+
+  @@unique([planId, moduleKey])
+  @@index([planId])
+  @@index([deletedAt])
+  @@map("plan_modules")
+}
+
+/// A subscription an account holds to a plan (feature 8.3). CLIENT-class. The status machine is
+/// packages/policy STATUS_MACHINES["subscription"] (§7): activation (webhook or manual) sets `active`
+/// with `starts_at`/`ends_at` from the plan term. An expired or cancelled row is never reactivated — a
+/// renewal is a new row (§7 line 395). Never hard-deleted (finance record, data.md).
+model Subscription {
+  id                String             @id @default(uuid(7)) @db.Uuid
+  accountId         String             @map("account_id") @db.Uuid
+  planId            String             @map("plan_id") @db.Uuid
+  status            SubscriptionStatus
+  startsAt          DateTime?          @map("starts_at") @db.Timestamptz(6)
+  endsAt            DateTime?          @map("ends_at") @db.Timestamptz(6)
+  trialEndsAt       DateTime?          @map("trial_ends_at") @db.Timestamptz(6)
+  autoRenew         Boolean            @default(false) @map("auto_renew")
+  activationSource  ActivationSource?  @map("activation_source")
+  activatedByUserId String?            @map("activated_by_user_id") @db.Uuid
+  cancelledAt       DateTime?          @map("cancelled_at") @db.Timestamptz(6)
+  cancelReason      String?            @map("cancel_reason") @db.VarChar(255)
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  account ClientAccount @relation(fields: [accountId], references: [id])
+  plan    Plan          @relation(fields: [planId], references: [id])
+
+  @@index([accountId, status])
+  @@index([planId])
+  @@index([status])
+  @@index([endsAt])
+  @@index([deletedAt])
+  @@map("subscriptions")
+}
+
+/// A payment (feature 8.3 handles inbound subscription payments). Visibility is by row: an inbound,
+/// `client_visible` payment is CLIENT (the subscriber's own receipt); every other row is
+/// RESTRICTED-FINANCE and is never serialised to a client (security.md — one response model per
+/// audience). `provider_ref` is the gateway transaction id and the webhook idempotency key (unique).
+/// What a payment is for is a polymorphic link (`related_type`/`related_id`), like audit_events.
+/// Never hard-deleted (finance record, data.md).
+model Payment {
+  id                String                  @id @default(uuid(7)) @db.Uuid
+  accountId         String                  @map("account_id") @db.Uuid
+  /// Gains its relation when module E (wedding projects) lands; a plain column meanwhile.
+  projectId         String?                 @map("project_id") @db.Uuid
+  direction         PaymentDirection
+  counterpartyType  PaymentCounterpartyType @map("counterparty_type")
+  counterpartyId    String?                 @map("counterparty_id") @db.Uuid
+  purpose           PaymentPurpose
+  relatedType       String?                 @map("related_type") @db.VarChar(255)
+  relatedId         String?                 @map("related_id") @db.Uuid
+  amount            Decimal                 @db.Decimal(14, 2)
+  currency          String                  @default("INR") @db.VarChar(3)
+  method            PaymentMethod
+  provider          String?                 @db.VarChar(255)
+  providerRef       String?                 @unique @map("provider_ref") @db.VarChar(255)
+  status            PaymentStatus
+  paidAt            DateTime?               @map("paid_at") @db.Timestamptz(6)
+  recordedBy        String?                 @map("recorded_by") @db.Uuid
+  /// Gains its FK when refunds are built (A-2: no refund in v1); a plain column meanwhile.
+  refundOfPaymentId String?                 @map("refund_of_payment_id") @db.Uuid
+  clientVisible     Boolean                 @default(false) @map("client_visible")
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  account ClientAccount @relation(fields: [accountId], references: [id])
+
+  @@index([accountId])
+  @@index([projectId])
+  @@index([status])
+  @@index([purpose])
+  @@index([relatedType, relatedId])
+  @@index([deletedAt])
+  @@map("payments")
+}
+
+/// A received provider webhook, stored raw before processing (api.md: "store the raw event"). The
+/// unique (provider, event_id) makes a redelivery a no-op at ingest (AC-02.5); durable idempotency is
+/// also enforced by payments.provider_ref and the activation transaction. Only signature-verified
+/// events are stored (a bad signature is a 401 and writes nothing). Append-only: no soft-delete.
+model WebhookEvent {
+  id          String             @id @default(uuid(7)) @db.Uuid
+  provider    String             @db.VarChar(64)
+  eventId     String             @map("event_id") @db.VarChar(255)
+  eventType   String             @map("event_type") @db.VarChar(128)
+  providerRef String?            @map("provider_ref") @db.VarChar(255)
+  payload     Json
+  status      WebhookEventStatus @default(received)
+  error       String?            @db.VarChar(1024)
+  receivedAt  DateTime           @default(now()) @map("received_at") @db.Timestamptz(6)
+  processedAt DateTime?          @map("processed_at") @db.Timestamptz(6)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@unique([provider, eventId])
+  @@index([providerRef])
+  @@map("webhook_events")
 }

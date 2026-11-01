@@ -503,6 +503,18 @@ erDiagram
         uuid refund_of_payment_id FK
         bool client_visible "true for inbound client payments (A-4)"
     }
+    webhook_events {
+        uuid id PK
+        string provider "e.g. razorpay"
+        string event_id "the provider's event id; unique per provider"
+        string event_type "e.g. payment.captured"
+        string provider_ref "the order the event is for; matches payments.provider_ref"
+        json payload "the raw verified event"
+        string status "enum received / processed / failed / ignored"
+        string error "nullable; sanitised"
+        datetime received_at
+        datetime processed_at "nullable until processed"
+    }
 ```
 
 Notes:
@@ -513,6 +525,7 @@ Notes:
 - **Entitlements** (audit GP-1) are resolved as: active or trial subscription gives the `plan_modules` of its plan; an active `service_agreements` row gives its service's module; an active `project_members` row gives `wedding_workspace` for that project regardless of subscription state. Expiry removes the subscription modules and nothing else. The permission matrix §3 has the full table.
 - **Hotel assistance** (GP-5): the client's request creates a `hotel_enquiries` row (module D). If AMPM charges for it, Sales creates a `service_agreements` row that points back to the enquiry; work beyond availability checking waits for `status = active`.
 - **Payments** carry a direction and a counterparty so one table serves subscription receipts, milestone receipts, vendor payouts and refunds. `client_visible` is true only for inbound client payments.
+- **`webhook_events` (feature 8.3):** the raw provider-webhook store api.md requires ("store the raw event"). Only signature-verified events are stored (a bad signature is a 401 that writes nothing); the unique `(provider, event_id)` makes a redelivery a no-op at ingest, and durable idempotency is also enforced by `payments.provider_ref` and the activation transaction. Append-only and operational, like `job_runs`: no soft-delete.
 
 ---
 

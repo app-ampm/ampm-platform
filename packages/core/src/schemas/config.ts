@@ -54,6 +54,12 @@ export type NotificationTemplate = z.infer<typeof notificationTemplate>;
 export const notificationTemplates = z.record(z.string(), notificationTemplate);
 export type NotificationTemplates = z.infer<typeof notificationTemplates>;
 
+/** Subscription lifecycle thresholds (feature 8.3): the notice window before a term ends (AC-02.7). */
+export const subscriptionPolicy = z.object({
+  expiryNoticeDays: z.number().int().nonnegative(),
+});
+export type SubscriptionPolicy = z.infer<typeof subscriptionPolicy>;
+
 /** One registry entry; the helper makes the compiler check the baseline against its own schema. */
 function entry<S extends z.ZodType>(
   schema: S,
@@ -77,6 +83,7 @@ export const CONFIG_REGISTRY = {
     push: false,
   }),
   "feature.flags": entry(featureFlags, {}),
+  "subscription.policy": entry(subscriptionPolicy, { expiryNoticeDays: 7 }),
   "notification.templates": entry(notificationTemplates, {
     "staff.invite": {
       email: {

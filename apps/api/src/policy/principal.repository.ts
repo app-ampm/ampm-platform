@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 
 import { PrismaService } from "../db/prisma.service.js";
+import type { SubscriptionStatus } from "../generated/prisma/client.js";
 
 /** A role the user holds: its key and id, and whether it is one of the nine matrix-driven system roles. */
 export interface PrincipalRole {
@@ -33,6 +34,8 @@ export abstract class PrincipalRepository {
   abstract touchLastLogin(userId: string, at: Date): Promise<void>;
   /** The capability keys a custom role grants, directly and through its permission sets (D-036). */
   abstract capabilityKeysForRoles(roleIds: readonly string[]): Promise<string[]>;
+  /** The statuses of the subscriptions on the account a client user belongs to (feature 8.3 gating). */
+  abstract accountSubscriptionStatuses(userId: string): Promise<SubscriptionStatus[]>;
 }
 
 @Injectable()
@@ -76,6 +79,24 @@ export class PrismaPrincipalRepository extends PrincipalRepository {
 
   async touchLastLogin(userId: string, at: Date): Promise<void> {
     await this.prisma.user.update({ where: { id: userId }, data: { lastLoginAt: at } });
+  }
+
+  /**
+   * The subscription statuses on the account a client user belongs to (via its account contact). Drives
+   * the subscription dimension of the client's entitlements (feature 8.3); empty when the user is on no
+   * account or the account has no subscription, which grants nothing extra.
+   */
+  async accountSubscriptionStatuses(userId: string): Promise<SubscriptionStatus[]> {
+    const contact = await this.prisma.accountContact.findFirst({
+      where: { userId, deletedAt: null },
+      select: { accountId: true },
+    });
+    if (!contact) return [];
+    const subscriptions = await this.prisma.subscription.findMany({
+      where: { accountId: contact.accountId, deletedAt: null },
+      select: { status: true },
+    });
+    return subscriptions.map((subscription) => subscription.status);
   }
 
   async capabilityKeysForRoles(roleIds: readonly string[]): Promise<string[]> {

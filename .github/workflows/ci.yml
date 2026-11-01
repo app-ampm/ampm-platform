@@ -330,6 +330,10 @@ jobs:
         run: |
           python3 docs/tools/scan_secrets.py --self-test
           python3 docs/tools/scan_secrets.py
+      - name: Scan for hard-coded prices and fees (AC-02.9 / AC-25.4)
+        run: |
+          python3 docs/tools/scan_price_literals.py --self-test
+          python3 docs/tools/scan_price_literals.py
 
   # Infra validation + container-stack smoke (heavy: builds both images and runs the stack). Gated to
   # infra sources and the toolchain baked into the images, so app-only changes — whose correctness the
