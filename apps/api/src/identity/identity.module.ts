@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 
 import { ENV, type Env } from "../env.js";
 import { AuthTokenService } from "./auth-token.service.js";
+import { ClientUserService } from "./client-user.service.js";
 import { CognitoIdentityAdapter } from "./cognito.adapter.js";
 import { IDENTITY_ADAPTER, type IdentityAdapter } from "./identity.types.js";
 import { LocalIdentityAdapter } from "./local.adapter.js";
@@ -23,7 +24,8 @@ import { LocalIdentityAdapter } from "./local.adapter.js";
       },
     },
     AuthTokenService,
+    ClientUserService,
   ],
-  exports: [IDENTITY_ADAPTER, AuthTokenService],
+  exports: [IDENTITY_ADAPTER, AuthTokenService, ClientUserService],
 })
 export class IdentityModule {}

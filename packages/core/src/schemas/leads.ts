@@ -230,8 +230,10 @@ export const leadView = z.object({
 });
 export type LeadView = z.infer<typeof leadView>;
 
-/** List/filter the pipeline (TW-10). Cursor-paginated; `source` filters by source key, `q` searches. */
+/** List/filter the pipeline (TW-10). Cursor-paginated by lead id; `source` filters by source key, `q`
+ *  searches. The cursor is a UUID, validated at the edge so a malformed cursor is a 400, not a 500. */
 export const leadListQuery = cursorQuery.extend({
+  cursor: uuid.optional(),
   status: leadStatus.optional(),
   ownerUserId: uuid.optional(),
   source: z.string().trim().max(64).optional(),
