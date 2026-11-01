@@ -118,6 +118,9 @@ services:
 
   redis:
     image: redis:7-alpine
+    # Non-root (F4, infra.md/D-048): the `sh -c` wrapper means the image entrypoint never sees
+    # `redis-server` as $1 and so never drops privileges itself, so pin the unprivileged `redis` user here.
+    user: redis
     # Password required at start (fail closed): an empty/unset REDIS_PASSWORD must not disable auth.
     # No persistence (nothing in Redis is the only copy, D-031).
     command:

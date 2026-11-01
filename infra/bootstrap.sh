@@ -337,6 +337,14 @@ EOF
 	fi
 }
 
+# The age private key the deploy's sops decryption reads lives at /etc/ampm/age.key (decrypt-secrets.sh
+# defaults SOPS_AGE_KEY_FILE there). Create the directory root-only so the operator can drop the key in;
+# nothing else created it before, so the documented path did not exist (F2).
+setup_secrets_dir() {
+	log "secrets dir /etc/ampm (age key goes here as age.key, 0600, operator-supplied)"
+	run install -d -m 700 -o root -g root /etc/ampm
+}
+
 # The deploy pipeline (feature 6.6) checks out the repo at /opt/ampm and runs infra/scripts/deploy.sh over
 # SSH, and the Compose files bind-mount config from that tree — so the host needs the repo there, owned by
 # the deploy user. Clone it when BOOTSTRAP_REPO_URL is given; otherwise the operator clones it once (see
@@ -362,7 +370,8 @@ main() {
 	check_preconditions
 	apt_base
 	setup_user
-	setup_repo
+	# Harden SSH, the firewall and Docker BEFORE touching the network for the private repo (F11): with
+	# `set -e` a clone failure must leave a hardened host, never one still on root/password SSH with ufw off.
 	harden_ssh
 	setup_firewall
 	install_docker
@@ -372,6 +381,8 @@ main() {
 	setup_swap
 	setup_log_rotation
 	setup_log_shipping
+	setup_secrets_dir
+	setup_repo
 	log "bootstrap complete${DRY_RUN:+ (dry-run — nothing changed)}"
 	if [[ -z "$DRY_RUN" ]]; then
 		warn "VERIFY BEFORE DISCONNECTING: from a second terminal confirm 'ssh -p $SSH_PORT $BOOTSTRAP_USER@<host>' logs in and 'sudo -n true' works. Root and password login are now disabled — this session is your only fallback until you do."
