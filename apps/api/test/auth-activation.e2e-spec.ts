@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -29,6 +31,7 @@ describe("Activation (e2e)", () => {
     for (const user of users) {
       await prisma.authToken.deleteMany({ where: { userId: user.id } });
       await prisma.session.deleteMany({ where: { userId: user.id } });
+      await prisma.projectMember.deleteMany({ where: { userId: user.id } });
       await prisma.user.delete({ where: { id: user.id } });
     }
   }
@@ -55,6 +58,61 @@ describe("Activation (e2e)", () => {
     });
     return { id: user.id, email };
   }
+
+  /** An invited client with an invited wedding membership — the shape feature 5.3 creates. */
+  async function invitedClient(
+    handle: string,
+  ): Promise<{ id: string; email: string; projectId: string }> {
+    const email = `${handle}${DOMAIN}`;
+    const projectId = randomUUID();
+    const user = await prisma.user.create({
+      data: {
+        userType: "client",
+        name: handle,
+        email,
+        status: "invited",
+        memberships: {
+          create: {
+            projectId,
+            projectRole: "client_representative",
+            clientSide: "bride",
+            status: "invited",
+          },
+        },
+      },
+    });
+    return { id: user.id, email, projectId };
+  }
+
+  it("activates a client and joins the wedding, which /me then shows (B1)", async () => {
+    const client = await invitedClient("joiner");
+    const token = await authTokens.issueInvite(client.id);
+    const subject = "local:joiner-activated";
+    const access = await adapter.mint(subject, { email: client.email });
+
+    await http()
+      .post("/auth/activate")
+      .set("authorization", `Bearer ${access}`)
+      .send({ token })
+      .expect(200);
+
+    // The membership moved invited -> active with accepted_at, so the client now reaches its wedding.
+    const membership = await prisma.projectMember.findFirstOrThrow({
+      where: { userId: client.id },
+    });
+    expect(membership.status).toBe("active");
+    expect(membership.acceptedAt).not.toBeNull();
+
+    // Reading as the activated client, /me carries the wedding (before the fix it was empty).
+    const asClient = await adapter.mint(subject, { email: client.email });
+    const me = await http().get("/me").set("authorization", `Bearer ${asClient}`).expect(200);
+    expect(me.body.data.memberships).toEqual([
+      expect.objectContaining({
+        projectId: client.projectId,
+        projectRole: "client_representative",
+      }),
+    ]);
+  });
 
   it("activates an invited user, then refuses to reuse the invite", async () => {
     const user = await invited("pat");

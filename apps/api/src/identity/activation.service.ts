@@ -66,6 +66,14 @@ export class ActivationService {
           where: { id: userId },
           data: { identitySubject: subject, status: "active" },
         });
+        // A client activating accepts their wedding: flip their invited membership(s) to active with
+        // accepted_at, or the activated client reaches no project — the principal loads active
+        // memberships only, so recordScope would yield `projectId in []` on every project query (B1).
+        // Staff have no such membership yet (module E), so this is a no-op for them.
+        await tx.projectMember.updateMany({
+          where: { userId, status: "invited", deletedAt: null },
+          data: { status: "active", acceptedAt: new Date() },
+        });
         await this.audit.record(
           {
             action: "update",

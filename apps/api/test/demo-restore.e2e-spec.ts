@@ -51,7 +51,13 @@ describe("Demo restore (e2e)", () => {
   /** A row in each of the five tables the reset clears, tagged so assertions and cleanup can find them. */
   async function seedScopedRows(userId: string, roleId: string, tag: string): Promise<void> {
     await prisma.session.create({
-      data: { userId, tokenId: tag, idleTimeoutMinutes: 720, lastSeenAt: new Date() },
+      data: {
+        userId,
+        tokenId: tag,
+        idleTimeoutMinutes: 720,
+        lastSeenAt: new Date(),
+        expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+      },
     });
     await prisma.authToken.create({
       data: {
@@ -159,6 +165,7 @@ describe("Demo restore (e2e)", () => {
         tokenId: "demo-e2e-rollback",
         idleTimeoutMinutes: 43200,
         lastSeenAt: new Date(),
+        expiresAt: new Date(Date.now() + 60 * 60 * 1000),
       },
     });
 

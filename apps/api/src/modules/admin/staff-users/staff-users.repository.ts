@@ -50,8 +50,10 @@ export abstract class StaffUsersRepository {
     cursor: string | undefined,
     status: UserStatus | undefined,
   ): Promise<{ rows: StaffUserRow[]; nextCursor: string | null }>;
-  /** True when any user (even soft-deleted) already holds this email — the column is globally unique. */
+  /** True when a LIVE (non-deleted) user already holds this email; a soft-deleted holder frees it (B9). */
   abstract emailExists(email: string): Promise<boolean>;
+  /** True when the user has linked an identity subject (has activated) — used to gate re-activation (B4). */
+  abstract isActivated(id: string): Promise<boolean>;
 }
 
 const WITH_ROLES = {
@@ -174,7 +176,16 @@ export class PrismaStaffUsersRepository extends StaffUsersRepository {
   }
 
   async emailExists(email: string): Promise<boolean> {
-    const count = await this.prisma.user.count({ where: { email } });
+    // Only a LIVE holder blocks the email; a soft-deleted user frees it (B9, partial unique index).
+    const count = await this.prisma.user.count({ where: { email, deletedAt: null } });
     return count > 0;
+  }
+
+  async isActivated(id: string): Promise<boolean> {
+    const user = await this.prisma.user.findFirst({
+      where: { id, userType: "staff", deletedAt: null },
+      select: { identitySubject: true },
+    });
+    return user?.identitySubject != null;
   }
 }

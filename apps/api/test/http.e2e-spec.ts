@@ -87,6 +87,17 @@ describe("the HTTP edge (e2e)", () => {
     expect(response.headers["x-request-id"]).toBe("trace-abc-123");
   });
 
+  it("mints a fresh id for a caller id longer than the audit column allows (A3)", async () => {
+    const tooLong = "x".repeat(65); // audit_events.request_id is VARCHAR(64)
+    const response = await request(app.getHttpServer())
+      .get("/health")
+      .set("x-request-id", tooLong)
+      .expect(200);
+    const assigned = response.headers["x-request-id"];
+    expect(assigned).not.toBe(tooLong);
+    expect(assigned.length).toBeLessThanOrEqual(64);
+  });
+
   it("api.md, structured logging with a request id: a parser refusal carries the caller's", async () => {
     const logged: (string | undefined)[] = [];
     const info = vi.spyOn(app.get(AppLogger), "info").mockImplementation((event: string) => {

@@ -38,6 +38,7 @@ const identity = (subject: string) => ({
   subject,
   provider: "local" as const,
   tokenId: "jti-test",
+  expiresAt: new Date("2026-11-30T00:00:00.000Z"),
   email: null,
   phone: null,
 });

@@ -41,6 +41,7 @@ export class SessionService {
       tokenId: identity.tokenId,
       idleTimeoutMinutes: await this.idleTimeoutFor(principal.type),
       lastSeenAt: now,
+      expiresAt: identity.expiresAt,
     });
     if (!created) return this.useExisting(session, principal, now);
     await this.audit.record({ action: "create", entityType: "session", entityId: session.id });

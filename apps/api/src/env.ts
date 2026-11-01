@@ -118,6 +118,25 @@ function deliveryIssues(value: EnvFields): EnvIssue[] {
   return issues;
 }
 
+/**
+ * Jobs: production must have `REDIS_URL` (A6). Without it the inline driver runs jobs in the request,
+ * the scheduled jobs (session reaper, demo restore, follow-up reminder) never run, and the rate limiter
+ * is per-process in memory, none of which is safe for a real deployment (D-031).
+ */
+function jobIssues(value: EnvFields): EnvIssue[] {
+  if (value.NODE_ENV === "production" && !value.REDIS_URL) {
+    return [
+      {
+        path: ["REDIS_URL"],
+        message:
+          "required in production: without it jobs run inline, the scheduled jobs (session reaper, " +
+          "demo restore, follow-up reminder) never run, and the rate limiter is per-process",
+      },
+    ];
+  }
+  return [];
+}
+
 /** Behind Caddy in production, `req.ip` must be the real client, so an untrusted proxy is refused. */
 function proxyIssues(value: EnvFields): EnvIssue[] {
   if (value.NODE_ENV === "production" && value.TRUST_PROXY === 0) {
@@ -134,7 +153,12 @@ function proxyIssues(value: EnvFields): EnvIssue[] {
 }
 
 const schema = fields.superRefine((value, ctx) => {
-  for (const issue of [...identityIssues(value), ...deliveryIssues(value), ...proxyIssues(value)]) {
+  for (const issue of [
+    ...identityIssues(value),
+    ...deliveryIssues(value),
+    ...jobIssues(value),
+    ...proxyIssues(value),
+  ]) {
     ctx.addIssue({ code: "custom", path: issue.path, message: issue.message });
   }
 });

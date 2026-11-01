@@ -27,12 +27,15 @@ type DemoWriter = Pick<Prisma.TransactionClient, "user">;
  * nothing. Shared by the seed and the restore spec so the account is defined once.
  */
 export async function upsertDemoUser(db: DemoWriter): Promise<void> {
-  const { id, ...fields } = DEMO_USER;
-  // `deletedAt: null` on update so a demo account a future surface soft-deletes is truly reset to baseline.
+  const { id, identitySubject, ...fields } = DEMO_USER;
+  // The identity subject is set only on create, never on the nightly restore (B8): under Cognito the
+  // demo account is linked to a real subject once, and overwriting it with the `local:demo` placeholder
+  // every night would break its sign-in. `deletedAt: null` on update still resets a soft-deleted demo
+  // account to baseline.
   await db.user.upsert({
     where: { id },
     update: { ...fields, deletedAt: null },
-    create: { id, ...fields },
+    create: { id, ...fields, identitySubject },
   });
 }
 

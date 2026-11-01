@@ -4,7 +4,9 @@ import type { NextFunction, Request, Response } from "express";
 
 import { requestContext } from "./request-context.js";
 
-const REQUEST_ID = /^[A-Za-z0-9._:-]{8,128}$/;
+// Capped at 64 so an accepted id always fits audit_events.request_id (VARCHAR(64)); a longer caller
+// id is replaced by a minted UUID rather than stored and then truncated or rejected by the audit (A3).
+const REQUEST_ID = /^[A-Za-z0-9._:-]{8,64}$/;
 
 /**
  * Step 0 of every request: a request id (a well-formed caller's id kept, otherwise minted) on the

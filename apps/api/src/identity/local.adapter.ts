@@ -29,10 +29,14 @@ export class LocalIdentityAdapter implements IdentityAdapter {
       if (payload.token_use !== "access" || typeof payload.sub !== "string")
         throw new Error("not an access token");
       if (typeof payload.jti !== "string") throw new Error("no token id");
+      // A token with no expiry must not open a session: the reaper keeps a session until its token's
+      // expiry, so a never-expiring token would mean a never-removable session (A2).
+      if (typeof payload.exp !== "number") throw new Error("no token expiry");
       return {
         subject: payload.sub,
         provider: "local",
         tokenId: payload.jti,
+        expiresAt: new Date(payload.exp * 1000),
         email: typeof payload.email === "string" ? payload.email : null,
         phone: typeof payload.phone_number === "string" ? payload.phone_number : null,
       };

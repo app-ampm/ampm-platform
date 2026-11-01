@@ -68,6 +68,15 @@ export class ClientLoginsController {
     return this.logins.update(params.projectId, params.userId, body, staffId(principal));
   }
 
+  @Post("projects/:projectId/client-logins/:userId/reinvite")
+  @RequirePermission("admin.client_logins.update", { projectParam: "projectId" })
+  @SelfAudited()
+  reinvite(
+    @ZodParams(projectUserParam) params: z.infer<typeof projectUserParam>,
+  ): Promise<ClientLoginView> {
+    return this.logins.reinvite(params.projectId, params.userId);
+  }
+
   @Delete("projects/:projectId/client-logins/:userId")
   @RequirePermission("admin.client_logins.delete", { projectParam: "projectId" })
   @SelfAudited()

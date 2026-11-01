@@ -10,14 +10,19 @@ import {
   type UserStatus,
 } from "@ampm/core";
 
+import { AppLogger } from "../../../common/logger.service.js";
 import { PrismaService } from "../../../db/prisma.service.js";
 import { ENV, type Env } from "../../../env.js";
 import { Prisma } from "../../../generated/prisma/client.js";
 import { AuthTokenService } from "../../../identity/auth-token.service.js";
 import { AuditService } from "../../../policy/audit.service.js";
 import { SessionService } from "../../../policy/session.service.js";
+import { assertNotLastSuperAdmin } from "../last-super-admin.js";
 import { NotificationService } from "../notification/notification.service.js";
 import { StaffUsersRepository, type StaffUserRow } from "./staff-users.repository.js";
+
+/** The Super Admin role's key; disabling or deleting the last active holder is refused (B3). */
+const SUPER_ADMIN_ROLE_KEY = "super_admin";
 
 /**
  * The admin status moves this surface allows. There is no `user` state machine in the policy engine,
@@ -61,6 +66,7 @@ export class StaffUsersService {
     private readonly sessions: SessionService,
     private readonly authTokens: AuthTokenService,
     private readonly notifications: NotificationService,
+    private readonly logger: AppLogger,
     @Inject(ENV) private readonly env: Env,
   ) {}
 
@@ -84,7 +90,34 @@ export class StaffUsersService {
     const { id, inviteToken } = await this.insertInvited(request, actorId);
     // Best-effort delivery after commit: the user and its invite token are already saved, so a queue
     // failure cannot be mistaken for a duplicate-email conflict, roll back the account, or fail create.
-    await this.queueInvite(id, request.name, inviteToken).catch(() => undefined);
+    // The failure is logged (not swallowed silently) so an undelivered invite is visible and re-sendable.
+    await this.queueInvite(id, request.name, inviteToken).catch((error: unknown) =>
+      this.logger.warn("staff.invite.notify_failed", { userId: id, error: String(error) }),
+    );
+    return this.get(id);
+  }
+
+  /**
+   * Re-issues an invite for a still-`invited` user and re-queues its delivery (feature 5.2, B2): the
+   * recovery path when the first invite was never delivered or has expired. Issuing retires any live
+   * invite, so only the newest link works. An already-activated or disabled user is refused.
+   */
+  async reinvite(id: string): Promise<StaffUserView> {
+    const user = await this.require(id);
+    if (user.status !== "invited") {
+      throw errors.conflict(`A ${user.status} user cannot be re-invited`);
+    }
+    const inviteToken = await this.prisma.$transaction(async (tx) => {
+      const token = await this.authTokens.issueInvite(id, tx);
+      await this.audit.record(
+        { action: "update", entityType: "user", entityId: id, after: { reinvited: true } },
+        tx,
+      );
+      return token;
+    });
+    await this.queueInvite(id, user.name, inviteToken).catch((error: unknown) =>
+      this.logger.warn("staff.reinvite.notify_failed", { userId: id, error: String(error) }),
+    );
     return this.get(id);
   }
 
@@ -162,6 +195,22 @@ export class StaffUsersService {
     if (!STATUS_MOVES[before.status].includes(request.status)) {
       throw errors.conflict(`A ${before.status} user cannot be moved to ${request.status}`);
     }
+    // B4: re-activating a user who never activated would make them `active` with no identity subject —
+    // they could not sign in, and their invite could no longer be claimed. Recover by deleting and
+    // re-creating (the email frees on delete, B9), or by re-inviting while still invited.
+    if (
+      before.status === "disabled" &&
+      request.status === "active" &&
+      !(await this.repository.isActivated(id))
+    ) {
+      throw errors.conflict(
+        "This user never activated, so it cannot be re-activated; delete it and send a fresh invitation",
+      );
+    }
+    // B3: disabling the last active Super Admin would lock the SA-only surface out.
+    if (request.status === "disabled" && before.roleKeys.includes(SUPER_ADMIN_ROLE_KEY)) {
+      await assertNotLastSuperAdmin(this.prisma, id);
+    }
     await this.prisma.$transaction(async (tx) => {
       await this.repository.setStatus(id, request.status, actorId, tx);
       await this.audit.record(
@@ -182,6 +231,10 @@ export class StaffUsersService {
 
   async remove(id: string, actorId: string): Promise<void> {
     const before = await this.require(id);
+    // B3: deleting the last active Super Admin would lock the SA-only surface out.
+    if (before.roleKeys.includes(SUPER_ADMIN_ROLE_KEY)) {
+      await assertNotLastSuperAdmin(this.prisma, id);
+    }
     await this.prisma.$transaction(async (tx) => {
       await this.repository.softDelete(id, actorId, tx);
       await this.audit.record(

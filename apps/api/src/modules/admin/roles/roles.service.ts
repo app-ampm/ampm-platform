@@ -19,7 +19,11 @@ import {
   capabilityViewsForKeys,
   isSuperAdmin,
 } from "../capability-grants.js";
+import { assertNotLastSuperAdmin } from "../last-super-admin.js";
 import { RolesRepository, type RoleRow } from "./roles.repository.js";
+
+/** The Super Admin role's key; unassigning it from the last active holder is refused (B3). */
+const SUPER_ADMIN_ROLE_KEY = "super_admin";
 
 /**
  * The Super-Admin role administration surface (D-036). Every mutation runs in one transaction with its
@@ -148,6 +152,11 @@ export class RolesService {
   }
 
   async unassign(userId: string, roleId: string): Promise<void> {
+    // Removing the Super Admin role from the only active Super Admin would lock the SA surface out (B3).
+    const role = await this.require(roleId);
+    if (role.roleKey === SUPER_ADMIN_ROLE_KEY) {
+      await assertNotLastSuperAdmin(this.prisma, userId);
+    }
     const removed = await this.prisma.$transaction(async (tx) => {
       const count = await this.repository.unassign(userId, roleId, tx);
       if (count === 0) return 0;

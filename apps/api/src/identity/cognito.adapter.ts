@@ -64,12 +64,16 @@ export function cognitoIdentityFromClaims(payload: JWTPayload, clientId: string)
   if (claims.client_id !== clientId) throw errors.unauthenticated();
   if (typeof claims.sub !== "string" || claims.sub.length === 0) throw errors.unauthenticated();
   if (typeof claims.jti !== "string" || claims.jti.length === 0) throw errors.unauthenticated();
+  // Cognito access tokens always carry `exp`; require it so the session is kept only until the token
+  // expires (A2). jwtVerify has already refused an expired token, so this is a present-and-numeric check.
+  if (typeof claims.exp !== "number") throw errors.unauthenticated();
   // A contact is surfaced only when the provider marks it verified; otherwise it is treated as absent,
   // so activation's verified-email match (D-041) fails closed instead of trusting an unverified claim.
   return {
     subject: claims.sub,
     provider: "cognito",
     tokenId: claims.jti,
+    expiresAt: new Date(claims.exp * 1000),
     email:
       typeof claims.email === "string" && isVerified(claims.email_verified) ? claims.email : null,
     phone:

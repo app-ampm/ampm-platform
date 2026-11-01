@@ -289,11 +289,13 @@ describe("NotificationService", () => {
     expect(sent).toHaveLength(0);
   });
 
-  it("marks the notification failed and clears its data when the adapter send throws", async () => {
+  it("retries a throwing send per the job policy, then dead-letters and fails the row (B2)", async () => {
     const repo = new FakeNotificationRepository();
+    let attempts = 0;
     const service = makeService(repo, {
       adapter: {
         async send() {
+          attempts += 1;
           throw new Error("smtp boom");
         },
       },
@@ -307,6 +309,9 @@ describe("NotificationService", () => {
       variables: { name: "Pat", activationUrl: "https://app.example/activate?token=abc" },
     });
     if (result.suppressed) throw new Error("unexpected suppression");
+    // The send job's default policy is three attempts (defineJob): a transient failure is retried,
+    // not terminal on the first throw. Only once every attempt fails does the row become `failed`.
+    expect(attempts).toBe(3);
     const row = repo.rows.get(result.notificationId);
     expect(row?.status).toBe("failed");
     expect(row?.data).toBeNull();

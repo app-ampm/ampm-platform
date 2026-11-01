@@ -17,6 +17,8 @@ export interface NewSession {
   readonly tokenId: string;
   readonly idleTimeoutMinutes: number;
   readonly lastSeenAt: Date;
+  /** The access token's expiry: the row is kept until then, so a revoked token stays denied (A2). */
+  readonly expiresAt: Date;
 }
 
 /** Whether this call inserted the row (`created`) or found one a concurrent request opened first. */
@@ -32,7 +34,7 @@ export abstract class SessionRepository {
   abstract touchLastSeen(id: string, at: Date): Promise<void>;
   /** Revokes every live session of a user; returns the ids this call revoked, for the audit trail. */
   abstract revokeAllForUser(userId: string, reason: string, at: Date): Promise<string[]>;
-  /** Deletes dead sessions (revoked, or idle past their own timeout); returns the number removed. */
+  /** Deletes sessions whose access token has expired (so re-presenting it fails at verify); returns the count. */
   abstract reap(): Promise<number>;
 }
 
@@ -79,12 +81,11 @@ export class PrismaSessionRepository extends SessionRepository {
   }
 
   async reap(): Promise<number> {
-    // All identifiers are literal; "now" is the database clock. A row is dead when it is revoked or
-    // has been idle longer than its own stored timeout.
-    return this.prisma.$executeRaw`
-      DELETE FROM sessions
-      WHERE revoked_at IS NOT NULL
-         OR last_seen_at < now() - make_interval(mins => idle_timeout_minutes)
-    `;
+    // Delete a row only once its access token has expired: before then the row must survive so that a
+    // revoked or idle-expired session keeps being denied in session.service (useExisting); deleting it
+    // earlier would let a still-valid token reopen a fresh live session (A2). After expiry the token can
+    // no longer be presented (the identity adapter refuses an expired token before touch), so the row is
+    // pure garbage. "now" is the database clock.
+    return this.prisma.$executeRaw`DELETE FROM sessions WHERE expires_at < now()`;
   }
 }

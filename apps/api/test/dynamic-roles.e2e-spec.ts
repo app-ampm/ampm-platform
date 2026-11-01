@@ -23,7 +23,7 @@ describe("Dynamic roles (e2e)", () => {
 
   /** Remove the fixtures, sessions and grants first — self-healing if a prior run left them behind. */
   async function removeFixtures(): Promise<void> {
-    const user = await prisma.user.findUnique({ where: { email: EMAIL } });
+    const user = await prisma.user.findFirst({ where: { email: EMAIL } });
     if (user) {
       await prisma.session.deleteMany({ where: { userId: user.id } });
       await prisma.userRole.deleteMany({ where: { userId: user.id } });

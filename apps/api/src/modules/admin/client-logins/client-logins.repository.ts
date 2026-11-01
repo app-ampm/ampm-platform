@@ -177,7 +177,8 @@ export class PrismaClientLoginsRepository extends ClientLoginsRepository {
   }
 
   async emailExists(email: string): Promise<boolean> {
-    const count = await this.prisma.user.count({ where: { email } });
+    // Only a LIVE holder blocks the email; a removed client login frees it (B9, partial unique index).
+    const count = await this.prisma.user.count({ where: { email, deletedAt: null } });
     return count > 0;
   }
 

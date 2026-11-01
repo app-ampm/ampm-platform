@@ -23,6 +23,7 @@ function build(cfg: Config = {}) {
         subject: "sub-1",
         provider: "local",
         tokenId: "jti",
+        expiresAt: new Date("2026-11-30T00:00:00.000Z"),
         email: cfg.verifiedEmail === undefined ? "u@x.com" : cfg.verifiedEmail,
         phone: null,
       },
@@ -33,6 +34,7 @@ function build(cfg: Config = {}) {
   const markUsedIfLive = vi.fn(async () => cfg.claimed ?? true);
   const record = vi.fn(async () => undefined);
   const txUserUpdate = vi.fn(async () => undefined);
+  const txMemberUpdateMany = vi.fn(async () => ({ count: 1 }));
   const userFindFirst = vi
     .fn()
     .mockResolvedValueOnce(
@@ -42,7 +44,10 @@ function build(cfg: Config = {}) {
   const prisma = {
     user: { findFirst: userFindFirst },
     $transaction: async (fn: (tx: unknown) => Promise<unknown>) =>
-      fn({ user: { update: txUserUpdate } }),
+      fn({
+        user: { update: txUserUpdate },
+        projectMember: { updateMany: txMemberUpdateMany },
+      }),
   } as unknown as PrismaService;
   const identity = { verifyAccessToken } as unknown as IdentityAdapter;
   const tokens = { findValidInvite, markUsedIfLive } as unknown as AuthTokenService;
@@ -50,6 +55,7 @@ function build(cfg: Config = {}) {
   return {
     service: new ActivationService(identity, tokens, prisma, audit),
     txUserUpdate,
+    txMemberUpdateMany,
     markUsedIfLive,
     record,
   };
@@ -70,6 +76,17 @@ describe("ActivationService", () => {
     expect(record).toHaveBeenCalledWith(
       expect.objectContaining({ action: "update", entityType: "user" }),
       expect.anything(),
+    );
+  });
+
+  it("flips the user's invited memberships to active on activation (B1)", async () => {
+    const { service, txMemberUpdateMany } = build({ verifiedEmail: "u@x.com" });
+    await service.activate("raw", "access");
+    expect(txMemberUpdateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { userId: "u1", status: "invited", deletedAt: null },
+        data: expect.objectContaining({ status: "active" }),
+      }),
     );
   });
 
@@ -121,6 +138,7 @@ describe("ActivationService", () => {
         token_use: "access",
         client_id: "c",
         jti: "jti-cog",
+        exp: 2_000_000_000,
         email: "u@x.com",
         email_verified: true,
       },
@@ -137,6 +155,7 @@ describe("ActivationService", () => {
         token_use: "access",
         client_id: "c",
         jti: "jti-cog",
+        exp: 2_000_000_000,
         email: "u@x.com",
         email_verified: false,
       },

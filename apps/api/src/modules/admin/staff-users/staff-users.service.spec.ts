@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
+import type { AppLogger } from "../../../common/logger.service.js";
 import type { AuditService } from "../../../policy/audit.service.js";
 import type { PrismaService } from "../../../db/prisma.service.js";
 import type { Env } from "../../../env.js";
@@ -27,11 +28,15 @@ class FakeRepository extends StaffUsersRepository {
     nextCursor: null as string | null,
   }));
   emailExists = vi.fn(async () => this.emailTaken);
+  isActivated = vi.fn(async () => true);
 }
 
 function harness(repo: FakeRepository) {
+  // Default: one other active Super Admin exists, so the last-SA guard never blocks unless a test says so.
+  const userCount = vi.fn(async () => 1);
   const prisma = {
     $transaction: async (fn: (tx: unknown) => Promise<unknown>) => fn({}),
+    user: { count: userCount },
   } as unknown as PrismaService;
   const record = vi.fn(async () => undefined);
   const revokeAllForUser = vi.fn(async () => undefined);
@@ -41,13 +46,26 @@ function harness(repo: FakeRepository) {
   const sessions = { revokeAllForUser } as unknown as SessionService;
   const authTokens = { issueInvite } as unknown as AuthTokenService;
   const notifications = { queue } as unknown as NotificationService;
+  const warn = vi.fn();
+  const logger = { warn, info: vi.fn(), error: vi.fn(), debug: vi.fn() } as unknown as AppLogger;
   const env = { WEB_APP_URL: "https://app.example" } as unknown as Env;
   return {
-    service: new StaffUsersService(repo, prisma, audit, sessions, authTokens, notifications, env),
+    service: new StaffUsersService(
+      repo,
+      prisma,
+      audit,
+      sessions,
+      authTokens,
+      notifications,
+      logger,
+      env,
+    ),
     record,
     revokeAllForUser,
     issueInvite,
     queue,
+    warn,
+    userCount,
   };
 }
 
@@ -151,9 +169,77 @@ describe("StaffUsersService", () => {
     );
   });
 
+  it("refuses re-activating a disabled user who never activated (B4)", async () => {
+    const repo = new FakeRepository({ u: row("u", "disabled") });
+    repo.isActivated = vi.fn(async () => false);
+    await expect(
+      harness(repo).service.setStatus("u", { status: "active" }, "sa"),
+    ).rejects.toMatchObject({ code: "conflict" });
+    expect(repo.setStatus).not.toHaveBeenCalled();
+  });
+
+  it("re-activates a disabled user who had activated (B4)", async () => {
+    const repo = new FakeRepository({ u: row("u", "disabled") });
+    repo.isActivated = vi.fn(async () => true);
+    await harness(repo).service.setStatus("u", { status: "active" }, "sa");
+    expect(repo.setStatus).toHaveBeenCalledWith("u", "active", "sa", expect.anything());
+  });
+
+  it("refuses disabling the last active Super Admin (B3)", async () => {
+    const repo = new FakeRepository({ u: { ...row("u", "active"), roleKeys: ["super_admin"] } });
+    const { service, userCount } = harness(repo);
+    userCount.mockResolvedValueOnce(1).mockResolvedValueOnce(0); // target is an active SA; no other
+    await expect(service.setStatus("u", { status: "disabled" }, "sa")).rejects.toMatchObject({
+      code: "conflict",
+    });
+    expect(repo.setStatus).not.toHaveBeenCalled();
+  });
+
+  it("disables a Super Admin when another active one remains (B3)", async () => {
+    const repo = new FakeRepository({ u: { ...row("u", "active"), roleKeys: ["super_admin"] } });
+    const { service, userCount } = harness(repo);
+    userCount.mockResolvedValueOnce(1).mockResolvedValueOnce(1); // another active SA exists
+    await service.setStatus("u", { status: "disabled" }, "sa");
+    expect(repo.setStatus).toHaveBeenCalledWith("u", "disabled", "sa", expect.anything());
+  });
+
+  it("refuses deleting the last active Super Admin (B3)", async () => {
+    const repo = new FakeRepository({ u: { ...row("u", "active"), roleKeys: ["super_admin"] } });
+    const { service, userCount } = harness(repo);
+    userCount.mockResolvedValueOnce(1).mockResolvedValueOnce(0);
+    await expect(service.remove("u", "sa")).rejects.toMatchObject({ code: "conflict" });
+    expect(repo.softDelete).not.toHaveBeenCalled();
+  });
+
   it("404s a missing staff user", async () => {
     await expect(harness(new FakeRepository()).service.get("missing")).rejects.toMatchObject({
       code: "not_found",
     });
+  });
+
+  it("re-invites an invited user: issues a fresh invite, re-queues delivery, and audits it (B2)", async () => {
+    const repo = new FakeRepository({ u: row("u", "invited") });
+    const { service, record, issueInvite, queue } = harness(repo);
+    const view = await service.reinvite("u");
+    expect(view.status).toBe("invited");
+    expect(issueInvite).toHaveBeenCalledWith("u", expect.anything());
+    expect(queue).toHaveBeenCalledWith(
+      expect.objectContaining({ recipientId: "u", templateKey: "staff.invite" }),
+    );
+    expect(record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: "update",
+        entityType: "user",
+        after: expect.objectContaining({ reinvited: true }),
+      }),
+      expect.anything(),
+    );
+  });
+
+  it("refuses to re-invite a user who is not invited (B2)", async () => {
+    const repo = new FakeRepository({ u: row("u", "active") });
+    const { service, issueInvite } = harness(repo);
+    await expect(service.reinvite("u")).rejects.toMatchObject({ code: "conflict" });
+    expect(issueInvite).not.toHaveBeenCalled();
   });
 });

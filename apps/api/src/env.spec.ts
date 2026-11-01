@@ -13,6 +13,7 @@ const prodValid = {
   EMAIL_FROM: "AMPM <no-reply@ampm.example>",
   WEB_APP_URL: "https://app.ampm.example",
   TRUST_PROXY: "1",
+  REDIS_URL: "redis://redis:6379",
 };
 
 describe("loadEnv", () => {
@@ -69,5 +70,19 @@ describe("loadEnv", () => {
         IDENTITY_LOCAL_SECRET: "a-development-secret-that-is-32chars",
       }),
     ).toThrow(/local identity provider/);
+  });
+
+  it("requires REDIS_URL in production (A6)", () => {
+    const { REDIS_URL: _omit, ...withoutRedis } = prodValid;
+    expect(() => loadEnv(withoutRedis)).toThrow(/REDIS_URL/);
+  });
+
+  it("allows development without REDIS_URL (jobs run inline)", () => {
+    const env = loadEnv({
+      DATABASE_URL: "postgres://localhost:5432/ampm",
+      IDENTITY_PROVIDER: "local",
+      IDENTITY_LOCAL_SECRET: "a-development-secret-that-is-32chars",
+    });
+    expect(env.REDIS_URL).toBeUndefined();
   });
 });

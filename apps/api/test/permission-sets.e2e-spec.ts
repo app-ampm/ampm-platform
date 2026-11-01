@@ -19,7 +19,7 @@ describe("Permission sets (e2e)", () => {
   let prisma: PrismaService;
 
   async function removeFixtures(): Promise<void> {
-    const user = await prisma.user.findUnique({ where: { email: EMAIL } });
+    const user = await prisma.user.findFirst({ where: { email: EMAIL } });
     if (user) {
       await prisma.session.deleteMany({ where: { userId: user.id } });
       await prisma.userRole.deleteMany({ where: { userId: user.id } });
@@ -105,7 +105,7 @@ describe("Permission sets (e2e)", () => {
       .expect(201);
     const roleId: string = role.body.data.id;
 
-    const user = await prisma.user.findUniqueOrThrow({ where: { email: EMAIL } });
+    const user = await prisma.user.findFirstOrThrow({ where: { email: EMAIL } });
     await http()
       .post(`/admin/users/${user.id}/roles`)
       .set("authorization", admin)
