@@ -117,6 +117,9 @@ services:
 
   redis:
     image: redis:7-alpine
+    # Non-root (F4, infra.md/D-048): the `sh -c` wrapper means the image entrypoint never sees
+    # `redis-server` as $1 and so never drops privileges itself, so pin the unprivileged `redis` user here.
+    user: redis
     command:
       - sh
       - -c
@@ -165,7 +168,9 @@ services:
     environment:
       NODE_ENV: production
       JOB_WORKER: "true"
-    networks: [internal]
+    # egress: the worker is what sends mail (SES over SMTP) and makes outbound provider calls from jobs,
+    # so it needs outbound internet like postgres/pgbackrest/alertmanager; `internal` alone has none (F1, D-050).
+    networks: [internal, egress]
     depends_on:
       postgres: { condition: service_healthy }
       redis: { condition: service_healthy }

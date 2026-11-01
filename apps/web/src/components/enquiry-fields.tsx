@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { cloneElement, isValidElement, type ReactElement, type ReactNode } from "react";
 
 /*
  * PUB-06 form parts: the centralised copy, the field primitives and the field groups the enquiry form
@@ -84,19 +84,31 @@ interface FieldProps {
 }
 
 function Field({ id, label, error, help, required, children }: FieldProps) {
+  // Associate the control with its error or help text, and mark its invalid/required state, so screen
+  // readers announce the problem on the right field (E5). Injected once here rather than on every input.
+  const describedBy = error ? `${id}-error` : help ? `${id}-help` : undefined;
+  const control = isValidElement(children)
+    ? cloneElement(children as ReactElement<Record<string, unknown>>, {
+        "aria-invalid": error ? true : undefined,
+        "aria-describedby": describedBy,
+        "aria-required": required ? true : undefined,
+      })
+    : children;
   return (
     <div className="flex flex-col gap-1">
       <label htmlFor={id} className="text-sm font-medium text-primary">
         {label}
         {required ? " *" : ""}
       </label>
-      {children}
+      {control}
       {error ? (
         <p id={`${id}-error`} role="alert" className="text-sm text-danger">
           {error}
         </p>
       ) : help ? (
-        <p className="text-sm text-muted">{help}</p>
+        <p id={`${id}-help`} className="text-sm text-muted">
+          {help}
+        </p>
       ) : null}
     </div>
   );

@@ -34,6 +34,13 @@ export function defineJob<T>(
 /** Runs one job; throwing asks the driver to retry per the job's policy, then dead-letter. */
 export type JobHandler<T> = (payload: T) => Promise<void>;
 
+/**
+ * Runs once when a job is dead-lettered (every attempt failed), to release anything the queued state
+ * held — e.g. a notification clears its render variables and marks the row `failed` (D-044, api.md).
+ * It must not throw; the driver logs the dead-letter regardless.
+ */
+export type JobDeadLetterHandler<T> = (payload: T) => Promise<void>;
+
 export interface EnqueueOptions {
   /** De-duplicates: enqueuing the same key again is a no-op (BullMQ `jobId`, or the inline seen-set). */
   readonly idempotencyKey?: string;
@@ -41,7 +48,12 @@ export interface EnqueueOptions {
 
 /** The transport behind the queue: inline in development and tests, BullMQ on Redis in production. */
 export interface JobDriver {
-  register(name: string, policy: JobPolicy, run: (payload: unknown) => Promise<void>): void;
+  register(
+    name: string,
+    policy: JobPolicy,
+    run: (payload: unknown) => Promise<void>,
+    onDeadLetter?: (payload: unknown) => Promise<void>,
+  ): void;
   enqueue(name: string, payload: unknown, options: EnqueueOptions): Promise<void>;
   /** Schedules a job on a cron pattern (a BullMQ repeatable); a no-op inline, where there is no scheduler. */
   scheduleRepeatable(name: string, cronPattern: string, payload: unknown): Promise<void>;

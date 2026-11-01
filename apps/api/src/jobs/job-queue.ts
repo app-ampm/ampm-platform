@@ -3,6 +3,7 @@ import { Inject, Injectable, type OnModuleDestroy } from "@nestjs/common";
 import {
   JOB_DRIVER,
   type EnqueueOptions,
+  type JobDeadLetterHandler,
   type JobDefinition,
   type JobDriver,
   type JobHandler,
@@ -21,11 +22,29 @@ import {
 export class JobQueue implements OnModuleDestroy {
   constructor(@Inject(JOB_DRIVER) private readonly driver: JobDriver) {}
 
-  register<T>(job: JobDefinition<T>, handler: JobHandler<T>): void {
-    this.driver.register(job.name, job.policy, async (payload) => {
-      // Re-validate on the consumer side: the payload came back through the driver (JSON on Redis).
-      await handler(job.schema.parse(payload));
-    });
+  /**
+   * Wires a handler to a job. An optional `onDeadLetter` runs once after every attempt has failed, to
+   * release what the queued state held (the send handler clears the invite token and marks the row
+   * `failed`); the payload is re-validated on both paths, since it came back through the driver.
+   */
+  register<T>(
+    job: JobDefinition<T>,
+    handler: JobHandler<T>,
+    onDeadLetter?: JobDeadLetterHandler<T>,
+  ): void {
+    this.driver.register(
+      job.name,
+      job.policy,
+      async (payload) => {
+        // Re-validate on the consumer side: the payload came back through the driver (JSON on Redis).
+        await handler(job.schema.parse(payload));
+      },
+      onDeadLetter
+        ? async (payload) => {
+            await onDeadLetter(job.schema.parse(payload));
+          }
+        : undefined,
+    );
   }
 
   async enqueue<T>(job: JobDefinition<T>, payload: T, options: EnqueueOptions = {}): Promise<void> {

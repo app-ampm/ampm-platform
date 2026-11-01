@@ -1,6 +1,7 @@
 import type { ClientSide } from "@ampm/core";
 import { describe, expect, it, vi } from "vitest";
 
+import type { AppLogger } from "../../../common/logger.service.js";
 import type { AuditService } from "../../../policy/audit.service.js";
 import type { PrismaService } from "../../../db/prisma.service.js";
 import type { Env } from "../../../env.js";
@@ -42,14 +43,26 @@ function harness(repo: FakeRepository) {
   const sessions = { revokeAllForUser } as unknown as SessionService;
   const authTokens = { issueInvite, invalidateInvitesFor } as unknown as AuthTokenService;
   const notifications = { queue } as unknown as NotificationService;
+  const warn = vi.fn();
+  const logger = { warn, info: vi.fn(), error: vi.fn(), debug: vi.fn() } as unknown as AppLogger;
   const env = { WEB_APP_URL: "https://app.example" } as unknown as Env;
   return {
-    service: new ClientLoginsService(repo, prisma, audit, sessions, authTokens, notifications, env),
+    service: new ClientLoginsService(
+      repo,
+      prisma,
+      audit,
+      sessions,
+      authTokens,
+      notifications,
+      logger,
+      env,
+    ),
     record,
     revokeAllForUser,
     issueInvite,
     invalidateInvitesFor,
     queue,
+    warn,
   };
 }
 
@@ -152,5 +165,30 @@ describe("ClientLoginsService", () => {
     await expect(harness(new FakeRepository()).service.get(PROJECT, "nope")).rejects.toMatchObject({
       code: "not_found",
     });
+  });
+
+  it("re-invites an invited login: issues a fresh invite, re-queues delivery, and audits it (B2)", async () => {
+    const repo = new FakeRepository({ u1: row("u1", "bride") });
+    const { service, record, issueInvite, queue } = harness(repo);
+    await service.reinvite(PROJECT, "u1");
+    expect(issueInvite).toHaveBeenCalledWith("u1", expect.anything());
+    expect(queue).toHaveBeenCalledWith(
+      expect.objectContaining({ recipientId: "u1", templateKey: "client.invite" }),
+    );
+    expect(record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: "update",
+        entityType: "client_login",
+        after: expect.objectContaining({ reinvited: true }),
+      }),
+      expect.anything(),
+    );
+  });
+
+  it("refuses to re-invite a login that is already activated (B2)", async () => {
+    const repo = new FakeRepository({ u1: { ...row("u1", "bride"), userStatus: "active" } });
+    const { service, issueInvite } = harness(repo);
+    await expect(service.reinvite(PROJECT, "u1")).rejects.toMatchObject({ code: "conflict" });
+    expect(issueInvite).not.toHaveBeenCalled();
   });
 });

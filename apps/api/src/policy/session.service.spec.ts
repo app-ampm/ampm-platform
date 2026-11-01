@@ -130,6 +130,8 @@ const identity = (tokenId: string): VerifiedIdentity => ({
   subject: "local:x",
   provider: "local",
   tokenId,
+  // Well after T0 and the idle windows the tests use, so the session's own expiry never interferes.
+  expiresAt: new Date("2026-11-30T00:00:00.000Z"),
   email: null,
   phone: null,
 });

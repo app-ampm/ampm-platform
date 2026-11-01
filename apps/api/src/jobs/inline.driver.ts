@@ -8,6 +8,7 @@ type JobLogger = Pick<Logger, "info" | "warn" | "error">;
 interface Registration {
   readonly policy: JobPolicy;
   readonly run: (payload: unknown) => Promise<void>;
+  readonly onDeadLetter?: (payload: unknown) => Promise<void>;
 }
 
 /**
@@ -23,8 +24,13 @@ export class InlineJobDriver implements JobDriver {
 
   constructor(private readonly logger: JobLogger) {}
 
-  register(name: string, policy: JobPolicy, run: (payload: unknown) => Promise<void>): void {
-    this.registrations.set(name, { policy, run });
+  register(
+    name: string,
+    policy: JobPolicy,
+    run: (payload: unknown) => Promise<void>,
+    onDeadLetter?: (payload: unknown) => Promise<void>,
+  ): void {
+    this.registrations.set(name, { policy, run, onDeadLetter });
   }
 
   async enqueue(name: string, payload: unknown, options: EnqueueOptions): Promise<void> {
@@ -56,11 +62,26 @@ export class InlineJobDriver implements JobDriver {
       } catch (error) {
         const fields: LogFields = { job: name, attempt, error: String(error) };
         if (attempt >= registration.policy.attempts) {
+          await this.deadLetter(name, registration, payload);
           this.logger.error("job.dead_lettered", fields);
           return;
         }
         this.logger.warn("job.retry", fields);
       }
+    }
+  }
+
+  /** Runs the dead-letter handler once retries are exhausted; a throwing handler must not mask the dead-letter. */
+  private async deadLetter(
+    name: string,
+    registration: Registration,
+    payload: unknown,
+  ): Promise<void> {
+    if (!registration.onDeadLetter) return;
+    try {
+      await registration.onDeadLetter(payload);
+    } catch (error) {
+      this.logger.error("job.dead_letter_handler_failed", { job: name, error: String(error) });
     }
   }
 }

@@ -25,6 +25,8 @@ graphify-out/.graphify_root
 graphify-out/.graphify_*.json
 graphify-out/.graphify_*.txt
 graphify-out/.needs_update
+# graphify writes a dated backup of the curated graph on each rebuild; it is a local artifact, not committed.
+graphify-out/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]/
 !graphify-out/.graphify_labels.json
 .claude/settings.json.graphify-bak
 

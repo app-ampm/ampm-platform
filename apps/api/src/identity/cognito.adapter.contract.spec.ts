@@ -58,13 +58,17 @@ describe("CognitoIdentityAdapter (offline JWKS contract)", () => {
   });
 
   it("verifies a well-formed access token to the right identity", async () => {
-    await expect(adapter.verifyAccessToken(await sign(access()))).resolves.toEqual({
+    const identity = await adapter.verifyAccessToken(await sign(access()));
+    expect(identity).toMatchObject({
       subject: "cognito-sub-1",
       provider: "cognito",
       tokenId: "jti-1",
       email: "pat@example.com",
       phone: null,
     });
+    // The session is kept until the token's own expiry (A2); the signed token expires an hour out.
+    expect(identity.expiresAt).toBeInstanceOf(Date);
+    expect(identity.expiresAt.getTime()).toBeGreaterThan(Date.now());
   });
 
   it('surfaces a verified email when email_verified is the string "true" (the Lambda shape)', async () => {

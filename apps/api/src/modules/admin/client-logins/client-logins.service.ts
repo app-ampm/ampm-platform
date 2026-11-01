@@ -7,6 +7,7 @@ import {
   type ClientLoginView,
 } from "@ampm/core";
 
+import { AppLogger } from "../../../common/logger.service.js";
 import { PrismaService } from "../../../db/prisma.service.js";
 import { ENV, type Env } from "../../../env.js";
 import { Prisma } from "../../../generated/prisma/client.js";
@@ -51,6 +52,7 @@ export class ClientLoginsService {
     private readonly sessions: SessionService,
     private readonly authTokens: AuthTokenService,
     private readonly notifications: NotificationService,
+    private readonly logger: AppLogger,
     @Inject(ENV) private readonly env: Env,
   ) {}
 
@@ -81,7 +83,40 @@ export class ClientLoginsService {
     const { userId, inviteToken } = await this.insertClientLogin(projectId, request, actorId);
     // Delivery is best-effort and after commit: the login and its invite token are already saved, so a
     // transient queue failure must not fail the create or be mistaken for a conflict (it can be re-sent).
-    await this.queueInvite(userId, request.name, inviteToken).catch(() => undefined);
+    // The failure is logged (not swallowed silently) so an undelivered invite is visible and re-sendable.
+    await this.queueInvite(userId, request.name, inviteToken).catch((error: unknown) =>
+      this.logger.warn("client.invite.notify_failed", { userId, error: String(error) }),
+    );
+    return this.get(projectId, userId);
+  }
+
+  /**
+   * Re-issues an invite for a still-`invited` client login and re-queues its delivery (B2): the recovery
+   * path when the first invite was never delivered or has expired. Issuing retires any live invite, so
+   * only the newest link works. An already-activated login is refused.
+   */
+  async reinvite(projectId: string, userId: string): Promise<ClientLoginView> {
+    const before = await this.require(projectId, userId);
+    if (before.userStatus !== "invited") {
+      throw errors.conflict(`A ${before.userStatus} client login cannot be re-invited`);
+    }
+    const inviteToken = await this.prisma.$transaction(async (tx) => {
+      const token = await this.authTokens.issueInvite(userId, tx);
+      await this.audit.record(
+        {
+          action: "update",
+          entityType: "client_login",
+          entityId: before.membershipId,
+          after: { reinvited: true },
+          maskImages: false,
+        },
+        tx,
+      );
+      return token;
+    });
+    await this.queueInvite(userId, before.name, inviteToken).catch((error: unknown) =>
+      this.logger.warn("client.reinvite.notify_failed", { userId, error: String(error) }),
+    );
     return this.get(projectId, userId);
   }
 

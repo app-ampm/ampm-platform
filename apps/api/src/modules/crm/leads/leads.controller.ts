@@ -109,7 +109,7 @@ export class LeadsController {
 
   @Patch("leads/:leadId")
   @RequirePermission("crm.leads.update")
-  @Audited({ entityType: "lead" })
+  @SelfAudited()
   update(
     @ZodParams(leadParam) params: { leadId: string },
     @ZodBody(leadUpdateRequest) body: LeadUpdateRequest,
@@ -120,7 +120,7 @@ export class LeadsController {
 
   @Patch("leads/:leadId/owner")
   @RequirePermission("crm.leads.update")
-  @Audited({ entityType: "lead" })
+  @SelfAudited()
   assign(
     @ZodParams(leadParam) params: { leadId: string },
     @ZodBody(leadAssignRequest) body: LeadAssignRequest,

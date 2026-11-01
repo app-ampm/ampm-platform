@@ -14,6 +14,16 @@ describe("web security middleware", () => {
     expect(csp).toContain("frame-ancestors 'none'");
   });
 
+  it("allows the API origin in connect-src so the enquiry form can post (C2)", () => {
+    const response = middleware(new NextRequest("https://app.example/"));
+    const csp = response.headers.get("content-security-policy") ?? "";
+    const connectSrc = csp
+      .split(";")
+      .find((directive) => directive.trim().startsWith("connect-src"));
+    // The default API origin (NEXT_PUBLIC_API_URL) must be present, not just 'self'.
+    expect(connectSrc).toContain("http://localhost:3900");
+  });
+
   it("gives each request a different nonce", () => {
     const first = middleware(new NextRequest("https://app.example/")).headers.get(
       "content-security-policy",

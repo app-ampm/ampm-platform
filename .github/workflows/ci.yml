@@ -99,6 +99,8 @@ jobs:
               - *lintcfg
               - *workflow
               - *tokens_src
+              - *core_src
+              - *apiclient_src
               - 'apps/web/**'
             api:
               - *toolchain
@@ -202,6 +204,13 @@ jobs:
         ports: ["5432:5432"]
         options: >-
           --health-cmd "pg_isready -U ampm" --health-interval 5s --health-timeout 5s --health-retries 10
+      # For the Redis-backed BullMQ driver test only (the step below sets REDIS_URL for it). The main
+      # test step deliberately leaves REDIS_URL unset so the API's e2e still runs jobs inline.
+      redis:
+        image: redis:7
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping" --health-interval 5s --health-timeout 5s --health-retries 10
     env:
       CI: true
       # prisma generate reads prisma.config.ts; the e2e suite migrates and seeds the disposable database.
@@ -222,6 +231,12 @@ jobs:
       - run: pnpm db:generate
       - name: Lint, typecheck and test the API (unit + e2e against PostgreSQL)
         run: pnpm exec turbo run lint typecheck test --filter=api
+      # The BullMQ driver can only be exercised against a real Redis (the inline driver covers the rest).
+      # Run it here with REDIS_URL set so it stays out of the inline e2e above (A1, D-031's gap).
+      - name: BullMQ job driver against Redis (A1, D-031)
+        env:
+          REDIS_URL: redis://localhost:6379
+        run: pnpm --filter api exec vitest run src/jobs/bullmq.driver.redis.spec.ts
 
   # Compile the affected apps (Next.js for web, Nest for the API). lint/typecheck do not exercise the
   # bundlers, so a change that only breaks the build is caught here. A `shared` change builds both.

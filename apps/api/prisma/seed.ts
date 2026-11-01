@@ -51,12 +51,12 @@ interface AccountOptions {
   readonly mfaEnabled?: boolean;
 }
 
-/** Upserts a synthetic account by email; the identity subject is the local provider's. */
+/** Upserts a synthetic account by its identity subject; email is no longer a unique key (B9). */
 async function upsertAccount(account: Account, options: AccountOptions) {
   const status = options.status ?? "active";
   return prisma.user.upsert({
-    where: { email: account.email },
-    update: { identitySubject: account.subject, status },
+    where: { identitySubject: account.subject },
+    update: { email: account.email, name: account.name, status },
     create: {
       userType: options.userType,
       name: account.name,

@@ -13,6 +13,17 @@ name: Deploy
 on:
   push:
     branches: [main] # -> build + deploy staging
+    # Only deployable changes trigger a staging deploy — a checkpoint commit that only touches the
+    # knowledge graph, the vault or docs must not kick off a 30-minute build and deploy (F7).
+    paths:
+      - "apps/**"
+      - "packages/**"
+      - "infra/**"
+      - "pnpm-lock.yaml"
+      - "package.json"
+      - "pnpm-workspace.yaml"
+      - "turbo.json"
+      - ".github/workflows/deploy.yml"
   release:
     types: [published] # -> build + deploy production (the release tag)
   workflow_dispatch:
@@ -130,6 +141,13 @@ jobs:
       - uses: actions/checkout@v7
       - name: Image prefix (GHCR requires lowercase)
         run: echo "IMAGE_PREFIX=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
+      # Production forward deploys come only from a published release tag, never a manual dispatch of an
+      # arbitrary branch (F6). A dispatch to production is allowed only for a rollback (IMAGE_TAG set).
+      - name: Refuse a manual forward deploy to production
+        if: ${{ github.event_name == 'workflow_dispatch' && env.ENVIRONMENT == 'production' && env.IMAGE_TAG == '' }}
+        run: |
+          echo "::error::a production forward deploy must come from a published release, not workflow_dispatch; dispatch to production only to roll back (set image_tag)."
+          exit 1
       # Fail CLOSED: refuse a production FORWARD deploy unless DEPLOY_FREEZE is empty or an explicit falsey
       # value — any other value (true, 1, a typo) is treated as frozen. A rollback (IMAGE_TAG set) is exempt
       # so a bad release can always be recovered, even during a live wedding.

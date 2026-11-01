@@ -39,9 +39,11 @@ class FakeRepository extends RolesRepository {
   userExists = vi.fn(async () => true);
 }
 
-function service(repo: FakeRepository) {
+function service(repo: FakeRepository, userCount = vi.fn(async () => 1)) {
   const prisma = {
     $transaction: async (fn: (tx: unknown) => Promise<unknown>) => fn({}),
+    // Default: another active Super Admin exists, so the last-SA guard (B3) never blocks unless a test says so.
+    user: { count: userCount },
   } as unknown as PrismaService;
   const audit = { record: vi.fn(async () => undefined) } as unknown as AuditService;
   const sessions = { revokeAllForUser: vi.fn(async () => undefined) } as unknown as SessionService;
@@ -153,6 +155,30 @@ describe("RolesService guardrails", () => {
       service(repo).assign("user-1", systemRole.id, staff(["PM"])),
     ).rejects.toMatchObject({ code: "forbidden" });
     expect(repo.assign).not.toHaveBeenCalled();
+  });
+
+  it("refuses unassigning Super Admin from the last active Super Admin (B3)", async () => {
+    const repo = new FakeRepository({ [systemRole.id]: systemRole });
+    const userCount = vi.fn<() => Promise<number>>();
+    userCount.mockResolvedValueOnce(1).mockResolvedValueOnce(0); // target is an active SA; no other
+    await expect(service(repo, userCount).unassign("user-1", systemRole.id)).rejects.toMatchObject({
+      code: "conflict",
+    });
+    expect(repo.unassign).not.toHaveBeenCalled();
+  });
+
+  it("unassigns Super Admin when another active one remains (B3)", async () => {
+    const repo = new FakeRepository({ [systemRole.id]: systemRole });
+    const userCount = vi.fn<() => Promise<number>>();
+    userCount.mockResolvedValueOnce(1).mockResolvedValueOnce(1); // another active SA exists
+    await service(repo, userCount).unassign("user-1", systemRole.id);
+    expect(repo.unassign).toHaveBeenCalledWith("user-1", systemRole.id, expect.anything());
+  });
+
+  it("unassigns a custom role without the last-Super-Admin check (B3)", async () => {
+    const repo = new FakeRepository({ [customRole.id]: customRole });
+    await service(repo).unassign("user-1", customRole.id);
+    expect(repo.unassign).toHaveBeenCalledWith("user-1", customRole.id, expect.anything());
   });
 
   it("lets any staff admin assign a custom role", async () => {

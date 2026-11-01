@@ -100,7 +100,7 @@ The engineering layer under the blueprint is [docs/engineering/standards.md](eng
 
 The data platform and identity service are compared with prices in [docs/engineering/platform-options.md](engineering/platform-options.md) (26 October 2026); the choice is the developer's and is recorded as R13.
 
-The build as it stood on 27 October 2026 (main at d176d1a, the skeleton plus the offline spike) is checked against these standards and the build plan in [docs/engineering/build-verification-2026-10-27.md](engineering/build-verification-2026-10-27.md): a fresh clone set up from the README and a verified multi-agent audit, with what to fix before the next phase.
+The build as it stood on 27 October 2026 (main at d176d1a, the skeleton plus the offline spike) is checked against these standards and the build plan in [docs/engineering/build-verification-2026-10-27.md](engineering/build-verification-2026-10-27.md): a fresh clone set up from the README and a verified multi-agent audit, with what to fix before the next phase. The build as it stood on 31 October 2026 (origin/main at 03b1505: sprints 3 to 7, the VPS block and feature 8.1) is checked in [docs/engineering/build-verification-2026-10-31.md](engineering/build-verification-2026-10-31.md): the gates and builds on a fresh worktree, a live smoke of the API and the enquiry form, seven parallel reviews with the high and medium findings re-verified by the lead, and the gaps against the briefs, the records and the 27 October lists.
 
 ## Repositories and the Obsidian vault
 

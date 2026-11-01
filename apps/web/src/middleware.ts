@@ -1,5 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
 
+import { env } from "./env";
+
+/** The API's origin (scheme://host:port) from NEXT_PUBLIC_API_URL, for connect-src. */
+const API_ORIGIN = new URL(env.NEXT_PUBLIC_API_URL).origin;
+
 /**
  * A per-request nonce and a strict Content-Security-Policy with no inline scripts (security.md). Next
  * reads the nonce from the request's CSP header and stamps it on its own bootstrap scripts; the browser
@@ -15,7 +20,9 @@ export function middleware(request: NextRequest): NextResponse {
     `style-src 'self' 'unsafe-inline'`,
     `img-src 'self' data: blob:`,
     `font-src 'self'`,
-    `connect-src 'self'`,
+    // The enquiry form (PUB-06) posts to the API, a different origin than the site in development and
+    // under Caddy, so the API origin must be allowed or the browser blocks the fetch (C2).
+    `connect-src 'self' ${API_ORIGIN}`,
     `object-src 'none'`,
     `base-uri 'self'`,
     `frame-ancestors 'none'`,

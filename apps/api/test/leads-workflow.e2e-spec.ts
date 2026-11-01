@@ -112,6 +112,113 @@ describe("Lead workspace workflows (e2e)", () => {
       .expect(409);
   });
 
+  it("enforces the lead status machine and records before/after images (C3, C6)", async () => {
+    const created = await http()
+      .post("/crm/leads")
+      .set("authorization", await sm())
+      .send({
+        name: `${TAG} Transition`,
+        source: "website",
+        phone: "9876500110",
+        ownerUserId: salesUserId,
+      })
+      .expect(201);
+    const leadId: string = created.body.data.id;
+    // Forward through the funnel is allowed...
+    await http()
+      .patch(`/crm/leads/${leadId}`)
+      .set("authorization", await sm())
+      .send({ status: "contacted" })
+      .expect(200);
+    // ...but moving back to `new` is refused with a 409 (no silent any-to-any jump).
+    await http()
+      .patch(`/crm/leads/${leadId}`)
+      .set("authorization", await sm())
+      .send({ status: "new" })
+      .expect(409);
+    // The allowed move left a before/after status image on the audit (A4, C6).
+    const images = await prisma.auditEvent.findMany({
+      where: { entityType: "lead", entityId: leadId, action: "update" },
+      select: { beforeJson: true, afterJson: true },
+    });
+    expect(images.some((e) => e.beforeJson !== null && e.afterJson !== null)).toBe(true);
+  });
+
+  it("makes a closed lead read-only (C3)", async () => {
+    const created = await http()
+      .post("/crm/leads")
+      .set("authorization", await sm())
+      .send({ name: `${TAG} Closed`, source: "website", phone: "9876500111" })
+      .expect(201);
+    const leadId: string = created.body.data.id;
+    await http()
+      .patch(`/crm/leads/${leadId}`)
+      .set("authorization", await sm())
+      .send({ status: "closed", closedReason: "lost" })
+      .expect(200);
+    // No further edits and no reopening.
+    await http()
+      .patch(`/crm/leads/${leadId}`)
+      .set("authorization", await sm())
+      .send({ requirements: "changed" })
+      .expect(409);
+    await http()
+      .patch(`/crm/leads/${leadId}`)
+      .set("authorization", await sm())
+      .send({ status: "new" })
+      .expect(409);
+  });
+
+  it("refuses an unknown or non-staff lead owner (C4)", async () => {
+    const created = await http()
+      .post("/crm/leads")
+      .set("authorization", await sm())
+      .send({ name: `${TAG} Owner`, source: "website", phone: "9876500112" })
+      .expect(201);
+    const leadId: string = created.body.data.id;
+    // An id that belongs to no user — before the fix this was an unmapped 500.
+    await http()
+      .patch(`/crm/leads/${leadId}/owner`)
+      .set("authorization", await sm())
+      .send({ ownerUserId: "00000000-0000-7000-8000-0000000000ff" })
+      .expect(400);
+    // A real account that is not active staff (the client login) cannot own an INTERNAL lead.
+    const client = await prisma.user.findFirstOrThrow({ where: { email: "client@example.com" } });
+    await http()
+      .patch(`/crm/leads/${leadId}/owner`)
+      .set("authorization", await sm())
+      .send({ ownerUserId: client.id })
+      .expect(400);
+  });
+
+  it("keeps a lead reachable and its dates in order on update (C7)", async () => {
+    const created = await http()
+      .post("/crm/leads")
+      .set("authorization", await sm())
+      .send({ name: `${TAG} Contact`, source: "website", phone: "9876500113" })
+      .expect(201);
+    const leadId: string = created.body.data.id;
+    // Clearing the only contact (a phone-only lead) is refused.
+    await http()
+      .patch(`/crm/leads/${leadId}`)
+      .set("authorization", await sm())
+      .send({ phone: null })
+      .expect(400);
+    // A reversed tentative range is refused, as at create.
+    await http()
+      .patch(`/crm/leads/${leadId}`)
+      .set("authorization", await sm())
+      .send({ tentativeDateFrom: "2027-03-10", tentativeDateTo: "2027-03-01" })
+      .expect(400);
+  });
+
+  it("rejects a malformed list cursor with 400, not 500 (L6)", async () => {
+    await http()
+      .get("/crm/leads?cursor=not-a-uuid")
+      .set("authorization", await sm())
+      .expect(400);
+  });
+
   it("sends a follow-up reminder once, idempotently (AC-01.5)", async () => {
     const created = await http()
       .post("/crm/leads")
@@ -140,5 +247,9 @@ describe("Lead workspace workflows (e2e)", () => {
         where: { recipientId: salesUserId, templateKey: "crm.follow_up_due", entityId: leadId },
       }),
     ).toBe(1);
+    // The sweep records its outcome on a job_runs row (C5, D-057).
+    expect(
+      await prisma.jobRun.count({ where: { jobName: "crm.lead.follow_up_reminder" } }),
+    ).toBeGreaterThan(0);
   });
 });

@@ -154,7 +154,10 @@ model User {
   id              String     @id @default(uuid(7)) @db.Uuid
   userType        UserType   @map("user_type")
   name            String     @db.VarChar(255)
-  email           String     @unique @db.VarChar(255)
+  /// Unique only among LIVE rows: a partial unique index (WHERE deleted_at IS NULL) lets a person be
+  /// re-created after a soft delete (B9). Prisma cannot express a partial unique, so it is a raw SQL
+  /// migration (like the Q5 side index) and not an @unique here.
+  email           String     @db.VarChar(255)
   phone           String?    @db.VarChar(32)
   status          UserStatus @default(invited)
   /// The identity service's subject (Cognito `sub`); null until the account is activated there.
@@ -402,6 +405,8 @@ model Session {
   tokenId            String    @unique @map("token_id") @db.VarChar(255)
   idleTimeoutMinutes Int       @map("idle_timeout_minutes")
   lastSeenAt         DateTime  @map("last_seen_at") @db.Timestamptz(6)
+  /// The access token's expiry: the row is kept until then so a revoked/idle session stays denied (A2).
+  expiresAt          DateTime  @map("expires_at") @db.Timestamptz(6)
   revokedAt          DateTime? @map("revoked_at") @db.Timestamptz(6)
   revokedReason      String?   @map("revoked_reason") @db.VarChar(255)
 
@@ -410,9 +415,8 @@ model Session {
   user User @relation(fields: [userId], references: [id])
 
   @@index([userId])
-  // Support the reaper's sweep for dead rows (revoked, or idle past the timeout).
-  @@index([revokedAt])
-  @@index([lastSeenAt])
+  // The reaper sweeps rows whose access token has expired.
+  @@index([expiresAt])
   @@map("sessions")
 }
 

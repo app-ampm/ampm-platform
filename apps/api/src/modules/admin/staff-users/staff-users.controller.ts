@@ -79,6 +79,13 @@ export class StaffUsersController {
     return this.users.setStatus(params.id, body, staffId(principal));
   }
 
+  @Post("staff-users/:id/reinvite")
+  @RequirePermission("admin.staff_users.update")
+  @SelfAudited()
+  reinvite(@ZodParams(idParam) params: { id: string }): Promise<StaffUserView> {
+    return this.users.reinvite(params.id);
+  }
+
   @Delete("staff-users/:id")
   @RequirePermission("admin.staff_users.delete")
   @SelfAudited()

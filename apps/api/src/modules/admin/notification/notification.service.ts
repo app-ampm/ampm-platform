@@ -117,7 +117,13 @@ export class NotificationService implements OnModuleInit {
   ) {}
 
   onModuleInit(): void {
-    this.jobs.register(sendNotificationJob, (payload) => this.deliver(payload.notificationId));
+    this.jobs.register(
+      sendNotificationJob,
+      (payload) => this.deliver(payload.notificationId),
+      // After every delivery attempt has failed the job dead-letters: mark the row failed and clear
+      // its render variables so no invite token is held at rest on a permanently-queued row (D-044).
+      (payload) => this.failPermanently(payload.notificationId),
+    );
   }
 
   async queue(input: QueueNotification): Promise<QueueResult> {
@@ -139,7 +145,8 @@ export class NotificationService implements OnModuleInit {
     await this.jobs.enqueue(
       sendNotificationJob,
       { notificationId: row.id },
-      { idempotencyKey: `notification.send:${row.id}` },
+      // '.' separator, not ':': BullMQ refuses a custom jobId containing ':' (bullmq.driver.ts, A1).
+      { idempotencyKey: `notification.send.${row.id}` },
     );
     return { suppressed: false, notificationId: row.id };
   }
@@ -204,12 +211,13 @@ export class NotificationService implements OnModuleInit {
         templateKey: row.templateKey,
         content,
       });
-    } catch {
-      // A failed external send is terminal here (email delivery is best-effort and re-sendable): mark
-      // the row failed and clear its render variables rather than leave it queued with the token at rest.
+    } catch (error) {
+      // A failed external send is transient and retryable (SMTP blips, provider outages): rethrow so
+      // the job retries with backoff. Only after every attempt fails does the job dead-letter, where
+      // `failPermanently` marks the row failed and clears its render variables (B2, D-044). The row
+      // stays `queued` and re-renderable across the retries.
       this.logger.warn("notification.send_failed", { templateKey: row.templateKey, channel });
-      await this.advance(row, { status: "failed", clearData: true });
-      return;
+      throw error instanceof Error ? error : new Error(String(error));
     }
     await this.advance(row, {
       status: "sent",
@@ -239,6 +247,16 @@ export class NotificationService implements OnModuleInit {
       return null;
     }
     return rendered.content;
+  }
+
+  /**
+   * The job's dead-letter handler: every send attempt failed, so mark the still-`queued` row failed
+   * and clear its render variables (the invite token). A no-op if the row has since left `queued`.
+   */
+  private async failPermanently(notificationId: string): Promise<void> {
+    const row = await this.repository.findById(notificationId);
+    if (!row || row.status !== "queued") return;
+    await this.advance(row, { status: "failed", clearData: true });
   }
 
   private async advance(row: NotificationRow, patch: StatusPatch): Promise<void> {

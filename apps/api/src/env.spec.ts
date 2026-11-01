@@ -13,6 +13,10 @@ const prodValid = {
   EMAIL_FROM: "AMPM <no-reply@ampm.example>",
   WEB_APP_URL: "https://app.ampm.example",
   TRUST_PROXY: "1",
+  REDIS_URL: "redis://redis:6379",
+  BOT_CHECK_PROVIDER: "siteverify",
+  BOT_CHECK_URL: "https://challenges.cloudflare.com/turnstile/v0/siteverify",
+  BOT_CHECK_SECRET: "bot-secret",
 };
 
 describe("loadEnv", () => {
@@ -69,5 +73,39 @@ describe("loadEnv", () => {
         IDENTITY_LOCAL_SECRET: "a-development-secret-that-is-32chars",
       }),
     ).toThrow(/local identity provider/);
+  });
+
+  it("requires REDIS_URL in production (A6)", () => {
+    const { REDIS_URL: _omit, ...withoutRedis } = prodValid;
+    expect(() => loadEnv(withoutRedis)).toThrow(/REDIS_URL/);
+  });
+
+  it("allows development without REDIS_URL (jobs run inline)", () => {
+    const env = loadEnv({
+      DATABASE_URL: "postgres://localhost:5432/ampm",
+      IDENTITY_PROVIDER: "local",
+      IDENTITY_LOCAL_SECRET: "a-development-secret-that-is-32chars",
+    });
+    expect(env.REDIS_URL).toBeUndefined();
+  });
+
+  it("refuses the stub bot check in production (C1)", () => {
+    expect(() => loadEnv({ ...prodValid, BOT_CHECK_PROVIDER: "stub" })).toThrow(
+      /BOT_CHECK_PROVIDER/,
+    );
+  });
+
+  it("requires the verify URL and secret for the siteverify bot check (C1)", () => {
+    const { BOT_CHECK_URL: _url, BOT_CHECK_SECRET: _secret, ...withoutBot } = prodValid;
+    expect(() => loadEnv(withoutBot)).toThrow(/BOT_CHECK_URL/);
+  });
+
+  it("defaults to the stub bot check in development", () => {
+    const env = loadEnv({
+      DATABASE_URL: "postgres://localhost:5432/ampm",
+      IDENTITY_PROVIDER: "local",
+      IDENTITY_LOCAL_SECRET: "a-development-secret-that-is-32chars",
+    });
+    expect(env.BOT_CHECK_PROVIDER).toBe("stub");
   });
 });

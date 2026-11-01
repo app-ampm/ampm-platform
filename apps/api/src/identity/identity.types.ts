@@ -5,6 +5,8 @@ export interface VerifiedIdentity {
   readonly provider: "cognito" | "local";
   /** The access token's `jti`; the key of the server-side session (D-033). */
   readonly tokenId: string;
+  /** The access token's expiry (`exp`); the session row is kept until then so revocation holds (A2). */
+  readonly expiresAt: Date;
   readonly email: string | null;
   readonly phone: string | null;
 }

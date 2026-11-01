@@ -28,11 +28,13 @@ describe("LocalIdentityAdapter", () => {
 });
 
 describe("cognitoIdentityFromClaims", () => {
+  const EXP = 2_000_000_000; // a fixed future `exp` (seconds); jwtVerify has already enforced it live
   const claims = {
     sub: "c0gn1t0-sub",
     token_use: "access",
     client_id: "client-1",
     jti: "jti-cognito",
+    exp: EXP,
     email: "x@example.com",
     email_verified: true,
   };
@@ -42,9 +44,15 @@ describe("cognitoIdentityFromClaims", () => {
       subject: "c0gn1t0-sub",
       provider: "cognito",
       tokenId: "jti-cognito",
+      expiresAt: new Date(EXP * 1000),
       email: "x@example.com",
       phone: null,
     });
+  });
+
+  it("rejects an access token with no expiry (A2)", () => {
+    const { exp: _omit, ...noExp } = claims;
+    expect(() => cognitoIdentityFromClaims(noExp, "client-1")).toThrow();
   });
 
   it('accepts email_verified as the boolean true or the string "true"', () => {
@@ -65,6 +73,7 @@ describe("cognitoIdentityFromClaims", () => {
       token_use: "access",
       client_id: "client-1",
       jti: "jti-cognito",
+      exp: EXP,
       email_verified: true,
     };
     expect(cognitoIdentityFromClaims(withoutEmail, "client-1").email).toBeNull();

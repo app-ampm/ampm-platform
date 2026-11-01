@@ -203,8 +203,21 @@ export class LeadsRepository {
     return match ? match.id : null;
   }
 
-  async update(id: string, patch: LeadUpdatePatch, updatedBy: string): Promise<void> {
-    await this.prisma.lead.update({ where: { id }, data: { ...patch, updatedBy } });
+  async update(
+    id: string,
+    patch: LeadUpdatePatch,
+    updatedBy: string,
+    client: Prisma.TransactionClient | PrismaService = this.prisma,
+  ): Promise<void> {
+    await client.lead.update({ where: { id }, data: { ...patch, updatedBy } });
+  }
+
+  /** True when the user is a live, active staff member — the only principal a lead may be owned by (C4). */
+  async isActiveStaff(userId: string): Promise<boolean> {
+    const count = await this.prisma.user.count({
+      where: { id: userId, userType: "staff", status: "active", deletedAt: null },
+    });
+    return count > 0;
   }
 
   /** Closes the duplicate as `merged`, pointing it at the survivor; runs inside the merge transaction. */

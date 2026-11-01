@@ -20,6 +20,10 @@ command -v sops >/dev/null 2>&1 || {
 	exit 1
 }
 
+# The non-interactive deploy SSH session carries no environment, so point sops at the host's age key by
+# default (bootstrap.sh creates /etc/ampm). An operator who keeps the key elsewhere overrides it (F2).
+export SOPS_AGE_KEY_FILE="${SOPS_AGE_KEY_FILE:-/etc/ampm/age.key}"
+
 repo_root=$(CDPATH='' cd -- "$(dirname -- "$0")/../.." && pwd)
 src_dir="$repo_root/infra/secrets"
 out_dir="$repo_root/infra/compose/$ENVIRONMENT"
