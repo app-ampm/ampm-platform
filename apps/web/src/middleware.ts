@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { env } from "./env.js";
+import { env } from "./env";
 
 /** The API's origin (scheme://host:port) from NEXT_PUBLIC_API_URL, for connect-src. */
 const API_ORIGIN = new URL(env.NEXT_PUBLIC_API_URL).origin;
