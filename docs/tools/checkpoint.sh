@@ -19,10 +19,23 @@ if [ "$HOOK" = 1 ] && [ ! -t 0 ]; then
   AMPM_SESSION_JSON=$(cat 2>/dev/null || true); export AMPM_SESSION_JSON
 fi
 
+# True in a git repository, whether the main checkout (.git is a dir) or a worktree (.git is a file) — so
+# the checkpoint commits inside the worktrees every session runs in, not only the main checkout (F9).
+in_git_repo() { git rev-parse --is-inside-work-tree >/dev/null 2>&1; }
+
 push() {  # pushes the branch when it has commits its upstream lacks; PUSH_FAILED counts them when the push is refused
   git rev-parse -q --verify '@{upstream}' >/dev/null 2>&1 || return 0
   local ahead; ahead=$(git rev-list --count '@{upstream}..HEAD' 2>/dev/null || echo 0)
   [ "$ahead" -gt 0 ] || return 0
+  # Scan before the push, not only in CI: the hook runs `git add -A` with lefthook disabled, and
+  # .gitignore un-ignores infra/secrets/examples/*.yaml, so a secret a session wrote could otherwise
+  # reach the remote before CI's secrets-scan could refuse it (F8). Fail closed when the scan flags the
+  # tree; the scanner is skipped only where it is absent (e.g. a throwaway repo), not in this project.
+  if [ -f docs/tools/scan_secrets.py ] && ! python3 docs/tools/scan_secrets.py >/dev/null 2>&1; then
+    PUSH_FAILED="$ahead"
+    echo "project: push blocked — secret scan flagged the tree (run docs/tools/scan_secrets.py); not pushing"
+    return 0
+  fi
   if git push -q; then echo "project: pushed"
   else
     ahead=$(git rev-list --count '@{upstream}..HEAD' 2>/dev/null || echo "$ahead")
@@ -31,9 +44,9 @@ push() {  # pushes the branch when it has commits its upstream lacks; PUSH_FAILE
 }
 
 run() {
-  if [ -d .git ] && [ -z "$(git config --local user.email)" ]; then
+  if in_git_repo && [ -z "$(git config --local user.email)" ]; then
     echo "project: no repository-local git identity (user.email), not committing"
-  elif [ -d .git ]; then
+  elif in_git_repo; then
     git add -A
     if git diff --cached --quiet; then
       echo "project: nothing to commit"
