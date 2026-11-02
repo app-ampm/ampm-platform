@@ -1,5 +1,10 @@
 import { Injectable } from "@nestjs/common";
-import type { MediaAssetCreateRequest, MediaAssetUpdateRequest, MediaListQuery } from "@ampm/core";
+import type {
+  MediaAssetCreateRequest,
+  MediaAssetUpdateRequest,
+  MediaListQuery,
+  MediaScanStatus,
+} from "@ampm/core";
 
 import { PrismaService } from "../../db/prisma.service.js";
 import { Prisma } from "../../generated/prisma/client.js";
@@ -111,6 +116,45 @@ export class MediaRepository {
     await (tx ?? this.prisma).mediaAsset.updateMany({
       where: { id, deletedAt: null },
       data: { deletedAt: new Date(), updatedBy: actorId },
+    });
+  }
+
+  /** The SECRET object key for signing a download — used internally, never returned to a caller. */
+  async storageKeyOf(id: string): Promise<string | null> {
+    const row = await this.prisma.mediaAsset.findFirst({
+      where: { id, deletedAt: null },
+      select: { storageKey: true },
+    });
+    return row ? row.storageKey : null;
+  }
+
+  /** Resolve an asset from its object key (the signed download path), for the scan gate and content type. */
+  async findByStorageKey(storageKey: string): Promise<MediaAssetRow | null> {
+    return this.prisma.mediaAsset.findFirst({
+      where: { storageKey, deletedAt: null },
+      select: MEDIA_SELECT,
+    });
+  }
+
+  /** Demote an asset to `pending` (non-downloadable) in a committed write before its bytes change (3b). */
+  async markPending(id: string, actorId: string): Promise<void> {
+    await this.prisma.mediaAsset.updateMany({
+      where: { id, deletedAt: null },
+      data: { scanStatus: "pending", updatedBy: actorId },
+    });
+  }
+
+  /** Record the content-verified type/size and the scan outcome after the bytes are stored (feature 9.3b). */
+  async setUploaded(
+    id: string,
+    data: { mimeType: string; sizeBytes: number; scanStatus: MediaScanStatus },
+    actorId: string,
+    tx?: Prisma.TransactionClient,
+  ): Promise<MediaAssetRow> {
+    return (tx ?? this.prisma).mediaAsset.update({
+      where: { id },
+      data: { ...data, updatedBy: actorId },
+      select: MEDIA_SELECT,
     });
   }
 

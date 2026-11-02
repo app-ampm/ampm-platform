@@ -1,12 +1,13 @@
 import { randomUUID } from "node:crypto";
 
-import { Injectable } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 import {
   errors,
   type MediaAssetCreateRequest,
   type MediaAssetPage,
   type MediaAssetUpdateRequest,
   type MediaAssetView,
+  type MediaDownloadUrl,
   type MediaListQuery,
   type MediaRemovedResponse,
   type MediaRightsStatus,
@@ -14,8 +15,14 @@ import {
 } from "@ampm/core";
 
 import { AuditService } from "../../policy/audit.service.js";
+import { STORAGE_ADAPTER, type StorageAdapter } from "../../storage/storage.types.js";
+import { AV_SCANNER, type AvScanner } from "./av-scanner.js";
+import { detectMedia, MAX_UPLOAD_BYTES } from "./media-content.js";
 import { MediaRepository, type MediaAssetRow } from "./media.repository.js";
 import { toMediaAssetView } from "./media.view.js";
+
+/** The lifetime of a signed media download link (security.md: 15 minutes). */
+const DOWNLOAD_TTL_SECONDS = 900;
 
 /** Rights statuses that may back client/demo/public visibility (GP-20). */
 const PUBLISHABLE_RIGHTS: ReadonlySet<MediaRightsStatus> = new Set([
@@ -46,9 +53,16 @@ export class MediaService {
   constructor(
     private readonly repo: MediaRepository,
     private readonly audit: AuditService,
+    @Inject(STORAGE_ADAPTER) private readonly storage: StorageAdapter,
+    @Inject(AV_SCANNER) private readonly scanner: AvScanner,
   ) {}
 
   async create(request: MediaAssetCreateRequest, actorId: string): Promise<MediaAssetView> {
+    if (request.ownerType !== "hotel") {
+      // media_assets is polymorphic, but only hotels are managed through this permission today; other
+      // owner types gain their own authorization + membership scoping when their modules land (security.md).
+      throw errors.validation([], "Only hotel media is supported in this release");
+    }
     this.assertPublishable(request.visibility, request.rightsStatus);
     const storageKey = `${request.ownerType}/${request.ownerId}/${randomUUID()}`;
     return toMediaAssetView(await this.repo.create(request, storageKey, actorId));
@@ -111,6 +125,93 @@ export class MediaService {
       );
     });
     return { id };
+  }
+
+  /**
+   * Store an uploaded object's bytes against the asset, by content (AC-20.2): the magic number decides the
+   * type (a renamed executable is refused) and must match the declared kind; the size is bounded. The bytes
+   * are scanned fail-closed (AC-20.3) and the row records the outcome — only a `clean` asset is downloadable.
+   */
+  async uploadBytes(id: string, bytes: Buffer, actorId: string): Promise<MediaAssetView> {
+    const asset = await this.require(id);
+    const detected = detectMedia(bytes);
+    if (!detected) {
+      throw errors.validation([], "Unsupported file type; allowed: JPEG, PNG, WebP, GIF, MP4");
+    }
+    if (detected.kind !== asset.kind) {
+      throw errors.validation(
+        [],
+        `File content is a ${detected.kind}, not the declared ${asset.kind}`,
+      );
+    }
+    if (bytes.length > MAX_UPLOAD_BYTES) {
+      throw errors.validation([], `File exceeds the ${MAX_UPLOAD_BYTES} byte limit`);
+    }
+    const storageKey = await this.storageKeyOrThrow(id);
+    // Demote to non-downloadable (a committed write) BEFORE the bytes change, so any failure or concurrent
+    // read in the overwrite -> scan -> commit window stays fail-closed (AC-20.3): a link minted while the
+    // asset was clean cannot serve the new, not-yet-scanned bytes.
+    await this.repo.markPending(id, actorId);
+    await this.storage.putObject(storageKey, bytes, detected.mimeType);
+    const scanStatus = await this.scanner.scan(bytes);
+    if (scanStatus !== "clean") await this.storage.deleteObject(storageKey); // never keep rejected bytes
+    const row = await this.repo.transaction(async (tx) => {
+      const updated = await this.repo.setUploaded(
+        id,
+        { mimeType: detected.mimeType, sizeBytes: bytes.length, scanStatus },
+        actorId,
+        tx,
+      );
+      await this.audit.record(
+        {
+          action: "update",
+          entityType: "media_asset",
+          entityId: id,
+          before: { scanStatus: asset.scanStatus },
+          after: { scanStatus, sizeBytes: bytes.length, mimeType: detected.mimeType },
+          maskImages: false,
+        },
+        tx,
+      );
+      return updated;
+    });
+    return toMediaAssetView(row);
+  }
+
+  /** Mint a 15-minute signed download link for a clean asset (AC-20). A non-clean asset is not downloadable. */
+  async downloadUrlFor(id: string): Promise<MediaDownloadUrl> {
+    const asset = await this.require(id);
+    if (asset.scanStatus !== "clean") {
+      throw errors.conflict("Media is not downloadable until a scan passes");
+    }
+    const signed = this.storage.signDownloadUrl(
+      await this.storageKeyOrThrow(id),
+      DOWNLOAD_TTL_SECONDS,
+    );
+    return { url: signed.url, expiresAt: signed.expiresAt.toISOString() };
+  }
+
+  /**
+   * Serve the bytes behind a signed download link: the signature must verify (not expired, key-bound) and
+   * the asset must be clean, else the same 404 as absence (security.md). Access followed the owning record
+   * when the link was minted; this endpoint honours that capability.
+   */
+  async streamBlob(
+    storageKey: string,
+    expiresAtEpoch: number,
+    signature: string,
+  ): Promise<{ bytes: Buffer; mimeType: string }> {
+    if (!this.storage.verifyDownload(storageKey, expiresAtEpoch, signature))
+      throw errors.notFound();
+    const asset = await this.repo.findByStorageKey(storageKey);
+    if (!asset || asset.scanStatus !== "clean") throw errors.notFound();
+    return { bytes: await this.storage.getObject(storageKey), mimeType: asset.mimeType };
+  }
+
+  private async storageKeyOrThrow(id: string): Promise<string> {
+    const key = await this.repo.storageKeyOf(id);
+    if (!key) throw errors.notFound("No such media asset");
+    return key;
   }
 
   private async require(id: string): Promise<MediaAssetRow> {
