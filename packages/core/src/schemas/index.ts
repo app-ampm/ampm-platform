@@ -290,3 +290,4 @@ export type {
 export * from "./hotels";
 export * from "./hotels-admin";
 export * from "./hotel-rates";
+export * from "./media";
