@@ -281,21 +281,9 @@ export type {
   PaymentPurpose,
   PaymentStatus,
 } from "./payments";
-// Value schemas and their inferred types in one statement so the barrel stays within the 300-line cap
-// (hotelDestinationView is internal to hotelView and reached via HotelView["destination"], not re-exported).
-export {
-  hotelListQuery,
-  hotelPage,
-  hotelView,
-  savedHotelListQuery,
-  savedHotelPage,
-  savedHotelRemovedResponse,
-  savedHotelView,
-  type HotelListQuery,
-  type HotelPage,
-  type HotelView,
-  type SavedHotelListQuery,
-  type SavedHotelPage,
-  type SavedHotelRemovedResponse,
-  type SavedHotelView,
-} from "./hotels";
+// Module C hotels: client discovery (hotels.ts) and the staff workspace (hotels-admin.ts, feature 9.1).
+// Wildcard re-exports keep the barrel within the 300-line max-lines cap; each file exports only its
+// public contracts (module-private helpers are plain `const`, not re-exported), and their names do not
+// collide, so `export *` is unambiguous.
+export * from "./hotels";
+export * from "./hotels-admin";
