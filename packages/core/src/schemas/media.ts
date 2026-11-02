@@ -121,3 +121,11 @@ export type MediaAssetPage = z.infer<typeof mediaAssetPage>;
 /** The acknowledgement after removing a media asset (soft delete is idempotent — returns its id). */
 export const mediaRemovedResponse = z.object({ id: uuid }).strict();
 export type MediaRemovedResponse = z.infer<typeof mediaRemovedResponse>;
+
+/**
+ * A signed, expiring link to download a media asset's bytes (AC-20). Minted only for a `clean` asset,
+ * in an authorised read context (access follows the owning record); the URL itself is the capability and
+ * the object key never appears on the wire.
+ */
+export const mediaDownloadUrl = z.object({ url: z.string(), expiresAt: isoDateTime }).strict();
+export type MediaDownloadUrl = z.infer<typeof mediaDownloadUrl>;

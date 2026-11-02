@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 
+import { AV_SCANNER, StubAvScanner } from "./av-scanner.js";
 import { MediaController } from "./media.controller.js";
 import { MediaRepository } from "./media.repository.js";
 import { MediaService } from "./media.service.js";
@@ -12,7 +13,9 @@ import { MediaService } from "./media.service.js";
  */
 @Module({
   controllers: [MediaController],
-  providers: [MediaService, MediaRepository],
+  // The storage adapter is global (StorageModule); the AV scanner is a stub this sprint (fail-closed),
+  // with a real provider a later config swap — production media is gated by the storage prod guard until then.
+  providers: [MediaService, MediaRepository, { provide: AV_SCANNER, useClass: StubAvScanner }],
   exports: [MediaService],
 })
 export class MediaModule {}
