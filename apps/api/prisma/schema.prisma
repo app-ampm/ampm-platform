@@ -996,6 +996,7 @@ model Destination {
   description   String?           @db.Text
   status        DestinationStatus @default(draft)
   publicVisible Boolean           @default(false) @map("public_visible")
+  heroMediaId   String?           @map("hero_media_id") @db.Uuid
 
   createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   createdBy String?   @map("created_by") @db.Uuid
@@ -1041,13 +1042,14 @@ model Hotel {
   updatedBy String?   @map("updated_by") @db.Uuid
   deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
 
-  destination   Destination         @relation(fields: [destinationId], references: [id])
-  savedBy       SavedHotel[]
-  contacts      HotelContact[]
-  rooms         HotelRoomCategory[]
-  venues        HotelVenue[]
-  rateCards     HotelRateCard[]
-  verifications HotelVerification[]
+  destination       Destination             @relation(fields: [destinationId], references: [id])
+  savedBy           SavedHotel[]
+  contacts          HotelContact[]
+  rooms             HotelRoomCategory[]
+  venues            HotelVenue[]
+  rateCards         HotelRateCard[]
+  verifications     HotelVerification[]
+  weddingReferences HotelWeddingReference[]
 
   @@index([destinationId])
   @@index([status, demoVisible])
@@ -1314,4 +1316,107 @@ model HotelRateItem {
   @@index([venueId])
   @@index([deletedAt])
   @@map("hotel_rate_items")
+}
+
+/// A consented previous-wedding reference for a hotel (data-model.md §5; GP-20). CLIENT when
+/// `client_visible`, which the service allows only once `consent_document_id` is set (the GP-20 gate).
+/// `project_id` (the AMPM wedding, Module E) and `consent_document_id` (Module N documents) are not built
+/// yet — plain Uuid now, the SavedHotel.projectId deferral pattern. The actual photos are MediaAsset rows
+/// (owner_type=hotel, consent_source_project_id set). Feature 9.3.
+model HotelWeddingReference {
+  id                String  @id @default(uuid(7)) @db.Uuid
+  hotelId           String  @map("hotel_id") @db.Uuid
+  projectId         String? @map("project_id") @db.Uuid
+  eventYear         Int     @map("event_year")
+  guestCount        Int?    @map("guest_count")
+  descriptionClient String? @map("description_client") @db.Text
+  clientVisible     Boolean @default(false) @map("client_visible")
+  consentDocumentId String? @map("consent_document_id") @db.Uuid
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  hotel Hotel @relation(fields: [hotelId], references: [id])
+
+  @@index([hotelId])
+  @@index([deletedAt])
+  @@map("hotel_wedding_references")
+}
+
+// ---------------------------------------------------------------- Module N — documents and media
+
+enum MediaOwnerType {
+  hotel
+  destination
+  vendor
+  design_version
+  invitation_version
+  project
+  cms
+}
+
+enum MediaKind {
+  image
+  video
+}
+
+enum MediaVisibility {
+  internal
+  client
+  demo
+  public
+}
+
+enum MediaRightsStatus {
+  owned
+  licensed
+  consent_required
+  consent_obtained
+}
+
+enum MediaScanStatus {
+  pending
+  clean
+  rejected
+}
+
+/// Gallery media with rights (data-model.md §16, Module N; first used by hotels, owner_type=hotel).
+/// Polymorphic: `owner_type`/`owner_id` name the owning record, so there is no Prisma relation on the
+/// owner — the repository scopes by owner (architecture §5, C→N downward). `storage_key`/`thumbnail_key`/
+/// `web_key` are SECRET and never serialised; a signed link is minted only when `scan_status = clean`
+/// (fail-closed, AC-20.3). `consent_*` reference Module N `documents` / Module E `wedding_projects`, not
+/// built yet — plain Uuid now (the SavedHotel.projectId pattern). GP-20: client/demo/public visibility
+/// requires rights_status owned|licensed|consent_obtained. Feature 9.3.
+model MediaAsset {
+  id                     String            @id @default(uuid(7)) @db.Uuid
+  ownerType              MediaOwnerType    @map("owner_type")
+  ownerId                String            @map("owner_id") @db.Uuid
+  kind                   MediaKind
+  storageKey             String            @map("storage_key") @db.VarChar(255)
+  thumbnailKey           String?           @map("thumbnail_key") @db.VarChar(255)
+  webKey                 String?           @map("web_key") @db.VarChar(255)
+  mimeType               String            @map("mime_type") @db.VarChar(255)
+  sizeBytes              Int               @map("size_bytes")
+  scanStatus             MediaScanStatus   @default(pending) @map("scan_status")
+  caption                String?           @db.VarChar(255)
+  sortOrder              Int?              @map("sort_order")
+  visibility             MediaVisibility   @default(internal)
+  rightsStatus           MediaRightsStatus @default(consent_required) @map("rights_status")
+  consentSourceProjectId String?           @map("consent_source_project_id") @db.Uuid
+  consentDocumentId      String?           @map("consent_document_id") @db.Uuid
+  uploadedBy             String            @map("uploaded_by") @db.Uuid
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  @@index([ownerType, ownerId, sortOrder])
+  @@index([scanStatus])
+  @@index([deletedAt])
+  @@map("media_assets")
 }
