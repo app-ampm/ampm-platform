@@ -1,6 +1,9 @@
 import { Module } from "@nestjs/common";
 
 import { HotelImportService } from "./hotel-import.service.js";
+import { HotelRatesController } from "./hotel-rates.controller.js";
+import { HotelRatesRepository } from "./hotel-rates.repository.js";
+import { HotelRatesService } from "./hotel-rates.service.js";
 import { HotelSubresourcesRepository } from "./hotel-subresources.repository.js";
 import { HotelSubresourcesService } from "./hotel-subresources.service.js";
 import { HotelsAdminController } from "./hotels-admin.controller.js";
@@ -25,7 +28,7 @@ import { HotelsService } from "./hotels.service.js";
  * with PortalService.
  */
 @Module({
-  controllers: [HotelsController, HotelsAdminController],
+  controllers: [HotelsController, HotelsAdminController, HotelRatesController],
   providers: [
     HotelsService,
     HotelsRepository,
@@ -34,6 +37,8 @@ import { HotelsService } from "./hotels.service.js";
     HotelImportService,
     HotelSubresourcesService,
     HotelSubresourcesRepository,
+    HotelRatesService,
+    HotelRatesRepository,
   ],
 })
 export class HotelsModule {}

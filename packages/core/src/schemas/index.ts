@@ -287,3 +287,4 @@ export type {
 // collide, so `export *` is unambiguous.
 export * from "./hotels";
 export * from "./hotels-admin";
+export * from "./hotel-rates";
