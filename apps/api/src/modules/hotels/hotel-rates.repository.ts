@@ -261,4 +261,59 @@ export class HotelRatesRepository {
       select: { id: true },
     });
   }
+
+  // --- Freshness sweep (AC-04.3). ---
+
+  /** Verifications still marked `verified` whose `verified_at` is older than the cutoff. */
+  findStaleVerifications(cutoff: Date): Promise<{ id: string; hotelId: string }[]> {
+    return this.prisma.hotelVerification.findMany({
+      where: { status: "verified", verifiedAt: { lt: cutoff }, deletedAt: null },
+      select: { id: true, hotelId: true },
+    });
+  }
+
+  async markVerificationStale(id: string, tx: Prisma.TransactionClient): Promise<void> {
+    await tx.hotelVerification.update({ where: { id }, data: { status: "stale" } });
+  }
+
+  /** Turn the verification's still-`verified` rate cards `stale`; returns how many moved. */
+  async markCardsStaleForVerification(
+    verificationId: string,
+    tx: Prisma.TransactionClient,
+  ): Promise<number> {
+    const result = await tx.hotelRateCard.updateMany({
+      where: { verificationId, status: "verified", deletedAt: null },
+      data: { status: "stale" },
+    });
+    return result.count;
+  }
+
+  /** Denormalise `hotels.last_verified_at` to the newest verification the hotel has (AC-04.3). */
+  async recomputeLastVerifiedAt(hotelId: string, tx: Prisma.TransactionClient): Promise<void> {
+    const newest = await tx.hotelVerification.aggregate({
+      where: { hotelId, deletedAt: null },
+      _max: { verifiedAt: true },
+    });
+    await tx.hotel.update({
+      where: { id: hotelId },
+      data: { lastVerifiedAt: newest._max.verifiedAt ?? null },
+    });
+  }
+
+  /** Active staff on the hotel team (HT; roleKey `hotel_team`) — the freshness notice's recipients. */
+  async hotelTeamRecipientIds(): Promise<string[]> {
+    const users = await this.prisma.user.findMany({
+      where: {
+        status: "active",
+        deletedAt: null,
+        roles: { some: { role: { roleKey: "hotel_team" } } },
+      },
+      select: { id: true },
+    });
+    return users.map((user) => user.id);
+  }
+
+  transaction<T>(work: (tx: Prisma.TransactionClient) => Promise<T>): Promise<T> {
+    return this.prisma.$transaction(work);
+  }
 }

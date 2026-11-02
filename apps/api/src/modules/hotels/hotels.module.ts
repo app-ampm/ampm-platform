@@ -1,5 +1,7 @@
 import { Module } from "@nestjs/common";
 
+import { NotificationModule } from "../admin/notification/notification.module.js";
+import { HotelFreshnessService } from "./hotel-freshness.service.js";
 import { HotelImportService } from "./hotel-import.service.js";
 import { HotelRatesController } from "./hotel-rates.controller.js";
 import { HotelRatesRepository } from "./hotel-rates.repository.js";
@@ -17,9 +19,9 @@ import { HotelsService } from "./hotels.service.js";
  * Module C — Hotel intelligence (docs/data-model.md §5). Client-facing discovery: browse/search the
  * hotel catalogue, read one hotel, save/remove a hotel on the account shortlist — all gated on the
  * client's `hotel_discovery` / `saved_hotels` entitlements and scoped by `hotelReach` (demo isolation,
- * A-28). No imports: PrismaService (DbModule), ENV/AppLogger (PlatformModule) are @Global, and the
- * principal with its resolved entitlements arrives on the request context (@CurrentPrincipal) — so this
- * module needs neither PolicyModule nor any other feature module.
+ * A-28). PrismaService (DbModule), ENV/AppLogger (PlatformModule), JobQueue (JobsModule) and ConfigService
+ * (ConfigModule) are @Global; NotificationModule is imported for the freshness job's hotel-team notice
+ * (feature 9.2). The principal with its resolved entitlements arrives on the request context.
  *
  * One deliberate deviation from api.md ("a module never queries another module's tables"): the repository
  * resolves the caller's own account by reading the CRM table `account_contacts` directly (shortlist
@@ -28,6 +30,7 @@ import { HotelsService } from "./hotels.service.js";
  * with PortalService.
  */
 @Module({
+  imports: [NotificationModule],
   controllers: [HotelsController, HotelsAdminController, HotelRatesController],
   providers: [
     HotelsService,
@@ -39,6 +42,7 @@ import { HotelsService } from "./hotels.service.js";
     HotelSubresourcesRepository,
     HotelRatesService,
     HotelRatesRepository,
+    HotelFreshnessService,
   ],
 })
 export class HotelsModule {}
