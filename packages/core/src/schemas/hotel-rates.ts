@@ -8,7 +8,8 @@ import { isoDateTime, money, uuid } from "./common.js";
  * is `verified` and the item is `client_visible`. A card cannot be verified without a verification record
  * (AC-04.4); the freshness job turns a stale verification's cards `stale` (AC-04.3). `source` and
  * `internal_notes` on a card are RESTRICTED — these are the STAFF views; the client discovery view (with
- * the "verified / stale / rates on request" labels) is a later slice. Confirmed quotations are Module D.
+ * the "verified / stale / rates on request" labels) is `hotelDetailView` in hotels.ts. Confirmed
+ * quotations are Module D, never discovery pricing.
  */
 
 export const hotelRateCardStatus = z.enum(["draft", "verified", "stale", "retired"]);

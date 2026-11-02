@@ -2,9 +2,9 @@ import { Injectable } from "@nestjs/common";
 import {
   errors,
   type EntitlementModule,
+  type HotelDetailView,
   type HotelListQuery,
   type HotelPage,
-  type HotelView,
   type SavedHotelListQuery,
   type SavedHotelPage,
   type SavedHotelRemovedResponse,
@@ -14,7 +14,7 @@ import type { Entitlements } from "@ampm/policy";
 
 import type { Principal } from "../../policy/principal.types.js";
 import { HotelsRepository } from "./hotels.repository.js";
-import { toHotelView, toSavedHotelView } from "./hotels.view.js";
+import { toHotelDetailView, toHotelView, toSavedHotelView } from "./hotels.view.js";
 
 /**
  * Module C discovery business rules: gate on the client's entitlements (hotel_discovery to browse/read,
@@ -33,11 +33,11 @@ export class HotelsService {
     return { items: rows.map(toHotelView), nextCursor };
   }
 
-  async get(principal: Principal, hotelId: string): Promise<HotelView> {
+  async get(principal: Principal, hotelId: string): Promise<HotelDetailView> {
     const { ent } = this.gate(principal, "hotel_discovery", false);
-    const hotel = await this.hotels.findInReach(ent.hotelReach, hotelId);
+    const hotel = await this.hotels.findDetailInReach(ent.hotelReach, hotelId);
     if (!hotel) throw errors.notFound(); // outside reach or truly absent — the same 404
-    return toHotelView(hotel);
+    return toHotelDetailView(hotel);
   }
 
   async listSaved(principal: Principal, query: SavedHotelListQuery): Promise<SavedHotelPage> {
