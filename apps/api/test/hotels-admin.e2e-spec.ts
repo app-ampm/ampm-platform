@@ -129,4 +129,23 @@ describe("Hotel import (e2e)", () => {
     expect(res.body.data).toMatchObject({ created: 0, updated: 2, destinationsCreated: 0 });
     expect(await countImported()).toBe(2);
   });
+
+  it("updates a destination and rejects a slug change (slug is immutable)", async () => {
+    const dest = await prisma.destination.findFirstOrThrow({ where: { slug: `${PREFIX}dest` } });
+    const res = await http()
+      .patch(`/hotels-admin/destinations/${dest.id}`)
+      .set("Authorization", await sa())
+      .send({ publicVisible: true, description: "Imported destination" })
+      .expect(200);
+    expect(res.body.data).toMatchObject({
+      slug: `${PREFIX}dest`,
+      publicVisible: true,
+      description: "Imported destination",
+    });
+    await http()
+      .patch(`/hotels-admin/destinations/${dest.id}`)
+      .set("Authorization", await sa())
+      .send({ slug: "renamed" })
+      .expect(400);
+  });
 });

@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common";
 import {
   errors,
   type DestinationCreateRequest,
+  type DestinationUpdateRequest,
   type DestinationView,
   type HotelCreateRequest,
   type HotelStaffDetailView,
@@ -14,6 +15,7 @@ import { AuditService } from "../../policy/audit.service.js";
 import { slugify } from "./hotel-import.js";
 import {
   HotelsAdminRepository,
+  type DestinationUpdatePatch,
   type HotelUpdatePatch,
   type HotelWriteData,
   type StaffHotelRow,
@@ -144,6 +146,35 @@ export class HotelsAdminService {
     return toDestinationView(row);
   }
 
+  async updateDestination(
+    destinationId: string,
+    request: DestinationUpdateRequest,
+    actorId: string,
+  ): Promise<DestinationView> {
+    const current = await this.repo.findDestinationById(destinationId);
+    if (!current) throw errors.notFound("No such destination");
+    await this.repo.updateDestination(destinationId, toDestinationPatch(request), actorId);
+    await this.audit.record({
+      action: "update",
+      entityType: "destination",
+      entityId: destinationId,
+      before: {
+        name: current.name,
+        status: current.status,
+        publicVisible: current.publicVisible,
+      },
+      after: {
+        name: request.name ?? current.name,
+        status: request.status ?? current.status,
+        publicVisible: request.publicVisible ?? current.publicVisible,
+      },
+      maskImages: false,
+    });
+    const row = await this.repo.findDestinationById(destinationId);
+    if (!row) throw errors.notFound("No such destination");
+    return toDestinationView(row);
+  }
+
   private async require(hotelId: string): Promise<StaffHotelRow> {
     const row = await this.repo.findById(hotelId);
     if (!row) throw errors.notFound("No such hotel");
@@ -204,5 +235,18 @@ function toHotelUpdatePatch(request: HotelUpdateRequest): HotelUpdatePatch {
   if (request.internalNotes !== undefined) patch.internalNotes = request.internalNotes ?? null;
   if (request.totalRooms !== undefined) patch.totalRooms = request.totalRooms ?? null;
   if (request.streetViewRef !== undefined) patch.streetViewRef = request.streetViewRef ?? null;
+  return patch;
+}
+
+/** The destination fields a patch set (the slug is immutable, so it is never part of an update). */
+function toDestinationPatch(request: DestinationUpdateRequest): DestinationUpdatePatch {
+  const patch: DestinationUpdatePatch = {};
+  if (request.name !== undefined) patch.name = request.name;
+  if (request.region !== undefined) patch.region = request.region ?? null;
+  if (request.state !== undefined) patch.state = request.state ?? null;
+  if (request.country !== undefined) patch.country = request.country;
+  if (request.description !== undefined) patch.description = request.description ?? null;
+  if (request.status !== undefined) patch.status = request.status;
+  if (request.publicVisible !== undefined) patch.publicVisible = request.publicVisible;
   return patch;
 }
