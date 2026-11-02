@@ -1,13 +1,22 @@
 import { Controller, Delete, Get, HttpCode, Patch, Post } from "@nestjs/common";
 import {
   destinationCreateRequest,
+  hotelContactCreateRequest,
+  hotelContactUpdateRequest,
   hotelCreateRequest,
   hotelImportRequest,
   hotelStaffListQuery,
   hotelUpdateRequest,
+  roomCategoryCreateRequest,
+  roomCategoryUpdateRequest,
   uuid,
+  venueCreateRequest,
+  venueUpdateRequest,
   type DestinationCreateRequest,
   type DestinationView,
+  type HotelContactCreateRequest,
+  type HotelContactUpdateRequest,
+  type HotelContactView,
   type HotelCreateRequest,
   type HotelImportRequest,
   type HotelImportResult,
@@ -15,6 +24,12 @@ import {
   type HotelStaffListQuery,
   type HotelStaffPage,
   type HotelUpdateRequest,
+  type RoomCategoryCreateRequest,
+  type RoomCategoryUpdateRequest,
+  type RoomCategoryView,
+  type VenueCreateRequest,
+  type VenueUpdateRequest,
+  type VenueView,
 } from "@ampm/core";
 import { z } from "zod";
 
@@ -28,10 +43,17 @@ import {
 } from "../../policy/decorators.js";
 import type { Principal } from "../../policy/principal.types.js";
 import { HotelImportService } from "./hotel-import.service.js";
+import { HotelSubresourcesService } from "./hotel-subresources.service.js";
 import { HotelsAdminService } from "./hotels-admin.service.js";
 
 const hotelParam = z.object({ hotelId: uuid });
 type HotelParam = z.infer<typeof hotelParam>;
+const roomParam = z.object({ hotelId: uuid, roomId: uuid });
+type RoomParam = z.infer<typeof roomParam>;
+const venueParam = z.object({ hotelId: uuid, venueId: uuid });
+type VenueParam = z.infer<typeof venueParam>;
+const contactParam = z.object({ hotelId: uuid, contactId: uuid });
+type ContactParam = z.infer<typeof contactParam>;
 
 function staffId(principal: Principal): string {
   if (principal.type !== "staff") throw new Error("a staff principal is required");
@@ -49,6 +71,7 @@ export class HotelsAdminController {
   constructor(
     private readonly hotels: HotelsAdminService,
     private readonly imports: HotelImportService,
+    private readonly subresources: HotelSubresourcesService,
   ) {}
 
   @Get("hotels")
@@ -123,5 +146,111 @@ export class HotelsAdminController {
     @CurrentPrincipal() principal: Principal,
   ): Promise<HotelImportResult> {
     return this.imports.import(body, staffId(principal));
+  }
+
+  // --- Room categories, venues and contacts of a hotel (feature 9.1). ---
+
+  @Post("hotels/:hotelId/rooms")
+  @RequirePermission("hotels.room_categories_venues.create")
+  @HttpCode(201)
+  @Audited({ entityType: "hotel_room_category" })
+  addRoom(
+    @ZodParams(hotelParam) params: HotelParam,
+    @ZodBody(roomCategoryCreateRequest) body: RoomCategoryCreateRequest,
+    @CurrentPrincipal() principal: Principal,
+  ): Promise<RoomCategoryView> {
+    return this.subresources.addRoom(params.hotelId, body, staffId(principal));
+  }
+
+  @Patch("hotels/:hotelId/rooms/:roomId")
+  @RequirePermission("hotels.room_categories_venues.update")
+  @SelfAudited()
+  updateRoom(
+    @ZodParams(roomParam) params: RoomParam,
+    @ZodBody(roomCategoryUpdateRequest) body: RoomCategoryUpdateRequest,
+    @CurrentPrincipal() principal: Principal,
+  ): Promise<RoomCategoryView> {
+    return this.subresources.updateRoom(params.hotelId, params.roomId, body, staffId(principal));
+  }
+
+  @Delete("hotels/:hotelId/rooms/:roomId")
+  @RequirePermission("hotels.room_categories_venues.delete")
+  @SelfAudited()
+  removeRoom(
+    @ZodParams(roomParam) params: RoomParam,
+    @CurrentPrincipal() principal: Principal,
+  ): Promise<{ id: string }> {
+    return this.subresources.removeRoom(params.hotelId, params.roomId, staffId(principal));
+  }
+
+  @Post("hotels/:hotelId/venues")
+  @RequirePermission("hotels.room_categories_venues.create")
+  @HttpCode(201)
+  @Audited({ entityType: "hotel_venue" })
+  addVenue(
+    @ZodParams(hotelParam) params: HotelParam,
+    @ZodBody(venueCreateRequest) body: VenueCreateRequest,
+    @CurrentPrincipal() principal: Principal,
+  ): Promise<VenueView> {
+    return this.subresources.addVenue(params.hotelId, body, staffId(principal));
+  }
+
+  @Patch("hotels/:hotelId/venues/:venueId")
+  @RequirePermission("hotels.room_categories_venues.update")
+  @SelfAudited()
+  updateVenue(
+    @ZodParams(venueParam) params: VenueParam,
+    @ZodBody(venueUpdateRequest) body: VenueUpdateRequest,
+    @CurrentPrincipal() principal: Principal,
+  ): Promise<VenueView> {
+    return this.subresources.updateVenue(params.hotelId, params.venueId, body, staffId(principal));
+  }
+
+  @Delete("hotels/:hotelId/venues/:venueId")
+  @RequirePermission("hotels.room_categories_venues.delete")
+  @SelfAudited()
+  removeVenue(
+    @ZodParams(venueParam) params: VenueParam,
+    @CurrentPrincipal() principal: Principal,
+  ): Promise<{ id: string }> {
+    return this.subresources.removeVenue(params.hotelId, params.venueId, staffId(principal));
+  }
+
+  @Post("hotels/:hotelId/contacts")
+  @RequirePermission("hotels.hotel_contacts.create")
+  @HttpCode(201)
+  @Audited({ entityType: "hotel_contact" })
+  addContact(
+    @ZodParams(hotelParam) params: HotelParam,
+    @ZodBody(hotelContactCreateRequest) body: HotelContactCreateRequest,
+    @CurrentPrincipal() principal: Principal,
+  ): Promise<HotelContactView> {
+    return this.subresources.addContact(params.hotelId, body, staffId(principal));
+  }
+
+  @Patch("hotels/:hotelId/contacts/:contactId")
+  @RequirePermission("hotels.hotel_contacts.update")
+  @SelfAudited()
+  updateContact(
+    @ZodParams(contactParam) params: ContactParam,
+    @ZodBody(hotelContactUpdateRequest) body: HotelContactUpdateRequest,
+    @CurrentPrincipal() principal: Principal,
+  ): Promise<HotelContactView> {
+    return this.subresources.updateContact(
+      params.hotelId,
+      params.contactId,
+      body,
+      staffId(principal),
+    );
+  }
+
+  @Delete("hotels/:hotelId/contacts/:contactId")
+  @RequirePermission("hotels.hotel_contacts.delete")
+  @SelfAudited()
+  removeContact(
+    @ZodParams(contactParam) params: ContactParam,
+    @CurrentPrincipal() principal: Principal,
+  ): Promise<{ id: string }> {
+    return this.subresources.removeContact(params.hotelId, params.contactId, staffId(principal));
   }
 }
