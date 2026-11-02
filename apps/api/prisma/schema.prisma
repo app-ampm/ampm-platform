@@ -1041,8 +1041,11 @@ model Hotel {
   updatedBy String?   @map("updated_by") @db.Uuid
   deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
 
-  destination Destination  @relation(fields: [destinationId], references: [id])
+  destination Destination          @relation(fields: [destinationId], references: [id])
   savedBy     SavedHotel[]
+  contacts    HotelContact[]
+  rooms       HotelRoomCategory[]
+  venues      HotelVenue[]
 
   @@index([destinationId])
   @@index([status, demoVisible])
@@ -1075,4 +1078,91 @@ model SavedHotel {
   @@index([hotelId])
   @@index([deletedAt])
   @@map("saved_hotels")
+}
+
+/// A hotel's internal contacts (data-model.md §5). RESTRICTED-CONTACT: the whole table is staff-only —
+/// clients reach a hotel through AMPM, never directly (permission-matrix §5.3, §7). Feature 9.1.
+model HotelContact {
+  id        String  @id @default(uuid(7)) @db.Uuid
+  hotelId   String  @map("hotel_id") @db.Uuid
+  name      String  @db.VarChar(255)
+  roleTitle String? @map("role_title") @db.VarChar(255)
+  phone     String? @db.VarChar(255)
+  email     String? @db.VarChar(255)
+  isPrimary Boolean @default(false) @map("is_primary")
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  hotel Hotel @relation(fields: [hotelId], references: [id])
+
+  @@index([hotelId])
+  @@index([deletedAt])
+  @@map("hotel_contacts")
+}
+
+/// A category of room a hotel offers, with inventory and occupancy (A-27; data-model.md §5). CLIENT-
+/// visible profile data; a hotel_rate_item prices a category (Module C rate tables, feature 9.2). Feature 9.1.
+model HotelRoomCategory {
+  id           String  @id @default(uuid(7)) @db.Uuid
+  hotelId      String  @map("hotel_id") @db.Uuid
+  name         String  @db.VarChar(255)
+  roomCount    Int?    @map("room_count")
+  maxOccupancy Int?    @map("max_occupancy")
+  sizeSqm      Int?    @map("size_sqm")
+  facilities   Json?   @map("facilities_json")
+  description  String? @db.Text
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  hotel Hotel @relation(fields: [hotelId], references: [id])
+
+  @@index([hotelId])
+  @@index([deletedAt])
+  @@map("hotel_room_categories")
+}
+
+enum HotelVenueType {
+  ballroom
+  lawn
+  poolside
+  rooftop
+  courtyard
+  beach
+  other
+}
+
+/// A function/event venue a hotel offers, with capacities by layout (data-model.md §5). CLIENT-visible
+/// profile data; a hotel_rate_item prices a venue (venue_rental, feature 9.2). Feature 9.1.
+model HotelVenue {
+  id                String         @id @default(uuid(7)) @db.Uuid
+  hotelId           String         @map("hotel_id") @db.Uuid
+  name              String         @db.VarChar(255)
+  venueType         HotelVenueType @map("venue_type")
+  isIndoor          Boolean        @map("is_indoor")
+  areaSqm           Int?           @map("area_sqm")
+  capacityBanquet   Int?           @map("capacity_banquet")
+  capacityTheatre   Int?           @map("capacity_theatre")
+  capacityReception Int?           @map("capacity_reception")
+  facilities        Json?          @map("facilities_json")
+  description       String?        @db.Text
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  hotel Hotel @relation(fields: [hotelId], references: [id])
+
+  @@index([hotelId])
+  @@index([deletedAt])
+  @@map("hotel_venues")
 }
