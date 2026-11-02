@@ -60,6 +60,12 @@ export const subscriptionPolicy = z.object({
 });
 export type SubscriptionPolicy = z.infer<typeof subscriptionPolicy>;
 
+/** Hotel verification freshness (feature 9.2, AC-04): a verification older than this many days is stale. */
+export const hotelVerificationPolicy = z.object({
+  maxAgeDays: z.number().int().positive(),
+});
+export type HotelVerificationPolicy = z.infer<typeof hotelVerificationPolicy>;
+
 /** One registry entry; the helper makes the compiler check the baseline against its own schema. */
 function entry<S extends z.ZodType>(
   schema: S,
@@ -84,6 +90,7 @@ export const CONFIG_REGISTRY = {
   }),
   "feature.flags": entry(featureFlags, {}),
   "subscription.policy": entry(subscriptionPolicy, { expiryNoticeDays: 7 }),
+  "hotel.verification_policy": entry(hotelVerificationPolicy, { maxAgeDays: 90 }),
   "notification.templates": entry(notificationTemplates, {
     "staff.invite": {
       email: {

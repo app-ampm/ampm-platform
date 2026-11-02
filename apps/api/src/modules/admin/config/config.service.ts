@@ -6,6 +6,7 @@ import {
   type ConfigKey,
   type ConfigView,
   type FeatureFlags,
+  type HotelVerificationPolicy,
   type NotificationChannelDefaults,
   type NotificationTemplates,
   type SessionIdleTimeouts,
@@ -41,6 +42,7 @@ export class ConfigService {
   get(key: "notification.templates"): Promise<NotificationTemplates>;
   get(key: "feature.flags"): Promise<FeatureFlags>;
   get(key: "subscription.policy"): Promise<SubscriptionPolicy>;
+  get(key: "hotel.verification_policy"): Promise<HotelVerificationPolicy>;
   async get(key: ConfigKey): Promise<unknown> {
     const cached = this.cache.get(key);
     const raw = cached !== undefined ? cached : await this.load(key);
