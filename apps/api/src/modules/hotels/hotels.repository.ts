@@ -27,6 +27,28 @@ const HOTEL_SELECT = {
   },
 } as const;
 
+/*
+ * The detail adds the hotel's verified/stale rate cards with ONLY their client-visible items and the
+ * backing verification's date (AC-04). The RESTRICTED card fields (source, internal_notes) are never
+ * selected; draft and retired cards are excluded, so nothing unpublished reaches a client.
+ */
+const DETAIL_HOTEL_SELECT = {
+  ...HOTEL_SELECT,
+  rateCards: {
+    where: { deletedAt: null, status: { in: ["verified", "stale"] } },
+    orderBy: { name: "asc" },
+    select: {
+      status: true,
+      verification: { select: { verifiedAt: true } },
+      items: {
+        where: { deletedAt: null, clientVisible: true },
+        orderBy: { itemType: "asc" },
+        select: { itemType: true, amount: true, amountMax: true, unit: true, inclusionsText: true },
+      },
+    },
+  },
+} as const satisfies Prisma.HotelSelect;
+
 const SAVED_SELECT = {
   id: true,
   note: true,
@@ -35,6 +57,7 @@ const SAVED_SELECT = {
 } as const;
 
 export type HotelRow = Prisma.HotelGetPayload<{ select: typeof HOTEL_SELECT }>;
+export type HotelDetailRow = Prisma.HotelGetPayload<{ select: typeof DETAIL_HOTEL_SELECT }>;
 export type SavedHotelRow = Prisma.SavedHotelGetPayload<{ select: typeof SAVED_SELECT }>;
 
 @Injectable()
@@ -82,6 +105,17 @@ export class HotelsRepository {
     return this.prisma.hotel.findFirst({
       where: { AND: [this.reachWhere(reach), { id: hotelId }] },
       select: HOTEL_SELECT,
+    });
+  }
+
+  /** The hotel detail with its client-facing pricing (same reach guard as findInReach, AND-composed). */
+  async findDetailInReach(
+    reach: readonly HotelReach[],
+    hotelId: string,
+  ): Promise<HotelDetailRow | null> {
+    return this.prisma.hotel.findFirst({
+      where: { AND: [this.reachWhere(reach), { id: hotelId }] },
+      select: DETAIL_HOTEL_SELECT,
     });
   }
 

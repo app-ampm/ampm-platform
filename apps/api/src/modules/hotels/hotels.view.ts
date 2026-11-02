@@ -1,6 +1,13 @@
-import type { HotelView, SavedHotelView } from "@ampm/core";
+import type {
+  ClientRateItemView,
+  HotelDetailView,
+  HotelRatesView,
+  HotelView,
+  SavedHotelView,
+} from "@ampm/core";
 
-import type { HotelRow, SavedHotelRow } from "./hotels.repository.js";
+import { decimalToMoney } from "./hotel-rates.money.js";
+import type { HotelDetailRow, HotelRow, SavedHotelRow } from "./hotels.repository.js";
 
 /**
  * Maps a repository row to the client response model (CP-11). The return type is the @ampm/core client
@@ -37,5 +44,48 @@ export function toSavedHotelView(row: SavedHotelRow): SavedHotelView {
     hotel: toHotelView(row.hotel),
     note: row.note,
     savedAt: row.createdAt.toISOString(),
+  };
+}
+
+type DetailCard = HotelDetailRow["rateCards"][number];
+
+/** The hotel detail: the discovery card plus its client-facing, freshness-labelled pricing (AC-04). */
+export function toHotelDetailView(row: HotelDetailRow): HotelDetailView {
+  return { ...toHotelView(row), rates: toRatesView(row.rateCards) };
+}
+
+/**
+ * AC-04.1/.2: prefer the verified cards' client-visible items ("Verified on <asOf>"); fall back to stale
+ * ones ("Stale, last checked <asOf>"), amounts still shown; with neither, rates are "on request" and no
+ * amount is sent. Only the selected status's cards contribute, so verified and stale never mix.
+ */
+function toRatesView(cards: DetailCard[]): HotelRatesView {
+  const withItems = cards.filter((card) => card.items.length > 0);
+  const verified = withItems.filter((card) => card.status === "verified");
+  const stale = withItems.filter((card) => card.status === "stale");
+  const chosen = verified.length > 0 ? verified : stale;
+  if (chosen.length === 0) return { status: "on_request", asOf: null, items: [] };
+  return {
+    status: verified.length > 0 ? "verified" : "stale",
+    asOf: newestVerifiedAt(chosen),
+    items: chosen.flatMap((card) => card.items.map(toClientRateItem)),
+  };
+}
+
+function newestVerifiedAt(cards: DetailCard[]): string | null {
+  const times = cards
+    .map((card) => card.verification?.verifiedAt)
+    .filter((date): date is Date => date != null)
+    .map((date) => date.getTime());
+  return times.length > 0 ? new Date(Math.max(...times)).toISOString() : null;
+}
+
+function toClientRateItem(item: DetailCard["items"][number]): ClientRateItemView {
+  return {
+    itemType: item.itemType,
+    amount: decimalToMoney(item.amount),
+    amountMax: item.amountMax ? decimalToMoney(item.amountMax) : null,
+    unit: item.unit,
+    inclusions: item.inclusionsText,
   };
 }

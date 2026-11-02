@@ -1,6 +1,7 @@
 import { z } from "zod";
 
-import { cursorQuery, isoDateTime, page, uuid } from "./common.js";
+import { cursorQuery, isoDateTime, money, page, uuid } from "./common.js";
+import { hotelRateItemType, hotelRateItemUnit } from "./hotel-rates.js";
 
 /*
  * Contracts for hotel discovery (Module C "Hotel intelligence"; docs/data-model.md §5, feature set C).
@@ -49,6 +50,40 @@ export const hotelView = z
   })
   .strict();
 export type HotelView = z.infer<typeof hotelView>;
+
+/**
+ * A hotel's indicative pricing as a client sees it (CP-05; AC-04). `status` is the freshness of the
+ * verified, client-visible rate card(s): `verified` with `asOf` renders "Verified on <asOf> by AMPM";
+ * `stale` renders "Stale, last checked <asOf>" with the amounts still shown; `on_request` shows no
+ * amounts and the assistance action. Never the word "confirmed" — a confirmed quotation is a Module D
+ * proposal, not discovery pricing. Availability is answered inside an enquiry, never shown here (AC-04.7).
+ */
+export const hotelRateFreshness = z.enum(["verified", "stale", "on_request"]);
+export type HotelRateFreshness = z.infer<typeof hotelRateFreshness>;
+
+export const clientRateItemView = z
+  .object({
+    itemType: hotelRateItemType,
+    amount: money, // the single value, or the lower bound of an indicative range
+    amountMax: money.nullable(), // the upper bound of an indicative range
+    unit: hotelRateItemUnit,
+    inclusions: z.string().nullable(),
+  })
+  .strict();
+export type ClientRateItemView = z.infer<typeof clientRateItemView>;
+
+export const hotelRatesView = z
+  .object({
+    status: hotelRateFreshness,
+    asOf: isoDateTime.nullable(),
+    items: z.array(clientRateItemView),
+  })
+  .strict();
+export type HotelRatesView = z.infer<typeof hotelRatesView>;
+
+/** The hotel detail (CP-05): the discovery card plus its indicative, freshness-labelled pricing. */
+export const hotelDetailView = hotelView.extend({ rates: hotelRatesView }).strict();
+export type HotelDetailView = z.infer<typeof hotelDetailView>;
 
 /**
  * Search/browse hotels (CP discovery). Cursor-paginated by hotel id; `destinationId` filters to one

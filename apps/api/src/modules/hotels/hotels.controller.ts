@@ -3,9 +3,9 @@ import {
   hotelListQuery,
   savedHotelListQuery,
   uuid,
+  type HotelDetailView,
   type HotelListQuery,
   type HotelPage,
-  type HotelView,
   type SavedHotelListQuery,
   type SavedHotelPage,
   type SavedHotelRemovedResponse,
@@ -52,7 +52,7 @@ export class HotelsController {
   get(
     @ZodParams(hotelParam) params: HotelParam,
     @CurrentPrincipal() principal: Principal,
-  ): Promise<HotelView> {
+  ): Promise<HotelDetailView> {
     return this.hotels.get(principal, params.hotelId);
   }
 
