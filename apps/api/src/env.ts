@@ -73,6 +73,15 @@ const fields = z.object({
   RAZORPAY_KEY_ID: z.string().min(1).optional(),
   RAZORPAY_KEY_SECRET: z.string().min(1).optional(),
   RAZORPAY_WEBHOOK_SECRET: z.string().min(1).optional(),
+  /**
+   * Media object store (feature 9.3, AC-20). `local` writes under STORAGE_LOCAL_DIR and signs 15-minute
+   * download URLs with MEDIA_SIGNING_SECRET (media's own key, security.md three-key rule) — development
+   * and staging only; production is refused below (the C1 pattern). `s3` is the Mumbai bucket + CDN,
+   * wired in feature 6.4.
+   */
+  STORAGE_PROVIDER: z.enum(["local", "s3"]).default("local"),
+  STORAGE_LOCAL_DIR: z.string().min(1).default(".storage"),
+  MEDIA_SIGNING_SECRET: z.string().min(32).optional(),
 });
 
 type EnvFields = z.infer<typeof fields>;
@@ -227,6 +236,21 @@ function proxyIssues(value: EnvFields): EnvIssue[] {
   return [];
 }
 
+/** Media store: the local filesystem store is refused in production; the S3 bucket arrives in feature 6.4. */
+function storageIssues(value: EnvFields): EnvIssue[] {
+  if (value.NODE_ENV === "production" && value.STORAGE_PROVIDER === "local") {
+    return [
+      {
+        path: ["STORAGE_PROVIDER"],
+        message:
+          "the local filesystem media store is development and staging only; production serves media " +
+          "from the S3 bucket and CDN (feature 6.4)",
+      },
+    ];
+  }
+  return [];
+}
+
 const schema = fields.superRefine((value, ctx) => {
   for (const issue of [
     ...identityIssues(value),
@@ -234,6 +258,7 @@ const schema = fields.superRefine((value, ctx) => {
     ...jobIssues(value),
     ...botCheckIssues(value),
     ...paymentIssues(value),
+    ...storageIssues(value),
     ...proxyIssues(value),
   ]) {
     ctx.addIssue({ code: "custom", path: issue.path, message: issue.message });
