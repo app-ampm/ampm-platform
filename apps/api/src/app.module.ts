@@ -3,6 +3,7 @@ import { Module } from "@nestjs/common";
 import { PlatformModule } from "./common/platform.module.js";
 import { DbModule } from "./db/db.module.js";
 import { JobsModule } from "./jobs/jobs.module.js";
+import { StorageModule } from "./storage/storage.module.js";
 import { AuthModule } from "./modules/auth/auth.module.js";
 import { AdminModule } from "./modules/admin/admin.module.js";
 import { AuditLogModule } from "./modules/admin/audit-log/audit-log.module.js";
@@ -29,6 +30,7 @@ import { PolicyModule } from "./policy/policy.module.js";
     AuditModule,
     ConfigModule,
     JobsModule,
+    StorageModule,
     PolicyModule,
     HealthModule,
     AdminModule,

@@ -21,6 +21,7 @@ const prodValid = {
   RAZORPAY_KEY_ID: "rzp_test_key",
   RAZORPAY_KEY_SECRET: "rzp-key-secret",
   RAZORPAY_WEBHOOK_SECRET: "rzp-webhook-secret",
+  STORAGE_PROVIDER: "s3",
 };
 
 describe("loadEnv", () => {
@@ -56,6 +57,10 @@ describe("loadEnv", () => {
     expect(() => loadEnv({ ...prodValid, EMAIL_FROM: "AMPM <no-reply@localhost>" })).toThrow(
       /EMAIL_FROM/,
     );
+  });
+
+  it("refuses the local media store in production", () => {
+    expect(() => loadEnv({ ...prodValid, STORAGE_PROVIDER: "local" })).toThrow(/STORAGE_PROVIDER/);
   });
 
   it("refuses a localhost WEB_APP_URL in production", () => {
