@@ -1821,6 +1821,10 @@ erDiagram
         string kind "enum image / video"
         string storage_key "RESTRICTED"
         string thumbnail_key
+        string web_key "RESTRICTED, web-size derivative (AC-24.1)"
+        string mime_type "detected by content, not extension (AC-20.2)"
+        int size_bytes
+        string scan_status "enum pending / clean / rejected; only clean is downloadable (AC-20.3, fail-closed)"
         string caption
         int sort_order
         string visibility "enum internal / client / demo / public"
@@ -1860,6 +1864,7 @@ Notes:
 
 - **Access follows the owning record.** Reading a document requires permission on `owner_type`/`owner_id`; `visibility` further narrows it. Download URLs are short-lived signed links (`document_access_links`), never permanent paths (SPEC §10, §12).
 - **Media rights** (GP-20). Only `rights_status = owned`, `licensed` or `consent_obtained` may be set to `client`, `demo` or `public` visibility; the API rejects the rest.
+- **Safe uploads** (AC-20, AC-24). A `media_assets` row is downloadable only when `scan_status = clean`; the media worker scans on upload (fail-closed — `pending` and `rejected` never mint a signed link), strips image metadata, and generates the `thumbnail_key` and `web_key` derivatives (the client is served the derivative, never the original). `mime_type` is detected by content and `size_bytes` is bounded by the `configurations` media limits.
 - **Identity documents** (A-8) live in a separate restricted bucket with its own key, are never included in exports, and every read writes an `audit_events` row with `action = restricted_read`. A retention job deletes the file and nulls `file_document_id` after `retention_until`.
 
 ---
