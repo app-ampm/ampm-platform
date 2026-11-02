@@ -1041,11 +1041,13 @@ model Hotel {
   updatedBy String?   @map("updated_by") @db.Uuid
   deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
 
-  destination Destination          @relation(fields: [destinationId], references: [id])
-  savedBy     SavedHotel[]
-  contacts    HotelContact[]
-  rooms       HotelRoomCategory[]
-  venues      HotelVenue[]
+  destination   Destination         @relation(fields: [destinationId], references: [id])
+  savedBy       SavedHotel[]
+  contacts      HotelContact[]
+  rooms         HotelRoomCategory[]
+  venues        HotelVenue[]
+  rateCards     HotelRateCard[]
+  verifications HotelVerification[]
 
   @@index([destinationId])
   @@index([status, demoVisible])
@@ -1122,7 +1124,8 @@ model HotelRoomCategory {
   updatedBy String?   @map("updated_by") @db.Uuid
   deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
 
-  hotel Hotel @relation(fields: [hotelId], references: [id])
+  hotel     Hotel           @relation(fields: [hotelId], references: [id])
+  rateItems HotelRateItem[]
 
   @@index([hotelId])
   @@index([deletedAt])
@@ -1160,9 +1163,155 @@ model HotelVenue {
   updatedBy String?   @map("updated_by") @db.Uuid
   deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
 
-  hotel Hotel @relation(fields: [hotelId], references: [id])
+  hotel     Hotel           @relation(fields: [hotelId], references: [id])
+  rateItems HotelRateItem[]
 
   @@index([hotelId])
   @@index([deletedAt])
   @@map("hotel_venues")
+}
+
+enum HotelVerificationFieldGroup {
+  profile
+  rooms
+  venues
+  rates
+  availability
+  media
+  contacts
+}
+
+enum HotelVerificationSource {
+  phone
+  email
+  site_visit
+  website
+  contract
+}
+
+enum HotelVerificationStatus {
+  verified
+  unverified
+  stale
+}
+
+/// A record that AMPM verified one field group of a hotel at a point in time (data-model.md §5). A rate
+/// card points at the verification backing it; the freshness job marks a verification (and its cards)
+/// stale once `verified_at` is older than `configurations.hotel_verification_max_age_days` (AC-04). Feature 9.2.
+model HotelVerification {
+  id         String                      @id @default(uuid(7)) @db.Uuid
+  hotelId    String                      @map("hotel_id") @db.Uuid
+  fieldGroup HotelVerificationFieldGroup @map("field_group")
+  verifiedAt DateTime?                   @map("verified_at") @db.Timestamptz(6)
+  verifiedBy String?                     @map("verified_by") @db.Uuid
+  source     HotelVerificationSource?
+  status     HotelVerificationStatus     @default(unverified)
+  nextDueAt  DateTime?                   @map("next_due_at") @db.Timestamptz(6)
+  notes      String?                     @db.Text
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  hotel     Hotel           @relation(fields: [hotelId], references: [id])
+  rateCards HotelRateCard[]
+
+  @@index([hotelId])
+  @@index([status])
+  @@index([deletedAt])
+  @@map("hotel_verifications")
+}
+
+enum HotelRateCardStatus {
+  draft
+  verified
+  stale
+  retired
+}
+
+/// A dated set of indicative rates for a hotel (data-model.md §5). CLIENT-visible only when `verified`
+/// and its items are `client_visible`; a card cannot be `verified` without a `verification_id` (AC-04.4).
+/// `source` and `internal_notes` are RESTRICTED. Confirmed quotations live in hotel_proposals, not here. Feature 9.2.
+model HotelRateCard {
+  id             String              @id @default(uuid(7)) @db.Uuid
+  hotelId        String              @map("hotel_id") @db.Uuid
+  name           String              @db.VarChar(255)
+  validFrom      DateTime?           @map("valid_from") @db.Date
+  validTo        DateTime?           @map("valid_to") @db.Date
+  currency       String              @default("INR") @db.VarChar(3)
+  status         HotelRateCardStatus @default(draft)
+  verificationId String?             @map("verification_id") @db.Uuid
+  source         String?             @db.Text
+  internalNotes  String?             @map("internal_notes") @db.Text
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  hotel        Hotel              @relation(fields: [hotelId], references: [id])
+  verification HotelVerification? @relation(fields: [verificationId], references: [id])
+  items        HotelRateItem[]
+
+  @@index([hotelId])
+  @@index([status])
+  @@index([verificationId])
+  @@index([deletedAt])
+  @@map("hotel_rate_cards")
+}
+
+enum HotelRateItemType {
+  room_rate
+  venue_rental
+  per_plate_veg
+  per_plate_non_veg
+  wedding_package
+  beverage_package
+  service_charge
+  tax
+  other
+}
+
+enum HotelRateItemUnit {
+  per_night
+  per_plate
+  per_event
+  percent
+}
+
+/// A priced line on a rate card (data-model.md §5). `amount`/`amount_max` express an indicative range
+/// (Q9); `client_visible` with a `verified` card is the only way a price reaches a client. Optionally
+/// tied to a room category or a venue. Feature 9.2.
+model HotelRateItem {
+  id             String            @id @default(uuid(7)) @db.Uuid
+  rateCardId     String            @map("rate_card_id") @db.Uuid
+  itemType       HotelRateItemType @map("item_type")
+  roomCategoryId String?           @map("room_category_id") @db.Uuid
+  venueId        String?           @map("venue_id") @db.Uuid
+  amount         Decimal           @db.Decimal(14, 2)
+  amountMax      Decimal?          @map("amount_max") @db.Decimal(14, 2)
+  isIndicative   Boolean           @default(true) @map("is_indicative")
+  unit           HotelRateItemUnit
+  minQuantity    Int?              @map("min_quantity")
+  inclusionsText String?           @map("inclusions_text") @db.Text
+  clientVisible  Boolean           @default(false) @map("client_visible")
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  rateCard     HotelRateCard      @relation(fields: [rateCardId], references: [id])
+  roomCategory HotelRoomCategory? @relation(fields: [roomCategoryId], references: [id])
+  venue        HotelVenue?        @relation(fields: [venueId], references: [id])
+
+  @@index([rateCardId])
+  @@index([roomCategoryId])
+  @@index([venueId])
+  @@index([deletedAt])
+  @@map("hotel_rate_items")
 }
