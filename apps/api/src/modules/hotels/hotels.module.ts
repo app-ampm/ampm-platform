@@ -1,6 +1,8 @@
 import { Module } from "@nestjs/common";
 
 import { HotelImportService } from "./hotel-import.service.js";
+import { HotelSubresourcesRepository } from "./hotel-subresources.repository.js";
+import { HotelSubresourcesService } from "./hotel-subresources.service.js";
 import { HotelsAdminController } from "./hotels-admin.controller.js";
 import { HotelsAdminRepository } from "./hotels-admin.repository.js";
 import { HotelsAdminService } from "./hotels-admin.service.js";
@@ -30,6 +32,8 @@ import { HotelsService } from "./hotels.service.js";
     HotelsAdminService,
     HotelsAdminRepository,
     HotelImportService,
+    HotelSubresourcesService,
+    HotelSubresourcesRepository,
   ],
 })
 export class HotelsModule {}
