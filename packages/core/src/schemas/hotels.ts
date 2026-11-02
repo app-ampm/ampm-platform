@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { cursorQuery, isoDateTime, money, page, uuid } from "./common.js";
 import { hotelRateItemType, hotelRateItemUnit } from "./hotel-rates.js";
+import { mediaGalleryItem } from "./media.js";
 
 /*
  * Contracts for hotel discovery (Module C "Hotel intelligence"; docs/data-model.md §5, feature set C).
@@ -81,8 +82,14 @@ export const hotelRatesView = z
   .strict();
 export type HotelRatesView = z.infer<typeof hotelRatesView>;
 
-/** The hotel detail (CP-05): the discovery card plus its indicative, freshness-labelled pricing. */
-export const hotelDetailView = hotelView.extend({ rates: hotelRatesView }).strict();
+/**
+ * The hotel detail (CP-05): the discovery card, its indicative freshness-labelled pricing, and the
+ * client-visible gallery. `gallery` holds only the media at or below the caller's visibility level
+ * (AC-24.4), each a signed link to a metadata-stripped derivative — never an object key (security.md).
+ */
+export const hotelDetailView = hotelView
+  .extend({ rates: hotelRatesView, gallery: z.array(mediaGalleryItem) })
+  .strict();
 export type HotelDetailView = z.infer<typeof hotelDetailView>;
 
 /**

@@ -3,12 +3,14 @@ import {
   errors,
   mediaAssetCreateRequest,
   mediaAssetUpdateRequest,
+  mediaDownloadQuery,
   mediaListQuery,
   uuid,
   type MediaAssetCreateRequest,
   type MediaAssetPage,
   type MediaAssetUpdateRequest,
   type MediaAssetView,
+  type MediaDownloadQuery,
   type MediaDownloadUrl,
   type MediaListQuery,
   type MediaRemovedResponse,
@@ -83,8 +85,11 @@ export class MediaController {
 
   @Get(":mediaId/download-url")
   @RequirePermission("hotels.hotel_media_rights_status.read")
-  downloadUrl(@ZodParams(mediaParam) params: MediaParam): Promise<MediaDownloadUrl> {
-    return this.media.downloadUrlFor(params.mediaId);
+  downloadUrl(
+    @ZodParams(mediaParam) params: MediaParam,
+    @ZodQuery(mediaDownloadQuery) query: MediaDownloadQuery,
+  ): Promise<MediaDownloadUrl> {
+    return this.media.downloadUrlFor(params.mediaId, query.variant);
   }
 
   @Get(":mediaId")

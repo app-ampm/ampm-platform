@@ -4,6 +4,7 @@ import type {
   MediaAssetUpdateRequest,
   MediaListQuery,
   MediaScanStatus,
+  MediaVisibility,
 } from "@ampm/core";
 
 import { PrismaService } from "../../db/prisma.service.js";
@@ -34,6 +35,22 @@ const MEDIA_SELECT = {
 } as const satisfies Prisma.MediaAssetSelect;
 
 export type MediaAssetRow = Prisma.MediaAssetGetPayload<{ select: typeof MEDIA_SELECT }>;
+
+/*
+ * The client-gallery projection (feature 9.3c). Carries the derivative keys so the service can sign links
+ * to them — they never leave the service, which maps this row to the key-free MediaGalleryItem. `rights`
+ * and `visibility` ride along so the service can apply the GP-20 rights gate as defence in depth.
+ */
+const GALLERY_SELECT = {
+  id: true,
+  kind: true,
+  caption: true,
+  rightsStatus: true,
+  thumbnailKey: true,
+  webKey: true,
+} as const satisfies Prisma.MediaAssetSelect;
+
+export type MediaGalleryRow = Prisma.MediaAssetGetPayload<{ select: typeof GALLERY_SELECT }>;
 
 @Injectable()
 export class MediaRepository {
@@ -119,35 +136,80 @@ export class MediaRepository {
     });
   }
 
-  /** The SECRET object key for signing a download — used internally, never returned to a caller. */
-  async storageKeyOf(id: string): Promise<string | null> {
-    const row = await this.prisma.mediaAsset.findFirst({
+  /**
+   * The SECRET object keys for signing a download — used internally, never returned to a caller. The
+   * derivative keys are null until the upload path generates them (feature 9.3c); the original is always set.
+   */
+  async keysOf(
+    id: string,
+  ): Promise<{ storageKey: string; thumbnailKey: string | null; webKey: string | null } | null> {
+    return this.prisma.mediaAsset.findFirst({
       where: { id, deletedAt: null },
-      select: { storageKey: true },
+      select: { storageKey: true, thumbnailKey: true, webKey: true },
     });
-    return row ? row.storageKey : null;
   }
 
-  /** Resolve an asset from its object key (the signed download path), for the scan gate and content type. */
-  async findByStorageKey(storageKey: string): Promise<MediaAssetRow | null> {
+  /**
+   * Resolve an asset from ANY of its object keys — original or a derivative (feature 9.3c) — for the scan
+   * gate and content type on the signed download path. A key cleared on re-upload (markPending) matches
+   * nothing, so a link minted against the old bytes stops resolving (fail-closed).
+   */
+  async findByAnyKey(key: string): Promise<MediaAssetRow | null> {
     return this.prisma.mediaAsset.findFirst({
-      where: { storageKey, deletedAt: null },
+      where: { deletedAt: null, OR: [{ storageKey: key }, { thumbnailKey: key }, { webKey: key }] },
       select: MEDIA_SELECT,
     });
   }
 
-  /** Demote an asset to `pending` (non-downloadable) in a committed write before its bytes change (3b). */
-  async markPending(id: string, actorId: string): Promise<void> {
-    await this.prisma.mediaAsset.updateMany({
-      where: { id, deletedAt: null },
-      data: { scanStatus: "pending", updatedBy: actorId },
+  /**
+   * One owner's gallery-ready media: clean, within the allowed visibility levels (AC-24.4), ordered for
+   * display. Soft-deleted and non-clean rows are scoped out here (security.md: repository scoping). The
+   * service applies the rights gate and skips rows without derivatives before signing links.
+   */
+  async listGallery(
+    ownerType: MediaAssetRow["ownerType"],
+    ownerId: string,
+    visibilities: MediaVisibility[],
+  ): Promise<MediaGalleryRow[]> {
+    return this.prisma.mediaAsset.findMany({
+      where: {
+        ownerType,
+        ownerId,
+        deletedAt: null,
+        scanStatus: "clean",
+        visibility: { in: visibilities },
+      },
+      orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
+      select: GALLERY_SELECT,
     });
   }
 
-  /** Record the content-verified type/size and the scan outcome after the bytes are stored (feature 9.3b). */
+  /**
+   * Demote an asset to `pending` and clear its derivative keys in one committed write before its bytes
+   * change (feature 9.3b/c). The demotion keeps the overwrite→scan window fail-closed; clearing the keys
+   * revokes any thumbnail/web link minted while the asset was clean (findByAnyKey no longer resolves them).
+   */
+  async markPending(id: string, actorId: string): Promise<void> {
+    await this.prisma.mediaAsset.updateMany({
+      where: { id, deletedAt: null },
+      data: { scanStatus: "pending", thumbnailKey: null, webKey: null, updatedBy: actorId },
+    });
+  }
+
+  /**
+   * Record the content-verified type/size, the scan outcome and (when generated) the derivative keys after
+   * the bytes are stored (feature 9.3b/c). `thumbnailKey`/`webKey` are written only when supplied, so a
+   * non-image or rejected upload leaves them as markPending cleared them.
+   */
   async setUploaded(
     id: string,
-    data: { mimeType: string; sizeBytes: number; scanStatus: MediaScanStatus },
+    data: {
+      mimeType: string;
+      sizeBytes: number;
+      scanStatus: MediaScanStatus;
+      thumbnailKey?: string;
+      webKey?: string;
+    },
     actorId: string,
     tx?: Prisma.TransactionClient,
   ): Promise<MediaAssetRow> {

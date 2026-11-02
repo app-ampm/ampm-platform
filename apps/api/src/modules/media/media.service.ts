@@ -8,28 +8,24 @@ import {
   type MediaAssetUpdateRequest,
   type MediaAssetView,
   type MediaDownloadUrl,
+  type MediaGalleryItem,
   type MediaListQuery,
+  type MediaOwnerType,
   type MediaRemovedResponse,
   type MediaRightsStatus,
+  type MediaVariant,
   type MediaVisibility,
 } from "@ampm/core";
 
 import { AuditService } from "../../policy/audit.service.js";
 import { STORAGE_ADAPTER, type StorageAdapter } from "../../storage/storage.types.js";
-import { AV_SCANNER, type AvScanner } from "./av-scanner.js";
-import { detectMedia, MAX_UPLOAD_BYTES } from "./media-content.js";
-import { MediaRepository, type MediaAssetRow } from "./media.repository.js";
+import { CLIENT_VISIBILITIES, DEMO_VISIBILITIES, PUBLISHABLE_RIGHTS } from "./media-content.js";
+import { MediaUploadService } from "./media-upload.service.js";
+import { MediaRepository, type MediaAssetRow, type MediaGalleryRow } from "./media.repository.js";
 import { toMediaAssetView } from "./media.view.js";
 
 /** The lifetime of a signed media download link (security.md: 15 minutes). */
 const DOWNLOAD_TTL_SECONDS = 900;
-
-/** Rights statuses that may back client/demo/public visibility (GP-20). */
-const PUBLISHABLE_RIGHTS: ReadonlySet<MediaRightsStatus> = new Set([
-  "owned",
-  "licensed",
-  "consent_obtained",
-]);
 
 /** The rights-and-visibility image audited on a media change — the fields GP-20 compliance turns on. */
 function rightsImage(row: MediaAssetRow): Record<string, unknown> {
@@ -39,6 +35,17 @@ function rightsImage(row: MediaAssetRow): Record<string, unknown> {
     consentSourceProjectId: row.consentSourceProjectId,
     consentDocumentId: row.consentDocumentId,
   };
+}
+
+/** A gallery row that has both derivatives and publishable rights — ready to serve to a client (AC-24.1). */
+type GalleryReadyRow = MediaGalleryRow & { thumbnailKey: string; webKey: string };
+
+function isGalleryReady(row: MediaGalleryRow): row is GalleryReadyRow {
+  // Defence in depth: the visibility scope already excludes non-publishable rows, but a client gallery
+  // re-checks the GP-20 rights gate and that the derivatives exist before it ever signs a link.
+  return (
+    PUBLISHABLE_RIGHTS.has(row.rightsStatus) && row.thumbnailKey !== null && row.webKey !== null
+  );
 }
 
 /**
@@ -54,7 +61,7 @@ export class MediaService {
     private readonly repo: MediaRepository,
     private readonly audit: AuditService,
     @Inject(STORAGE_ADAPTER) private readonly storage: StorageAdapter,
-    @Inject(AV_SCANNER) private readonly scanner: AvScanner,
+    private readonly uploads: MediaUploadService,
   ) {}
 
   async create(request: MediaAssetCreateRequest, actorId: string): Promise<MediaAssetView> {
@@ -75,6 +82,22 @@ export class MediaService {
 
   async get(id: string): Promise<MediaAssetView> {
     return toMediaAssetView(await this.require(id));
+  }
+
+  /**
+   * The gallery an owning module (Module C hotel discovery, feature 9.3c) shows a client/demo principal:
+   * the owner's clean, rights-cleared media at or below the audience's visibility level (AC-24.4), each a
+   * pair of short-lived signed links to its metadata-stripped derivatives (CP-05). No object key, rights,
+   * visibility or scan state crosses the boundary — the caller gets pictures, not governance (security.md).
+   */
+  async clientGallery(
+    ownerType: MediaOwnerType,
+    ownerId: string,
+    audience: "client" | "demo",
+  ): Promise<MediaGalleryItem[]> {
+    const visibilities = audience === "demo" ? DEMO_VISIBILITIES : CLIENT_VISIBILITIES;
+    const rows = await this.repo.listGallery(ownerType, ownerId, [...visibilities]);
+    return rows.filter(isGalleryReady).map((row) => this.toGalleryItem(row));
   }
 
   async update(
@@ -128,90 +151,70 @@ export class MediaService {
   }
 
   /**
-   * Store an uploaded object's bytes against the asset, by content (AC-20.2): the magic number decides the
-   * type (a renamed executable is refused) and must match the declared kind; the size is bounded. The bytes
-   * are scanned fail-closed (AC-20.3) and the row records the outcome — only a `clean` asset is downloadable.
+   * Store an uploaded object's bytes against the asset. The content checks, fail-closed scan and derivative
+   * generation are the MediaUploadService's pipeline (AC-20.2/.3, AC-24.1); this resolves the asset (404 if
+   * absent) and delegates, so a non-existent id is refused before any work.
    */
   async uploadBytes(id: string, bytes: Buffer, actorId: string): Promise<MediaAssetView> {
     const asset = await this.require(id);
-    const detected = detectMedia(bytes);
-    if (!detected) {
-      throw errors.validation([], "Unsupported file type; allowed: JPEG, PNG, WebP, GIF, MP4");
-    }
-    if (detected.kind !== asset.kind) {
-      throw errors.validation(
-        [],
-        `File content is a ${detected.kind}, not the declared ${asset.kind}`,
-      );
-    }
-    if (bytes.length > MAX_UPLOAD_BYTES) {
-      throw errors.validation([], `File exceeds the ${MAX_UPLOAD_BYTES} byte limit`);
-    }
-    const storageKey = await this.storageKeyOrThrow(id);
-    // Demote to non-downloadable (a committed write) BEFORE the bytes change, so any failure or concurrent
-    // read in the overwrite -> scan -> commit window stays fail-closed (AC-20.3): a link minted while the
-    // asset was clean cannot serve the new, not-yet-scanned bytes.
-    await this.repo.markPending(id, actorId);
-    await this.storage.putObject(storageKey, bytes, detected.mimeType);
-    const scanStatus = await this.scanner.scan(bytes);
-    if (scanStatus !== "clean") await this.storage.deleteObject(storageKey); // never keep rejected bytes
-    const row = await this.repo.transaction(async (tx) => {
-      const updated = await this.repo.setUploaded(
-        id,
-        { mimeType: detected.mimeType, sizeBytes: bytes.length, scanStatus },
-        actorId,
-        tx,
-      );
-      await this.audit.record(
-        {
-          action: "update",
-          entityType: "media_asset",
-          entityId: id,
-          before: { scanStatus: asset.scanStatus },
-          after: { scanStatus, sizeBytes: bytes.length, mimeType: detected.mimeType },
-          maskImages: false,
-        },
-        tx,
-      );
-      return updated;
-    });
-    return toMediaAssetView(row);
+    return toMediaAssetView(await this.uploads.apply(id, asset, bytes, actorId));
   }
 
-  /** Mint a 15-minute signed download link for a clean asset (AC-20). A non-clean asset is not downloadable. */
-  async downloadUrlFor(id: string): Promise<MediaDownloadUrl> {
+  /**
+   * Mint a 15-minute signed link to one rendition of a clean asset (AC-20/AC-24.1). `original` is always
+   * available; `web`/`thumbnail` resolve only once the derivatives exist (a video, or an asset uploaded
+   * before derivatives, has none → 404). A non-clean asset is not downloadable at all.
+   */
+  async downloadUrlFor(id: string, variant: MediaVariant = "original"): Promise<MediaDownloadUrl> {
     const asset = await this.require(id);
     if (asset.scanStatus !== "clean") {
       throw errors.conflict("Media is not downloadable until a scan passes");
     }
-    const signed = this.storage.signDownloadUrl(
-      await this.storageKeyOrThrow(id),
-      DOWNLOAD_TTL_SECONDS,
-    );
+    const keys = await this.keysOrThrow(id);
+    const key =
+      variant === "web"
+        ? keys.webKey
+        : variant === "thumbnail"
+          ? keys.thumbnailKey
+          : keys.storageKey;
+    if (!key) throw errors.notFound("No such media variant");
+    const signed = this.storage.signDownloadUrl(key, DOWNLOAD_TTL_SECONDS);
     return { url: signed.url, expiresAt: signed.expiresAt.toISOString() };
   }
 
   /**
    * Serve the bytes behind a signed download link: the signature must verify (not expired, key-bound) and
-   * the asset must be clean, else the same 404 as absence (security.md). Access followed the owning record
-   * when the link was minted; this endpoint honours that capability.
+   * the owning asset must be clean, else the same 404 as absence (security.md). The key may be the original
+   * or a derivative — both resolve to the same asset, so one scan gate covers every rendition. Access
+   * followed the owning record when the link was minted; this endpoint honours that capability.
    */
   async streamBlob(
-    storageKey: string,
+    key: string,
     expiresAtEpoch: number,
     signature: string,
   ): Promise<{ bytes: Buffer; mimeType: string }> {
-    if (!this.storage.verifyDownload(storageKey, expiresAtEpoch, signature))
-      throw errors.notFound();
-    const asset = await this.repo.findByStorageKey(storageKey);
+    if (!this.storage.verifyDownload(key, expiresAtEpoch, signature)) throw errors.notFound();
+    const asset = await this.repo.findByAnyKey(key);
     if (!asset || asset.scanStatus !== "clean") throw errors.notFound();
-    return { bytes: await this.storage.getObject(storageKey), mimeType: asset.mimeType };
+    return { bytes: await this.storage.getObject(key), mimeType: asset.mimeType };
   }
 
-  private async storageKeyOrThrow(id: string): Promise<string> {
-    const key = await this.repo.storageKeyOf(id);
-    if (!key) throw errors.notFound("No such media asset");
-    return key;
+  private toGalleryItem(row: GalleryReadyRow): MediaGalleryItem {
+    return {
+      id: row.id,
+      kind: row.kind,
+      caption: row.caption,
+      thumbnailUrl: this.storage.signDownloadUrl(row.thumbnailKey, DOWNLOAD_TTL_SECONDS).url,
+      webUrl: this.storage.signDownloadUrl(row.webKey, DOWNLOAD_TTL_SECONDS).url,
+    };
+  }
+
+  private async keysOrThrow(
+    id: string,
+  ): Promise<{ storageKey: string; thumbnailKey: string | null; webKey: string | null }> {
+    const keys = await this.repo.keysOf(id);
+    if (!keys) throw errors.notFound("No such media asset");
+    return keys;
   }
 
   private async require(id: string): Promise<MediaAssetRow> {
