@@ -238,6 +238,21 @@ enum WebhookEventStatus {
   ignored
 }
 
+// --- Module C: Hotel intelligence (docs/data-model.md §5). The client-facing hotel catalogue the
+// hotel-discovery subscription unlocks, and the per-account shortlist (saved_hotels). ---
+
+enum DestinationStatus {
+  draft
+  active
+  inactive
+}
+
+enum HotelStatus {
+  draft
+  active
+  inactive
+}
+
 /// Staff, client and demo accounts. Credentials live in the identity service (Cognito, T-6): the
 /// API keeps the identity subject that maps a verified token to this row; it never stores a password.
 model User {
@@ -262,15 +277,15 @@ model User {
   updatedBy String?   @map("updated_by") @db.Uuid
   deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
 
-  roles         UserRole[]
-  memberships   ProjectMember[]
-  authTokens    AuthToken[]
-  preferences   NotificationPreference[]
-  auditEvents   AuditEvent[]
-  importJobs    ImportJob[]
-  sessions      Session[]
-  leadsOwned     Lead[]
-  leadActivities LeadActivity[]
+  roles                 UserRole[]
+  memberships           ProjectMember[]
+  authTokens            AuthToken[]
+  preferences           NotificationPreference[]
+  auditEvents           AuditEvent[]
+  importJobs            ImportJob[]
+  sessions              Session[]
+  leadsOwned            Lead[]
+  leadActivities        LeadActivity[]
   clientAccountsPrimary ClientAccount[]
   accountContacts       AccountContact[]
 
@@ -342,21 +357,21 @@ model UserRole {
 /// holds. Both the Super-Admin pick-list and the server-side allow-list for a custom role's grants.
 /// Rewritten by the seed, so the matrix stays the source. Dormant: nothing reads it yet.
 model GrantableCapability {
-  id            String @id @default(uuid(7)) @db.Uuid
+  id                 String  @id @default(uuid(7)) @db.Uuid
   /// Stable id `module.resource.action:scope`, with `#<condition-signature>` when conditioned.
-  capabilityKey String @unique @map("capability_key") @db.VarChar(255)
-  module        String @db.VarChar(64)
-  resource      String @db.VarChar(128)
-  action        String @db.VarChar(32)
-  scope         String @db.VarChar(16)
+  capabilityKey      String  @unique @map("capability_key") @db.VarChar(255)
+  module             String  @db.VarChar(64)
+  resource           String  @db.VarChar(128)
+  action             String  @db.VarChar(32)
+  scope              String  @db.VarChar(16)
   /// The grant's conditions (packages/policy `Condition[]`); an empty array is a plain grant.
-  conditions    Json
+  conditions         Json
   /// The system role codes that hold this exact grant (`StaffRole[]`), for the class ceiling.
-  sourceRoles   Json    @map("source_roles")
-  isStaffOnly   Boolean @default(true) @map("is_staff_only")
+  sourceRoles        Json    @map("source_roles")
+  isStaffOnly        Boolean @default(true) @map("is_staff_only")
   /// Role/account administration and identity documents: never assignable to a custom role.
   isEscalationLocked Boolean @default(false) @map("is_escalation_locked")
-  label         String  @db.VarChar(255)
+  label              String  @db.VarChar(255)
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
@@ -584,10 +599,10 @@ model Configuration {
   scope     ConfigurationScope @default(global)
   scopeId   String?            @map("scope_id") @db.Uuid
 
-  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  createdBy String?   @map("created_by") @db.Uuid
-  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
-  updatedBy String?   @map("updated_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy String?  @map("created_by") @db.Uuid
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedBy String?  @map("updated_by") @db.Uuid
 
   @@index([scope, scopeId])
   @@map("configurations")
@@ -696,11 +711,11 @@ model Lead {
   updatedBy String?   @map("updated_by") @db.Uuid
   deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
 
-  source      LeadSource     @relation(fields: [sourceId], references: [id])
-  owner       User?          @relation(fields: [ownerUserId], references: [id])
-  duplicateOf Lead?          @relation("LeadDuplicate", fields: [duplicateOfLeadId], references: [id])
-  duplicates  Lead[]         @relation("LeadDuplicate")
-  activities  LeadActivity[]
+  source           LeadSource     @relation(fields: [sourceId], references: [id])
+  owner            User?          @relation(fields: [ownerUserId], references: [id])
+  duplicateOf      Lead?          @relation("LeadDuplicate", fields: [duplicateOfLeadId], references: [id])
+  duplicates       Lead[]         @relation("LeadDuplicate")
+  activities       LeadActivity[]
   convertedAccount ClientAccount?
 
   @@index([status])
@@ -771,6 +786,7 @@ model ClientAccount {
   contacts       AccountContact[]
   subscriptions  Subscription[]
   payments       Payment[]
+  savedHotels    SavedHotel[]
 
   @@index([status])
   @@index([primaryContactUserId])
@@ -964,4 +980,99 @@ model WebhookEvent {
   @@unique([provider, eventId])
   @@index([providerRef])
   @@map("webhook_events")
+}
+
+// --- Module C models (docs/data-model.md §5, docs/field-matrix.md §4). ---
+
+/// A place weddings happen (reference table, Super-Admin editable): a hotel sits in exactly one. Name
+/// and slug are CLIENT, and PUBLIC on the website when `public_visible`. Columns mirror field-matrix §4.
+model Destination {
+  id            String            @id @default(uuid(7)) @db.Uuid
+  name          String            @db.VarChar(255)
+  slug          String            @unique @db.VarChar(255)
+  region        String?           @db.VarChar(255)
+  state         String?           @db.VarChar(255)
+  country       String            @db.VarChar(255)
+  description   String?           @db.Text
+  status        DestinationStatus @default(draft)
+  publicVisible Boolean           @default(false) @map("public_visible")
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  hotels Hotel[]
+
+  @@index([status])
+  @@index([deletedAt])
+  @@map("destinations")
+}
+
+/// A hotel in the catalogue (A-28; data-model.md:565-585). Client-class fields (name, brand, address,
+/// description_client, …) build the client view; `internal_rating` and `internal_notes` are
+/// RESTRICTED-NOTES and never enter a client response (the repository select omits them — security.md).
+/// `demo_visible` is the demo-isolation flag the repository filters on for a demo principal (data.md).
+model Hotel {
+  id                String      @id @default(uuid(7)) @db.Uuid
+  destinationId     String      @map("destination_id") @db.Uuid
+  name              String      @db.VarChar(255)
+  slug              String      @unique @db.VarChar(255)
+  brand             String?     @db.VarChar(255)
+  starCategory      String?     @map("star_category") @db.VarChar(255)
+  address           String?     @db.Text
+  latitude          Decimal?    @db.Decimal(9, 6)
+  longitude         Decimal?    @db.Decimal(9, 6)
+  descriptionClient String?     @map("description_client") @db.Text
+  website           String?     @db.VarChar(255)
+  status            HotelStatus @default(draft)
+  demoVisible       Boolean     @default(false) @map("demo_visible")
+  publicShowcase    Boolean     @default(false) @map("public_showcase")
+  internalRating    Int?        @map("internal_rating")
+  internalNotes     String?     @map("internal_notes") @db.Text
+  totalRooms        Int?        @map("total_rooms")
+  streetViewRef     String?     @map("street_view_ref") @db.VarChar(255)
+  lastVerifiedAt    DateTime?   @map("last_verified_at") @db.Timestamptz(6)
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  destination Destination  @relation(fields: [destinationId], references: [id])
+  savedBy     SavedHotel[]
+
+  @@index([destinationId])
+  @@index([status, demoVisible])
+  @@index([deletedAt])
+  @@map("hotels")
+}
+
+/// A hotel a client account has shortlisted (data-model.md:665-679). Unique on (account_id, hotel_id)
+/// so a re-save reuses the row (the service clears `deleted_at` rather than inserting a second row).
+/// `project_id` is back-filled by the system when a project is linked (GP-27, Module E) — plain Uuid now.
+model SavedHotel {
+  id            String  @id @default(uuid(7)) @db.Uuid
+  accountId     String  @map("account_id") @db.Uuid
+  hotelId       String  @map("hotel_id") @db.Uuid
+  projectId     String? @map("project_id") @db.Uuid
+  savedByUserId String  @map("saved_by_user_id") @db.Uuid
+  note          String? @db.Text
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  account ClientAccount @relation(fields: [accountId], references: [id])
+  hotel   Hotel         @relation(fields: [hotelId], references: [id])
+
+  @@unique([accountId, hotelId])
+  @@index([accountId])
+  @@index([hotelId])
+  @@index([deletedAt])
+  @@map("saved_hotels")
 }

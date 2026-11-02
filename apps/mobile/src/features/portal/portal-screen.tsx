@@ -30,6 +30,7 @@ export function PortalScreen() {
   const me = useMe();
   const plans = usePlans();
   const unlocked = me.data?.entitlements.hotelReach.includes("all_hotels") ?? false;
+  const canBrowse = me.data?.entitlements.modules.includes("hotel_discovery") ?? false;
   return (
     <ScrollView
       className="flex-1 bg-surface"
@@ -41,7 +42,7 @@ export function PortalScreen() {
         <MeError error={me.error} onRetry={() => void me.refetch()} />
       ) : (
         <Stack gap={4}>
-          <EntitlementBand unlocked={unlocked} loading={me.isPending} />
+          <EntitlementBand unlocked={unlocked} canBrowse={canBrowse} loading={me.isPending} />
           <PlanList plans={plans} unlocked={unlocked} />
         </Stack>
       )}
@@ -89,17 +90,38 @@ function MeError({ error, onRetry }: { readonly error: unknown; readonly onRetry
 
 function EntitlementBand({
   unlocked,
+  canBrowse,
   loading,
 }: {
   readonly unlocked: boolean;
+  readonly canBrowse: boolean;
   readonly loading: boolean;
 }) {
+  const router = useRouter();
   if (loading) return <Skeleton className="h-16 w-full" />;
   if (unlocked) {
     return (
-      <Callout kind="verified" title="Hotel discovery unlocked">
-        You can now search all hotels.
-      </Callout>
+      <Stack gap={2}>
+        <Callout kind="verified" title="Hotel discovery unlocked">
+          You can now search all hotels.
+        </Callout>
+        <Button icon="search" onPress={() => router.push("/hotels")}>
+          Browse hotels
+        </Button>
+      </Stack>
+    );
+  }
+  // A demo / project / agreement principal reaches its own scoped set without a full subscription.
+  if (canBrowse) {
+    return (
+      <Stack gap={2}>
+        <Callout kind="indicative" title="Browse hotels">
+          Explore the hotels available to you.
+        </Callout>
+        <Button variant="secondary" icon="search" onPress={() => router.push("/hotels")}>
+          Browse hotels
+        </Button>
+      </Stack>
     );
   }
   return <Callout kind="indicative" title="Subscribe to unlock full hotel discovery" />;

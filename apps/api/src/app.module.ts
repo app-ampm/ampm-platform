@@ -12,6 +12,7 @@ import { NotificationModule } from "./modules/admin/notification/notification.mo
 import { CrmModule } from "./modules/crm/crm.module.js";
 import { SubscriptionsModule } from "./modules/crm/subscriptions/subscriptions.module.js";
 import { DemoModule } from "./modules/demo/demo.module.js";
+import { HotelsModule } from "./modules/hotels/hotels.module.js";
 import { PermissionSetsModule } from "./modules/admin/permission-sets/permission-sets.module.js";
 import { RolesModule } from "./modules/admin/roles/roles.module.js";
 import { StaffUsersModule } from "./modules/admin/staff-users/staff-users.module.js";
@@ -40,6 +41,7 @@ import { PolicyModule } from "./policy/policy.module.js";
     ClientLoginsModule,
     CrmModule,
     SubscriptionsModule,
+    HotelsModule,
     DemoModule,
     SpikeModule,
   ],

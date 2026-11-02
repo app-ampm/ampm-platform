@@ -16,6 +16,7 @@ import {
 
 import { Prisma, PrismaClient } from "../src/generated/prisma/client.js";
 import { upsertDemoUser } from "../src/modules/demo/demo-baseline.js";
+import { seedHotels } from "./seed-hotels.js";
 
 const url = process.env["DATABASE_URL"];
 if (!url) throw new Error("DATABASE_URL is required to seed");
@@ -311,10 +312,11 @@ async function main(): Promise<void> {
   await seedConfigurations();
   await seedLeadSources();
   await seedPlans();
+  await seedHotels(prisma);
   await seedGrantableCapabilities();
   console.log(
-    "seeded roles, permissions, seven synthetic accounts, the baseline configuration " +
-      `and ${GRANTABLE_CAPABILITIES.length} grantable capabilities`,
+    "seeded roles, permissions, seven synthetic accounts, four synthetic hotels, the baseline " +
+      `configuration and ${GRANTABLE_CAPABILITIES.length} grantable capabilities`,
   );
 }
 

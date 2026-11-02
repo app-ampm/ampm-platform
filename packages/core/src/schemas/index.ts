@@ -281,3 +281,21 @@ export type {
   PaymentPurpose,
   PaymentStatus,
 } from "./payments";
+// Value schemas and their inferred types in one statement so the barrel stays within the 300-line cap
+// (hotelDestinationView is internal to hotelView and reached via HotelView["destination"], not re-exported).
+export {
+  hotelListQuery,
+  hotelPage,
+  hotelView,
+  savedHotelListQuery,
+  savedHotelPage,
+  savedHotelRemovedResponse,
+  savedHotelView,
+  type HotelListQuery,
+  type HotelPage,
+  type HotelView,
+  type SavedHotelListQuery,
+  type SavedHotelPage,
+  type SavedHotelRemovedResponse,
+  type SavedHotelView,
+} from "./hotels";
