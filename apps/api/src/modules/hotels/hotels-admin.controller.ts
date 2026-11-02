@@ -1,6 +1,7 @@
 import { Controller, Delete, Get, HttpCode, Patch, Post } from "@nestjs/common";
 import {
   destinationCreateRequest,
+  destinationUpdateRequest,
   hotelContactCreateRequest,
   hotelContactUpdateRequest,
   hotelCreateRequest,
@@ -13,6 +14,7 @@ import {
   venueCreateRequest,
   venueUpdateRequest,
   type DestinationCreateRequest,
+  type DestinationUpdateRequest,
   type DestinationView,
   type HotelContactCreateRequest,
   type HotelContactUpdateRequest,
@@ -54,6 +56,8 @@ const venueParam = z.object({ hotelId: uuid, venueId: uuid });
 type VenueParam = z.infer<typeof venueParam>;
 const contactParam = z.object({ hotelId: uuid, contactId: uuid });
 type ContactParam = z.infer<typeof contactParam>;
+const destinationParam = z.object({ destinationId: uuid });
+type DestinationParam = z.infer<typeof destinationParam>;
 
 function staffId(principal: Principal): string {
   if (principal.type !== "staff") throw new Error("a staff principal is required");
@@ -133,6 +137,17 @@ export class HotelsAdminController {
     @CurrentPrincipal() principal: Principal,
   ): Promise<DestinationView> {
     return this.hotels.createDestination(body, staffId(principal));
+  }
+
+  @Patch("destinations/:destinationId")
+  @RequirePermission("hotels.destinations.update")
+  @SelfAudited()
+  updateDestination(
+    @ZodParams(destinationParam) params: DestinationParam,
+    @ZodBody(destinationUpdateRequest) body: DestinationUpdateRequest,
+    @CurrentPrincipal() principal: Principal,
+  ): Promise<DestinationView> {
+    return this.hotels.updateDestination(params.destinationId, body, staffId(principal));
   }
 
   @Post("imports")

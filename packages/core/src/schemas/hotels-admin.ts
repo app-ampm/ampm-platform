@@ -80,6 +80,7 @@ export type DestinationCreateRequest = z.infer<typeof destinationCreateRequest>;
 
 export const destinationUpdateRequest = z
   .object(destinationFields)
+  .omit({ slug: true }) // the slug is immutable once set — recreate the destination to change it
   .partial()
   .strict()
   .refine((v) => Object.keys(v).length > 0, "at least one field is required");
