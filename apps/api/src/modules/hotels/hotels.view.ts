@@ -3,6 +3,7 @@ import type {
   HotelDetailView,
   HotelRatesView,
   HotelView,
+  MediaGalleryItem,
   SavedHotelView,
 } from "@ampm/core";
 
@@ -49,9 +50,16 @@ export function toSavedHotelView(row: SavedHotelRow): SavedHotelView {
 
 type DetailCard = HotelDetailRow["rateCards"][number];
 
-/** The hotel detail: the discovery card plus its client-facing, freshness-labelled pricing (AC-04). */
-export function toHotelDetailView(row: HotelDetailRow): HotelDetailView {
-  return { ...toHotelView(row), rates: toRatesView(row.rateCards) };
+/**
+ * The hotel detail: the discovery card, its client-facing freshness-labelled pricing (AC-04) and the
+ * client-visible gallery (AC-24.4). The gallery is resolved by Module N through MediaService and passed
+ * in — this mapper never touches `media_assets` (the C→N boundary; architecture §5).
+ */
+export function toHotelDetailView(
+  row: HotelDetailRow,
+  gallery: MediaGalleryItem[],
+): HotelDetailView {
+  return { ...toHotelView(row), rates: toRatesView(row.rateCards), gallery };
 }
 
 /**

@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common";
 
 import { NotificationModule } from "../admin/notification/notification.module.js";
+import { MediaModule } from "../media/media.module.js";
 import { HotelFreshnessService } from "./hotel-freshness.service.js";
 import { HotelImportService } from "./hotel-import.service.js";
 import { HotelRatesController } from "./hotel-rates.controller.js";
@@ -30,7 +31,7 @@ import { HotelsService } from "./hotels.service.js";
  * with PortalService.
  */
 @Module({
-  imports: [NotificationModule],
+  imports: [NotificationModule, MediaModule],
   controllers: [HotelsController, HotelsAdminController, HotelRatesController],
   providers: [
     HotelsService,

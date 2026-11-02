@@ -12,6 +12,7 @@ import {
 } from "@ampm/core";
 import type { Entitlements } from "@ampm/policy";
 
+import { MediaService } from "../media/media.service.js";
 import type { Principal } from "../../policy/principal.types.js";
 import { HotelsRepository } from "./hotels.repository.js";
 import { toHotelDetailView, toHotelView, toSavedHotelView } from "./hotels.view.js";
@@ -25,7 +26,10 @@ import { toHotelDetailView, toHotelView, toSavedHotelView } from "./hotels.view.
  */
 @Injectable()
 export class HotelsService {
-  constructor(private readonly hotels: HotelsRepository) {}
+  constructor(
+    private readonly hotels: HotelsRepository,
+    private readonly media: MediaService,
+  ) {}
 
   async list(principal: Principal, query: HotelListQuery): Promise<HotelPage> {
     const { ent } = this.gate(principal, "hotel_discovery", false);
@@ -37,7 +41,11 @@ export class HotelsService {
     const { ent } = this.gate(principal, "hotel_discovery", false);
     const hotel = await this.hotels.findDetailInReach(ent.hotelReach, hotelId);
     if (!hotel) throw errors.notFound(); // outside reach or truly absent — the same 404
-    return toHotelDetailView(hotel);
+    // The gallery shows only media at or below the caller's visibility level (AC-24.4): a demo prospect
+    // sees demo/public, a real client sees client/demo/public. Read through Module N, never its table.
+    const audience = principal.type === "demo" ? "demo" : "client";
+    const gallery = await this.media.clientGallery("hotel", hotelId, audience);
+    return toHotelDetailView(hotel, gallery);
   }
 
   async listSaved(principal: Principal, query: SavedHotelListQuery): Promise<SavedHotelPage> {

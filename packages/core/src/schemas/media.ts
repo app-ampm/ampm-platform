@@ -129,3 +129,31 @@ export type MediaRemovedResponse = z.infer<typeof mediaRemovedResponse>;
  */
 export const mediaDownloadUrl = z.object({ url: z.string(), expiresAt: isoDateTime }).strict();
 export type MediaDownloadUrl = z.infer<typeof mediaDownloadUrl>;
+
+/**
+ * Which stored rendition of an image a download link is minted for (AC-24.1). The `original` is always
+ * kept; `web` and `thumbnail` are the metadata-stripped derivatives the gallery serves (CP-05). A
+ * derivative that was never generated (a video, or an asset uploaded before derivatives) is a 404.
+ */
+export const mediaVariant = z.enum(["original", "web", "thumbnail"]);
+export type MediaVariant = z.infer<typeof mediaVariant>;
+
+export const mediaDownloadQuery = z.object({ variant: mediaVariant.default("original") }).strict();
+export type MediaDownloadQuery = z.infer<typeof mediaDownloadQuery>;
+
+/**
+ * One image as a client/demo principal sees it in a gallery (CP-05). The object keys never appear — only
+ * short-lived signed links to the metadata-stripped derivatives (security.md, AC-20). Rights, visibility,
+ * scan state and size stay server-side: a client sees a picture, not its governance. Reused by every
+ * owner's gallery (a hotel for 9.3, a vendor portfolio later), so it carries no owner-specific field.
+ */
+export const mediaGalleryItem = z
+  .object({
+    id: uuid,
+    kind: mediaKind,
+    caption: z.string().nullable(),
+    thumbnailUrl: z.string(), // signed link to the thumbnail derivative
+    webUrl: z.string(), // signed link to the web-size derivative
+  })
+  .strict();
+export type MediaGalleryItem = z.infer<typeof mediaGalleryItem>;

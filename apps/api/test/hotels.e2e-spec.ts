@@ -1,4 +1,6 @@
-import type { HotelReach } from "@ampm/core";
+import { randomUUID } from "node:crypto";
+
+import type { HotelReach, MediaVisibility } from "@ampm/core";
 import type { Entitlements } from "@ampm/policy";
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import request from "supertest";
@@ -11,6 +13,7 @@ import { startApi } from "./start-api.js";
 
 const TAG = "E2E-Hotels";
 const PREFIX = "e2e-hotels";
+const GALLERY_ACTOR = "00000000-0000-7000-8000-0000000000aa"; // a plain Uuid; uploaded_by has no FK
 
 /** A fabricated client/demo principal for service-level reach tests (no HTTP round-trip needed). */
 function fakeEntitlements(reach: HotelReach, readOnly: boolean): Entitlements {
@@ -80,6 +83,13 @@ describe("Hotel discovery (e2e)", () => {
     await prisma.notification.deleteMany({ where: { recipientId: { in: userIds } } });
     await prisma.session.deleteMany({ where: { userId: { in: userIds } } });
     await prisma.user.deleteMany({ where: { id: { in: userIds } } });
+    const hotelRows = await prisma.hotel.findMany({
+      where: { slug: { startsWith: PREFIX } },
+      select: { id: true },
+    });
+    await prisma.mediaAsset.deleteMany({
+      where: { ownerType: "hotel", ownerId: { in: hotelRows.map((h) => h.id) } },
+    });
     await prisma.hotel.deleteMany({ where: { slug: { startsWith: PREFIX } } });
     await prisma.destination.deleteMany({ where: { slug: { startsWith: PREFIX } } });
   }
@@ -117,6 +127,52 @@ describe("Hotel discovery (e2e)", () => {
 
   const http = () => request(app.getHttpServer());
   const auth = (token: string) => `Bearer ${token}`;
+
+  /** A clean, rights-cleared gallery image on an owner at one visibility, with both derivatives present. */
+  async function seedGalleryImage(ownerId: string, visibility: MediaVisibility): Promise<void> {
+    const storageKey = `hotel/${ownerId}/${randomUUID()}`;
+    await prisma.mediaAsset.create({
+      data: {
+        ownerType: "hotel",
+        ownerId,
+        kind: "image",
+        storageKey,
+        thumbnailKey: `${storageKey}.thumb`,
+        webKey: `${storageKey}.web`,
+        mimeType: "image/jpeg",
+        sizeBytes: 100,
+        scanStatus: "clean",
+        visibility,
+        rightsStatus: "owned",
+        caption: visibility, // the caption doubles as the visibility label the assertions read
+        uploadedBy: GALLERY_ACTOR,
+        createdBy: GALLERY_ACTOR,
+      },
+    });
+  }
+
+  /** A clean, client-visible row with NO derivatives (a video): listGallery returns it, isGalleryReady drops it. */
+  async function seedNoDerivative(ownerId: string): Promise<void> {
+    const storageKey = `hotel/${ownerId}/${randomUUID()}`;
+    await prisma.mediaAsset.create({
+      data: {
+        ownerType: "hotel",
+        ownerId,
+        kind: "video",
+        storageKey,
+        thumbnailKey: null,
+        webKey: null,
+        mimeType: "video/mp4",
+        sizeBytes: 100,
+        scanStatus: "clean",
+        visibility: "client",
+        rightsStatus: "owned",
+        caption: "novid",
+        uploadedBy: GALLERY_ACTOR,
+        createdBy: GALLERY_ACTOR,
+      },
+    });
+  }
 
   /** Buy the Discovery plan for the token's own account and complete the stub payment → all_hotels. */
   async function activate(token: string): Promise<void> {
@@ -258,5 +314,36 @@ describe("Hotel discovery (e2e)", () => {
     expect(list.items).toEqual([]);
     await expect(hotels.get(principal, hotelA)).rejects.toMatchObject({ code: "not_found" });
     await expect(hotels.save(principal, hotelA)).rejects.toMatchObject({ code: "not_found" });
+  });
+
+  it("shows a hotel gallery of exactly the media at or below the principal's level (AC-24.4)", async () => {
+    await prisma.mediaAsset.deleteMany({ where: { ownerType: "hotel", ownerId: hotelA } });
+    for (const v of ["internal", "demo", "client", "public"] as const) {
+      await seedGalleryImage(hotelA, v);
+    }
+    // A clean, client-visible row with no derivatives: in listGallery's scope but excluded by isGalleryReady,
+    // so it must NOT appear below (otherwise the gallery would sign null keys into broken links).
+    await seedNoDerivative(hotelA);
+
+    const asClient = await hotels.get(
+      fakePrincipal("client", fakeEntitlements("all_hotels", false)),
+      hotelA,
+    );
+    const asDemo = await hotels.get(
+      fakePrincipal("demo", fakeEntitlements("demo_hotels", true)),
+      hotelA,
+    );
+
+    // "At or below": a client sees public+demo+client; a demo prospect sees public+demo; internal reaches
+    // neither (the staff-only level). The public website visitor path (public only) is a separate surface.
+    expect(asClient.gallery.map((m) => m.caption).sort()).toEqual(["client", "demo", "public"]);
+    expect(asDemo.gallery.map((m) => m.caption).sort()).toEqual(["demo", "public"]);
+
+    // Each item is a pair of signed blob links and nothing else — no object-key field crosses the boundary.
+    for (const item of asClient.gallery) {
+      expect(Object.keys(item).sort()).toEqual(["caption", "id", "kind", "thumbnailUrl", "webUrl"]);
+      expect(item.thumbnailUrl).toContain("/media/blob?");
+      expect(item.webUrl).toContain("/media/blob?");
+    }
   });
 });
