@@ -4,6 +4,7 @@ import {
   destinationBrowseItem,
   hotelCompareItem,
   hotelCompareQuery,
+  hotelDetailView,
   hotelListQuery,
   hotelView,
   savedHotelRemovedResponse,
@@ -50,6 +51,27 @@ describe("hotelView (one client model per audience — security.md)", () => {
     );
     expect(hotelView.safeParse({ ...hotel, status: "active" }).success).toBe(false);
     expect(hotelView.safeParse({ ...hotel, demoVisible: true }).success).toBe(false);
+  });
+});
+
+describe("hotelDetailView (GET /hotels/:id — the card plus rates, gallery, references)", () => {
+  // The exact shape the detail endpoint returns for a hotel with no verified rates or media — the
+  // on_request/empty case that must still render (AC-04). Regression for the client reading the detail
+  // endpoint with the strict card schema hotelView, which rejects these keys and throws (empty discovery
+  // detail: the hook must parse with hotelDetailView, not hotelView).
+  const detail = {
+    ...hotel,
+    rates: { status: "on_request", asOf: null, items: [] },
+    gallery: [],
+    references: [],
+  };
+
+  it("accepts the detail payload", () => {
+    expect(hotelDetailView.safeParse(detail).success).toBe(true);
+  });
+
+  it("is not a hotelView — the strict card schema rejects the detail's extra keys", () => {
+    expect(hotelView.safeParse(detail).success).toBe(false);
   });
 });
 
