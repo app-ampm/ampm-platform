@@ -1,6 +1,6 @@
 # AMPM Platform — Field Matrix
 
-**Status:** DRAFT v0.1, generated 2026-11-02 from [data-model.md](data-model.md) by `docs/tools/field_matrix_build.py`. Do not edit by hand; change the data model or `docs/tools/field_rules.py` and rebuild.
+**Status:** DRAFT v0.1, generated 2026-11-03 from [data-model.md](data-model.md) by `docs/tools/field_matrix_build.py`. Do not edit by hand; change the data model or `docs/tools/field_rules.py` and rebuild.
 **Companions:** [requirements-audit.md](requirements-audit.md) (Q numbers), [data-model.md](data-model.md) (assumptions A-1 to A-30), [permission-matrix.md](permission-matrix.md) (role codes, visibility classes, assumptions P-1 to P-11).
 **Spreadsheet version:** [field-matrix.csv](field-matrix.csv) has the same rows for filtering.
 
@@ -33,13 +33,13 @@ Global conventions that apply to every row: money is `numeric(14,2)` with a sibl
 | K — Rooms, travel and transport | 9 | 93 | 45 | 44 | 3 |
 | L — Menus and food service | 4 | 31 | 15 | 25 | 0 |
 | M — Tasks, staffing and incidents | 4 | 46 | 20 | 16 | 17 |
-| N — Documents, media and identity documents | 4 | 55 | 31 | 0 | 18 |
+| N — Documents, media and identity documents | 4 | 56 | 31 | 0 | 18 |
 | O — Checklists, closure and feedback | 4 | 30 | 17 | 7 | 0 |
 | P — Public website content (dormant) | 2 | 17 | 8 | 17 | 0 |
 | Q — Live chat | 2 | 16 | 6 | 16 | 0 |
-| **Total** | **116** | **1153** | **500** | **646** | **104** |
+| **Total** | **116** | **1154** | **500** | **646** | **104** |
 
-Fields by visibility class: CLIENT 613, INTERNAL 347, Other (per record, recipient or parent) 56, RESTRICTED-NOTES 34, PUBLIC 33, RESTRICTED-FINANCE 31, RESTRICTED-CONTACT 13, RESTRICTED-IDENTITY 13, SECRET 7, RESTRICTED-BANK 4, SENSITIVE-GUEST 2.
+Fields by visibility class: CLIENT 613, INTERNAL 347, Other (per record, recipient or parent) 57, RESTRICTED-NOTES 34, PUBLIC 33, RESTRICTED-FINANCE 31, RESTRICTED-CONTACT 13, RESTRICTED-IDENTITY 13, SECRET 7, RESTRICTED-BANK 4, SENSITIVE-GUEST 2.
 
 ---
 
@@ -1907,6 +1907,7 @@ Created at stage: **Any** · Default editor: HT (hotels); VC (vendors); CD (a) (
 | `consent_source_project_id` (FK) | references wedding_projects; nullable, the wedding the media came from |  | HT (hotels); VC (vendors); CD (a) (designs); SA; SM (rights, showcase) | Per the visibility field | When rights_status is consent_obtained for wedding media | — |
 | `consent_document_id` (FK) | references documents; nullable |  | HT (hotels); VC (vendors); CD (a) (designs); SA; SM (rights, showcase) | Per the visibility field | When rights_status is consent_obtained | — |
 | `uploaded_by` (FK) | references users |  | SYS (acting user) | Per the visibility field | At creation | — |
+| `upload_started_at` | timestamp (UTC); nullable; upload claim that serialises concurrent uploads (slice 5c) |  | SYS (when the action happens) | Per the visibility field | System | — |
 
 ### `identity_documents`
 

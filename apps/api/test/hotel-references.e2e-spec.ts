@@ -207,4 +207,23 @@ describe("Hotel wedding references (e2e)", () => {
       .expect(403);
     await http().delete(`${base()}/${MISSING}`).set("Authorization", sm).expect(403);
   });
+
+  it("backstops GP-20 at the database: a client-visible reference needs consent (DB CHECK, slice 5c)", async () => {
+    // A direct insert bypassing the service gate is still refused by the CHECK constraint, so the invariant
+    // holds regardless of request interleaving (the service gate alone is check-then-act).
+    await expect(
+      prisma.hotelWeddingReference.create({
+        data: { hotelId, eventYear: 2024, clientVisible: true, consentDocumentId: null },
+      }),
+    ).rejects.toThrow();
+    // The permitted combinations still insert: internal with no consent, and client-visible WITH consent.
+    const internal = await prisma.hotelWeddingReference.create({
+      data: { hotelId, eventYear: 2024, clientVisible: false, consentDocumentId: null },
+    });
+    const visible = await prisma.hotelWeddingReference.create({
+      data: { hotelId, eventYear: 2024, clientVisible: true, consentDocumentId: CONSENT_DOC },
+    });
+    expect(internal.clientVisible).toBe(false);
+    expect(visible.consentDocumentId).toBe(CONSENT_DOC);
+  });
 });

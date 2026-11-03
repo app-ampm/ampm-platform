@@ -52,6 +52,12 @@ const GALLERY_SELECT = {
 
 export type MediaGalleryRow = Prisma.MediaAssetGetPayload<{ select: typeof GALLERY_SELECT }>;
 
+/**
+ * How long an upload claim is honoured before it is considered stale and stealable (feature 9.3 slice 5c).
+ * Longer than any real upload, short enough that a crashed upload self-heals without operator action.
+ */
+const UPLOAD_CLAIM_TTL_MS = 5 * 60 * 1000;
+
 @Injectable()
 export class MediaRepository {
   constructor(private readonly prisma: PrismaService) {}
@@ -185,15 +191,35 @@ export class MediaRepository {
   }
 
   /**
-   * Demote an asset to `pending` and clear its derivative keys in one committed write before its bytes
-   * change (feature 9.3b/c). The demotion keeps the overwrite→scan window fail-closed; clearing the keys
-   * revokes any thumbnail/web link minted while the asset was clean (findByAnyKey no longer resolves them).
+   * Claim an asset for upload and demote it in one atomic compare-and-swap (feature 9.3 slice 5c). Acquires
+   * only when no upload is in flight (`upload_started_at` null) or a prior claim is older than the stale-steal
+   * TTL, so a crashed upload self-heals; on success it also demotes to `pending` and clears the derivative
+   * keys (the overwrite -> scan window stays fail-closed, and a link minted while clean stops resolving).
+   * Returns false when another upload already holds the claim, so the caller refuses rather than interleaving
+   * its storage writes and tearing the rendition set.
    */
-  async markPending(id: string, actorId: string): Promise<void> {
-    await this.prisma.mediaAsset.updateMany({
-      where: { id, deletedAt: null },
-      data: { scanStatus: "pending", thumbnailKey: null, webKey: null, updatedBy: actorId },
+  async claimUpload(id: string, actorId: string): Promise<boolean> {
+    const staleCutoff = new Date(Date.now() - UPLOAD_CLAIM_TTL_MS);
+    const result = await this.prisma.mediaAsset.updateMany({
+      where: {
+        id,
+        deletedAt: null,
+        OR: [{ uploadStartedAt: null }, { uploadStartedAt: { lt: staleCutoff } }],
+      },
+      data: {
+        uploadStartedAt: new Date(),
+        scanStatus: "pending",
+        thumbnailKey: null,
+        webKey: null,
+        updatedBy: actorId,
+      },
     });
+    return result.count > 0;
+  }
+
+  /** Release the upload claim (feature 9.3 slice 5c) so a retry can proceed at once, before the TTL lapses. */
+  async releaseUpload(id: string): Promise<void> {
+    await this.prisma.mediaAsset.updateMany({ where: { id }, data: { uploadStartedAt: null } });
   }
 
   /**
@@ -215,7 +241,8 @@ export class MediaRepository {
   ): Promise<MediaAssetRow> {
     return (tx ?? this.prisma).mediaAsset.update({
       where: { id },
-      data: { ...data, updatedBy: actorId },
+      // Releasing the upload claim (upload_started_at -> null) is part of committing the terminal state.
+      data: { ...data, uploadStartedAt: null, updatedBy: actorId },
       select: MEDIA_SELECT,
     });
   }

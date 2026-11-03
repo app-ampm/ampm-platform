@@ -659,7 +659,7 @@ erDiagram
         int event_year
         int guest_count
         text description_client "CLIENT"
-        bool client_visible
+        bool client_visible "only with consent_document_id set (GP-20; enforced by a DB CHECK)"
         uuid consent_document_id FK "consent from the referenced client (GP-20)"
     }
     saved_hotels {
@@ -1832,6 +1832,7 @@ erDiagram
         uuid consent_source_project_id FK "nullable, the wedding the media came from"
         uuid consent_document_id FK "nullable"
         uuid uploaded_by FK
+        datetime upload_started_at "nullable; upload claim that serialises concurrent uploads (slice 5c)"
     }
     identity_documents {
         uuid id PK

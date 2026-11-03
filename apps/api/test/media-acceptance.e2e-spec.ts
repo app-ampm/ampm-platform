@@ -167,4 +167,39 @@ describe("Media AC-20/AC-24 acceptance (e2e)", () => {
       .set("Authorization", auth)
       .expect(404);
   });
+
+  it("releases the upload claim once an upload settles (slice 5c)", async () => {
+    const id = await newAsset("image", "image/jpeg");
+    await uploadBytes(id, await realJpeg()).expect(200);
+    const row = await prisma.mediaAsset.findUniqueOrThrow({
+      where: { id },
+      select: { uploadStartedAt: true },
+    });
+    expect(row.uploadStartedAt).toBeNull();
+  });
+
+  it("refuses a concurrent upload while one holds the claim (409), leaves the live asset untouched, and steals a stale claim (slice 5c)", async () => {
+    const id = await newAsset("image", "image/jpeg");
+    await uploadBytes(id, await realJpeg()).expect(200); // now clean, with derivatives, claim released
+
+    // Simulate a second upload in flight by holding the claim; a concurrent upload is refused (409)...
+    await prisma.mediaAsset.update({ where: { id }, data: { uploadStartedAt: new Date() } });
+    await uploadBytes(id, await realJpeg()).expect(409);
+
+    // ...and the refusal left the committed rendition set intact (fail-closed: the loser never demotes a
+    // live asset — the demote is coupled to the winning CAS, so a 409 touches nothing).
+    const after = await http().get(`/media/${id}`).set("Authorization", auth).expect(200);
+    expect(after.body.data.scanStatus).toBe("clean");
+    await http()
+      .get(`/media/${id}/download-url?variant=web`)
+      .set("Authorization", auth)
+      .expect(200);
+
+    // A claim older than the stale-steal TTL is reclaimed, so a stuck (e.g. crashed) upload self-heals.
+    await prisma.mediaAsset.update({
+      where: { id },
+      data: { uploadStartedAt: new Date(Date.now() - 10 * 60 * 1000) },
+    });
+    await uploadBytes(id, await realJpeg()).expect(200);
+  });
 });
