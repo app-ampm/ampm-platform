@@ -58,6 +58,25 @@ describe("hotelListQuery", () => {
     expect(parsed.success).toBe(true);
     if (parsed.success) expect(parsed.data.q).toBe("lake");
   });
+
+  it("coerces the numeric discovery filters and the verifiedRatesOnly flag (feature 9.4)", () => {
+    const parsed = hotelListQuery.parse({
+      star: "5",
+      minRooms: "100",
+      minGuestCapacity: "500",
+      verifiedRatesOnly: "true",
+    });
+    expect(parsed).toMatchObject({
+      star: "5",
+      minRooms: 100,
+      minGuestCapacity: 500,
+      verifiedRatesOnly: true,
+    });
+    expect(hotelListQuery.parse({ verifiedRatesOnly: "false" }).verifiedRatesOnly).toBe(false);
+    // Strict: only true/false, and a negative minimum is rejected at the edge.
+    expect(hotelListQuery.safeParse({ verifiedRatesOnly: "1" }).success).toBe(false);
+    expect(hotelListQuery.safeParse({ minRooms: "-1" }).success).toBe(false);
+  });
 });
 
 describe("savedHotelView", () => {

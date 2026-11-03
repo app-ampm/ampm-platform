@@ -82,9 +82,7 @@ export class HotelsRepository {
     reach: readonly HotelReach[],
     query: HotelListQuery,
   ): Promise<{ rows: HotelRow[]; nextCursor: string | null }> {
-    const where = this.reachWhere(reach);
-    if (query.destinationId) where.destinationId = query.destinationId;
-    if (query.q) where.name = { contains: query.q, mode: "insensitive" };
+    const where = this.searchWhere(reach, query);
     const limit = query.limit;
     const hotels = await this.prisma.hotel.findMany({
       where,
@@ -96,6 +94,43 @@ export class HotelsRepository {
     const hasMore = hotels.length > limit;
     const rows = hasMore ? hotels.slice(0, limit) : hotels;
     return { rows, nextCursor: hasMore ? rows[rows.length - 1]!.id : null };
+  }
+
+  /**
+   * Build the catalogue WHERE: the reach scope (always) plus the optional discovery filters (feature 9.4,
+   * AC-04.6). Each narrows within the reach — `minGuestCapacity` matches a hotel with a venue (banquet or
+   * reception) seating at least N, `verifiedRatesOnly` one with a verified card carrying a client-visible
+   * item. A `gte` on a nullable column (rooms, capacities) excludes unknown values, as a filter should. The
+   * numeric filters guard on truthiness, so a 0 or an empty query param (`?minRooms=`, which coerces to 0)
+   * is a no-op — a zero minimum is meaningless and must not silently exclude every unknown-value hotel.
+   */
+  private searchWhere(reach: readonly HotelReach[], query: HotelListQuery): Prisma.HotelWhereInput {
+    const where = this.reachWhere(reach);
+    if (query.destinationId) where.destinationId = query.destinationId;
+    if (query.q) where.name = { contains: query.q, mode: "insensitive" };
+    if (query.star) where.starCategory = query.star;
+    if (query.minRooms) where.totalRooms = { gte: query.minRooms };
+    if (query.minGuestCapacity) {
+      where.venues = {
+        some: {
+          deletedAt: null,
+          OR: [
+            { capacityBanquet: { gte: query.minGuestCapacity } },
+            { capacityReception: { gte: query.minGuestCapacity } },
+          ],
+        },
+      };
+    }
+    if (query.verifiedRatesOnly) {
+      where.rateCards = {
+        some: {
+          deletedAt: null,
+          status: "verified",
+          items: { some: { deletedAt: null, clientVisible: true } },
+        },
+      };
+    }
+    return where;
   }
 
   async findInReach(reach: readonly HotelReach[], hotelId: string): Promise<HotelRow | null> {
