@@ -42,6 +42,26 @@ describe("offline change queue", () => {
     expect(sendable.map((m) => m.sequence)).toEqual([1, 3]);
   });
 
+  it("keeps the earliest enqueue of a duplicated write even when the inputs are out of order", () => {
+    // The accidental duplicate (sequence 2) is listed before the original (sequence 1): dedupe must
+    // order by sequence first, so the retained send is always the earliest, never whichever happened
+    // to come first in the array.
+    const original = mutation({ sequence: 1, baseVersion: 1, body: "first" });
+    const duplicate = mutation({ sequence: 2, baseVersion: 1, body: "resend" });
+    const sendable = dedupeByIdempotency([duplicate, original]);
+    expect(sendable).toHaveLength(1);
+    expect(sendable[0]?.sequence).toBe(1);
+    expect(sendable[0]?.body).toBe("first");
+  });
+
+  it("orders for replay without mutating the queued array", () => {
+    // The queue is the local store's own record; replay reads it and must never reorder it in place.
+    const queued = [mutation({ sequence: 2 }), mutation({ sequence: 1 })];
+    const ordered = orderForReplay(queued);
+    expect(ordered.map((m) => m.sequence)).toEqual([1, 2]);
+    expect(queued.map((m) => m.sequence)).toEqual([2, 1]);
+  });
+
   it("builds the request body from a queued mutation", () => {
     const body = toUpsertBody(mutation({ recordId: "note-r", baseVersion: 4 }));
     expect(body).toMatchObject({ id: "note-r", baseVersion: 4, status: "open" });
