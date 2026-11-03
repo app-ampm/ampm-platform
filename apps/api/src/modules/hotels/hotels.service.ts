@@ -3,6 +3,8 @@ import {
   errors,
   type DestinationBrowseResponse,
   type EntitlementModule,
+  type HotelCompareQuery,
+  type HotelCompareResponse,
   type HotelDetailView,
   type HotelListQuery,
   type HotelPage,
@@ -19,6 +21,7 @@ import { HotelReferencesService } from "./hotel-references.service.js";
 import { HotelsRepository } from "./hotels.repository.js";
 import {
   toDestinationBrowseItem,
+  toHotelCompareItem,
   toHotelDetailView,
   toHotelView,
   toSavedHotelView,
@@ -69,6 +72,29 @@ export class HotelsService {
       this.references.clientReferences(hotelId),
     ]);
     return toHotelDetailView(hotel, gallery, references);
+  }
+
+  /**
+   * Compare a handful of the caller's saved hotels (CP-06, feature 9.4c). Gated on hotel_discovery, not just
+   * saved_hotels: a compare item carries the indicative rates, so an expired account (saved names only) must
+   * not reach it. Compare is a view over the shortlist — only ids the caller has actually saved AND can see
+   * in reach are returned, in the order asked; any other id is silently omitted (denial equals absence). No
+   * gallery or references, so this never touches Module N — a light read that reuses the detail rate rows.
+   */
+  async compare(principal: Principal, query: HotelCompareQuery): Promise<HotelCompareResponse> {
+    const { ent, userId } = this.gate(principal, "hotel_discovery", false);
+    const accountId = await this.accountIdOrThrow(userId);
+    const saved = await this.hotels.savedHotelIds(accountId, query.ids);
+    const rows = await this.hotels.findDetailsInReach(
+      ent.hotelReach,
+      query.ids.filter((id) => saved.has(id)),
+    );
+    const byId = new Map(rows.map((row) => [row.id, row]));
+    const items = query.ids.flatMap((id) => {
+      const row = byId.get(id);
+      return row ? [toHotelCompareItem(row)] : [];
+    });
+    return { items };
   }
 
   async listSaved(principal: Principal, query: SavedHotelListQuery): Promise<SavedHotelPage> {

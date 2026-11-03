@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   destinationBrowseItem,
+  hotelCompareItem,
+  hotelCompareQuery,
   hotelListQuery,
   hotelView,
   savedHotelRemovedResponse,
@@ -110,5 +112,47 @@ describe("destinationBrowseItem", () => {
     expect(destinationBrowseItem.safeParse(item).success).toBe(true);
     expect(destinationBrowseItem.safeParse({ ...item, extra: 1 }).success).toBe(false);
     expect(destinationBrowseItem.safeParse(destination).success).toBe(false); // hotelCount is required
+  });
+});
+
+describe("hotelCompareItem (feature 9.4c)", () => {
+  const rates = { status: "on_request", asOf: null, items: [] };
+
+  it("is the client card plus rates — no gallery, references, or restricted field", () => {
+    expect(hotelCompareItem.safeParse({ ...hotel, rates }).success).toBe(true);
+    // Deliberately lighter than the detail: the detail's gallery/references are not part of a compare item.
+    expect(hotelCompareItem.safeParse({ ...hotel, rates, gallery: [] }).success).toBe(false);
+    expect(hotelCompareItem.safeParse({ ...hotel, rates, references: [] }).success).toBe(false);
+    // Strict over the embedded hotel view, so no RESTRICTED field can ride along either (security.md).
+    expect(hotelCompareItem.safeParse({ ...hotel, rates, internalNotes: "x" }).success).toBe(false);
+    expect(hotelCompareItem.safeParse(hotel).success).toBe(false); // rates is required
+  });
+});
+
+describe("hotelCompareQuery (feature 9.4c)", () => {
+  const A = ID;
+  const B = HOTEL_ID;
+  const C = "018f0000-0000-7000-8000-00000000cafe";
+  const D = "018f0000-0000-7000-8000-00000000d00d";
+  const E = "018f0000-0000-7000-8000-00000000e00e";
+
+  it("splits a comma list into 2–4 hotel ids, trimming blanks", () => {
+    const parsed = hotelCompareQuery.parse({ ids: ` ${A} , ${B} ,, ${C} ` });
+    expect(parsed.ids).toEqual([A, B, C]); // trimmed, empty segments dropped
+    expect(hotelCompareQuery.parse({ ids: [A, B, C, D].join(",") }).ids).toHaveLength(4); // four is allowed
+  });
+
+  it("normalises id case to lowercase, so a non-canonical but valid id still matches the stored one", () => {
+    // z.uuid accepts upper/mixed case; the service matches ids against lower-case DB values, so normalise here.
+    expect(hotelCompareQuery.parse({ ids: `${A.toUpperCase()},${B}` }).ids).toEqual([A, B]);
+  });
+
+  it("requires at least two ids and at most four, each a distinct UUID", () => {
+    expect(hotelCompareQuery.safeParse({ ids: A }).success).toBe(false); // one id is not a comparison
+    expect(hotelCompareQuery.safeParse({ ids: [A, B, C, D, E].join(",") }).success).toBe(false); // > 4
+    expect(hotelCompareQuery.safeParse({ ids: `${A},not-a-uuid` }).success).toBe(false);
+    expect(hotelCompareQuery.safeParse({ ids: `${A},${A}` }).success).toBe(false); // duplicate
+    expect(hotelCompareQuery.safeParse({ ids: `${A},${A.toUpperCase()}` }).success).toBe(false); // dup after normalise
+    expect(hotelCompareQuery.safeParse({ ids: `${A},${B}`, extra: 1 }).success).toBe(false); // strict
   });
 });

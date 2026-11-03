@@ -166,6 +166,22 @@ export class HotelsRepository {
   }
 
   /**
+   * The detail rows for a bounded set of hotel ids that are in reach (compare, feature 9.4c). AND-composed
+   * for the same reason as findInReach — an `id: { in }` beside the empty-reach guard's own `id: { in: [] }`
+   * would clobber it. Out-of-reach ids simply do not match; the caller orders and maps what comes back.
+   */
+  async findDetailsInReach(
+    reach: readonly HotelReach[],
+    hotelIds: readonly string[],
+  ): Promise<HotelDetailRow[]> {
+    if (hotelIds.length === 0) return [];
+    return this.prisma.hotel.findMany({
+      where: { AND: [this.reachWhere(reach), { id: { in: [...hotelIds] } }] },
+      select: DETAIL_HOTEL_SELECT,
+    });
+  }
+
+  /**
    * The caller's own account from their contact row — never from the request (security.md). This reads a
    * CRM table (account_contacts) from Module C: a deliberate, recorded cross-module shortcut (D-063). The
    * same lookup lives in PortalService; both are to move onto the principal when consolidated.
@@ -212,6 +228,20 @@ export class HotelsRepository {
     const hasMore = saved.length > limit;
     const rows = hasMore ? saved.slice(0, limit) : saved;
     return { rows, nextCursor: hasMore ? rows[rows.length - 1]!.id : null };
+  }
+
+  /**
+   * Which of the requested hotel ids are on this account's live shortlist (compare, feature 9.4c). Compare
+   * is a view over saved_hotels, so an id the caller has not saved is not comparable; a soft-deleted saved
+   * row (an un-saved hotel) does not count. Returns the saved subset as a set for the service to intersect.
+   */
+  async savedHotelIds(accountId: string, hotelIds: readonly string[]): Promise<Set<string>> {
+    if (hotelIds.length === 0) return new Set();
+    const rows = await this.prisma.savedHotel.findMany({
+      where: { accountId, hotelId: { in: [...hotelIds] }, deletedAt: null },
+      select: { hotelId: true },
+    });
+    return new Set(rows.map((r) => r.hotelId));
   }
 
   /**
