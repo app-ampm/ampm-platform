@@ -73,6 +73,7 @@ const KNOWN_COLUMNS = new Set([
   "internalRating",
   "internalNotes",
   "streetViewRef",
+  "imageRef",
 ]);
 
 /** The header labels of the frozen import template, in order — used to write the template and its docs. */
@@ -94,6 +95,7 @@ export const HOTEL_IMPORT_COLUMNS: readonly string[] = [
   "internalRating",
   "internalNotes",
   "streetViewRef",
+  "imageRef",
 ];
 
 function coerceBoolean(raw: string): boolean | string {

@@ -309,6 +309,9 @@ export const hotelImportRow = z
     internalRating: z.number().int().min(1).max(5).optional(),
     internalNotes: z.string().trim().max(10_000).optional(),
     streetViewRef: z.string().trim().max(255).optional(),
+    // slice 5b: an optional reference (URL/filename) to the hotel's lead image. The importer registers a
+    // PENDING gallery media_asset by reference (bytes uploaded later); the reference is kept as the caption.
+    imageRef: z.string().trim().max(255).optional(),
   })
   .strict(); // the API's CSV parser coerces string cells to these types (and blanks to undefined) first
 export type HotelImportRow = z.infer<typeof hotelImportRow>;
@@ -332,8 +335,10 @@ export type HotelImportRowError = z.infer<typeof hotelImportRowError>;
 
 /**
  * The outcome of an import. On a dry run `applied` is false and nothing was written. `created`/`updated`
- * count the hotels upserted; `destinationsCreated` the destinations made on the way; `rejected` are the
- * rows that failed validation (named by line and field). `importJobId` is the `import_jobs` record.
+ * count the hotels upserted; `destinationsCreated` the destinations made on the way; `mediaRegistered` the
+ * pending gallery images registered by reference (slice 5b, idempotent — a re-run registers none again);
+ * `rejected` are the rows that failed validation (named by line and field). `importJobId` is the
+ * `import_jobs` record.
  */
 export const hotelImportResult = z
   .object({
@@ -344,6 +349,7 @@ export const hotelImportResult = z
     created: z.number().int().min(0),
     updated: z.number().int().min(0),
     destinationsCreated: z.number().int().min(0),
+    mediaRegistered: z.number().int().min(0),
     rejected: z.array(hotelImportRowError),
   })
   .strict();

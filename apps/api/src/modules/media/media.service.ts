@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 
 import { Inject, Injectable } from "@nestjs/common";
 import {
@@ -19,13 +19,23 @@ import {
 
 import { AuditService } from "../../policy/audit.service.js";
 import { STORAGE_ADAPTER, type StorageAdapter } from "../../storage/storage.types.js";
-import { CLIENT_VISIBILITIES, DEMO_VISIBILITIES, PUBLISHABLE_RIGHTS } from "./media-content.js";
+import {
+  CLIENT_VISIBILITIES,
+  DEMO_VISIBILITIES,
+  mimeForRef,
+  PUBLISHABLE_RIGHTS,
+} from "./media-content.js";
 import { MediaUploadService } from "./media-upload.service.js";
 import { MediaRepository, type MediaAssetRow, type MediaGalleryRow } from "./media.repository.js";
 import { toMediaAssetView } from "./media.view.js";
 
 /** The lifetime of a signed media download link (security.md: 15 minutes). */
 const DOWNLOAD_TTL_SECONDS = 900;
+
+/** A short, stable hex hash of an import reference — the deterministic half of an imported image's key. */
+function refHash(ref: string): string {
+  return createHash("sha256").update(ref).digest("hex").slice(0, 32);
+}
 
 /** The rights-and-visibility image audited on a media change — the fields GP-20 compliance turns on. */
 function rightsImage(row: MediaAssetRow): Record<string, unknown> {
@@ -73,6 +83,49 @@ export class MediaService {
     this.assertPublishable(request.visibility, request.rightsStatus);
     const storageKey = `${request.ownerType}/${request.ownerId}/${randomUUID()}`;
     return toMediaAssetView(await this.repo.create(request, storageKey, actorId));
+  }
+
+  /**
+   * Register a gallery image from the importer's by-reference column (feature 9.3 slice 5b). Idempotent per
+   * (owner, ref): a PENDING, `internal`, `consent_required` image placeholder whose caption is the
+   * reference — never client-visible until the media team uploads bytes and records rights (GP-20). Returns
+   * whether a new row was created, so a re-run of the same import registers nothing again.
+   */
+  async registerImportedImage(
+    ownerType: MediaOwnerType,
+    ownerId: string,
+    ref: string,
+    actorId: string,
+  ): Promise<{ created: boolean }> {
+    // A deterministic object key per (owner, ref) is the idempotency handle — a re-run resolves the same key
+    // and skips. The reference is an INTERNAL datum, so it is kept in the audit event (append-only), never in
+    // the client-facing caption, which would otherwise reach the gallery once the asset is published (GP-20).
+    const storageKey = `${ownerType}/${ownerId}/import-${refHash(ref)}`;
+    if (await this.repo.findByAnyKey(storageKey)) return { created: false };
+    const row = await this.repo.create(
+      {
+        ownerType,
+        ownerId,
+        kind: "image",
+        mimeType: mimeForRef(ref),
+        sizeBytes: 0, // a placeholder; the upload path sets the real size from the bytes (AC-20.2)
+        visibility: "internal",
+        rightsStatus: "consent_required",
+      },
+      storageKey,
+      actorId,
+    );
+    // create() is audited by the controller interceptor on the API path; from the importer there is no
+    // interceptor, so record the create here (security.md: a media create is audited). The ref lives here.
+    await this.audit.record({
+      action: "create",
+      entityType: "media_asset",
+      entityId: row.id,
+      before: null,
+      after: { source: "import", ref, scanStatus: "pending" },
+      maskImages: false,
+    });
+    return { created: true };
   }
 
   async list(query: MediaListQuery): Promise<MediaAssetPage> {
