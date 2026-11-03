@@ -43,6 +43,13 @@ describe("buildCandidate", () => {
     expect(buildCandidate(["totalRooms"], ["many"])).toEqual({ totalRooms: "many" });
   });
 
+  it("passes a string column like imageRef through unchanged (slice 5b)", () => {
+    expect(buildCandidate(["name", "imageRef"], ["X", "hero.jpg"])).toEqual({
+      name: "X",
+      imageRef: "hero.jpg",
+    });
+  });
+
   it("omits a blank cell rather than sending an empty string", () => {
     expect(buildCandidate(["name", "brand"], ["X", ""])).toEqual({ name: "X" });
   });

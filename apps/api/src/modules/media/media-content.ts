@@ -65,6 +65,19 @@ export function isDerivableImage(detected: DetectedMedia): boolean {
   return detected.kind === "image" && DERIVABLE_IMAGE_MIMES.has(detected.mimeType);
 }
 
+/**
+ * A best-effort MIME type for an image named by reference in the importer (feature 9.3 slice 5b). The
+ * pending row declares it; the upload path later corrects it from the bytes' content (AC-20.2), so an
+ * unknown extension falls back to image/jpeg rather than guessing wrong.
+ */
+export function mimeForRef(ref: string): string {
+  const lower = ref.toLowerCase();
+  if (lower.endsWith(".png")) return "image/png";
+  if (lower.endsWith(".webp")) return "image/webp";
+  if (lower.endsWith(".gif")) return "image/gif";
+  return "image/jpeg";
+}
+
 /** Longest-edge ceilings for the stored derivatives (AC-24.1). The original is always kept alongside. */
 export const WEB_MAX_EDGE = 1600;
 export const THUMBNAIL_MAX_EDGE = 400;

@@ -10,8 +10,14 @@ import {
 
 import { Prisma } from "../../generated/prisma/client.js";
 import { AuditService } from "../../policy/audit.service.js";
+import { MediaService } from "../media/media.service.js";
 import { buildCandidate, isBlankRow, parseCsv, slugify, titleCaseSlug } from "./hotel-import.js";
 import { HotelsAdminRepository, type HotelWriteData } from "./hotels-admin.repository.js";
+
+interface RowImageRef {
+  readonly hotelId: string;
+  readonly ref: string;
+}
 
 interface ValidRow {
   readonly line: number;
@@ -37,6 +43,7 @@ export class HotelImportService {
   constructor(
     private readonly repo: HotelsAdminRepository,
     private readonly audit: AuditService,
+    private readonly media: MediaService,
   ) {}
 
   async import(request: HotelImportRequest, actorId: string): Promise<HotelImportResult> {
@@ -57,15 +64,25 @@ export class HotelImportService {
         created: 0,
         updated: 0,
         destinationsCreated: 0,
+        mediaRegistered: 0,
         rejected,
       };
     }
-    const outcome = await this.applyValidRows(valid, totalRows, errorReportJson, actorId);
+    const { imageRefs, ...outcome } = await this.applyValidRows(
+      valid,
+      totalRows,
+      errorReportJson,
+      actorId,
+    );
+    // Media is registered through Module N AFTER the hotel transaction commits, so a rolled-back import
+    // never leaves a pending asset pointing at a hotel that was not written (the C->N boundary, api.md).
+    const mediaRegistered = await this.registerMedia(imageRefs, actorId);
     return {
       ...outcome,
       dryRun: false,
       applied: outcome.created + outcome.updated > 0,
       totalRows,
+      mediaRegistered,
       rejected,
     };
   }
@@ -81,37 +98,21 @@ export class HotelImportService {
     created: number;
     updated: number;
     destinationsCreated: number;
+    imageRefs: RowImageRef[];
   }> {
     return this.repo.transaction(async (tx) => {
       const importJobId = await this.repo.createImportJob("hotels", actorId, tx);
       const destinations = new Map<string, string>();
+      const imageRefs: RowImageRef[] = [];
       let created = 0;
       let updated = 0;
       let destinationsCreated = 0;
       for (const { data } of valid) {
-        const destination = await this.resolveDestination(data, destinations, actorId, tx);
-        if (destination.created) destinationsCreated++;
-        const destinationId = destination.id;
-        const slug = data.slug ?? slugify(data.name);
-        const existingId = await this.repo.hotelIdBySlug(slug, tx);
-        if (existingId) {
-          await this.repo.updateHotel(
-            existingId,
-            { destinationId, ...toProfileData(data) },
-            actorId,
-            tx,
-          );
-          updated++;
-          await this.auditRow("update", existingId, slug, data.name, tx);
-        } else {
-          const id = await this.repo.insertHotel(
-            { destinationId, slug, ...toProfileData(data) },
-            actorId,
-            tx,
-          );
-          created++;
-          await this.auditRow("create", id, slug, data.name, tx);
-        }
+        const row = await this.upsertRow(data, destinations, actorId, tx);
+        if (row.created) created++;
+        if (row.updated) updated++;
+        if (row.destinationCreated) destinationsCreated++;
+        if (data.imageRef) imageRefs.push({ hotelId: row.hotelId, ref: data.imageRef });
       }
       const status = created + updated > 0 ? "applied" : "failed";
       await this.repo.finishImportJob(
@@ -120,8 +121,57 @@ export class HotelImportService {
         actorId,
         tx,
       );
-      return { importJobId, created, updated, destinationsCreated };
+      return { importJobId, created, updated, destinationsCreated, imageRefs };
     });
+  }
+
+  /** Upsert one row's hotel (by slug) with its destination and per-row audit; reports what it did. */
+  private async upsertRow(
+    data: HotelImportRow,
+    destinations: Map<string, string>,
+    actorId: string,
+    tx: Prisma.TransactionClient,
+  ): Promise<{ hotelId: string; created: boolean; updated: boolean; destinationCreated: boolean }> {
+    const destination = await this.resolveDestination(data, destinations, actorId, tx);
+    const destinationId = destination.id;
+    const slug = data.slug ?? slugify(data.name);
+    const existingId = await this.repo.hotelIdBySlug(slug, tx);
+    if (existingId) {
+      await this.repo.updateHotel(
+        existingId,
+        { destinationId, ...toProfileData(data) },
+        actorId,
+        tx,
+      );
+      await this.auditRow("update", existingId, slug, data.name, tx);
+      return {
+        hotelId: existingId,
+        created: false,
+        updated: true,
+        destinationCreated: destination.created,
+      };
+    }
+    const id = await this.repo.insertHotel(
+      { destinationId, slug, ...toProfileData(data) },
+      actorId,
+      tx,
+    );
+    await this.auditRow("create", id, slug, data.name, tx);
+    return { hotelId: id, created: true, updated: false, destinationCreated: destination.created };
+  }
+
+  /**
+   * Register each row's by-reference image through Module N, AFTER the hotel transaction has committed
+   * (feature 9.3 slice 5b). Idempotent per (hotel, ref), so a re-run of the same file registers none again;
+   * returns how many pending placeholders were newly created.
+   */
+  private async registerMedia(imageRefs: RowImageRef[], actorId: string): Promise<number> {
+    let mediaRegistered = 0;
+    for (const { hotelId, ref } of imageRefs) {
+      const { created } = await this.media.registerImportedImage("hotel", hotelId, ref, actorId);
+      if (created) mediaRegistered++;
+    }
+    return mediaRegistered;
   }
 
   private validate(content: string): Validation {
