@@ -7,6 +7,9 @@ import { HotelImportService } from "./hotel-import.service.js";
 import { HotelRatesController } from "./hotel-rates.controller.js";
 import { HotelRatesRepository } from "./hotel-rates.repository.js";
 import { HotelRatesService } from "./hotel-rates.service.js";
+import { HotelReferencesController } from "./hotel-references.controller.js";
+import { HotelReferencesRepository } from "./hotel-references.repository.js";
+import { HotelReferencesService } from "./hotel-references.service.js";
 import { HotelSubresourcesRepository } from "./hotel-subresources.repository.js";
 import { HotelSubresourcesService } from "./hotel-subresources.service.js";
 import { HotelsAdminController } from "./hotels-admin.controller.js";
@@ -32,7 +35,12 @@ import { HotelsService } from "./hotels.service.js";
  */
 @Module({
   imports: [NotificationModule, MediaModule],
-  controllers: [HotelsController, HotelsAdminController, HotelRatesController],
+  controllers: [
+    HotelsController,
+    HotelsAdminController,
+    HotelRatesController,
+    HotelReferencesController,
+  ],
   providers: [
     HotelsService,
     HotelsRepository,
@@ -43,6 +51,8 @@ import { HotelsService } from "./hotels.service.js";
     HotelSubresourcesRepository,
     HotelRatesService,
     HotelRatesRepository,
+    HotelReferencesService,
+    HotelReferencesRepository,
     HotelFreshnessService,
   ],
 })

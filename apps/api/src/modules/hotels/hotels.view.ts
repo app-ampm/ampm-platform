@@ -5,6 +5,7 @@ import type {
   HotelView,
   MediaGalleryItem,
   SavedHotelView,
+  WeddingReferenceClientItem,
 } from "@ampm/core";
 
 import { decimalToMoney } from "./hotel-rates.money.js";
@@ -51,15 +52,18 @@ export function toSavedHotelView(row: SavedHotelRow): SavedHotelView {
 type DetailCard = HotelDetailRow["rateCards"][number];
 
 /**
- * The hotel detail: the discovery card, its client-facing freshness-labelled pricing (AC-04) and the
- * client-visible gallery (AC-24.4). The gallery is resolved by Module N through MediaService and passed
- * in — this mapper never touches `media_assets` (the C→N boundary; architecture §5).
+ * The hotel detail: the discovery card, its client-facing freshness-labelled pricing (AC-04), the
+ * client-visible gallery (AC-24.4) and the consented previous-wedding references (GP-20). The gallery is
+ * resolved by Module N through MediaService and the references by the same-module HotelReferencesService;
+ * both arrive already mapped to their key-free client models, so this mapper never touches `media_assets`
+ * (the C→N boundary; architecture §5) nor re-projects a reference's internal governance fields.
  */
 export function toHotelDetailView(
   row: HotelDetailRow,
   gallery: MediaGalleryItem[],
+  references: WeddingReferenceClientItem[],
 ): HotelDetailView {
-  return { ...toHotelView(row), rates: toRatesView(row.rateCards), gallery };
+  return { ...toHotelView(row), rates: toRatesView(row.rateCards), gallery, references };
 }
 
 /**
