@@ -109,6 +109,17 @@ export const hotelListQuery = cursorQuery.extend({
   cursor: uuid.optional(),
   destinationId: uuid.optional(),
   q: z.string().trim().max(255).optional(),
+  // Discovery filters (feature 9.4, AC-04.6). `star` matches the star category exactly; `minRooms` keeps
+  // hotels with at least that many rooms (accommodation); `minGuestCapacity` keeps hotels with a venue that
+  // seats at least that many (banquet or reception — event capacity); `verifiedRatesOnly` keeps hotels that
+  // currently show verified, client-visible pricing. Each narrows the catalogue; reach scoping still applies.
+  star: z.string().trim().max(50).optional(),
+  minRooms: z.coerce.number().int().min(0).optional(),
+  minGuestCapacity: z.coerce.number().int().min(0).optional(),
+  verifiedRatesOnly: z
+    .enum(["true", "false"])
+    .transform((v) => v === "true")
+    .optional(),
 });
 export type HotelListQuery = z.infer<typeof hotelListQuery>;
 
