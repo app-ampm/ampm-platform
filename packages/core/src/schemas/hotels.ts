@@ -30,6 +30,22 @@ export const hotelDestinationView = z
 export type HotelDestinationView = z.infer<typeof hotelDestinationView>;
 
 /**
+ * A destination as the client browse shows it (CP-01/02, feature 9.4b): the client destination fields plus
+ * the number of active hotels in the caller's reach (AC-04.5 — the count matches the catalogue the caller
+ * can actually open: all active for a subscriber, only demo_visible for a demo prospect).
+ */
+export const destinationBrowseItem = hotelDestinationView
+  .extend({ hotelCount: z.number().int() })
+  .strict();
+export type DestinationBrowseItem = z.infer<typeof destinationBrowseItem>;
+
+/** The client destinations browse (a bounded reference set — a handful of destinations, not paginated). */
+export const destinationBrowseResponse = z
+  .object({ items: z.array(destinationBrowseItem) })
+  .strict();
+export type DestinationBrowseResponse = z.infer<typeof destinationBrowseResponse>;
+
+/**
  * A hotel as a client/demo principal sees it in discovery (CP-11; permission-matrix §4, PUBLIC+CLIENT
  * classes only). Strict and flat — the list card and the detail base. No status, demo_visible,
  * public_showcase, internal_rating/notes, latitude/longitude or contacts. An indicative price range is a

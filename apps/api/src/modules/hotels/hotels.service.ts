@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import {
   errors,
+  type DestinationBrowseResponse,
   type EntitlementModule,
   type HotelDetailView,
   type HotelListQuery,
@@ -16,7 +17,12 @@ import { MediaService } from "../media/media.service.js";
 import type { Principal } from "../../policy/principal.types.js";
 import { HotelReferencesService } from "./hotel-references.service.js";
 import { HotelsRepository } from "./hotels.repository.js";
-import { toHotelDetailView, toHotelView, toSavedHotelView } from "./hotels.view.js";
+import {
+  toDestinationBrowseItem,
+  toHotelDetailView,
+  toHotelView,
+  toSavedHotelView,
+} from "./hotels.view.js";
 
 /**
  * Module C discovery business rules: gate on the client's entitlements (hotel_discovery to browse/read,
@@ -37,6 +43,16 @@ export class HotelsService {
     const { ent } = this.gate(principal, "hotel_discovery", false);
     const { rows, nextCursor } = await this.hotels.list(ent.hotelReach, query);
     return { items: rows.map(toHotelView), nextCursor };
+  }
+
+  /**
+   * The destinations a client/demo principal may browse (CP-01/02, feature 9.4b): those with active hotels
+   * in reach, each with that in-reach count (AC-04.5). Same entitlement gate and reach as the hotel list.
+   */
+  async browseDestinations(principal: Principal): Promise<DestinationBrowseResponse> {
+    const { ent } = this.gate(principal, "hotel_discovery", false);
+    const rows = await this.hotels.listDestinations(ent.hotelReach);
+    return { items: rows.map(toDestinationBrowseItem) };
   }
 
   async get(principal: Principal, hotelId: string): Promise<HotelDetailView> {

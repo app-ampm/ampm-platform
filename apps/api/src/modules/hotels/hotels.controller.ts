@@ -3,6 +3,7 @@ import {
   hotelListQuery,
   savedHotelListQuery,
   uuid,
+  type DestinationBrowseResponse,
   type HotelDetailView,
   type HotelListQuery,
   type HotelPage,
@@ -46,6 +47,12 @@ export class HotelsController {
     @CurrentPrincipal() principal: Principal,
   ): Promise<SavedHotelPage> {
     return this.hotels.listSaved(principal, query);
+  }
+
+  // Declared before `:hotelId` so "destinations" resolves here, not to the hotel-detail param handler.
+  @Get("destinations")
+  browseDestinations(@CurrentPrincipal() principal: Principal): Promise<DestinationBrowseResponse> {
+    return this.hotels.browseDestinations(principal);
   }
 
   @Get(":hotelId")
