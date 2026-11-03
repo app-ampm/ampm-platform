@@ -281,4 +281,15 @@ describe("Client rate rendering (e2e)", () => {
     expect(rates.asOf).toBeNull();
     expect(rates.items).toEqual([]);
   });
+
+  it("resolves GET /hotels/destinations as a literal route, not a hotel id (feature 9.4b)", async () => {
+    // Route-ordering guard: @Get("destinations") must be declared before @Get(":hotelId"). If it were not,
+    // "destinations" would be parsed as a hotelId and fail the uuid edge (400); a 200 with an items array
+    // proves it resolves to the destinations browse. The count logic itself is covered at the service level.
+    const res = await http()
+      .get("/hotels/destinations")
+      .set("authorization", auth(clientToken))
+      .expect(200);
+    expect(Array.isArray(res.body.data.items)).toBe(true);
+  });
 });

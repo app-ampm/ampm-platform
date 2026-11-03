@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { hotelListQuery, hotelView, savedHotelRemovedResponse, savedHotelView } from "./hotels.js";
+import {
+  destinationBrowseItem,
+  hotelListQuery,
+  hotelView,
+  savedHotelRemovedResponse,
+  savedHotelView,
+} from "./hotels.js";
 
 const ID = "018f0000-0000-7000-8000-000000000000";
 const HOTEL_ID = "018f0000-0000-7000-8000-00000000beef";
@@ -95,5 +101,14 @@ describe("savedHotelRemovedResponse", () => {
   it("is just the hotel id", () => {
     expect(savedHotelRemovedResponse.safeParse({ hotelId: HOTEL_ID }).success).toBe(true);
     expect(savedHotelRemovedResponse.safeParse({ hotelId: "x" }).success).toBe(false);
+  });
+});
+
+describe("destinationBrowseItem", () => {
+  it("carries the client destination fields plus a hotelCount, and is strict (feature 9.4b)", () => {
+    const item = { ...destination, hotelCount: 5 };
+    expect(destinationBrowseItem.safeParse(item).success).toBe(true);
+    expect(destinationBrowseItem.safeParse({ ...item, extra: 1 }).success).toBe(false);
+    expect(destinationBrowseItem.safeParse(destination).success).toBe(false); // hotelCount is required
   });
 });

@@ -60,6 +60,17 @@ export type HotelRow = Prisma.HotelGetPayload<{ select: typeof HOTEL_SELECT }>;
 export type HotelDetailRow = Prisma.HotelGetPayload<{ select: typeof DETAIL_HOTEL_SELECT }>;
 export type SavedHotelRow = Prisma.SavedHotelGetPayload<{ select: typeof SAVED_SELECT }>;
 
+/** A destination plus its in-reach active-hotel count, composed from a grouped count (feature 9.4b). */
+export interface DestinationBrowseRow {
+  readonly id: string;
+  readonly name: string;
+  readonly slug: string;
+  readonly region: string | null;
+  readonly state: string | null;
+  readonly country: string;
+  readonly hotelCount: number;
+}
+
 @Injectable()
 export class HotelsRepository {
   constructor(private readonly prisma: PrismaService) {}
@@ -201,5 +212,28 @@ export class HotelsRepository {
     const hasMore = saved.length > limit;
     const rows = hasMore ? saved.slice(0, limit) : saved;
     return { rows, nextCursor: hasMore ? rows[rows.length - 1]!.id : null };
+  }
+
+  /**
+   * Active destinations that have at least one active hotel in the caller's reach, each with that in-reach
+   * count (CP-01/02, AC-04.5). The count uses the same reach predicate as the catalogue, so a destination's
+   * number matches the hotels the caller can open; an empty reach yields none, and a draft destination is
+   * excluded even if it has in-reach hotels. Counted by grouping hotels, then the destinations are fetched.
+   */
+  async listDestinations(reach: readonly HotelReach[]): Promise<DestinationBrowseRow[]> {
+    const inReach = this.reachWhere(reach);
+    const counts = await this.prisma.hotel.groupBy({
+      by: ["destinationId"],
+      where: inReach,
+      _count: { _all: true },
+    });
+    const countByDestination = new Map(counts.map((c) => [c.destinationId, c._count._all]));
+    if (countByDestination.size === 0) return [];
+    const destinations = await this.prisma.destination.findMany({
+      where: { status: "active", deletedAt: null, id: { in: [...countByDestination.keys()] } },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true, slug: true, region: true, state: true, country: true },
+    });
+    return destinations.map((d) => ({ ...d, hotelCount: countByDestination.get(d.id) ?? 0 }));
   }
 }

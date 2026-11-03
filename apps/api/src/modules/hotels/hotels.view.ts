@@ -1,5 +1,6 @@
 import type {
   ClientRateItemView,
+  DestinationBrowseItem,
   HotelDetailView,
   HotelRatesView,
   HotelView,
@@ -9,7 +10,12 @@ import type {
 } from "@ampm/core";
 
 import { decimalToMoney } from "./hotel-rates.money.js";
-import type { HotelDetailRow, HotelRow, SavedHotelRow } from "./hotels.repository.js";
+import type {
+  DestinationBrowseRow,
+  HotelDetailRow,
+  HotelRow,
+  SavedHotelRow,
+} from "./hotels.repository.js";
 
 /**
  * Maps a repository row to the client response model (CP-11). The return type is the @ampm/core client
@@ -46,6 +52,19 @@ export function toSavedHotelView(row: SavedHotelRow): SavedHotelView {
     hotel: toHotelView(row.hotel),
     note: row.note,
     savedAt: row.createdAt.toISOString(),
+  };
+}
+
+/** A destination browse item (CP-01/02): the client destination fields plus the in-reach hotel count. */
+export function toDestinationBrowseItem(row: DestinationBrowseRow): DestinationBrowseItem {
+  return {
+    id: row.id,
+    name: row.name,
+    slug: row.slug,
+    region: row.region,
+    state: row.state,
+    country: row.country,
+    hotelCount: row.hotelCount,
   };
 }
 
