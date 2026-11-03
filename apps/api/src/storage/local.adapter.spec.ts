@@ -46,7 +46,10 @@ describe("LocalStorageAdapter", () => {
     const { key, exp, sig } = parse(signed.url);
     expect(signed.expiresAt.getTime()).toBeGreaterThan(Date.now());
     expect(store.verifyDownload(key, exp, sig)).toBe(true);
-    expect(store.verifyDownload(key, exp, sig.replace(/.$/, "0"))).toBe(false); // tampered signature
+    // Flip the last character to a definitely-different one: replacing it with a fixed "0" left the
+    // signature unchanged (and the tamper undetected) on the ~1/16 of runs where sig already ended in "0".
+    const tamperedSig = sig.slice(0, -1) + (sig.slice(-1) === "0" ? "1" : "0");
+    expect(store.verifyDownload(key, exp, tamperedSig)).toBe(false); // tampered signature
     expect(store.verifyDownload("hotels/abc/other.jpg", exp, sig)).toBe(false); // signature is key-bound
   });
 
