@@ -14,6 +14,7 @@ import type { Entitlements } from "@ampm/policy";
 
 import { MediaService } from "../media/media.service.js";
 import type { Principal } from "../../policy/principal.types.js";
+import { HotelReferencesService } from "./hotel-references.service.js";
 import { HotelsRepository } from "./hotels.repository.js";
 import { toHotelDetailView, toHotelView, toSavedHotelView } from "./hotels.view.js";
 
@@ -29,6 +30,7 @@ export class HotelsService {
   constructor(
     private readonly hotels: HotelsRepository,
     private readonly media: MediaService,
+    private readonly references: HotelReferencesService,
   ) {}
 
   async list(principal: Principal, query: HotelListQuery): Promise<HotelPage> {
@@ -43,9 +45,14 @@ export class HotelsService {
     if (!hotel) throw errors.notFound(); // outside reach or truly absent — the same 404
     // The gallery shows only media at or below the caller's visibility level (AC-24.4): a demo prospect
     // sees demo/public, a real client sees client/demo/public. Read through Module N, never its table.
+    // References are same-module (Module C): only the consented, client-visible ones (GP-20). Both reads
+    // run in parallel since the hotel is already confirmed in reach (the p95-under-400ms detail, AC-16).
     const audience = principal.type === "demo" ? "demo" : "client";
-    const gallery = await this.media.clientGallery("hotel", hotelId, audience);
-    return toHotelDetailView(hotel, gallery);
+    const [gallery, references] = await Promise.all([
+      this.media.clientGallery("hotel", hotelId, audience),
+      this.references.clientReferences(hotelId),
+    ]);
+    return toHotelDetailView(hotel, gallery, references);
   }
 
   async listSaved(principal: Principal, query: SavedHotelListQuery): Promise<SavedHotelPage> {

@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { cursorQuery, isoDateTime, money, page, uuid } from "./common.js";
+import { weddingReferenceClientItem } from "./hotel-references.js";
 import { hotelRateItemType, hotelRateItemUnit } from "./hotel-rates.js";
 import { mediaGalleryItem } from "./media.js";
 
@@ -83,12 +84,18 @@ export const hotelRatesView = z
 export type HotelRatesView = z.infer<typeof hotelRatesView>;
 
 /**
- * The hotel detail (CP-05): the discovery card, its indicative freshness-labelled pricing, and the
- * client-visible gallery. `gallery` holds only the media at or below the caller's visibility level
- * (AC-24.4), each a signed link to a metadata-stripped derivative — never an object key (security.md).
+ * The hotel detail (CP-05): the discovery card, its indicative freshness-labelled pricing, the
+ * client-visible gallery, and the consented previous-wedding references. `gallery` holds only the media
+ * at or below the caller's visibility level (AC-24.4), each a signed link to a metadata-stripped
+ * derivative — never an object key (security.md). `references` holds only the `client_visible` references
+ * whose consent is on file (GP-20), each the social-proof content alone (no internal project/consent key).
  */
 export const hotelDetailView = hotelView
-  .extend({ rates: hotelRatesView, gallery: z.array(mediaGalleryItem) })
+  .extend({
+    rates: hotelRatesView,
+    gallery: z.array(mediaGalleryItem),
+    references: z.array(weddingReferenceClientItem),
+  })
   .strict();
 export type HotelDetailView = z.infer<typeof hotelDetailView>;
 
