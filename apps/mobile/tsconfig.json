@@ -2,6 +2,10 @@
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
     "strict": true,
+    // Jest's ambient globals (describe/it/expect/jest) and RNTL's matcher augmentation for the test
+    // files, as packages/ui does. Expo's own ambient types load via the triple-slash references in
+    // expo-env.d.ts / nativewind-env.d.ts and `.expo/types`, which the `types` array does not gate.
+    "types": ["jest"],
     "paths": {
       "@/*": ["./src/*"],
       "@/assets/*": ["./assets/*"]
