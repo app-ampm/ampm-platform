@@ -1,6 +1,7 @@
 import type {
   ClientRateItemView,
   DestinationBrowseItem,
+  HotelCompareItem,
   HotelDetailView,
   HotelRatesView,
   HotelView,
@@ -83,6 +84,15 @@ export function toHotelDetailView(
   references: WeddingReferenceClientItem[],
 ): HotelDetailView {
   return { ...toHotelView(row), rates: toRatesView(row.rateCards), gallery, references };
+}
+
+/**
+ * A compare item (CP-06, feature 9.4c): the discovery card and its freshness-labelled pricing, and nothing
+ * else. The same CLIENT-only projection as the detail minus the gallery and references, so the comparison
+ * carries no RESTRICTED field either — compare stays a light read over the shortlist.
+ */
+export function toHotelCompareItem(row: HotelDetailRow): HotelCompareItem {
+  return { ...toHotelView(row), rates: toRatesView(row.rateCards) };
 }
 
 /**

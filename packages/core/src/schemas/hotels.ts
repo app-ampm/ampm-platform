@@ -116,6 +116,48 @@ export const hotelDetailView = hotelView
 export type HotelDetailView = z.infer<typeof hotelDetailView>;
 
 /**
+ * One hotel as the client compare shows it (CP-06, feature 9.4c): the discovery card and its indicative
+ * freshness-labelled pricing — the fields a planner weighs side by side. Deliberately no gallery or
+ * references (rich content, not comparison data), so compare stays a light read over the shortlist.
+ */
+export const hotelCompareItem = hotelView.extend({ rates: hotelRatesView }).strict();
+export type HotelCompareItem = z.infer<typeof hotelCompareItem>;
+
+/**
+ * Compare a handful of the caller's saved hotels by id (CP-06). `ids` is a comma-separated list of 2 to 4
+ * DISTINCT hotel ids; only ids on the caller's own shortlist and in reach are returned (denial equals
+ * absence), in the order asked. Scoped to saved_hotels — a view over the shortlist, not an open multi-hotel
+ * fetch. Ids are lower-cased so a valid but non-canonical-case uuid still matches the stored (lower-case)
+ * id in the service's set/map lookups, and duplicates are a 400 — a comparison is of distinct hotels, not
+ * one hotel against itself.
+ */
+export const hotelCompareQuery = z
+  .object({
+    ids: z
+      .string()
+      .transform((s) =>
+        s
+          .split(",")
+          .map((x) => x.trim().toLowerCase())
+          .filter(Boolean),
+      )
+      .pipe(
+        z
+          .array(uuid)
+          .min(2)
+          .max(4)
+          .refine((ids) => new Set(ids).size === ids.length, {
+            message: "hotel ids must be distinct",
+          }),
+      ),
+  })
+  .strict();
+export type HotelCompareQuery = z.infer<typeof hotelCompareQuery>;
+
+export const hotelCompareResponse = z.object({ items: z.array(hotelCompareItem) }).strict();
+export type HotelCompareResponse = z.infer<typeof hotelCompareResponse>;
+
+/**
  * Search/browse hotels (CP discovery). Cursor-paginated by hotel id; `destinationId` filters to one
  * destination, `q` searches the hotel name. The cursor is a UUID, validated at the edge so a malformed
  * cursor is a 400, not a Postgres uuid-cast 500 (as subscriptionListQuery). Reach is applied in the

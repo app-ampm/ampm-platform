@@ -1,9 +1,12 @@
 import { Controller, Delete, Get, HttpCode, Post } from "@nestjs/common";
 import {
+  hotelCompareQuery,
   hotelListQuery,
   savedHotelListQuery,
   uuid,
   type DestinationBrowseResponse,
+  type HotelCompareQuery,
+  type HotelCompareResponse,
   type HotelDetailView,
   type HotelListQuery,
   type HotelPage,
@@ -53,6 +56,15 @@ export class HotelsController {
   @Get("destinations")
   browseDestinations(@CurrentPrincipal() principal: Principal): Promise<DestinationBrowseResponse> {
     return this.hotels.browseDestinations(principal);
+  }
+
+  // Declared before `:hotelId` so "compare" resolves here, not to the hotel-detail param handler.
+  @Get("compare")
+  compare(
+    @ZodQuery(hotelCompareQuery) query: HotelCompareQuery,
+    @CurrentPrincipal() principal: Principal,
+  ): Promise<HotelCompareResponse> {
+    return this.hotels.compare(principal, query);
   }
 
   @Get(":hotelId")
