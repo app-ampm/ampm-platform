@@ -1068,6 +1068,7 @@ N,media_assets,Any,rights_status,string,,"owned, licensed, consent_required, con
 N,media_assets,Any,consent_source_project_id,uuid,FK,,"references wedding_projects; nullable, the wedding the media came from","HT (hotels); VC (vendors); CD (a) (designs); SA; SM (rights, showcase)",Per the visibility field,When rights_status is consent_obtained for wedding media,—,GP-20 (Q9)
 N,media_assets,Any,consent_document_id,uuid,FK,,references documents; nullable,"HT (hotels); VC (vendors); CD (a) (designs); SA; SM (rights, showcase)",Per the visibility field,When rights_status is consent_obtained,—,GP-20 (Q9)
 N,media_assets,Any,uploaded_by,uuid,FK,,references users,SYS (acting user),Per the visibility field,At creation,—,GP-20 (Q9)
+N,media_assets,Any,upload_started_at,datetime,,,timestamp (UTC); nullable; upload claim that serialises concurrent uploads (slice 5c),SYS (when the action happens),Per the visibility field,System,—,GP-20 (Q9)
 N,identity_documents,Guest operations (conditional),id,uuid,PK,,"UUID v7, generated",SYS,RESTRICTED-IDENTITY,System,—,"A-8 (Q8), P-5 (Q8), GP-41"
 N,identity_documents,Guest operations (conditional),guest_id,uuid,FK,,references guests,RG (a) with explicit grant; GU for the own document; SA break-glass,RESTRICTED-IDENTITY,At creation,—,"A-8 (Q8), P-5 (Q8), GP-41"
 N,identity_documents,Guest operations (conditional),project_id,uuid,FK,,references wedding_projects,RG (a) with explicit grant; GU for the own document; SA break-glass,RESTRICTED-IDENTITY,At creation,—,"A-8 (Q8), P-5 (Q8), GP-41"

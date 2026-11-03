@@ -1408,6 +1408,9 @@ model MediaAsset {
   consentSourceProjectId String?           @map("consent_source_project_id") @db.Uuid
   consentDocumentId      String?           @map("consent_document_id") @db.Uuid
   uploadedBy             String            @map("uploaded_by") @db.Uuid
+  // The upload-claim timestamp (feature 9.3 slice 5c): an upload holds it to serialize concurrent uploads
+  // to this asset; null when no upload is in flight. A compare-and-swap acquires it (with a stale-steal TTL).
+  uploadStartedAt        DateTime?         @map("upload_started_at") @db.Timestamptz(6)
 
   createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   createdBy String?   @map("created_by") @db.Uuid

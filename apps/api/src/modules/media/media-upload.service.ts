@@ -65,10 +65,12 @@ export class MediaUploadService {
     const scanStatus = await this.scanner.scan(bytes);
     const renditions = scanStatus === "clean" ? await this.renderImage(bytes, detected) : null;
     const storageKey = await this.storageKeyOrThrow(id);
-    // Only now mutate. Demote first (a committed write) so the write -> commit window stays fail-closed
-    // (AC-20.3: a link minted while clean cannot serve not-yet-committed bytes), and record the transition
-    // on any failure so a client-visible demotion is never observable without an audit event (security.md).
-    await this.repo.markPending(id, actorId);
+    // Only now mutate. Claim-and-demote in one atomic compare-and-swap (slice 5c): it serializes concurrent
+    // uploads to this asset (a second upload gets a 409 rather than interleaving its writes and tearing the
+    // rendition set) and demotes to `pending` + clears the derivative keys so the overwrite -> commit window
+    // stays fail-closed (AC-20.3: a link minted while clean cannot serve not-yet-committed bytes). The claim
+    // is released when the upload settles (commit) or fails (below); the stale TTL is the crash backstop.
+    await this.claimOrConflict(id, actorId);
     try {
       const keys =
         scanStatus === "clean"
@@ -84,7 +86,11 @@ export class MediaUploadService {
         actorId,
       );
     } catch (error) {
+      // The demotion committed but the upload did not: audit the transition so a client-visible demotion is
+      // never observable without an audit event (security.md), and release the claim so a retry need not wait
+      // out the stale TTL.
       await this.auditDemotion(id, asset.scanStatus);
+      await this.repo.releaseUpload(id);
       throw error;
     }
   }
@@ -189,6 +195,13 @@ export class MediaUploadService {
       this.storage.deleteObject(thumbnailKeyOf(storageKey)),
     ]);
     return {};
+  }
+
+  /** Acquire the per-asset upload claim or refuse (slice 5c): a concurrent upload to the same asset is a 409. */
+  private async claimOrConflict(id: string, actorId: string): Promise<void> {
+    if (!(await this.repo.claimUpload(id, actorId))) {
+      throw errors.conflict("An upload is already in progress for this media asset");
+    }
   }
 
   private async storageKeyOrThrow(id: string): Promise<string> {
