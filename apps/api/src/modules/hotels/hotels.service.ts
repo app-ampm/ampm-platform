@@ -8,6 +8,7 @@ import {
   type HotelDetailView,
   type HotelListQuery,
   type HotelPage,
+  type HotelReach,
   type SavedHotelListQuery,
   type SavedHotelPage,
   type SavedHotelRemovedResponse,
@@ -16,6 +17,7 @@ import {
 import type { Entitlements } from "@ampm/policy";
 
 import { MediaService } from "../media/media.service.js";
+import { entitlementGate } from "../../policy/entitlement-gate.js";
 import type { Principal } from "../../policy/principal.types.js";
 import { HotelReferencesService } from "./hotel-references.service.js";
 import { HotelsRepository } from "./hotels.repository.js";
@@ -97,6 +99,15 @@ export class HotelsService {
     return { items };
   }
 
+  /**
+   * 10.1 (Module D → C through this service): confirm a hotel is in the client's reach before an enquiry
+   * targets it; an out-of-reach or absent hotel is the same 404 (denial equals absence, security.md).
+   */
+  async requireHotelInReach(reach: readonly HotelReach[], hotelId: string): Promise<void> {
+    const hotel = await this.hotels.findInReach(reach, hotelId);
+    if (!hotel) throw errors.notFound();
+  }
+
   async listSaved(principal: Principal, query: SavedHotelListQuery): Promise<SavedHotelPage> {
     const { userId } = this.gate(principal, "saved_hotels", false);
     const accountId = await this.accountIdOrThrow(userId);
@@ -130,11 +141,7 @@ export class HotelsService {
     module: EntitlementModule,
     needWrite: boolean,
   ): { ent: Entitlements; userId: string } {
-    if (principal.type !== "client" && principal.type !== "demo") throw errors.notFound();
-    const ent = principal.entitlements;
-    if (!ent.modules.includes(module)) throw errors.notFound();
-    if (needWrite && ent.readOnlyModules.includes(module)) throw errors.notFound();
-    return { ent, userId: principal.userId };
+    return entitlementGate(principal, module, needWrite);
   }
 
   /** The caller's own account id, or a 404 when the client has none (portal.service.ts pattern). */

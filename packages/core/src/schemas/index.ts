@@ -292,3 +292,6 @@ export * from "./hotels-admin";
 export * from "./hotel-rates";
 export * from "./hotel-references";
 export * from "./media";
+// Module D consultancy (consultancy.ts), feature 10.1. The Module N documents/document_access_links
+// TABLES land in 10.1 as forward schema; their contract + service arrive with feature 10.2 (first upload).
+export * from "./consultancy";

@@ -24,3 +24,13 @@ export { hotelQueryKey, useHotel } from "./hooks/use-hotel";
 export { SAVED_HOTELS_QUERY_KEY, useSavedHotels } from "./hooks/use-saved-hotels";
 export { useSaveHotel } from "./hooks/use-save-hotel";
 export { useUnsaveHotel } from "./hooks/use-unsave-hotel";
+// Module D consultancy (feature 10.1): the client side of hotel enquiries (CP-07/08).
+export {
+  HOTEL_ENQUIRIES_QUERY_KEY,
+  hotelEnquiryQueryKey,
+  useHotelEnquiries,
+  useHotelEnquiry,
+  type HotelEnquiriesQuery,
+} from "./hooks/use-hotel-enquiries";
+export { useRequestHotelAssistance } from "./hooks/use-request-hotel-assistance";
+export { useUpdateEnquiryNote } from "./hooks/use-update-enquiry-note";

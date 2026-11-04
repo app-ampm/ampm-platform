@@ -1346,6 +1346,124 @@ model HotelWeddingReference {
   @@map("hotel_wedding_references")
 }
 
+// ---------------------------------------------------------------- Module D — Hotel consultancy
+// (docs/data-model.md §6, docs/permission-matrix.md §5.4/§7). The enquiry pipeline that turns a
+// discovered hotel (Module C) into a negotiated, booked one. Module D reads Modules C and B through
+// their services, never their tables — so account/hotel/user/project/service_agreement FKs are plain
+// indexed Uuid columns with no Prisma relation (the SavedHotel.projectId / consent_document_id
+// pattern). service_agreement_id (Module B, GP-5) and project_id (Module E, GP-27) are nullable FKs
+// to tables not yet built. The ten-status machine + transitions live in @ampm/policy (statuses.ts,
+// generated matrix.json §7), not here; this enum only lists the states. Feature 10.1.
+
+enum HotelEnquiryStatus {
+  draft
+  submitted
+  awaiting_hotel
+  response_received
+  negotiating
+  visit_scheduled
+  proposal_received
+  client_decision
+  confirmed
+  closed
+}
+
+/// Terminal outcome recorded when an enquiry is closed (a separate column from status, §6).
+enum HotelEnquiryOutcome {
+  booked
+  declined
+  no_availability
+  withdrawn
+}
+
+enum HotelEnquiryEventType {
+  submitted
+  sent_to_hotel
+  hotel_response
+  negotiation_note
+  client_update
+  status_change
+  visit
+  proposal
+}
+
+/// A hotel enquiry: the root of the consultancy pipeline (§6). account_id (Module B) owns it before a
+/// wedding project exists; project_id is back-filled when the project is created (GP-27). The client
+/// sees status + client fields (functions_summary, notes_client) + non-internal events; notes_internal
+/// is RESTRICTED-NOTES. `outcome` is set only on close. Standard columns per data.md §1.
+model HotelEnquiry {
+  id                 String               @id @default(uuid(7)) @db.Uuid
+  accountId          String               @map("account_id") @db.Uuid
+  projectId          String?              @map("project_id") @db.Uuid
+  hotelId            String               @map("hotel_id") @db.Uuid
+  requestedByUserId  String               @map("requested_by_user_id") @db.Uuid
+  assignedUserId     String?              @map("assigned_user_id") @db.Uuid
+  serviceAgreementId String?              @map("service_agreement_id") @db.Uuid
+  status             HotelEnquiryStatus   @default(draft)
+  dateFrom           DateTime             @map("date_from") @db.Date
+  dateTo             DateTime             @map("date_to") @db.Date
+  datesFlexible      Boolean              @default(false) @map("dates_flexible")
+  guestEstimate      Int                  @map("guest_estimate")
+  roomsRequired      Int?                 @map("rooms_required")
+  functionsSummary   String?              @map("functions_summary") @db.Text
+  contactPreference  String?              @map("contact_preference") @db.VarChar(255)
+  notesClient        String?              @map("notes_client") @db.Text
+  notesInternal      String?              @map("notes_internal") @db.Text
+  submittedAt        DateTime?            @map("submitted_at") @db.Timestamptz(6)
+  closedAt           DateTime?            @map("closed_at") @db.Timestamptz(6)
+  outcome            HotelEnquiryOutcome?
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  events HotelEnquiryEvent[]
+
+  // A partial unique index on (account_id, hotel_id) WHERE status <> 'closed' AND deleted_at IS NULL
+  // enforces one open enquiry per account+hotel (AC-26 idempotency backstop). Prisma cannot express a
+  // partial unique index, so it is the raw-SQL migration 20261104063033_hotel_enquiry_open_unique.
+  @@index([accountId, status])
+  @@index([projectId, status])
+  @@index([hotelId])
+  @@index([assignedUserId, status])
+  @@index([requestedByUserId])
+  @@index([serviceAgreementId])
+  @@index([deletedAt])
+  @@map("hotel_enquiries")
+}
+
+/// The enquiry's append-only domain timeline (§6). Append-only by repository convention (create + list
+/// only; a correction is a new event), keeping the standard columns per data.md §1 — strict schema-level
+/// immutability (dropping updated_*/deleted_at, like audit_events) is a later decision (brief §2.5).
+/// internal_only = true hides the event from the client serialiser entirely (RESTRICTED-NOTES, row-level
+/// absence — never a hide-flag). document_id (Module N) is a plain Uuid awaiting the documents relation.
+model HotelEnquiryEvent {
+  id           String                @id @default(uuid(7)) @db.Uuid
+  enquiryId    String                @map("enquiry_id") @db.Uuid
+  eventType    HotelEnquiryEventType @map("event_type")
+  occurredAt   DateTime              @map("occurred_at") @db.Timestamptz(6)
+  userId       String                @map("user_id") @db.Uuid
+  summary      String?               @db.Text
+  internalOnly Boolean               @default(false) @map("internal_only")
+  documentId   String?               @map("document_id") @db.Uuid
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  enquiry HotelEnquiry @relation(fields: [enquiryId], references: [id])
+
+  @@index([enquiryId, occurredAt])
+  @@index([documentId])
+  @@index([userId])
+  @@index([deletedAt])
+  @@map("hotel_enquiry_events")
+}
+
 // ---------------------------------------------------------------- Module N — documents and media
 
 enum MediaOwnerType {
@@ -1422,4 +1540,93 @@ model MediaAsset {
   @@index([scanStatus])
   @@index([deletedAt])
   @@map("media_assets")
+}
+
+enum DocumentType {
+  proposal
+  contract
+  invoice
+  design
+  menu
+  schedule
+  rooming_list
+  rider
+  ticket
+  consent
+  other
+}
+
+enum DocumentVisibility {
+  internal
+  client
+  guest
+  public
+}
+
+/// A stored document (data-model.md §16, Module N). Polymorphic owner via owner_type/owner_id (no Prisma
+/// relation on the owner — the repository scopes by the owning record). storage_key is RESTRICTED and
+/// never serialised; a signed link is minted only through DocumentAccessLink. First built by Module D
+/// feature 10.1 (the first document_id consumer: enquiry/agreement/proposal/contract attachments).
+/// size_bytes/checksum are filled at upload-finalize, so they are nullable until then. Antivirus
+/// scanning (security.md) is wired with the real storage adapter, like MediaAsset's stub scanner.
+model Document {
+  id                String             @id @default(uuid(7)) @db.Uuid
+  projectId         String?            @map("project_id") @db.Uuid
+  accountId         String?            @map("account_id") @db.Uuid
+  ownerType         String             @map("owner_type") @db.VarChar(255)
+  ownerId           String             @map("owner_id") @db.Uuid
+  title             String             @db.VarChar(255)
+  documentType      DocumentType       @map("document_type")
+  storageKey        String             @map("storage_key") @db.VarChar(255)
+  mimeType          String             @map("mime_type") @db.VarChar(255)
+  sizeBytes         Int?               @map("size_bytes")
+  checksum          String?            @db.VarChar(255)
+  versionNumber     Int                @default(1) @map("version_number")
+  previousVersionId String?            @map("previous_version_id") @db.Uuid
+  visibility        DocumentVisibility @default(internal)
+  uploadedBy        String             @map("uploaded_by") @db.Uuid
+  retentionClass    String?            @map("retention_class") @db.VarChar(255)
+  retentionUntil    DateTime?          @map("retention_until") @db.Timestamptz(6)
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  accessLinks DocumentAccessLink[]
+
+  @@index([ownerType, ownerId])
+  @@index([projectId])
+  @@index([accountId])
+  @@index([previousVersionId])
+  @@index([deletedAt])
+  @@map("documents")
+}
+
+/// A minted, expiring access link to a document (data-model.md §16). One row per download request; the
+/// API checks the owning record, writes this row, then returns a signed URL valid for 15 minutes
+/// (security.md). token_hash is RESTRICTED (the link's signature, hashed). expires_at defaults to 15
+/// minutes and is never more than 24 hours (field-matrix); revoked_at ends it early.
+model DocumentAccessLink {
+  id            String    @id @default(uuid(7)) @db.Uuid
+  documentId    String    @map("document_id") @db.Uuid
+  tokenHash     String    @map("token_hash") @db.VarChar(255)
+  expiresAt     DateTime  @map("expires_at") @db.Timestamptz(6)
+  maxDownloads  Int       @default(1) @map("max_downloads")
+  downloadCount Int       @default(0) @map("download_count")
+  revokedAt     DateTime? @map("revoked_at") @db.Timestamptz(6)
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  document Document @relation(fields: [documentId], references: [id])
+
+  @@index([documentId])
+  @@index([expiresAt])
+  @@index([deletedAt])
+  @@map("document_access_links")
 }

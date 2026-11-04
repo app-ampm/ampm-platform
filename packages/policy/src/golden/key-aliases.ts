@@ -63,7 +63,7 @@ export const KEY_ALIAS_GOLDEN: readonly AliasGolden[] = [
     line: 183,
     section: "5.4",
     label: "Enquiry internal notes and internal-only events",
-    key: "consultancy.hotel_enquiries_client_fields.read_internal_notes",
+    key: "consultancy.enquiries.read_internal_notes",
     holders: { SA: ALL, SM: ALL, HT: ALL, PM: ASSIGNED },
   },
   {
