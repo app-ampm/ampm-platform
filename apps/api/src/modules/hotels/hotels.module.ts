@@ -55,5 +55,7 @@ import { HotelsService } from "./hotels.service.js";
     HotelReferencesRepository,
     HotelFreshnessService,
   ],
+  // ConsultancyModule (Module D, feature 10.1) injects HotelsService for the enquiry reach check.
+  exports: [HotelsService],
 })
 export class HotelsModule {}

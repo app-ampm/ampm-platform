@@ -10,6 +10,7 @@ import { AuditLogModule } from "./modules/admin/audit-log/audit-log.module.js";
 import { ClientLoginsModule } from "./modules/admin/client-logins/client-logins.module.js";
 import { ConfigModule } from "./modules/admin/config/config.module.js";
 import { NotificationModule } from "./modules/admin/notification/notification.module.js";
+import { ConsultancyModule } from "./modules/consultancy/consultancy.module.js";
 import { CrmModule } from "./modules/crm/crm.module.js";
 import { SubscriptionsModule } from "./modules/crm/subscriptions/subscriptions.module.js";
 import { DemoModule } from "./modules/demo/demo.module.js";
@@ -46,6 +47,7 @@ import { PolicyModule } from "./policy/policy.module.js";
     SubscriptionsModule,
     HotelsModule,
     MediaModule,
+    ConsultancyModule,
     DemoModule,
     SpikeModule,
   ],
