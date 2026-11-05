@@ -79,6 +79,19 @@ export const consultancyChargeablePolicy = z.object({
 });
 export type ConsultancyChargeablePolicy = z.infer<typeof consultancyChargeablePolicy>;
 
+/**
+ * Whether booking-milestone amounts are shown to the client (W-14, feature 10.5, AC-05.6). A milestone
+ * has a single `amount` column the client MAY see — only where the client pays the hotel directly — so
+ * the default is hidden and the client serialiser omits the amount unless this flag is on. Configuration,
+ * not code, so AMPM can flip it without a deploy once it confirms the payment arrangement.
+ */
+export const consultancyMilestoneVisibilityPolicy = z.object({
+  milestoneAmountsVisible: z.boolean(),
+});
+export type ConsultancyMilestoneVisibilityPolicy = z.infer<
+  typeof consultancyMilestoneVisibilityPolicy
+>;
+
 /** One registry entry; the helper makes the compiler check the baseline against its own schema. */
 function entry<S extends z.ZodType>(
   schema: S,
@@ -107,6 +120,11 @@ export const CONFIG_REGISTRY = {
   "consultancy.chargeable_services": entry(consultancyChargeablePolicy, {
     // R8 baseline: availability checking is free; the rest of the hotel-assistance pipeline is paid.
     chargeableServiceKeys: ["negotiation", "site_visit", "contract_review", "booking_assistance"],
+  }),
+  "consultancy.milestone_amounts_visible": entry(consultancyMilestoneVisibilityPolicy, {
+    // W-14 default: milestone amounts stay hidden from the client until AMPM confirms the client pays
+    // the hotel directly.
+    milestoneAmountsVisible: false,
   }),
   "notification.templates": entry(notificationTemplates, {
     "staff.invite": {

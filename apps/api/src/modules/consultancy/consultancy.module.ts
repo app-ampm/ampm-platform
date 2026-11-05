@@ -19,13 +19,21 @@ import { ProposalsClientService } from "./proposals-client.service.js";
 import { ProposalsController } from "./proposals.controller.js";
 import { ProposalsRepository } from "./proposals.repository.js";
 import { ProposalsService } from "./proposals.service.js";
+import { BookingMilestonesClientController } from "./booking-milestones-client.controller.js";
+import { BookingMilestonesClientService } from "./booking-milestones-client.service.js";
+import { BookingMilestonesController } from "./booking-milestones.controller.js";
+import { BookingMilestonesRepository } from "./booking-milestones.repository.js";
+import { BookingMilestonesService } from "./booking-milestones.service.js";
+import { MilestoneOverdueService } from "./milestones.overdue.service.js";
 
 /**
  * Module D — Hotel consultancy. 10.1 built the enquiry pipeline (`consultancy-admin` on
  * `consultancy.enquiries.*`; the client side `consultancy` gated on `hotel_assistance`); 10.3 added site
  * visits (`consultancy.site_visits.*`); 10.4 adds hotel proposals (`consultancy.proposals.*`, the
  * client/internal money split with `read_internal_amount`, the version/decision machine, sharing advances
- * the enquiry to `client_decision`, and handler-less `consultancy.proposal.*` events). It reads Module C
+ * the enquiry to `client_decision`, and handler-less `consultancy.proposal.*` events); 10.5 adds booking
+ * milestones (`consultancy.booking_milestones.*`), the AC-05.6 confirmed-guard on the enquiry transition
+ * and an hourly overdue sweep. It reads Module C
  * through HotelsService, reaches Module B through ServiceAgreementsService (the AC-05.7 gate) and domain
  * events; account resolution reads the CRM `account_contacts` table directly (the recorded D-063 shortcut).
  * PrismaService, the EventBus, ConfigService and the policy/audit kernel are @Global.
@@ -39,6 +47,8 @@ import { ProposalsService } from "./proposals.service.js";
     SiteVisitsClientController,
     ProposalsController,
     ProposalsClientController,
+    BookingMilestonesController,
+    BookingMilestonesClientController,
   ],
   providers: [
     EnquiriesService,
@@ -51,6 +61,10 @@ import { ProposalsService } from "./proposals.service.js";
     ProposalsService,
     ProposalsClientService,
     ProposalsRepository,
+    BookingMilestonesService,
+    BookingMilestonesClientService,
+    BookingMilestonesRepository,
+    MilestoneOverdueService,
   ],
 })
 export class ConsultancyModule {}

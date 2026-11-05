@@ -1509,6 +1509,28 @@ enum HotelProposalStatus {
   superseded
 }
 
+/// A booking milestone's lifecycle (data-model §6, feature 10.5). Hand-rolled in the consultancy module
+/// (not a packages/policy STATUS_MACHINE §7): pending → done | overdue | cancelled; the worker sweep sets
+/// overdue; done and cancelled are terminal.
+enum BookingMilestoneStatus {
+  pending
+  done
+  overdue
+  cancelled
+}
+
+/// A booking milestone's type (data-model §6, feature 10.5): the pipeline step it marks. A done
+/// `confirmed` milestone plus a signed contract are the enquiry→confirmed guard (AC-05.6).
+enum BookingMilestoneType {
+  hold_placed
+  contract_sent
+  contract_signed
+  advance_paid
+  rooming_list_due
+  balance_due
+  confirmed
+}
+
 /// A hotel enquiry: the root of the consultancy pipeline (§6). account_id (Module B) owns it before a
 /// wedding project exists; project_id is back-filled when the project is created (GP-27). The client
 /// sees status + client fields (functions_summary, notes_client) + non-internal events; notes_internal
@@ -1544,6 +1566,7 @@ model HotelEnquiry {
   events     HotelEnquiryEvent[]
   siteVisits SiteVisit[]
   proposals  HotelProposal[]
+  milestones BookingMilestone[]
 
   // A partial unique index on (account_id, hotel_id) WHERE status <> 'closed' AND deleted_at IS NULL
   // enforces one open enquiry per account+hotel (AC-26 idempotency backstop). Prisma cannot express a
@@ -1689,6 +1712,45 @@ model HotelProposalLine {
   @@index([proposalId])
   @@index([deletedAt])
   @@map("hotel_proposal_lines")
+}
+
+/// A booking milestone for an enquiry (data-model §6, feature 10.5, AC-05.6). The pipeline's closing
+/// steps: a done `confirmed` milestone plus a signed contract (interim: a done `contract_signed` milestone
+/// carrying an uploaded `document_id`) are what let the enquiry reach `confirmed`. One `amount` column
+/// (A-4) the client sees only where the W-14 config flag is on — no client/internal split. Payments are
+/// recorded, not collected (offline bank transfer, v1). `project_id` is back-filled by Module E (GP-27);
+/// `contract_id` (Module G) and `document_id` (Module N) are plain columns until those modules land.
+/// Standard columns per data.md §1.
+model BookingMilestone {
+  id            String                 @id @default(uuid(7)) @db.Uuid
+  enquiryId     String                 @map("enquiry_id") @db.Uuid
+  projectId     String?                @map("project_id") @db.Uuid
+  milestoneType BookingMilestoneType   @map("milestone_type")
+  status        BookingMilestoneStatus @default(pending)
+  dueAt         DateTime?              @map("due_at") @db.Timestamptz(6)
+  completedAt   DateTime?              @map("completed_at") @db.Timestamptz(6)
+  amount        Decimal?               @db.Decimal(14, 2)
+  currency      String?                @db.VarChar(3)
+  /// Gains its FK when contracts (module G) land; a plain column meanwhile (brief §2.3).
+  contractId    String?                @map("contract_id") @db.Uuid
+  /// Gains its FK when the documents service (module N) lands; a plain column meanwhile.
+  documentId    String?                @map("document_id") @db.Uuid
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  enquiry HotelEnquiry @relation(fields: [enquiryId], references: [id])
+
+  @@index([enquiryId, status])
+  @@index([status, dueAt])
+  @@index([projectId])
+  @@index([contractId])
+  @@index([documentId])
+  @@index([deletedAt])
+  @@map("booking_milestones")
 }
 
 // ---------------------------------------------------------------- Module N — documents and media

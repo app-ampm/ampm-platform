@@ -12,6 +12,7 @@ import { ServiceAgreementsService } from "../crm/service-agreements/service-agre
 import { EnquiryEventsRepository, type EnquiryEventRow } from "./enquiry-events.repository.js";
 import { EnquiriesRepository, type EnquiryRow } from "./enquiries.repository.js";
 import { EnquiriesService } from "./enquiries.service.js";
+import { BookingMilestonesRepository } from "./booking-milestones.repository.js";
 
 function makeRow(over: Partial<EnquiryRow> = {}): EnquiryRow {
   return {
@@ -94,6 +95,10 @@ function build(row: EnquiryRow = makeRow(), events: EnquiryEventRow[] = []) {
     })),
   };
   const agreements = { hasActiveForEnquiry: vi.fn(async () => false) };
+  const milestones = {
+    hasDoneMilestone: vi.fn(async () => false),
+    hasSignedContract: vi.fn(async () => false),
+  };
   const logger = { warn: vi.fn() };
   const service = new EnquiriesService(
     repo as unknown as EnquiriesRepository,
@@ -103,9 +108,10 @@ function build(row: EnquiryRow = makeRow(), events: EnquiryEventRow[] = []) {
     notifications as unknown as NotificationService,
     config as unknown as ConfigService,
     agreements as unknown as ServiceAgreementsService,
+    milestones as unknown as BookingMilestonesRepository,
     logger as unknown as AppLogger,
   );
-  return { service, repo, eventsRepo, audit, notifications, config, agreements };
+  return { service, repo, eventsRepo, audit, notifications, config, agreements, milestones };
 }
 
 describe("EnquiriesService.transition", () => {
@@ -192,8 +198,9 @@ describe("EnquiriesService.transition", () => {
     expect(notifications.queue).toHaveBeenCalledTimes(1); // one client user, closed is client-visible
   });
 
-  it("blocks confirmed until the 10.5 milestone + contract mechanism exists (AC-05.6)", async () => {
-    const { service, repo } = build(makeRow({ status: "client_decision" }));
+  it("blocks confirmed when no done 'confirmed' milestone exists (AC-05.6)", async () => {
+    const { service, repo, milestones } = build(makeRow({ status: "client_decision" }));
+    milestones.hasDoneMilestone.mockResolvedValue(false);
     await expect(
       service.transition(staff(["HT"]), access, "enq-1", {
         status: "confirmed",
@@ -202,6 +209,32 @@ describe("EnquiriesService.transition", () => {
       }),
     ).rejects.toMatchObject({ code: "conflict" });
     expect(repo.updateStatus).not.toHaveBeenCalled();
+  });
+
+  it("blocks confirmed when the milestone is done but no signed contract (AC-05.6)", async () => {
+    const { service, repo, milestones } = build(makeRow({ status: "client_decision" }));
+    milestones.hasDoneMilestone.mockResolvedValue(true);
+    milestones.hasSignedContract.mockResolvedValue(false);
+    await expect(
+      service.transition(staff(["HT"]), access, "enq-1", {
+        status: "confirmed",
+        outcome: null,
+        summary: null,
+      }),
+    ).rejects.toMatchObject({ code: "conflict" });
+    expect(repo.updateStatus).not.toHaveBeenCalled();
+  });
+
+  it("confirms when a done 'confirmed' milestone and a signed contract exist (AC-05.6)", async () => {
+    const { service, repo, milestones } = build(makeRow({ status: "client_decision" }));
+    milestones.hasDoneMilestone.mockResolvedValue(true);
+    milestones.hasSignedContract.mockResolvedValue(true);
+    await service.transition(staff(["HT"]), access, "enq-1", {
+      status: "confirmed",
+      outcome: null,
+      summary: null,
+    });
+    expect(repo.updateStatus).toHaveBeenCalledTimes(1);
   });
 });
 

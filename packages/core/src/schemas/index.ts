@@ -51,6 +51,7 @@ export {
   configView,
   configWriteRequest,
   consultancyChargeablePolicy,
+  consultancyMilestoneVisibilityPolicy,
   featureFlags,
   hotelVerificationPolicy,
   isConfigKey,
@@ -66,6 +67,7 @@ export type {
   ConfigView,
   ConfigWriteRequest,
   ConsultancyChargeablePolicy,
+  ConsultancyMilestoneVisibilityPolicy,
   FeatureFlags,
   HotelVerificationPolicy,
   NotificationChannelDefaults,
@@ -307,3 +309,7 @@ export * from "./site-visits";
 // client-visible lines for the client; the internal total + derived margin only for read_internal_amount
 // holders (AC-05.2). Versioned + immutable once shared (AC-09).
 export * from "./hotel-proposals";
+// Module D hotel booking milestones (booking-milestones.ts), feature 10.5. One `amount` column, absent
+// from the client view unless the W-14 config flag is on; a done `confirmed` milestone + a signed
+// contract are the enquiry→confirmed guard (AC-05.6).
+export * from "./booking-milestones";

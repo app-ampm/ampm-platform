@@ -28,11 +28,13 @@ import {
   type EnquiryRow,
   type EnquiryStatusPatch,
 } from "./enquiries.repository.js";
+import { BookingMilestonesRepository } from "./booking-milestones.repository.js";
 import { EnquiryEventsRepository, type EnquiryEventRow } from "./enquiry-events.repository.js";
 import {
   buildStaffPatch,
   buildStatusPatch,
   guardChargeableStage,
+  guardConfirmedReady,
   isInherentlyInternalEvent,
   staffId,
 } from "./enquiries.helpers.js";
@@ -66,6 +68,7 @@ export class EnquiriesService {
     private readonly notifications: NotificationService,
     private readonly config: ConfigService,
     private readonly agreements: ServiceAgreementsService,
+    private readonly milestones: BookingMilestonesRepository,
     private readonly logger: AppLogger,
   ) {}
 
@@ -129,6 +132,7 @@ export class EnquiriesService {
       throw errors.forbidden(`You cannot move this enquiry from ${current.status} to ${to}`);
     }
     await guardChargeableStage(this.config, this.agreements, current.id, to);
+    await guardConfirmedReady(this.milestones, current.id, to);
     const patch = buildStatusPatch(request, to);
     await this.persistTransition(current, patch, to, request.summary, staffId(principal));
     if (isClientVisibleStatus(to)) {

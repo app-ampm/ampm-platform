@@ -9,22 +9,18 @@ import type {
 import type { Principal } from "../../policy/principal.types.js";
 import type { ConfigService } from "../admin/config/config.service.js";
 import type { ServiceAgreementsService } from "../crm/service-agreements/service-agreements.service.js";
+import type { BookingMilestonesRepository } from "./booking-milestones.repository.js";
 import type { EnquiryStatusPatch } from "./enquiries.repository.js";
 
 /**
- * The status patch for a staff transition. `confirmed` needs a completed booking milestone + a signed
- * contract (feature 10.5), so it is not yet reachable (AC-05.6); `closed` requires an outcome and
- * stamps `closed_at`. A plain forward move carries only the new status.
+ * The status patch for a staff transition. `confirmed` is gated by `guardConfirmedReady` in the service
+ * before this runs (a done `confirmed` milestone + a signed contract, AC-05.6), so here it is a plain
+ * forward move; `closed` requires an outcome and stamps `closed_at`.
  */
 export function buildStatusPatch(
   request: HotelEnquiryStatusUpdateRequest,
   to: HotelEnquiryStatus,
 ): EnquiryStatusPatch {
-  if (to === "confirmed") {
-    throw errors.conflict(
-      "Confirming an enquiry needs a completed booking milestone and a signed contract (feature 10.5)",
-    );
-  }
   if (to === "closed") {
     if (!request.outcome) throw errors.conflict("An outcome is required to close an enquiry");
     return { status: to, outcome: request.outcome, closedAt: new Date() };
@@ -61,6 +57,26 @@ export async function guardChargeableStage(
     throw errors.conflict(
       "This stage is a paid service and needs an active service agreement on the enquiry",
     );
+  }
+}
+
+/**
+ * The AC-05.6 confirmed-guard: an enquiry reaches `confirmed` only when a `confirmed` booking milestone is
+ * done AND a signed contract exists (interim: a done `contract_signed` milestone carrying an uploaded
+ * document). Each missing item throws its own 409 so the message names it. Only the move to `confirmed`
+ * is gated; every other transition passes through.
+ */
+export async function guardConfirmedReady(
+  milestones: BookingMilestonesRepository,
+  enquiryId: string,
+  to: HotelEnquiryStatus,
+): Promise<void> {
+  if (to !== "confirmed") return;
+  if (!(await milestones.hasDoneMilestone(enquiryId, "confirmed"))) {
+    throw errors.conflict("Confirming an enquiry needs a completed 'confirmed' booking milestone");
+  }
+  if (!(await milestones.hasSignedContract(enquiryId))) {
+    throw errors.conflict("Confirming an enquiry needs a signed contract");
   }
 }
 
