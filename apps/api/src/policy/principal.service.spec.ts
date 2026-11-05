@@ -31,6 +31,10 @@ class FakeRepository extends PrincipalRepository {
   accountSubscriptionStatuses(): Promise<SubscriptionStatus[]> {
     return Promise.resolve([]);
   }
+  accountHasActiveHotelAgreement(): Promise<boolean> {
+    return Promise.resolve(this.hotelAgreement);
+  }
+  hotelAgreement = false;
 }
 
 const env = (dynamicRoles: boolean): Env => ({ DYNAMIC_ROLES: dynamicRoles }) as unknown as Env;

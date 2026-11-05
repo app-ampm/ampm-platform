@@ -12,6 +12,7 @@ import { ConfigModule } from "./modules/admin/config/config.module.js";
 import { NotificationModule } from "./modules/admin/notification/notification.module.js";
 import { ConsultancyModule } from "./modules/consultancy/consultancy.module.js";
 import { CrmModule } from "./modules/crm/crm.module.js";
+import { ServiceAgreementsModule } from "./modules/crm/service-agreements/service-agreements.module.js";
 import { SubscriptionsModule } from "./modules/crm/subscriptions/subscriptions.module.js";
 import { DemoModule } from "./modules/demo/demo.module.js";
 import { HotelsModule } from "./modules/hotels/hotels.module.js";
@@ -45,6 +46,7 @@ import { PolicyModule } from "./policy/policy.module.js";
     ClientLoginsModule,
     CrmModule,
     SubscriptionsModule,
+    ServiceAgreementsModule,
     HotelsModule,
     MediaModule,
     ConsultancyModule,

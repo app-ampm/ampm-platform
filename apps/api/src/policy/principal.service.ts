@@ -113,7 +113,11 @@ export class PrincipalService {
       isDemo: record.userType === "demo",
       suspended: false,
       subscription,
-      hotelAssistanceAgreement: false,
+      // An active hotel-assistance agreement grants the module (data-model §4, feature 10.2, GP-5).
+      hotelAssistanceAgreement:
+        record.userType === "client"
+          ? await this.repository.accountHasActiveHotelAgreement(record.id)
+          : false,
       project: record.memberships.length > 0 ? "active" : "none",
     });
     this.entitlements.set(record.id, entitlements);

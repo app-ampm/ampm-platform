@@ -36,6 +36,9 @@ export abstract class PrincipalRepository {
   abstract capabilityKeysForRoles(roleIds: readonly string[]): Promise<string[]>;
   /** The statuses of the subscriptions on the account a client user belongs to (feature 8.3 gating). */
   abstract accountSubscriptionStatuses(userId: string): Promise<SubscriptionStatus[]>;
+  /** Whether the account a client belongs to holds an active hotel-assistance agreement (feature 10.2,
+   *  GP-5): an active row grants the `hotel_assistance` entitlement module (data-model §4). */
+  abstract accountHasActiveHotelAgreement(userId: string): Promise<boolean>;
 }
 
 @Injectable()
@@ -97,6 +100,24 @@ export class PrismaPrincipalRepository extends PrincipalRepository {
       select: { status: true },
     });
     return subscriptions.map((subscription) => subscription.status);
+  }
+
+  async accountHasActiveHotelAgreement(userId: string): Promise<boolean> {
+    const contact = await this.prisma.accountContact.findFirst({
+      where: { userId, deletedAt: null },
+      select: { accountId: true },
+    });
+    if (!contact) return false;
+    const agreement = await this.prisma.serviceAgreement.findFirst({
+      where: {
+        accountId: contact.accountId,
+        status: "active",
+        deletedAt: null,
+        serviceType: { category: "hotel_assistance" },
+      },
+      select: { id: true },
+    });
+    return agreement !== null;
   }
 
   async capabilityKeysForRoles(roleIds: readonly string[]): Promise<string[]> {

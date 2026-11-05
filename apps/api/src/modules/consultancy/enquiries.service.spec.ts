@@ -6,7 +6,9 @@ import { PrismaService } from "../../db/prisma.service.js";
 import { AuditService } from "../../policy/audit.service.js";
 import type { Principal } from "../../policy/principal.types.js";
 import type { StaffRole } from "@ampm/policy";
+import { ConfigService } from "../admin/config/config.service.js";
 import { NotificationService } from "../admin/notification/notification.service.js";
+import { ServiceAgreementsService } from "../crm/service-agreements/service-agreements.service.js";
 import { EnquiryEventsRepository, type EnquiryEventRow } from "./enquiry-events.repository.js";
 import { EnquiriesRepository, type EnquiryRow } from "./enquiries.repository.js";
 import { EnquiriesService } from "./enquiries.service.js";
@@ -86,6 +88,12 @@ function build(row: EnquiryRow = makeRow(), events: EnquiryEventRow[] = []) {
   const prisma = { $transaction: <T>(fn: (tx: unknown) => Promise<T>): Promise<T> => fn({}) };
   const audit = { record: vi.fn(async () => undefined) };
   const notifications = { queue: vi.fn(async () => ({ suppressed: false, notificationId: "n1" })) };
+  const config = {
+    get: vi.fn(async () => ({
+      chargeableServiceKeys: ["negotiation", "site_visit", "contract_review", "booking_assistance"],
+    })),
+  };
+  const agreements = { hasActiveForEnquiry: vi.fn(async () => false) };
   const logger = { warn: vi.fn() };
   const service = new EnquiriesService(
     repo as unknown as EnquiriesRepository,
@@ -93,9 +101,11 @@ function build(row: EnquiryRow = makeRow(), events: EnquiryEventRow[] = []) {
     prisma as unknown as PrismaService,
     audit as unknown as AuditService,
     notifications as unknown as NotificationService,
+    config as unknown as ConfigService,
+    agreements as unknown as ServiceAgreementsService,
     logger as unknown as AppLogger,
   );
-  return { service, repo, eventsRepo, audit, notifications };
+  return { service, repo, eventsRepo, audit, notifications, config, agreements };
 }
 
 describe("EnquiriesService.transition", () => {

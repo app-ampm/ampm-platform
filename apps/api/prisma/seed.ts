@@ -14,7 +14,7 @@ import {
   type StaffRole,
 } from "@ampm/policy";
 
-import { Prisma, PrismaClient } from "../src/generated/prisma/client.js";
+import { Prisma, PrismaClient, type ServiceCategory } from "../src/generated/prisma/client.js";
 import { upsertDemoUser } from "../src/modules/demo/demo-baseline.js";
 import { seedHotels } from "./seed-hotels.js";
 
@@ -302,6 +302,36 @@ async function seedPlans(): Promise<void> {
   }
 }
 
+/**
+ * The v1 service-type catalogue (feature 10.2, GP-5): the paid services beyond the subscription. A
+ * reference table (Super-Admin editable, data.md §1); `service_key` is the stable business key and
+ * `category` maps to the entitlement module. The hotel-assistance pipeline keys are seeded now; the
+ * design / vendor / full-management services are stubbed for the categories their modules will build.
+ */
+async function seedServiceTypes(): Promise<void> {
+  const types: ReadonlyArray<{ serviceKey: string; name: string; category: ServiceCategory }> = [
+    { serviceKey: "availability_check", name: "Availability check", category: "hotel_assistance" },
+    { serviceKey: "negotiation", name: "Rate negotiation", category: "hotel_assistance" },
+    { serviceKey: "site_visit", name: "Site visit", category: "hotel_assistance" },
+    { serviceKey: "contract_review", name: "Contract review", category: "hotel_assistance" },
+    { serviceKey: "booking_assistance", name: "Booking assistance", category: "hotel_assistance" },
+    { serviceKey: "design", name: "Design", category: "design" },
+    {
+      serviceKey: "vendor_coordination",
+      name: "Vendor coordination",
+      category: "vendor_coordination",
+    },
+    { serviceKey: "full_management", name: "Full management", category: "full_management" },
+  ];
+  for (const type of types) {
+    await prisma.serviceType.upsert({
+      where: { serviceKey: type.serviceKey },
+      update: { name: type.name, category: type.category },
+      create: { serviceKey: type.serviceKey, name: type.name, category: type.category },
+    });
+  }
+}
+
 async function main(): Promise<void> {
   const roleIds = await seedRoles();
   await seedStaff(roleIds);
@@ -312,6 +342,7 @@ async function main(): Promise<void> {
   await seedConfigurations();
   await seedLeadSources();
   await seedPlans();
+  await seedServiceTypes();
   await seedHotels(prisma);
   await seedGrantableCapabilities();
   console.log(

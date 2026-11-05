@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common";
 
 import { NotificationModule } from "../admin/notification/notification.module.js";
+import { ServiceAgreementsModule } from "../crm/service-agreements/service-agreements.module.js";
 import { HotelsModule } from "../hotels/hotels.module.js";
 import { EnquiriesClientController } from "./enquiries-client.controller.js";
 import { EnquiriesClientService } from "./enquiries-client.service.js";
@@ -20,7 +21,7 @@ import { EnquiryEventsRepository } from "./enquiry-events.repository.js";
  * with this feature as forward schema; their service and contract arrive with feature 10.2 (first upload).
  */
 @Module({
-  imports: [HotelsModule, NotificationModule],
+  imports: [HotelsModule, NotificationModule, ServiceAgreementsModule],
   controllers: [EnquiriesController, EnquiriesClientController],
   providers: [
     EnquiriesService,

@@ -1,6 +1,68 @@
-import type { HotelEnquiryStaffUpdateRequest } from "@ampm/core";
+import { errors } from "@ampm/core";
+import type {
+  HotelEnquiryStaffUpdateRequest,
+  HotelEnquiryStatus,
+  HotelEnquiryStatusUpdateRequest,
+  ServiceKey,
+} from "@ampm/core";
 
 import type { Principal } from "../../policy/principal.types.js";
+import type { ConfigService } from "../admin/config/config.service.js";
+import type { ServiceAgreementsService } from "../crm/service-agreements/service-agreements.service.js";
+import type { EnquiryStatusPatch } from "./enquiries.repository.js";
+
+/**
+ * The status patch for a staff transition. `confirmed` needs a completed booking milestone + a signed
+ * contract (feature 10.5), so it is not yet reachable (AC-05.6); `closed` requires an outcome and
+ * stamps `closed_at`. A plain forward move carries only the new status.
+ */
+export function buildStatusPatch(
+  request: HotelEnquiryStatusUpdateRequest,
+  to: HotelEnquiryStatus,
+): EnquiryStatusPatch {
+  if (to === "confirmed") {
+    throw errors.conflict(
+      "Confirming an enquiry needs a completed booking milestone and a signed contract (feature 10.5)",
+    );
+  }
+  if (to === "closed") {
+    if (!request.outcome) throw errors.conflict("An outcome is required to close an enquiry");
+    return { status: to, outcome: request.outcome, closedAt: new Date() };
+  }
+  return { status: to };
+}
+
+/**
+ * The enquiry transitions that represent a chargeable service (AC-05.7, R8): moving to one needs an
+ * active service agreement when R8's config lists that service as chargeable. 10.2 gates `negotiating`
+ * (negotiation); visit_scheduled/proposal stages join when 10.3–10.5 build them.
+ */
+const CHARGEABLE_TRANSITION_SERVICE: Partial<Record<HotelEnquiryStatus, ServiceKey>> = {
+  negotiating: "negotiation",
+};
+
+/**
+ * The AC-05.7 gate: a chargeable enquiry stage needs an active agreement. The chargeable set is
+ * configuration, so AMPM can make a service free by removing its key; the active-agreement check
+ * reaches Module B through its service (never its tables). A free service, or one with an active
+ * agreement, passes; otherwise the move is a 409 until the agreement is active.
+ */
+export async function guardChargeableStage(
+  config: ConfigService,
+  agreements: ServiceAgreementsService,
+  enquiryId: string,
+  to: HotelEnquiryStatus,
+): Promise<void> {
+  const serviceKey = CHARGEABLE_TRANSITION_SERVICE[to];
+  if (!serviceKey) return;
+  const { chargeableServiceKeys } = await config.get("consultancy.chargeable_services");
+  if (!chargeableServiceKeys.includes(serviceKey)) return;
+  if (!(await agreements.hasActiveForEnquiry(enquiryId))) {
+    throw errors.conflict(
+      "This stage is a paid service and needs an active service agreement on the enquiry",
+    );
+  }
+}
 
 const INHERENTLY_INTERNAL_EVENTS: ReadonlySet<string> = new Set([
   "sent_to_hotel",
