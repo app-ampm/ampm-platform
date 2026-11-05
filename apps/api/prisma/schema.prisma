@@ -1486,6 +1486,16 @@ enum HotelEnquiryEventType {
   proposal
 }
 
+/// A site visit's own lifecycle (data-model §6, feature 10.3). Hand-rolled in the consultancy module
+/// (not a packages/policy STATUS_MACHINE §7): proposed → confirmed → completed, with cancelled reachable
+/// from any non-terminal state; completed and cancelled are terminal.
+enum SiteVisitStatus {
+  proposed
+  confirmed
+  completed
+  cancelled
+}
+
 /// A hotel enquiry: the root of the consultancy pipeline (§6). account_id (Module B) owns it before a
 /// wedding project exists; project_id is back-filled when the project is created (GP-27). The client
 /// sees status + client fields (functions_summary, notes_client) + non-internal events; notes_internal
@@ -1518,7 +1528,8 @@ model HotelEnquiry {
   updatedBy String?   @map("updated_by") @db.Uuid
   deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
 
-  events HotelEnquiryEvent[]
+  events     HotelEnquiryEvent[]
+  siteVisits SiteVisit[]
 
   // A partial unique index on (account_id, hotel_id) WHERE status <> 'closed' AND deleted_at IS NULL
   // enforces one open enquiry per account+hotel (AC-26 idempotency backstop). Prisma cannot express a
@@ -1561,6 +1572,36 @@ model HotelEnquiryEvent {
   @@index([userId])
   @@index([deletedAt])
   @@map("hotel_enquiry_events")
+}
+
+/// A scheduled visit to the enquiry's hotel (data-model §6, feature 10.3, AC-05.5). `hotel_id` is the
+/// enquiry's hotel (Module C), a plain column with no relation. One response model per audience
+/// (security.md): the client sees date, status and their own `client_feedback` (CLIENT); `attendees_text`
+/// (INTERNAL) and `outcome_internal` (RESTRICTED-NOTES) are ABSENT from the client view, never a
+/// hide-flag — and never reach a client/guest/demo principal. Standard columns per data.md §1.
+model SiteVisit {
+  id             String          @id @default(uuid(7)) @db.Uuid
+  enquiryId      String          @map("enquiry_id") @db.Uuid
+  /// The enquiry's hotel (Module C); a plain column, no Prisma relation (cross-module).
+  hotelId        String          @map("hotel_id") @db.Uuid
+  scheduledAt    DateTime        @map("scheduled_at") @db.Timestamptz(6)
+  status         SiteVisitStatus @default(proposed)
+  attendeesText  String?         @map("attendees_text") @db.Text
+  outcomeInternal String?        @map("outcome_internal") @db.Text
+  clientFeedback String?         @map("client_feedback") @db.Text
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  enquiry HotelEnquiry @relation(fields: [enquiryId], references: [id])
+
+  @@index([enquiryId, status])
+  @@index([hotelId])
+  @@index([deletedAt])
+  @@map("site_visits")
 }
 
 // ---------------------------------------------------------------- Module N — documents and media

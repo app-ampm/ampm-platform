@@ -2250,7 +2250,7 @@
       "module": "consultancy",
       "resource": "site_visits",
       "label": "Site visits",
-      "provisional": true,
+      "provisional": false,
       "cells": {
         "SA": "CRU",
         "SM": "R",
