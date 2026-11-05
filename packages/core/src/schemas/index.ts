@@ -300,3 +300,6 @@ export * from "./consultancy";
 // Module B paid-service agreements (service-agreements.ts), feature 10.2. GP-5: an active hotel-assistance
 // agreement unblocks work beyond availability checking on its linked enquiry (the AC-05.7 gate).
 export * from "./service-agreements";
+// Module D hotel site visits (site-visits.ts), feature 10.3. Dual-audience: the client sees date/status
+// + own feedback; attendees and the internal outcome never reach a client (AC-05.5).
+export * from "./site-visits";

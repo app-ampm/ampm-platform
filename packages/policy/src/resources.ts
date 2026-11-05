@@ -61,11 +61,12 @@ export const RESOURCES: Record<string, Record<string, string>> = {
     "Payments inbound from clients": "payments_inbound",
     "Payments outbound to vendors and hotels": "payments_outbound",
   },
-  // Module D (consultancy) feature 10.1 curates the two enquiry rows; site_visits, proposals and
-  // booking_milestones stay provisional until features 10.3–10.5 build them.
+  // Module D (consultancy): feature 10.1 curated the two enquiry rows, 10.3 the site-visit row;
+  // proposals and booking_milestones stay provisional until features 10.4–10.5 build them.
   "5.4": {
     "Hotel enquiries, client fields": "enquiries",
     "Enquiry internal notes and internal-only events": "enquiry_notes",
+    "Site visits": "site_visits",
   },
   // §10 names this report's export key `reports.budget_internal.export`.
   "5.16": {
