@@ -2323,110 +2323,6 @@
     ]
   },
   {
-    "id": "consultancy.hotel_proposals_client_amounts.create:all",
-    "module": "consultancy",
-    "resource": "hotel_proposals_client_amounts",
-    "action": "create",
-    "scope": "all",
-    "conditions": [],
-    "isStaffOnly": true,
-    "isEscalationLocked": false,
-    "label": "Create — Hotel proposals, client amounts",
-    "sourceRoles": [
-      "SA",
-      "HT"
-    ]
-  },
-  {
-    "id": "consultancy.hotel_proposals_client_amounts.read:all",
-    "module": "consultancy",
-    "resource": "hotel_proposals_client_amounts",
-    "action": "read",
-    "scope": "all",
-    "conditions": [],
-    "isStaffOnly": true,
-    "isEscalationLocked": false,
-    "label": "Read — Hotel proposals, client amounts",
-    "sourceRoles": [
-      "SA",
-      "SM",
-      "HT",
-      "FA"
-    ]
-  },
-  {
-    "id": "consultancy.hotel_proposals_client_amounts.read:assigned",
-    "module": "consultancy",
-    "resource": "hotel_proposals_client_amounts",
-    "action": "read",
-    "scope": "assigned",
-    "conditions": [],
-    "isStaffOnly": true,
-    "isEscalationLocked": false,
-    "label": "Read — Hotel proposals, client amounts (assigned)",
-    "sourceRoles": [
-      "PM"
-    ]
-  },
-  {
-    "id": "consultancy.hotel_proposals_client_amounts.share:all",
-    "module": "consultancy",
-    "resource": "hotel_proposals_client_amounts",
-    "action": "share",
-    "scope": "all",
-    "conditions": [],
-    "isStaffOnly": true,
-    "isEscalationLocked": false,
-    "label": "Share — Hotel proposals, client amounts",
-    "sourceRoles": [
-      "SA",
-      "HT"
-    ]
-  },
-  {
-    "id": "consultancy.hotel_proposals_client_amounts.share:assigned",
-    "module": "consultancy",
-    "resource": "hotel_proposals_client_amounts",
-    "action": "share",
-    "scope": "assigned",
-    "conditions": [],
-    "isStaffOnly": true,
-    "isEscalationLocked": false,
-    "label": "Share — Hotel proposals, client amounts (assigned)",
-    "sourceRoles": [
-      "PM"
-    ]
-  },
-  {
-    "id": "consultancy.hotel_proposals_client_amounts.update:all",
-    "module": "consultancy",
-    "resource": "hotel_proposals_client_amounts",
-    "action": "update",
-    "scope": "all",
-    "conditions": [],
-    "isStaffOnly": true,
-    "isEscalationLocked": false,
-    "label": "Update — Hotel proposals, client amounts",
-    "sourceRoles": [
-      "SA",
-      "HT"
-    ]
-  },
-  {
-    "id": "consultancy.hotel_proposals_client_amounts.update:assigned",
-    "module": "consultancy",
-    "resource": "hotel_proposals_client_amounts",
-    "action": "update",
-    "scope": "assigned",
-    "conditions": [],
-    "isStaffOnly": true,
-    "isEscalationLocked": false,
-    "label": "Update — Hotel proposals, client amounts (assigned)",
-    "sourceRoles": [
-      "PM"
-    ]
-  },
-  {
     "id": "consultancy.hotel_proposals_internal_amounts.read:all",
     "module": "consultancy",
     "resource": "hotel_proposals_internal_amounts",
@@ -2469,6 +2365,110 @@
     "sourceRoles": [
       "SA",
       "HT"
+    ]
+  },
+  {
+    "id": "consultancy.proposals.create:all",
+    "module": "consultancy",
+    "resource": "proposals",
+    "action": "create",
+    "scope": "all",
+    "conditions": [],
+    "isStaffOnly": true,
+    "isEscalationLocked": false,
+    "label": "Create — Hotel proposals, client amounts",
+    "sourceRoles": [
+      "SA",
+      "HT"
+    ]
+  },
+  {
+    "id": "consultancy.proposals.read:all",
+    "module": "consultancy",
+    "resource": "proposals",
+    "action": "read",
+    "scope": "all",
+    "conditions": [],
+    "isStaffOnly": true,
+    "isEscalationLocked": false,
+    "label": "Read — Hotel proposals, client amounts",
+    "sourceRoles": [
+      "SA",
+      "SM",
+      "HT",
+      "FA"
+    ]
+  },
+  {
+    "id": "consultancy.proposals.read:assigned",
+    "module": "consultancy",
+    "resource": "proposals",
+    "action": "read",
+    "scope": "assigned",
+    "conditions": [],
+    "isStaffOnly": true,
+    "isEscalationLocked": false,
+    "label": "Read — Hotel proposals, client amounts (assigned)",
+    "sourceRoles": [
+      "PM"
+    ]
+  },
+  {
+    "id": "consultancy.proposals.share:all",
+    "module": "consultancy",
+    "resource": "proposals",
+    "action": "share",
+    "scope": "all",
+    "conditions": [],
+    "isStaffOnly": true,
+    "isEscalationLocked": false,
+    "label": "Share — Hotel proposals, client amounts",
+    "sourceRoles": [
+      "SA",
+      "HT"
+    ]
+  },
+  {
+    "id": "consultancy.proposals.share:assigned",
+    "module": "consultancy",
+    "resource": "proposals",
+    "action": "share",
+    "scope": "assigned",
+    "conditions": [],
+    "isStaffOnly": true,
+    "isEscalationLocked": false,
+    "label": "Share — Hotel proposals, client amounts (assigned)",
+    "sourceRoles": [
+      "PM"
+    ]
+  },
+  {
+    "id": "consultancy.proposals.update:all",
+    "module": "consultancy",
+    "resource": "proposals",
+    "action": "update",
+    "scope": "all",
+    "conditions": [],
+    "isStaffOnly": true,
+    "isEscalationLocked": false,
+    "label": "Update — Hotel proposals, client amounts",
+    "sourceRoles": [
+      "SA",
+      "HT"
+    ]
+  },
+  {
+    "id": "consultancy.proposals.update:assigned",
+    "module": "consultancy",
+    "resource": "proposals",
+    "action": "update",
+    "scope": "assigned",
+    "conditions": [],
+    "isStaffOnly": true,
+    "isEscalationLocked": false,
+    "label": "Update — Hotel proposals, client amounts (assigned)",
+    "sourceRoles": [
+      "PM"
     ]
   },
   {

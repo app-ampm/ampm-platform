@@ -14,14 +14,20 @@ import { SiteVisitsClientService } from "./site-visits-client.service.js";
 import { SiteVisitsController } from "./site-visits.controller.js";
 import { SiteVisitsRepository } from "./site-visits.repository.js";
 import { SiteVisitsService } from "./site-visits.service.js";
+import { ProposalsClientController } from "./proposals-client.controller.js";
+import { ProposalsClientService } from "./proposals-client.service.js";
+import { ProposalsController } from "./proposals.controller.js";
+import { ProposalsRepository } from "./proposals.repository.js";
+import { ProposalsService } from "./proposals.service.js";
 
 /**
- * Module D — Hotel consultancy. 10.1 built the enquiry pipeline (`consultancy-admin` staff workspace on
- * `consultancy.enquiries.*` driving the ten-status lifecycle; the client/demo side `consultancy` gated on
- * `hotel_assistance`); 10.3 adds site visits (`consultancy.site_visits.*`, scheduling advances the enquiry
- * to `visit_scheduled`; the client reads date/status and submits own feedback). It reads Module C through
- * HotelsService, reaches Module B through ServiceAgreementsService (the AC-05.7 gate) and a domain event
- * (P-7); account resolution reads the CRM `account_contacts` table directly (the recorded D-063 shortcut).
+ * Module D — Hotel consultancy. 10.1 built the enquiry pipeline (`consultancy-admin` on
+ * `consultancy.enquiries.*`; the client side `consultancy` gated on `hotel_assistance`); 10.3 added site
+ * visits (`consultancy.site_visits.*`); 10.4 adds hotel proposals (`consultancy.proposals.*`, the
+ * client/internal money split with `read_internal_amount`, the version/decision machine, sharing advances
+ * the enquiry to `client_decision`, and handler-less `consultancy.proposal.*` events). It reads Module C
+ * through HotelsService, reaches Module B through ServiceAgreementsService (the AC-05.7 gate) and domain
+ * events; account resolution reads the CRM `account_contacts` table directly (the recorded D-063 shortcut).
  * PrismaService, the EventBus, ConfigService and the policy/audit kernel are @Global.
  */
 @Module({
@@ -31,6 +37,8 @@ import { SiteVisitsService } from "./site-visits.service.js";
     EnquiriesClientController,
     SiteVisitsController,
     SiteVisitsClientController,
+    ProposalsController,
+    ProposalsClientController,
   ],
   providers: [
     EnquiriesService,
@@ -40,6 +48,9 @@ import { SiteVisitsService } from "./site-visits.service.js";
     SiteVisitsService,
     SiteVisitsClientService,
     SiteVisitsRepository,
+    ProposalsService,
+    ProposalsClientService,
+    ProposalsRepository,
   ],
 })
 export class ConsultancyModule {}

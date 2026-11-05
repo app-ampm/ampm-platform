@@ -70,7 +70,7 @@ export const KEY_ALIAS_GOLDEN: readonly AliasGolden[] = [
     line: 186,
     section: "5.4",
     label: "Hotel proposals, internal amounts",
-    key: "consultancy.hotel_proposals_client_amounts.read_internal_amount",
+    key: "consultancy.proposals.read_internal_amount",
     holders: { SA: ALL, HT: ALL, PM: ASSIGNED, FA: ALL },
   },
   {
