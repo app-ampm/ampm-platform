@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { serviceKey } from "./service-agreements.js";
+
 /**
  * Configuration, not code (api.md): plans, prices, demo limits, labels, templates, thresholds and
  * feature switches are `configurations` rows read through one typed accessor. This registry is the
@@ -66,6 +68,17 @@ export const hotelVerificationPolicy = z.object({
 });
 export type HotelVerificationPolicy = z.infer<typeof hotelVerificationPolicy>;
 
+/**
+ * Which hotel-consultancy services AMPM charges for (R8, feature 10.2, AC-05.7). A hotel enquiry can
+ * progress through availability checking for free; moving it into a chargeable stage (negotiation)
+ * requires an active service agreement. The set is configuration, not code — AMPM can make a service
+ * free by removing its key — so the gate reads it through the accessor, never a literal.
+ */
+export const consultancyChargeablePolicy = z.object({
+  chargeableServiceKeys: z.array(serviceKey),
+});
+export type ConsultancyChargeablePolicy = z.infer<typeof consultancyChargeablePolicy>;
+
 /** One registry entry; the helper makes the compiler check the baseline against its own schema. */
 function entry<S extends z.ZodType>(
   schema: S,
@@ -91,6 +104,10 @@ export const CONFIG_REGISTRY = {
   "feature.flags": entry(featureFlags, {}),
   "subscription.policy": entry(subscriptionPolicy, { expiryNoticeDays: 7 }),
   "hotel.verification_policy": entry(hotelVerificationPolicy, { maxAgeDays: 90 }),
+  "consultancy.chargeable_services": entry(consultancyChargeablePolicy, {
+    // R8 baseline: availability checking is free; the rest of the hotel-assistance pipeline is paid.
+    chargeableServiceKeys: ["negotiation", "site_visit", "contract_review", "booking_assistance"],
+  }),
   "notification.templates": entry(notificationTemplates, {
     "staff.invite": {
       email: {

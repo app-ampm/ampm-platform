@@ -238,6 +238,37 @@ enum WebhookEventStatus {
   ignored
 }
 
+/// The classification of a service_type (data-model §4). Drives which entitlement module an active
+/// service_agreement grants (packages/policy entitlements) — adding a category means adding a module,
+/// so this is fixed in code, while the service_key within a category is Super-Admin-editable reference data.
+enum ServiceCategory {
+  hotel_assistance
+  design
+  vendor_coordination
+  full_management
+  other
+}
+
+/// How a service_agreement's fee is expressed (data-model §4). v1 handles `fixed`; `percentage` and
+/// `milestones` are modelled now and priced when milestone billing (module F) lands.
+enum ServiceFeeStructure {
+  fixed
+  percentage
+  milestones
+}
+
+/// The service_agreement lifecycle (data-model §4). Hand-rolled (not a packages/policy STATUS_MACHINE §7):
+/// draft → sent → accepted → active → completed, with cancelled reachable from any non-terminal state.
+/// `active` is the state that grants the service's entitlement module; completed and cancelled are terminal.
+enum ServiceAgreementStatus {
+  draft
+  sent
+  accepted
+  active
+  completed
+  cancelled
+}
+
 // --- Module C: Hotel intelligence (docs/data-model.md §5). The client-facing hotel catalogue the
 // hotel-discovery subscription unlocks, and the per-account shortlist (saved_hotels). ---
 
@@ -783,10 +814,11 @@ model ClientAccount {
 
   lead           Lead?            @relation(fields: [leadId], references: [id])
   primaryContact User?            @relation(fields: [primaryContactUserId], references: [id])
-  contacts       AccountContact[]
-  subscriptions  Subscription[]
-  payments       Payment[]
-  savedHotels    SavedHotel[]
+  contacts          AccountContact[]
+  subscriptions     Subscription[]
+  payments          Payment[]
+  savedHotels       SavedHotel[]
+  serviceAgreements ServiceAgreement[]
 
   @@index([status])
   @@index([primaryContactUserId])
@@ -980,6 +1012,73 @@ model WebhookEvent {
   @@unique([provider, eventId])
   @@index([providerRef])
   @@map("webhook_events")
+}
+
+/// A sellable paid service beyond the subscription (reference table, Super-Admin editable, data.md §1).
+/// `service_key` is the stable business key (Super-Admin may add rows within a category); `category`
+/// is the fixed classification that maps to an entitlement module. v1 seeds the hotel-assistance keys.
+model ServiceType {
+  id         String          @id @default(uuid(7)) @db.Uuid
+  serviceKey String          @unique @map("service_key") @db.VarChar(64)
+  name       String          @db.VarChar(255)
+  category   ServiceCategory
+  isActive   Boolean         @default(true) @map("is_active")
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  agreements ServiceAgreement[]
+
+  @@index([category])
+  @@index([deletedAt])
+  @@map("service_types")
+}
+
+/// A paid-service agreement an account signs (GP-5, data-model §4). CLIENT-class to the signing account
+/// (scope, fee and status), RESTRICTED-FINANCE internally. The status machine is hand-rolled in the
+/// service-agreements module (not a packages/policy STATUS_MACHINE §7). An `active` row grants the
+/// service's entitlement module (packages/policy entitlements): for hotel assistance that unblocks work
+/// beyond availability checking on the linked enquiry (AC-05.7). `fee_amount` is set by AMPM, never
+/// defaulted (Q4). Cross-module links (project, hotel_enquiry, document, actor) are plain columns until
+/// their modules land — `hotel_enquiry_id` is the reciprocal of hotel_enquiries.service_agreement_id.
+model ServiceAgreement {
+  id                String                 @id @default(uuid(7)) @db.Uuid
+  accountId         String                 @map("account_id") @db.Uuid
+  /// Gains its relation when module E (wedding projects) lands; back-filled on project creation (GP-27).
+  projectId         String?                @map("project_id") @db.Uuid
+  serviceTypeId     String                 @map("service_type_id") @db.Uuid
+  /// Reciprocal of hotel_enquiries.service_agreement_id; a plain column (module D), no Prisma relation.
+  hotelEnquiryId    String?                @map("hotel_enquiry_id") @db.Uuid
+  scopeText         String                 @map("scope_text")
+  feeAmount         Decimal                @map("fee_amount") @db.Decimal(14, 2)
+  feeStructure      ServiceFeeStructure    @map("fee_structure")
+  currency          String                 @default("INR") @db.VarChar(3)
+  termsVersion      String?                @map("terms_version") @db.VarChar(255)
+  status            ServiceAgreementStatus @default(draft)
+  acceptedAt        DateTime?              @map("accepted_at") @db.Timestamptz(6)
+  acceptedByUserId  String?                @map("accepted_by_user_id") @db.Uuid
+  /// Gains its FK when the documents service (module N) lands; a plain column meanwhile.
+  documentId        String?                @map("document_id") @db.Uuid
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  account     ClientAccount @relation(fields: [accountId], references: [id])
+  serviceType ServiceType   @relation(fields: [serviceTypeId], references: [id])
+
+  @@index([accountId, status])
+  @@index([serviceTypeId])
+  @@index([hotelEnquiryId])
+  @@index([projectId])
+  @@index([status])
+  @@index([deletedAt])
+  @@map("service_agreements")
 }
 
 // --- Module C models (docs/data-model.md §5, docs/field-matrix.md §4). ---

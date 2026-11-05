@@ -50,6 +50,7 @@ export {
   CONFIG_REGISTRY,
   configView,
   configWriteRequest,
+  consultancyChargeablePolicy,
   featureFlags,
   hotelVerificationPolicy,
   isConfigKey,
@@ -64,6 +65,7 @@ export type {
   ConfigValue,
   ConfigView,
   ConfigWriteRequest,
+  ConsultancyChargeablePolicy,
   FeatureFlags,
   HotelVerificationPolicy,
   NotificationChannelDefaults,
@@ -295,3 +297,6 @@ export * from "./media";
 // Module D consultancy (consultancy.ts), feature 10.1. The Module N documents/document_access_links
 // TABLES land in 10.1 as forward schema; their contract + service arrive with feature 10.2 (first upload).
 export * from "./consultancy";
+// Module B paid-service agreements (service-agreements.ts), feature 10.2. GP-5: an active hotel-assistance
+// agreement unblocks work beyond availability checking on its linked enquiry (the AC-05.7 gate).
+export * from "./service-agreements";

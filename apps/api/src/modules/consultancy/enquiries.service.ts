@@ -20,14 +20,22 @@ import { PrismaService } from "../../db/prisma.service.js";
 import { recordScope } from "../../db/scoping.js";
 import { AuditService } from "../../policy/audit.service.js";
 import { type Principal, toPolicyPrincipal } from "../../policy/principal.types.js";
+import { ConfigService } from "../admin/config/config.service.js";
 import { NotificationService } from "../admin/notification/notification.service.js";
+import { ServiceAgreementsService } from "../crm/service-agreements/service-agreements.service.js";
 import {
   EnquiriesRepository,
   type EnquiryRow,
   type EnquiryStatusPatch,
 } from "./enquiries.repository.js";
 import { EnquiryEventsRepository, type EnquiryEventRow } from "./enquiry-events.repository.js";
-import { buildStaffPatch, isInherentlyInternalEvent, staffId } from "./enquiries.helpers.js";
+import {
+  buildStaffPatch,
+  buildStatusPatch,
+  guardChargeableStage,
+  isInherentlyInternalEvent,
+  staffId,
+} from "./enquiries.helpers.js";
 import {
   toEnquiryClientDetailView,
   toEnquiryEventView,
@@ -56,6 +64,8 @@ export class EnquiriesService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly notifications: NotificationService,
+    private readonly config: ConfigService,
+    private readonly agreements: ServiceAgreementsService,
     private readonly logger: AppLogger,
   ) {}
 
@@ -118,7 +128,8 @@ export class EnquiriesService {
     ) {
       throw errors.forbidden(`You cannot move this enquiry from ${current.status} to ${to}`);
     }
-    const patch = this.statusPatch(current, request, to);
+    await guardChargeableStage(this.config, this.agreements, current.id, to);
+    const patch = buildStatusPatch(request, to);
     await this.persistTransition(current, patch, to, request.summary, staffId(principal));
     if (isClientVisibleStatus(to)) {
       await this.notifyClient(current.accountId, current.id).catch(() =>
@@ -271,24 +282,6 @@ export class EnquiriesService {
       await this.requireInScope(id, principal, access),
       this.canReadInternalNotes(principal),
     );
-  }
-
-  private statusPatch(
-    current: EnquiryRow,
-    request: HotelEnquiryStatusUpdateRequest,
-    to: HotelEnquiryStatus,
-  ): EnquiryStatusPatch {
-    if (to === "confirmed") {
-      // AC-05.6: confirmed needs a done `confirmed` milestone + a signed contract (feature 10.5) — not yet reachable.
-      throw errors.conflict(
-        "Confirming an enquiry needs a completed booking milestone and a signed contract (feature 10.5)",
-      );
-    }
-    if (to === "closed") {
-      if (!request.outcome) throw errors.conflict("An outcome is required to close an enquiry");
-      return { status: to, outcome: request.outcome, closedAt: new Date() };
-    }
-    return { status: to };
   }
 
   private canReadInternalNotes(principal: Principal): boolean {
