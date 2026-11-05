@@ -1496,6 +1496,19 @@ enum SiteVisitStatus {
   cancelled
 }
 
+/// A hotel proposal's lifecycle (data-model §6, feature 10.4). Hand-rolled in the consultancy module
+/// (not a packages/policy STATUS_MACHINE §7): draft → shared → accepted|declined|revision_requested; a
+/// revision issues a new version that supersedes its predecessor. Shared and later versions are
+/// immutable (a change is a new version, data-model §1); accepted/declined/superseded are terminal.
+enum HotelProposalStatus {
+  draft
+  shared
+  revision_requested
+  accepted
+  declined
+  superseded
+}
+
 /// A hotel enquiry: the root of the consultancy pipeline (§6). account_id (Module B) owns it before a
 /// wedding project exists; project_id is back-filled when the project is created (GP-27). The client
 /// sees status + client fields (functions_summary, notes_client) + non-internal events; notes_internal
@@ -1530,6 +1543,7 @@ model HotelEnquiry {
 
   events     HotelEnquiryEvent[]
   siteVisits SiteVisit[]
+  proposals  HotelProposal[]
 
   // A partial unique index on (account_id, hotel_id) WHERE status <> 'closed' AND deleted_at IS NULL
   // enforces one open enquiry per account+hotel (AC-26 idempotency backstop). Prisma cannot express a
@@ -1602,6 +1616,79 @@ model SiteVisit {
   @@index([hotelId])
   @@index([deletedAt])
   @@map("site_visits")
+}
+
+/// A negotiated hotel proposal for an enquiry (data-model §6, feature 10.4, AC-05.2/AC-09). The
+/// commercial heart: `client_total_amount` is CLIENT (A-4, what the account pays) and
+/// `internal_total_amount` is RESTRICTED-FINANCE (hotel net / commission basis); the margin is DERIVED
+/// (client − internal), never a column. One response model per audience (security.md): the client view
+/// carries the client total + `client_visible` lines only; the internal total, the margin and the
+/// non-visible lines never reach a client. Immutable once shared — a change is a new version that
+/// supersedes the old (`supersedes_proposal_id`, `version_number`), and approvals (Module I, nullable)
+/// reference the exact version. `document_id` (Module N) and `approval_id` are plain columns meanwhile.
+model HotelProposal {
+  id                  String              @id @default(uuid(7)) @db.Uuid
+  enquiryId           String              @map("enquiry_id") @db.Uuid
+  /// The enquiry's hotel (Module C); a plain column, no Prisma relation (cross-module).
+  hotelId             String              @map("hotel_id") @db.Uuid
+  versionNumber       Int                 @map("version_number")
+  status              HotelProposalStatus @default(draft)
+  validUntil          DateTime?           @map("valid_until") @db.Date
+  clientTotalAmount   Decimal             @map("client_total_amount") @db.Decimal(14, 2)
+  internalTotalAmount Decimal             @map("internal_total_amount") @db.Decimal(14, 2)
+  currency            String              @default("INR") @db.VarChar(3)
+  /// Gains its FK when the documents service (module N) lands; a plain column meanwhile.
+  documentId          String?             @map("document_id") @db.Uuid
+  sharedAt            DateTime?           @map("shared_at") @db.Timestamptz(6)
+  decidedAt           DateTime?           @map("decided_at") @db.Timestamptz(6)
+  decidedByUserId     String?             @map("decided_by_user_id") @db.Uuid
+  /// Gains its FK when approvals (module I) land; a plain column meanwhile (brief §2.3).
+  approvalId          String?             @map("approval_id") @db.Uuid
+  /// Self-reference to the version this one supersedes; a plain column (set within the revision txn).
+  supersedesProposalId String?            @map("supersedes_proposal_id") @db.Uuid
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  enquiry HotelEnquiry        @relation(fields: [enquiryId], references: [id])
+  lines   HotelProposalLine[]
+
+  @@unique([enquiryId, versionNumber])
+  @@index([enquiryId, status])
+  @@index([hotelId])
+  @@index([status])
+  @@index([deletedAt])
+  @@map("hotel_proposals")
+}
+
+/// A line of a hotel proposal (data-model §6). `item_type` reuses the `hotel_rate_items` enumeration.
+/// `client_visible` is per line: the client view carries only client-visible lines, the internal view
+/// all of them. Lines are owned per version (a revision creates new lines), so they are immutable once
+/// their proposal is shared.
+model HotelProposalLine {
+  id            String           @id @default(uuid(7)) @db.Uuid
+  proposalId    String           @map("proposal_id") @db.Uuid
+  itemType      HotelRateItemType @map("item_type")
+  description   String           @db.Text
+  quantity      Decimal          @db.Decimal(14, 2)
+  unitAmount    Decimal          @map("unit_amount") @db.Decimal(14, 2)
+  totalAmount   Decimal          @map("total_amount") @db.Decimal(14, 2)
+  clientVisible Boolean          @map("client_visible")
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  proposal HotelProposal @relation(fields: [proposalId], references: [id])
+
+  @@index([proposalId])
+  @@index([deletedAt])
+  @@map("hotel_proposal_lines")
 }
 
 // ---------------------------------------------------------------- Module N — documents and media

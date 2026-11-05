@@ -396,9 +396,9 @@
     "semantic_hash": "562555e66a64d3c212ed7956753475b6"
   },
   "packages/api-client/src/index.ts": {
-    "mtime": 1793841969.3405504,
-    "seen": 1793843800.967941,
-    "ast_hash": "68b457cc84f06f0cfb124ece04834955",
+    "mtime": 1793891905.4808314,
+    "seen": 1793893953.875823,
+    "ast_hash": "58cdae36df7f917dd75b860d806826b5",
     "semantic_hash": ""
   },
   "packages/api-client/tsconfig.json": {
@@ -1752,9 +1752,9 @@
     "semantic_hash": ""
   },
   "packages/core/src/schemas/index.ts": {
-    "mtime": 1793841504.311093,
-    "seen": 1793843800.968736,
-    "ast_hash": "f3648763baddcf4bb0f93044943a45a4",
+    "mtime": 1793891431.8053613,
+    "seen": 1793893953.876642,
+    "ast_hash": "480c4d3f1942c4ad4c3cdfca5ae6b860",
     "semantic_hash": ""
   },
   "packages/core/tsup.config.ts": {
@@ -1794,15 +1794,15 @@
     "semantic_hash": ""
   },
   "packages/policy/src/generated/matrix.json": {
-    "mtime": 1793841534.019708,
-    "seen": 1793843800.9694872,
-    "ast_hash": "d9fecd4f0e2cd0bd249377154dfa1c1b",
+    "mtime": 1793892722.228,
+    "seen": 1793893953.877455,
+    "ast_hash": "c25508c70cfbdcc3f8705c501608c475",
     "semantic_hash": ""
   },
   "packages/policy/src/resources.ts": {
-    "mtime": 1793841526.8968341,
-    "seen": 1793843800.9698591,
-    "ast_hash": "4aa1639326dc2a508e60a672a1101290",
+    "mtime": 1793891297.9850428,
+    "seen": 1793893953.877855,
+    "ast_hash": "539f85f14af2d0cc349e3eca5a068d05",
     "semantic_hash": ""
   },
   "packages/policy/src/roles.ts": {
@@ -2376,9 +2376,9 @@
     "semantic_hash": ""
   },
   "packages/policy/src/document-keys.ts": {
-    "mtime": 1793590156.299854,
-    "seen": 1793774757.562918,
-    "ast_hash": "8503b348839248d734c5a8e34b13eea7",
+    "mtime": 1793891303.610126,
+    "seen": 1793893953.877335,
+    "ast_hash": "240aa1b80a78cdc5fb2a9ba728973586",
     "semantic_hash": ""
   },
   "packages/policy/src/golden/class-contexts.ts": {
@@ -2406,9 +2406,9 @@
     "semantic_hash": ""
   },
   "packages/policy/src/golden/key-aliases.ts": {
-    "mtime": 1793768263.9004343,
-    "seen": 1793774757.562927,
-    "ast_hash": "81b05911c5e7045b5b903b1ab1d76ef0",
+    "mtime": 1793891307.6226764,
+    "seen": 1793893953.877537,
+    "ast_hash": "99796b175350b85f9ee9f6081718886f",
     "semantic_hash": ""
   },
   "packages/policy/src/record-rows.test.ts": {
@@ -2694,9 +2694,9 @@
     "semantic_hash": ""
   },
   "packages/policy/src/generated/capabilities.json": {
-    "mtime": 1793841534.022205,
-    "seen": 1793843800.969486,
-    "ast_hash": "b538a374c9b7ce8525412b7e01b6ca6a",
+    "mtime": 1793892722.2299075,
+    "seen": 1793893953.877455,
+    "ast_hash": "23eecd30b054b7d058ea2c9c7f2a6981",
     "semantic_hash": ""
   },
   "apps/api/src/policy/audit-coverage.spec.ts": {
@@ -4380,9 +4380,9 @@
     "semantic_hash": ""
   },
   "apps/api/src/modules/consultancy/consultancy.module.ts": {
-    "mtime": 1793841930.7595491,
-    "seen": 1793843800.962697,
-    "ast_hash": "5a1903b9b75c1974aec0478a74a338fa",
+    "mtime": 1793891865.9632742,
+    "seen": 1793893953.870191,
+    "ast_hash": "f80f7375e3bbd67248f911dca1fc2aed",
     "semantic_hash": ""
   },
   "apps/api/src/modules/consultancy/enquiries-client.controller.ts": {
@@ -4677,6 +4677,102 @@
     "mtime": 1793841496.7935138,
     "seen": 1793843800.9688802,
     "ast_hash": "8b22e64f277a85668d56de44111977c9",
+    "semantic_hash": ""
+  },
+  "apps/api/src/modules/consultancy/proposal-status.ts": {
+    "mtime": 1793891493.8336806,
+    "seen": 1793893953.870386,
+    "ast_hash": "cb37df2ce5416407d8ae43b524b62661",
+    "semantic_hash": ""
+  },
+  "apps/api/src/modules/consultancy/proposals-client.controller.ts": {
+    "mtime": 1793891846.4555488,
+    "seen": 1793893953.8703868,
+    "ast_hash": "483b48e998fbcd7df08f51d4ef6d3d73",
+    "semantic_hash": ""
+  },
+  "apps/api/src/modules/consultancy/proposals-client.service.ts": {
+    "mtime": 1793891795.745506,
+    "seen": 1793893953.870388,
+    "ast_hash": "8047732a9b8693b9e99955673b0bab36",
+    "semantic_hash": ""
+  },
+  "apps/api/src/modules/consultancy/proposals.controller.ts": {
+    "mtime": 1793891819.330724,
+    "seen": 1793893953.870389,
+    "ast_hash": "621d0011e9d833b4ed3283bf6bd47ab0",
+    "semantic_hash": ""
+  },
+  "apps/api/src/modules/consultancy/proposals.events.ts": {
+    "mtime": 1793892150.3920429,
+    "seen": 1793893953.87039,
+    "ast_hash": "50b6843ce936d31e5d267db8339bcade",
+    "semantic_hash": ""
+  },
+  "apps/api/src/modules/consultancy/proposals.helpers.ts": {
+    "mtime": 1793894990.1302946,
+    "seen": 1793895310.968698,
+    "ast_hash": "f164d0f18a76a548740d0d4e0b0546d3",
+    "semantic_hash": ""
+  },
+  "apps/api/src/modules/consultancy/proposals.money.ts": {
+    "mtime": 1793894757.1430821,
+    "seen": 1793895310.968699,
+    "ast_hash": "8aae0d48e309c1fd7ab5fb03897f0660",
+    "semantic_hash": ""
+  },
+  "apps/api/src/modules/consultancy/proposals.repository.ts": {
+    "mtime": 1793894757.1537392,
+    "seen": 1793895310.968699,
+    "ast_hash": "3a1b1dfcbd97c3ad25330a47a57a4034",
+    "semantic_hash": ""
+  },
+  "apps/api/src/modules/consultancy/proposals.service.spec.ts": {
+    "mtime": 1793894757.167083,
+    "seen": 1793895310.9687,
+    "ast_hash": "dcca98c65c0b04c777f4308b108580e7",
+    "semantic_hash": ""
+  },
+  "apps/api/src/modules/consultancy/proposals.service.ts": {
+    "mtime": 1793895040.6141386,
+    "seen": 1793895310.968701,
+    "ast_hash": "6dd45af5a81324efb2b1002f87144b57",
+    "semantic_hash": ""
+  },
+  "apps/api/src/modules/consultancy/proposals.view.ts": {
+    "mtime": 1793891583.7035997,
+    "seen": 1793893953.870393,
+    "ast_hash": "9bf943a4df2da05816e4461b704cf5d3",
+    "semantic_hash": ""
+  },
+  "apps/api/test/proposals.e2e-spec.ts": {
+    "mtime": 1793895143.2881403,
+    "seen": 1793895310.971606,
+    "ast_hash": "6e259d950d578db7b1ee9d51be44da29",
+    "semantic_hash": ""
+  },
+  "packages/api-client/src/hooks/use-decide-hotel-proposal.ts": {
+    "mtime": 1793891900.4500914,
+    "seen": 1793893953.875486,
+    "ast_hash": "2d0ddd48d70759837f03ef96a2d80722",
+    "semantic_hash": ""
+  },
+  "packages/api-client/src/hooks/use-hotel-proposals.ts": {
+    "mtime": 1793891893.0536723,
+    "seen": 1793893953.87552,
+    "ast_hash": "6e64c5bb11fceaaa7454442f5da8d4cf",
+    "semantic_hash": ""
+  },
+  "packages/core/src/schemas/hotel-proposals.test.ts": {
+    "mtime": 1793894757.2251005,
+    "seen": 1793895310.974734,
+    "ast_hash": "6b13c869a54702d5dd444c0a99b474d7",
+    "semantic_hash": ""
+  },
+  "packages/core/src/schemas/hotel-proposals.ts": {
+    "mtime": 1793894757.2202387,
+    "seen": 1793895310.974735,
+    "ast_hash": "278e021f103ad96898d162a737682941",
     "semantic_hash": ""
   }
 }

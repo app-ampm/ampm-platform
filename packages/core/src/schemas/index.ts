@@ -303,3 +303,7 @@ export * from "./service-agreements";
 // Module D hotel site visits (site-visits.ts), feature 10.3. Dual-audience: the client sees date/status
 // + own feedback; attendees and the internal outcome never reach a client (AC-05.5).
 export * from "./site-visits";
+// Module D hotel proposals (hotel-proposals.ts), feature 10.4. Two response models: the client total +
+// client-visible lines for the client; the internal total + derived margin only for read_internal_amount
+// holders (AC-05.2). Versioned + immutable once shared (AC-09).
+export * from "./hotel-proposals";
