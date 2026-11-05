@@ -2469,7 +2469,7 @@
       "module": "consultancy",
       "resource": "booking_milestones",
       "label": "Booking milestones",
-      "provisional": true,
+      "provisional": false,
       "cells": {
         "SA": "CRU",
         "SM": "R",

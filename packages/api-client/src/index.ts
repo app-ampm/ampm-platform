@@ -50,3 +50,9 @@ export {
   useHotelProposals,
 } from "./hooks/use-hotel-proposals";
 export { useDecideHotelProposal } from "./hooks/use-decide-hotel-proposal";
+export {
+  bookingMilestoneQueryKey,
+  bookingMilestonesQueryKey,
+  useBookingMilestone,
+  useBookingMilestones,
+} from "./hooks/use-booking-milestones";
