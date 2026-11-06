@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   hotelProposalInternalPage,
   hotelProposalInternalView,
+  type HotelProposalCreateRequest,
   type HotelProposalInternalPage,
   type HotelProposalInternalView,
 } from "@ampm/core";
@@ -30,6 +31,26 @@ export function useStaffProposals(enquiryId: string) {
         signal,
       ),
     enabled: Boolean(enquiryId),
+  });
+}
+
+/** Draft a new proposal for an enquiry (`POST /consultancy-admin/proposals`); starts at version 1,
+ *  `draft`. Both totals are entered (A-4); the margin is derived server-side and is never sent. */
+export function useCreateProposal(enquiryId: string) {
+  const api = useApiClient();
+  const queryClient = useQueryClient();
+  return useMutation<HotelProposalInternalView, Error, HotelProposalCreateRequest>({
+    mutationFn: (body) =>
+      api.request("/consultancy-admin/proposals", {
+        method: "POST",
+        body,
+        schema: hotelProposalInternalView,
+      }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: staffProposalsQueryKey(enquiryId) });
+      void queryClient.invalidateQueries({ queryKey: staffEnquiryQueryKey(enquiryId) });
+      void queryClient.invalidateQueries({ queryKey: STAFF_ENQUIRIES_QUERY_KEY });
+    },
   });
 }
 

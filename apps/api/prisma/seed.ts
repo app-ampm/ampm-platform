@@ -35,6 +35,8 @@ export const SEED = {
   // Creative: create and read only on the wedding's incidents (permission-matrix §5.13 line 296).
   creative: { email: "creative@example.com", name: "Chitra Creative", subject: "local:cd" },
   sales: { email: "sales@example.com", name: "Sameer Sales", subject: "local:sm" },
+  // Hotel / Destination team: drives the hotel-enquiry pipeline's early stages (the SA cannot) — Slice 3.
+  hotelTeam: { email: "hotel@example.com", name: "Hema Hotels", subject: "local:ht" },
   client: { email: "client@example.com", name: "Rhea Client", subject: "local:client" },
   disabled: { email: "disabled@example.com", name: "Dev Disabled", subject: "local:disabled" },
   projectId: "0192f3a0-7d3e-7b1a-9c2f-0000000000a1",
@@ -150,6 +152,8 @@ async function seedStaff(roleIds: ReadonlyMap<StaffRole, string>): Promise<void>
   await joinProject(creative.id, "staff");
   const sales = await upsertAccount(SEED.sales, { userType: "staff", mfaEnabled: true });
   await assignRole(sales.id, roleId(roleIds, "SM"));
+  const hotelTeam = await upsertAccount(SEED.hotelTeam, { userType: "staff", mfaEnabled: true });
+  await assignRole(hotelTeam.id, roleId(roleIds, "HT"));
   await upsertAccount(SEED.disabled, { userType: "staff", status: "disabled" });
 }
 
