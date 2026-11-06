@@ -18,7 +18,7 @@ cd "$(dirname "$0")/.."
 BASE="infra/compose/local/compose.yml"
 # The box keeps its own override here — it publishes the API on 127.0.0.1:7001 and sets
 # CORS_ORIGINS / WEB_APP_URL / TRUST_PROXY for the public origin. It is box-specific and not committed;
-# infra/compose/local/compose.test-override.example.yml is the template to copy onto the box.
+# deploy/app-ampmverse/compose.test-override.example.yml is the template to copy onto the box.
 OVR="infra/compose/local/compose.test-override.yml"
 COMPOSE="docker compose -f ${BASE} -f ${OVR}"
 

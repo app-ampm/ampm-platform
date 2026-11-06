@@ -66,5 +66,5 @@ Hotel-team account), the hotels, and the client's consultancy chain plus a fresh
 The script composes `infra/compose/local/compose.yml` with the box-only `compose.test-override.yml` (which
 publishes the API on `127.0.0.1:7001` and sets `CORS_ORIGINS`/`WEB_APP_URL`/`TRUST_PROXY`); that override is
 box-specific and not committed —
-[`compose.test-override.example.yml`](../../infra/compose/local/compose.test-override.example.yml) beside it
+[`compose.test-override.example.yml`](../../deploy/app-ampmverse/compose.test-override.example.yml)
 is the template to copy onto the box.
