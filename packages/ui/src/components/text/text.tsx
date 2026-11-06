@@ -36,6 +36,14 @@ const HEADING_VARIANTS: ReadonlySet<TextVariant> = new Set([
 const CAPPED_VARIANTS: ReadonlySet<TextVariant> = new Set(["hero", "display", "title", "stat"]);
 
 /**
+ * NativeWind cannot express `font-variant-numeric` on native (it warns and drops `tabular-nums`), so
+ * the data variants also set React Native's own `fontVariant`: prices, dates and counts keep aligned
+ * digits on iOS and Android as they do on the web. A constant, not a theme value.
+ */
+const TABULAR_VARIANTS: ReadonlySet<TextVariant> = new Set(["data", "mono"]);
+const TABULAR_STYLE = { fontVariant: ["tabular-nums" as const] };
+
+/**
  * The one way to put words on screen. Headings announce themselves as headers to screen readers;
  * font scaling stays on (accessibility rules), capped for the display sizes so layouts survive.
  *
@@ -51,6 +59,7 @@ export function Text({
   align,
   className,
   accessibilityRole,
+  style,
   ...rest
 }: TextProps) {
   const role = accessibilityRole ?? (HEADING_VARIANTS.has(variant) ? "header" : undefined);
@@ -64,6 +73,7 @@ export function Text({
         textStyles({ variant, tone: resolvedTone, weight: resolvedWeight, align }),
         className,
       )}
+      style={TABULAR_VARIANTS.has(variant) ? [TABULAR_STYLE, style] : style}
       {...rest}
     />
   );

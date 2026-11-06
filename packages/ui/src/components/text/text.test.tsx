@@ -44,4 +44,11 @@ describe("Text", () => {
     expect(screen.getByText("Paragraph").props.className).toContain("text-body");
     expect(screen.getByText("Label").props.className).toContain("text-muted");
   });
+
+  it("keeps tabular digits on native for data", async () => {
+    await renderWithProviders(<Text variant="data">₹16,000–24,000</Text>);
+    expect(JSON.stringify(screen.getByText("₹16,000–24,000").props.style)).toContain(
+      "tabular-nums",
+    );
+  });
 });
