@@ -72,8 +72,13 @@ export function SignInScreen() {
       <EmailSignIn onSubmit={signIn} pending={pending} errorText={errorText} />
       <QuickSignIn title="Staff" users={DEMO_STAFF} onPick={signIn} pending={pending} />
       <QuickSignIn title="Client" users={DEMO_CLIENTS} onPick={signIn} pending={pending} />
-      <Link href="/gallery" variant="standalone" tone="muted">
-        Component gallery
+      <Link
+        href="/gallery"
+        variant="standalone"
+        tone="muted"
+        accessibilityLabel="Component gallery"
+      >
+        Component gallery →
       </Link>
     </ScrollView>
   );

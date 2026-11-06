@@ -1,15 +1,15 @@
-import { ScrollView, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import type { ReactNode } from "react";
+import { View } from "react-native";
 
-import { Button } from "../components/button";
 import { Card } from "../components/card";
-import { Row, Stack } from "../components/layout";
+import { Row } from "../components/layout";
+import { Screen } from "../components/screen";
+import { ScreenHeader } from "../components/screen-header";
 import { StatusChip } from "../components/status-chip";
 import { Text } from "../components/text";
 import { useBreakpoint } from "../hooks/use-breakpoint";
 import { useIsClient } from "../hooks/use-is-client";
 import { allStories, type Story, type StoryModule } from "../stories";
-import { useTheme } from "../theme/theme-provider";
 
 function chunk<T>(items: readonly T[], size: number): T[][] {
   const rows: T[][] = [];
@@ -17,20 +17,29 @@ function chunk<T>(items: readonly T[], size: number): T[][] {
   return rows;
 }
 
-function StoryCell({ story }: { story: Story }) {
+/** One variant or state, on a flat tint inside its section: rows inside panels are flat. */
+function StoryCell({ story }: { readonly story: Story }) {
   return (
-    <Card padding="md" className="flex-1 gap-3">
-      <Text variant="caption" tone="muted">
-        {story.name}
-      </Text>
+    <Card tone="flat" padding="sm" className="flex-1 gap-3">
+      <Text variant="label">{story.name}</Text>
+      {story.description ? (
+        <Text variant="bodySmall" tone="muted">
+          {story.description}
+        </Text>
+      ) : null}
       {story.render()}
     </Card>
   );
 }
 
-function Section({ module, columns }: { module: StoryModule; columns: number }) {
+/**
+ * A component's stories in one section, one to three cells a row. The section is glass that does not
+ * blur: the stories' own top-level panels (glass cards, tab bars, the rail, notices) are the only blur,
+ * as they are on a screen, so the catalogue never draws blur on blur (§3: only top-level panels blur).
+ */
+function Section({ module, columns }: { readonly module: StoryModule; readonly columns: number }) {
   return (
-    <Stack gap={3}>
+    <Card blur={false} className="gap-4 md:p-7" testID={`gallery-section-${module.title}`}>
       <Text variant="heading">{module.title}</Text>
       {chunk(module.stories, columns).map((row, index) => (
         <Row key={index} gap={3} align="start">
@@ -44,49 +53,49 @@ function Section({ module, columns }: { module: StoryModule; columns: number }) 
             : null}
         </Row>
       ))}
-    </Stack>
+    </Card>
   );
 }
 
+export interface GalleryProps {
+  /**
+   * A sticky glass bar under the catalogue (Screen's footer), for the app's own shortcuts; Screen
+   * keeps it clear of the home indicator and keeps room for it at the end of the scroll.
+   */
+  readonly footer?: ReactNode;
+}
+
 /**
- * Every component in every variant and state, on phone, tablet and web (standards §2.7 step 4).
- * One column on a phone, two on a tablet, three on a desktop window; the header switches the scheme.
+ * Every component in every variant and state, on phone, tablet and web (standards §2.7 step 4), on
+ * the Peacock Night canvas: the Screen scaffold with its glow, a section per component and a flat cell
+ * per story. One column on a phone, two on a tablet, three on a desktop window; the chip shows the
+ * breakpoint. Dark only: there is no scheme to switch.
+ *
+ *   <Gallery footer={<Row gap={2} justify="end"><Link href="/account" variant="nav">Account</Link></Row>} />
  */
-export function Gallery() {
-  const { resolved, toggle } = useTheme();
+export function Gallery({ footer }: GalleryProps = {}) {
   const { breakpoint, width, isPhone, isTablet } = useBreakpoint();
-  const insets = useSafeAreaInsets();
   // The server knows no window: it renders the phone layout and the client takes over after hydration.
   const isClient = useIsClient();
   const columns = !isClient || isPhone ? 1 : isTablet ? 2 : 3;
   const sizeLabel = isClient ? `${breakpoint} · ${Math.round(width)} px` : "…";
   return (
-    <ScrollView
-      className="flex-1 bg-surface"
-      contentContainerClassName="gap-8 p-4 pb-12 md:p-8"
-      style={{ paddingTop: insets.top }}
+    <Screen
       testID="gallery"
+      contentClassName="gap-4.5"
+      footer={footer}
+      header={
+        <ScreenHeader
+          eyebrow="Peacock Night"
+          title="AMPM UI"
+          subtitle="Every component of the kit, in each variant and state."
+          trailing={<StatusChip label={sizeLabel} tone="info" size="sm" />}
+        />
+      }
     >
-      <Row justify="between" wrap gap={3}>
-        <Stack gap={1}>
-          <Text variant="title">AMPM UI</Text>
-          <Row gap={2}>
-            <StatusChip label={sizeLabel} tone="brand" size="sm" />
-            <StatusChip label={resolved} size="sm" icon={resolved === "dark" ? "moon" : "sun"} />
-          </Row>
-        </Stack>
-        <Button
-          variant="secondary"
-          size="sm"
-          icon={resolved === "dark" ? "sun" : "moon"}
-          onPress={toggle}
-        >
-          {resolved === "dark" ? "Light" : "Dark"}
-        </Button>
-      </Row>
       {allStories.map((module) => (
         <Section key={module.title} module={module} columns={columns} />
       ))}
-    </ScrollView>
+    </Screen>
   );
 }

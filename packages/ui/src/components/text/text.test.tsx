@@ -1,3 +1,5 @@
+import { StyleSheet } from "react-native";
+
 import { renderWithProviders, screen } from "../../test/render";
 import { Text } from "./text";
 import { textStyles } from "./text.styles";
@@ -50,5 +52,23 @@ describe("Text", () => {
     expect(JSON.stringify(screen.getByText("₹16,000–24,000").props.style)).toContain(
       "tabular-nums",
     );
+  });
+
+  // NativeWind drops the tabular-nums class on native; a caller asking for it gets fontVariant.
+  it("keeps tabular digits on native wherever the class asks for them", async () => {
+    await renderWithProviders(
+      <>
+        <Text variant="title" className="text-right tabular-nums">
+          ₹50,000
+        </Text>
+        <Text variant="caption">200 hotels</Text>
+        <Text className="web:tabular-nums">12</Text>
+      </>,
+    );
+    expect(StyleSheet.flatten(screen.getByText("₹50,000").props.style)).toEqual({
+      fontVariant: ["tabular-nums"],
+    });
+    expect(StyleSheet.flatten(screen.getByText("200 hotels").props.style)).toBeUndefined();
+    expect(StyleSheet.flatten(screen.getByText("12").props.style)).toBeUndefined();
   });
 });

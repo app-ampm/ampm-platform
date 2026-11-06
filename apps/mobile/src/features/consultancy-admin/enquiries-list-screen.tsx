@@ -77,8 +77,8 @@ function StaffHeader() {
           Sign out
         </Button>
       </Row>
-      <Link href="/leads" variant="standalone" tone="muted">
-        Leads workspace
+      <Link href="/leads" variant="standalone" tone="muted" accessibilityLabel="Leads workspace">
+        Leads workspace →
       </Link>
     </Stack>
   );

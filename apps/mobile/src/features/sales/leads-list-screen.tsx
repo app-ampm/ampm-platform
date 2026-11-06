@@ -79,8 +79,13 @@ function WorkspaceHeader() {
           Sign out
         </Button>
       </Row>
-      <Link href="/enquiries" variant="standalone" tone="muted">
-        Hotel enquiries
+      <Link
+        href="/enquiries"
+        variant="standalone"
+        tone="muted"
+        accessibilityLabel="Hotel enquiries"
+      >
+        Hotel enquiries →
       </Link>
     </Stack>
   );

@@ -22,7 +22,8 @@ export interface ToastProviderProps {
 
 /**
  * Brief confirmations and non-blocking warnings. Mount once near the root; `useToast()` anywhere
- * below. Toasts are announced politely, dismiss on a timer or a tap, and stack newest first.
+ * below. Toasts are announced politely, dismiss on a timer (unless they carry an action) or a tap,
+ * and stack newest first.
  */
 export function ToastProvider({ children, dismissLabel }: ToastProviderProps) {
   const [items, setItems] = useState<readonly ToastItem[]>([]);
@@ -40,7 +41,9 @@ export function ToastProvider({ children, dismissLabel }: ToastProviderProps) {
     (options: ToastOptions) => {
       const id = nextId.current++;
       setItems((current) => [{ ...options, id }, ...current]);
-      const duration = options.durationMs ?? DEFAULT_TOAST_DURATION_MS;
+      // A toast with an action stays until it is dismissed (WCAG 2.2.1): someone moving to "View" with
+      // a keyboard or a screen reader must not lose it on a timer.
+      const duration = options.durationMs ?? (options.action ? 0 : DEFAULT_TOAST_DURATION_MS);
       if (duration > 0)
         timers.current.set(
           id,

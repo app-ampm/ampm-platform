@@ -6,6 +6,7 @@ import { uiCopy } from "../../copy";
 import { useReducedMotion } from "../../hooks/use-reduced-motion";
 import { cn } from "../../lib/cn";
 import { Button } from "../button";
+import { GlassPanel } from "../glass-panel";
 import { Text } from "../text";
 
 export interface SheetProps {
@@ -23,6 +24,12 @@ export interface SheetProps {
 
 const SIZE = { auto: "max-h-full", half: "h-1/2", full: "h-full rounded-t-none" } as const;
 
+/**
+ * The panel: base glass with only its top edge stroked, radius 28 on the top corners, the phone's
+ * 18 gutter. GlassPanel blurs on the web and iOS and draws the opaque fallback on Android.
+ */
+const PANEL = "rounded-none rounded-t-2xl border-0 border-t px-4.5 pt-3";
+
 function SheetHeader({
   title,
   closeLabel,
@@ -34,13 +41,13 @@ function SheetHeader({
 }) {
   return (
     <>
-      <View className="mb-3 h-1 w-10 self-center rounded-full bg-strong" />
+      <View className="mb-3 h-1 w-10 self-center rounded-full bg-primary/26" />
       <View className="mb-2 flex-row items-center justify-between gap-2">
         <Text variant="heading" className="flex-1" numberOfLines={2}>
           {title}
         </Text>
         <Button
-          variant="ghost"
+          variant="glass"
           size="sm"
           icon="x"
           accessibilityLabel={closeLabel}
@@ -60,8 +67,8 @@ interface ScrimProps {
 function SheetScrim({ onClose, label, testID }: ScrimProps) {
   return (
     <Pressable
-      // Absolute: the scrim fills the screen behind the panel and closes the sheet on press.
-      className="absolute inset-0 bg-overlay/50"
+      // Absolute: the midnight 70% scrim fills the screen behind the panel and closes the sheet.
+      className="absolute inset-0 bg-overlay/70"
       onPress={onClose}
       accessibilityRole="button"
       accessibilityLabel={label}
@@ -86,8 +93,10 @@ function SheetBody({ children, footer }: { children: ReactNode; footer: ReactNod
 }
 
 /**
- * A bottom sheet on a modal: focus stays inside (React Native Web traps it, native treats it as a
- * modal view), the scrim and the close button both dismiss, the slide respects reduced motion.
+ * A bottom sheet on a modal, in Peacock Night glass: a midnight 70% scrim, a base-glass panel with
+ * radius 28 on its top corners, a pearl handle, a Gilda Display title and a glass close button. Focus
+ * stays inside (React Native Web traps it, native treats it as a modal view), the scrim and the close
+ * button both dismiss, the slide respects reduced motion.
  *
  *   <Sheet open={open} onClose={close} title="Filters" footer={<Button onPress={apply}>Apply</Button>}>...</Sheet>
  */
@@ -114,14 +123,18 @@ export function Sheet({
     >
       <View className="flex-1 justify-end">
         <SheetScrim onClose={onClose} label={closeLabel} testID={testID} />
-        <View
+        <GlassPanel
           accessibilityViewIsModal
-          className={cn("rounded-t-2xl bg-surface-elevated px-4 pt-3", SIZE[size])}
-          style={{ paddingBottom: insets.bottom + 16 }}
+          className={cn(PANEL, SIZE[size])}
+          // The home indicator's inset is a run-time number; the 16 above it is the class below.
+          style={{ paddingBottom: insets.bottom }}
+          testID={testID ? `${testID}-panel` : undefined}
         >
-          <SheetHeader title={title} closeLabel={closeLabel} onClose={onClose} />
-          <SheetBody footer={footer}>{children}</SheetBody>
-        </View>
+          <View className="shrink pb-4" testID={testID ? `${testID}-content` : undefined}>
+            <SheetHeader title={title} closeLabel={closeLabel} onClose={onClose} />
+            <SheetBody footer={footer}>{children}</SheetBody>
+          </View>
+        </GlassPanel>
       </View>
     </Modal>
   );

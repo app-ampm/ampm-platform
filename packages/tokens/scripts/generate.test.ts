@@ -92,6 +92,13 @@ describe("Peacock Night palette", () => {
     expect(glow.gold.color).toBe(palette.gold);
   });
 
+  it("gives the spacing steps in pixels for layout maths", async () => {
+    const { spacingPx } = await import("../src/spacing.ts");
+    expect(spacingPx["6.5"]).toBe(26);
+    expect(spacingPx["4.5"]).toBe(18);
+    expect(spacingPx.px).toBe(1);
+  });
+
   it("offers the opacity steps the glass recipes need", () => {
     for (const step of ["6", "12", "14", "16", "20", "30", "40", "50", "58", "70", "80"])
       expect(opacity).toHaveProperty(step);

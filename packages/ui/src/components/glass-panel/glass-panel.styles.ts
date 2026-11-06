@@ -74,3 +74,12 @@ export const flatTintStyles = "border border-primary/12 bg-primary/6";
 /** Every focusable control on the web: a gold border and the 4px gold 18% halo, no outline. */
 export const focusRingStyles =
   "web:focus-visible:border-brand web:focus-visible:shadow-halo web:focus-visible:outline-none";
+
+/**
+ * The same focus ring on a part inside a focusable `group` (the box of a checkbox row, the track of a
+ * switch, the pill inside a segment's or a chip's 44px target): the part shows the gold border and halo
+ * while its pressable ancestor has keyboard focus. That ancestor takes `group web:outline-none`, and the
+ * part keeps a 1px border (transparent until then) so focus never changes its size.
+ */
+export const groupFocusRingStyles =
+  "web:group-focus-visible:border-brand web:group-focus-visible:shadow-halo";

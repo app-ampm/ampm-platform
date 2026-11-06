@@ -4,4 +4,7 @@ export { Row } from "./row";
 export type { RowProps } from "./row";
 export { Spacer } from "./spacer";
 export type { SpacerProps } from "./spacer";
-export type { Align, Gap, Justify } from "./layout.styles";
+export { Divider } from "./divider";
+export type { DividerProps } from "./divider";
+export { dividerStyles } from "./layout.styles";
+export type { Align, DividerOrientation, Gap, Justify } from "./layout.styles";

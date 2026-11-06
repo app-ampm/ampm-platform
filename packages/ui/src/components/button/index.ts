@@ -1,4 +1,4 @@
 export { Button } from "./button";
 export type { ButtonProps } from "./button";
-export { buttonStyles } from "./button.styles";
-export type { ButtonSize, ButtonVariant } from "./button.styles";
+export { buttonLabelStyles, buttonStyles } from "./button.styles";
+export type { ButtonLabelStyleProps, ButtonSize, ButtonVariant } from "./button.styles";

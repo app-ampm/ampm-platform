@@ -2,7 +2,8 @@
  * Spacing on the 4px scale (`p-2` = 8px, `gap-4` = 16px), in rem so the web honours the user's
  * font size; NativeWind inlines rem at 16 on native (apps/mobile/metro.config.js) so both platforms
  * agree. Arbitrary values are forbidden; a missing step is added here. Peacock Night adds the half
- * steps its mocks use: 6, 10 and 14 (gaps and chip padding), 18 (the phone gutter) and 22 (checkboxes).
+ * steps its mocks use: 6, 10 and 14 (gaps and chip padding), 18 (the phone gutter), 22 (checkboxes)
+ * and 26 (the floating tab bar's distance from the bottom).
  */
 export const spacing = {
   "0": "0px",
@@ -19,6 +20,7 @@ export const spacing = {
   "5": "1.25rem",
   "5.5": "1.375rem",
   "6": "1.5rem",
+  "6.5": "1.625rem",
   "7": "1.75rem",
   "8": "2rem",
   "9": "2.25rem",
@@ -49,3 +51,14 @@ export const sizes = {
   touch: "2.75rem",
   rail: "14.5rem",
 } as const;
+
+/**
+ * The spacing steps in pixels (rem at 16, as NativeWind inlines it), for the layout maths a class
+ * cannot express, such as a safe-area inset plus a gap: `insets.bottom + spacingPx["6.5"]`.
+ */
+export const spacingPx = Object.fromEntries(
+  Object.entries(spacing).map(([step, value]) => [
+    step,
+    value.endsWith("rem") ? Number.parseFloat(value) * 16 : Number.parseFloat(value),
+  ]),
+) as Record<keyof typeof spacing, number>;

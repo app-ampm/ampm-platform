@@ -1,9 +1,15 @@
 import { Activity } from "react";
 import { Platform } from "react-native";
 
+import { announcePolitely as liveRegionAnnounce } from "../lib/live-region";
 import { spyOnAnnounce } from "../test/announce";
 import { render, renderHook } from "../test/render";
-import { announcementText, useAnnounce } from "./use-announce";
+import { announcementText, politeLiveRegion, useAnnounce } from "./use-announce";
+
+// The web's live region writes to the DOM (live-region.web.ts, tested in the web project); here it
+// only records what useAnnounce sends it.
+jest.mock("../lib/live-region", () => ({ announcePolitely: jest.fn() }));
+const announcePolitely = jest.mocked(liveRegionAnnounce);
 
 interface HookProps {
   readonly message: string | undefined;
@@ -20,6 +26,7 @@ describe("useAnnounce", () => {
   let announce: jest.SpyInstance;
   beforeEach(() => {
     announce = spyOnAnnounce();
+    announcePolitely.mockClear();
   });
   afterEach(() => jest.restoreAllMocks());
 
@@ -93,6 +100,61 @@ describe("useAnnounce", () => {
     jest.replaceProperty(Platform, "OS", os);
     await renderAnnounce({ message: "Enter a name", isActive: true });
     expect(announce).not.toHaveBeenCalled();
+    expect(announcePolitely).not.toHaveBeenCalled();
+  });
+
+  describe("with { web: true }", () => {
+    function renderPolite(message: string, isActive = true) {
+      return renderHook(
+        ({ text, active }: { text: string; active: boolean }) =>
+          useAnnounce(text, active, { web: true }),
+        { initialProps: { text: message, active: isActive } },
+      );
+    }
+
+    it("speaks on the web through the page's live region, once per message", async () => {
+      jest.replaceProperty(Platform, "OS", "web");
+      const { rerender } = await renderPolite("Offline. 3 updates queued.");
+      await rerender({ text: "Offline. 3 updates queued.", active: true });
+      await rerender({ text: "Offline. 4 updates queued.", active: true });
+      expect(announcePolitely.mock.calls).toEqual([
+        ["Offline. 3 updates queued."],
+        ["Offline. 4 updates queued."],
+      ]);
+      expect(announce).not.toHaveBeenCalled();
+    });
+
+    it("stays silent on the web while inactive", async () => {
+      jest.replaceProperty(Platform, "OS", "web");
+      await renderPolite("Offline.", false);
+      expect(announcePolitely).not.toHaveBeenCalled();
+    });
+
+    it("still leaves Android to the notice's own live region, and iOS to VoiceOver", async () => {
+      jest.replaceProperty(Platform, "OS", "android");
+      await renderPolite("Offline.");
+      expect(announcePolitely).not.toHaveBeenCalled();
+      expect(announce).not.toHaveBeenCalled();
+      jest.restoreAllMocks();
+      jest.replaceProperty(Platform, "OS", "ios");
+      announce = spyOnAnnounce();
+      await renderPolite("Offline.");
+      expect(announce).toHaveBeenCalledWith("Offline.", { queue: true });
+      expect(announcePolitely).not.toHaveBeenCalled();
+    });
+  });
+});
+
+describe("politeLiveRegion", () => {
+  afterEach(() => jest.restoreAllMocks());
+
+  it("is a polite live region on Android and nothing on iOS or the web", () => {
+    jest.replaceProperty(Platform, "OS", "android");
+    expect(politeLiveRegion()).toEqual({ accessibilityLiveRegion: "polite" });
+    for (const os of ["ios", "web"] as const) {
+      jest.replaceProperty(Platform, "OS", os);
+      expect(politeLiveRegion()).toEqual({});
+    }
   });
 });
 

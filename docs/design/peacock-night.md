@@ -133,8 +133,9 @@ drop shadows.**
   bars; glass cards `rounded-lg` (22) on a phone and `md:rounded-xl` (24) on a desktop; rows inside panels
   `rounded` (16); page containers and sheets `rounded-2xl` (28); checkboxes `rounded-sm` (7).
 - **Spacing:** the 4px scale plus the half steps the mocks use (`1.5` 6, `2.5` 10, `3.5` 14, `4.5` 18,
-  `5.5` 22). Gaps inside cards 8–16, card padding 16–24 on a phone and 22–36 on a desktop, 14–18 between
-  panels, page padding 32–72 on a desktop, **18 on a phone (`px-4.5`)**.
+  `5.5` 22, `6.5` 26); `spacingPx` gives them in pixels for layout maths such as an inset plus a gap.
+  Gaps inside cards 8–16, card padding 16–24 on a phone and 22–36 on a desktop, 14–18 between panels,
+  page padding 32–72 on a desktop, **18 on a phone (`px-4.5`)**.
 - **Motion:** `motion.ts` durations. Glass panels fade and rise 8px over 200ms (ease-out); tabs and
   segments slide their pill; reduced motion jumps to the end state.
 - **Hover (web):** links turn gold; secondary buttons gain a pearl 8% fill; cards raise their stroke
@@ -156,7 +157,7 @@ Every component is a folder with its test and stories; the Gallery shows every v
 | `Button` | Pill, Manrope 700. `primary` gold fill, midnight text, pressed gold 85%. `secondary` transparent, pearl text, pearl 40% stroke, hover pearl 8%. `highlight` peacock fill, midnight text, for confirm actions ("Approve version 3", "Mark cue done"). `glass` base glass, pearl text (over photos, floating actions). `ghost` text only. `destructive` gold outline (no red). Disabled: transparent, pearl 45% text, dashed pearl 26%. Icon-only buttons are circles. |
 | `Link` | Gold, Manrope 700, often with " →"; nav links pearl that turn gold on hover. |
 | `Input` | Pill, midnight 50% fill, pearl 20% stroke, padding 14 × 18. Focus: gold stroke plus halo. Error: gold stroke and a gold helper line. `prefix` ("+91" in pearl 60% with a divider). Multiline inputs use radius 22. |
-| `OtpInput` | Six cells 46 × 54, radius 16. Filled: peacock 25% fill, peacock 70% stroke. Active: gold stroke plus halo. Empty: pearl 20% stroke. |
+| `OtpInput` | Six cells 48 × 56 (the mocks' 46 × 54 on the 4px scale), radius 16. Filled: peacock 25% fill, peacock 70% stroke. Active: gold stroke plus halo. Empty: pearl 20% stroke. |
 | `SegmentedControl` | Pill track (midnight 50%, pearl 16% stroke, 4px padding); the active segment is a peacock pill with midnight text. Also the tab strip (hotel page tabs), scrollable. |
 | `FilterChip` | Selectable pill: pearl 30% outline; selected is peacock with midnight text. |
 | `Toggle` | 48 × 28 track. On: gold track, midnight knob. Off: pearl 12% track, pearl 45% knob. |

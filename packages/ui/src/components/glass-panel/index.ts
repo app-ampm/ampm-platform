@@ -6,5 +6,6 @@ export {
   internalPanelStyles,
   flatTintStyles,
   focusRingStyles,
+  groupFocusRingStyles,
 } from "./glass-panel.styles";
 export type { GlassRecipeName, GlassStyleProps } from "./glass-panel.styles";

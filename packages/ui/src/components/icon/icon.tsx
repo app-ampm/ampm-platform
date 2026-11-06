@@ -5,20 +5,9 @@ import { colors, type ColorName } from "@ampm/tokens";
 import { cn } from "../../lib/cn";
 import { useTheme } from "../../theme/theme-provider";
 import { icons, type IconName } from "./icon.registry";
+import type { IconSize, IconTone } from "./icon.types";
 
-export type IconSize = "sm" | "md" | "lg" | "xl";
-export type IconTone =
-  | "primary"
-  | "body"
-  | "muted"
-  | "brand"
-  | "highlight"
-  | "onBrand"
-  | "onHighlight"
-  | "success"
-  | "warning"
-  | "danger"
-  | "info";
+export type { IconSize, IconTone } from "./icon.types";
 
 export interface IconProps {
   readonly name: IconName;
@@ -57,11 +46,14 @@ export function Icon({ name, size = "md", tone = "primary", label, className, te
   const { resolved } = useTheme();
   const Glyph = icons[name];
   const pixels = SIZES[size];
+  // Decorative: hidden on iOS and Android by the two native props, and on the web by aria-hidden,
+  // the one react-native-web forwards (it would otherwise expose the bare svg).
   const accessibility = label
     ? { accessible: true, accessibilityRole: "image" as const, accessibilityLabel: label }
     : {
         accessibilityElementsHidden: true,
         importantForAccessibility: "no-hide-descendants" as const,
+        "aria-hidden": true,
       };
   return (
     <View

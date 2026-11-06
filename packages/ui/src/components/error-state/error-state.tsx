@@ -11,7 +11,12 @@ export interface ErrorStateProps extends Omit<
   readonly retrying?: boolean | undefined;
 }
 
-/** Something failed; the message never shows a raw error (code.md), the action retries. */
+/**
+ * Something failed: a gold icon (Peacock Night has no red), a message that never shows a raw error
+ * (code.md), and a retry. Announced as an alert when it appears.
+ *
+ *   <ErrorState onRetry={refetch} retrying={isRefetching} />
+ */
 export function ErrorState({
   title = uiCopy.error.title,
   description = uiCopy.error.description,
@@ -23,7 +28,7 @@ export function ErrorState({
   return (
     <StateView
       icon="alert-triangle"
-      iconTone="danger"
+      iconTone="brand"
       title={title}
       description={description}
       action={onRetry ? { label: retryLabel, onPress: onRetry, loading: retrying } : undefined}

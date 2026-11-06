@@ -16,7 +16,7 @@ export {
   MIN_TEXT_CONTRAST,
 } from "./colors";
 export type { Hex, ColorToken, ColorName, ContrastPair } from "./colors";
-export { spacing, sizes } from "./spacing";
+export { spacing, spacingPx, sizes } from "./spacing";
 export { radii } from "./radii";
 export {
   fontFaces,
