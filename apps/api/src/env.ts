@@ -62,6 +62,26 @@ const fields = z.object({
   BOT_CHECK_PROVIDER: z.enum(["stub", "siteverify"]).default("stub"),
   BOT_CHECK_URL: z.string().url().optional(),
   BOT_CHECK_SECRET: z.string().min(1).optional(),
+  /**
+   * The payment gateway (feature 8.3, AC-02). `stub` is a deterministic in-process sandbox for
+   * development and staging — no network, no card data — refused in production below (the C1 pattern).
+   * `razorpay` is the hosted-checkout gateway: `KEY_ID` is the public key the browser checkout uses,
+   * `KEY_SECRET` signs the order API call, `WEBHOOK_SECRET` verifies the signed webhook. Keys come from
+   * the secret zone (feature 6.4), never code.
+   */
+  PAYMENT_PROVIDER: z.enum(["stub", "razorpay"]).default("stub"),
+  RAZORPAY_KEY_ID: z.string().min(1).optional(),
+  RAZORPAY_KEY_SECRET: z.string().min(1).optional(),
+  RAZORPAY_WEBHOOK_SECRET: z.string().min(1).optional(),
+  /**
+   * Media object store (feature 9.3, AC-20). `local` writes under STORAGE_LOCAL_DIR and signs 15-minute
+   * download URLs with MEDIA_SIGNING_SECRET (media's own key, security.md three-key rule) — development
+   * and staging only; production is refused below (the C1 pattern). `s3` is the Mumbai bucket + CDN,
+   * wired in feature 6.4.
+   */
+  STORAGE_PROVIDER: z.enum(["local", "s3"]).default("local"),
+  STORAGE_LOCAL_DIR: z.string().min(1).default(".storage"),
+  MEDIA_SIGNING_SECRET: z.string().min(32).optional(),
 });
 
 type EnvFields = z.infer<typeof fields>;
@@ -174,6 +194,33 @@ function botCheckIssues(value: EnvFields): EnvIssue[] {
   return issues;
 }
 
+/**
+ * Payments: production must use a real gateway, not the in-process stub (the C1 pattern); the Razorpay
+ * gateway needs its public key, secret and webhook secret. Without this guard a no-op payment adapter
+ * that activates nothing could ship to production.
+ */
+function paymentIssues(value: EnvFields): EnvIssue[] {
+  const issues: EnvIssue[] = [];
+  if (value.NODE_ENV === "production" && value.PAYMENT_PROVIDER === "stub") {
+    issues.push({
+      path: ["PAYMENT_PROVIDER"],
+      message: "the stub payment gateway is refused in production; use razorpay",
+    });
+  }
+  if (value.PAYMENT_PROVIDER === "razorpay") {
+    for (const key of [
+      "RAZORPAY_KEY_ID",
+      "RAZORPAY_KEY_SECRET",
+      "RAZORPAY_WEBHOOK_SECRET",
+    ] as const) {
+      if (!value[key]) {
+        issues.push({ path: [key], message: "required when PAYMENT_PROVIDER is razorpay" });
+      }
+    }
+  }
+  return issues;
+}
+
 /** Behind Caddy in production, `req.ip` must be the real client, so an untrusted proxy is refused. */
 function proxyIssues(value: EnvFields): EnvIssue[] {
   if (value.NODE_ENV === "production" && value.TRUST_PROXY === 0) {
@@ -189,12 +236,29 @@ function proxyIssues(value: EnvFields): EnvIssue[] {
   return [];
 }
 
+/** Media store: the local filesystem store is refused in production; the S3 bucket arrives in feature 6.4. */
+function storageIssues(value: EnvFields): EnvIssue[] {
+  if (value.NODE_ENV === "production" && value.STORAGE_PROVIDER === "local") {
+    return [
+      {
+        path: ["STORAGE_PROVIDER"],
+        message:
+          "the local filesystem media store is development and staging only; production serves media " +
+          "from the S3 bucket and CDN (feature 6.4)",
+      },
+    ];
+  }
+  return [];
+}
+
 const schema = fields.superRefine((value, ctx) => {
   for (const issue of [
     ...identityIssues(value),
     ...deliveryIssues(value),
     ...jobIssues(value),
     ...botCheckIssues(value),
+    ...paymentIssues(value),
+    ...storageIssues(value),
     ...proxyIssues(value),
   ]) {
     ctx.addIssue({ code: "custom", path: issue.path, message: issue.message });

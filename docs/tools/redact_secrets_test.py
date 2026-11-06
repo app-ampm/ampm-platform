@@ -622,12 +622,24 @@ def check_snapshot_only() -> list[str]:
 
 
 def _held_while(live: str, held: int, argv: list[str], out: str) -> tuple[bool, bool]:
-    """Runs the redactor with argv while this process holds a flock on live: (it waited for the lock, it then finished)."""
+    """Runs the redactor with argv while this process holds a flock on live: (it waited for the lock, it then finished).
+
+    "Waited" means the child could not get its lock while we held ours — a
+    blocked masker, which cannot finish or write OUT until we release. A reader
+    that shares the lock, by contrast, finishes on its own while we still hold
+    it, however slowly its interpreter cold-starts. So poll for that progress
+    (child exited, or OUT written) up to a generous deadline and only call it a
+    wait if the deadline passes with neither — rather than reading a single
+    fixed 0.6s sample, which mistook a slow subprocess start on a loaded CI
+    runner for a lock wait and flaked the shared-reader case.
+    """
     script = os.path.join(os.path.dirname(os.path.abspath(__file__)), "redact_secrets.py")
     with open(live, "rb") as handle:
         fcntl.flock(handle.fileno(), held)
         child = subprocess.Popen([sys.executable, script, *argv], stdout=subprocess.DEVNULL)
-        time.sleep(0.6)
+        deadline = time.monotonic() + 3.0
+        while time.monotonic() < deadline and child.poll() is None and not os.path.exists(out):
+            time.sleep(0.02)
         waited = child.poll() is None and not os.path.exists(out)
         fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
         finished = child.wait(timeout=30) == 0

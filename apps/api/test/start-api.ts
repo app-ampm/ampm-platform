@@ -29,7 +29,8 @@ export interface TestApi {
  */
 export async function startApi(): Promise<TestApi> {
   const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
-  const app = moduleRef.createNestApplication<NestExpressApplication>();
+  // `rawBody` matches main.ts, so the e2e suite exercises the webhook's raw-body signature check (8.3).
+  const app = moduleRef.createNestApplication<NestExpressApplication>({ rawBody: true });
   configureHttp(app);
   await app.init();
   const adapter = new LocalIdentityAdapter(process.env["IDENTITY_LOCAL_SECRET"] ?? "");

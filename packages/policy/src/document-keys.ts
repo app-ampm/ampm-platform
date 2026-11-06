@@ -16,9 +16,9 @@ export const DOCUMENT_RESOURCES: Readonly<Record<string, RowName>> = {
   "hotels.profiles": { section: "5.3", label: "Hotel profiles, client fields" },
   "hotels.rate_cards": { section: "5.3", label: "Rate cards and rate items" },
   "hotels.contacts": { section: "5.3", label: "Hotel contacts" },
-  // Lines 540-541: a hotel proposal is the §5.4 row of line 185; its internal total (line 186)
-  // is reached through the row's `read_internal_amount` alias.
-  "consultancy.proposals": { section: "5.4", label: "Hotel proposals, client amounts" },
+  // consultancy.proposals needs no bridge: feature 10.4 curated the §5.4 "Hotel proposals, client
+  // amounts" row's resource to `proposals`, so `consultancy.proposals.*` resolves directly (the internal
+  // total is reached through that row's `read_internal_amount` alias).
   // Line 542: adding or removing members on a project is the §5.5 staff members row (line 196).
   "projects.members": { section: "5.5", label: "Project members, staff" },
   // Lines 543-544: budget lines are the §5.7 row of line 215; `read_internal_cost` reads line 216.

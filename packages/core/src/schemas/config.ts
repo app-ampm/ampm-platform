@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { serviceKey } from "./service-agreements.js";
+
 /**
  * Configuration, not code (api.md): plans, prices, demo limits, labels, templates, thresholds and
  * feature switches are `configurations` rows read through one typed accessor. This registry is the
@@ -54,6 +56,42 @@ export type NotificationTemplate = z.infer<typeof notificationTemplate>;
 export const notificationTemplates = z.record(z.string(), notificationTemplate);
 export type NotificationTemplates = z.infer<typeof notificationTemplates>;
 
+/** Subscription lifecycle thresholds (feature 8.3): the notice window before a term ends (AC-02.7). */
+export const subscriptionPolicy = z.object({
+  expiryNoticeDays: z.number().int().nonnegative(),
+});
+export type SubscriptionPolicy = z.infer<typeof subscriptionPolicy>;
+
+/** Hotel verification freshness (feature 9.2, AC-04): a verification older than this many days is stale. */
+export const hotelVerificationPolicy = z.object({
+  maxAgeDays: z.number().int().positive(),
+});
+export type HotelVerificationPolicy = z.infer<typeof hotelVerificationPolicy>;
+
+/**
+ * Which hotel-consultancy services AMPM charges for (R8, feature 10.2, AC-05.7). A hotel enquiry can
+ * progress through availability checking for free; moving it into a chargeable stage (negotiation)
+ * requires an active service agreement. The set is configuration, not code — AMPM can make a service
+ * free by removing its key — so the gate reads it through the accessor, never a literal.
+ */
+export const consultancyChargeablePolicy = z.object({
+  chargeableServiceKeys: z.array(serviceKey),
+});
+export type ConsultancyChargeablePolicy = z.infer<typeof consultancyChargeablePolicy>;
+
+/**
+ * Whether booking-milestone amounts are shown to the client (W-14, feature 10.5, AC-05.6). A milestone
+ * has a single `amount` column the client MAY see — only where the client pays the hotel directly — so
+ * the default is hidden and the client serialiser omits the amount unless this flag is on. Configuration,
+ * not code, so AMPM can flip it without a deploy once it confirms the payment arrangement.
+ */
+export const consultancyMilestoneVisibilityPolicy = z.object({
+  milestoneAmountsVisible: z.boolean(),
+});
+export type ConsultancyMilestoneVisibilityPolicy = z.infer<
+  typeof consultancyMilestoneVisibilityPolicy
+>;
+
 /** One registry entry; the helper makes the compiler check the baseline against its own schema. */
 function entry<S extends z.ZodType>(
   schema: S,
@@ -77,6 +115,17 @@ export const CONFIG_REGISTRY = {
     push: false,
   }),
   "feature.flags": entry(featureFlags, {}),
+  "subscription.policy": entry(subscriptionPolicy, { expiryNoticeDays: 7 }),
+  "hotel.verification_policy": entry(hotelVerificationPolicy, { maxAgeDays: 90 }),
+  "consultancy.chargeable_services": entry(consultancyChargeablePolicy, {
+    // R8 baseline: availability checking is free; the rest of the hotel-assistance pipeline is paid.
+    chargeableServiceKeys: ["negotiation", "site_visit", "contract_review", "booking_assistance"],
+  }),
+  "consultancy.milestone_amounts_visible": entry(consultancyMilestoneVisibilityPolicy, {
+    // W-14 default: milestone amounts stay hidden from the client until AMPM confirms the client pays
+    // the hotel directly.
+    milestoneAmountsVisible: false,
+  }),
   "notification.templates": entry(notificationTemplates, {
     "staff.invite": {
       email: {

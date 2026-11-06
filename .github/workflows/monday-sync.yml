@@ -1,9 +1,10 @@
 name: monday-sync
 
-# Keeps the "AMPM Platform — Build Plan" monday board in step with merges.
-# When a PR is merged, any `Monday: <card-key> <state>` trailers in its
-# description move the card's Status, stamp "Completed on" (for `done`), and
-# post a progress note to the card. See docs/tools/monday-sync.md.
+# Keeps the AMPM monday boards in step with merges. When a PR is merged, any
+# `Monday: <card-key> <state>` trailers move the Build-Plan card's Status, stamp
+# "Completed on" (for `done`), and post a progress note; and every merged PR
+# also appends a row (what/how/why) to the PR Merge Log board. See
+# docs/tools/monday-sync.md.
 #
 # Requires repo secret MONDAY_API_TOKEN (a monday.com personal API token).
 # The workflow only takes effect once it is present on the default branch.
@@ -30,5 +31,7 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
           PR_TITLE: ${{ github.event.pull_request.title }}
           PR_URL: ${{ github.event.pull_request.html_url }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          PR_MERGED_AT: ${{ github.event.pull_request.merged_at }}
           PR_BODY: ${{ github.event.pull_request.body }}
         run: printf '%s' "$PR_BODY" | python3 docs/tools/monday_sync.py --from-pr

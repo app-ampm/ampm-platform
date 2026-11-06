@@ -17,6 +17,11 @@ const prodValid = {
   BOT_CHECK_PROVIDER: "siteverify",
   BOT_CHECK_URL: "https://challenges.cloudflare.com/turnstile/v0/siteverify",
   BOT_CHECK_SECRET: "bot-secret",
+  PAYMENT_PROVIDER: "razorpay",
+  RAZORPAY_KEY_ID: "rzp_test_key",
+  RAZORPAY_KEY_SECRET: "rzp-key-secret",
+  RAZORPAY_WEBHOOK_SECRET: "rzp-webhook-secret",
+  STORAGE_PROVIDER: "s3",
 };
 
 describe("loadEnv", () => {
@@ -52,6 +57,10 @@ describe("loadEnv", () => {
     expect(() => loadEnv({ ...prodValid, EMAIL_FROM: "AMPM <no-reply@localhost>" })).toThrow(
       /EMAIL_FROM/,
     );
+  });
+
+  it("refuses the local media store in production", () => {
+    expect(() => loadEnv({ ...prodValid, STORAGE_PROVIDER: "local" })).toThrow(/STORAGE_PROVIDER/);
   });
 
   it("refuses a localhost WEB_APP_URL in production", () => {
@@ -107,5 +116,23 @@ describe("loadEnv", () => {
       IDENTITY_LOCAL_SECRET: "a-development-secret-that-is-32chars",
     });
     expect(env.BOT_CHECK_PROVIDER).toBe("stub");
+  });
+
+  it("refuses the stub payment gateway in production (feature 8.3)", () => {
+    expect(() => loadEnv({ ...prodValid, PAYMENT_PROVIDER: "stub" })).toThrow(/PAYMENT_PROVIDER/);
+  });
+
+  it("requires the Razorpay keys when the gateway is razorpay", () => {
+    const { RAZORPAY_KEY_ID: _id, ...withoutKey } = prodValid;
+    expect(() => loadEnv(withoutKey)).toThrow(/RAZORPAY_KEY_ID/);
+  });
+
+  it("defaults to the stub payment gateway in development", () => {
+    const env = loadEnv({
+      DATABASE_URL: "postgres://localhost:5432/ampm",
+      IDENTITY_PROVIDER: "local",
+      IDENTITY_LOCAL_SECRET: "a-development-secret-that-is-32chars",
+    });
+    expect(env.PAYMENT_PROVIDER).toBe("stub");
   });
 });

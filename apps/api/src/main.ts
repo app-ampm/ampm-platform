@@ -7,7 +7,12 @@ import { ENV, type Env } from "./env.js";
 import { configureHttp } from "./http.setup.js";
 
 async function bootstrap(): Promise<void> {
-  const app = await NestFactory.create<NestExpressApplication>(AppModule, { bufferLogs: true });
+  // `rawBody` keeps the exact request bytes on `req.rawBody` so the payment webhook can verify the
+  // provider's HMAC signature over them (a re-serialised body would not match — feature 8.3, AC-02.6).
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    bufferLogs: true,
+    rawBody: true,
+  });
   configureHttp(app);
   const logger = app.get(AppLogger);
   app.useLogger(logger);

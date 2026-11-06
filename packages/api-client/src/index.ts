@@ -11,3 +11,88 @@ export type { ApiProviderProps } from "./provider";
 export { ME_QUERY_KEY, useMe } from "./hooks/use-me";
 export { NOTIFICATIONS_QUERY_KEY, useNotifications } from "./hooks/use-notifications";
 export { useSubmitEnquiry } from "./hooks/use-submit-enquiry";
+export { LEADS_QUERY_KEY, useLeads } from "./hooks/use-leads";
+export { leadQueryKey, useLead } from "./hooks/use-lead";
+export { useLeadActivities } from "./hooks/use-lead-activities";
+export { useConvertLead } from "./hooks/use-convert-lead";
+export { useDevLogin } from "./hooks/use-dev-login";
+export { PLANS_QUERY_KEY, usePlans } from "./hooks/use-plans";
+export { usePortalSubscribe } from "./hooks/use-portal-subscribe";
+export { useCompletePayment } from "./hooks/use-complete-payment";
+export { HOTELS_QUERY_KEY, useHotels } from "./hooks/use-hotels";
+export { hotelQueryKey, useHotel } from "./hooks/use-hotel";
+export { SAVED_HOTELS_QUERY_KEY, useSavedHotels } from "./hooks/use-saved-hotels";
+export { useSaveHotel } from "./hooks/use-save-hotel";
+export { useUnsaveHotel } from "./hooks/use-unsave-hotel";
+// Module D consultancy (feature 10.1): the client side of hotel enquiries (CP-07/08).
+export {
+  HOTEL_ENQUIRIES_QUERY_KEY,
+  hotelEnquiryQueryKey,
+  useHotelEnquiries,
+  useHotelEnquiry,
+  type HotelEnquiriesQuery,
+} from "./hooks/use-hotel-enquiries";
+export { useRequestHotelAssistance } from "./hooks/use-request-hotel-assistance";
+export { useUpdateEnquiryNote } from "./hooks/use-update-enquiry-note";
+export {
+  SERVICE_AGREEMENTS_QUERY_KEY,
+  serviceAgreementQueryKey,
+  useServiceAgreement,
+  useServiceAgreements,
+} from "./hooks/use-service-agreements";
+export { useAcceptServiceAgreement } from "./hooks/use-accept-service-agreement";
+export { siteVisitsQueryKey, useSiteVisits } from "./hooks/use-site-visits";
+export { useUpdateSiteVisitFeedback } from "./hooks/use-update-site-visit-feedback";
+export {
+  hotelProposalQueryKey,
+  hotelProposalsQueryKey,
+  useHotelProposal,
+  useHotelProposals,
+} from "./hooks/use-hotel-proposals";
+export { useDecideHotelProposal } from "./hooks/use-decide-hotel-proposal";
+export {
+  bookingMilestoneQueryKey,
+  bookingMilestonesQueryKey,
+  useBookingMilestone,
+  useBookingMilestones,
+} from "./hooks/use-booking-milestones";
+// Module D consultancy (feature 10.x, Slice 2): the STAFF side of the pipeline (consultancy-admin + crm),
+// read as the internal view and driven by status transitions. Staff-only — gated server-side by role.
+export {
+  STAFF_ENQUIRIES_QUERY_KEY,
+  staffEnquiryQueryKey,
+  useStaffEnquiries,
+  useStaffEnquiry,
+  useTransitionEnquiry,
+  type StaffEnquiriesQuery,
+} from "./hooks/use-staff-enquiries";
+export {
+  STAFF_PROPOSALS_QUERY_KEY,
+  staffProposalsQueryKey,
+  useCreateProposal,
+  useReviseProposal,
+  useShareProposal,
+  useStaffProposals,
+} from "./hooks/use-staff-proposals";
+export {
+  STAFF_SITE_VISITS_QUERY_KEY,
+  staffSiteVisitsQueryKey,
+  useCreateSiteVisit,
+  useStaffSiteVisits,
+  useTransitionSiteVisit,
+} from "./hooks/use-staff-site-visits";
+export {
+  STAFF_MILESTONES_QUERY_KEY,
+  staffMilestonesQueryKey,
+  useCreateBookingMilestone,
+  useStaffBookingMilestones,
+  useTransitionBookingMilestone,
+} from "./hooks/use-staff-booking-milestones";
+export {
+  STAFF_SERVICE_AGREEMENTS_QUERY_KEY,
+  useCreateServiceAgreement,
+  useStaffServiceAgreements,
+  useTransitionServiceAgreement,
+  type StaffServiceAgreementsQuery,
+} from "./hooks/use-staff-service-agreements";
+export { SERVICE_TYPES_QUERY_KEY, useServiceTypes } from "./hooks/use-service-types";

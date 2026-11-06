@@ -148,6 +148,142 @@ enum ClientAccountStatus {
   closed
 }
 
+/// Module B commercial tables (plans, subscriptions, payments) — feature 8.3. Statuses are
+/// enumerations fixed in code; labels are configuration (data.md). Values follow docs/data-model.md §4.
+enum PlanType {
+  hotel_discovery
+  trial
+  demo
+  package
+}
+
+enum BillingType {
+  one_time
+  recurring
+}
+
+enum PlanStatus {
+  draft
+  active
+  retired
+}
+
+/// A plan module's access depth (docs/field-matrix §3). The module key itself is a plain column
+/// validated against @ampm/core `entitlementModule`, so the catalogue and the policy engine share one
+/// source of truth and a new module needs no migration.
+enum PlanModuleAccess {
+  read
+  full
+}
+
+/// Mirrors packages/policy STATUS_MACHINES["subscription"] exactly (§7); terminal: expired, cancelled.
+enum SubscriptionStatus {
+  trial
+  pending_payment
+  active
+  expiring
+  expired
+  suspended
+  cancelled
+}
+
+enum ActivationSource {
+  gateway_webhook
+  manual
+}
+
+enum PaymentDirection {
+  inbound
+  outbound
+}
+
+enum PaymentCounterpartyType {
+  client
+  vendor
+  hotel
+  other
+}
+
+enum PaymentPurpose {
+  subscription
+  service_fee
+  milestone
+  vendor_payment
+  hotel_payment
+  refund
+}
+
+enum PaymentMethod {
+  gateway
+  bank_transfer
+  upi
+  cheque
+  cash
+}
+
+enum PaymentStatus {
+  initiated
+  pending
+  succeeded
+  failed
+  refunded
+  cancelled
+}
+
+/// A received provider webhook's lifecycle (feature 8.3). Append-only like job_runs: no soft-delete.
+enum WebhookEventStatus {
+  received
+  processed
+  failed
+  ignored
+}
+
+/// The classification of a service_type (data-model §4). Drives which entitlement module an active
+/// service_agreement grants (packages/policy entitlements) — adding a category means adding a module,
+/// so this is fixed in code, while the service_key within a category is Super-Admin-editable reference data.
+enum ServiceCategory {
+  hotel_assistance
+  design
+  vendor_coordination
+  full_management
+  other
+}
+
+/// How a service_agreement's fee is expressed (data-model §4). v1 handles `fixed`; `percentage` and
+/// `milestones` are modelled now and priced when milestone billing (module F) lands.
+enum ServiceFeeStructure {
+  fixed
+  percentage
+  milestones
+}
+
+/// The service_agreement lifecycle (data-model §4). Hand-rolled (not a packages/policy STATUS_MACHINE §7):
+/// draft → sent → accepted → active → completed, with cancelled reachable from any non-terminal state.
+/// `active` is the state that grants the service's entitlement module; completed and cancelled are terminal.
+enum ServiceAgreementStatus {
+  draft
+  sent
+  accepted
+  active
+  completed
+  cancelled
+}
+
+// --- Module C: Hotel intelligence (docs/data-model.md §5). The client-facing hotel catalogue the
+// hotel-discovery subscription unlocks, and the per-account shortlist (saved_hotels). ---
+
+enum DestinationStatus {
+  draft
+  active
+  inactive
+}
+
+enum HotelStatus {
+  draft
+  active
+  inactive
+}
+
 /// Staff, client and demo accounts. Credentials live in the identity service (Cognito, T-6): the
 /// API keeps the identity subject that maps a verified token to this row; it never stores a password.
 model User {
@@ -172,15 +308,15 @@ model User {
   updatedBy String?   @map("updated_by") @db.Uuid
   deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
 
-  roles         UserRole[]
-  memberships   ProjectMember[]
-  authTokens    AuthToken[]
-  preferences   NotificationPreference[]
-  auditEvents   AuditEvent[]
-  importJobs    ImportJob[]
-  sessions      Session[]
-  leadsOwned     Lead[]
-  leadActivities LeadActivity[]
+  roles                 UserRole[]
+  memberships           ProjectMember[]
+  authTokens            AuthToken[]
+  preferences           NotificationPreference[]
+  auditEvents           AuditEvent[]
+  importJobs            ImportJob[]
+  sessions              Session[]
+  leadsOwned            Lead[]
+  leadActivities        LeadActivity[]
   clientAccountsPrimary ClientAccount[]
   accountContacts       AccountContact[]
 
@@ -252,21 +388,21 @@ model UserRole {
 /// holds. Both the Super-Admin pick-list and the server-side allow-list for a custom role's grants.
 /// Rewritten by the seed, so the matrix stays the source. Dormant: nothing reads it yet.
 model GrantableCapability {
-  id            String @id @default(uuid(7)) @db.Uuid
+  id                 String  @id @default(uuid(7)) @db.Uuid
   /// Stable id `module.resource.action:scope`, with `#<condition-signature>` when conditioned.
-  capabilityKey String @unique @map("capability_key") @db.VarChar(255)
-  module        String @db.VarChar(64)
-  resource      String @db.VarChar(128)
-  action        String @db.VarChar(32)
-  scope         String @db.VarChar(16)
+  capabilityKey      String  @unique @map("capability_key") @db.VarChar(255)
+  module             String  @db.VarChar(64)
+  resource           String  @db.VarChar(128)
+  action             String  @db.VarChar(32)
+  scope              String  @db.VarChar(16)
   /// The grant's conditions (packages/policy `Condition[]`); an empty array is a plain grant.
-  conditions    Json
+  conditions         Json
   /// The system role codes that hold this exact grant (`StaffRole[]`), for the class ceiling.
-  sourceRoles   Json    @map("source_roles")
-  isStaffOnly   Boolean @default(true) @map("is_staff_only")
+  sourceRoles        Json    @map("source_roles")
+  isStaffOnly        Boolean @default(true) @map("is_staff_only")
   /// Role/account administration and identity documents: never assignable to a custom role.
   isEscalationLocked Boolean @default(false) @map("is_escalation_locked")
-  label         String  @db.VarChar(255)
+  label              String  @db.VarChar(255)
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
@@ -494,10 +630,10 @@ model Configuration {
   scope     ConfigurationScope @default(global)
   scopeId   String?            @map("scope_id") @db.Uuid
 
-  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  createdBy String?   @map("created_by") @db.Uuid
-  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
-  updatedBy String?   @map("updated_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy String?  @map("created_by") @db.Uuid
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedBy String?  @map("updated_by") @db.Uuid
 
   @@index([scope, scopeId])
   @@map("configurations")
@@ -606,11 +742,11 @@ model Lead {
   updatedBy String?   @map("updated_by") @db.Uuid
   deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
 
-  source      LeadSource     @relation(fields: [sourceId], references: [id])
-  owner       User?          @relation(fields: [ownerUserId], references: [id])
-  duplicateOf Lead?          @relation("LeadDuplicate", fields: [duplicateOfLeadId], references: [id])
-  duplicates  Lead[]         @relation("LeadDuplicate")
-  activities  LeadActivity[]
+  source           LeadSource     @relation(fields: [sourceId], references: [id])
+  owner            User?          @relation(fields: [ownerUserId], references: [id])
+  duplicateOf      Lead?          @relation("LeadDuplicate", fields: [duplicateOfLeadId], references: [id])
+  duplicates       Lead[]         @relation("LeadDuplicate")
+  activities       LeadActivity[]
   convertedAccount ClientAccount?
 
   @@index([status])
@@ -678,7 +814,11 @@ model ClientAccount {
 
   lead           Lead?            @relation(fields: [leadId], references: [id])
   primaryContact User?            @relation(fields: [primaryContactUserId], references: [id])
-  contacts       AccountContact[]
+  contacts          AccountContact[]
+  subscriptions     Subscription[]
+  payments          Payment[]
+  savedHotels       SavedHotel[]
+  serviceAgreements ServiceAgreement[]
 
   @@index([status])
   @@index([primaryContactUserId])
@@ -712,4 +852,1070 @@ model AccountContact {
   @@index([userId])
   @@index([deletedAt])
   @@map("account_contacts")
+}
+
+// --- Module B: CRM commercial tables (docs/data-model.md §4). Plans, subscriptions and payments:
+// the hotel-discovery subscription a converted account buys through Razorpay (feature 8.3). ---
+
+/// A sellable plan (reference table, Super-Admin editable, data.md §1): PUBLIC when `active`, so the
+/// public website and portal show its price and inclusions. `price_amount` is the single source of the
+/// price — never a code literal (AC-02.9/AC-25.4). v1 is the Rs 50,000 one-month Discovery plan.
+model Plan {
+  id           String      @id @default(uuid(7)) @db.Uuid
+  planKey      String      @unique @map("plan_key") @db.VarChar(64)
+  name         String      @db.VarChar(255)
+  planType     PlanType    @map("plan_type")
+  billingType  BillingType @map("billing_type")
+  priceAmount  Decimal     @map("price_amount") @db.Decimal(14, 2)
+  currency     String      @default("INR") @db.VarChar(3)
+  termDays     Int?        @map("term_days")
+  trialDays    Int?        @map("trial_days")
+  isDemo       Boolean     @default(false) @map("is_demo")
+  status       PlanStatus  @default(draft)
+  termsVersion String?     @map("terms_version") @db.VarChar(255)
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  modules       PlanModule[]
+  subscriptions Subscription[]
+
+  @@index([status])
+  @@index([deletedAt])
+  @@map("plans")
+}
+
+/// A module a plan grants. `module_key` holds an @ampm/core `entitlementModule` value (validated in the
+/// contract, not a drifting enum); `access_level` is the grant depth. PUBLIC — shown in the catalogue.
+model PlanModule {
+  id          String           @id @default(uuid(7)) @db.Uuid
+  planId      String           @map("plan_id") @db.Uuid
+  moduleKey   String           @map("module_key") @db.VarChar(64)
+  accessLevel PlanModuleAccess @map("access_level")
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  plan Plan @relation(fields: [planId], references: [id])
+
+  @@unique([planId, moduleKey])
+  @@index([planId])
+  @@index([deletedAt])
+  @@map("plan_modules")
+}
+
+/// A subscription an account holds to a plan (feature 8.3). CLIENT-class. The status machine is
+/// packages/policy STATUS_MACHINES["subscription"] (§7): activation (webhook or manual) sets `active`
+/// with `starts_at`/`ends_at` from the plan term. An expired or cancelled row is never reactivated — a
+/// renewal is a new row (§7 line 395). Never hard-deleted (finance record, data.md).
+model Subscription {
+  id                String             @id @default(uuid(7)) @db.Uuid
+  accountId         String             @map("account_id") @db.Uuid
+  planId            String             @map("plan_id") @db.Uuid
+  status            SubscriptionStatus
+  startsAt          DateTime?          @map("starts_at") @db.Timestamptz(6)
+  endsAt            DateTime?          @map("ends_at") @db.Timestamptz(6)
+  trialEndsAt       DateTime?          @map("trial_ends_at") @db.Timestamptz(6)
+  autoRenew         Boolean            @default(false) @map("auto_renew")
+  activationSource  ActivationSource?  @map("activation_source")
+  activatedByUserId String?            @map("activated_by_user_id") @db.Uuid
+  cancelledAt       DateTime?          @map("cancelled_at") @db.Timestamptz(6)
+  cancelReason      String?            @map("cancel_reason") @db.VarChar(255)
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  account ClientAccount @relation(fields: [accountId], references: [id])
+  plan    Plan          @relation(fields: [planId], references: [id])
+
+  @@index([accountId, status])
+  @@index([planId])
+  @@index([status])
+  @@index([endsAt])
+  @@index([deletedAt])
+  @@map("subscriptions")
+}
+
+/// A payment (feature 8.3 handles inbound subscription payments). Visibility is by row: an inbound,
+/// `client_visible` payment is CLIENT (the subscriber's own receipt); every other row is
+/// RESTRICTED-FINANCE and is never serialised to a client (security.md — one response model per
+/// audience). `provider_ref` is the gateway transaction id and the webhook idempotency key (unique).
+/// What a payment is for is a polymorphic link (`related_type`/`related_id`), like audit_events.
+/// Never hard-deleted (finance record, data.md).
+model Payment {
+  id                String                  @id @default(uuid(7)) @db.Uuid
+  accountId         String                  @map("account_id") @db.Uuid
+  /// Gains its relation when module E (wedding projects) lands; a plain column meanwhile.
+  projectId         String?                 @map("project_id") @db.Uuid
+  direction         PaymentDirection
+  counterpartyType  PaymentCounterpartyType @map("counterparty_type")
+  counterpartyId    String?                 @map("counterparty_id") @db.Uuid
+  purpose           PaymentPurpose
+  relatedType       String?                 @map("related_type") @db.VarChar(255)
+  relatedId         String?                 @map("related_id") @db.Uuid
+  amount            Decimal                 @db.Decimal(14, 2)
+  currency          String                  @default("INR") @db.VarChar(3)
+  method            PaymentMethod
+  provider          String?                 @db.VarChar(255)
+  providerRef       String?                 @unique @map("provider_ref") @db.VarChar(255)
+  status            PaymentStatus
+  paidAt            DateTime?               @map("paid_at") @db.Timestamptz(6)
+  recordedBy        String?                 @map("recorded_by") @db.Uuid
+  /// Gains its FK when refunds are built (A-2: no refund in v1); a plain column meanwhile.
+  refundOfPaymentId String?                 @map("refund_of_payment_id") @db.Uuid
+  clientVisible     Boolean                 @default(false) @map("client_visible")
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  account ClientAccount @relation(fields: [accountId], references: [id])
+
+  @@index([accountId])
+  @@index([projectId])
+  @@index([status])
+  @@index([purpose])
+  @@index([relatedType, relatedId])
+  @@index([deletedAt])
+  @@map("payments")
+}
+
+/// A received provider webhook, stored raw before processing (api.md: "store the raw event"). The
+/// unique (provider, event_id) makes a redelivery a no-op at ingest (AC-02.5); durable idempotency is
+/// also enforced by payments.provider_ref and the activation transaction. Only signature-verified
+/// events are stored (a bad signature is a 401 and writes nothing). Append-only: no soft-delete.
+model WebhookEvent {
+  id          String             @id @default(uuid(7)) @db.Uuid
+  provider    String             @db.VarChar(64)
+  eventId     String             @map("event_id") @db.VarChar(255)
+  eventType   String             @map("event_type") @db.VarChar(128)
+  providerRef String?            @map("provider_ref") @db.VarChar(255)
+  payload     Json
+  status      WebhookEventStatus @default(received)
+  error       String?            @db.VarChar(1024)
+  receivedAt  DateTime           @default(now()) @map("received_at") @db.Timestamptz(6)
+  processedAt DateTime?          @map("processed_at") @db.Timestamptz(6)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@unique([provider, eventId])
+  @@index([providerRef])
+  @@map("webhook_events")
+}
+
+/// A sellable paid service beyond the subscription (reference table, Super-Admin editable, data.md §1).
+/// `service_key` is the stable business key (Super-Admin may add rows within a category); `category`
+/// is the fixed classification that maps to an entitlement module. v1 seeds the hotel-assistance keys.
+model ServiceType {
+  id         String          @id @default(uuid(7)) @db.Uuid
+  serviceKey String          @unique @map("service_key") @db.VarChar(64)
+  name       String          @db.VarChar(255)
+  category   ServiceCategory
+  isActive   Boolean         @default(true) @map("is_active")
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  agreements ServiceAgreement[]
+
+  @@index([category])
+  @@index([deletedAt])
+  @@map("service_types")
+}
+
+/// A paid-service agreement an account signs (GP-5, data-model §4). CLIENT-class to the signing account
+/// (scope, fee and status), RESTRICTED-FINANCE internally. The status machine is hand-rolled in the
+/// service-agreements module (not a packages/policy STATUS_MACHINE §7). An `active` row grants the
+/// service's entitlement module (packages/policy entitlements): for hotel assistance that unblocks work
+/// beyond availability checking on the linked enquiry (AC-05.7). `fee_amount` is set by AMPM, never
+/// defaulted (Q4). Cross-module links (project, hotel_enquiry, document, actor) are plain columns until
+/// their modules land — `hotel_enquiry_id` is the reciprocal of hotel_enquiries.service_agreement_id.
+model ServiceAgreement {
+  id                String                 @id @default(uuid(7)) @db.Uuid
+  accountId         String                 @map("account_id") @db.Uuid
+  /// Gains its relation when module E (wedding projects) lands; back-filled on project creation (GP-27).
+  projectId         String?                @map("project_id") @db.Uuid
+  serviceTypeId     String                 @map("service_type_id") @db.Uuid
+  /// Reciprocal of hotel_enquiries.service_agreement_id; a plain column (module D), no Prisma relation.
+  hotelEnquiryId    String?                @map("hotel_enquiry_id") @db.Uuid
+  scopeText         String                 @map("scope_text")
+  feeAmount         Decimal                @map("fee_amount") @db.Decimal(14, 2)
+  feeStructure      ServiceFeeStructure    @map("fee_structure")
+  currency          String                 @default("INR") @db.VarChar(3)
+  termsVersion      String?                @map("terms_version") @db.VarChar(255)
+  status            ServiceAgreementStatus @default(draft)
+  acceptedAt        DateTime?              @map("accepted_at") @db.Timestamptz(6)
+  acceptedByUserId  String?                @map("accepted_by_user_id") @db.Uuid
+  /// Gains its FK when the documents service (module N) lands; a plain column meanwhile.
+  documentId        String?                @map("document_id") @db.Uuid
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  account     ClientAccount @relation(fields: [accountId], references: [id])
+  serviceType ServiceType   @relation(fields: [serviceTypeId], references: [id])
+
+  @@index([accountId, status])
+  @@index([serviceTypeId])
+  @@index([hotelEnquiryId])
+  @@index([projectId])
+  @@index([status])
+  @@index([deletedAt])
+  @@map("service_agreements")
+}
+
+// --- Module C models (docs/data-model.md §5, docs/field-matrix.md §4). ---
+
+/// A place weddings happen (reference table, Super-Admin editable): a hotel sits in exactly one. Name
+/// and slug are CLIENT, and PUBLIC on the website when `public_visible`. Columns mirror field-matrix §4.
+model Destination {
+  id            String            @id @default(uuid(7)) @db.Uuid
+  name          String            @db.VarChar(255)
+  slug          String            @unique @db.VarChar(255)
+  region        String?           @db.VarChar(255)
+  state         String?           @db.VarChar(255)
+  country       String            @db.VarChar(255)
+  description   String?           @db.Text
+  status        DestinationStatus @default(draft)
+  publicVisible Boolean           @default(false) @map("public_visible")
+  heroMediaId   String?           @map("hero_media_id") @db.Uuid
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  hotels Hotel[]
+
+  @@index([status])
+  @@index([deletedAt])
+  @@map("destinations")
+}
+
+/// A hotel in the catalogue (A-28; data-model.md:565-585). Client-class fields (name, brand, address,
+/// description_client, …) build the client view; `internal_rating` and `internal_notes` are
+/// RESTRICTED-NOTES and never enter a client response (the repository select omits them — security.md).
+/// `demo_visible` is the demo-isolation flag the repository filters on for a demo principal (data.md).
+model Hotel {
+  id                String      @id @default(uuid(7)) @db.Uuid
+  destinationId     String      @map("destination_id") @db.Uuid
+  name              String      @db.VarChar(255)
+  slug              String      @unique @db.VarChar(255)
+  brand             String?     @db.VarChar(255)
+  starCategory      String?     @map("star_category") @db.VarChar(255)
+  address           String?     @db.Text
+  latitude          Decimal?    @db.Decimal(9, 6)
+  longitude         Decimal?    @db.Decimal(9, 6)
+  descriptionClient String?     @map("description_client") @db.Text
+  website           String?     @db.VarChar(255)
+  status            HotelStatus @default(draft)
+  demoVisible       Boolean     @default(false) @map("demo_visible")
+  publicShowcase    Boolean     @default(false) @map("public_showcase")
+  internalRating    Int?        @map("internal_rating")
+  internalNotes     String?     @map("internal_notes") @db.Text
+  totalRooms        Int?        @map("total_rooms")
+  streetViewRef     String?     @map("street_view_ref") @db.VarChar(255)
+  lastVerifiedAt    DateTime?   @map("last_verified_at") @db.Timestamptz(6)
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  destination       Destination             @relation(fields: [destinationId], references: [id])
+  savedBy           SavedHotel[]
+  contacts          HotelContact[]
+  rooms             HotelRoomCategory[]
+  venues            HotelVenue[]
+  rateCards         HotelRateCard[]
+  verifications     HotelVerification[]
+  weddingReferences HotelWeddingReference[]
+
+  @@index([destinationId])
+  @@index([status, demoVisible])
+  @@index([deletedAt])
+  @@map("hotels")
+}
+
+/// A hotel a client account has shortlisted (data-model.md:665-679). Unique on (account_id, hotel_id)
+/// so a re-save reuses the row (the service clears `deleted_at` rather than inserting a second row).
+/// `project_id` is back-filled by the system when a project is linked (GP-27, Module E) — plain Uuid now.
+model SavedHotel {
+  id            String  @id @default(uuid(7)) @db.Uuid
+  accountId     String  @map("account_id") @db.Uuid
+  hotelId       String  @map("hotel_id") @db.Uuid
+  projectId     String? @map("project_id") @db.Uuid
+  savedByUserId String  @map("saved_by_user_id") @db.Uuid
+  note          String? @db.Text
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  account ClientAccount @relation(fields: [accountId], references: [id])
+  hotel   Hotel         @relation(fields: [hotelId], references: [id])
+
+  @@unique([accountId, hotelId])
+  @@index([accountId])
+  @@index([hotelId])
+  @@index([deletedAt])
+  @@map("saved_hotels")
+}
+
+/// A hotel's internal contacts (data-model.md §5). RESTRICTED-CONTACT: the whole table is staff-only —
+/// clients reach a hotel through AMPM, never directly (permission-matrix §5.3, §7). Feature 9.1.
+model HotelContact {
+  id        String  @id @default(uuid(7)) @db.Uuid
+  hotelId   String  @map("hotel_id") @db.Uuid
+  name      String  @db.VarChar(255)
+  roleTitle String? @map("role_title") @db.VarChar(255)
+  phone     String? @db.VarChar(255)
+  email     String? @db.VarChar(255)
+  isPrimary Boolean @default(false) @map("is_primary")
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  hotel Hotel @relation(fields: [hotelId], references: [id])
+
+  @@index([hotelId])
+  @@index([deletedAt])
+  @@map("hotel_contacts")
+}
+
+/// A category of room a hotel offers, with inventory and occupancy (A-27; data-model.md §5). CLIENT-
+/// visible profile data; a hotel_rate_item prices a category (Module C rate tables, feature 9.2). Feature 9.1.
+model HotelRoomCategory {
+  id           String  @id @default(uuid(7)) @db.Uuid
+  hotelId      String  @map("hotel_id") @db.Uuid
+  name         String  @db.VarChar(255)
+  roomCount    Int?    @map("room_count")
+  maxOccupancy Int?    @map("max_occupancy")
+  sizeSqm      Int?    @map("size_sqm")
+  facilities   Json?   @map("facilities_json")
+  description  String? @db.Text
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  hotel     Hotel           @relation(fields: [hotelId], references: [id])
+  rateItems HotelRateItem[]
+
+  @@index([hotelId])
+  @@index([deletedAt])
+  @@map("hotel_room_categories")
+}
+
+enum HotelVenueType {
+  ballroom
+  lawn
+  poolside
+  rooftop
+  courtyard
+  beach
+  other
+}
+
+/// A function/event venue a hotel offers, with capacities by layout (data-model.md §5). CLIENT-visible
+/// profile data; a hotel_rate_item prices a venue (venue_rental, feature 9.2). Feature 9.1.
+model HotelVenue {
+  id                String         @id @default(uuid(7)) @db.Uuid
+  hotelId           String         @map("hotel_id") @db.Uuid
+  name              String         @db.VarChar(255)
+  venueType         HotelVenueType @map("venue_type")
+  isIndoor          Boolean        @map("is_indoor")
+  areaSqm           Int?           @map("area_sqm")
+  capacityBanquet   Int?           @map("capacity_banquet")
+  capacityTheatre   Int?           @map("capacity_theatre")
+  capacityReception Int?           @map("capacity_reception")
+  facilities        Json?          @map("facilities_json")
+  description       String?        @db.Text
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  hotel     Hotel           @relation(fields: [hotelId], references: [id])
+  rateItems HotelRateItem[]
+
+  @@index([hotelId])
+  @@index([deletedAt])
+  @@map("hotel_venues")
+}
+
+enum HotelVerificationFieldGroup {
+  profile
+  rooms
+  venues
+  rates
+  availability
+  media
+  contacts
+}
+
+enum HotelVerificationSource {
+  phone
+  email
+  site_visit
+  website
+  contract
+}
+
+enum HotelVerificationStatus {
+  verified
+  unverified
+  stale
+}
+
+/// A record that AMPM verified one field group of a hotel at a point in time (data-model.md §5). A rate
+/// card points at the verification backing it; the freshness job marks a verification (and its cards)
+/// stale once `verified_at` is older than `configurations.hotel_verification_max_age_days` (AC-04). Feature 9.2.
+model HotelVerification {
+  id         String                      @id @default(uuid(7)) @db.Uuid
+  hotelId    String                      @map("hotel_id") @db.Uuid
+  fieldGroup HotelVerificationFieldGroup @map("field_group")
+  verifiedAt DateTime?                   @map("verified_at") @db.Timestamptz(6)
+  verifiedBy String?                     @map("verified_by") @db.Uuid
+  source     HotelVerificationSource?
+  status     HotelVerificationStatus     @default(unverified)
+  nextDueAt  DateTime?                   @map("next_due_at") @db.Timestamptz(6)
+  notes      String?                     @db.Text
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  hotel     Hotel           @relation(fields: [hotelId], references: [id])
+  rateCards HotelRateCard[]
+
+  @@index([hotelId])
+  @@index([status])
+  @@index([deletedAt])
+  @@map("hotel_verifications")
+}
+
+enum HotelRateCardStatus {
+  draft
+  verified
+  stale
+  retired
+}
+
+/// A dated set of indicative rates for a hotel (data-model.md §5). CLIENT-visible only when `verified`
+/// and its items are `client_visible`; a card cannot be `verified` without a `verification_id` (AC-04.4).
+/// `source` and `internal_notes` are RESTRICTED. Confirmed quotations live in hotel_proposals, not here. Feature 9.2.
+model HotelRateCard {
+  id             String              @id @default(uuid(7)) @db.Uuid
+  hotelId        String              @map("hotel_id") @db.Uuid
+  name           String              @db.VarChar(255)
+  validFrom      DateTime?           @map("valid_from") @db.Date
+  validTo        DateTime?           @map("valid_to") @db.Date
+  currency       String              @default("INR") @db.VarChar(3)
+  status         HotelRateCardStatus @default(draft)
+  verificationId String?             @map("verification_id") @db.Uuid
+  source         String?             @db.Text
+  internalNotes  String?             @map("internal_notes") @db.Text
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  hotel        Hotel              @relation(fields: [hotelId], references: [id])
+  verification HotelVerification? @relation(fields: [verificationId], references: [id])
+  items        HotelRateItem[]
+
+  @@index([hotelId])
+  @@index([status])
+  @@index([verificationId])
+  @@index([deletedAt])
+  @@map("hotel_rate_cards")
+}
+
+enum HotelRateItemType {
+  room_rate
+  venue_rental
+  per_plate_veg
+  per_plate_non_veg
+  wedding_package
+  beverage_package
+  service_charge
+  tax
+  other
+}
+
+enum HotelRateItemUnit {
+  per_night
+  per_plate
+  per_event
+  percent
+}
+
+/// A priced line on a rate card (data-model.md §5). `amount`/`amount_max` express an indicative range
+/// (Q9); `client_visible` with a `verified` card is the only way a price reaches a client. Optionally
+/// tied to a room category or a venue. Feature 9.2.
+model HotelRateItem {
+  id             String            @id @default(uuid(7)) @db.Uuid
+  rateCardId     String            @map("rate_card_id") @db.Uuid
+  itemType       HotelRateItemType @map("item_type")
+  roomCategoryId String?           @map("room_category_id") @db.Uuid
+  venueId        String?           @map("venue_id") @db.Uuid
+  amount         Decimal           @db.Decimal(14, 2)
+  amountMax      Decimal?          @map("amount_max") @db.Decimal(14, 2)
+  isIndicative   Boolean           @default(true) @map("is_indicative")
+  unit           HotelRateItemUnit
+  minQuantity    Int?              @map("min_quantity")
+  inclusionsText String?           @map("inclusions_text") @db.Text
+  clientVisible  Boolean           @default(false) @map("client_visible")
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  rateCard     HotelRateCard      @relation(fields: [rateCardId], references: [id])
+  roomCategory HotelRoomCategory? @relation(fields: [roomCategoryId], references: [id])
+  venue        HotelVenue?        @relation(fields: [venueId], references: [id])
+
+  @@index([rateCardId])
+  @@index([roomCategoryId])
+  @@index([venueId])
+  @@index([deletedAt])
+  @@map("hotel_rate_items")
+}
+
+/// A consented previous-wedding reference for a hotel (data-model.md §5; GP-20). CLIENT when
+/// `client_visible`, which the service allows only once `consent_document_id` is set (the GP-20 gate).
+/// `project_id` (the AMPM wedding, Module E) and `consent_document_id` (Module N documents) are not built
+/// yet — plain Uuid now, the SavedHotel.projectId deferral pattern. The actual photos are MediaAsset rows
+/// (owner_type=hotel, consent_source_project_id set). Feature 9.3.
+model HotelWeddingReference {
+  id                String  @id @default(uuid(7)) @db.Uuid
+  hotelId           String  @map("hotel_id") @db.Uuid
+  projectId         String? @map("project_id") @db.Uuid
+  eventYear         Int     @map("event_year")
+  guestCount        Int?    @map("guest_count")
+  descriptionClient String? @map("description_client") @db.Text
+  clientVisible     Boolean @default(false) @map("client_visible")
+  consentDocumentId String? @map("consent_document_id") @db.Uuid
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  hotel Hotel @relation(fields: [hotelId], references: [id])
+
+  @@index([hotelId])
+  @@index([deletedAt])
+  @@map("hotel_wedding_references")
+}
+
+// ---------------------------------------------------------------- Module D — Hotel consultancy
+// (docs/data-model.md §6, docs/permission-matrix.md §5.4/§7). The enquiry pipeline that turns a
+// discovered hotel (Module C) into a negotiated, booked one. Module D reads Modules C and B through
+// their services, never their tables — so account/hotel/user/project/service_agreement FKs are plain
+// indexed Uuid columns with no Prisma relation (the SavedHotel.projectId / consent_document_id
+// pattern). service_agreement_id (Module B, GP-5) and project_id (Module E, GP-27) are nullable FKs
+// to tables not yet built. The ten-status machine + transitions live in @ampm/policy (statuses.ts,
+// generated matrix.json §7), not here; this enum only lists the states. Feature 10.1.
+
+enum HotelEnquiryStatus {
+  draft
+  submitted
+  awaiting_hotel
+  response_received
+  negotiating
+  visit_scheduled
+  proposal_received
+  client_decision
+  confirmed
+  closed
+}
+
+/// Terminal outcome recorded when an enquiry is closed (a separate column from status, §6).
+enum HotelEnquiryOutcome {
+  booked
+  declined
+  no_availability
+  withdrawn
+}
+
+enum HotelEnquiryEventType {
+  submitted
+  sent_to_hotel
+  hotel_response
+  negotiation_note
+  client_update
+  status_change
+  visit
+  proposal
+}
+
+/// A site visit's own lifecycle (data-model §6, feature 10.3). Hand-rolled in the consultancy module
+/// (not a packages/policy STATUS_MACHINE §7): proposed → confirmed → completed, with cancelled reachable
+/// from any non-terminal state; completed and cancelled are terminal.
+enum SiteVisitStatus {
+  proposed
+  confirmed
+  completed
+  cancelled
+}
+
+/// A hotel proposal's lifecycle (data-model §6, feature 10.4). Hand-rolled in the consultancy module
+/// (not a packages/policy STATUS_MACHINE §7): draft → shared → accepted|declined|revision_requested; a
+/// revision issues a new version that supersedes its predecessor. Shared and later versions are
+/// immutable (a change is a new version, data-model §1); accepted/declined/superseded are terminal.
+enum HotelProposalStatus {
+  draft
+  shared
+  revision_requested
+  accepted
+  declined
+  superseded
+}
+
+/// A booking milestone's lifecycle (data-model §6, feature 10.5). Hand-rolled in the consultancy module
+/// (not a packages/policy STATUS_MACHINE §7): pending → done | overdue | cancelled; the worker sweep sets
+/// overdue; done and cancelled are terminal.
+enum BookingMilestoneStatus {
+  pending
+  done
+  overdue
+  cancelled
+}
+
+/// A booking milestone's type (data-model §6, feature 10.5): the pipeline step it marks. A done
+/// `confirmed` milestone plus a signed contract are the enquiry→confirmed guard (AC-05.6).
+enum BookingMilestoneType {
+  hold_placed
+  contract_sent
+  contract_signed
+  advance_paid
+  rooming_list_due
+  balance_due
+  confirmed
+}
+
+/// A hotel enquiry: the root of the consultancy pipeline (§6). account_id (Module B) owns it before a
+/// wedding project exists; project_id is back-filled when the project is created (GP-27). The client
+/// sees status + client fields (functions_summary, notes_client) + non-internal events; notes_internal
+/// is RESTRICTED-NOTES. `outcome` is set only on close. Standard columns per data.md §1.
+model HotelEnquiry {
+  id                 String               @id @default(uuid(7)) @db.Uuid
+  accountId          String               @map("account_id") @db.Uuid
+  projectId          String?              @map("project_id") @db.Uuid
+  hotelId            String               @map("hotel_id") @db.Uuid
+  requestedByUserId  String               @map("requested_by_user_id") @db.Uuid
+  assignedUserId     String?              @map("assigned_user_id") @db.Uuid
+  serviceAgreementId String?              @map("service_agreement_id") @db.Uuid
+  status             HotelEnquiryStatus   @default(draft)
+  dateFrom           DateTime             @map("date_from") @db.Date
+  dateTo             DateTime             @map("date_to") @db.Date
+  datesFlexible      Boolean              @default(false) @map("dates_flexible")
+  guestEstimate      Int                  @map("guest_estimate")
+  roomsRequired      Int?                 @map("rooms_required")
+  functionsSummary   String?              @map("functions_summary") @db.Text
+  contactPreference  String?              @map("contact_preference") @db.VarChar(255)
+  notesClient        String?              @map("notes_client") @db.Text
+  notesInternal      String?              @map("notes_internal") @db.Text
+  submittedAt        DateTime?            @map("submitted_at") @db.Timestamptz(6)
+  closedAt           DateTime?            @map("closed_at") @db.Timestamptz(6)
+  outcome            HotelEnquiryOutcome?
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  events     HotelEnquiryEvent[]
+  siteVisits SiteVisit[]
+  proposals  HotelProposal[]
+  milestones BookingMilestone[]
+
+  // A partial unique index on (account_id, hotel_id) WHERE status <> 'closed' AND deleted_at IS NULL
+  // enforces one open enquiry per account+hotel (AC-26 idempotency backstop). Prisma cannot express a
+  // partial unique index, so it is the raw-SQL migration 20261104063033_hotel_enquiry_open_unique.
+  @@index([accountId, status])
+  @@index([projectId, status])
+  @@index([hotelId])
+  @@index([assignedUserId, status])
+  @@index([requestedByUserId])
+  @@index([serviceAgreementId])
+  @@index([deletedAt])
+  @@map("hotel_enquiries")
+}
+
+/// The enquiry's append-only domain timeline (§6). Append-only by repository convention (create + list
+/// only; a correction is a new event), keeping the standard columns per data.md §1 — strict schema-level
+/// immutability (dropping updated_*/deleted_at, like audit_events) is a later decision (brief §2.5).
+/// internal_only = true hides the event from the client serialiser entirely (RESTRICTED-NOTES, row-level
+/// absence — never a hide-flag). document_id (Module N) is a plain Uuid awaiting the documents relation.
+model HotelEnquiryEvent {
+  id           String                @id @default(uuid(7)) @db.Uuid
+  enquiryId    String                @map("enquiry_id") @db.Uuid
+  eventType    HotelEnquiryEventType @map("event_type")
+  occurredAt   DateTime              @map("occurred_at") @db.Timestamptz(6)
+  userId       String                @map("user_id") @db.Uuid
+  summary      String?               @db.Text
+  internalOnly Boolean               @default(false) @map("internal_only")
+  documentId   String?               @map("document_id") @db.Uuid
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  enquiry HotelEnquiry @relation(fields: [enquiryId], references: [id])
+
+  @@index([enquiryId, occurredAt])
+  @@index([documentId])
+  @@index([userId])
+  @@index([deletedAt])
+  @@map("hotel_enquiry_events")
+}
+
+/// A scheduled visit to the enquiry's hotel (data-model §6, feature 10.3, AC-05.5). `hotel_id` is the
+/// enquiry's hotel (Module C), a plain column with no relation. One response model per audience
+/// (security.md): the client sees date, status and their own `client_feedback` (CLIENT); `attendees_text`
+/// (INTERNAL) and `outcome_internal` (RESTRICTED-NOTES) are ABSENT from the client view, never a
+/// hide-flag — and never reach a client/guest/demo principal. Standard columns per data.md §1.
+model SiteVisit {
+  id             String          @id @default(uuid(7)) @db.Uuid
+  enquiryId      String          @map("enquiry_id") @db.Uuid
+  /// The enquiry's hotel (Module C); a plain column, no Prisma relation (cross-module).
+  hotelId        String          @map("hotel_id") @db.Uuid
+  scheduledAt    DateTime        @map("scheduled_at") @db.Timestamptz(6)
+  status         SiteVisitStatus @default(proposed)
+  attendeesText  String?         @map("attendees_text") @db.Text
+  outcomeInternal String?        @map("outcome_internal") @db.Text
+  clientFeedback String?         @map("client_feedback") @db.Text
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  enquiry HotelEnquiry @relation(fields: [enquiryId], references: [id])
+
+  @@index([enquiryId, status])
+  @@index([hotelId])
+  @@index([deletedAt])
+  @@map("site_visits")
+}
+
+/// A negotiated hotel proposal for an enquiry (data-model §6, feature 10.4, AC-05.2/AC-09). The
+/// commercial heart: `client_total_amount` is CLIENT (A-4, what the account pays) and
+/// `internal_total_amount` is RESTRICTED-FINANCE (hotel net / commission basis); the margin is DERIVED
+/// (client − internal), never a column. One response model per audience (security.md): the client view
+/// carries the client total + `client_visible` lines only; the internal total, the margin and the
+/// non-visible lines never reach a client. Immutable once shared — a change is a new version that
+/// supersedes the old (`supersedes_proposal_id`, `version_number`), and approvals (Module I, nullable)
+/// reference the exact version. `document_id` (Module N) and `approval_id` are plain columns meanwhile.
+model HotelProposal {
+  id                  String              @id @default(uuid(7)) @db.Uuid
+  enquiryId           String              @map("enquiry_id") @db.Uuid
+  /// The enquiry's hotel (Module C); a plain column, no Prisma relation (cross-module).
+  hotelId             String              @map("hotel_id") @db.Uuid
+  versionNumber       Int                 @map("version_number")
+  status              HotelProposalStatus @default(draft)
+  validUntil          DateTime?           @map("valid_until") @db.Date
+  clientTotalAmount   Decimal             @map("client_total_amount") @db.Decimal(14, 2)
+  internalTotalAmount Decimal             @map("internal_total_amount") @db.Decimal(14, 2)
+  currency            String              @default("INR") @db.VarChar(3)
+  /// Gains its FK when the documents service (module N) lands; a plain column meanwhile.
+  documentId          String?             @map("document_id") @db.Uuid
+  sharedAt            DateTime?           @map("shared_at") @db.Timestamptz(6)
+  decidedAt           DateTime?           @map("decided_at") @db.Timestamptz(6)
+  decidedByUserId     String?             @map("decided_by_user_id") @db.Uuid
+  /// Gains its FK when approvals (module I) land; a plain column meanwhile (brief §2.3).
+  approvalId          String?             @map("approval_id") @db.Uuid
+  /// Self-reference to the version this one supersedes; a plain column (set within the revision txn).
+  supersedesProposalId String?            @map("supersedes_proposal_id") @db.Uuid
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  enquiry HotelEnquiry        @relation(fields: [enquiryId], references: [id])
+  lines   HotelProposalLine[]
+
+  @@unique([enquiryId, versionNumber])
+  @@index([enquiryId, status])
+  @@index([hotelId])
+  @@index([status])
+  @@index([deletedAt])
+  @@map("hotel_proposals")
+}
+
+/// A line of a hotel proposal (data-model §6). `item_type` reuses the `hotel_rate_items` enumeration.
+/// `client_visible` is per line: the client view carries only client-visible lines, the internal view
+/// all of them. Lines are owned per version (a revision creates new lines), so they are immutable once
+/// their proposal is shared.
+model HotelProposalLine {
+  id            String           @id @default(uuid(7)) @db.Uuid
+  proposalId    String           @map("proposal_id") @db.Uuid
+  itemType      HotelRateItemType @map("item_type")
+  description   String           @db.Text
+  quantity      Decimal          @db.Decimal(14, 2)
+  unitAmount    Decimal          @map("unit_amount") @db.Decimal(14, 2)
+  totalAmount   Decimal          @map("total_amount") @db.Decimal(14, 2)
+  clientVisible Boolean          @map("client_visible")
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  proposal HotelProposal @relation(fields: [proposalId], references: [id])
+
+  @@index([proposalId])
+  @@index([deletedAt])
+  @@map("hotel_proposal_lines")
+}
+
+/// A booking milestone for an enquiry (data-model §6, feature 10.5, AC-05.6). The pipeline's closing
+/// steps: a done `confirmed` milestone plus a signed contract (interim: a done `contract_signed` milestone
+/// carrying an uploaded `document_id`) are what let the enquiry reach `confirmed`. One `amount` column
+/// (A-4) the client sees only where the W-14 config flag is on — no client/internal split. Payments are
+/// recorded, not collected (offline bank transfer, v1). `project_id` is back-filled by Module E (GP-27);
+/// `contract_id` (Module G) and `document_id` (Module N) are plain columns until those modules land.
+/// Standard columns per data.md §1.
+model BookingMilestone {
+  id            String                 @id @default(uuid(7)) @db.Uuid
+  enquiryId     String                 @map("enquiry_id") @db.Uuid
+  projectId     String?                @map("project_id") @db.Uuid
+  milestoneType BookingMilestoneType   @map("milestone_type")
+  status        BookingMilestoneStatus @default(pending)
+  dueAt         DateTime?              @map("due_at") @db.Timestamptz(6)
+  completedAt   DateTime?              @map("completed_at") @db.Timestamptz(6)
+  amount        Decimal?               @db.Decimal(14, 2)
+  currency      String?                @db.VarChar(3)
+  /// Gains its FK when contracts (module G) land; a plain column meanwhile (brief §2.3).
+  contractId    String?                @map("contract_id") @db.Uuid
+  /// Gains its FK when the documents service (module N) lands; a plain column meanwhile.
+  documentId    String?                @map("document_id") @db.Uuid
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  enquiry HotelEnquiry @relation(fields: [enquiryId], references: [id])
+
+  @@index([enquiryId, status])
+  @@index([status, dueAt])
+  @@index([projectId])
+  @@index([contractId])
+  @@index([documentId])
+  @@index([deletedAt])
+  @@map("booking_milestones")
+}
+
+// ---------------------------------------------------------------- Module N — documents and media
+
+enum MediaOwnerType {
+  hotel
+  destination
+  vendor
+  design_version
+  invitation_version
+  project
+  cms
+}
+
+enum MediaKind {
+  image
+  video
+}
+
+enum MediaVisibility {
+  internal
+  client
+  demo
+  public
+}
+
+enum MediaRightsStatus {
+  owned
+  licensed
+  consent_required
+  consent_obtained
+}
+
+enum MediaScanStatus {
+  pending
+  clean
+  rejected
+}
+
+/// Gallery media with rights (data-model.md §16, Module N; first used by hotels, owner_type=hotel).
+/// Polymorphic: `owner_type`/`owner_id` name the owning record, so there is no Prisma relation on the
+/// owner — the repository scopes by owner (architecture §5, C→N downward). `storage_key`/`thumbnail_key`/
+/// `web_key` are SECRET and never serialised; a signed link is minted only when `scan_status = clean`
+/// (fail-closed, AC-20.3). `consent_*` reference Module N `documents` / Module E `wedding_projects`, not
+/// built yet — plain Uuid now (the SavedHotel.projectId pattern). GP-20: client/demo/public visibility
+/// requires rights_status owned|licensed|consent_obtained. Feature 9.3.
+model MediaAsset {
+  id                     String            @id @default(uuid(7)) @db.Uuid
+  ownerType              MediaOwnerType    @map("owner_type")
+  ownerId                String            @map("owner_id") @db.Uuid
+  kind                   MediaKind
+  storageKey             String            @map("storage_key") @db.VarChar(255)
+  thumbnailKey           String?           @map("thumbnail_key") @db.VarChar(255)
+  webKey                 String?           @map("web_key") @db.VarChar(255)
+  mimeType               String            @map("mime_type") @db.VarChar(255)
+  sizeBytes              Int               @map("size_bytes")
+  scanStatus             MediaScanStatus   @default(pending) @map("scan_status")
+  caption                String?           @db.VarChar(255)
+  sortOrder              Int?              @map("sort_order")
+  visibility             MediaVisibility   @default(internal)
+  rightsStatus           MediaRightsStatus @default(consent_required) @map("rights_status")
+  consentSourceProjectId String?           @map("consent_source_project_id") @db.Uuid
+  consentDocumentId      String?           @map("consent_document_id") @db.Uuid
+  uploadedBy             String            @map("uploaded_by") @db.Uuid
+  // The upload-claim timestamp (feature 9.3 slice 5c): an upload holds it to serialize concurrent uploads
+  // to this asset; null when no upload is in flight. A compare-and-swap acquires it (with a stale-steal TTL).
+  uploadStartedAt        DateTime?         @map("upload_started_at") @db.Timestamptz(6)
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  @@index([ownerType, ownerId, sortOrder])
+  @@index([scanStatus])
+  @@index([deletedAt])
+  @@map("media_assets")
+}
+
+enum DocumentType {
+  proposal
+  contract
+  invoice
+  design
+  menu
+  schedule
+  rooming_list
+  rider
+  ticket
+  consent
+  other
+}
+
+enum DocumentVisibility {
+  internal
+  client
+  guest
+  public
+}
+
+/// A stored document (data-model.md §16, Module N). Polymorphic owner via owner_type/owner_id (no Prisma
+/// relation on the owner — the repository scopes by the owning record). storage_key is RESTRICTED and
+/// never serialised; a signed link is minted only through DocumentAccessLink. First built by Module D
+/// feature 10.1 (the first document_id consumer: enquiry/agreement/proposal/contract attachments).
+/// size_bytes/checksum are filled at upload-finalize, so they are nullable until then. Antivirus
+/// scanning (security.md) is wired with the real storage adapter, like MediaAsset's stub scanner.
+model Document {
+  id                String             @id @default(uuid(7)) @db.Uuid
+  projectId         String?            @map("project_id") @db.Uuid
+  accountId         String?            @map("account_id") @db.Uuid
+  ownerType         String             @map("owner_type") @db.VarChar(255)
+  ownerId           String             @map("owner_id") @db.Uuid
+  title             String             @db.VarChar(255)
+  documentType      DocumentType       @map("document_type")
+  storageKey        String             @map("storage_key") @db.VarChar(255)
+  mimeType          String             @map("mime_type") @db.VarChar(255)
+  sizeBytes         Int?               @map("size_bytes")
+  checksum          String?            @db.VarChar(255)
+  versionNumber     Int                @default(1) @map("version_number")
+  previousVersionId String?            @map("previous_version_id") @db.Uuid
+  visibility        DocumentVisibility @default(internal)
+  uploadedBy        String             @map("uploaded_by") @db.Uuid
+  retentionClass    String?            @map("retention_class") @db.VarChar(255)
+  retentionUntil    DateTime?          @map("retention_until") @db.Timestamptz(6)
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  accessLinks DocumentAccessLink[]
+
+  @@index([ownerType, ownerId])
+  @@index([projectId])
+  @@index([accountId])
+  @@index([previousVersionId])
+  @@index([deletedAt])
+  @@map("documents")
+}
+
+/// A minted, expiring access link to a document (data-model.md §16). One row per download request; the
+/// API checks the owning record, writes this row, then returns a signed URL valid for 15 minutes
+/// (security.md). token_hash is RESTRICTED (the link's signature, hashed). expires_at defaults to 15
+/// minutes and is never more than 24 hours (field-matrix); revoked_at ends it early.
+model DocumentAccessLink {
+  id            String    @id @default(uuid(7)) @db.Uuid
+  documentId    String    @map("document_id") @db.Uuid
+  tokenHash     String    @map("token_hash") @db.VarChar(255)
+  expiresAt     DateTime  @map("expires_at") @db.Timestamptz(6)
+  maxDownloads  Int       @default(1) @map("max_downloads")
+  downloadCount Int       @default(0) @map("download_count")
+  revokedAt     DateTime? @map("revoked_at") @db.Timestamptz(6)
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  document Document @relation(fields: [documentId], references: [id])
+
+  @@index([documentId])
+  @@index([expiresAt])
+  @@index([deletedAt])
+  @@map("document_access_links")
 }

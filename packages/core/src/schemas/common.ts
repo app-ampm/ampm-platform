@@ -13,3 +13,14 @@ export type CursorQuery = z.infer<typeof cursorQuery>;
 export function page<T extends z.ZodType>(item: T) {
   return z.object({ items: z.array(item), nextCursor: z.string().nullable() });
 }
+
+/**
+ * Money on the wire: integer minor units (paise) plus the currency, the same shape `money.ts` models.
+ * One wire shape for every audience; the audience safety (a `ClientAmount` can never be built from an
+ * `InternalAmount`) lives in `money.ts`, and a view emits a client amount through `clientAmount()`.
+ */
+export const money = z.object({
+  minor: z.number().int(),
+  currency: z.literal("INR"),
+});
+export type Money = z.infer<typeof money>;

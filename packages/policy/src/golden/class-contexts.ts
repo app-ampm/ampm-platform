@@ -63,7 +63,7 @@ export const EVERY_FACT: ClassContext = {
 export const ROWS = {
   hotelProfiles: "hotels.hotel_profiles_client_fields", // 168
   hotelContacts: "hotels.hotel_contacts", // 170
-  enquiries: "consultancy.hotel_enquiries_client_fields", // 182
+  enquiries: "consultancy.enquiries", // 182
   projects: "projects.wedding_projects", // 193
   projectNotes: "projects.project_internal_notes", // 194
   venues: "projects.project_hotels_external_venues", // 195

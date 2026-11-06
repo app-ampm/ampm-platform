@@ -14,8 +14,10 @@ import {
   type StaffRole,
 } from "@ampm/policy";
 
-import { Prisma, PrismaClient } from "../src/generated/prisma/client.js";
+import { Prisma, PrismaClient, type ServiceCategory } from "../src/generated/prisma/client.js";
 import { upsertDemoUser } from "../src/modules/demo/demo-baseline.js";
+import { seedConsultancyDemo } from "./seed-consultancy.js";
+import { seedHotels } from "./seed-hotels.js";
 
 const url = process.env["DATABASE_URL"];
 if (!url) throw new Error("DATABASE_URL is required to seed");
@@ -33,6 +35,8 @@ export const SEED = {
   // Creative: create and read only on the wedding's incidents (permission-matrix §5.13 line 296).
   creative: { email: "creative@example.com", name: "Chitra Creative", subject: "local:cd" },
   sales: { email: "sales@example.com", name: "Sameer Sales", subject: "local:sm" },
+  // Hotel / Destination team: drives the hotel-enquiry pipeline's early stages (the SA cannot) — Slice 3.
+  hotelTeam: { email: "hotel@example.com", name: "Hema Hotels", subject: "local:ht" },
   client: { email: "client@example.com", name: "Rhea Client", subject: "local:client" },
   disabled: { email: "disabled@example.com", name: "Dev Disabled", subject: "local:disabled" },
   projectId: "0192f3a0-7d3e-7b1a-9c2f-0000000000a1",
@@ -148,11 +152,13 @@ async function seedStaff(roleIds: ReadonlyMap<StaffRole, string>): Promise<void>
   await joinProject(creative.id, "staff");
   const sales = await upsertAccount(SEED.sales, { userType: "staff", mfaEnabled: true });
   await assignRole(sales.id, roleId(roleIds, "SM"));
+  const hotelTeam = await upsertAccount(SEED.hotelTeam, { userType: "staff", mfaEnabled: true });
+  await assignRole(hotelTeam.id, roleId(roleIds, "HT"));
   await upsertAccount(SEED.disabled, { userType: "staff", status: "disabled" });
 }
 
 /** The client representative (bride's side) with finance view and approval rights on the project. */
-async function seedClient(): Promise<void> {
+async function seedClient(): Promise<string> {
   const client = await upsertAccount(SEED.client, { userType: "client", phone: "+911234567003" });
   await prisma.projectMember.upsert({
     where: { projectId_userId: { projectId: SEED.projectId, userId: client.id } },
@@ -166,6 +172,46 @@ async function seedClient(): Promise<void> {
       canApprove: true,
       status: "active",
       acceptedAt: new Date(),
+    },
+  });
+  return client.id;
+}
+
+/**
+ * An active prospect client for the portal demo (CP-11): an account-contact on a prospect account with
+ * NO subscription and NO project membership, so their entitlements start empty (hotel discovery locked)
+ * and the subscription purchase is what opens it. Distinct from Rhea, whose project membership already
+ * grants project-scoped discovery.
+ */
+async function seedPortalDemoClient(): Promise<void> {
+  const user = await upsertAccount(
+    { email: "prospect@example.com", name: "Prasad Prospect", subject: "local:prospect" },
+    { userType: "client", phone: "+911234567010" },
+  );
+  const account = await prisma.clientAccount.upsert({
+    where: { id: "0192f3a0-7d3e-7b1a-9c2f-0000000000c1" },
+    update: { primaryContactUserId: user.id },
+    create: {
+      id: "0192f3a0-7d3e-7b1a-9c2f-0000000000c1",
+      name: "Prasad & Partner",
+      status: "prospect",
+      primaryContactUserId: user.id,
+      createdBy: user.id,
+    },
+    select: { id: true },
+  });
+  await prisma.accountContact.upsert({
+    where: { id: "0192f3a0-7d3e-7b1a-9c2f-0000000000c2" },
+    update: { userId: user.id },
+    create: {
+      id: "0192f3a0-7d3e-7b1a-9c2f-0000000000c2",
+      accountId: account.id,
+      name: user.name,
+      relation: "self",
+      email: user.email,
+      isDecisionMaker: true,
+      userId: user.id,
+      createdBy: user.id,
     },
   });
 }
@@ -230,18 +276,86 @@ async function seedLeadSources(): Promise<void> {
   }
 }
 
+/**
+ * The v1 subscription catalogue (feature 8.3): the Hotel Discovery plan, Rs 50,000 one-time for one
+ * month, granting hotel discovery and hotel assistance. The price is data in the `plans` reference
+ * table, never a code literal (AC-02.9/AC-25.4) — the seed is the one place a currency amount appears.
+ */
+async function seedPlans(): Promise<void> {
+  const plan = await prisma.plan.upsert({
+    where: { planKey: "discovery" },
+    update: {},
+    create: {
+      planKey: "discovery",
+      name: "Hotel Discovery",
+      planType: "hotel_discovery",
+      billingType: "one_time",
+      priceAmount: new Prisma.Decimal("50000.00"),
+      currency: "INR",
+      termDays: 30,
+      isDemo: false,
+      status: "active",
+      termsVersion: "2026-11",
+    },
+    select: { id: true },
+  });
+  for (const moduleKey of ["hotel_discovery", "hotel_assistance"]) {
+    await prisma.planModule.upsert({
+      where: { planId_moduleKey: { planId: plan.id, moduleKey } },
+      update: { accessLevel: "full" },
+      create: { planId: plan.id, moduleKey, accessLevel: "full" },
+    });
+  }
+}
+
+/**
+ * The v1 service-type catalogue (feature 10.2, GP-5): the paid services beyond the subscription. A
+ * reference table (Super-Admin editable, data.md §1); `service_key` is the stable business key and
+ * `category` maps to the entitlement module. The hotel-assistance pipeline keys are seeded now; the
+ * design / vendor / full-management services are stubbed for the categories their modules will build.
+ */
+async function seedServiceTypes(): Promise<void> {
+  const types: ReadonlyArray<{ serviceKey: string; name: string; category: ServiceCategory }> = [
+    { serviceKey: "availability_check", name: "Availability check", category: "hotel_assistance" },
+    { serviceKey: "negotiation", name: "Rate negotiation", category: "hotel_assistance" },
+    { serviceKey: "site_visit", name: "Site visit", category: "hotel_assistance" },
+    { serviceKey: "contract_review", name: "Contract review", category: "hotel_assistance" },
+    { serviceKey: "booking_assistance", name: "Booking assistance", category: "hotel_assistance" },
+    { serviceKey: "design", name: "Design", category: "design" },
+    {
+      serviceKey: "vendor_coordination",
+      name: "Vendor coordination",
+      category: "vendor_coordination",
+    },
+    { serviceKey: "full_management", name: "Full management", category: "full_management" },
+  ];
+  for (const type of types) {
+    await prisma.serviceType.upsert({
+      where: { serviceKey: type.serviceKey },
+      update: { name: type.name, category: type.category },
+      create: { serviceKey: type.serviceKey, name: type.name, category: type.category },
+    });
+  }
+}
+
 async function main(): Promise<void> {
   const roleIds = await seedRoles();
   await seedStaff(roleIds);
-  await seedClient();
+  const clientUserId = await seedClient();
+  await seedPortalDemoClient();
   // The canonical demo account, defined once in the demo baseline the nightly restore also rebuilds (5.5).
   await upsertDemoUser(prisma);
   await seedConfigurations();
   await seedLeadSources();
+  await seedPlans();
+  await seedServiceTypes();
+  await seedHotels(prisma);
+  // Depends on the discovery plan, the negotiation service type and the Lake Pavilion hotel seeded above.
+  await seedConsultancyDemo(prisma, clientUserId);
   await seedGrantableCapabilities();
   console.log(
-    "seeded roles, permissions, six synthetic accounts, the baseline configuration " +
-      `and ${GRANTABLE_CAPABILITIES.length} grantable capabilities`,
+    "seeded roles, permissions, eight synthetic accounts, four synthetic hotels, Rhea's hotel " +
+      `consultancy demo, the baseline configuration and ${GRANTABLE_CAPABILITIES.length} grantable capabilities`,
   );
 }
 

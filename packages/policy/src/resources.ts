@@ -61,6 +61,18 @@ export const RESOURCES: Record<string, Record<string, string>> = {
     "Payments inbound from clients": "payments_inbound",
     "Payments outbound to vendors and hotels": "payments_outbound",
   },
+  // Module D (consultancy): feature 10.1 curated the two enquiry rows, 10.3 the site-visit row, 10.4 the
+  // proposals row, 10.5 the booking-milestones row. Only the client-amounts proposal row is curated here —
+  // the internal-amounts row keeps its slug and is reached through the `read_internal_amount` alias
+  // (KEY_ALIASES below), the budget/vendor §5.7/§5.8 pattern. The milestone `amount` is one CLIENT column
+  // gated by the W-14 config flag at the serialiser, so it needs no alias.
+  "5.4": {
+    "Hotel enquiries, client fields": "enquiries",
+    "Enquiry internal notes and internal-only events": "enquiry_notes",
+    "Site visits": "site_visits",
+    "Hotel proposals, client amounts": "proposals",
+    "Booking milestones": "booking_milestones",
+  },
   // §10 names this report's export key `reports.budget_internal.export`.
   "5.16": {
     "Internal cost and margin variance": "budget_internal",

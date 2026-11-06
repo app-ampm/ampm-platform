@@ -71,22 +71,7 @@ export class AccountsService {
     if (lead.status === "converted") throw errors.conflict("This lead has already been converted");
     if (lead.status === "closed") throw errors.conflict("A closed lead cannot be converted");
 
-    const plan: ConvertPlan = {
-      leadId,
-      previousStatus: lead.status,
-      accountName: request.accountName ?? lead.name,
-      coupleNames: request.coupleNames ?? null,
-      preferredLocations: request.preferredLocations ?? null,
-      contact: {
-        name: request.primaryContact.name ?? lead.name,
-        relation: request.primaryContact.relation ?? DEFAULT_CONTACT_RELATION,
-        email: request.primaryContact.email,
-        phone: request.primaryContact.phone ?? lead.phone ?? null,
-        isDecisionMaker: request.primaryContact.isDecisionMaker,
-      },
-      actorId,
-    };
-
+    const plan = buildConvertPlan(leadId, lead, request, actorId);
     const created = await this.runConvert(plan);
     const inviteQueued = await this.queueInvite(
       created.userId,
@@ -236,5 +221,29 @@ function toContactData(
     isDecisionMaker: plan.contact.isDecisionMaker,
     userId,
     createdBy: plan.actorId,
+  };
+}
+
+/** Build the convert plan: every field defaults from the lead, so the request may carry only the email. */
+function buildConvertPlan(
+  leadId: string,
+  lead: NonNullable<Awaited<ReturnType<LeadsRepository["findById"]>>>,
+  request: LeadConvertRequest,
+  actorId: string,
+): ConvertPlan {
+  return {
+    leadId,
+    previousStatus: lead.status,
+    accountName: request.accountName ?? lead.name,
+    coupleNames: request.coupleNames ?? null,
+    preferredLocations: request.preferredLocations ?? null,
+    contact: {
+      name: request.primaryContact.name ?? lead.name,
+      relation: request.primaryContact.relation ?? DEFAULT_CONTACT_RELATION,
+      email: request.primaryContact.email,
+      phone: request.primaryContact.phone ?? lead.phone ?? null,
+      isDecisionMaker: request.primaryContact.isDecisionMaker,
+    },
+    actorId,
   };
 }
