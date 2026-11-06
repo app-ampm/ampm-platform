@@ -1,0 +1,3 @@
+destinationSlug,destinationName,slug,name,brand,starCategory,address,latitude,longitude,descriptionClient,website,totalRooms,demoVisible,status,internalRating,internalNotes,streetViewRef
+udaipur,Udaipur,lake-pavilion-udaipur,The Lake Pavilion,Pavilion Collection,5,"Lake Pichola Road, Udaipur, Rajasthan 313001",24.576,73.680,A heritage-style lakeside palace with courtyard lawns.,https://example.com/lake-pavilion,84,true,active,4,Seasonal rates confirmed with sales office.,ST-UDR-01
+goa,Goa,candolim-sands-goa,Candolim Sands Resort,,5,"Candolim Beach Road, North Goa 403515",15.518,73.762,A beachfront resort for seaside receptions.,https://example.com/candolim-sands,160,true,active,,,ST-GOA-07

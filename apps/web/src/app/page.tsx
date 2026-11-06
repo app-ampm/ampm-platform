@@ -1,8 +1,9 @@
 import { SchemeToggle } from "@/components/scheme-toggle";
 
 /**
- * Bootstrap check page: the same card as apps/mobile/src/app/index.tsx with the same token classes,
- * so web and native can be compared. Replaced by the public site's home page later.
+ * Bootstrap check page: a token-check card mirroring the mobile component gallery
+ * (apps/mobile/src/app/gallery.tsx) with the same token classes, so web and native can be compared.
+ * Replaced by the public site's home page later.
  */
 export default function Home() {
   return (

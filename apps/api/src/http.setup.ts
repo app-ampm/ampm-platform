@@ -1,7 +1,7 @@
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import type { NextFunction, Request, Response } from "express";
 
-import { answerParserRefusal } from "./common/app-error.filter.js";
+import { answerParserRefusal, refuseBinaryOutsideUpload } from "./common/app-error.filter.js";
 import { requestContextMiddleware } from "./common/request-context.middleware.js";
 
 /**
@@ -10,6 +10,14 @@ import { requestContextMiddleware } from "./common/request-context.middleware.js
  * guard runs, and AppErrorFilter answers it as payload_too_large.
  */
 export const JSON_BODY_LIMIT = "100kb";
+
+/**
+ * The raw-body ceiling for media uploads (application/octet-stream), feature 9.3b. Set just above the
+ * service's per-file limit (25 MiB) so an oversized upload is answered by the service with the named limit
+ * (AC-20.2), not the parser. Only the upload route reaches this parser (refuseBinaryOutsideUpload gates it);
+ * in production media uploads to object storage through signed URLs, so these bytes bypass the API.
+ */
+export const MEDIA_UPLOAD_LIMIT = "26mb";
 
 /**
  * HTTP settings shared by the server and the e2e suite, so the tests exercise what runs. Express
@@ -33,6 +41,9 @@ export function configureHttp(app: NestExpressApplication): void {
     next();
   });
   app.useBodyParser("json", { limit: JSON_BODY_LIMIT });
+  // Binary bodies are refused everywhere but the media upload route, before the raw parser buffers them.
+  app.use(refuseBinaryOutsideUpload);
+  app.useBodyParser("raw", { type: "application/octet-stream", limit: MEDIA_UPLOAD_LIMIT });
   app.use(answerParserRefusal);
   // Says nothing a caller needs and names the framework to anyone probing for it.
   app.disable("x-powered-by");

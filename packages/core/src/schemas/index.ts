@@ -1,5 +1,5 @@
-export { cursorQuery, isoDateTime, page, uuid } from "./common";
-export type { CursorQuery } from "./common";
+export { cursorQuery, isoDateTime, money, page, uuid } from "./common";
+export type { CursorQuery, Money } from "./common";
 export {
   auditAction,
   auditActorType,
@@ -50,26 +50,34 @@ export {
   CONFIG_REGISTRY,
   configView,
   configWriteRequest,
+  consultancyChargeablePolicy,
+  consultancyMilestoneVisibilityPolicy,
   featureFlags,
+  hotelVerificationPolicy,
   isConfigKey,
   notificationChannelDefaults,
   notificationTemplate,
   notificationTemplates,
   sessionIdleTimeouts,
+  subscriptionPolicy,
 } from "./config";
 export type {
   ConfigKey,
   ConfigValue,
   ConfigView,
   ConfigWriteRequest,
+  ConsultancyChargeablePolicy,
+  ConsultancyMilestoneVisibilityPolicy,
   FeatureFlags,
+  HotelVerificationPolicy,
   NotificationChannelDefaults,
   NotificationTemplate,
   NotificationTemplates,
   SessionIdleTimeouts,
+  SubscriptionPolicy,
 } from "./config";
-export { activateRequest, activateResponse } from "./auth";
-export type { ActivateRequest, ActivateResponse } from "./auth";
+export { activateRequest, activateResponse, devLoginRequest, devLoginResponse } from "./auth";
+export type { ActivateRequest, ActivateResponse, DevLoginRequest, DevLoginResponse } from "./auth";
 export {
   clientLoginCreateRequest,
   clientLoginList,
@@ -217,3 +225,91 @@ export type {
   LeadConvertRequest,
   LeadConvertResponse,
 } from "./accounts";
+export {
+  billingType,
+  planModuleAccess,
+  planModuleView,
+  planPublicView,
+  plansResponse,
+  planType,
+} from "./plans";
+export type {
+  BillingType,
+  PlanModuleAccess,
+  PlanModuleView,
+  PlanPublicView,
+  PlansResponse,
+  PlanType,
+} from "./plans";
+export {
+  activationSource,
+  devCompletePaymentRequest,
+  devCompletePaymentResponse,
+  portalSubscriptionCreateRequest,
+  subscriptionClientView,
+  subscriptionCreateRequest,
+  subscriptionCreateResponse,
+  subscriptionListQuery,
+  subscriptionOrder,
+  subscriptionPage,
+  subscriptionStatus,
+  subscriptionView,
+} from "./subscriptions";
+export type {
+  ActivationSource,
+  DevCompletePaymentRequest,
+  DevCompletePaymentResponse,
+  PortalSubscriptionCreateRequest,
+  SubscriptionClientView,
+  SubscriptionCreateRequest,
+  SubscriptionCreateResponse,
+  SubscriptionListQuery,
+  SubscriptionOrder,
+  SubscriptionPage,
+  SubscriptionStatus,
+  SubscriptionView,
+} from "./subscriptions";
+export {
+  manualPaymentRequest,
+  paymentClientView,
+  paymentDirection,
+  paymentFinanceView,
+  paymentMethod,
+  paymentPurpose,
+  paymentStatus,
+} from "./payments";
+export type {
+  ManualPaymentRequest,
+  PaymentClientView,
+  PaymentDirection,
+  PaymentFinanceView,
+  PaymentMethod,
+  PaymentPurpose,
+  PaymentStatus,
+} from "./payments";
+// Module C hotels: client discovery (hotels.ts) and the staff workspace (hotels-admin.ts, feature 9.1).
+// Wildcard re-exports keep the barrel within the 300-line max-lines cap; each file exports only its
+// public contracts (module-private helpers are plain `const`, not re-exported), and their names do not
+// collide, so `export *` is unambiguous.
+export * from "./hotels";
+export * from "./hotels-admin";
+export * from "./hotel-rates";
+export * from "./hotel-references";
+export * from "./media";
+// Module D consultancy (consultancy.ts), feature 10.1. The Module N documents/document_access_links
+// TABLES land in 10.1 as forward schema; their contract + service arrive with feature 10.2 (first upload).
+export * from "./consultancy";
+// Module B paid-service agreements (service-agreements.ts), feature 10.2. GP-5: an active hotel-assistance
+// agreement unblocks work beyond availability checking on its linked enquiry (the AC-05.7 gate).
+export * from "./service-agreements";
+// Module D hotel site visits (site-visits.ts), feature 10.3. Dual-audience: the client sees date/status
+// + own feedback; attendees and the internal outcome never reach a client (AC-05.5).
+export * from "./site-visits";
+// Module D hotel proposals (hotel-proposals.ts), feature 10.4. Two response models: the client total +
+// client-visible lines for the client; the internal total + derived margin only for read_internal_amount
+// holders (AC-05.2). Versioned + immutable once shared (AC-09).
+export * from "./hotel-proposals";
+// Module D hotel booking milestones (booking-milestones.ts), feature 10.5. One `amount` column, absent
+// from the client view unless the W-14 config flag is on; a done `confirmed` milestone + a signed
+// contract are the enquiry→confirmed guard (AC-05.6).
+export * from "./booking-milestones";

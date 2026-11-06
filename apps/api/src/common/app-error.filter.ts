@@ -1,8 +1,34 @@
 import { type ArgumentsHost, Catch, type ExceptionFilter, HttpException } from "@nestjs/common";
 import { AppError, errors, isAppError, type ApiFailure, type ErrorCode } from "@ampm/core";
-import type { NextFunction, Response } from "express";
+import type { NextFunction, Request, Response } from "express";
 
 import { AppLogger } from "./logger.service.js";
+
+// The only route that accepts a binary (application/octet-stream) body: the media upload (feature 9.3b).
+const UPLOAD_PATH = /^\/media\/[^/]+\/upload\/?$/;
+
+/**
+ * Refuse a binary body on any route but the media upload, BEFORE the raw parser buffers it — so a large
+ * octet-stream body cannot amplify memory use pre-auth on a record endpoint (security). Registered right
+ * after the JSON parser and before the raw one, so only the upload route ever buffers a large body.
+ */
+export function refuseBinaryOutsideUpload(req: Request, res: Response, next: NextFunction): void {
+  const isOctetStream = (req.headers["content-type"] ?? "")
+    .toLowerCase()
+    .startsWith("application/octet-stream");
+  const isUpload = req.method === "POST" && UPLOAD_PATH.test(req.path);
+  if (isOctetStream && !isUpload) {
+    const error = new AppError(
+      "unsupported_media_type",
+      "This route does not accept a binary body",
+      undefined,
+      415,
+    );
+    res.status(415).json(error.toEnvelope());
+    return;
+  }
+  next();
+}
 
 const STATUS_CODES: Readonly<Record<number, ErrorCode>> = {
   400: "validation_failed",

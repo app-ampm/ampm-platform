@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import type { AppLogger } from "../common/logger.service.js";
 import type { Env } from "../env.js";
+import type { SubscriptionStatus } from "../generated/prisma/client.js";
 import { PrincipalRepository, type PrincipalRecord } from "./principal.repository.js";
 import { PrincipalService } from "./principal.service.js";
 import { toPolicyPrincipal } from "./principal.types.js";
@@ -27,6 +28,13 @@ class FakeRepository extends PrincipalRepository {
     for (const id of roleIds) for (const key of this.caps[id] ?? []) keys.add(key);
     return Promise.resolve([...keys]);
   }
+  accountSubscriptionStatuses(): Promise<SubscriptionStatus[]> {
+    return Promise.resolve([]);
+  }
+  accountHasActiveHotelAgreement(): Promise<boolean> {
+    return Promise.resolve(this.hotelAgreement);
+  }
+  hotelAgreement = false;
 }
 
 const env = (dynamicRoles: boolean): Env => ({ DYNAMIC_ROLES: dynamicRoles }) as unknown as Env;

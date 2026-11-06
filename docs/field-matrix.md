@@ -1,6 +1,6 @@
 # AMPM Platform — Field Matrix
 
-**Status:** DRAFT v0.1, generated 2026-10-31 from [data-model.md](data-model.md) by `docs/tools/field_matrix_build.py`. Do not edit by hand; change the data model or `docs/tools/field_rules.py` and rebuild.
+**Status:** DRAFT v0.1, generated 2026-11-03 from [data-model.md](data-model.md) by `docs/tools/field_matrix_build.py`. Do not edit by hand; change the data model or `docs/tools/field_rules.py` and rebuild.
 **Companions:** [requirements-audit.md](requirements-audit.md) (Q numbers), [data-model.md](data-model.md) (assumptions A-1 to A-30), [permission-matrix.md](permission-matrix.md) (role codes, visibility classes, assumptions P-1 to P-11).
 **Spreadsheet version:** [field-matrix.csv](field-matrix.csv) has the same rows for filtering.
 
@@ -21,7 +21,7 @@ Global conventions that apply to every row: money is `numeric(14,2)` with a sibl
 | Module | Tables | Fields | Required at creation | Client or public visible | Restricted, sensitive or secret |
 |---|---|---|---|---|---|
 | A — Identity, access and administration | 19 | 116 | 59 | 10 | 1 |
-| B — CRM, subscriptions and commercial agreements | 12 | 129 | 49 | 90 | 4 |
+| B — CRM, subscriptions and commercial agreements | 13 | 139 | 55 | 90 | 4 |
 | C — Hotel intelligence | 10 | 100 | 38 | 82 | 11 |
 | D — Hotel consultancy | 6 | 70 | 28 | 65 | 3 |
 | E — Wedding project | 3 | 36 | 13 | 29 | 3 |
@@ -33,13 +33,13 @@ Global conventions that apply to every row: money is `numeric(14,2)` with a sibl
 | K — Rooms, travel and transport | 9 | 93 | 45 | 44 | 3 |
 | L — Menus and food service | 4 | 31 | 15 | 25 | 0 |
 | M — Tasks, staffing and incidents | 4 | 46 | 20 | 16 | 17 |
-| N — Documents, media and identity documents | 4 | 51 | 29 | 0 | 17 |
+| N — Documents, media and identity documents | 4 | 56 | 31 | 0 | 18 |
 | O — Checklists, closure and feedback | 4 | 30 | 17 | 7 | 0 |
 | P — Public website content (dormant) | 2 | 17 | 8 | 17 | 0 |
 | Q — Live chat | 2 | 16 | 6 | 16 | 0 |
-| **Total** | **115** | **1139** | **492** | **646** | **103** |
+| **Total** | **116** | **1154** | **500** | **646** | **104** |
 
-Fields by visibility class: CLIENT 613, INTERNAL 337, Other (per record, recipient or parent) 53, RESTRICTED-NOTES 34, PUBLIC 33, RESTRICTED-FINANCE 31, RESTRICTED-CONTACT 13, RESTRICTED-IDENTITY 13, SECRET 6, RESTRICTED-BANK 4, SENSITIVE-GUEST 2.
+Fields by visibility class: CLIENT 613, INTERNAL 347, Other (per record, recipient or parent) 57, RESTRICTED-NOTES 34, PUBLIC 33, RESTRICTED-FINANCE 31, RESTRICTED-CONTACT 13, RESTRICTED-IDENTITY 13, SECRET 7, RESTRICTED-BANK 4, SENSITIVE-GUEST 2.
 
 ---
 
@@ -510,6 +510,23 @@ Created at stage: **Subscription / engagement / vendor payment** · Default edit
 | `recorded_by` (FK) | references users |  | SYS (acting user) | CLIENT when client_visible; RESTRICTED-FINANCE for outbound rows | System | — |
 | `refund_of_payment_id` (FK) | references payments; must be a succeeded payment; refund total never exceeds it |  | FA; SA; SYS (gateway webhooks) | CLIENT when client_visible; RESTRICTED-FINANCE for outbound rows | Optional | — |
 | `client_visible` | true or false; true for inbound client payments (A-4) |  | FA; SA; SYS (gateway webhooks) | CLIENT when client_visible; RESTRICTED-FINANCE for outbound rows | Optional | true only for inbound client payments (A-4) |
+
+### `webhook_events`
+
+Created at stage: **Operational** · Default editor: SYS · Default visibility: INTERNAL · Assumptions: feature 8.3 · raw verified provider webhooks; append-only, no soft-delete, like job_runs
+
+| Field | Type and validation | Options | Edited by | Visibility | Required | Automation and report impact |
+|---|---|---|---|---|---|---|
+| `id` (PK) | UUID v7, generated |  | SYS | INTERNAL | System | — |
+| `provider` | string, up to 255 characters; e.g. razorpay |  | SYS | INTERNAL | At creation | — |
+| `event_id` | the provider's event id; unique per provider |  | SYS | INTERNAL | At creation | — |
+| `event_type` | string, up to 255 characters; e.g. payment.captured |  | SYS | INTERNAL | At creation | — |
+| `provider_ref` | string, up to 255 characters; the order the event is for; matches payments.provider_ref |  | SYS | INTERNAL | At creation | — |
+| `payload` | valid JSON matching the registered schema; the raw verified event |  | SYS | INTERNAL | At creation | — |
+| `status` | one of the listed options | received, processed, failed, ignored | SYS | INTERNAL | At creation | received then processed, failed or ignored; a bad signature writes nothing |
+| `error` | nullable; sanitised |  | SYS | INTERNAL | Optional | — |
+| `received_at` | timestamp (UTC) |  | SYS | INTERNAL | Optional | — |
+| `processed_at` | nullable until processed |  | SYS | INTERNAL | System | — |
 
 ---
 
@@ -1879,6 +1896,10 @@ Created at stage: **Any** · Default editor: HT (hotels); VC (vendors); CD (a) (
 | `kind` | one of the listed options | image, video | HT (hotels); VC (vendors); CD (a) (designs); SA; SM (rights, showcase) | Per the visibility field | At creation | — |
 | `storage_key` | string, up to 255 characters |  | SYS | SECRET | At creation | — |
 | `thumbnail_key` | string, up to 255 characters |  | SYS | SECRET | Optional | Generated by the media worker; video transcoded for controlled delivery |
+| `web_key` | string, up to 255 characters; web-size derivative (AC-24.1) |  | SYS | SECRET | Optional | Web-size derivative generated by the media worker with image metadata stripped; the client is served this, never the original (AC-24.1) |
+| `mime_type` | detected by content, not extension; allowed list per kind (AC-20.2) |  | SYS | Per the visibility field | At creation | — |
+| `size_bytes` | integer; within the configured media limit (AC-20.2) |  | SYS | Per the visibility field | At creation | — |
+| `scan_status` | one of the listed options | pending / clean / rejected; only clean is downloadable (AC-20.3, fail-closed) | SYS | Per the visibility field | Optional | Antivirus scan on upload; only clean is downloadable, pending and rejected are quarantined (AC-20.3, fail-closed) |
 | `caption` | string, up to 255 characters |  | HT (hotels); VC (vendors); CD (a) (designs); SA; SM (rights, showcase) | Same class as the asset | Optional | — |
 | `sort_order` | integer, 0 or more; unique within its parent |  | HT (hotels); VC (vendors); CD (a) (designs); SA; SM (rights, showcase) | Per the visibility field | Optional | — |
 | `visibility` | one of the listed options | internal, client, demo, public | HT (hotels); VC (vendors); CD (a) (designs); SA; SM (rights, showcase) | Per the visibility field | At creation | Sharing change audited; switches the serialiser per class |
@@ -1886,6 +1907,7 @@ Created at stage: **Any** · Default editor: HT (hotels); VC (vendors); CD (a) (
 | `consent_source_project_id` (FK) | references wedding_projects; nullable, the wedding the media came from |  | HT (hotels); VC (vendors); CD (a) (designs); SA; SM (rights, showcase) | Per the visibility field | When rights_status is consent_obtained for wedding media | — |
 | `consent_document_id` (FK) | references documents; nullable |  | HT (hotels); VC (vendors); CD (a) (designs); SA; SM (rights, showcase) | Per the visibility field | When rights_status is consent_obtained | — |
 | `uploaded_by` (FK) | references users |  | SYS (acting user) | Per the visibility field | At creation | — |
+| `upload_started_at` | timestamp (UTC); nullable; upload claim that serialises concurrent uploads (slice 5c) |  | SYS (when the action happens) | Per the visibility field | System | — |
 
 ### `identity_documents`
 

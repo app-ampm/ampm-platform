@@ -2095,9 +2095,9 @@
     {
       "section": "5.4",
       "module": "consultancy",
-      "resource": "hotel_enquiries_client_fields",
+      "resource": "enquiries",
       "label": "Hotel enquiries, client fields",
-      "provisional": true,
+      "provisional": false,
       "cells": {
         "SA": "CRUD",
         "SM": "CR",
@@ -2174,9 +2174,9 @@
     {
       "section": "5.4",
       "module": "consultancy",
-      "resource": "enquiry_internal_notes_internal",
+      "resource": "enquiry_notes",
       "label": "Enquiry internal notes and internal-only events",
-      "provisional": true,
+      "provisional": false,
       "cells": {
         "SA": "CRU",
         "SM": "R",
@@ -2238,7 +2238,7 @@
       },
       "aliases": [
         {
-          "resource": "hotel_enquiries_client_fields",
+          "resource": "enquiries",
           "action": "read_internal_notes",
           "as": "read"
         }
@@ -2250,7 +2250,7 @@
       "module": "consultancy",
       "resource": "site_visits",
       "label": "Site visits",
-      "provisional": true,
+      "provisional": false,
       "cells": {
         "SA": "CRU",
         "SM": "R",
@@ -2317,9 +2317,9 @@
     {
       "section": "5.4",
       "module": "consultancy",
-      "resource": "hotel_proposals_client_amounts",
+      "resource": "proposals",
       "label": "Hotel proposals, client amounts",
-      "provisional": true,
+      "provisional": false,
       "cells": {
         "SA": "CRUS",
         "SM": "R",
@@ -2457,7 +2457,7 @@
       },
       "aliases": [
         {
-          "resource": "hotel_proposals_client_amounts",
+          "resource": "proposals",
           "action": "read_internal_amount",
           "as": "read"
         }
@@ -2469,7 +2469,7 @@
       "module": "consultancy",
       "resource": "booking_milestones",
       "label": "Booking milestones",
-      "provisional": true,
+      "provisional": false,
       "cells": {
         "SA": "CRU",
         "SM": "R",

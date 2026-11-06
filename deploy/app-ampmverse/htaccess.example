@@ -1,0 +1,25 @@
+# Reference httpdocs/.htaccess for the app.ampmverse.com throwaway test box (docs/engineering/test-deploy.md).
+#
+# Version-controlled so the box's web config is written back into the repo (infra.md), NOT auto-deployed:
+# deploy-web.sh preserves the box's live .htaccess (rsync --exclude) because it also carries the box's
+# Basic-Auth stanza, which must not be clobbered. When setting up a fresh box, copy this file to
+# httpdocs/.htaccess and add the Basic-Auth block. This is the THROWAWAY test box, not the production
+# VPS (decision D-015). Requires mod_proxy + mod_rewrite (Plesk provides both).
+
+RewriteEngine On
+
+# API: proxy /_api/* to the box-local NestJS API. Edit the port if the box runs it elsewhere (default 7001).
+RewriteRule ^_api/(.*)$ http://127.0.0.1:7001/$1 [P,L]
+
+# SPA fallback: any path that is not /_api and not a real file or directory serves the single-page app,
+# so a deep link such as /portal/requests/<id> loads index.html and the router resolves it client-side.
+RewriteCond %{REQUEST_URI} !^/_api/
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule . /index.html [L]
+
+# Basic-Auth gate (the box keeps this live; uncomment + point at the box's .htpasswd on a fresh setup):
+# AuthType Basic
+# AuthName "AMPM test"
+# AuthUserFile /var/www/vhosts/app.ampmverse.com/.htpasswd
+# Require valid-user

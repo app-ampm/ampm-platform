@@ -63,14 +63,14 @@ export const KEY_ALIAS_GOLDEN: readonly AliasGolden[] = [
     line: 183,
     section: "5.4",
     label: "Enquiry internal notes and internal-only events",
-    key: "consultancy.hotel_enquiries_client_fields.read_internal_notes",
+    key: "consultancy.enquiries.read_internal_notes",
     holders: { SA: ALL, SM: ALL, HT: ALL, PM: ASSIGNED },
   },
   {
     line: 186,
     section: "5.4",
     label: "Hotel proposals, internal amounts",
-    key: "consultancy.hotel_proposals_client_amounts.read_internal_amount",
+    key: "consultancy.proposals.read_internal_amount",
     holders: { SA: ALL, HT: ALL, PM: ASSIGNED, FA: ALL },
   },
   {

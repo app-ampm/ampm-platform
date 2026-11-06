@@ -13,6 +13,7 @@ import {
   StubBotCheckAdapter,
   type BotCheckAdapter,
 } from "./leads/bot-check.adapter.js";
+import { HotelAssistanceDemoHandler } from "./leads/hotel-assistance-demo.handler.js";
 import { LeadActivitiesRepository } from "./leads/lead-activities.repository.js";
 import { LeadEnquiryService } from "./leads/lead-enquiry.service.js";
 import { LeadReminderService } from "./leads/leads.reminder.service.js";
@@ -37,6 +38,7 @@ import { LeadsService } from "./leads/leads.service.js";
     LeadReminderService,
     LeadsRepository,
     LeadActivitiesRepository,
+    HotelAssistanceDemoHandler,
     AccountsService,
     AccountsRepository,
     {

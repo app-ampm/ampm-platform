@@ -5,10 +5,14 @@ import {
   isConfigKey,
   type ConfigKey,
   type ConfigView,
+  type ConsultancyChargeablePolicy,
+  type ConsultancyMilestoneVisibilityPolicy,
   type FeatureFlags,
+  type HotelVerificationPolicy,
   type NotificationChannelDefaults,
   type NotificationTemplates,
   type SessionIdleTimeouts,
+  type SubscriptionPolicy,
 } from "@ampm/core";
 
 import { PrismaService } from "../../../db/prisma.service.js";
@@ -39,6 +43,10 @@ export class ConfigService {
   get(key: "notification.default_channels"): Promise<NotificationChannelDefaults>;
   get(key: "notification.templates"): Promise<NotificationTemplates>;
   get(key: "feature.flags"): Promise<FeatureFlags>;
+  get(key: "subscription.policy"): Promise<SubscriptionPolicy>;
+  get(key: "hotel.verification_policy"): Promise<HotelVerificationPolicy>;
+  get(key: "consultancy.chargeable_services"): Promise<ConsultancyChargeablePolicy>;
+  get(key: "consultancy.milestone_amounts_visible"): Promise<ConsultancyMilestoneVisibilityPolicy>;
   async get(key: ConfigKey): Promise<unknown> {
     const cached = this.cache.get(key);
     const raw = cached !== undefined ? cached : await this.load(key);
