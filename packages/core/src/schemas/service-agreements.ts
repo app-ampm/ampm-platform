@@ -53,6 +53,21 @@ export const serviceAgreementStatus = z.enum([
 ]);
 export type ServiceAgreementStatus = z.infer<typeof serviceAgreementStatus>;
 
+/** A service-type catalogue row (reference data, data-model §4), for the staff agreement-create picker. */
+export const serviceTypeView = z.object({
+  id: uuid,
+  // The stable business key as stored (a Super-Admin-extendable VarChar), reported as an open string so a
+  // future catalogue row outside the fixed v1 `serviceKey` enum does not 500 the whole list.
+  serviceKey: z.string().min(1).max(64),
+  name: z.string().min(1).max(255),
+  category: serviceCategory,
+});
+export type ServiceTypeView = z.infer<typeof serviceTypeView>;
+
+/** The active service-type catalogue (`GET /crm/service-types`). */
+export const serviceTypesResponse = z.object({ items: z.array(serviceTypeView) });
+export type ServiceTypesResponse = z.infer<typeof serviceTypesResponse>;
+
 /** The fee the DB column `numeric(14,2)` can hold, in minor units (paise): Rs 999,999,999,999.99. A
  * fee outside [0, this] is rejected at the edge (422) rather than overflowing the column (a 500). */
 const MAX_FEE_MINOR = 99_999_999_999_999;

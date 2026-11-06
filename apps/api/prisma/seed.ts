@@ -354,7 +354,7 @@ async function main(): Promise<void> {
   await seedConsultancyDemo(prisma, clientUserId);
   await seedGrantableCapabilities();
   console.log(
-    "seeded roles, permissions, seven synthetic accounts, four synthetic hotels, Rhea's hotel " +
+    "seeded roles, permissions, eight synthetic accounts, four synthetic hotels, Rhea's hotel " +
       `consultancy demo, the baseline configuration and ${GRANTABLE_CAPABILITIES.length} grantable capabilities`,
   );
 }
