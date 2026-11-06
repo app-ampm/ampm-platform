@@ -2,7 +2,7 @@
   "name": "@ampm/tokens",
   "version": "0.0.0",
   "private": true,
-  "description": "Design tokens: colours, spacing, radii, type scale, fonts, shadows, motion, breakpoints. The only place theme values exist (.claude/rules/styling.md). `pnpm tokens:build` generates the Tailwind preset and the CSS variables into dist/.",
+  "description": "Design tokens (Peacock Night): colours, opacity steps, glass, spacing, radii, type scale, fonts, shadows, motion, breakpoints. The only place theme values exist (.claude/rules/styling.md). `pnpm tokens:build` generates the Tailwind presets (Expo and the Next.js site) and the CSS variables into dist/.",
   "type": "module",
   "exports": {
     ".": {
@@ -12,6 +12,10 @@
     "./tailwind.preset": {
       "types": "./dist/tailwind.preset.d.cts",
       "default": "./dist/tailwind.preset.cjs"
+    },
+    "./tailwind.preset.web": {
+      "types": "./dist/tailwind.preset.web.d.cts",
+      "default": "./dist/tailwind.preset.web.cjs"
     },
     "./tokens.css": "./dist/tokens.css"
   },

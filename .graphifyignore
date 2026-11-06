@@ -18,3 +18,6 @@ CLAUDE.md
 # gitignored and so already skipped; the Expo template's binary assets (icons, logos, template images) are
 # tracked but are boilerplate, not AMPM content.
 apps/mobile/assets/
+# The Peacock Night handoff's HTML mocks and token drafts: inline-styled boards, mapped through docs/design/peacock-night.md instead.
+reference_docs/design/peacock-night/designs/
+reference_docs/design/peacock-night/tokens/

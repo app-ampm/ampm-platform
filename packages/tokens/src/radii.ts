@@ -1,11 +1,14 @@
-/** Corner radii: `rounded` is the default (md); `rounded-full` for pills and avatars. */
+/**
+ * Corner radii: Peacock Night. Controls are pills (`rounded-full`: buttons, inputs, chips, tabs,
+ * segmented controls, nav and tab bars); panels are soft.
+ */
 export const radii = {
   none: "0px",
-  sm: "0.25rem",
-  DEFAULT: "0.5rem",
-  md: "0.5rem",
-  lg: "0.75rem",
-  xl: "1rem",
-  "2xl": "1.5rem",
+  sm: "0.4375rem", // 7 · checkboxes, small square marks
+  DEFAULT: "1rem", // 16 · rows and inner cards inside panels, OTP cells
+  md: "1rem",
+  lg: "1.375rem", // 22 · glass cards on a phone
+  xl: "1.5rem", // 24 · glass panels on a desktop
+  "2xl": "1.75rem", // 28 · page containers, sheets
   full: "9999px",
 } as const;

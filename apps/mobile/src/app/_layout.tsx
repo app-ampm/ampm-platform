@@ -1,15 +1,17 @@
 import "../global.css";
 
-import { Fraunces_400Regular, Fraunces_600SemiBold } from "@expo-google-fonts/fraunces";
-import { JetBrainsMono_400Regular } from "@expo-google-fonts/jetbrains-mono";
+import { GildaDisplay_400Regular } from "@expo-google-fonts/gilda-display";
 import {
-  SourceSans3_400Regular,
-  SourceSans3_500Medium,
-  SourceSans3_600SemiBold,
-  SourceSans3_700Bold,
-} from "@expo-google-fonts/source-sans-3";
+  Manrope_400Regular,
+  Manrope_500Medium,
+  Manrope_600SemiBold,
+  Manrope_700Bold,
+  Manrope_800ExtraBold,
+} from "@expo-google-fonts/manrope";
+import { RozhaOne_400Regular } from "@expo-google-fonts/rozha-one";
 import { useFonts } from "expo-font";
 import * as SplashScreen from "expo-splash-screen";
+import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 
 import { ApiProvider } from "@ampm/api-client";
@@ -22,15 +24,15 @@ import { AppStack } from "@/navigation/app-stack";
 
 SplashScreen.preventAutoHideAsync();
 
-/** The faces the tokens name (packages/tokens/src/typography.ts), loaded under exactly those names. */
+/** Peacock Night's faces as the tokens name them (packages/tokens/src/typography.ts), loaded under exactly those names. */
 const FONTS = {
-  [fontFaces.display]: Fraunces_400Regular,
-  [fontFaces.displaySemibold]: Fraunces_600SemiBold,
-  [fontFaces.sans]: SourceSans3_400Regular,
-  [fontFaces.sansMedium]: SourceSans3_500Medium,
-  [fontFaces.sansSemibold]: SourceSans3_600SemiBold,
-  [fontFaces.sansBold]: SourceSans3_700Bold,
-  [fontFaces.mono]: JetBrainsMono_400Regular,
+  [fontFaces.display]: GildaDisplay_400Regular,
+  [fontFaces.sans]: Manrope_400Regular,
+  [fontFaces.sansMedium]: Manrope_500Medium,
+  [fontFaces.sansSemibold]: Manrope_600SemiBold,
+  [fontFaces.sansBold]: Manrope_700Bold,
+  [fontFaces.sansExtrabold]: Manrope_800ExtraBold,
+  [fontFaces.devanagari]: RozhaOne_400Regular,
 };
 
 export default function RootLayout() {
@@ -45,7 +47,9 @@ export default function RootLayout() {
 
   return (
     <ApiProvider baseUrl={env.EXPO_PUBLIC_API_URL} getAccessToken={getAccessToken}>
-      <ThemeProvider>
+      {/* Peacock Night is dark only: light status-bar content over the midnight canvas. */}
+      <ThemeProvider initialPreference="dark">
+        <StatusBar style="light" />
         <ToastProvider>
           <AppStack />
         </ToastProvider>

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import { fontVariables } from "./fonts";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -16,10 +17,10 @@ export const metadata: Metadata = {
  */
 export const dynamic = "force-dynamic";
 
+/** Peacock Night is dark only: the midnight canvas, pearl text and the next/font variables on <html>. */
 export default function RootLayout({ children }: LayoutProps<"/">) {
-  // suppressHydrationWarning: the scheme toggle puts `dark` on <html> before React hydrates.
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" className={fontVariables}>
       <body className="min-h-screen bg-surface font-sans text-primary antialiased">{children}</body>
     </html>
   );

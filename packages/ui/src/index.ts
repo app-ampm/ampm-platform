@@ -2,7 +2,7 @@
  * @ampm/ui: universal components and UI-only hooks on React Native primitives, react-native-web
  * and NativeWind, styled with @ampm/tokens classes only (.claude/rules/ui.md).
  */
-export const UI_VERSION = "0.2.0";
+export const UI_VERSION = "1.0.0";
 
 export { cn } from "./lib/cn";
 export type { ClassValue } from "./lib/cn";
@@ -18,11 +18,13 @@ export type { ThemePreference, ResolvedTheme, ThemeContextValue } from "./theme/
 export { useBreakpoint, breakpointFor } from "./hooks/use-breakpoint";
 export type { Breakpoint, BreakpointInfo } from "./hooks/use-breakpoint";
 export { useReducedMotion } from "./hooks/use-reduced-motion";
+export { useGlassBlur } from "./hooks/use-glass-blur";
 export { useIsClient } from "./hooks/use-is-client";
 export { announcementText, useAnnounce } from "./hooks/use-announce";
 export { uiCopy } from "./copy";
 
 export * from "./components/text";
+export * from "./components/glass-panel";
 export * from "./components/icon";
 export * from "./components/layout";
 export * from "./components/skeleton";

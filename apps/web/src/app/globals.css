@@ -2,3 +2,17 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/*
+ * Peacock Night is dark only, and Gilda Display ships one weight: the browser must never fake a bold
+ * or an italic. The page behind everything is the midnight canvas.
+ */
+@layer base {
+  html {
+    color-scheme: dark;
+    font-synthesis: none;
+  }
+  body {
+    background-color: rgb(var(--color-surface));
+  }
+}

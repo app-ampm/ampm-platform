@@ -6,13 +6,13 @@
     "orientation": "default",
     "icon": "./assets/images/icon.png",
     "scheme": "ampm",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "dark",
     "ios": {
       "icon": "./assets/expo.icon"
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#f8f6fa",
+        "backgroundColor": "#0E1534",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
@@ -28,11 +28,11 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#f8f6fa",
+          "backgroundColor": "#0E1534",
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76,
           "dark": {
-            "backgroundColor": "#171319"
+            "backgroundColor": "#0E1534"
           }
         }
       ],
@@ -41,6 +41,7 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "backgroundColor": "#0E1534"
   }
 }

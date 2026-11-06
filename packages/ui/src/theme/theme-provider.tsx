@@ -17,7 +17,7 @@ const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 export interface ThemeProviderProps {
   readonly children: ReactNode;
-  /** Initial preference; the app passes the stored one once persistence exists. */
+  /** Initial preference. Peacock Night is dark only, so the default is dark and the schemes are identical. */
   readonly initialPreference?: ThemePreference;
   /** Called when the user changes the preference, so the app can store it. */
   readonly onPreferenceChange?: (preference: ThemePreference) => void;
@@ -35,7 +35,7 @@ export interface ThemeProviderProps {
  */
 export function ThemeProvider({
   children,
-  initialPreference = "system",
+  initialPreference = "dark",
   onPreferenceChange,
 }: ThemeProviderProps) {
   const [preference, setPreferenceState] = useState<ThemePreference>(initialPreference);

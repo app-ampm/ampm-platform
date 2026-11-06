@@ -29,4 +29,40 @@ export const uiCopy = {
     title: "Something went wrong",
     description: "Please try again. If it keeps happening, tell the AMPM team.",
   },
+  // Peacock Night components. Each component owns its section; strings are fallbacks for props.
+  offlineBanner: {
+    title: "Offline",
+    queued: (count: number) => (count === 1 ? "1 update queued" : `${count} updates queued`),
+    description: "They sync when signal returns.",
+  },
+  internalPanel: {
+    label: "Internal · never sent to clients",
+  },
+  screenHeader: {
+    back: "Back",
+  },
+  tabBar: {
+    label: "Main navigation",
+    locked: "Locked",
+  },
+  navRail: {
+    label: "Workspace navigation",
+    collapse: "Collapse navigation",
+    expand: "Expand navigation",
+  },
+  otp: {
+    label: "Verification code",
+    digit: (position: number, length: number) => `Digit ${position} of ${length}`,
+  },
+  stepper: {
+    done: "done",
+    current: "current step",
+    upcoming: "not started",
+  },
+  progress: {
+    label: "Progress",
+  },
+  photo: {
+    placeholder: "Photo",
+  },
 } as const;

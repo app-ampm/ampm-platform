@@ -1,6 +1,7 @@
 import { stories as button } from "../components/button/button.stories";
 import { stories as callout } from "../components/callout/callout.stories";
 import { stories as card } from "../components/card/card.stories";
+import { stories as glass } from "../components/glass-panel/glass-panel.stories";
 import { stories as icon } from "../components/icon/icon.stories";
 import { stories as image } from "../components/image/image.stories";
 import { stories as input } from "../components/input/input.stories";
@@ -20,6 +21,7 @@ import { stories as tokens } from "./tokens.stories";
 export const allStories: readonly StoryModule[] = [
   tokens,
   text,
+  glass,
   icon,
   layout,
   button,

@@ -19,10 +19,29 @@ describe("Text", () => {
     expect(screen.queryByRole("header", { name: "Body" })).toBeNull();
   });
 
-  it("maps variants, tones and weights to token classes", async () => {
-    expect(textStyles({ variant: "title" })).toContain("font-display-semibold");
-    expect(textStyles({ tone: "danger" })).toContain("text-danger");
+  it("maps variants, tones and weights to Peacock Night token classes", () => {
+    expect(textStyles({ variant: "title" })).toContain("font-display");
+    expect(textStyles({ variant: "eyebrow" })).toContain("tracking-eyebrow");
+    expect(textStyles({ variant: "data" })).toContain("tabular-nums");
+    expect(textStyles({ variant: "greeting" })).toContain("font-devanagari");
+    // Needs-you is gold: Peacock Night has no red.
+    expect(textStyles({ tone: "danger" })).toContain("text-brand");
     expect(textStyles({ weight: "semibold" })).toContain("font-sans-semibold");
     expect(textStyles({ weight: "semibold" })).not.toContain("font-sans ");
+  });
+
+  it("never bolds Gilda Display and gives body text its 80% strength", async () => {
+    await renderWithProviders(
+      <>
+        <Text variant="title" weight="bold">
+          Welcome back
+        </Text>
+        <Text>Paragraph</Text>
+        <Text variant="eyebrow">Label</Text>
+      </>,
+    );
+    expect(screen.getByText("Welcome back").props.className).not.toContain("font-sans-bold");
+    expect(screen.getByText("Paragraph").props.className).toContain("text-body");
+    expect(screen.getByText("Label").props.className).toContain("text-muted");
   });
 });

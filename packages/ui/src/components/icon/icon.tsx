@@ -8,7 +8,17 @@ import { icons, type IconName } from "./icon.registry";
 
 export type IconSize = "sm" | "md" | "lg" | "xl";
 export type IconTone =
-  "primary" | "muted" | "brand" | "onBrand" | "success" | "warning" | "danger" | "info";
+  | "primary"
+  | "body"
+  | "muted"
+  | "brand"
+  | "highlight"
+  | "onBrand"
+  | "onHighlight"
+  | "success"
+  | "warning"
+  | "danger"
+  | "info";
 
 export interface IconProps {
   readonly name: IconName;
@@ -24,9 +34,12 @@ const SIZES: Record<IconSize, number> = { sm: 16, md: 20, lg: 24, xl: 32 };
 
 const TONE_COLOR: Record<IconTone, ColorName> = {
   primary: "primary",
+  body: "body",
   muted: "muted",
   brand: "brand",
+  highlight: "highlight",
   onBrand: "brand-ink",
+  onHighlight: "highlight-ink",
   success: "success",
   warning: "warning",
   danger: "danger",
@@ -35,7 +48,8 @@ const TONE_COLOR: Record<IconTone, ColorName> = {
 
 /**
  * The shared icon (Lucide through react-native-svg, identical on every platform). Colour comes from
- * the tokens for the current scheme, so an icon never carries a hex of its own.
+ * the tokens for the current scheme, so an icon never carries a hex of its own: pearl, gold or peacock
+ * (Peacock Night), or midnight on a gold or peacock fill.
  *
  *   <Icon name="check-circle" tone="success" label="Verified" />
  */
