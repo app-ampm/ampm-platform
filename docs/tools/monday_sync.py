@@ -121,15 +121,35 @@ def sync_card(cfg, token, key, state, note, pr, dry_run) -> bool:
         print(f"            update : {body}")
         return True
 
-    try:
-        if vals:
+    # The status/date write and the progress note are posted independently so a
+    # failure of one can never swallow the other. (On 2 Nov 2026 a transient
+    # monday 403 USER_UNAUTHORIZED on change_multiple_column_values discarded
+    # nine progress notes: both calls shared one try/except, so the note was
+    # skipped the moment the column write threw.) The note is the founder-facing
+    # record and always gets its own attempt; a dropped status flip is harmless
+    # because a later trailer re-applies it.
+    col_ok = True
+    if vals:
+        try:
             gql(token, SET_COLS, {"board": board, "item": item, "vals": json.dumps(vals)})
+        except (urllib.error.URLError, RuntimeError, KeyError) as exc:
+            col_ok = False
+            print(f"  !! monday error on {key} status: {exc}", file=sys.stderr)
+
+    upd_ok = True
+    try:
         gql(token, POST_UPDATE, {"item": item, "body": body})
-        print(f"  ok: {key} -> {state}")
-        return True
     except (urllib.error.URLError, RuntimeError, KeyError) as exc:
-        print(f"  !! monday error on {key}: {exc}", file=sys.stderr)
-        return False
+        upd_ok = False
+        print(f"  !! monday error on {key} update: {exc}", file=sys.stderr)
+
+    if col_ok and upd_ok:
+        print(f"  ok: {key} -> {state}")
+    elif upd_ok:
+        print(f"  ~~ {key}: note posted; status write failed (a later trailer re-applies it)", file=sys.stderr)
+    else:
+        print(f"  !! {key}: note post failed" + ("" if col_ok else "; status write also failed"), file=sys.stderr)
+    return col_ok and upd_ok
 
 
 def main() -> None:
