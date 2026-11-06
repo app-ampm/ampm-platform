@@ -17,7 +17,7 @@ codifies the test box so it stops being purely hand-built (infra.md: write host 
 
 ```bash
 WEB_SSH=user@31.97.62.74 WEB_HTTPDOCS=/var/www/vhosts/app.ampmverse.com/httpdocs \
-  bash infra/scripts/deploy-web.sh
+  bash deploy/deploy-web.sh
 ```
 
 This runs `expo export --platform web` (the `web:export` script — a static export with
@@ -30,7 +30,7 @@ prune stale assets but `--exclude`s the box's hand-placed control files (`.htacc
   (`dist/index.html` + `dist/_expo/…`). The box's `httpdocs/.htaccess` does two jobs: it proxies `/_api` to
   the local API (`[P]`) and rewrites unknown paths to `index.html`, so a deep link (`/portal/requests/<id>`)
   loads the app and the router resolves it client-side. The canonical file is version-controlled at
-  [`infra/app-ampmverse/htaccess.example`](../../infra/app-ampmverse/htaccess.example); it is kept on the box
+  [`deploy/app-ampmverse/htaccess.example`](../../deploy/app-ampmverse/htaccess.example); it is kept on the box
   (deploys do not overwrite it, because it also carries the Basic-Auth stanza). On a fresh box, copy it to
   `httpdocs/.htaccess` and fill in the auth block.
 

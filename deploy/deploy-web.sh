@@ -6,7 +6,7 @@
 #
 # Usage:
 #   WEB_SSH=user@31.97.62.74 WEB_HTTPDOCS=/var/www/vhosts/app.ampmverse.com/httpdocs \
-#     bash infra/scripts/deploy-web.sh
+#     bash deploy/deploy-web.sh
 #
 # Env:
 #   WEB_SSH          (required) ssh target for the box
@@ -18,7 +18,7 @@ set -euo pipefail
 : "${WEB_HTTPDOCS:?set WEB_HTTPDOCS=/path/to/httpdocs}"
 API_URL="${EXPO_PUBLIC_API_URL:-https://app.ampmverse.com/_api}"
 
-ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT/apps/mobile"
 
 echo "Exporting apps/mobile web build (API=$API_URL) ..."
@@ -33,12 +33,12 @@ rsync -az --delete \
   dist/ "$WEB_SSH:$WEB_HTTPDOCS/"
 
 # The /_api proxy + SPA fallback live only in the box's .htaccess (reference:
-# infra/app-ampmverse/htaccess.example). Warn loudly if it is missing — without it deep links 404 and
+# deploy/app-ampmverse/htaccess.example). Warn loudly if it is missing — without it deep links 404 and
 # every /_api call fails. (The check runs over the same ssh the rsync just used.)
 # shellcheck disable=SC2029  # WEB_HTTPDOCS is a local var; expanding it client-side is intended.
 if ! ssh "$WEB_SSH" "test -f '$WEB_HTTPDOCS/.htaccess'"; then
   echo "WARNING: $WEB_HTTPDOCS/.htaccess is missing — deep links and /_api will NOT work." >&2
-  echo "         Copy infra/app-ampmverse/htaccess.example to it (and add the Basic-Auth block)." >&2
+  echo "         Copy deploy/app-ampmverse/htaccess.example to it (and add the Basic-Auth block)." >&2
 fi
 
 echo "Done. The box must keep its .htaccess (/_api [P] proxy + SPA fallback) and run the API with"
