@@ -29,6 +29,8 @@ import { formatDate } from "../consultancy/consultancy.format";
 import { SectionError } from "../consultancy/section-error";
 import { staffAgreementBadge, staffProposalBadge } from "./consultancy-admin.format";
 import { TransitionRow } from "./transition-row";
+import { CreateToggle } from "./consultancy-admin.widgets";
+import { ProposalCreateForm } from "./proposal-create-form";
 
 const AGREEMENT_NEXT: Record<ServiceAgreementStatus, readonly ServiceAgreementStatus[]> = {
   draft: ["sent", "cancelled"],
@@ -113,13 +115,15 @@ export function ProposalsSection({ enquiryId }: { readonly enquiryId: string }) 
         onRetry={() => void proposals.refetch()}
       />
     );
-  if (proposals.data.items.length === 0) return null;
   return (
     <Stack gap={2}>
       <Text variant="subheading">Proposals</Text>
       {proposals.data.items.map((proposal) => (
         <ProposalCard key={proposal.id} proposal={proposal} enquiryId={enquiryId} />
       ))}
+      <CreateToggle label="New proposal">
+        {(done) => <ProposalCreateForm enquiryId={enquiryId} onDone={done} />}
+      </CreateToggle>
     </Stack>
   );
 }

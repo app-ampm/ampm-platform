@@ -10,7 +10,14 @@
  */
 import { Prisma, type PrismaClient } from "../src/generated/prisma/client.js";
 
-import { EVENTS, HOTEL_SLUG, ID, LINES, MILESTONES } from "./seed-consultancy-data.js";
+import {
+  EVENTS,
+  HOTEL_SLUG,
+  HOTEL_SLUG_2,
+  ID,
+  LINES,
+  MILESTONES,
+} from "./seed-consultancy-data.js";
 
 /**
  * Anchored at seed time (not a fixed date): the journey so far — submitted through proposal shared —
@@ -276,6 +283,39 @@ async function upsertMilestones(prisma: PrismaClient, clientUserId: string): Pro
   }
 }
 
+/** A second enquiry left at `submitted` on another hotel, so a staff member can drive the whole pipeline
+ *  from the start (SA can only do the client-decision tail; the Hotel team drives the earlier stages). */
+async function upsertFreshEnquiry(prisma: PrismaClient, clientUserId: string): Promise<void> {
+  const hotel = await prisma.hotel.findUnique({
+    where: { slug: HOTEL_SLUG_2 },
+    select: { id: true },
+  });
+  if (!hotel) return;
+  await prisma.hotelEnquiry.upsert({
+    where: { id: ID.pipelineEnquiry },
+    // Refresh the dates only; never reset `status`, so a re-seed does not rewind an enquiry a tester has
+    // already driven forward (nor collide on the (account, hotel) open-unique index).
+    update: { dateFrom: day(130), dateTo: day(132), submittedAt: day(-2) },
+    create: {
+      id: ID.pipelineEnquiry,
+      accountId: ID.account,
+      hotelId: hotel.id,
+      requestedByUserId: clientUserId,
+      status: "submitted",
+      dateFrom: day(130),
+      dateTo: day(132),
+      datesFlexible: true,
+      guestEstimate: 120,
+      roomsRequired: 40,
+      functionsSummary: "Mehndi and wedding ceremony",
+      contactPreference: "WhatsApp",
+      notesClient: "Exploring a second venue in Jaipur as a backup.",
+      submittedAt: day(-2),
+      createdBy: clientUserId,
+    },
+  });
+}
+
 /** Seed Rhea's whole consultancy journey. Needs the plan, the negotiation service type and the hotel. */
 export async function seedConsultancyDemo(
   prisma: PrismaClient,
@@ -296,4 +336,5 @@ export async function seedConsultancyDemo(
   await upsertProposal(prisma, refs, clientUserId);
   await upsertProposalLines(prisma, clientUserId);
   await upsertMilestones(prisma, clientUserId);
+  await upsertFreshEnquiry(prisma, clientUserId);
 }

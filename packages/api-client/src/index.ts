@@ -69,6 +69,7 @@ export {
 export {
   STAFF_PROPOSALS_QUERY_KEY,
   staffProposalsQueryKey,
+  useCreateProposal,
   useReviseProposal,
   useShareProposal,
   useStaffProposals,
@@ -76,12 +77,14 @@ export {
 export {
   STAFF_SITE_VISITS_QUERY_KEY,
   staffSiteVisitsQueryKey,
+  useCreateSiteVisit,
   useStaffSiteVisits,
   useTransitionSiteVisit,
 } from "./hooks/use-staff-site-visits";
 export {
   STAFF_MILESTONES_QUERY_KEY,
   staffMilestonesQueryKey,
+  useCreateBookingMilestone,
   useStaffBookingMilestones,
   useTransitionBookingMilestone,
 } from "./hooks/use-staff-booking-milestones";

@@ -21,6 +21,9 @@ import {
 } from "../consultancy/consultancy.format";
 import { SectionError } from "../consultancy/section-error";
 import { TransitionRow } from "./transition-row";
+import { CreateToggle } from "./consultancy-admin.widgets";
+import { MilestoneCreateForm } from "./milestone-create-form";
+import { VisitCreateForm } from "./visit-create-form";
 
 const VISIT_NEXT: Record<SiteVisitStatus, readonly SiteVisitStatus[]> = {
   proposed: ["confirmed", "cancelled"],
@@ -48,13 +51,15 @@ export function VisitsSection({ enquiryId }: { readonly enquiryId: string }) {
         onRetry={() => void visits.refetch()}
       />
     );
-  if (visits.data.items.length === 0) return null;
   return (
     <Stack gap={2}>
       <Text variant="subheading">Site visits</Text>
       {visits.data.items.map((visit) => (
         <VisitCard key={visit.id} visit={visit} enquiryId={enquiryId} />
       ))}
+      <CreateToggle label="New site visit">
+        {(done) => <VisitCreateForm enquiryId={enquiryId} onDone={done} />}
+      </CreateToggle>
     </Stack>
   );
 }
@@ -112,13 +117,15 @@ export function MilestonesSection({ enquiryId }: { readonly enquiryId: string })
         onRetry={() => void milestones.refetch()}
       />
     );
-  if (milestones.data.items.length === 0) return null;
   return (
     <Stack gap={2}>
       <Text variant="subheading">Booking milestones</Text>
       {milestones.data.items.map((milestone) => (
         <MilestoneCard key={milestone.id} milestone={milestone} enquiryId={enquiryId} />
       ))}
+      <CreateToggle label="New milestone">
+        {(done) => <MilestoneCreateForm enquiryId={enquiryId} onDone={done} />}
+      </CreateToggle>
     </Stack>
   );
 }

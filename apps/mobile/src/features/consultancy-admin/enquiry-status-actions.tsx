@@ -4,6 +4,7 @@ import { useTransitionEnquiry } from "@ampm/api-client";
 import type { HotelEnquiryOutcome, HotelEnquiryStatus } from "@ampm/core";
 import { Button, Callout, Row, Stack, Text, useToast } from "@ampm/ui";
 
+import { errorMessage } from "./consultancy-admin.form";
 import { staffEnquiryBadge } from "./consultancy-admin.format";
 
 /**
@@ -46,7 +47,10 @@ export function EnquiryStatusActions({
   const move = (to: HotelEnquiryStatus, outcome: HotelEnquiryOutcome | null = null): void =>
     transition.mutate(
       { status: to, outcome, summary: null },
-      { onError: (error) => toast.show({ title: moveError(error), tone: "danger" }) },
+      {
+        onError: (error) =>
+          toast.show({ title: errorMessage(error, "Could not change the status"), tone: "danger" }),
+      },
     );
   if (nexts.length === 0) return <Callout kind="info" title="This enquiry is closed." />;
   return (
@@ -98,12 +102,4 @@ function CloseOutcomes({
       </Row>
     </Stack>
   );
-}
-
-/** A denied transition (403) or an unmet guard (409) carries a useful message; surface it. */
-function moveError(error: unknown): string {
-  const message = (error as { message?: unknown } | null)?.message;
-  return typeof message === "string" && message.length > 0
-    ? message
-    : "Could not change the status";
 }

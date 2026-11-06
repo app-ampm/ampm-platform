@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   bookingMilestoneStaffPage,
   bookingMilestoneStaffView,
+  type BookingMilestoneCreateRequest,
   type BookingMilestoneStaffPage,
   type BookingMilestoneStaffView,
   type BookingMilestoneTransitionRequest,
@@ -29,6 +30,24 @@ export function useStaffBookingMilestones(enquiryId: string) {
         signal,
       ),
     enabled: Boolean(enquiryId),
+  });
+}
+
+/** Add a milestone to an enquiry (`POST /consultancy-admin/booking-milestones`); starts `pending`. */
+export function useCreateBookingMilestone(enquiryId: string) {
+  const api = useApiClient();
+  const queryClient = useQueryClient();
+  return useMutation<BookingMilestoneStaffView, Error, BookingMilestoneCreateRequest>({
+    mutationFn: (body) =>
+      api.request("/consultancy-admin/booking-milestones", {
+        method: "POST",
+        body,
+        schema: bookingMilestoneStaffView,
+      }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: staffMilestonesQueryKey(enquiryId) });
+      void queryClient.invalidateQueries({ queryKey: staffEnquiryQueryKey(enquiryId) });
+    },
   });
 }
 

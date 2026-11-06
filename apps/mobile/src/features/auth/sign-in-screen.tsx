@@ -14,6 +14,7 @@ import { setAccessToken } from "@/lib/session";
 const DEMO_STAFF = [
   { email: "sales@example.com", label: "Sameer Sales" },
   { email: "admin@example.com", label: "Asha Admin" },
+  { email: "hotel@example.com", label: "Hema Hotels" },
 ] as const;
 const DEMO_CLIENTS = [
   // Rhea is an entitled client (hotel assistance) — the Flow-2 client. Prasad is a demo prospect whose
