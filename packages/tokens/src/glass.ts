@@ -51,3 +51,17 @@ export const glow = {
 } as const;
 
 export type GlowTone = keyof typeof glow;
+
+/**
+ * The same light as CSS backgrounds, for the web (`bg-glow-peacock`, `bg-glow-gold`) and the striped
+ * photo placeholders (`bg-stripes-peacock`, `bg-stripes-gold`: 14px bands at 135 degrees). Native draws
+ * orbs and stripes with react-native-svg from `glow` instead; background images do nothing there.
+ */
+export const backgroundImage = {
+  "glow-peacock": "radial-gradient(circle, rgba(19, 138, 133, 0.55) 0%, rgba(19, 138, 133, 0) 66%)",
+  "glow-gold": "radial-gradient(circle, rgba(221, 184, 97, 0.3) 0%, rgba(221, 184, 97, 0) 66%)",
+  "stripes-peacock":
+    "repeating-linear-gradient(135deg, rgba(19, 138, 133, 0.1) 0 14px, rgba(19, 138, 133, 0) 14px 28px)",
+  "stripes-gold":
+    "repeating-linear-gradient(135deg, rgba(221, 184, 97, 0.14) 0 14px, rgba(221, 184, 97, 0) 14px 28px)",
+} as const;

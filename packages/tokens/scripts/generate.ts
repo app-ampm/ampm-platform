@@ -13,7 +13,7 @@
  */
 import { breakpoints } from "../src/breakpoints.ts";
 import { MIN_TEXT_CONTRAST, colors, contrastPairs } from "../src/colors.ts";
-import { backdropBlur, backdropSaturate } from "../src/glass.ts";
+import { backdropBlur, backdropSaturate, backgroundImage } from "../src/glass.ts";
 import { layers } from "../src/layers.ts";
 import { duration, easing } from "../src/motion.ts";
 import { opacity } from "../src/opacity.ts";
@@ -154,6 +154,7 @@ function theme(families: Record<string, readonly string[]>) {
       letterSpacing,
       backdropBlur,
       backdropSaturate,
+      backgroundImage,
     },
   };
 }

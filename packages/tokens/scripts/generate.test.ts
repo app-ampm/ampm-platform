@@ -111,6 +111,7 @@ describe("generate", () => {
     expect(preset.theme.opacity["16"]).toBe("0.16");
     expect(preset.theme.extend.letterSpacing.eyebrow).toBe("0.22em");
     expect(preset.theme.extend.backdropBlur.glass).toBe("24px");
+    expect(outputs.preset).toContain('"glow-peacock": "radial-gradient(');
     expect(preset.theme.fontFamily.display?.[0]).toBe("GildaDisplay-Regular");
     expect(preset.plugins).toHaveLength(1);
   });

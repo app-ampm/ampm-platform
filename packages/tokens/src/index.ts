@@ -27,7 +27,7 @@ export {
   webFontVariables,
 } from "./typography";
 export { shadows } from "./shadows";
-export { glass, glow, backdropBlur, backdropSaturate, nativeBlur } from "./glass";
+export { glass, glow, backdropBlur, backdropSaturate, backgroundImage, nativeBlur } from "./glass";
 export type { GlassRecipe, GlowTone } from "./glass";
 export { opacity } from "./opacity";
 export { duration, easing, motionMs, motionBezier } from "./motion";
