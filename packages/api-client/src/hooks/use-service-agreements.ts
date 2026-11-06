@@ -17,6 +17,7 @@ export function serviceAgreementQueryKey(agreementId: string) {
 
 export interface ServiceAgreementsQuery {
   readonly status?: string;
+  readonly hotelEnquiryId?: string;
   readonly cursor?: string;
 }
 
@@ -25,6 +26,7 @@ export function useServiceAgreements(query: ServiceAgreementsQuery = {}) {
   const api = useApiClient();
   const params = new URLSearchParams();
   if (query.status) params.set("status", query.status);
+  if (query.hotelEnquiryId) params.set("hotelEnquiryId", query.hotelEnquiryId);
   if (query.cursor) params.set("cursor", query.cursor);
   const suffix = params.toString();
   return useQuery<ServiceAgreementClientPage>({

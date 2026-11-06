@@ -16,6 +16,7 @@ import {
 
 import { Prisma, PrismaClient, type ServiceCategory } from "../src/generated/prisma/client.js";
 import { upsertDemoUser } from "../src/modules/demo/demo-baseline.js";
+import { seedConsultancyDemo } from "./seed-consultancy.js";
 import { seedHotels } from "./seed-hotels.js";
 
 const url = process.env["DATABASE_URL"];
@@ -153,7 +154,7 @@ async function seedStaff(roleIds: ReadonlyMap<StaffRole, string>): Promise<void>
 }
 
 /** The client representative (bride's side) with finance view and approval rights on the project. */
-async function seedClient(): Promise<void> {
+async function seedClient(): Promise<string> {
   const client = await upsertAccount(SEED.client, { userType: "client", phone: "+911234567003" });
   await prisma.projectMember.upsert({
     where: { projectId_userId: { projectId: SEED.projectId, userId: client.id } },
@@ -169,6 +170,7 @@ async function seedClient(): Promise<void> {
       acceptedAt: new Date(),
     },
   });
+  return client.id;
 }
 
 /**
@@ -335,7 +337,7 @@ async function seedServiceTypes(): Promise<void> {
 async function main(): Promise<void> {
   const roleIds = await seedRoles();
   await seedStaff(roleIds);
-  await seedClient();
+  const clientUserId = await seedClient();
   await seedPortalDemoClient();
   // The canonical demo account, defined once in the demo baseline the nightly restore also rebuilds (5.5).
   await upsertDemoUser(prisma);
@@ -344,10 +346,12 @@ async function main(): Promise<void> {
   await seedPlans();
   await seedServiceTypes();
   await seedHotels(prisma);
+  // Depends on the discovery plan, the negotiation service type and the Lake Pavilion hotel seeded above.
+  await seedConsultancyDemo(prisma, clientUserId);
   await seedGrantableCapabilities();
   console.log(
-    "seeded roles, permissions, seven synthetic accounts, four synthetic hotels, the baseline " +
-      `configuration and ${GRANTABLE_CAPABILITIES.length} grantable capabilities`,
+    "seeded roles, permissions, seven synthetic accounts, four synthetic hotels, Rhea's hotel " +
+      `consultancy demo, the baseline configuration and ${GRANTABLE_CAPABILITIES.length} grantable capabilities`,
   );
 }
 

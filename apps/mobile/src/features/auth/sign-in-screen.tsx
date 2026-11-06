@@ -15,7 +15,12 @@ const DEMO_STAFF = [
   { email: "sales@example.com", label: "Sameer Sales" },
   { email: "admin@example.com", label: "Asha Admin" },
 ] as const;
-const DEMO_CLIENTS = [{ email: "prospect@example.com", label: "Prasad Prospect" }] as const;
+const DEMO_CLIENTS = [
+  // Rhea is an entitled client (hotel assistance) — the Flow-2 client. Prasad is a demo prospect whose
+  // assistance request is routed to Sales (P-7), so he is not a consultancy client.
+  { email: "client@example.com", label: "Rhea Client" },
+  { email: "prospect@example.com", label: "Prasad Prospect" },
+] as const;
 
 /** Signs in against the local `/auth/dev-login`, stores the token, and lets the entry gate route by role. */
 function useDevSignIn() {

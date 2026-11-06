@@ -31,6 +31,7 @@ export function PortalScreen() {
   const plans = usePlans();
   const unlocked = me.data?.entitlements.hotelReach.includes("all_hotels") ?? false;
   const canBrowse = me.data?.entitlements.modules.includes("hotel_discovery") ?? false;
+  const hasAssistance = me.data?.entitlements.modules.includes("hotel_assistance") ?? false;
   return (
     <ScrollView
       className="flex-1 bg-surface"
@@ -43,6 +44,7 @@ export function PortalScreen() {
       ) : (
         <Stack gap={4}>
           <EntitlementBand unlocked={unlocked} canBrowse={canBrowse} loading={me.isPending} />
+          <ConsultancyLink hasAssistance={hasAssistance} />
           <PlanList plans={plans} unlocked={unlocked} />
         </Stack>
       )}
@@ -125,6 +127,29 @@ function EntitlementBand({
     );
   }
   return <Callout kind="indicative" title="Subscribe to unlock full hotel discovery" />;
+}
+
+/** A link into the hotel-consultancy journey (Flow-2), for a client entitled to hotel assistance. */
+function ConsultancyLink({ hasAssistance }: { readonly hasAssistance: boolean }) {
+  const router = useRouter();
+  if (!hasAssistance) return null;
+  return (
+    <Card>
+      <Stack gap={2}>
+        <Text variant="subheading">Hotel consultancy</Text>
+        <Text tone="muted">Track your hotel requests, proposals and booking milestones.</Text>
+        <Row justify="start">
+          <Button
+            variant="secondary"
+            icon="arrow-right"
+            onPress={() => router.push("/portal/requests")}
+          >
+            Your hotel requests
+          </Button>
+        </Row>
+      </Stack>
+    </Card>
+  );
 }
 
 function PlanList({

@@ -88,7 +88,24 @@ function HotelBody({ hotel }: { readonly hotel: HotelView }) {
       {hotel.description ? <Text>{hotel.description}</Text> : null}
       {hotel.address ? <Text tone="muted">{hotel.address}</Text> : null}
       <SaveButton hotel={hotel} />
+      <RequestAssistanceButton hotel={hotel} />
     </Stack>
+  );
+}
+
+/** CP-07 entry: an entitled client opens a hotel-assistance enquiry for this hotel (the consultancy flow). */
+function RequestAssistanceButton({ hotel }: { readonly hotel: HotelView }) {
+  const router = useRouter();
+  const me = useMe();
+  const canRequest = me.data?.entitlements.modules.includes("hotel_assistance") ?? false;
+  if (!canRequest) return null;
+  return (
+    <Button
+      variant="secondary"
+      onPress={() => router.push(`/portal/requests/new?hotelId=${hotel.id}`)}
+    >
+      Request hotel assistance
+    </Button>
   );
 }
 
