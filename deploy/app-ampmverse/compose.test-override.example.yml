@@ -1,0 +1,13 @@
+# Example of the box-only Compose override the app.ampmverse.com test box keeps at
+# infra/compose/local/compose.test-override.yml. Copy this to that path on the box; the real file is not
+# committed because it is box-specific (like httpdocs/.htaccess, whose template is deploy/app-ampmverse/).
+# It publishes ONLY the API on the box's loopback and points the app at the public origin. No secrets.
+name: ampm-local
+services:
+  api:
+    ports:
+      - "127.0.0.1:7001:3900" # loopback only; httpdocs/.htaccess [P] proxies /_api to this
+    environment:
+      CORS_ORIGINS: "https://app.ampmverse.com"
+      WEB_APP_URL: "https://app.ampmverse.com"
+      TRUST_PROXY: "1"

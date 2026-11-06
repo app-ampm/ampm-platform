@@ -30,6 +30,7 @@ import { SectionError } from "../consultancy/section-error";
 import { staffAgreementBadge, staffProposalBadge } from "./consultancy-admin.format";
 import { TransitionRow } from "./transition-row";
 import { CreateToggle } from "./consultancy-admin.widgets";
+import { AgreementCreateForm } from "./agreement-create-form";
 import { ProposalCreateForm } from "./proposal-create-form";
 
 const AGREEMENT_NEXT: Record<ServiceAgreementStatus, readonly ServiceAgreementStatus[]> = {
@@ -41,8 +42,14 @@ const AGREEMENT_NEXT: Record<ServiceAgreementStatus, readonly ServiceAgreementSt
   cancelled: [],
 };
 
-/** The service agreement(s) for this enquiry; staff move them draft→sent→accepted→active→completed. */
-export function AgreementSection({ enquiryId }: { readonly enquiryId: string }) {
+/** The service agreement(s) for this enquiry; staff draft them and move draft→sent→accepted→active→completed. */
+export function AgreementSection({
+  enquiryId,
+  accountId,
+}: {
+  readonly enquiryId: string;
+  readonly accountId: string;
+}) {
   const agreements = useStaffServiceAgreements({ hotelEnquiryId: enquiryId });
   if (agreements.isPending) return <SectionSkeleton title="Service agreements" />;
   if (agreements.isError)
@@ -53,13 +60,17 @@ export function AgreementSection({ enquiryId }: { readonly enquiryId: string }) 
         onRetry={() => void agreements.refetch()}
       />
     );
-  if (agreements.data.items.length === 0) return null;
   return (
     <Stack gap={2}>
       <Text variant="subheading">Service agreements</Text>
       {agreements.data.items.map((agreement) => (
         <AgreementCard key={agreement.id} agreement={agreement} enquiryId={enquiryId} />
       ))}
+      <CreateToggle label="New agreement">
+        {(done) => (
+          <AgreementCreateForm enquiryId={enquiryId} accountId={accountId} onDone={done} />
+        )}
+      </CreateToggle>
     </Stack>
   );
 }
