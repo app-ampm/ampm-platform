@@ -18,6 +18,11 @@ Example:
 Card keys are defined in monday_board_map.json. The API token is read from the
 MONDAY_API_TOKEN environment variable and is never written to the repo.
 
+On a merged PR (--from-pr) it also appends one row to the PR-log board — what
+shipped, how, and why, parsed from the title and description — whenever a
+"pr_log" section is present in monday_board_map.json. PR_AUTHOR and PR_MERGED_AT
+(set by the workflow) enrich that row.
+
 Usage:
     MONDAY_API_TOKEN=... python3 docs/tools/monday_sync.py --card kernel --state done --note "..."
     cat pr-body.txt | MONDAY_API_TOKEN=... python3 docs/tools/monday_sync.py --from-pr
@@ -152,6 +157,141 @@ def sync_card(cfg, token, key, state, note, pr, dry_run) -> bool:
     return col_ok and upd_ok
 
 
+# ── PR-log board ────────────────────────────────────────────────────────────
+# A companion board carries one row per merged PR (what shipped, how, and why),
+# where the milestone board above only moves when a whole card is done. The row
+# is built from the PR title (conventional-commit type + scope) and description,
+# parsed into What/How/Why by markdown headings with a first-paragraph fallback.
+# Column ids live under "pr_log" in monday_board_map.json; see monday-sync.md.
+
+CREATE_ITEM = (
+    "mutation ($board: ID!, $name: String!, $vals: JSON!) {"
+    "  create_item(board_id: $board, item_name: $name, column_values: $vals) { id }"
+    "}"
+)
+
+CONVENTIONAL = {"feat", "fix", "chore", "docs", "test", "refactor", "perf", "ci", "build", "style", "revert"}
+_TYPE = re.compile(r"^\s*(\w+)(?:\(([^)]*)\))?!?:", re.ASCII)
+_HEADER = re.compile(r"^\s{0,3}#{1,6}\s+(.+?)\s*#*\s*$", re.MULTILINE)
+_HTML_COMMENT = re.compile(r"<!--.*?-->", re.DOTALL)
+
+_WHY_HEADS = ("why", "why it matters", "motivation", "rationale", "context", "background", "problem")
+_HOW_HEADS = ("how", "implementation", "the fix", "the change", "changes", "approach", "what i did", "details", "design")
+_WHAT_HEADS = ("what", "summary", "overview", "what changed", "what this is", "what was done")
+_CAP = {"what": 700, "how": 600, "why": 600}
+
+
+def _clean_body(body: str) -> str:
+    """The PR description without HTML comments, Monday: trailers, or the bot/co-author footers."""
+    out = []
+    for line in _HTML_COMMENT.sub("", body or "").splitlines():
+        s = line.strip()
+        if TRAILER.match(line) or s.startswith("🤖") or s.lower().startswith("co-authored-by:"):
+            continue
+        out.append(line)
+    return "\n".join(out).strip()
+
+
+def _sections(body: str) -> tuple[str, list[tuple[str, str]]]:
+    """(text before the first heading, [(heading, section body), …])."""
+    heads = list(_HEADER.finditer(body))
+    if not heads:
+        return body.strip(), []
+    preamble = body[: heads[0].start()].strip()
+    sections = []
+    for i, m in enumerate(heads):
+        end = heads[i + 1].start() if i + 1 < len(heads) else len(body)
+        sections.append((m.group(1).strip(), body[m.end():end].strip()))
+    return preamble, sections
+
+
+def _matches(head: str, synonyms: tuple[str, ...]) -> bool:
+    h = head.lower().strip(" :—-?.")
+    return any(h == s or h.startswith(s + " ") for s in synonyms)
+
+
+def _collapse(text: str, cap: int) -> str:
+    text = re.sub(r"\s+", " ", text).strip()
+    return text if len(text) <= cap else text[: cap - 1].rstrip() + "…"
+
+
+def parse_pr_body(title: str, body: str) -> tuple[str, str, str, str, str]:
+    """(type, area, what, how, why) for a PR, best-effort from its title and description.
+
+    type/area come from a conventional-commit title (`feat(hotels): …`); a prose
+    title yields neither. what/how/why come from markdown sections named by their
+    heading (What/Summary, How/Implementation, Why/Motivation…); with no such
+    section, what falls back to the first paragraph then the title, how/why blank.
+    """
+    m = _TYPE.match(title or "")
+    ptype = m.group(1).lower() if m else ""
+    area = (m.group(2).strip() if m and m.group(2) else "")
+    if ptype not in CONVENTIONAL:
+        ptype = ""
+
+    preamble, sections = _sections(_clean_body(body))
+    what = how = why = ""
+    for head, content in sections:
+        if not why and _matches(head, _WHY_HEADS):
+            why = content
+        elif not how and _matches(head, _HOW_HEADS):
+            how = content
+        elif not what and _matches(head, _WHAT_HEADS):
+            what = content
+    if not what:
+        what = next((b.strip() for b in re.split(r"\n\s*\n", preamble) if b.strip()), "") or (title or "")
+    return ptype, area, _collapse(what, _CAP["what"]), _collapse(how, _CAP["how"]), _collapse(why, _CAP["why"])
+
+
+def _merged_date(merged_iso: str) -> dict:
+    """monday date value {date,time} in UTC from an ISO instant; now if unparseable."""
+    try:
+        dt = datetime.fromisoformat((merged_iso or "").replace("Z", "+00:00")).astimezone(timezone.utc)
+    except ValueError:
+        dt = datetime.now(timezone.utc)
+    return {"date": dt.strftime("%Y-%m-%d"), "time": dt.strftime("%H:%M:%S")}
+
+
+def build_log_columns(log_cfg: dict, pr: dict, body: str) -> dict:
+    """The PR-log row's column values, keyed by the column ids in monday_board_map.json."""
+    cols = log_cfg["columns"]
+    number, title, url = pr.get("number", ""), pr.get("title", ""), pr.get("url", "")
+    ptype, area, what, how, why = parse_pr_body(title, body)
+    return {
+        cols["pr_number"]: str(number),
+        cols["merged"]: _merged_date(pr.get("merged", "")),
+        cols["type"]: ptype,
+        cols["area"]: area,
+        cols["author"]: pr.get("author", "") or "",
+        cols["link"]: {"url": url, "text": f"PR #{number}" if number else "PR"},
+        cols["what"]: {"text": what},
+        cols["how"]: {"text": how},
+        cols["why"]: {"text": why},
+    }
+
+
+def log_pr(cfg: dict, token: str, pr: dict, body: str, dry_run: bool) -> bool:
+    """Append one row to the PR-log board for a merged PR (no-op if the board is unconfigured)."""
+    log_cfg = cfg.get("pr_log")
+    if not log_cfg:
+        return True
+    number, title = pr.get("number", ""), pr.get("title", "")
+    name = ((f"#{number} {title}".strip() if number else title) or f"PR {number}")[:255]
+    vals = build_log_columns(log_cfg, pr, body)
+
+    if dry_run:
+        print(f"  [dry-run] pr-log {name[:60]}")
+        print(f"            columns: {json.dumps(vals)[:300]}…")
+        return True
+    try:
+        gql(token, CREATE_ITEM, {"board": str(log_cfg["board_id"]), "name": name, "vals": json.dumps(vals)})
+        print(f"  ok: pr-log #{number}")
+        return True
+    except (urllib.error.URLError, RuntimeError, KeyError) as exc:
+        print(f"  !! monday error on pr-log #{number}: {exc}", file=sys.stderr)
+        return False
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description="Sync AMPM progress to the monday board.")
     ap.add_argument("--from-pr", action="store_true", help="parse Monday: trailers from a PR body on stdin")
@@ -172,19 +312,28 @@ def main() -> None:
         "number": os.environ.get("PR_NUMBER", ""),
         "title": os.environ.get("PR_TITLE", ""),
         "url": os.environ.get("PR_URL", ""),
+        "author": os.environ.get("PR_AUTHOR", ""),
+        "merged": os.environ.get("PR_MERGED_AT", ""),
     }
 
-    jobs = []
+    body_text, jobs = "", []
     if args.from_pr:
-        for m in TRAILER.finditer(sys.stdin.read()):
-            jobs.append((m.group(1).lower(), m.group(2).lower(), m.group(3).strip()))
-        if not jobs:
-            print("no `Monday:` trailers found; nothing to sync")
-            return
+        body_text = sys.stdin.read()
+        jobs = [(m.group(1).lower(), m.group(2).lower(), m.group(3).strip()) for m in TRAILER.finditer(body_text)]
     elif args.card and args.state:
-        jobs.append((args.card.lower(), args.state.lower(), args.note.strip()))
+        jobs = [(args.card.lower(), args.state.lower(), args.note.strip())]
     else:
         ap.error("pass either --from-pr, or --card and --state")
+
+    # PR-log board: one row per merged PR, whether or not it carries trailers.
+    if args.from_pr and cfg.get("pr_log"):
+        log_pr(cfg, token, pr, body_text, args.dry_run)
+
+    # Build-plan board: trailer-driven card status + progress notes.
+    if not jobs:
+        if args.from_pr:
+            print("no `Monday:` trailers found; build-plan board unchanged")
+        return
 
     print(f"monday-sync: {len(jobs)} card(s)")
     failures = 0

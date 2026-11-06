@@ -3,6 +3,21 @@
   "board_url": "https://thewebpaandas-team.monday.com/boards/5032167934",
   "columns": { "status": "color_mm8jv45c", "completed": "date_mm8jdjbc" },
   "status_labels": { "working": "Working on it", "done": "Done", "upcoming": "Upcoming", "blocked": "Stuck" },
+  "pr_log": {
+    "board_id": 5032332363,
+    "board_url": "https://thewebpaandas-team.monday.com/boards/5032332363",
+    "columns": {
+      "pr_number": "numeric_mm8vcx81",
+      "merged": "date_mm8vmm71",
+      "type": "text_mm8vd7c8",
+      "area": "text_mm8v2rzv",
+      "author": "text_mm8vkt27",
+      "link": "link_mm8v13gm",
+      "what": "long_text_mm8vxa13",
+      "how": "long_text_mm8v2qs9",
+      "why": "long_text_mm8vpxkk"
+    }
+  },
   "cards": {
     "monorepo": 2892633611,
     "tokens": 2892669899,
