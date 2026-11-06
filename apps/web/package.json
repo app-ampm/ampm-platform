@@ -13,6 +13,7 @@
   "dependencies": {
     "@ampm/api-client": "workspace:*",
     "@ampm/core": "workspace:*",
+    "@ampm/ui": "workspace:*",
     "@tanstack/react-query": "catalog:",
     "next": "16.4.3",
     "react": "catalog:",

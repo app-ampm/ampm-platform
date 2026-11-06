@@ -4,6 +4,7 @@
   "main": "expo-router/entry",
   "dependencies": {
     "@ampm/api-client": "workspace:*",
+    "@ampm/policy": "workspace:*",
     "@ampm/tokens": "workspace:*",
     "@ampm/ui": "workspace:*",
     "@expo-google-fonts/gilda-display": "^0.4.2",

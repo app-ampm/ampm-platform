@@ -371,6 +371,9 @@ importers:
       '@ampm/api-client':
         specifier: workspace:*
         version: link:../../packages/api-client
+      '@ampm/policy':
+        specifier: workspace:*
+        version: link:../../packages/policy
       '@ampm/tokens':
         specifier: workspace:*
         version: link:../../packages/tokens
@@ -510,6 +513,9 @@ importers:
       '@ampm/core':
         specifier: workspace:*
         version: link:../../packages/core
+      '@ampm/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
       '@tanstack/react-query':
         specifier: 'catalog:'
         version: 5.105.0(@types/react@19.3.0)(react@19.3.0)
