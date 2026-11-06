@@ -48,11 +48,23 @@ API in that **test/local** config (never production), with `CORS_ORIGINS=https:/
 
 ## Deploy the API at latest main
 
-Pull `main`, run the migrations and reseed on the box, and restart the API process:
+Get the latest source onto the box (its checkout has no git remote of its own — ship it with
+`git archive HEAD | ssh <box> 'cd <repo-on-box> && tar -xf -'` from a clean worktree), then run the box
+redeploy, which rebuilds the API/worker image and re-seeds:
 
 ```bash
-pnpm install && pnpm --filter api db:deploy && pnpm --filter api db:seed
-# then restart the box's API process (pm2 / systemd / the box-only compose override)
+bash deploy/redeploy-box.sh
 ```
 
-`db:seed` plants the demo accounts, hotels, and (with this slice) a demo consultancy chain for the client.
+It is **non-destructive**: it recreates only api+worker (leaving Postgres/Redis up, to dodge the startup
+"recovery mode" race), applies any pending migrations with `prisma migrate deploy`, then runs the
+idempotent seed (`tsx prisma/seed.ts`) — so demo data a tester has already driven forward is preserved. For
+a clean wipe use `prisma migrate reset --force` (Prisma 7 takes no `--skip-*` flags and does not auto-seed)
+followed by the seed; the script's header documents both. `db:seed` plants the demo accounts (including the
+Hotel-team account), the hotels, and the client's consultancy chain plus a fresh `submitted` enquiry.
+
+The script composes `infra/compose/local/compose.yml` with the box-only `compose.test-override.yml` (which
+publishes the API on `127.0.0.1:7001` and sets `CORS_ORIGINS`/`WEB_APP_URL`/`TRUST_PROXY`); that override is
+box-specific and not committed —
+[`compose.test-override.example.yml`](../../infra/compose/local/compose.test-override.example.yml) beside it
+is the template to copy onto the box.

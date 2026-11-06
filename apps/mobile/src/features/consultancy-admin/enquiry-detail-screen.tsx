@@ -75,7 +75,7 @@ function DetailBody({
     <Stack gap={4}>
       <EnquiryHeader enquiry={enquiry.data} />
       <EnquiryStatusActions enquiryId={enquiryId} status={enquiry.data.status} />
-      <AgreementSection enquiryId={enquiryId} />
+      <AgreementSection enquiryId={enquiryId} accountId={enquiry.data.accountId} />
       <ProposalsSection enquiryId={enquiryId} />
       <VisitsSection enquiryId={enquiryId} />
       <MilestonesSection enquiryId={enquiryId} />

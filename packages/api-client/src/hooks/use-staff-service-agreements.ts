@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   serviceAgreementStaffPage,
   serviceAgreementStaffView,
+  type ServiceAgreementCreateRequest,
   type ServiceAgreementStaffPage,
   type ServiceAgreementStaffView,
   type ServiceAgreementTransitionRequest,
@@ -37,6 +38,25 @@ export function useStaffServiceAgreements(query: StaffServiceAgreementsQuery = {
         serviceAgreementStaffPage,
         signal,
       ),
+  });
+}
+
+/** Draft a new service agreement for an enquiry (`POST /crm/service-agreements`); starts `draft`. */
+export function useCreateServiceAgreement(enquiryId: string) {
+  const api = useApiClient();
+  const queryClient = useQueryClient();
+  return useMutation<ServiceAgreementStaffView, Error, ServiceAgreementCreateRequest>({
+    mutationFn: (body) =>
+      api.request("/crm/service-agreements", {
+        method: "POST",
+        body,
+        schema: serviceAgreementStaffView,
+      }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: STAFF_SERVICE_AGREEMENTS_QUERY_KEY });
+      void queryClient.invalidateQueries({ queryKey: staffEnquiryQueryKey(enquiryId) });
+      void queryClient.invalidateQueries({ queryKey: STAFF_ENQUIRIES_QUERY_KEY });
+    },
   });
 }
 

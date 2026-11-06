@@ -6,6 +6,9 @@ import { ServiceAgreementsClientService } from "./service-agreements-client.serv
 import { ServiceAgreementsController } from "./service-agreements.controller.js";
 import { ServiceAgreementsRepository } from "./service-agreements.repository.js";
 import { ServiceAgreementsService } from "./service-agreements.service.js";
+import { ServiceTypesController } from "./service-types.controller.js";
+import { ServiceTypesRepository } from "./service-types.repository.js";
+import { ServiceTypesService } from "./service-types.service.js";
 
 /**
  * Module B — paid-service agreements (feature 10.2, GP-5): the commercial contract for a paid service
@@ -18,11 +21,17 @@ import { ServiceAgreementsService } from "./service-agreements.service.js";
  */
 @Module({
   imports: [PolicyModule],
-  controllers: [ServiceAgreementsController, ServiceAgreementsClientController],
+  controllers: [
+    ServiceAgreementsController,
+    ServiceAgreementsClientController,
+    ServiceTypesController,
+  ],
   providers: [
     ServiceAgreementsService,
     ServiceAgreementsClientService,
     ServiceAgreementsRepository,
+    ServiceTypesService,
+    ServiceTypesRepository,
   ],
   exports: [ServiceAgreementsService],
 })

@@ -90,7 +90,9 @@ export {
 } from "./hooks/use-staff-booking-milestones";
 export {
   STAFF_SERVICE_AGREEMENTS_QUERY_KEY,
+  useCreateServiceAgreement,
   useStaffServiceAgreements,
   useTransitionServiceAgreement,
   type StaffServiceAgreementsQuery,
 } from "./hooks/use-staff-service-agreements";
+export { SERVICE_TYPES_QUERY_KEY, useServiceTypes } from "./hooks/use-service-types";

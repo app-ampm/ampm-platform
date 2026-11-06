@@ -300,6 +300,21 @@ describe("Service agreements and the chargeable gate (e2e)", () => {
       .expect(404);
   });
 
+  it("lists the service-type catalogue for a staff reader and denies a client (GET /crm/service-types)", async () => {
+    const res = await http()
+      .get("/crm/service-types")
+      .set("authorization", await sm())
+      .expect(200);
+    const items = res.body.data.items as Array<{ id: string; serviceKey: string }>;
+    expect(items.find((i) => i.serviceKey === "negotiation")?.id).toBe(negotiationTypeId);
+
+    const client = await provision("types");
+    const denied = await http()
+      .get("/crm/service-types")
+      .set("authorization", auth(await mint(client.subject)));
+    expect(denied.status).not.toBe(200); // a client holds no crm.service_agreements.read
+  });
+
   /** Create a draft agreement (never sent), returning its id. */
   async function createDraft(accountId: string): Promise<string> {
     const created = await http()
