@@ -10,6 +10,7 @@ import {
   Card,
   EmptyState,
   ErrorState,
+  Link,
   OfflineState,
   Row,
   Skeleton,
@@ -68,15 +69,20 @@ function WorkspaceHeader() {
     router.replace("/sign-in");
   };
   return (
-    <Row gap={2} justify="between" align="start">
-      <Stack gap={0}>
-        <Text variant="title">Leads</Text>
-        {me.data ? <Text tone="muted">{`Signed in as ${me.data.principal.name}`}</Text> : null}
-      </Stack>
-      <Button variant="ghost" size="sm" onPress={signOut}>
-        Sign out
-      </Button>
-    </Row>
+    <Stack gap={2}>
+      <Row gap={2} justify="between" align="start">
+        <Stack gap={0}>
+          <Text variant="title">Leads</Text>
+          {me.data ? <Text tone="muted">{`Signed in as ${me.data.principal.name}`}</Text> : null}
+        </Stack>
+        <Button variant="ghost" size="sm" onPress={signOut}>
+          Sign out
+        </Button>
+      </Row>
+      <Link href="/enquiries" variant="standalone" tone="muted">
+        Hotel enquiries
+      </Link>
+    </Stack>
   );
 }
 

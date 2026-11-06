@@ -56,3 +56,38 @@ export {
   useBookingMilestone,
   useBookingMilestones,
 } from "./hooks/use-booking-milestones";
+// Module D consultancy (feature 10.x, Slice 2): the STAFF side of the pipeline (consultancy-admin + crm),
+// read as the internal view and driven by status transitions. Staff-only — gated server-side by role.
+export {
+  STAFF_ENQUIRIES_QUERY_KEY,
+  staffEnquiryQueryKey,
+  useStaffEnquiries,
+  useStaffEnquiry,
+  useTransitionEnquiry,
+  type StaffEnquiriesQuery,
+} from "./hooks/use-staff-enquiries";
+export {
+  STAFF_PROPOSALS_QUERY_KEY,
+  staffProposalsQueryKey,
+  useReviseProposal,
+  useShareProposal,
+  useStaffProposals,
+} from "./hooks/use-staff-proposals";
+export {
+  STAFF_SITE_VISITS_QUERY_KEY,
+  staffSiteVisitsQueryKey,
+  useStaffSiteVisits,
+  useTransitionSiteVisit,
+} from "./hooks/use-staff-site-visits";
+export {
+  STAFF_MILESTONES_QUERY_KEY,
+  staffMilestonesQueryKey,
+  useStaffBookingMilestones,
+  useTransitionBookingMilestone,
+} from "./hooks/use-staff-booking-milestones";
+export {
+  STAFF_SERVICE_AGREEMENTS_QUERY_KEY,
+  useStaffServiceAgreements,
+  useTransitionServiceAgreement,
+  type StaffServiceAgreementsQuery,
+} from "./hooks/use-staff-service-agreements";
