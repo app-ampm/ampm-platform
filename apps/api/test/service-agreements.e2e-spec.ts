@@ -109,15 +109,7 @@ describe("Service agreements and the chargeable gate (e2e)", () => {
     const created = await http()
       .post("/crm/service-agreements")
       .set("authorization", await sm())
-      .send({
-        accountId,
-        serviceTypeId: negotiationTypeId,
-        hotelEnquiryId: enquiryId,
-        scopeText: "Negotiate rates and block rooms for the February wedding.",
-        fee: { minor: 2500000, currency: "INR" },
-        feeStructure: "fixed",
-        termsVersion: "v1",
-      })
+      .send(agreementBody(accountId, enquiryId, "Negotiate rates."))
       .expect(201);
     const agreementId = created.body.data.id as string;
     expect(created.body.data.accountId).toBe(accountId); // staff view carries internal fields
@@ -300,20 +292,50 @@ describe("Service agreements and the chargeable gate (e2e)", () => {
       .expect(404);
   });
 
+  it("refuses an agreement whose enquiry belongs to another account, and allows the matched pair", async () => {
+    const a = await provision("xacct-a");
+    const b = await provision("xacct-b");
+    const bToken = await mint(b.subject);
+    await activateSubscription(bToken); // B opens the hotel-assistance pipeline and raises an enquiry.
+    const enquiry = await http()
+      .post("/consultancy/enquiries")
+      .set("authorization", auth(bToken))
+      .send({ hotelId, dateFrom: "2027-03-10", dateTo: "2027-03-12", guestEstimate: 80 })
+      .expect(201);
+    const bEnquiryId = enquiry.body.data.enquiry.id as string;
+    const smAuth = await sm();
+    const draftFor = (accountId: string) =>
+      http()
+        .post("/crm/service-agreements")
+        .set("authorization", smAuth)
+        .send(agreementBody(accountId, bEnquiryId, "Cross-account defence."));
+
+    // A points at B's enquiry: rejected (never stored), so the AC-05.7 gate (keyed on the enquiry) cannot
+    // advance B's enquiry on A's agreement and B's enquiry id cannot leak into A's CLIENT view. B's own
+    // matched account+enquiry pair is accepted.
+    await draftFor(a.accountId).expect(400);
+    await draftFor(b.accountId).expect(201);
+  });
+
+  /** The draft-agreement body Sales posts; the only differences are the account, the enquiry and the scope. */
+  function agreementBody(accountId: string, hotelEnquiryId: string | null, scopeText: string) {
+    return {
+      accountId,
+      serviceTypeId: negotiationTypeId,
+      hotelEnquiryId,
+      scopeText,
+      fee: { minor: 2500000, currency: "INR" },
+      feeStructure: "fixed",
+      termsVersion: "v1",
+    };
+  }
+
   /** Create a draft agreement (never sent), returning its id. */
   async function createDraft(accountId: string): Promise<string> {
     const created = await http()
       .post("/crm/service-agreements")
       .set("authorization", await sm())
-      .send({
-        accountId,
-        serviceTypeId: negotiationTypeId,
-        hotelEnquiryId: null,
-        scopeText: "Draft — internal, not yet sent.",
-        fee: { minor: 2500000, currency: "INR" },
-        feeStructure: "fixed",
-        termsVersion: "v1",
-      })
+      .send(agreementBody(accountId, null, "Draft — internal, not yet sent."))
       .expect(201);
     return created.body.data.id as string;
   }
