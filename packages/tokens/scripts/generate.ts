@@ -143,6 +143,10 @@ function theme(families: Record<string, readonly string[]>) {
     transitionDuration: duration,
     transitionTimingFunction: easing,
     extend: {
+      // NativeWind's native preset extends `sans`, `serif` and `mono` with the platform's system fonts,
+      // and a preset's `extend` outranks every preset's `theme`; repeating the families here (this preset
+      // comes after NativeWind's) keeps `font-sans` on Manrope on iOS and Android.
+      fontFamily: families,
       height: sizes,
       minHeight: sizes,
       width: sizes,

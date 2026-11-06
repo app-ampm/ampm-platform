@@ -115,6 +115,16 @@ describe("generate", () => {
     expect(preset.plugins).toHaveLength(1);
   });
 
+  it("repeats the families under extend so NativeWind's system-font extension cannot win", () => {
+    // NativeWind's native preset extends sans, serif and mono with platform fonts, and any preset's
+    // extend outranks every theme; the tokens preset comes second, so its extend has the last word.
+    const preset = loadPreset(outputs.preset) as LoadedPreset & {
+      theme: { extend: { fontFamily: Record<string, string[]> } };
+    };
+    expect(preset.theme.extend.fontFamily.sans?.[0]).toBe("Manrope-Regular");
+    expect(preset.theme.extend.fontFamily.mono?.[0]).toBe("Manrope-SemiBold");
+  });
+
   it("emits the web preset with next/font variables and the web variant", () => {
     const preset = loadPreset(outputs.webPreset);
     expect(preset.theme.fontFamily.display?.[0]).toBe(
