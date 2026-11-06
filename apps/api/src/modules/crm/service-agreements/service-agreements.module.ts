@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 
+import { EnquiryLookupModule } from "../../consultancy/enquiry-lookup.module.js";
 import { PolicyModule } from "../../../policy/policy.module.js";
 import { ServiceAgreementsClientController } from "./service-agreements-client.controller.js";
 import { ServiceAgreementsClientService } from "./service-agreements-client.service.js";
@@ -17,10 +18,12 @@ import { ServiceTypesService } from "./service-types.service.js";
  * scoped, not entitlement-gated). An `active` agreement grants `hotel_assistance`, so activation busts
  * the account's entitlement cache — PolicyModule provides PrincipalService for that; AuditService is
  * @Global. ServiceAgreementsService is exported so the consultancy module can run the AC-05.7 gate
- * (hasActiveForEnquiry) through a service call, never by reading this module's tables.
+ * (hasActiveForEnquiry) through a service call, never by reading this module's tables. The reciprocal
+ * read — resolving a `hotel_enquiry`'s owning account when staff draft an agreement against it — comes
+ * through EnquiryLookupModule's service, a dependency-light leaf so the two modules do not form a cycle.
  */
 @Module({
-  imports: [PolicyModule],
+  imports: [PolicyModule, EnquiryLookupModule],
   controllers: [
     ServiceAgreementsController,
     ServiceAgreementsClientController,

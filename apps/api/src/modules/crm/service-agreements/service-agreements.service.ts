@@ -10,6 +10,7 @@ import {
   type ServiceAgreementUpdateRequest,
 } from "@ampm/core";
 
+import { EnquiryLookupService } from "../../consultancy/enquiry-lookup.service.js";
 import type { Access } from "../../../common/request-context.js";
 import { PrismaService } from "../../../db/prisma.service.js";
 import { recordScope } from "../../../db/scoping.js";
@@ -45,6 +46,7 @@ export class ServiceAgreementsService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly principals: PrincipalService,
+    private readonly enquiryLookup: EnquiryLookupService,
   ) {}
 
   async list(
@@ -73,7 +75,16 @@ export class ServiceAgreementsService {
         { path: "serviceTypeId", message: "Unknown or inactive service type" },
       ]);
     }
-    const row = await this.prisma.$transaction(async (tx) => {
+    await this.validateCreateReferences(request, category);
+    return toAgreementStaffView(await this.insertAgreement(request, actorId));
+  }
+
+  /** Insert the draft and its audit row in one transaction (the referential checks have already run). */
+  private async insertAgreement(
+    request: ServiceAgreementCreateRequest,
+    actorId: string,
+  ): Promise<AgreementRow> {
+    return this.prisma.$transaction(async (tx) => {
       const created = await this.agreements.create(
         {
           accountId: request.accountId,
@@ -104,7 +115,44 @@ export class ServiceAgreementsService {
       );
       return created;
     });
-    return toAgreementStaffView(row);
+  }
+
+  /**
+   * Create-time referential checks (api.md: never trust a client-supplied identifier for ownership —
+   * look it up and compare). The account must exist, so a bad id is a validation error, not a dangling
+   * FK (a 500). A `hotel_enquiry_id` is an FK-less plain column (schema §ServiceAgreement), so it is
+   * validated here rather than by the database: only a hotel-assistance agreement may carry one, the
+   * enquiry must resolve (through the consultancy lookup service, never its tables), and it must belong
+   * to the same account. A mismatch left unchecked would let the AC-05.7 gate — keyed on the enquiry —
+   * advance another account's enquiry on this agreement, and would leak that enquiry id into this
+   * account's CLIENT view. A hotel-assistance agreement with no enquiry stays valid: an active one
+   * grants `hotel_assistance` on its own (feature 10.2 e2e, entitlement wiring).
+   */
+  private async validateCreateReferences(
+    request: ServiceAgreementCreateRequest,
+    category: string,
+  ): Promise<void> {
+    if (!(await this.agreements.accountExists(request.accountId))) {
+      throw errors.validation([{ path: "accountId", message: "Unknown account" }]);
+    }
+    if (request.hotelEnquiryId === null) return;
+    if (category !== "hotel_assistance") {
+      throw errors.validation([
+        {
+          path: "hotelEnquiryId",
+          message: "Only a hotel-assistance agreement can reference an enquiry",
+        },
+      ]);
+    }
+    const enquiryAccountId = await this.enquiryLookup.accountIdForEnquiry(request.hotelEnquiryId);
+    if (enquiryAccountId === null) {
+      throw errors.validation([{ path: "hotelEnquiryId", message: "Unknown enquiry" }]);
+    }
+    if (enquiryAccountId !== request.accountId) {
+      throw errors.validation([
+        { path: "hotelEnquiryId", message: "The enquiry belongs to a different account" },
+      ]);
+    }
   }
 
   async updateTerms(

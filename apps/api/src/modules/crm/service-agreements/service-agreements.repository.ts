@@ -97,6 +97,17 @@ export class ServiceAgreementsRepository {
     return contacts.flatMap((contact) => (contact.userId ? [contact.userId] : []));
   }
 
+  /** Whether a live (non-soft-deleted) client account exists, so a create with a bad `account_id` is a
+   *  validation error at the edge rather than a dangling-FK 500. A sibling CRM read, like
+   *  `accountIdForUser` above (both retire when account resolution moves onto a shared accessor). */
+  async accountExists(accountId: string): Promise<boolean> {
+    const row = await this.prisma.clientAccount.findFirst({
+      where: { id: accountId, deletedAt: null },
+      select: { id: true },
+    });
+    return row !== null;
+  }
+
   /** The service_type's category (and existence), to set the agreement's subject and reject a bad id. */
   async serviceTypeCategory(serviceTypeId: string): Promise<string | null> {
     const row = await this.prisma.serviceType.findFirst({

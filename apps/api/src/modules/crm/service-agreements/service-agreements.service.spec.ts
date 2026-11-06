@@ -7,6 +7,7 @@ import { Prisma } from "../../../generated/prisma/client.js";
 import { AuditService } from "../../../policy/audit.service.js";
 import { PrincipalService } from "../../../policy/principal.service.js";
 import type { Principal } from "../../../policy/principal.types.js";
+import { EnquiryLookupService } from "../../consultancy/enquiry-lookup.service.js";
 import {
   type AgreementRow,
   type AgreementWriteData,
@@ -60,6 +61,7 @@ const access: Access = { key: "crm.service_agreements.update", scope: "all" };
 
 function build(row: AgreementRow = makeRow()) {
   const repo = {
+    accountExists: vi.fn(async () => true),
     serviceTypeCategory: vi.fn(async (): Promise<string | null> => "hotel_assistance"),
     create: vi.fn(async (_data: AgreementWriteData) => row),
     findByIdInScope: vi.fn(async () => row),
@@ -72,13 +74,16 @@ function build(row: AgreementRow = makeRow()) {
   const prisma = { $transaction: <T>(fn: (tx: unknown) => Promise<T>): Promise<T> => fn({}) };
   const audit = { record: vi.fn(async () => undefined) };
   const principals = { invalidateEntitlements: vi.fn() };
+  // Resolves to makeRow()'s default account, so the happy-path create passes the ownership check.
+  const enquiryLookup = { accountIdForEnquiry: vi.fn(async (): Promise<string | null> => "acc-1") };
   const service = new ServiceAgreementsService(
     repo as unknown as ServiceAgreementsRepository,
     prisma as unknown as PrismaService,
     audit as unknown as AuditService,
     principals as unknown as PrincipalService,
+    enquiryLookup as unknown as EnquiryLookupService,
   );
-  return { service, repo, audit, principals };
+  return { service, repo, audit, principals, enquiryLookup };
 }
 
 describe("ServiceAgreementsService.create", () => {
@@ -114,6 +119,90 @@ describe("ServiceAgreementsService.create", () => {
     const data = repo.create.mock.calls[0]?.[0];
     expect(data?.feeAmount.toNumber()).toBe(25000);
     expect(audit.record).toHaveBeenCalledOnce();
+  });
+
+  it("rejects an unknown account (a bad id is a validation error, not a dangling FK)", async () => {
+    const { service, repo } = build();
+    repo.accountExists.mockResolvedValueOnce(false);
+    await expect(
+      service.create(staff(), {
+        accountId: "ghost",
+        serviceTypeId: "st-1",
+        hotelEnquiryId: null,
+        scopeText: "x",
+        fee: { minor: 2500000, currency: "INR" },
+        feeStructure: "fixed",
+        termsVersion: null,
+      }),
+    ).rejects.toMatchObject({ code: "validation_failed" });
+    expect(repo.create).not.toHaveBeenCalled();
+  });
+
+  it("rejects an enquiry that belongs to another account (ownership mismatch, AC-05.7 defence)", async () => {
+    const { service, repo, enquiryLookup } = build();
+    enquiryLookup.accountIdForEnquiry.mockResolvedValueOnce("acc-other");
+    await expect(
+      service.create(staff(), {
+        accountId: "acc-1",
+        serviceTypeId: "st-1",
+        hotelEnquiryId: "enq-of-another-account",
+        scopeText: "x",
+        fee: { minor: 2500000, currency: "INR" },
+        feeStructure: "fixed",
+        termsVersion: null,
+      }),
+    ).rejects.toMatchObject({ code: "validation_failed" });
+    expect(repo.create).not.toHaveBeenCalled();
+  });
+
+  it("rejects a hotelEnquiryId that resolves to no live enquiry", async () => {
+    const { service, repo, enquiryLookup } = build();
+    enquiryLookup.accountIdForEnquiry.mockResolvedValueOnce(null);
+    await expect(
+      service.create(staff(), {
+        accountId: "acc-1",
+        serviceTypeId: "st-1",
+        hotelEnquiryId: "missing",
+        scopeText: "x",
+        fee: { minor: 2500000, currency: "INR" },
+        feeStructure: "fixed",
+        termsVersion: null,
+      }),
+    ).rejects.toMatchObject({ code: "validation_failed" });
+    expect(repo.create).not.toHaveBeenCalled();
+  });
+
+  it("rejects a non-hotel-assistance agreement that carries an enquiry (without looking it up)", async () => {
+    const { service, repo, enquiryLookup } = build();
+    repo.serviceTypeCategory.mockResolvedValueOnce("design");
+    await expect(
+      service.create(staff(), {
+        accountId: "acc-1",
+        serviceTypeId: "st-design",
+        hotelEnquiryId: "enq-1",
+        scopeText: "x",
+        fee: { minor: 2500000, currency: "INR" },
+        feeStructure: "fixed",
+        termsVersion: null,
+      }),
+    ).rejects.toMatchObject({ code: "validation_failed" });
+    expect(enquiryLookup.accountIdForEnquiry).not.toHaveBeenCalled();
+    expect(repo.create).not.toHaveBeenCalled();
+  });
+
+  it("allows a hotel-assistance agreement with no enquiry (an active one grants the entitlement alone)", async () => {
+    const { service, repo, enquiryLookup } = build();
+    await service.create(staff(), {
+      accountId: "acc-1",
+      serviceTypeId: "st-1",
+      hotelEnquiryId: null,
+      scopeText: "Entitlement-granting agreement, no enquiry.",
+      fee: { minor: 2500000, currency: "INR" },
+      feeStructure: "fixed",
+      termsVersion: null,
+    });
+    expect(repo.create).toHaveBeenCalledOnce();
+    expect(enquiryLookup.accountIdForEnquiry).not.toHaveBeenCalled();
   });
 });
 
