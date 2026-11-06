@@ -16,6 +16,9 @@ export function SectionError({
   readonly error: unknown;
   readonly onRetry: () => void;
 }) {
+  // A forbidden sub-resource — a staff sub-role without this section's grant — is absence, not a
+  // retryable error: hide the section rather than loop on a retry that will always 403.
+  if (isAppError(error) && error.code === "forbidden") return null;
   const offline = isAppError(error) && error.code === "network_error";
   return (
     <Stack gap={2}>

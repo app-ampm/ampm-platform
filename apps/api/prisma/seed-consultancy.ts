@@ -258,6 +258,7 @@ async function upsertMilestones(prisma: PrismaClient, clientUserId: string): Pro
         status: milestone.status,
         dueAt: day(milestone.due),
         completedAt: milestone.completed === null ? null : day(milestone.completed),
+        documentId: milestone.documentId,
       },
       create: {
         id: milestone.id,
@@ -268,6 +269,7 @@ async function upsertMilestones(prisma: PrismaClient, clientUserId: string): Pro
         completedAt: milestone.completed === null ? null : day(milestone.completed),
         amount: milestone.amount === null ? null : money(milestone.amount),
         currency: milestone.amount === null ? null : "INR",
+        documentId: milestone.documentId,
         createdBy: clientUserId,
       },
     });

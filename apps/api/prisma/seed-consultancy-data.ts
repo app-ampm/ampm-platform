@@ -104,7 +104,11 @@ export const LINES = [
   },
 ] as const;
 
-/** The booking milestones: the hold is done, the rest pending; one carries a (W-14-hidden) amount. */
+/**
+ * The booking milestones: the hold is done, the rest pending; advance_paid carries a (W-14-hidden) amount.
+ * contract_signed carries a document, so a staff user (admin) can mark it + confirmed done and drive the
+ * enquiry client_decision -> confirmed (AC-05.6 needs a done contract_signed-with-document + done confirmed).
+ */
 export const MILESTONES = [
   {
     id: "0192f3a0-7d3e-7b1a-9c2f-0000000000dc",
@@ -113,6 +117,7 @@ export const MILESTONES = [
     due: -6,
     completed: -6,
     amount: null,
+    documentId: null,
   },
   {
     id: "0192f3a0-7d3e-7b1a-9c2f-0000000000dd",
@@ -121,6 +126,16 @@ export const MILESTONES = [
     due: 4,
     completed: null,
     amount: null,
+    documentId: null,
+  },
+  {
+    id: "0192f3a0-7d3e-7b1a-9c2f-0000000000d0",
+    type: "contract_signed",
+    status: "pending",
+    due: 7,
+    completed: null,
+    amount: null,
+    documentId: "0192f3a0-7d3e-7b1a-9c2f-0000000000f1",
   },
   {
     id: "0192f3a0-7d3e-7b1a-9c2f-0000000000de",
@@ -129,6 +144,7 @@ export const MILESTONES = [
     due: 11,
     completed: null,
     amount: "500000.00",
+    documentId: null,
   },
   {
     id: "0192f3a0-7d3e-7b1a-9c2f-0000000000df",
@@ -137,5 +153,6 @@ export const MILESTONES = [
     due: 21,
     completed: null,
     amount: null,
+    documentId: null,
   },
 ] as const;
