@@ -171,6 +171,90 @@ def check_trailer_parsing() -> list[str]:
     return [] if got == want else [f"trailer_parsing: expected {want}, got {got}"]
 
 
+LOG_CFG = {
+    "pr_log": {
+        "board_id": 999,
+        "columns": {
+            "pr_number": "n", "merged": "d", "type": "t", "area": "a", "author": "au",
+            "link": "l", "what": "w", "how": "h", "why": "y",
+        },
+    }
+}
+
+
+def check_parse_pr_body_sections() -> list[str]:
+    """type/area from a conventional title; What/How/Why from named markdown sections."""
+    body = "intro\n\n## What\nAdded rate cards.\n\n## How\nNew tables + API.\n\n## Why it matters\nThe paid product.\n"
+    ptype, area, what, how, why = ms.parse_pr_body("feat(hotels): rate cards", body)
+    problems = []
+    if (ptype, area) != ("feat", "hotels"):
+        problems.append(f"type/area = {(ptype, area)!r}")
+    if "Added rate cards" not in what:
+        problems.append(f"what = {what!r}")
+    if "New tables" not in how:
+        problems.append(f"how = {how!r}")
+    if "paid product" not in why.lower():
+        problems.append(f"why = {why!r}")
+    return [f"parse_sections: {p}" for p in problems]
+
+
+def check_parse_pr_body_fallback() -> list[str]:
+    """A prose title has no type; with no sections, what is the first paragraph."""
+    ptype, area, what, how, why = ms.parse_pr_body(
+        "Hardening pass after the audit", "First real paragraph.\n\nSecond paragraph.\n"
+    )
+    problems = []
+    if ptype or area:
+        problems.append(f"prose title should yield no type/area, got {(ptype, area)!r}")
+    if not what.startswith("First real paragraph"):
+        problems.append(f"what fallback = {what!r}")
+    if how or why:
+        problems.append("how/why should be blank with no sections")
+    return [f"parse_fallback: {p}" for p in problems]
+
+
+def check_log_pr_creates_row() -> list[str]:
+    """log_pr posts one create_item with the board id, a '#NN ' name, and mapped columns."""
+    pr = {"number": "42", "title": "feat(api): a thing", "url": "https://gh/pull/42",
+          "author": "app-ampm", "merged": "2026-11-02T07:11:38Z"}
+    with patched() as (fake, _out, _err):
+        ret = ms.log_pr(LOG_CFG, "tok", pr, "## What\nDid a thing.\n", dry_run=False)
+    problems = []
+    created = [v for q, v in fake.calls if q == ms.CREATE_ITEM]
+    if len(created) != 1:
+        problems.append(f"expected 1 create_item, got {len(created)}")
+    else:
+        v = created[0]
+        vals = json.loads(v["vals"])
+        if v.get("board") != "999":
+            problems.append(f"board = {v.get('board')!r}")
+        if not v.get("name", "").startswith("#42 "):
+            problems.append(f"name = {v.get('name')!r}")
+        if vals.get("n") != "42" or vals.get("t") != "feat" or vals.get("a") != "api":
+            problems.append(f"number/type/area = {(vals.get('n'), vals.get('t'), vals.get('a'))!r}")
+        if vals.get("d", {}).get("date") != "2026-11-02":
+            problems.append(f"merged date = {vals.get('d')!r}")
+        if vals.get("l", {}).get("url") != "https://gh/pull/42":
+            problems.append("link url not set")
+        if not vals.get("w", {}).get("text"):
+            problems.append("what column empty")
+    if ret is not True:
+        problems.append(f"expected True, got {ret!r}")
+    return [f"log_pr_creates_row: {p}" for p in problems]
+
+
+def check_log_pr_unconfigured() -> list[str]:
+    """With no pr_log section, log_pr is a no-op that hits no API."""
+    with patched() as (fake, _out, _err):
+        ret = ms.log_pr({"cards": {}}, "tok", {"number": "1", "title": "x"}, "", dry_run=False)
+    problems = []
+    if any(q == ms.CREATE_ITEM for q, _ in fake.calls):
+        problems.append("create_item called though no board is configured")
+    if ret is not True:
+        problems.append(f"expected True no-op, got {ret!r}")
+    return [f"log_pr_unconfigured: {p}" for p in problems]
+
+
 def run() -> int:
     checks = [
         check_status_failure_keeps_note,
@@ -180,6 +264,10 @@ def run() -> int:
         check_done_stamps_date,
         check_unknown_key_skipped,
         check_trailer_parsing,
+        check_parse_pr_body_sections,
+        check_parse_pr_body_fallback,
+        check_log_pr_creates_row,
+        check_log_pr_unconfigured,
     ]
     failures: list[str] = []
     for check in checks:

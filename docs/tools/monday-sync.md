@@ -18,6 +18,19 @@ Updates feed becomes a running progress log.
 - It is **post-merge and best-effort**: a monday hiccup or a missing token logs
   and exits green — it never blocks a merge or CI.
 
+## The PR Merge Log board
+
+A second board, **AMPM Platform — PR Merge Log**
+(<https://thewebpaandas-team.monday.com/boards/5032332363>), carries **one row
+per merged PR** — PR #, merged date, author, type, area, a PR link, and
+What / How / Why — as a companion to the Build-Plan board (which only moves when
+a whole card is done). On every merge, `monday_sync.py --from-pr` appends a row:
+the type/area come from a conventional-commit title (`feat(hotels): …`) and the
+What/How/Why are parsed from the description's markdown sections, falling back to
+the first paragraph. No trailer is needed — every PR is logged. The board id and
+column ids live under `pr_log` in `monday_board_map.json`; `PR_AUTHOR` and
+`PR_MERGED_AT` (set by the workflow) fill the author and date.
+
 ## The PR trailer (how Claude/you tell the board what moved)
 
 Add one or more lines anywhere in the PR description:
