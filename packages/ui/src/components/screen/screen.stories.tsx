@@ -12,6 +12,7 @@ import { Stat } from "../stat";
 import { TabBar } from "../tab-bar";
 import { Text } from "../text";
 import { Screen } from "./screen";
+import { SAMPLE_AMOUNTS } from "../../stories/fixtures/sample-amounts";
 
 const noop = () => undefined;
 
@@ -75,7 +76,7 @@ function PriceBar() {
   return (
     <Row justify="between" gap={3}>
       <Stack gap={0}>
-        <Text variant="data">₹18–24K</Text>
+        <Text variant="data">{SAMPLE_AMOUNTS.roomRange}</Text>
         <Text variant="caption">per room / night</Text>
       </Stack>
       <Button>Check availability</Button>
@@ -94,7 +95,7 @@ function HotelPage() {
         footer={<PriceBar />}
       >
         <Panel title="Rates" detail="Verified on 2 Nov 2026 by AMPM" />
-        <Panel title="Package range" detail="₹65–80 lakh" />
+        <Panel title="Package range" detail={SAMPLE_AMOUNTS.packageRange} />
         <Panel title="Venues" detail="Four, from 120 to 420 guests" />
       </Screen>
     </Frame>

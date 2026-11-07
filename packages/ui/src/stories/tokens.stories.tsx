@@ -5,6 +5,7 @@ import { Row, Stack } from "../components/layout";
 import { Text, type TextTone, type TextVariant } from "../components/text";
 import { cn } from "../lib/cn";
 import { defineStories } from "./define";
+import { SAMPLE_AMOUNTS } from "./fixtures/sample-amounts";
 
 // Peacock Night's tokens as the classes that draw them (docs/design/peacock-night.md §1–5). No value
 // is written here: every swatch is a class, every number a label.
@@ -90,7 +91,7 @@ const RAMP: readonly {
   { variant: "eyebrow", sample: "Total discovery", spec: "eyebrow · Manrope 600 10, tracked" },
   {
     variant: "data",
-    sample: "₹46,80,000 · 12–14 FEB 2027",
+    sample: `${SAMPLE_AMOUNTS.weddingBudget} · 12–14 FEB 2027`,
     spec: "data · Manrope 600 13, tabular",
   },
   {

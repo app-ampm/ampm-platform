@@ -3,6 +3,7 @@ import { View } from "react-native";
 import { defineStories } from "../../stories/define";
 import { Stack } from "../layout";
 import { Text } from "./text";
+import { SAMPLE_AMOUNTS } from "../../stories/fixtures/sample-amounts";
 
 export const stories = defineStories({
   title: "Text",
@@ -31,7 +32,7 @@ export const stories = defineStories({
           <Text variant="bodySmall">Body small 13</Text>
           <Text variant="label">Label 13</Text>
           <Text variant="caption">Caption 11</Text>
-          <Text variant="data">₹46,80,000 · 12–14 FEB 2027</Text>
+          <Text variant="data">{`${SAMPLE_AMOUNTS.weddingBudget} · 12–14 FEB 2027`}</Text>
         </Stack>
       ),
     },

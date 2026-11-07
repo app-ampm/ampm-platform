@@ -10,8 +10,14 @@ import {
   panelEyebrowStyles,
 } from "./how-it-works.styles";
 
+interface StageSummaryProps {
+  readonly stage: StagePlan;
+  /** The catalogue price, when the stage has one and the API could say. */
+  readonly price: string | null | undefined;
+}
+
 /** The stage's number in gold Gilda, its name, the price where it has one and how it is paid for. */
-function StageSummary({ stage }: { readonly stage: StagePlan }) {
+function StageSummary({ stage, price }: StageSummaryProps) {
   return (
     <div className="flex flex-col gap-3 md:col-span-2 md:gap-3.5 xl:col-span-1">
       <p
@@ -25,9 +31,9 @@ function StageSummary({ stage }: { readonly stage: StagePlan }) {
       <h2 className={cn(textStyles({ variant: "title" }), "text-3xl md:text-4xl")}>
         {stage.title}
       </h2>
-      {stage.price ? (
+      {price ? (
         <p className={cn(textStyles({ variant: "data", tone: "primary" }), "text-xl md:text-2xl")}>
-          {stage.price}
+          {price}
         </p>
       ) : null}
       <p className={cn(BODY_TEXT, "md:max-w-xl")}>{stage.terms}</p>
@@ -65,7 +71,7 @@ function StageList({ title, items, tone }: StageListProps) {
  * summary then the two lists (the mock's 0.9fr / 1fr / 1fr as thirds). Tablet and small desktop: the
  * summary across the top and the two lists side by side. Phone: one column, as the W8 cards stack.
  */
-export function StagePanel({ stage }: { readonly stage: StagePlan }) {
+export function StagePanel({ stage, price }: StageSummaryProps) {
   return (
     <GlassCard
       as="li"
@@ -76,7 +82,7 @@ export function StagePanel({ stage }: { readonly stage: StagePlan }) {
         LARGE_PANEL_RADIUS,
       )}
     >
-      <StageSummary stage={stage} />
+      <StageSummary stage={stage} price={price} />
       <StageList title="What you get" items={stage.youGet} tone={stage.tone} />
       <StageList title="What AMPM does" items={stage.ampmDoes} tone={stage.tone} />
     </GlassCard>

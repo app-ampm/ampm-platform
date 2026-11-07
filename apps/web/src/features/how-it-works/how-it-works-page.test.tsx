@@ -16,7 +16,8 @@ function escapeHtml(text: string): string {
 
 /** PUB-02 + PUB-07 rendered as the server sends it: the mock's copy, its plans and its links. */
 describe("how it works page", () => {
-  const html = renderToStaticMarkup(<HowItWorksPage />);
+  // The price comes from the plan catalogue at render time (plan-price.ts); here it is the seed's.
+  const html = renderToStaticMarkup(<HowItWorksPage planPrices={{ hotel_discovery: "₹50,000" }} />);
 
   it("opens with the hero heading, the gold words emphasised", () => {
     expect(html).toMatch(/<h1 [^>]*id="how-it-works-heading"/);
@@ -34,6 +35,14 @@ describe("how it works page", () => {
     for (const stage of STAGE_PLANS)
       for (const item of [...stage.youGet, ...stage.ampmDoes])
         expect(html).toContain(`>${escapeHtml(item)}</li>`);
+  });
+
+  it("leaves the price out, terms kept, when the catalogue could not say", () => {
+    const withoutPrice = renderToStaticMarkup(
+      <HowItWorksPage planPrices={{ hotel_discovery: null }} />,
+    );
+    expect(withoutPrice).not.toContain("₹");
+    expect(withoutPrice).toContain("One month from the day it activates.");
   });
 
   it("compares the stages in a table named by its heading, each mark spoken as a word", () => {

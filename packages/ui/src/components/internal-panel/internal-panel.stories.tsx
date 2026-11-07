@@ -1,13 +1,14 @@
 import { defineStories } from "../../stories/define";
+import { SAMPLE_AMOUNTS } from "../../stories/fixtures/sample-amounts";
 import { Divider, Row, Stack } from "../layout";
 import { Text } from "../text";
 import { InternalPanel } from "./internal-panel";
 
 // Staff-screen samples (T5 rate card, T6 enquiries). A client screen never renders this panel.
 const COSTS = [
-  { line: "Deluxe lake-view room", cost: "₹14,200", margin: "22%" },
-  { line: "Veg menu, per plate", cost: "₹2,900", margin: "18%" },
-  { line: "Lawn hire, per function", cost: "₹5,10,000", margin: "14%" },
+  { line: "Deluxe lake-view room", cost: SAMPLE_AMOUNTS.roomNight, margin: "22%" },
+  { line: "Veg menu, per plate", cost: SAMPLE_AMOUNTS.vegPlate, margin: "18%" },
+  { line: "Lawn hire, per function", cost: SAMPLE_AMOUNTS.lawnHire, margin: "14%" },
 ];
 
 export const stories = defineStories({

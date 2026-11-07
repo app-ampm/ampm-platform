@@ -3,19 +3,20 @@ import type { GlassCardTone } from "@/components/site";
 /*
  * The How it works page's words (PUB-02 + PUB-07), copied from the approved mock
  * (`Peacock Night 1 - Website.dc.html`, W2) and its data script, in one place until the public site's
- * i18n arrives. The plans match AMPM's decisions: hotel discovery is a one-month subscription of
- * Rs 50,000 and renewal is a new purchase (A-3); the demo shows three locations with one real hotel
- * each at indicative prices (decision log, 26 October 2026).
+ * i18n arrives. The plans match AMPM's decisions: hotel discovery is a one-month subscription and
+ * renewal is a new purchase (A-3); its price is configuration, read from the public plan catalogue
+ * when the page renders (plan-price.ts), never written here (AC-02.9 / AC-25.4); the demo shows three
+ * locations with one real hotel each at indicative prices (decision log, 26 October 2026).
  */
 
 export interface StagePlan {
   readonly number: string;
   readonly title: string;
   /**
-   * The subscription's price. AMPM can change it in settings (A-3), so this copy changes with it;
-   * the later stages have no list price.
+   * The plan whose catalogue price this stage shows. AMPM changes prices in settings (A-3), so the
+   * page reads the price from the API instead of carrying it; the later stages have no list price.
    */
-  readonly price?: string | undefined;
+  readonly planType?: "hotel_discovery" | undefined;
   /** How the stage is paid for. */
   readonly terms: string;
   readonly youGet: readonly string[];
@@ -28,7 +29,7 @@ export const STAGE_PLANS: readonly StagePlan[] = [
   {
     number: "01",
     title: "Hotel discovery",
-    price: "₹50,000",
+    planType: "hotel_discovery",
     terms: "One month from the day it activates. Renewal is a new purchase.",
     youGet: [
       "Search and filter 200 hotels",

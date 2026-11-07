@@ -2,6 +2,7 @@ import { defineStories } from "../../stories/define";
 import { Button } from "../button";
 import { Text } from "../text";
 import { Stepper, type StepperStep } from "./stepper";
+import { SAMPLE_AMOUNTS } from "../../stories/fixtures/sample-amounts";
 
 const ENQUIRY: StepperStep[] = [
   { key: "submitted", label: "Submitted" },
@@ -28,7 +29,7 @@ const MILESTONES: StepperStep[] = [
     detail: "Due 15 Dec 2026",
     content: (
       <Text variant="data" tone="body">
-        ₹9,50,000
+        {SAMPLE_AMOUNTS.advancePayment}
       </Text>
     ),
   },
