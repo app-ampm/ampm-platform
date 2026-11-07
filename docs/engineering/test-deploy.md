@@ -95,13 +95,19 @@ same source.
 
 1. **DNS** (the `ampmverse.com` zone is at GoDaddy, nameservers `ns05`/`ns06.domaincontrol.com`): an `A`
    record `site` → `31.97.62.74`, next to `app`.
-2. **Plesk**, inside the app.ampmverse.com subscription so the document root belongs to `app_ampmverse`:
-   add the domain `site.ampmverse.com` (a blank website), secure it with Let's Encrypt and turn on the
-   permanent HTTP→HTTPS redirect, as app.ampmverse.com has.
+2. **Plesk**, signed in as the subscription user (`app_ampm`): Add Domain → Blank website,
+   `site.ampmverse.com` in the app.ampmverse.com webspace (so the document root,
+   `/var/www/vhosts/app.ampmverse.com/site.ampmverse.com`, belongs to `app_ampmverse`), DNS and mail
+   services off (the zone is GoDaddy's; the site sends no mail), preferred domain None. Then SSL/TLS
+   Certificates → the free Let's Encrypt certificate for `site.ampmverse.com` only (no www, no wildcard:
+   neither has a DNS record), HTTP validation, and "Redirect from http to https" on. Done on 7 Nov 2026;
+   the certificate renews itself.
 3. Copy [`deploy/site-ampmverse/htaccess.example`](../../deploy/site-ampmverse/htaccess.example) to the
-   new document root as `.htaccess` and remove Plesk's placeholder page. It proxies every request to
-   `127.0.0.1:7002` behind app.'s Basic-Auth user file and leaves `/.well-known/acme-challenge/` open so the
-   certificate renews.
+   new document root as `.htaccess` and move Plesk's placeholder `index.html` out of it (it is kept in
+   `~/plesk-default-pages/`): nginx serves `.html` files from the document root without asking Apache, so
+   a file left there skips the password. The `.htaccess` proxies every request, `/` included
+   (`DirectoryIndex disabled`), to `127.0.0.1:7002` behind app.'s Basic-Auth user file and leaves
+   `/.well-known/acme-challenge/` open so the certificate renews.
 4. With the override from the template in place, recreate the API once so it picks up the new
    `CORS_ORIGINS`: `docker compose -f infra/compose/local/compose.yml -f infra/compose/local/compose.test-override.yml up -d --no-deps --wait api`.
 
@@ -123,7 +129,8 @@ server owner's call.
 
 - On the box: `curl -sI http://127.0.0.1:7002/` answers `200`, and its `content-security-policy` lists
   `https://app.ampmverse.com` in `connect-src`.
-- Public: `curl -sI https://site.ampmverse.com/` answers `401` (the gate); signed in, every page loads and
-  How it works shows the discovery price.
+- Public: `curl -sI https://site.ampmverse.com/` answers `401` (the gate); signed in, every page loads,
+  `/` is the home page (not Next's 404, which means the `DirectoryIndex` line is missing) and How it works
+  shows the discovery price.
 - CORS: `curl -si -X OPTIONS https://app.ampmverse.com/_api/crm/enquiries -H 'Origin: https://site.ampmverse.com' -H 'Access-Control-Request-Method: POST'`
   answers with `access-control-allow-origin: https://site.ampmverse.com`.

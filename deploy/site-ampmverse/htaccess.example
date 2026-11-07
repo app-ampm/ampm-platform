@@ -15,6 +15,10 @@ Require valid-user
 
 RewriteEngine On
 
+# The root URL too: left on, mod_dir answers "/" by looking up its DirectoryIndex names, the lookup passes
+# through the proxy rule below, and Next receives "/index.html" (its 404) instead of the home page.
+DirectoryIndex disabled
+
 # Every other request goes to the Next.js server in the web container, published on the box's loopback
 # only. Edit the port if the box publishes it elsewhere (default 7002).
 RewriteCond %{REQUEST_URI} !^/\.well-known/acme-challenge/
