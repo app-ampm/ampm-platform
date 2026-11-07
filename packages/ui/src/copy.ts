@@ -96,4 +96,11 @@ export const uiCopy = {
     withBadge: (label: string, badge: number | string) => `${label} · ${badge}`,
     spokenWithBadge: (label: string, badge: number | string) => `${label}, ${badge}`,
   },
+  queryError: {
+    // A session that has ended; screens name what the sign-in is for ("Sign in to view leads").
+    signIn: {
+      title: "Sign in to continue",
+      action: "Sign in",
+    },
+  },
 } as const;

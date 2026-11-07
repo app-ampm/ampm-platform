@@ -4,6 +4,7 @@ import { useReviseProposal, useShareProposal } from "@ampm/api-client";
 import {
   clientAmount,
   formatAmount,
+  formatDay,
   internalAmount,
   type HotelProposalInternalView,
 } from "@ampm/core";
@@ -19,7 +20,6 @@ import {
   useToast,
 } from "@ampm/ui";
 
-import { formatDate } from "../consultancy/consultancy.format";
 import { rateItemLabel } from "./consultancy-admin.form";
 import { staffProposalBadge } from "./consultancy-admin.format";
 import { FigureRow, RecordHeader } from "./section-parts";
@@ -65,7 +65,7 @@ function ProposalClientTotal({ proposal }: { readonly proposal: HotelProposalInt
       />
       {proposal.validUntil ? (
         <Text variant="bodySmall" tone="muted">
-          {`Valid until ${formatDate(proposal.validUntil)}`}
+          {`Valid until ${formatDay(proposal.validUntil)}`}
         </Text>
       ) : null}
     </Stack>

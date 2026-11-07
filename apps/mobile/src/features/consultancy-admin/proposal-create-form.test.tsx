@@ -1,6 +1,6 @@
 import { uiCopy } from "@ampm/ui";
 
-import { dismissToasts, fireEvent, screen, waitFor, within } from "../../test/render";
+import { fireEvent, screen, waitFor, within } from "../../test/render";
 import {
   ENQUIRY_ID,
   failure,
@@ -64,7 +64,6 @@ describe("ProposalCreateForm", () => {
       },
     });
     expect(await screen.findByText("Proposal drafted")).toBeOnTheScreen();
-    await dismissToasts();
   });
 
   it("types the internal total inside the InternalPanel, the client total outside it", async () => {
@@ -111,7 +110,6 @@ describe("ProposalCreateForm", () => {
         },
       ],
     });
-    await dismissToasts();
   });
 
   it("moves a line marked internal only into an InternalPanel, out of the client sum", async () => {
@@ -125,7 +123,6 @@ describe("ProposalCreateForm", () => {
     await fireEvent.press(submitButton());
     await waitFor(() => expect(onDone).toHaveBeenCalledTimes(1));
     expect(sent.at(-1)?.body).toMatchObject({ lines: [{ clientVisible: false }] });
-    await dismissToasts();
   });
 
   it("removes a line", async () => {
@@ -141,7 +138,6 @@ describe("ProposalCreateForm", () => {
     await fireEvent.press(submitButton());
     expect(await screen.findByText("forbidden")).toBeOnTheScreen();
     expect(onDone).not.toHaveBeenCalled();
-    await dismissToasts();
   });
 
   it("cancels without sending anything", async () => {

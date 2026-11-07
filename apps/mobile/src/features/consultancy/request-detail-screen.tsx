@@ -1,18 +1,10 @@
 import { useRouter } from "expo-router";
 
 import { useHotel, useHotelEnquiry } from "@ampm/api-client";
-import { isAppError, type HotelEnquiryClientDetailView } from "@ampm/core";
-import {
-  Card,
-  EmptyState,
-  ErrorState,
-  OfflineState,
-  Screen,
-  ScreenHeader,
-  Skeleton,
-  Stack,
-  StatusChip,
-} from "@ampm/ui";
+import type { HotelEnquiryClientDetailView } from "@ampm/core";
+import { Card, QueryErrorState, Screen, ScreenHeader, Skeleton, Stack, StatusChip } from "@ampm/ui";
+
+import { useGoToSignIn } from "@/navigation/sign-in";
 
 import { enquiryChip } from "./consultancy.format";
 import { EnquiryActivity } from "./enquiry-activity";
@@ -69,9 +61,18 @@ function DetailBody({
   readonly enquiry: ReturnType<typeof useHotelEnquiry>;
   readonly enquiryId: string;
 }) {
+  const goToSignIn = useGoToSignIn();
   if (enquiry.isPending) return <DetailLoading />;
   if (enquiry.isError)
-    return <DetailError error={enquiry.error} onRetry={() => void enquiry.refetch()} />;
+    return (
+      <QueryErrorState
+        error={enquiry.error}
+        onRetry={() => void enquiry.refetch()}
+        onSignIn={goToSignIn}
+        signIn={{ title: "Sign in to view this request" }}
+        notFound={{ title: "Request not found" }}
+      />
+    );
   return (
     <Stack gap={6}>
       <EnquirySummary enquiry={enquiry.data} />
@@ -82,34 +83,6 @@ function DetailBody({
       <EnquiryActivity events={enquiry.data.events} />
     </Stack>
   );
-}
-
-function DetailError({
-  error,
-  onRetry,
-}: {
-  readonly error: unknown;
-  readonly onRetry: () => void;
-}) {
-  const router = useRouter();
-  if (isAppError(error) && error.code === "network_error")
-    return <OfflineState onRetry={onRetry} />;
-  if (isAppError(error) && error.code === "unauthenticated") {
-    return (
-      <EmptyState
-        icon="lock"
-        title="Sign in to view this request"
-        action={{
-          label: "Sign in",
-          onPress: () => router.replace("/sign-in"),
-          variant: "primary",
-        }}
-      />
-    );
-  }
-  if (isAppError(error) && error.code === "not_found")
-    return <EmptyState icon="inbox" title="Request not found" />;
-  return <ErrorState onRetry={onRetry} />;
 }
 
 function DetailLoading() {

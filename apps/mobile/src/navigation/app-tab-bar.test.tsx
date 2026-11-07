@@ -2,10 +2,18 @@ import type { QueryClient } from "@tanstack/react-query";
 
 import { ME_QUERY_KEY } from "@ampm/api-client";
 import type { MeResponse, PrincipalType, StaffRoleCode } from "@ampm/core";
-import { uiCopy } from "@ampm/ui";
 
-import { createTestQueryClient, failure, pendingFetch, renderWithApi } from "../test/api";
-import { fireEvent, screen } from "../test/render";
+import { setAccessToken } from "@/lib/session";
+
+import {
+  createTestQueryClient,
+  failure,
+  ok,
+  pendingFetch,
+  renderWithApi,
+  TEST_API_BASE,
+} from "../test/api";
+import { act, fireEvent, screen } from "../test/render";
 import { AppTabBar } from "./app-tab-bar";
 
 // The bar reads the path and moves between areas through the router; the window class decides
@@ -66,13 +74,14 @@ async function renderBar(
 beforeEach(() => {
   mockDismissTo.mockReset();
   mockIsWide = false;
+  setAccessToken("signed-in-token");
 });
 
 describe("AppTabBar for a client", () => {
   it("shows the five client tabs with the area of the path selected", async () => {
     await renderBar("/portal/requests/018f0000-0000-7000-8000-0000000000e1", me("client", []));
     const labels = screen.getAllByRole("tab").map((tab) => tab.props.accessibilityLabel);
-    expect(labels).toEqual(["Home", "Hotels", "My Wedding, Locked", "Approvals, Locked", "More"]);
+    expect(labels).toEqual(["Home", "Hotels", "Wedding, Locked", "Approvals, Locked", "More"]);
     expect(screen.getByRole("tab", { name: "Home" })).toBeSelected();
   });
 
@@ -95,12 +104,9 @@ describe("AppTabBar for a client", () => {
 
   it("explains a locked tab with a toast instead of navigating", async () => {
     await renderBar("/portal", me("client", []));
-    await fireEvent.press(screen.getByRole("tab", { name: "My Wedding, Locked" }));
+    await fireEvent.press(screen.getByRole("tab", { name: "Wedding, Locked" }));
     expect(await screen.findByText("Opens once AMPM is appointed")).toBeOnTheScreen();
     expect(mockDismissTo).not.toHaveBeenCalled();
-    // Dismissed here rather than left on its four-second timer, which would hold Jest open.
-    await fireEvent.press(screen.getByRole("button", { name: uiCopy.dismiss }));
-    expect(screen.queryByText("Opens once AMPM is appointed")).toBeNull();
   });
 });
 
@@ -143,6 +149,65 @@ describe("AppTabBar when /me fails", () => {
   it("selects More on the account screen", async () => {
     await renderBar("/account", undefined, fails);
     expect(await screen.findByRole("tab", { name: "More" })).toBeSelected();
+  });
+});
+
+describe("AppTabBar without a session", () => {
+  it.each<[string, boolean]>([
+    ["on a phone", false],
+    ["on a window 768 or wider", true],
+  ])("never asks for /me and keeps only More, the way to sign in, %s", async (_case, isWide) => {
+    setAccessToken(null);
+    mockIsWide = isWide;
+    const asked: string[] = [];
+    const recording: FetchFn = (input) => {
+      asked.push(String(input));
+      return Promise.resolve(failure("unauthenticated", 401));
+    };
+    await renderBar("/leads", undefined, recording);
+    const tabs = screen.getAllByRole("tab");
+    expect(tabs.map((tab) => tab.props.accessibilityLabel)).toEqual(["More"]);
+    await fireEvent.press(screen.getByRole("tab", { name: "More" }));
+    expect(mockDismissTo).toHaveBeenCalledWith("/account");
+    expect(asked).toEqual([]);
+  });
+});
+
+describe("AppTabBar follows the session while it stays mounted", () => {
+  /** The API answering /me with `body`, recording each URL it is asked. */
+  const answering =
+    (asked: string[], body: MeResponse): FetchFn =>
+    (input) => {
+      asked.push(String(input));
+      return Promise.resolve(ok(body));
+    };
+
+  it("drops to More and asks nothing for /me once signing out drops the session", async () => {
+    const asked: string[] = [];
+    const queryClient = await renderBar(
+      "/portal",
+      me("client", []),
+      answering(asked, me("client", [])),
+    );
+    expect(screen.getAllByRole("tab")).toHaveLength(5);
+    // Signing out drops the token and clears the cache (navigation/sign-out.ts).
+    await act(() => {
+      setAccessToken(null);
+      queryClient.clear();
+    });
+    const tabs = screen.getAllByRole("tab");
+    expect(tabs.map((tab) => tab.props.accessibilityLabel)).toEqual(["More"]);
+    expect(asked).toEqual([]);
+  });
+
+  it("asks for /me once signing in stores a token, and shows the person's tabs", async () => {
+    setAccessToken(null);
+    const asked: string[] = [];
+    await renderBar("/leads", undefined, answering(asked, me("staff", ["SM"])));
+    expect(screen.getAllByRole("tab")).toHaveLength(1);
+    await act(() => setAccessToken("signed-in-token"));
+    expect(await screen.findByRole("tab", { name: "Leads" })).toBeSelected();
+    expect(asked).toEqual([`${TEST_API_BASE}/me`]);
   });
 });
 

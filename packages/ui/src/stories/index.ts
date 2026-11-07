@@ -20,6 +20,7 @@ import { stories as offlineBanner } from "../components/offline-banner/offline-b
 import { stories as otpInput } from "../components/otp-input/otp-input.stories";
 import { stories as photoPlaceholder } from "../components/photo-placeholder/photo-placeholder.stories";
 import { stories as progressBar } from "../components/progress-bar/progress-bar.stories";
+import { stories as queryErrorState } from "../components/query-error-state/query-error-state.stories";
 import { stories as screenHeader } from "../components/screen-header/screen-header.stories";
 import { stories as screen } from "../components/screen/screen.stories";
 import { stories as segmentedControl } from "../components/segmented-control/segmented-control.stories";
@@ -70,6 +71,7 @@ export const allStories: readonly StoryModule[] = [
   image,
   skeleton,
   states,
+  queryErrorState,
   sheet,
   toast,
   screenHeader,

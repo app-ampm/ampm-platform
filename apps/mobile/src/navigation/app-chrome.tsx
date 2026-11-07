@@ -9,7 +9,9 @@ import {
 
 import { useMe } from "@ampm/api-client";
 
-import { chromeAudience } from "./chrome-audience";
+import { useIsSignedIn } from "@/lib/session";
+
+import { chromeAudience, isAudienceRoute } from "./chrome-audience";
 import { ClientTopNav } from "./client-top-nav";
 import type { Audience } from "./routes";
 import { StaffRail } from "./staff-rail";
@@ -45,12 +47,19 @@ function ScreenInsets({ audience, children }: ScreenInsetsProps) {
  * the entry redirect. Phones get the tab bar from the screens instead. Colours come from classes, so
  * the web export decides none in JavaScript before hydration.
  *
+ * `/me` is asked only where the chrome can draw: with a session, on a window 768 or wider, on a
+ * workspace or portal route. The chrome stays mounted on sign-in, where the question could only be
+ * refused (the entry route sends a person there with a refused token still held), and refused again
+ * on every window focus; on a phone, the gallery or the entry redirect the answer would go unused.
+ * Signing in or out renders the chrome again (`useIsSignedIn`), and so does each navigation.
+ *
  *   <AppChrome><Stack screenOptions={…} /></AppChrome>
  */
 export function AppChrome({ children }: { readonly children: ReactNode }) {
-  const me = useMe();
+  const hasSession = useIsSignedIn();
   const pathname = usePathname();
   const { isWide, isRailExpanded } = useWindowClass();
+  const me = useMe({ enabled: hasSession && isWide && isAudienceRoute(pathname) });
   const audience = isWide && me.data ? chromeAudience(pathname, me.data.principal.type) : null;
   return (
     <View className="flex-1 flex-row bg-surface">

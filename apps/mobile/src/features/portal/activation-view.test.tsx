@@ -35,14 +35,6 @@ const subscribed: Handler = () =>
     201,
   );
 
-/**
- * Closes the toast on screen. A toast dismisses itself after four seconds, and that timer would keep
- * Jest's event loop alive after the run; dismissing it clears the timer.
- */
-async function dismissToast(): Promise<void> {
-  await fireEvent.press(screen.getByRole("button", { name: uiCopy.dismiss }));
-}
-
 const PAY = { name: "Pay ₹50,000" } as const;
 const COMPLETE = { name: "Complete payment (demo)" } as const;
 
@@ -107,7 +99,6 @@ describe("PortalScreen activation and payment (CP-11)", () => {
     await fireEvent.press(await screen.findByRole("button", PAY));
     expect(await screen.findByText("Could not start the subscription")).toBeOnTheScreen();
     expect(screen.getByRole("button", PAY)).toBeOnTheScreen();
-    await dismissToast();
   });
 
   it("says so when the payment cannot complete", async () => {
@@ -120,7 +111,6 @@ describe("PortalScreen activation and payment (CP-11)", () => {
     await fireEvent.press(await screen.findByRole("button", PAY));
     await fireEvent.press(await screen.findByRole("button", COMPLETE));
     expect(await screen.findByText("Could not complete the payment")).toBeOnTheScreen();
-    await dismissToast();
   });
 
   it("lets a principal with a scoped hotel set browse it before subscribing", async () => {

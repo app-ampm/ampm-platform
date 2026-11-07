@@ -61,7 +61,7 @@ describe("RequestDetailScreen", () => {
     expect(screen.getByLabelText("Your decision")).toBeOnTheScreen();
     expect(screen.getByLabelText("Proposal shared, done")).toBeOnTheScreen();
     expect(screen.getByLabelText("Your decision, current step")).toBeOnTheScreen();
-    expect(screen.getByText("12–14 Feb 2027 · 300 guests · 80 rooms")).toBeOnTheScreen();
+    expect(screen.getByText("12–14 FEB 2027 · 300 guests · 80 rooms")).toBeOnTheScreen();
     expect(screen.getByText("Sangeet, wedding, reception")).toBeOnTheScreen();
     expect(
       screen.getByText("The lawn is free on the 13th and holds 350 for a sangeet."),
@@ -109,6 +109,20 @@ describe("RequestDetailScreen", () => {
     );
     expect(await screen.findByText("Proposals")).toBeOnTheScreen();
     expect(await screen.findByText(uiCopy.error.title)).toBeOnTheScreen();
+  });
+
+  // Denial equals absence (security.md): the API's 404 for a sub-resource the client may not see is
+  // the same as for one that does not exist, so the section hides instead of offering a retry.
+  it("hides a section the API answers with a 404, and keeps the rest of the request", async () => {
+    await renderDetail(
+      enquiryApi({
+        [`GET /consultancy/enquiries/${ENQUIRY_ID}/proposals`]: fail(404, "not_found"),
+      }),
+    );
+    expect(await screen.findByText("Sangeet, wedding, reception")).toBeOnTheScreen();
+    await waitFor(() => expect(screen.queryByText("Proposals")).toBeNull());
+    expect(screen.queryByText(uiCopy.error.title)).toBeNull();
+    expect(screen.queryByRole("button", { name: uiCopy.retry })).toBeNull();
   });
 
   it("shows not found for an enquiry outside the client's reach", async () => {

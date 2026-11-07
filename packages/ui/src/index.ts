@@ -69,6 +69,7 @@ export * from "./components/state-view";
 export * from "./components/empty-state";
 export * from "./components/error-state";
 export * from "./components/offline-state";
+export * from "./components/query-error-state";
 export * from "./components/sheet";
 export * from "./components/toast";
 

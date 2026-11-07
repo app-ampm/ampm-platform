@@ -4,8 +4,7 @@ import {
   enquiryChip,
   enquiryFacts,
   enquiryStep,
-  formatDate,
-  formatStay,
+  formatPickedDay,
   milestoneStepStates,
   proposalDates,
 } from "./consultancy.format";
@@ -78,32 +77,29 @@ describe("milestoneStepStates", () => {
 });
 
 describe("dates", () => {
-  it("writes a stay compactly, as the mocks do", () => {
-    expect(formatStay("2027-02-12", "2027-02-14")).toBe("12–14 Feb 2027");
-    expect(formatStay("2027-02-28", "2027-03-02")).toBe("28 Feb – 2 Mar 2027");
-    expect(formatStay("2026-12-30", "2027-01-02")).toBe("30 Dec 2026 – 2 Jan 2027");
-    expect(formatStay("2027-02-12", "2027-02-12")).toBe("12 Feb 2027");
-  });
-
-  it("reads a date as the calendar day it names, and keeps a value it cannot parse", () => {
-    expect(formatDate("2027-02-12")).toBe("12 Feb 2027");
-    expect(formatDate("soon")).toBe("soon");
-  });
-
-  it("puts an enquiry's stay on one data line", () => {
+  it("puts an enquiry's stay on one data line, the month in capitals", () => {
     const stay = { dateFrom: "2027-02-12", dateTo: "2027-02-14", guestEstimate: 300 };
     expect(enquiryFacts({ ...stay, roomsRequired: 80, datesFlexible: true })).toBe(
-      "12–14 Feb 2027 · 300 guests · 80 rooms · Flexible dates",
+      "12–14 FEB 2027 · 300 guests · 80 rooms · Flexible dates",
     );
     expect(
       enquiryFacts({ ...stay, guestEstimate: 1, roomsRequired: null, datesFlexible: false }),
-    ).toBe("12–14 Feb 2027 · 1 guest");
+    ).toBe("12–14 FEB 2027 · 1 guest");
   });
 
   it("dates a proposal by when it was shared and how long it holds", () => {
     expect(proposalDates({ sharedAt: null, validUntil: "2026-11-20" })).toBe(
-      "Valid until 20 Nov 2026",
+      "Valid until 20 NOV 2026",
+    );
+    const sharedAt = new Date(2026, 10, 3, 14, 5).toISOString();
+    expect(proposalDates({ sharedAt, validUntil: "2026-11-20" })).toBe(
+      "Shared 3 NOV 2026 · Valid until 20 NOV 2026",
     );
     expect(proposalDates({ sharedAt: null, validUntil: null })).toBeNull();
+  });
+
+  it("dates a visit or a due date by the day staff picked, sent as midnight UTC", () => {
+    expect(formatPickedDay("2027-01-31T00:00:00.000Z")).toBe("31 Jan 2027");
+    expect(formatPickedDay("2027-01-20T23:30:00.000Z")).toBe("20 Jan 2027");
   });
 });

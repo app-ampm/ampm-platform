@@ -19,3 +19,14 @@ export function chromeAudience(pathname: string, principalType: PrincipalType): 
   const audience = audienceOf(principalType);
   return AUDIENCE_ROUTES[audience].some((route) => isOnRoute(pathname, route)) ? audience : null;
 }
+
+/**
+ * Whether the route is the workspace's or the portal's, the only routes a wide window draws navigation
+ * around (for one audience or the other). Sign-in, the gallery and the entry redirect are neither, so
+ * the chrome has no use for `/me` there.
+ */
+export function isAudienceRoute(pathname: string): boolean {
+  return Object.values(AUDIENCE_ROUTES).some((routes) =>
+    routes.some((route) => isOnRoute(pathname, route)),
+  );
+}

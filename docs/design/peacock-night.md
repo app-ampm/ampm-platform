@@ -78,6 +78,12 @@ glass fallback), `surface-inset` (pearl 3%), `highlight-soft` (peacock 30%), `br
 Never write a hex, `rgb()`, `px` or arbitrary value (`bg-[#…]`, `p-[13px]`) outside `packages/tokens`.
 A missing step is added to the tokens.
 
+Lint enforces the vocabulary: after ESLint, `packages/ui`, `apps/mobile` and `apps/web` run the class
+audit (`packages/config/tailwind/class-audit.mjs`), which fails when a class is not generated on the web
+or on native, such as a typo, a retired token or an opacity step missing from `opacity.ts`, all of which
+Tailwind would otherwise drop without a word. A class meant for a single platform carries its variant
+(`web:`, `native:`).
+
 ## 3. Glass, rims and glow
 
 Depth comes from glass, a 1px rim along the top edge, and glow orbs behind the content. **There are no
@@ -198,8 +204,8 @@ Every component is a folder with its test and stories; the Gallery shows every v
 | Client portal (browser) | 768 and up | The desktop artboards (D, C) |
 | Client portal (browser) | under 768 | The client app layouts (P): `TabBar` |
 
-- The client app's tabs are Home, Hotels, My Wedding, Approvals (count badge), More. My Wedding and
-  Approvals stay locked until AMPM is appointed.
+- The client app's tabs are Home, Hotels, Wedding, Approvals (count badge), More (the portal's top bar
+  says My Wedding). Wedding and Approvals stay locked until AMPM is appointed.
 - The rail shows only the areas the person's role grants (`packages/policy`); a hidden area is still
   refused by the server.
 - Screens use `Screen` and `ScreenHeader`, never a hand-rolled `ScrollView` with padding and insets.
@@ -235,7 +241,8 @@ their sprint comes.
 | D8 enquiries and proposal | CP-07…09 | `/portal/requests…` | Reskinned |
 | T2 leads pipeline, T3 lead detail | TW-10, TW-11 | `/leads`, `/leads/[id]` | Reskinned |
 | T6 enquiries | TW-25 | `/enquiries`, `/enquiries/[id]` | Reskinned |
-| M10 more and sync | — | `/account`, `/field-notes` | Reskinned |
+| P10 / M10 more | — | `/account` | Reskinned |
+| M5 tasks (offline spike) | — | `/field-notes` | Reskinned |
 | D3 demo, D9 expired | DM-01 | — | Next |
 | C1–C10 client portal | CP-20…42 | — | Next |
 | T1, T4, T5, T7–T13 admin | TW-01…98 | — | Next |

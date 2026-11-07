@@ -1,16 +1,17 @@
-import type {
-  BookingMilestoneStatus,
-  HotelEnquiryStaffPage,
-  HotelEnquiryStaffView,
-  HotelEnquiryStatus,
-  HotelProposalStatus,
-  ServiceAgreementStatus,
-  SiteVisitStatus,
+import {
+  formatDay,
+  type BookingMilestoneStatus,
+  type HotelEnquiryStaffPage,
+  type HotelEnquiryStaffView,
+  type HotelEnquiryStatus,
+  type HotelProposalStatus,
+  type ServiceAgreementStatus,
+  type SiteVisitStatus,
 } from "@ampm/core";
 import { STATUS_MACHINES } from "@ampm/policy";
 import type { StepState } from "@ampm/ui";
 
-import { formatDate, guestsLabel, type Badge } from "../consultancy/consultancy.format";
+import { guestsLabel, type Badge } from "../consultancy/consultancy.format";
 
 /*
  * Staff-audience status badges (T6, the hotel team queue). They are written out rather than spread
@@ -39,6 +40,12 @@ export const staffEnquiryBadge: Record<HotelEnquiryStatus, Badge> = {
  */
 export const UNASSIGNED_BADGE: Badge = { label: "Unassigned", tone: "danger" };
 export const ASSIGNED_BADGE: Badge = { label: "Assigned", tone: "info" };
+
+/**
+ * What the queue and the enquiry page say to a staff role without the consultancy grant (the API's
+ * 403): not theirs, rather than a fault to retry.
+ */
+export const ROLE_WITHOUT_GRANT = { title: "Not available for your role" } as const;
 
 export const staffProposalBadge: Record<HotelProposalStatus, Badge> = {
   draft: { label: "Draft", tone: "neutral" },
@@ -103,7 +110,7 @@ type QueueFields = Pick<HotelEnquiryStaffView, "guestEstimate" | "submittedAt" |
 /** A queue row's second line, the guests and the enquiry's age: "300 guests · submitted 3 Nov 2026". */
 export function enquiryQueueLine(enquiry: QueueFields): string {
   const age = enquiry.submittedAt
-    ? `submitted ${formatDate(enquiry.submittedAt)}`
-    : `created ${formatDate(enquiry.createdAt)}`;
+    ? `submitted ${formatDay(enquiry.submittedAt)}`
+    : `created ${formatDay(enquiry.createdAt)}`;
   return `${guestsLabel(enquiry.guestEstimate)} · ${age}`;
 }

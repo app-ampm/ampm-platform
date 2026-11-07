@@ -57,7 +57,7 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "web:export": "expo export --platform web --output-dir dist",
-    "lint": "eslint .",
+    "lint": "eslint . && node ../../packages/config/tailwind/class-audit.mjs native src",
     "test": "jest --passWithNoTests",
     "dev": "expo start --port 8082",
     "typecheck": "expo customize tsconfig.json && tsc --noEmit",

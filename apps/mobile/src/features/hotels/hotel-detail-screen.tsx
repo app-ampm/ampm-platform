@@ -2,13 +2,14 @@ import { useRouter } from "expo-router";
 
 import { useHotel } from "@ampm/api-client";
 import type { HotelDetailView } from "@ampm/core";
-import { Row, Screen, Skeleton, Stack } from "@ampm/ui";
+import { QueryErrorState, Row, Screen, Skeleton, Stack } from "@ampm/ui";
+
+import { useGoToSignIn } from "@/navigation/sign-in";
 
 import { SaveHeartButton, useHotelPagePermissions } from "./hotel-actions";
 import { HotelFooter } from "./hotel-footer";
 import { HotelBackButton, HotelHero, HotelHeroFrame } from "./hotel-hero";
 import { HotelPanel } from "./hotel-panel";
-import { HotelsQueryError } from "./hotels-query-error";
 
 const NOT_FOUND = {
   title: "Hotel not found",
@@ -22,16 +23,18 @@ const NOT_FOUND = {
  */
 export function HotelDetailScreen({ hotelId }: { readonly hotelId: string }) {
   const router = useRouter();
+  const goToSignIn = useGoToSignIn();
   const hotel = useHotel(hotelId);
   const onBack = () => router.back();
   if (hotel.isSuccess) return <HotelPage hotel={hotel.data} onBack={onBack} />;
   if (hotel.isError)
     return (
       <Screen glow="top" width="content" header={<BackRow onBack={onBack} />}>
-        <HotelsQueryError
+        <QueryErrorState
           error={hotel.error}
           onRetry={() => void hotel.refetch()}
-          signInTitle="Sign in to view this hotel"
+          onSignIn={goToSignIn}
+          signIn={{ title: "Sign in to view this hotel" }}
           notFound={NOT_FOUND}
         />
       </Screen>

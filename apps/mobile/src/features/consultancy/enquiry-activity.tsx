@@ -1,7 +1,7 @@
-import type { HotelEnquiryEventClientView } from "@ampm/core";
+import { formatDay, type HotelEnquiryEventClientView } from "@ampm/core";
 import { Card, Row, Stack, Text } from "@ampm/ui";
 
-import { eventLabel, formatDate } from "./consultancy.format";
+import { eventLabel } from "./consultancy.format";
 
 function ActivityRow({ event }: { readonly event: HotelEnquiryEventClientView }) {
   return (
@@ -12,7 +12,7 @@ function ActivityRow({ event }: { readonly event: HotelEnquiryEventClientView })
             {eventLabel(event.eventType)}
           </Text>
           <Text variant="data" tone="muted">
-            {formatDate(event.occurredAt)}
+            {formatDay(event.occurredAt, { style: "data" })}
           </Text>
         </Row>
         {event.summary ? <Text>{event.summary}</Text> : null}

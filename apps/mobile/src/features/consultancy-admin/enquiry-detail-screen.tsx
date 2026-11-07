@@ -1,21 +1,13 @@
 import { useRouter } from "expo-router";
 
 import { useStaffEnquiry } from "@ampm/api-client";
-import { isAppError, type HotelEnquiryStaffDetailView } from "@ampm/core";
-import {
-  Card,
-  EmptyState,
-  ErrorState,
-  OfflineState,
-  Screen,
-  ScreenHeader,
-  Skeleton,
-  Stack,
-  StatusChip,
-} from "@ampm/ui";
+import type { HotelEnquiryStaffDetailView } from "@ampm/core";
+import { Card, QueryErrorState, Screen, ScreenHeader, Skeleton, Stack, StatusChip } from "@ampm/ui";
+
+import { useGoToSignIn } from "@/navigation/sign-in";
 
 import { enquiryFacts } from "../consultancy/consultancy.format";
-import { staffEnquiryBadge } from "./consultancy-admin.format";
+import { ROLE_WITHOUT_GRANT, staffEnquiryBadge } from "./consultancy-admin.format";
 import { EnquiryActivity } from "./enquiry-activity";
 import { AgreementSection, ProposalsSection } from "./enquiry-commercial";
 import { EnquiryDetails } from "./enquiry-details";
@@ -74,9 +66,19 @@ function DetailBody({
   readonly enquiry: EnquiryQuery;
   readonly enquiryId: string;
 }) {
+  const goToSignIn = useGoToSignIn();
   if (enquiry.isPending) return <DetailLoading />;
   if (enquiry.isError)
-    return <DetailError error={enquiry.error} onRetry={() => void enquiry.refetch()} />;
+    return (
+      <QueryErrorState
+        error={enquiry.error}
+        onRetry={() => void enquiry.refetch()}
+        onSignIn={goToSignIn}
+        signIn={{ title: "Sign in to view this enquiry" }}
+        notFound={{ title: "Enquiry not found" }}
+        forbidden={ROLE_WITHOUT_GRANT}
+      />
+    );
   return (
     <Stack gap={4}>
       <EnquiryDetails enquiry={enquiry.data} />
@@ -88,35 +90,6 @@ function DetailBody({
       <EnquiryActivity events={enquiry.data.events} />
     </Stack>
   );
-}
-
-function DetailError({
-  error,
-  onRetry,
-}: {
-  readonly error: unknown;
-  readonly onRetry: () => void;
-}) {
-  const router = useRouter();
-  if (isAppError(error) && error.code === "network_error")
-    return <OfflineState onRetry={onRetry} />;
-  if (isAppError(error) && error.code === "unauthenticated")
-    return (
-      <EmptyState
-        icon="lock"
-        title="Sign in to view this enquiry"
-        action={{
-          label: "Sign in",
-          variant: "primary",
-          onPress: () => router.replace("/sign-in"),
-        }}
-      />
-    );
-  if (isAppError(error) && error.code === "forbidden")
-    return <EmptyState icon="lock" title="Not available for your role" />;
-  if (isAppError(error) && error.code === "not_found")
-    return <EmptyState icon="inbox" title="Enquiry not found" />;
-  return <ErrorState onRetry={onRetry} />;
 }
 
 /** The shapes of the loaded screen (details, then the pipeline panel), so nothing jumps on arrival. */

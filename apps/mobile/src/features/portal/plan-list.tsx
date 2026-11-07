@@ -1,8 +1,7 @@
 import { View } from "react-native";
 
 import { usePlans } from "@ampm/api-client";
-import { isAppError } from "@ampm/core";
-import { EmptyState, ErrorState, OfflineState, Skeleton, Stack } from "@ampm/ui";
+import { EmptyState, QueryErrorState, Skeleton, Stack } from "@ampm/ui";
 
 import { PlanCard } from "./plan-card";
 
@@ -17,12 +16,7 @@ export function PlanList() {
     );
   }
   if (plans.isError) {
-    const retry = (): void => void plans.refetch();
-    return isAppError(plans.error) && plans.error.code === "network_error" ? (
-      <OfflineState onRetry={retry} />
-    ) : (
-      <ErrorState onRetry={retry} />
-    );
+    return <QueryErrorState error={plans.error} onRetry={() => void plans.refetch()} />;
   }
   if (plans.data.items.length === 0) {
     return <EmptyState icon="inbox" title="No plans available yet" />;

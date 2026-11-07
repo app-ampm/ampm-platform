@@ -4,7 +4,9 @@
  *
  * Tailwind drops an unknown class without a word, so a typo, an opacity step outside the tokens
  * (`bg-brand/15`), a retired token (`shadow-sm`) or an arbitrary value simply renders nothing. This
- * audit makes that a lint error (.claude/rules/styling.md: theme values come only from the tokens).
+ * audit makes that a lint error (.claude/rules/styling.md: theme values come only from the tokens):
+ * the `lint` scripts of apps/mobile and packages/ui run it in native mode on their own `src`, and
+ * apps/web's in web mode.
  *
  *   node class-audit.mjs native src ../../packages/ui/src   # Expo app and packages/ui
  *   node class-audit.mjs web src                            # the Next.js site

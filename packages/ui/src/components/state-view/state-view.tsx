@@ -54,7 +54,8 @@ function StateActionButton({ action }: { action: StateAction }) {
       variant={action.variant ?? "secondary"}
       onPress={action.onPress}
       loading={action.loading ?? false}
-      className="mt-1"
+      // Not full width, a Button aligns itself to the start: centre it under the icon and title.
+      className="mt-1 self-center"
     >
       {action.label}
     </Button>

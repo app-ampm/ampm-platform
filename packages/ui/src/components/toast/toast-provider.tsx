@@ -2,6 +2,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -29,6 +30,16 @@ export function ToastProvider({ children, dismissLabel }: ToastProviderProps) {
   const [items, setItems] = useState<readonly ToastItem[]>([]);
   const nextId = useRef(1);
   const timers = useRef(new Map<number, ReturnType<typeof setTimeout>>());
+
+  // The auto-dismiss timers end with the provider: one left running would fire into a provider that
+  // is gone, and hold a test runner open after its last test.
+  useEffect(() => {
+    const pending = timers.current;
+    return () => {
+      pending.forEach((timer) => clearTimeout(timer));
+      pending.clear();
+    };
+  }, []);
 
   const dismiss = useCallback((id: number) => {
     const timer = timers.current.get(id);

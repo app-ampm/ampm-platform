@@ -1,9 +1,9 @@
 import { useState } from "react";
 
-import type { HotelEnquiryStaffDetailView } from "@ampm/core";
+import { formatDay, type HotelEnquiryStaffDetailView } from "@ampm/core";
 import { Card, InternalPanel, SegmentedControl, Stack, Text } from "@ampm/ui";
 
-import { eventLabel, formatDate } from "../consultancy/consultancy.format";
+import { eventLabel } from "../consultancy/consultancy.format";
 
 type EnquiryEvent = HotelEnquiryStaffDetailView["events"][number];
 
@@ -62,7 +62,7 @@ export function EnquiryActivity({ events }: { readonly events: readonly EnquiryE
 
 /** One event: a flat row when the client sees it too, an internal panel when only staff do. */
 function EventRow({ event }: { readonly event: EnquiryEvent }) {
-  const when = formatDate(event.occurredAt).toUpperCase();
+  const when = formatDay(event.occurredAt, { style: "data" });
   const summary = event.summary ? (
     <Text variant="bodySmall" tone="body">
       {event.summary}

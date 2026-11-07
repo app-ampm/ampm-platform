@@ -2,11 +2,21 @@ import { useRouter } from "expo-router";
 import type { ReactNode } from "react";
 
 import { useMe, useSavedHotels } from "@ampm/api-client";
-import { Card, EmptyState, Screen, ScreenHeader, Skeleton, Stack, Text } from "@ampm/ui";
+import {
+  Card,
+  EmptyState,
+  QueryErrorState,
+  Screen,
+  ScreenHeader,
+  Skeleton,
+  Stack,
+  Text,
+} from "@ampm/ui";
+
+import { useGoToSignIn } from "@/navigation/sign-in";
 
 import { canBrowseHotels } from "../portal/portal.format";
 import { hotelCountLabel } from "./hotels.format";
-import { HotelsQueryError } from "./hotels-query-error";
 import { SavedHotelRow } from "./saved-hotel-row";
 
 export interface SavedHotelsScreenProps {
@@ -50,13 +60,15 @@ interface SavedListProps {
 }
 
 function SavedList({ saved, onOpen, onBrowse }: SavedListProps) {
+  const goToSignIn = useGoToSignIn();
   if (saved.isPending) return <SavedLoading />;
   if (saved.isError)
     return (
-      <HotelsQueryError
+      <QueryErrorState
         error={saved.error}
         onRetry={() => void saved.refetch()}
-        signInTitle="Sign in to view your shortlist"
+        onSignIn={goToSignIn}
+        signIn={{ title: "Sign in to view your shortlist" }}
       />
     );
   const { items, nextCursor } = saved.data;

@@ -4,9 +4,19 @@ import type { UseQueryResult } from "@tanstack/react-query";
 
 import { useLeads } from "@ampm/api-client";
 import type { LeadPage } from "@ampm/core";
-import { EmptyState, Row, Screen, ScreenHeader, Skeleton, Stack, useBreakpoint } from "@ampm/ui";
+import {
+  EmptyState,
+  QueryErrorState,
+  Row,
+  Screen,
+  ScreenHeader,
+  Skeleton,
+  Stack,
+  useBreakpoint,
+} from "@ampm/ui";
 
-import { LeadErrorState } from "./lead-error-state";
+import { useGoToSignIn } from "@/navigation/sign-in";
+
 import { LeadsBoard } from "./leads-board";
 import { LeadsList } from "./leads-list";
 import { isOpenLead } from "./sales.format";
@@ -50,14 +60,18 @@ interface BodyProps {
 }
 
 function LeadsBody({ leads, isBoard, onOpen }: BodyProps) {
+  const goToSignIn = useGoToSignIn();
   if (leads.isPending) return <LeadsLoading isBoard={isBoard} />;
   if (leads.isError) {
     return (
-      <LeadErrorState
+      <QueryErrorState
         error={leads.error}
         onRetry={() => void leads.refetch()}
-        signInTitle="Sign in to view leads"
-        signInDescription="Your session has ended. Sign in again to continue."
+        onSignIn={goToSignIn}
+        signIn={{
+          title: "Sign in to view leads",
+          description: "Your session has ended. Sign in again to continue.",
+        }}
       />
     );
   }

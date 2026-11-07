@@ -3,11 +3,21 @@ import type { UseQueryResult } from "@tanstack/react-query";
 
 import { useLead } from "@ampm/api-client";
 import type { LeadView } from "@ampm/core";
-import { Row, Screen, ScreenHeader, Skeleton, Stack, StatusChip, useBreakpoint } from "@ampm/ui";
+import {
+  QueryErrorState,
+  Row,
+  Screen,
+  ScreenHeader,
+  Skeleton,
+  Stack,
+  StatusChip,
+  useBreakpoint,
+} from "@ampm/ui";
+
+import { useGoToSignIn } from "@/navigation/sign-in";
 
 import { LeadActivityCard } from "./lead-activity-card";
 import { LeadDemoCard } from "./lead-demo-card";
-import { LeadErrorState } from "./lead-error-state";
 import { LeadFactsCard } from "./lead-facts-card";
 import { LeadInviteCard } from "./lead-invite-card";
 import { statusLabel, statusTone } from "./sales.format";
@@ -52,13 +62,15 @@ function DetailLoading() {
 }
 
 function DetailBody({ lead }: { readonly lead: UseQueryResult<LeadView> }) {
+  const goToSignIn = useGoToSignIn();
   if (lead.isPending) return <DetailLoading />;
   if (lead.isError) {
     return (
-      <LeadErrorState
+      <QueryErrorState
         error={lead.error}
         onRetry={() => void lead.refetch()}
-        signInTitle="Sign in to view this lead"
+        onSignIn={goToSignIn}
+        signIn={{ title: "Sign in to view this lead" }}
         notFound={{ title: "Lead not found", description: "It may have been removed." }}
       />
     );

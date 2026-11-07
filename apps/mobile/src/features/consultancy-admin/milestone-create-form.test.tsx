@@ -1,4 +1,4 @@
-import { dismissToasts, fireEvent, screen, waitFor } from "../../test/render";
+import { fireEvent, screen, waitFor } from "../../test/render";
 import { ENQUIRY_ID, MILESTONE_CREATED, ok, renderWithApi } from "./commercial.fixtures";
 import { MilestoneCreateForm } from "./milestone-create-form";
 
@@ -33,7 +33,6 @@ describe("MilestoneCreateForm", () => {
         documentId: null,
       },
     });
-    await dismissToasts();
   });
 
   it("refuses an impossible due date with a gold line, then sends a real one at midnight UTC", async () => {
@@ -53,6 +52,5 @@ describe("MilestoneCreateForm", () => {
       dueAt: "2027-01-31T00:00:00.000Z",
       amount: { minor: 25_000_000, currency: "INR" },
     });
-    await dismissToasts();
   });
 });

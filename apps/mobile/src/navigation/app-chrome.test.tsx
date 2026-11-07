@@ -1,12 +1,14 @@
+import { focusManager } from "@tanstack/react-query";
 import { Text } from "react-native";
 import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { ME_QUERY_KEY } from "@ampm/api-client";
+import { ApiProvider, ME_QUERY_KEY } from "@ampm/api-client";
 import type { MeResponse, PrincipalType, StaffRoleCode } from "@ampm/core";
-import { uiCopy } from "@ampm/ui";
 
-import { createTestQueryClient, pendingFetch, renderWithApi } from "../test/api";
-import { fireEvent, screen } from "../test/render";
+import { setAccessToken } from "@/lib/session";
+
+import { createTestQueryClient, ok, pendingFetch, renderWithApi, TEST_API_BASE } from "../test/api";
+import { act, fireEvent, screen } from "../test/render";
 import { AppChrome } from "./app-chrome";
 
 // The chrome reads the path and moves between areas through the router; the window class says
@@ -63,26 +65,30 @@ const DEVICE = {
   insets: { top: 24, left: 44, right: 44, bottom: 20 },
 };
 
-/** The chrome around a stand-in for the stack, at a path, with /me in the cache (never refetched). */
-async function renderChrome(path: string, seed: MeResponse) {
-  mockPathname = path;
-  const queryClient = createTestQueryClient({ staleTime: Infinity });
-  queryClient.setQueryData(ME_QUERY_KEY, seed);
-  await renderWithApi(
+/** The chrome around a stand-in for the stack. */
+function chrome() {
+  return (
     <SafeAreaProvider initialMetrics={DEVICE}>
       <AppChrome>
         <InsetsProbe />
       </AppChrome>
-    </SafeAreaProvider>,
-    pendingFetch,
-    { queryClient },
+    </SafeAreaProvider>
   );
+}
+
+/** The chrome at a path, with /me in the cache (never refetched). */
+async function renderChrome(path: string, seed: MeResponse) {
+  mockPathname = path;
+  const queryClient = createTestQueryClient({ staleTime: Infinity });
+  queryClient.setQueryData(ME_QUERY_KEY, seed);
+  await renderWithApi(chrome(), pendingFetch, { queryClient });
 }
 
 beforeEach(() => {
   mockDismissTo.mockReset();
   mockReplace.mockReset();
   mockWindow = { isWide: true, isRailExpanded: true };
+  setAccessToken("signed-in-token");
 });
 
 describe("AppChrome for staff", () => {
@@ -133,8 +139,81 @@ describe("AppChrome for a client", () => {
     await fireEvent.press(screen.getByRole("button", { name: "Approvals, Locked" }));
     expect(await screen.findByText("Opens once AMPM is appointed")).toBeOnTheScreen();
     expect(mockDismissTo).not.toHaveBeenCalled();
-    // Dismissed here rather than left on its four-second timer, which would hold Jest open.
-    await fireEvent.press(screen.getByRole("button", { name: uiCopy.dismiss }));
+  });
+});
+
+const ME_URL = `${TEST_API_BASE}/me`;
+
+/** The API answering /me for Sales, recording each URL it is asked. */
+function recordingApi(asked: string[]): typeof fetch {
+  return (input) => {
+    asked.push(String(input));
+    return Promise.resolve(ok(SALES));
+  };
+}
+
+/** The window loses and regains focus: React Query refetches what is stale, a tick later. */
+async function regainFocus(): Promise<void> {
+  await act(async () => {
+    focusManager.setFocused(false);
+    focusManager.setFocused(true);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+}
+
+describe("AppChrome and the session", () => {
+  afterEach(() => {
+    focusManager.setFocused(undefined);
+  });
+
+  it("asks nothing for /me on sign-in, then draws the rail once signing in navigates", async () => {
+    setAccessToken(null);
+    mockPathname = "/sign-in";
+    const asked: string[] = [];
+    const api = recordingApi(asked);
+    const queryClient = await renderWithApi(chrome(), api);
+    expect(asked).toEqual([]);
+    // Signing in stores the token and clears the cache, then navigates; the navigation renders the
+    // chrome again (features/auth/sign-in-screen.tsx).
+    await act(() => {
+      setAccessToken("signed-in-token");
+      queryClient.clear();
+    });
+    mockPathname = "/leads";
+    await screen.rerender(
+      <ApiProvider baseUrl={TEST_API_BASE} fetch={api} queryClient={queryClient}>
+        {chrome()}
+      </ApiProvider>,
+    );
+    expect(await screen.findByTestId("staff-rail")).toBeOnTheScreen();
+    expect(asked).toEqual([ME_URL]);
+  });
+
+  it("takes the rail away on signing out, and asks /me no more when the window regains focus", async () => {
+    mockPathname = "/leads";
+    const asked: string[] = [];
+    await renderWithApi(chrome(), recordingApi(asked));
+    expect(await screen.findByTestId("staff-rail")).toBeOnTheScreen();
+    await regainFocus();
+    expect(asked).toEqual([ME_URL, ME_URL]);
+    await fireEvent.press(screen.getByRole("button", { name: "Sign out" }));
+    expect(screen.queryByTestId("staff-rail")).toBeNull();
+    await regainFocus();
+    expect(asked).toEqual([ME_URL, ME_URL]);
+  });
+
+  it.each<[string, string, boolean]>([
+    ["on sign-in, with a refused token still held", "/sign-in", true],
+    ["on the gallery", "/gallery", true],
+    ["on the entry redirect", "/", true],
+    ["on a phone, where it draws nothing", "/leads", false],
+  ])("asks nothing for /me %s, even on a regained focus", async (_case, path, isWide) => {
+    mockPathname = path;
+    mockWindow = { isWide, isRailExpanded: isWide };
+    const asked: string[] = [];
+    await renderWithApi(chrome(), recordingApi(asked));
+    await regainFocus();
+    expect(asked).toEqual([]);
   });
 });
 

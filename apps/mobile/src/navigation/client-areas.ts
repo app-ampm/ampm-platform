@@ -7,7 +7,10 @@ export type ClientAreaPath = "/portal" | "/hotels" | "/account";
 
 export interface ClientArea {
   readonly key: ClientAreaKey;
+  /** The name in the portal's top navigation (D4). */
   readonly label: string;
+  /** The phone tab bar's shorter name (P2: five tabs share 390 points), when it differs. */
+  readonly tabLabel?: string;
   /** Where the area opens; `null` while it is locked (My Wedding and Approvals until AMPM is appointed). */
   readonly href: ClientAreaPath | null;
 }
@@ -19,7 +22,7 @@ export interface ClientArea {
 export const CLIENT_AREAS: readonly ClientArea[] = [
   { key: "home", label: "Home", href: "/portal" },
   { key: "hotels", label: "Hotels", href: "/hotels" },
-  { key: "wedding", label: "My Wedding", href: null },
+  { key: "wedding", label: "My Wedding", tabLabel: "Wedding", href: null },
   { key: "approvals", label: "Approvals", href: null },
   { key: "more", label: "More", href: "/account" },
 ];

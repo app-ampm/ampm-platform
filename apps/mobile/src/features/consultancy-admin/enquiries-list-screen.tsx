@@ -2,13 +2,12 @@ import type { ReactNode } from "react";
 import { useRouter } from "expo-router";
 
 import { useStaffEnquiries } from "@ampm/api-client";
-import { isAppError, type HotelEnquiryStaffView } from "@ampm/core";
+import { formatDayRange, type HotelEnquiryStaffView } from "@ampm/core";
 import {
   Card,
   EmptyState,
-  ErrorState,
   ListItem,
-  OfflineState,
+  QueryErrorState,
   Screen,
   ScreenHeader,
   Skeleton,
@@ -16,8 +15,10 @@ import {
   StatusChip,
 } from "@ampm/ui";
 
-import { formatStay } from "../consultancy/consultancy.format";
+import { useGoToSignIn } from "@/navigation/sign-in";
+
 import {
+  ROLE_WITHOUT_GRANT,
   UNASSIGNED_BADGE,
   enquiryQueueLine,
   queueEyebrow,
@@ -48,9 +49,18 @@ export function StaffEnquiriesListScreen({ tabBar }: { readonly tabBar?: ReactNo
 
 function QueueBody({ enquiries }: { readonly enquiries: EnquiriesQuery }) {
   const router = useRouter();
+  const goToSignIn = useGoToSignIn();
   if (enquiries.isPending) return <QueueLoading />;
   if (enquiries.isError)
-    return <QueueError error={enquiries.error} onRetry={() => void enquiries.refetch()} />;
+    return (
+      <QueryErrorState
+        error={enquiries.error}
+        onRetry={() => void enquiries.refetch()}
+        onSignIn={goToSignIn}
+        signIn={{ title: "Sign in to view enquiries" }}
+        forbidden={ROLE_WITHOUT_GRANT}
+      />
+    );
   if (enquiries.data.items.length === 0)
     return (
       <EmptyState
@@ -90,13 +100,13 @@ function EnquiryRow({
   const unassigned = enquiry.assignedUserId === null;
   const title = enquiry.functionsSummary ?? "Hotel enquiry";
   const subtitle = enquiryQueueLine(enquiry);
-  const stay = formatStay(enquiry.dateFrom, enquiry.dateTo);
+  const stay = formatDayRange(enquiry.dateFrom, enquiry.dateTo);
   const spoken = [title, badge.label, unassigned ? UNASSIGNED_BADGE.label : null, subtitle, stay];
   return (
     <ListItem
       title={title}
       subtitle={subtitle}
-      meta={stay.toUpperCase()}
+      meta={formatDayRange(enquiry.dateFrom, enquiry.dateTo, { style: "data" })}
       trailing={
         <Stack gap={1} align="end">
           <StatusChip label={badge.label} tone={badge.tone} size="sm" className="self-end" />
@@ -127,25 +137,4 @@ function QueueLoading() {
       </Stack>
     </Card>
   );
-}
-
-function QueueError({ error, onRetry }: { readonly error: unknown; readonly onRetry: () => void }) {
-  const router = useRouter();
-  if (isAppError(error) && error.code === "network_error")
-    return <OfflineState onRetry={onRetry} />;
-  if (isAppError(error) && error.code === "unauthenticated")
-    return (
-      <EmptyState
-        icon="lock"
-        title="Sign in to view enquiries"
-        action={{
-          label: "Sign in",
-          variant: "primary",
-          onPress: () => router.replace("/sign-in"),
-        }}
-      />
-    );
-  if (isAppError(error) && error.code === "forbidden")
-    return <EmptyState icon="lock" title="Not available for your role" />;
-  return <ErrorState onRetry={onRetry} />;
 }

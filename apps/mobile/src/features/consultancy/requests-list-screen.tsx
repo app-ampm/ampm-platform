@@ -2,17 +2,9 @@ import type { ReactNode } from "react";
 import { useRouter } from "expo-router";
 
 import { useHotelEnquiries } from "@ampm/api-client";
-import { isAppError } from "@ampm/core";
-import {
-  Card,
-  EmptyState,
-  ErrorState,
-  OfflineState,
-  Screen,
-  ScreenHeader,
-  Skeleton,
-  Stack,
-} from "@ampm/ui";
+import { Card, EmptyState, QueryErrorState, Screen, ScreenHeader, Skeleton, Stack } from "@ampm/ui";
+
+import { useGoToSignIn } from "@/navigation/sign-in";
 
 import { RequestRow } from "./request-row";
 
@@ -36,23 +28,19 @@ export function RequestsListScreen({ tabBar }: { readonly tabBar?: ReactNode }) 
 
 function RequestsBody({ enquiries }: { readonly enquiries: ReturnType<typeof useHotelEnquiries> }) {
   const router = useRouter();
+  const goToSignIn = useGoToSignIn();
   if (enquiries.isPending) return <ListLoading />;
   if (enquiries.isError)
-    return <ListError error={enquiries.error} onRetry={() => void enquiries.refetch()} />;
-  if (enquiries.data.items.length === 0) {
     return (
-      <EmptyState
-        icon="inbox"
-        title="No hotel requests yet"
-        description="Open a hotel and tap “Request hotel assistance” to start one."
-        action={{
-          label: "Browse hotels",
-          onPress: () => router.push("/hotels"),
-          variant: "primary",
-        }}
+      <QueryErrorState
+        error={enquiries.error}
+        onRetry={() => void enquiries.refetch()}
+        onSignIn={goToSignIn}
+        signIn={{ title: "Sign in to view your requests" }}
       />
     );
-  }
+  if (enquiries.data.items.length === 0)
+    return <NoRequests onBrowse={() => router.push("/hotels")} />;
   return (
     <Card padding="sm">
       <Stack gap={2}>
@@ -68,24 +56,16 @@ function RequestsBody({ enquiries }: { readonly enquiries: ReturnType<typeof use
   );
 }
 
-function ListError({ error, onRetry }: { readonly error: unknown; readonly onRetry: () => void }) {
-  const router = useRouter();
-  if (isAppError(error) && error.code === "network_error")
-    return <OfflineState onRetry={onRetry} />;
-  if (isAppError(error) && error.code === "unauthenticated") {
-    return (
-      <EmptyState
-        icon="lock"
-        title="Sign in to view your requests"
-        action={{
-          label: "Sign in",
-          onPress: () => router.replace("/sign-in"),
-          variant: "primary",
-        }}
-      />
-    );
-  }
-  return <ErrorState onRetry={onRetry} />;
+/** No request yet: how one starts, and the way to the hotels as the screen's gold action. */
+function NoRequests({ onBrowse }: { readonly onBrowse: () => void }) {
+  return (
+    <EmptyState
+      icon="inbox"
+      title="No hotel requests yet"
+      description="Open a hotel and tap “Request hotel assistance” to start one."
+      action={{ label: "Browse hotels", onPress: onBrowse, variant: "primary" }}
+    />
+  );
 }
 
 function ListLoading() {

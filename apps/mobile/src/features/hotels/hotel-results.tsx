@@ -1,9 +1,10 @@
 import type { useHotels } from "@ampm/api-client";
-import { EmptyState, Skeleton, Stack, Text } from "@ampm/ui";
+import { EmptyState, QueryErrorState, Skeleton, Stack, Text } from "@ampm/ui";
+
+import { useGoToSignIn } from "@/navigation/sign-in";
 
 import { HotelCard } from "./hotel-card";
-import { DISCOVERY_CLOSED, hotelCountLabel } from "./hotels.format";
-import { HotelsQueryError } from "./hotels-query-error";
+import { DISCOVERY_CLOSED, DISCOVERY_SIGN_IN, hotelCountLabel } from "./hotels.format";
 
 export interface HotelResultsProps {
   readonly hotels: ReturnType<typeof useHotels>;
@@ -15,13 +16,15 @@ export interface HotelResultsProps {
  * no longer holds hotel discovery), failed, nothing found, or the cards.
  */
 export function HotelResults({ hotels, onOpen }: HotelResultsProps) {
+  const goToSignIn = useGoToSignIn();
   if (hotels.isPending) return <HotelResultsLoading />;
   if (hotels.isError)
     return (
-      <HotelsQueryError
+      <QueryErrorState
         error={hotels.error}
         onRetry={() => void hotels.refetch()}
-        signInTitle="Sign in to browse hotels"
+        onSignIn={goToSignIn}
+        signIn={DISCOVERY_SIGN_IN}
         notFound={DISCOVERY_CLOSED}
       />
     );

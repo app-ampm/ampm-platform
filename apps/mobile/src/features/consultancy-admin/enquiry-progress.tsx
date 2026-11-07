@@ -27,7 +27,7 @@ import {
 } from "@ampm/ui";
 
 import {
-  formatDate,
+  formatPickedDay,
   milestoneStepStates,
   milestoneTypeLabel,
 } from "../consultancy/consultancy.format";
@@ -78,7 +78,7 @@ export function VisitsSection({ enquiryId }: { readonly enquiryId: string }) {
     );
   const steps = [...visits.data.items].sort(byScheduledAt).map((visit): StepperStep => ({
     key: visit.id,
-    label: formatDate(visit.scheduledAt),
+    label: formatPickedDay(visit.scheduledAt),
     state: visitStepState[visit.status],
     content: <VisitStep visit={visit} enquiryId={enquiryId} />,
   }));
@@ -162,7 +162,7 @@ export function MilestonesSection({ enquiryId }: { readonly enquiryId: string })
   const steps = items.map((milestone, index): StepperStep => ({
     key: milestone.id,
     label: milestoneTypeLabel(milestone.milestoneType),
-    detail: milestone.dueAt ? `Due ${formatDate(milestone.dueAt)}` : undefined,
+    detail: milestone.dueAt ? `Due ${formatPickedDay(milestone.dueAt)}` : undefined,
     state: states[index],
     content: <MilestoneStep milestone={milestone} enquiryId={enquiryId} />,
   }));

@@ -1,11 +1,13 @@
-import type {
-  BookingMilestoneStatus,
-  BookingMilestoneType,
-  HotelEnquiryOutcome,
-  HotelEnquiryStatus,
-  HotelProposalStatus,
-  ServiceAgreementStatus,
-  SiteVisitStatus,
+import {
+  formatDay,
+  formatDayRange,
+  type BookingMilestoneStatus,
+  type BookingMilestoneType,
+  type HotelEnquiryOutcome,
+  type HotelEnquiryStatus,
+  type HotelProposalStatus,
+  type ServiceAgreementStatus,
+  type SiteVisitStatus,
 } from "@ampm/core";
 import type { StatusTone, StepState } from "@ampm/ui";
 
@@ -167,56 +169,6 @@ export function milestoneStepStates(statuses: readonly BookingMilestoneStatus[])
   });
 }
 
-const LOCALE = "en-IN";
-
-/**
- * A wire date ("2027-02-12") as a local calendar date. `new Date("2027-02-12")` is midnight UTC, which
- * a time zone west of Greenwich shows as the day before.
- */
-function calendarDate(value: string): Date | null {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
-  if (!match) return null;
-  const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
-  return Number.isNaN(date.getTime()) ? null : date;
-}
-
-/** A short calendar date; the wire sends an ISO date or datetime. Falls back to the raw string. */
-export function formatDate(iso: string): string {
-  const parsed = calendarDate(iso) ?? new Date(iso);
-  if (Number.isNaN(parsed.getTime())) return iso;
-  return parsed.toLocaleDateString(LOCALE, { day: "numeric", month: "short", year: "numeric" });
-}
-
-/** A date range for an enquiry's stay. */
-export function formatDateRange(from: string, to: string): string {
-  return `${formatDate(from)} – ${formatDate(to)}`;
-}
-
-function dayMonth(date: Date, withYear: boolean): string {
-  return date.toLocaleDateString(
-    LOCALE,
-    withYear
-      ? { day: "numeric", month: "short", year: "numeric" }
-      : { day: "numeric", month: "short" },
-  );
-}
-
-/**
- * A stay's dates, compact (D8): "12–14 Feb 2027", "28 Feb – 2 Mar 2027", "30 Dec 2026 – 2 Jan 2027".
- * Values that are not calendar dates fall back to the long range.
- */
-export function formatStay(from: string, to: string): string {
-  const start = calendarDate(from);
-  const end = calendarDate(to);
-  if (!start || !end) return formatDateRange(from, to);
-  if (start.getFullYear() !== end.getFullYear())
-    return `${dayMonth(start, true)} – ${dayMonth(end, true)}`;
-  if (start.getMonth() !== end.getMonth())
-    return `${dayMonth(start, false)} – ${dayMonth(end, true)}`;
-  if (start.getDate() === end.getDate()) return dayMonth(end, true);
-  return `${start.getDate()}–${dayMonth(end, true)}`;
-}
-
 export function guestsLabel(count: number): string {
   return count === 1 ? "1 guest" : `${count} guests`;
 }
@@ -229,12 +181,22 @@ interface EnquiryFacts {
   readonly roomsRequired: number | null;
 }
 
-/** An enquiry's stay as one data line: "12–14 Feb 2027 · 300 guests · 80 rooms · Flexible dates". */
+/** An enquiry's stay as one data line: "12–14 FEB 2027 · 300 guests · 80 rooms · Flexible dates". */
 export function enquiryFacts(enquiry: EnquiryFacts): string {
-  const parts = [formatStay(enquiry.dateFrom, enquiry.dateTo), guestsLabel(enquiry.guestEstimate)];
+  const stay = formatDayRange(enquiry.dateFrom, enquiry.dateTo, { style: "data" });
+  const parts = [stay, guestsLabel(enquiry.guestEstimate)];
   if (enquiry.roomsRequired) parts.push(`${enquiry.roomsRequired} rooms`);
   if (enquiry.datesFlexible) parts.push("Flexible dates");
   return parts.join(" · ");
+}
+
+/**
+ * A site visit's day or a milestone's due date, "31 Jan 2027": a day staff pick in the form, which
+ * goes out as midnight UTC (consultancy-admin.form.ts), so it is read as written. Read as a moment,
+ * a time zone west of Greenwich would show the day before. Both audiences' screens use it.
+ */
+export function formatPickedDay(iso: string): string {
+  return formatDay(iso, { day: "written" });
 }
 
 interface ProposalDates {
@@ -242,10 +204,14 @@ interface ProposalDates {
   readonly validUntil: string | null;
 }
 
-/** "Shared 3 Nov 2026 · Valid until 20 Nov 2026", or null when the proposal carries neither date. */
+/**
+ * A proposal's dates as one data line, "Shared 3 NOV 2026 · Valid until 20 NOV 2026", or null when
+ * the proposal carries neither date.
+ */
 export function proposalDates(proposal: ProposalDates): string | null {
   const parts: string[] = [];
-  if (proposal.sharedAt) parts.push(`Shared ${formatDate(proposal.sharedAt)}`);
-  if (proposal.validUntil) parts.push(`Valid until ${formatDate(proposal.validUntil)}`);
+  if (proposal.sharedAt) parts.push(`Shared ${formatDay(proposal.sharedAt, { style: "data" })}`);
+  if (proposal.validUntil)
+    parts.push(`Valid until ${formatDay(proposal.validUntil, { style: "data" })}`);
   return parts.length > 0 ? parts.join(" · ") : null;
 }

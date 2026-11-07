@@ -21,7 +21,7 @@ import {
 } from "@ampm/ui";
 
 import {
-  formatDate,
+  formatPickedDay,
   milestoneBadge,
   milestoneStepStates,
   milestoneTypeLabel,
@@ -58,7 +58,7 @@ function VisitHeading({ visit }: { readonly visit: SiteVisitClientView }) {
   return (
     <Row gap={3} justify="between" align="start">
       <Text variant="heading" className="flex-1">
-        {formatDate(visit.scheduledAt)}
+        {formatPickedDay(visit.scheduledAt)}
       </Text>
       <StatusChip label={badge.label} tone={badge.tone} size="sm" />
     </Row>
@@ -124,7 +124,7 @@ function milestoneSteps(milestones: readonly BookingMilestoneClientView[]): Step
   return milestones.map((milestone, index) => ({
     key: milestone.id,
     label: milestoneTypeLabel(milestone.milestoneType),
-    detail: milestone.dueAt ? `Due ${formatDate(milestone.dueAt)}` : undefined,
+    detail: milestone.dueAt ? `Due ${formatPickedDay(milestone.dueAt)}` : undefined,
     state: states[index],
     content: <MilestoneMeta milestone={milestone} />,
   }));

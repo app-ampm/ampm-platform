@@ -82,7 +82,7 @@ const CREATIVE: MeResponse = { ...STAFF, roles: ["CD"] };
 
 type FetchFn = typeof fetch;
 
-/** The More screen under the API; the client comes back for the sign-out test's cache spy. */
+/** The More screen under the API; the client comes back for the cache spies of the sign-out tests. */
 function renderScreen(fetchImpl: FetchFn): Promise<QueryClient> {
   return renderWithApi(<AccountScreen />, fetchImpl);
 }
@@ -160,12 +160,17 @@ describe("AccountScreen", () => {
     expect(mockReplace).toHaveBeenCalledWith("/sign-in");
   });
 
-  it("shows the sign-in empty state when /me is unauthenticated", async () => {
-    await renderScreen(() =>
+  it("shows the sign-in empty state when /me is unauthenticated, and drops the refused token", async () => {
+    // The token the API refuses (one that has expired) is still held until the way back to sign-in.
+    setAccessToken("expired-token");
+    const queryClient = await renderScreen(() =>
       Promise.resolve(jsonResponse({ error: { code: "unauthenticated", message: "x" } }, 401)),
     );
+    const clear = jest.spyOn(queryClient, "clear");
     expect(await screen.findByText("Sign in to see your account")).toBeOnTheScreen();
     await fireEvent.press(screen.getByRole("button", { name: "Sign in" }));
+    expect(getAccessToken()).toBeNull();
+    expect(clear).toHaveBeenCalled();
     expect(mockReplace).toHaveBeenCalledWith("/sign-in");
   });
 

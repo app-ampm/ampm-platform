@@ -7,8 +7,7 @@ import { useSignOut } from "./sign-out";
  * that the account and portal screens keep under their error state when `/me` cannot be read, since
  * the navigation then has no person to show.
  *
- *   <ErrorState onRetry={retry} />
- *   <SignOutButton />
+ *   <QueryErrorState error={me.error} onRetry={retry} errorFooter={<SignOutButton />} />
  */
 export function SignOutButton() {
   const signOut = useSignOut();

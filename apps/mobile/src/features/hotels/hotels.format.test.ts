@@ -3,7 +3,6 @@ import type { ClientRateItemView, HotelRatesView } from "@ampm/core";
 import {
   destinationLabel,
   destinationOptions,
-  formatDay,
   headlineCaption,
   headlineRate,
   hotelCountLabel,
@@ -46,11 +45,6 @@ describe("hotel labels", () => {
     expect(hotelCountLabel(1, false)).toBe("1 hotel");
     expect(hotelCountLabel(14, false)).toBe("14 hotels");
     expect(hotelCountLabel(50, true)).toBe("50+ hotels");
-  });
-
-  it("formats a day and keeps a value it cannot read", () => {
-    expect(formatDay(AS_OF)).toBe("2 Nov 2026");
-    expect(formatDay("not a date")).toBe("not a date");
   });
 });
 

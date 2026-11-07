@@ -15,7 +15,7 @@
     }
   },
   "scripts": {
-    "lint": "eslint .",
+    "lint": "eslint . && node ../config/tailwind/class-audit.mjs native src",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "jest --passWithNoTests"
   },

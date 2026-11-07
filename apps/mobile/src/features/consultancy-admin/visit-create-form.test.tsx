@@ -1,6 +1,6 @@
 import { uiCopy } from "@ampm/ui";
 
-import { dismissToasts, fireEvent, screen, waitFor, within } from "../../test/render";
+import { fireEvent, screen, waitFor, within } from "../../test/render";
 import { ENQUIRY_ID, ok, renderWithApi, VISIT_CREATED } from "./commercial.fixtures";
 import { VisitCreateForm } from "./visit-create-form";
 
@@ -36,7 +36,6 @@ describe("VisitCreateForm", () => {
       },
     });
     expect(await screen.findByText("Site visit scheduled")).toBeOnTheScreen();
-    await dismissToasts();
   });
 
   it("asks for the visit date once the field is left empty", async () => {

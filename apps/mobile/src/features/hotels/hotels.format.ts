@@ -1,5 +1,6 @@
 import {
   clientAmount,
+  formatDay,
   type ClientAmount,
   type ClientRateItemView,
   type HotelDestinationView,
@@ -49,13 +50,8 @@ export const DISCOVERY_CLOSED = {
   description: "Hotel discovery opens once your plan is active.",
 } as const;
 
-const DAY: Intl.DateTimeFormatOptions = { day: "numeric", month: "short", year: "numeric" };
-
-/** A calendar day from the wire's ISO datetime ("2 Nov 2026"); falls back to the raw string. */
-export function formatDay(iso: string): string {
-  const parsed = new Date(iso);
-  return Number.isNaN(parsed.getTime()) ? iso : parsed.toLocaleDateString("en-IN", DAY);
-}
+/** The search's sign-in prompt, whether `/me` or the search itself finds the session gone. */
+export const DISCOVERY_SIGN_IN = { title: "Sign in to browse hotels" } as const;
 
 /**
  * The destinations the filter chips offer: those of the hotels on screen, plus the chosen one (so it

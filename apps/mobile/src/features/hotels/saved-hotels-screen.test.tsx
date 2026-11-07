@@ -73,7 +73,7 @@ describe("SavedHotelsScreen", () => {
     await renderWithApi(<SavedHotelsScreen />, shortlistApi().fetch);
     const row = await screen.findByRole("button", { name: ROW_NAME });
     expect(screen.getByText("1 hotel")).toBeOnTheScreen();
-    expect(screen.getByText("Saved 2 Nov 2026")).toBeOnTheScreen();
+    expect(screen.getByText("Saved 2 NOV 2026")).toBeOnTheScreen();
     expect(screen.getByLabelText("5-star")).toBeOnTheScreen();
     await fireEvent.press(row);
     expect(mockPush).toHaveBeenCalledWith({ pathname: "/hotels/[id]", params: { id: HOTEL_ID } });

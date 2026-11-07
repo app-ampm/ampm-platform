@@ -1,8 +1,8 @@
 import { useHotel } from "@ampm/api-client";
-import type { HotelEnquiryClientView } from "@ampm/core";
+import { formatDayRange, type HotelEnquiryClientView } from "@ampm/core";
 import { ListItem, StatusChip } from "@ampm/ui";
 
-import { enquiryChip, formatStay, guestsLabel } from "./consultancy.format";
+import { enquiryChip, guestsLabel } from "./consultancy.format";
 
 /**
  * One enquiry in the list (D8): the hotel's name, the stay and the party, and its status as a chip.
@@ -19,7 +19,7 @@ export function RequestRow({
   const hotel = useHotel(enquiry.hotelId);
   const chip = enquiryChip(enquiry);
   const title = hotel.data?.name ?? "Hotel request";
-  const stay = formatStay(enquiry.dateFrom, enquiry.dateTo);
+  const stay = formatDayRange(enquiry.dateFrom, enquiry.dateTo);
   const party = guestsLabel(enquiry.guestEstimate);
   return (
     <ListItem

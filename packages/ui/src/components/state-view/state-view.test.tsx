@@ -60,6 +60,21 @@ describe("state views", () => {
     );
   });
 
+  // The Button aligns itself to the start unless it is full width, which pinned the action to the
+  // panel's left edge under a centred icon and title.
+  it("centres the action under the icon and title", async () => {
+    await renderWithProviders(
+      <StateView
+        icon="inbox"
+        title="No requests"
+        action={{ label: "New request", onPress: jest.fn() }}
+      />,
+    );
+    const action = classes(screen.getByRole("button", { name: "New request" }).props.className);
+    expect(action).toContain("self-center");
+    expect(action).not.toContain("self-start");
+  });
+
   it("goes flat inside another panel", async () => {
     await renderWithProviders(<StateView icon="inbox" title="Nothing yet" />);
     expect(JSON.stringify(screen.toJSON())).toContain("ExpoBlur");

@@ -1,4 +1,4 @@
-import { dismissToasts, fireEvent, screen, waitFor } from "../../test/render";
+import { fireEvent, screen, waitFor } from "../../test/render";
 import { AgreementCreateForm } from "./agreement-create-form";
 import {
   ACCOUNT_ID,
@@ -61,7 +61,6 @@ describe("AgreementCreateForm", () => {
         termsVersion: null,
       },
     });
-    await dismissToasts();
   });
 
   it("marks the chosen service as selected for screen readers", async () => {

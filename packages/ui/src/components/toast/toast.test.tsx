@@ -34,6 +34,23 @@ describe("Toast", () => {
     expect(screen.queryByText("Saved")).toBeNull();
   });
 
+  // A timer left running would fire into a provider that is gone, and keep a test runner's event
+  // loop alive after the last test (screen tests raise toasts and end without dismissing them).
+  it("clears its timers when it unmounts, so a pending toast never fires afterwards", async () => {
+    const errors = jest.spyOn(console, "error");
+    await renderWithProviders(<Trigger />);
+    await fireEvent.press(screen.getByRole("button", { name: "Show" }));
+    expect(screen.getByText("Saved")).toBeOnTheScreen();
+    await screen.unmount();
+    // Outside act, as a stray timer would run. Short of the toast's due time everything else queued
+    // runs (React's microtasks, the entrance animation), so only a toast timer could still wait.
+    jest.advanceTimersByTime(DEFAULT_TOAST_DURATION_MS - 1);
+    expect(jest.getTimerCount()).toBe(0);
+    jest.advanceTimersByTime(DEFAULT_TOAST_DURATION_MS);
+    expect(errors).not.toHaveBeenCalled();
+    jest.restoreAllMocks();
+  });
+
   it("keeps a sticky toast until it is dismissed", async () => {
     await renderWithProviders(<Trigger sticky />);
     await fireEvent.press(screen.getByRole("button", { name: "Show" }));

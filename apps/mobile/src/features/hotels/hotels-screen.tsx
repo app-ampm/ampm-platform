@@ -3,13 +3,14 @@ import { useState, type ReactNode } from "react";
 
 import { useHotels, useMe } from "@ampm/api-client";
 import type { HotelDestinationView } from "@ampm/core";
-import { Button, EmptyState, Input, Screen, ScreenHeader } from "@ampm/ui";
+import { Button, EmptyState, Input, QueryErrorState, Screen, ScreenHeader } from "@ampm/ui";
+
+import { useGoToSignIn } from "@/navigation/sign-in";
 
 import { canBrowseHotels } from "../portal/portal.format";
 import { DestinationFilter } from "./destination-filter";
 import { HotelResults, HotelResultsLoading } from "./hotel-results";
-import { DISCOVERY_CLOSED, destinationOptions } from "./hotels.format";
-import { HotelsQueryError } from "./hotels-query-error";
+import { DISCOVERY_CLOSED, DISCOVERY_SIGN_IN, destinationOptions } from "./hotels.format";
 
 export interface HotelsScreenProps {
   /** The app's tab bar; the route supplies it and the screen only gives it room. */
@@ -17,8 +18,6 @@ export interface HotelsScreenProps {
 }
 
 type Destination = HotelDestinationView | null;
-
-const SIGN_IN_TITLE = "Sign in to browse hotels";
 
 /**
  * Hotel discovery (Module C; D5 search results, P3 hotel search): search the hotels the subscription
@@ -56,13 +55,15 @@ interface HotelsBodyProps extends SearchProps {
 /** `/me` first: loading, its failures, the closed search with the way to the plans, or the search. */
 function HotelsBody({ me, destination, onDestination }: HotelsBodyProps) {
   const router = useRouter();
+  const goToSignIn = useGoToSignIn();
   if (!me.data) {
     if (!me.isError) return <HotelResultsLoading />;
     return (
-      <HotelsQueryError
+      <QueryErrorState
         error={me.error}
         onRetry={() => void me.refetch()}
-        signInTitle={SIGN_IN_TITLE}
+        onSignIn={goToSignIn}
+        signIn={DISCOVERY_SIGN_IN}
       />
     );
   }

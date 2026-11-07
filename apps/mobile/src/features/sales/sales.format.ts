@@ -1,4 +1,11 @@
-import { leadStatus, type LeadActivityType, type LeadStatus, type LeadView } from "@ampm/core";
+import {
+  formatDay,
+  formatDayRange,
+  leadStatus,
+  type LeadActivityType,
+  type LeadStatus,
+  type LeadView,
+} from "@ampm/core";
 import type { StatusTone } from "@ampm/ui";
 
 /**
@@ -49,21 +56,6 @@ const ACTIVITY_LABEL: Record<LeadActivityType, string> = {
   note: "Note",
 };
 
-const MONTHS = [
-  "JAN",
-  "FEB",
-  "MAR",
-  "APR",
-  "MAY",
-  "JUN",
-  "JUL",
-  "AUG",
-  "SEP",
-  "OCT",
-  "NOV",
-  "DEC",
-] as const;
-
 const MINUTE_MS = 60_000;
 const HOUR_MS = 60 * MINUTE_MS;
 const DAY_MS = 24 * HOUR_MS;
@@ -98,49 +90,14 @@ export function leadSummary(lead: LeadView): string {
     .join(", ");
 }
 
-interface DayParts {
-  readonly day: number;
-  /** 0 for January. */
-  readonly month: number;
-  readonly year: number;
-}
-
-function monthName(month: number): string {
-  return MONTHS[month] ?? "";
-}
-
-function dayLabel({ day, month, year }: DayParts): string {
-  return `${day} ${monthName(month)} ${year}`;
-}
-
-/** An ISO calendar date ("2027-02-12") as written: no time zone may move it to the day before. */
-function calendarParts(iso: string): DayParts | null {
-  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
-  if (!match) return null;
-  return { year: Number(match[1]), month: Number(match[2]) - 1, day: Number(match[3]) };
-}
-
-function rangeLabel(start: DayParts, end: DayParts): string {
-  if (start.year !== end.year) return `${dayLabel(start)} – ${dayLabel(end)}`;
-  if (start.month !== end.month) return `${start.day} ${monthName(start.month)} – ${dayLabel(end)}`;
-  if (start.day === end.day) return dayLabel(start);
-  return `${start.day}–${dayLabel(end)}`;
-}
-
 /**
  * A lead's tentative dates as data, uppercase like the mocks: "12–14 FEB 2027", "28 FEB – 2 MAR 2027",
  * "30 DEC 2027 – 2 JAN 2028", or the one date given. Null when the lead has no dates.
  */
 export function formatStay(from: string | null, to: string | null): string | null {
-  const start = from ? calendarParts(from) : null;
-  const end = to ? calendarParts(to) : null;
-  if (start && end) return rangeLabel(start, end);
-  const single = start ?? end;
-  return single ? dayLabel(single) : null;
-}
-
-function localParts(date: Date): DayParts {
-  return { day: date.getDate(), month: date.getMonth(), year: date.getFullYear() };
+  if (from && to) return formatDayRange(from, to, { style: "data" });
+  const single = from ?? to;
+  return single ? formatDay(single, { style: "data" }) : null;
 }
 
 const twoDigits = (value: number): string => String(value).padStart(2, "0");
@@ -149,13 +106,8 @@ const twoDigits = (value: number): string => String(value).padStart(2, "0");
 export function formatMoment(iso: string): string {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return iso;
-  return `${dayLabel(localParts(date))} · ${twoDigits(date.getHours())}:${twoDigits(date.getMinutes())}`;
-}
-
-/** A calendar day in the device's time: "2 NOV 2026". */
-function formatDay(iso: string): string {
-  const date = new Date(iso);
-  return Number.isNaN(date.getTime()) ? iso : dayLabel(localParts(date));
+  const time = `${twoDigits(date.getHours())}:${twoDigits(date.getMinutes())}`;
+  return `${formatDay(iso, { style: "data" })} · ${time}`;
 }
 
 /**
@@ -170,7 +122,7 @@ export function formatAge(iso: string, now: number): string {
   if (elapsed < DAY_MS) return `${Math.floor(elapsed / HOUR_MS)}h`;
   if (elapsed < WEEK_MS) return `${Math.floor(elapsed / DAY_MS)}d`;
   if (elapsed < AGE_AS_DATE_AFTER_MS) return `${Math.floor(elapsed / WEEK_MS)}w`;
-  return formatDay(iso);
+  return formatDay(iso, { style: "data" });
 }
 
 /** Where and when, as one data line: "Udaipur or Goa · 12–14 FEB 2027 · 250 guests". */

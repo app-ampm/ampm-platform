@@ -1,8 +1,8 @@
 import { useUnsaveHotel } from "@ampm/api-client";
-import type { SavedHotelView } from "@ampm/core";
+import { formatDay, type SavedHotelView } from "@ampm/core";
 import { Button, ListItem, PhotoPlaceholder, Row, StatusChip, useToast } from "@ampm/ui";
 
-import { destinationLabel, formatDay, starLabel } from "./hotels.format";
+import { destinationLabel, starLabel } from "./hotels.format";
 
 export interface SavedHotelRowProps {
   readonly item: SavedHotelView;
@@ -18,7 +18,7 @@ export function SavedHotelRow({ item, onOpen }: SavedHotelRowProps) {
   const unsave = useUnsaveHotel(item.hotel.id);
   const { hotel } = item;
   const where = destinationLabel(hotel.destination);
-  const day = formatDay(item.savedAt);
+  const savedOn = formatDay(item.savedAt);
   const onRemove = (): void => {
     unsave.mutate(undefined, {
       onError: () => toast.show({ title: "Could not remove the hotel", tone: "danger" }),
@@ -31,10 +31,10 @@ export function SavedHotelRow({ item, onOpen }: SavedHotelRowProps) {
         className="flex-1 border-t-0"
         title={hotel.name}
         subtitle={where}
-        meta={`Saved ${day}`}
+        meta={`Saved ${formatDay(item.savedAt, { style: "data" })}`}
         leading={<Thumbnail destination={hotel.destination.name} />}
         trailing={hotel.starCategory ? <StarChip starCategory={hotel.starCategory} /> : undefined}
-        accessibilityLabel={`${hotel.name} in ${where}, saved ${day}`}
+        accessibilityLabel={`${hotel.name} in ${where}, saved ${savedOn}`}
         onPress={onOpen}
       />
       <Button

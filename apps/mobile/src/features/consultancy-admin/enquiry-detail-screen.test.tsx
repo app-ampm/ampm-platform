@@ -53,7 +53,8 @@ function enquiryFetch(
       [DETAIL]: () => ok(detail),
       [STATUS]: status,
       [VISITS]: () => page([visitFixture()]),
-      [MILESTONES]: () => page([milestoneFixture()]),
+      // Due on the day staff picked, sent as midnight UTC (consultancy-admin.form.ts).
+      [MILESTONES]: () => page([milestoneFixture({ dueAt: "2027-01-31T00:00:00.000Z" })]),
       [VISIT_STATUS]: () => ok(visitFixture({ status: "confirmed" })),
       [MILESTONE_STATUS]: () => ok(milestoneFixture({ status: "done" })),
     },
@@ -188,7 +189,9 @@ describe("StaffEnquiryDetailScreen: visits and milestones", () => {
   it("puts the milestones on the stepper and marks one done", async () => {
     const sent: SentRequest[] = [];
     await renderDetail(enquiryFetch(detailFixture(), sent));
-    expect(await screen.findByLabelText("Advance payment, current step")).toBeOnTheScreen();
+    expect(
+      await screen.findByLabelText("Advance payment, current step, Due 31 Jan 2027"),
+    ).toBeOnTheScreen();
     const milestones = screen.getByTestId("milestones");
     expect(within(milestones).getByText("Pending")).toBeOnTheScreen();
     expect(within(milestones).getByText("₹9,50,000")).toBeOnTheScreen();

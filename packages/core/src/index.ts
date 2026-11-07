@@ -6,6 +6,9 @@ export const CORE_VERSION = "0.2.0";
 export { clientAmount, formatAmount, internalAmount } from "./money";
 export type { ClientAmount, Currency, InternalAmount } from "./money";
 
+export { formatDay, formatDayRange } from "./dates";
+export type { DateFormatOptions, DateStyle, DayReading } from "./dates";
+
 export { AppError, ERROR_CODES, errors, isApiFailure, isAppError } from "./errors";
 export type { ApiEnvelope, ApiFailure, ApiSuccess, ErrorCode, ErrorDetail } from "./errors";
 

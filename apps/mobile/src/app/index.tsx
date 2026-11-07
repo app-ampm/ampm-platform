@@ -2,7 +2,7 @@ import { Redirect } from "expo-router";
 
 import { useMe } from "@ampm/api-client";
 
-import { isSignedIn } from "@/lib/session";
+import { useIsSignedIn } from "@/lib/session";
 import { staffHomeHref } from "@/navigation/staff-areas";
 
 /**
@@ -10,7 +10,8 @@ import { staffHomeHref } from "@/navigation/staff-areas";
  * grant (Leads for Sales, Tasks for a role with neither leads nor enquiries), clients to the portal.
  */
 export default function IndexRoute() {
-  if (!isSignedIn()) return <Redirect href="/sign-in" />;
+  const hasSession = useIsSignedIn();
+  if (!hasSession) return <Redirect href="/sign-in" />;
   return <AuthedRedirect />;
 }
 

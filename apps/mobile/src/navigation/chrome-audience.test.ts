@@ -1,4 +1,4 @@
-import { chromeAudience } from "./chrome-audience";
+import { chromeAudience, isAudienceRoute } from "./chrome-audience";
 
 describe("chromeAudience", () => {
   it("draws the staff rail on the workspace's areas and their detail screens", () => {
@@ -27,6 +27,25 @@ describe("chromeAudience", () => {
     for (const path of ["/sign-in", "/gallery", "/"]) {
       expect(chromeAudience(path, "staff")).toBeNull();
       expect(chromeAudience(path, "client")).toBeNull();
+    }
+  });
+});
+
+describe("isAudienceRoute", () => {
+  it("holds for the workspace's and the portal's routes and the screens under them", () => {
+    const routes = [
+      "/leads",
+      "/enquiries/abc",
+      "/field-notes",
+      "/portal/requests/new",
+      "/hotels/saved",
+    ];
+    for (const path of [...routes, "/account"]) expect(isAudienceRoute(path)).toBe(true);
+  });
+
+  it("fails for sign-in, the gallery, the entry redirect and a look-alike path", () => {
+    for (const path of ["/sign-in", "/gallery", "/", "/leadership"]) {
+      expect(isAudienceRoute(path)).toBe(false);
     }
   });
 });
