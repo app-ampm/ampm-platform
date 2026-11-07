@@ -17,6 +17,7 @@ import {
   assertAssignable,
   assignableCapabilityViews,
   capabilityViewsForKeys,
+  capabilityViewsForRole,
   isSuperAdmin,
 } from "../capability-grants.js";
 import { assertNotLastSuperAdmin } from "../last-super-admin.js";
@@ -49,6 +50,16 @@ export class RolesService {
 
   async list(): Promise<RoleView[]> {
     const roles = await this.repository.listCustom();
+    return roles.map((role) => this.toView(role));
+  }
+
+  /**
+   * Every live role with its resolved capabilities — the read model for assigning a role and for the
+   * roles-and-permissions viewer. The nine system roles come first; unlike `list()` (custom-only, the
+   * editor's working set) this is the complete set, because a staff user can hold either kind.
+   */
+  async assignable(): Promise<RoleView[]> {
+    const roles = await this.repository.listAll();
     return roles.map((role) => this.toView(role));
   }
 
@@ -197,12 +208,17 @@ export class RolesService {
   }
 
   private toView(role: RoleRow): RoleView {
+    // A system role carries no stored grants — its power is the matrix, resolved from the catalog by
+    // source role; a custom role's capabilities are its stored direct grants.
+    const capabilities = role.isSystem
+      ? capabilityViewsForRole(role.roleKey)
+      : capabilityViewsForKeys(role.capabilityKeys);
     return {
       id: role.id,
       roleKey: role.roleKey,
       name: role.name,
       isSystem: role.isSystem,
-      capabilities: capabilityViewsForKeys(role.capabilityKeys),
+      capabilities,
     };
   }
 }

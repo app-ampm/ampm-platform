@@ -4,10 +4,10 @@ import type { IconName } from "@ampm/ui";
 
 import { isOnRoute } from "./routes";
 
-export type StaffAreaKey = "leads" | "enquiries" | "tasks" | "settings";
+export type StaffAreaKey = "leads" | "enquiries" | "tasks" | "admin" | "settings";
 
 /** The routes of the staff workspace's areas: each is the area's top-level screen. */
-export type StaffAreaPath = "/leads" | "/enquiries" | "/field-notes" | "/account";
+export type StaffAreaPath = "/leads" | "/enquiries" | "/field-notes" | "/admin" | "/account";
 
 export interface StaffArea {
   readonly key: StaffAreaKey;
@@ -51,6 +51,18 @@ export const STAFF_AREAS: readonly StaffArea[] = [
     // The key the area's only screen needs today: the field-notes spike reads and writes as incidents.
     // The real task screens (M5) will ask for "tasks.tasks.read" instead.
     permission: "tasks.incidents.read",
+  },
+  {
+    key: "admin",
+    label: "Admin console",
+    tabLabel: "Admin",
+    icon: "shield-check",
+    href: "/admin",
+    // The console is the Super Admin's surface (TW-90 "Who: SA"; the Settings area only SA sees in
+    // full). The directory read is open to every role for incidental look-ups, so the area is gated on
+    // a staff-management key only SA holds; sections other roles may see (e.g. reference data for
+    // Finance) will reveal themselves per-section once they are built.
+    permission: "admin.staff_users.update",
   },
   {
     key: "settings",

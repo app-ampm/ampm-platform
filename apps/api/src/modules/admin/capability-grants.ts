@@ -1,5 +1,11 @@
 import { errors, type CapabilityView } from "@ampm/core";
-import { assignableCapabilities, capabilityById, type GrantableCapability } from "@ampm/policy";
+import {
+  GRANTABLE_CAPABILITIES,
+  assignableCapabilities,
+  capabilityById,
+  roleFromKey,
+  type GrantableCapability,
+} from "@ampm/policy";
 
 import type { Principal } from "../../policy/principal.types.js";
 
@@ -35,6 +41,22 @@ export function capabilityViewsForKeys(keys: readonly string[]): CapabilityView[
     .map((key) => capabilityById(key))
     .filter((capability): capability is GrantableCapability => capability !== undefined)
     .map(toCapabilityView);
+}
+
+/**
+ * The capability views a *system* role holds, resolved from the matrix catalog by its source role.
+ * A system role carries no stored `role_grants` — its power lives in the matrix (D-036) — so unlike a
+ * custom role its capabilities cannot be read from the database; they are every catalog capability
+ * whose `sourceRoles` include this role. Includes the escalation-locked ones a custom role could never
+ * borrow, because this is the read model the Super Admin uses to see what a built-in role can do. An
+ * unknown key (catalog drift) yields an empty list, never a throw.
+ */
+export function capabilityViewsForRole(roleKey: string): CapabilityView[] {
+  const code = roleFromKey(roleKey);
+  if (code === undefined) return [];
+  return GRANTABLE_CAPABILITIES.filter((capability) => capability.sourceRoles.includes(code)).map(
+    toCapabilityView,
+  );
 }
 
 /**

@@ -48,6 +48,17 @@ export class RolesController {
     return this.roles.list();
   }
 
+  /**
+   * Every live role (system + custom) with its resolved capabilities — the pick-list for assigning a
+   * role and the source for the roles-and-permissions viewer. Declared before `roles/:id` so the
+   * literal path is matched first rather than parsed as a uuid.
+   */
+  @Get("roles/assignable")
+  @RequirePermission("admin.roles.read")
+  assignable(): Promise<RoleView[]> {
+    return this.roles.assignable();
+  }
+
   @Get("roles/:id")
   @RequirePermission("admin.roles.read")
   get(@ZodParams(idParam) params: { id: string }): Promise<RoleView> {
