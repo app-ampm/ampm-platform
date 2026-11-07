@@ -53,8 +53,9 @@ API in that **test/local** config (never production), with `CORS_ORIGINS=https:/
 ## Deploy the API at latest main
 
 Get the latest source onto the box (its checkout has no git remote of its own — ship it with
-`git archive HEAD | ssh <box> 'cd <repo-on-box> && tar -xf -'` from a clean worktree), then run the box
-redeploy, which rebuilds the API/worker image and re-seeds:
+`git archive HEAD -- . ':(exclude)graphify-out' | ssh <box> 'cd <repo-on-box> && tar -xf -'` from a clean
+worktree; the knowledge graph is not needed on the box), write the commit to the box's `.deployed-commit`,
+then run the box redeploy, which rebuilds the API/worker image and re-seeds:
 
 ```bash
 bash deploy/redeploy-box.sh
