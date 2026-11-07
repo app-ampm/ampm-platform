@@ -1,0 +1,26 @@
+# Reference .htaccess for site.ampmverse.com, the public website on the throwaway test box
+# (docs/engineering/test-deploy.md). Copy it to the site's document root as .htaccess. Nothing deploys over
+# it: the site itself lives in the web container (deploy/redeploy-site.sh), not in the document root. This
+# is the test box, not the production VPS (D-015). Needs mod_rewrite, mod_proxy and mod_proxy_http (Plesk
+# has them).
+
+# Basic-Auth gate with app.ampmverse.com's user file, so the same login works on both sites (the browser
+# asks once per site). The ACME challenge stays open so Plesk's Let's Encrypt can renew the certificate.
+AuthType Basic
+AuthName "AMPM test site"
+AuthUserFile /var/www/vhosts/app.ampmverse.com/httpdocs/.htpasswd
+<RequireAny>
+Require expr %{REQUEST_URI} =~ m#^/\.well-known/acme-challenge/#
+Require valid-user
+</RequireAny>
+
+RewriteEngine On
+
+# The root URL too: left on, mod_dir answers "/" by looking up its DirectoryIndex names, the lookup passes
+# through the proxy rule below, and Next receives "/index.html" (its 404) instead of the home page.
+DirectoryIndex disabled
+
+# Every other request goes to the Next.js server in the web container, published on the box's loopback
+# only. Edit the port if the box publishes it elsewhere (default 7002).
+RewriteCond %{REQUEST_URI} !^/\.well-known/acme-challenge/
+RewriteRule ^(.*)$ http://127.0.0.1:7002/$1 [P,L]
