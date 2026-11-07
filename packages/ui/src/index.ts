@@ -54,6 +54,7 @@ export * from "./components/stepper";
 // Surfaces and content.
 export * from "./components/card";
 export * from "./components/list-item";
+export * from "./components/data-table";
 export * from "./components/internal-panel";
 export * from "./components/stat";
 export * from "./components/avatar";
