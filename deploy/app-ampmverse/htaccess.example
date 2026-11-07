@@ -1,25 +1,33 @@
-# Reference httpdocs/.htaccess for the app.ampmverse.com throwaway test box (docs/engineering/test-deploy.md).
-#
-# Version-controlled so the box's web config is written back into the repo (infra.md), NOT auto-deployed:
-# deploy-web.sh preserves the box's live .htaccess (rsync --exclude) because it also carries the box's
-# Basic-Auth stanza, which must not be clobbered. When setting up a fresh box, copy this file to
-# httpdocs/.htaccess and add the Basic-Auth block. This is the THROWAWAY test box, not the production
-# VPS (decision D-015). Requires mod_proxy + mod_rewrite (Plesk provides both).
+# httpdocs/.htaccess of app.ampmverse.com, the throwaway test box (docs/engineering/test-deploy.md), as it
+# runs there. Version-controlled so the box's web config is written back into the repo (infra.md);
+# deploys never overwrite it (deploy-web.sh's rsync excludes it and the .htpasswd it names). On a fresh
+# box copy it to httpdocs/.htaccess and create that user file with htpasswd. This is the test box, not
+# the production VPS (D-015). Needs mod_rewrite, mod_proxy and mod_proxy_http (Plesk has them).
 
+# Basic-Auth gate over the whole site, except /_api: the app sends its own Bearer token there, which
+# replaces the browser's Basic credentials, so a gated /_api would refuse every signed-in call (and the
+# website's cross-origin enquiry form posts there too). /_api/auth/dev-login stays behind the password:
+# on this box (the local identity provider) it mints a token for any seeded account from an email alone.
+# The app calls it signed out, with no Bearer header, so the browser sends the saved Basic credentials.
+# Case-insensitive, because Express matches routes case-insensitively.
+AuthType Basic
+AuthName "AMPM test site"
+AuthUserFile /var/www/vhosts/app.ampmverse.com/httpdocs/.htpasswd
+<RequireAny>
+Require expr "%{REQUEST_URI} =~ m#^/_api/# && %{REQUEST_URI} !~ m#^/_api/auth/dev-login#i"
+Require valid-user
+</RequireAny>
+
+<IfModule mod_rewrite.c>
 RewriteEngine On
+RewriteBase /
 
-# API: proxy /_api/* to the box-local NestJS API. Edit the port if the box runs it elsewhere (default 7001).
+# API: /_api/* to the box-local NestJS API (default port 7001).
 RewriteRule ^_api/(.*)$ http://127.0.0.1:7001/$1 [P,L]
 
-# SPA fallback: any path that is not /_api and not a real file or directory serves the single-page app,
-# so a deep link such as /portal/requests/<id> loads index.html and the router resolves it client-side.
-RewriteCond %{REQUEST_URI} !^/_api/
+# SPA fallback: a path that is not a real file or directory loads index.html, so a deep link such as
+# /portal/requests/<id> opens the app and its router resolves it.
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule . /index.html [L]
-
-# Basic-Auth gate (the box keeps this live; uncomment + point at the box's .htpasswd on a fresh setup):
-# AuthType Basic
-# AuthName "AMPM test"
-# AuthUserFile /var/www/vhosts/app.ampmverse.com/.htpasswd
-# Require valid-user
+RewriteRule ^ /index.html [L]
+</IfModule>

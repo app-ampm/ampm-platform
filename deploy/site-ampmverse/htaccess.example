@@ -1,10 +1,11 @@
 # Reference .htaccess for site.ampmverse.com, the public website on the throwaway test box
 # (docs/engineering/test-deploy.md). Copy it to the site's document root as .htaccess. Nothing deploys over
 # it: the site itself lives in the web container (deploy/redeploy-site.sh), not in the document root. This
-# is the test box, not the production VPS (D-015). Requires mod_proxy + mod_rewrite (Plesk provides both).
+# is the test box, not the production VPS (D-015). Needs mod_rewrite, mod_proxy and mod_proxy_http (Plesk
+# has them).
 
-# Basic-Auth gate, sharing app.ampmverse.com's user file so one login opens both sites. The ACME challenge
-# stays open so Plesk's Let's Encrypt can renew the certificate.
+# Basic-Auth gate with app.ampmverse.com's user file, so the same login works on both sites (the browser
+# asks once per site). The ACME challenge stays open so Plesk's Let's Encrypt can renew the certificate.
 AuthType Basic
 AuthName "AMPM test site"
 AuthUserFile /var/www/vhosts/app.ampmverse.com/httpdocs/.htpasswd

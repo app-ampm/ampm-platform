@@ -14,7 +14,15 @@ BASE="infra/compose/local/compose.yml"
 OVR="infra/compose/local/compose.test-override.yml"
 COMPOSE="docker compose -f ${BASE} -f ${OVR}"
 
-if ! $COMPOSE config --services 2>/dev/null | grep -qx web; then
+# Read the service list whole before searching it: piped into `grep -q`, which exits at the first match,
+# Compose can die on the closed pipe and pipefail would report a missing service that is there.
+if ! services=$($COMPOSE config --services 2>&1); then
+  echo "Compose cannot read the box's files (is infra/compose/local/.env on the box?):" >&2
+  echo "$services" >&2
+  echo "STEP_FAILED=config"
+  exit 9
+fi
+if ! grep -qx web <<<"$services"; then
   echo "The box override ${OVR} defines no web service." >&2
   echo "Copy it from deploy/app-ampmverse/compose.test-override.example.yml first." >&2
   echo "STEP_FAILED=config"

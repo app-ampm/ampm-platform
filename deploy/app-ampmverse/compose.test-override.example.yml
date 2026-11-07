@@ -2,8 +2,16 @@
 # infra/compose/local/compose.test-override.yml. Copy this to that path on the box; the real file is not
 # committed because it is box-specific (like httpdocs/.htaccess, whose template is deploy/app-ampmverse/).
 # It publishes the API and the public website on the box's loopback only and points both at their
-# public origins. No secrets.
+# public origins. No secrets: the token-signing key comes from the box's own infra/compose/local/.env.
 name: ampm-local
+
+# The box's token-signing key, never the development value committed in compose.yml: /_api is reachable
+# from the internet, so a key anyone with the repository can read would let them forge tokens. It lives in
+# infra/compose/local/.env on the box (gitignored and dockerignored, mode 600), generated there with
+#   umask 077; printf 'AMPM_BOX_IDENTITY_SECRET=%s\n' "$(openssl rand -base64 48 | tr -d '/+=\n')" > infra/compose/local/.env
+# Compose reads that file for interpolation; changing the key signs every tester out.
+x-box-identity-secret: &box-identity-secret "${AMPM_BOX_IDENTITY_SECRET:?set AMPM_BOX_IDENTITY_SECRET in infra/compose/local/.env on the box}"
+
 services:
   api:
     ports:
@@ -13,6 +21,17 @@ services:
       CORS_ORIGINS: "https://app.ampmverse.com,https://site.ampmverse.com"
       WEB_APP_URL: "https://app.ampmverse.com"
       TRUST_PROXY: "1"
+      IDENTITY_LOCAL_SECRET: *box-identity-secret
+    deploy:
+      resources:
+        limits: { cpus: "1", memory: 1g }
+
+  worker:
+    environment:
+      IDENTITY_LOCAL_SECRET: *box-identity-secret
+    deploy:
+      resources:
+        limits: { cpus: "1", memory: 1g }
 
   # The public website (apps/web) at site.ampmverse.com, whose .htaccess
   # (deploy/site-ampmverse/htaccess.example) proxies every request to this container. Built and

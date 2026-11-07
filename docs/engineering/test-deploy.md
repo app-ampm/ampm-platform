@@ -15,7 +15,9 @@ codifies the test box so it stops being purely hand-built (infra.md: write host 
   served at `https://site.ampmverse.com` through that domain's `.htaccess` (`[P]` proxy); see
   [The public website](#the-public-website--siteampmversecom) below.
 - **Gate**: HTTP Basic-Auth (user `ampm`) in front of both sites; the site's `.htaccess` uses app.'s user
-  file, so one login opens both. `/_api` stays outside the gate.
+  file, so the same login works on both (the browser asks once per site). `/_api` stays outside the gate
+  for the app's Bearer calls and the website's enquiry form, except `/_api/auth/dev-login`, which stays
+  behind it (see the run-config below).
 
 ## Deploy the UI
 
@@ -36,13 +38,26 @@ prune stale assets but `--exclude`s the box's hand-placed control files (`.htacc
   loads the app and the router resolves it client-side. The canonical file is version-controlled at
   [`deploy/app-ampmverse/htaccess.example`](../../deploy/app-ampmverse/htaccess.example); it is kept on the box
   (deploys do not overwrite it, because it also carries the Basic-Auth stanza). On a fresh box, copy it to
-  `httpdocs/.htaccess` and fill in the auth block.
+  `httpdocs/.htaccess` and create the user file it names with `htpasswd`.
 
 ## Box API run-config (so sign-in works)
 
 The in-app dev sign-in (`/auth/dev-login`) is **fail-closed**: it only works when the API runs with
 `NODE_ENV` ≠ `production`, `IDENTITY_PROVIDER=local`, and `IDENTITY_LOCAL_SECRET` set. The box must run the
-API in that **test/local** config (never production), with `CORS_ORIGINS=https://app.ampmverse.com`. Then:
+API in that **test/local** config (never production), with `CORS_ORIGINS` listing app. and site. Because
+`/_api` is reachable from the internet, two guards apply (D-080):
+
+- **Dev sign-in behind the password.** `/auth/dev-login` mints a token for any seeded account from an email
+  alone, so `httpdocs/.htaccess` keeps `/_api/auth/dev-login` (case-insensitively) inside the Basic-Auth gate
+  while the rest of `/_api` stays open. The app calls it signed out, without a Bearer header, so the browser
+  sends the saved Basic credentials. Check: `curl -s -o /dev/null -w '%{http_code}' -X POST https://app.ampmverse.com/_api/auth/dev-login`
+  answers `401`.
+- **The box's own signing key.** The API and worker sign tokens with `AMPM_BOX_IDENTITY_SECRET` from
+  `infra/compose/local/.env` on the box (gitignored, mode 600, generated there; the override template shows
+  the command), never the development value committed in `compose.yml`. Replacing it signs every tester
+  out.
+
+Then:
 
 - **Client**: sign in as `client@example.com` (Rhea — a client account with an active Hotel Discovery
   subscription and the seeded consultancy journey). `prospect@example.com` has no subscription or project,
@@ -69,8 +84,10 @@ followed by the seed; the script's header documents both. `db:seed` plants the d
 Hotel-team account), the hotels, and the client's consultancy chain plus a fresh `submitted` enquiry.
 
 The script composes `infra/compose/local/compose.yml` with the box-only `compose.test-override.yml` (which
-publishes the API on `127.0.0.1:7001`, sets `CORS_ORIGINS`/`WEB_APP_URL`/`TRUST_PROXY`, and defines the
-website's `web` service); that override is box-specific and not committed —
+publishes the API on `127.0.0.1:7001`, sets `CORS_ORIGINS`/`WEB_APP_URL`/`TRUST_PROXY`, takes the signing key
+from the box's `.env`, limits the API and worker to 1 CPU / 1 GB, and defines the website's `web` service);
+Compose reads that `.env` itself, so the scripts need nothing more. The override is box-specific and not
+committed —
 [`compose.test-override.example.yml`](../../deploy/app-ampmverse/compose.test-override.example.yml)
 is the template to copy onto the box.
 
@@ -104,12 +121,15 @@ same source.
    the certificate renews itself.
 3. Copy [`deploy/site-ampmverse/htaccess.example`](../../deploy/site-ampmverse/htaccess.example) to the
    new document root as `.htaccess` and move Plesk's placeholder `index.html` out of it (it is kept in
-   `~/plesk-default-pages/`): nginx serves `.html` files from the document root without asking Apache, so
-   a file left there skips the password. The `.htaccess` proxies every request, `/` included
-   (`DirectoryIndex disabled`), to `127.0.0.1:7002` behind app.'s Basic-Auth user file and leaves
-   `/.well-known/acme-challenge/` open so the certificate renews.
-4. With the override from the template in place, recreate the API once so it picks up the new
-   `CORS_ORIGINS`: `docker compose -f infra/compose/local/compose.yml -f infra/compose/local/compose.test-override.yml up -d --no-deps --wait api`.
+   `~/plesk-default-pages/`), so the document root holds nothing but the `.htaccess`. On this server static
+   files go through Apache's gate (app.'s `index.html` answers `401`), but Plesk's "Serve static files
+   directly by nginx" option, if it were turned on, would hand out any file left there without the
+   password. The `.htaccess` proxies every request, `/` included (`DirectoryIndex disabled`), to
+   `127.0.0.1:7002` behind app.'s Basic-Auth user file and leaves `/.well-known/acme-challenge/` open so the
+   certificate renews.
+4. With the override from the template and the box's `.env` key in place, recreate the API and worker once
+   so they pick up `CORS_ORIGINS`, the key and the limits:
+   `docker compose -f infra/compose/local/compose.yml -f infra/compose/local/compose.test-override.yml up -d --no-deps --wait api worker`.
 
 ### Deploy the website
 

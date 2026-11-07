@@ -14,7 +14,7 @@
 # Prisma 7 note: `migrate reset` no longer takes --skip-generate/--skip-seed and does not auto-run the
 # config seed, so migrations and the seed are explicit steps here.
 set -uo pipefail
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/.." || exit 1
 
 BASE="infra/compose/local/compose.yml"
 # The box keeps its own override here — it publishes the API on 127.0.0.1:7001 and sets
