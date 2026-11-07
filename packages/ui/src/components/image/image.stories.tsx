@@ -21,5 +21,16 @@ export const stories = defineStories({
         </Row>
       ),
     },
+    {
+      name: "Cannot load: the pearl 6% surface",
+      render: () => (
+        <Image
+          source={{ uri: "https://ampm.invalid/missing.jpg" }}
+          alt="A photo that could not load"
+          className="h-32 w-full"
+          radius="lg"
+        />
+      ),
+    },
   ],
 });

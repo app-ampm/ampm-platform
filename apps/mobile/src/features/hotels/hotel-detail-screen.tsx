@@ -1,148 +1,93 @@
-import { ScrollView } from "react-native";
 import { useRouter } from "expo-router";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { useHotel, useMe, useSaveHotel, useSavedHotels, useUnsaveHotel } from "@ampm/api-client";
-import { isAppError, type HotelView } from "@ampm/core";
-import {
-  Button,
-  EmptyState,
-  ErrorState,
-  OfflineState,
-  Row,
-  Skeleton,
-  Stack,
-  StatusChip,
-  Text,
-  useToast,
-} from "@ampm/ui";
+import { useHotel } from "@ampm/api-client";
+import type { HotelDetailView } from "@ampm/core";
+import { QueryErrorState, Row, Screen, Skeleton, Stack } from "@ampm/ui";
 
-import { destinationLabel } from "./hotel-card";
+import { useGoToSignIn } from "@/navigation/sign-in";
 
-/** A single hotel the client unlocked (Module C): its details and a shortlist toggle. */
+import { SaveHeartButton, useHotelPagePermissions } from "./hotel-actions";
+import { HotelFooter } from "./hotel-footer";
+import { HotelBackButton, HotelHero, HotelHeroFrame } from "./hotel-hero";
+import { HotelPanel } from "./hotel-panel";
+
+const NOT_FOUND = {
+  title: "Hotel not found",
+  description: "This hotel is not available to you.",
+};
+
+/**
+ * A single hotel the client unlocked (Module C; D6 and P4 hotel page): the photo with the back button
+ * over it, the glass panel with the name, facts and sections, and a sticky bar with the price and the
+ * page's one gold action. Loading keeps the page's shape; failures keep the back button.
+ */
 export function HotelDetailScreen({ hotelId }: { readonly hotelId: string }) {
-  const insets = useSafeAreaInsets();
   const router = useRouter();
+  const goToSignIn = useGoToSignIn();
   const hotel = useHotel(hotelId);
-  return (
-    <ScrollView
-      className="flex-1 bg-surface"
-      contentContainerClassName="gap-4 p-4 md:p-8"
-      style={{ paddingTop: insets.top }}
-    >
-      <Row justify="start">
-        <Button variant="ghost" size="sm" icon="arrow-left" onPress={() => router.back()}>
-          Back
-        </Button>
-      </Row>
-      <HotelDetail hotel={hotel} />
-    </ScrollView>
-  );
-}
-
-function HotelDetail({ hotel }: { readonly hotel: ReturnType<typeof useHotel> }) {
-  const router = useRouter();
-  if (hotel.isPending) return <DetailLoading />;
-  if (hotel.isError) {
-    if (isAppError(hotel.error) && hotel.error.code === "network_error")
-      return <OfflineState onRetry={() => void hotel.refetch()} />;
-    if (isAppError(hotel.error) && hotel.error.code === "unauthenticated")
-      return (
-        <EmptyState
-          icon="lock"
-          title="Sign in to view this hotel"
-          action={{ label: "Sign in", onPress: () => router.replace("/sign-in") }}
+  const onBack = () => router.back();
+  if (hotel.isSuccess) return <HotelPage hotel={hotel.data} onBack={onBack} />;
+  if (hotel.isError)
+    return (
+      <Screen glow="top" width="content" header={<BackRow onBack={onBack} />}>
+        <QueryErrorState
+          error={hotel.error}
+          onRetry={() => void hotel.refetch()}
+          onSignIn={goToSignIn}
+          signIn={{ title: "Sign in to view this hotel" }}
+          notFound={NOT_FOUND}
         />
-      );
-    if (isAppError(hotel.error) && hotel.error.code === "not_found")
-      return (
-        <EmptyState
-          icon="inbox"
-          title="Hotel not found"
-          description="This hotel is not available to you."
-        />
-      );
-    return <ErrorState onRetry={() => void hotel.refetch()} />;
-  }
-  return <HotelBody hotel={hotel.data} />;
-}
-
-function HotelBody({ hotel }: { readonly hotel: HotelView }) {
-  const facts = [
-    hotel.starCategory ? `${hotel.starCategory}-star` : null,
-    hotel.totalRooms !== null ? `${hotel.totalRooms} rooms` : null,
-  ].filter((fact): fact is string => fact !== null);
+      </Screen>
+    );
   return (
-    <Stack gap={3}>
-      <Stack gap={1}>
-        <Text variant="title">{hotel.name}</Text>
-        <Text tone="muted">{destinationLabel(hotel.destination)}</Text>
-      </Stack>
-      {facts.length > 0 ? (
-        <Row gap={2} wrap>
-          {facts.map((fact) => (
-            <StatusChip key={fact} label={fact} tone="info" size="sm" />
-          ))}
-        </Row>
-      ) : null}
-      {hotel.description ? <Text>{hotel.description}</Text> : null}
-      {hotel.address ? <Text tone="muted">{hotel.address}</Text> : null}
-      <SaveButton hotel={hotel} />
-      <RequestAssistanceButton hotel={hotel} />
-    </Stack>
+    <Screen glow="top" width="content">
+      <DetailLoading onBack={onBack} />
+    </Screen>
   );
 }
 
-/** CP-07 entry: an entitled client opens a hotel-assistance enquiry for this hotel (the consultancy flow). */
-function RequestAssistanceButton({ hotel }: { readonly hotel: HotelView }) {
-  const router = useRouter();
-  const me = useMe();
-  const canRequest = me.data?.entitlements.modules.includes("hotel_assistance") ?? false;
-  if (!canRequest) return null;
+/**
+ * The loaded page. An account that may ask for availability gets that as the footer's gold action and
+ * the save as a heart over the photo (P4); one that may only save keeps the save in the footer.
+ */
+function HotelPage({
+  hotel,
+  onBack,
+}: {
+  readonly hotel: HotelDetailView;
+  readonly onBack: () => void;
+}) {
+  const permissions = useHotelPagePermissions();
+  const heart =
+    permissions.canRequest && permissions.canSave ? <SaveHeartButton hotel={hotel} /> : undefined;
   return (
-    <Button
-      variant="secondary"
-      onPress={() => router.push(`/portal/requests/new?hotelId=${hotel.id}`)}
+    <Screen
+      glow="top"
+      width="content"
+      footer={<HotelFooter hotel={hotel} permissions={permissions} />}
     >
-      Request hotel assistance
-    </Button>
+      <HotelHero hotel={hotel} onBack={onBack} trailing={heart} />
+      <HotelPanel hotel={hotel} />
+    </Screen>
   );
 }
 
-function SaveButton({ hotel }: { readonly hotel: HotelView }) {
-  const toast = useToast();
-  const me = useMe();
-  const saved = useSavedHotels();
-  const save = useSaveHotel(hotel.id);
-  const unsave = useUnsaveHotel(hotel.id);
-  const canSave =
-    (me.data?.entitlements.modules.includes("saved_hotels") ?? false) &&
-    !(me.data?.entitlements.readOnlyModules.includes("saved_hotels") ?? false);
-  if (!canSave) return null;
-  const isSaved = saved.data?.items.some((item) => item.hotel.id === hotel.id) ?? false;
-  const onToggle = (): void => {
-    const mutation = isSaved ? unsave : save;
-    mutation.mutate(undefined, {
-      onError: () => toast.show({ title: "Could not update your shortlist", tone: "danger" }),
-    });
-  };
+function BackRow({ onBack }: { readonly onBack: () => void }) {
   return (
-    <Button
-      variant={isSaved ? "secondary" : "primary"}
-      icon="star"
-      loading={save.isPending || unsave.isPending}
-      onPress={onToggle}
-    >
-      {isSaved ? "Saved to shortlist" : "Save hotel"}
-    </Button>
+    <Row>
+      <HotelBackButton onPress={onBack} />
+    </Row>
   );
 }
 
-function DetailLoading() {
+/** The page's shape while the hotel loads: the hero and the panel as skeletons, the back button live. */
+function DetailLoading({ onBack }: { readonly onBack: () => void }) {
   return (
-    <Stack gap={3} testID="hotel-detail-loading">
-      <Skeleton className="h-8 w-full" />
-      <Skeleton className="h-40 w-full" />
+    <Stack gap={4} testID="hotel-detail-loading">
+      <HotelHeroFrame onBack={onBack}>
+        <Skeleton className="h-full w-full rounded-none" />
+      </HotelHeroFrame>
+      <Skeleton className="h-64 w-full rounded-lg" />
     </Stack>
   );
 }

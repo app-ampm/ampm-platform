@@ -1,27 +1,23 @@
-import { Gallery, Link, Stack } from "@ampm/ui";
+import { Gallery, Link, Row } from "@ampm/ui";
 
-/** The component gallery (the bootstrap showcase); reachable from the sign-in screen. */
+/**
+ * The component gallery (the bootstrap showcase); reachable from the sign-in screen. Its shortcuts sit
+ * in the Screen's sticky glass footer, which keeps them clear of the home indicator and keeps room for
+ * them at the end of the scroll, so they never cover the last stories.
+ */
 export default function GalleryRoute() {
   return (
-    <Stack className="flex-1">
-      <Gallery />
-      <Stack gap={2} className="absolute bottom-6 right-6">
-        {/* Absolute: floating shortcuts over the gallery during the bootstrap. */}
-        <Link
-          href="/account"
-          variant="standalone"
-          className="rounded bg-surface-elevated px-3 shadow-md"
-        >
-          Account
-        </Link>
-        <Link
-          href="/field-notes"
-          variant="standalone"
-          className="rounded bg-surface-elevated px-3 shadow-md"
-        >
-          Field notes
-        </Link>
-      </Stack>
-    </Stack>
+    <Gallery
+      footer={
+        <Row gap={2} justify="end">
+          <Link href="/account" variant="nav" className="px-3">
+            Account
+          </Link>
+          <Link href="/field-notes" variant="nav" className="px-3">
+            Field notes
+          </Link>
+        </Row>
+      }
+    />
   );
 }

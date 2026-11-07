@@ -6,13 +6,14 @@
     "dev": "next dev --port 3417",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint .",
+    "lint": "eslint . && node ../../packages/config/tailwind/class-audit.mjs web src",
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
     "@ampm/api-client": "workspace:*",
     "@ampm/core": "workspace:*",
+    "@ampm/ui": "workspace:*",
     "@tanstack/react-query": "catalog:",
     "next": "16.4.3",
     "react": "catalog:",

@@ -1,19 +1,23 @@
-import type { BookingMilestoneType, HotelRateItemType, Money } from "@ampm/core";
+import type {
+  BookingMilestoneType,
+  HotelRateItemType,
+  Money,
+  ServiceFeeStructure,
+} from "@ampm/core";
 
 import { milestoneTypeLabel } from "../consultancy/consultancy.format";
+import { isIsoDate } from "../consultancy/new-request.form";
 
 /**
  * Shared parsing, validation and option lists for the staff create forms (Slice 3). The forms are plain
- * controlled text inputs because the UI library has no Select/Date primitive (ui.md); enums are entered
- * through button rows (OptionButtons) and amounts as rupees that convert to the wire's integer paise.
+ * controlled text inputs because the UI library has no Select/Date primitive (ui.md): enums are picked
+ * with the kit's FilterChip and SegmentedControl, amounts are typed as rupees that convert to the wire's
+ * integer paise, and each field check returns the gold error line that names its field (Peacock Night
+ * §5: "inline gold helper text that names the field").
  */
 
-/** A real YYYY-MM-DD calendar date, matching the server's `z.iso.date()` (rejects e.g. 2027-02-30). */
-export function isIsoDate(value: string): boolean {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
-  const parsed = new Date(`${value}T00:00:00.000Z`);
-  return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
-}
+/** The client request form's calendar-date check, the one copy both audiences' forms use. */
+export { isIsoDate };
 
 /** A YYYY-MM-DD date as an ISO datetime at midnight UTC, for a `z.iso.datetime()` field. */
 export function isoDateTimeFromDate(date: string): string {
@@ -39,15 +43,44 @@ export function moneyFromRupees(text: string): Money | null {
 
 /** A denied (403) or guard-blocked (409) write carries a useful message; surface it over the fallback. */
 export function errorMessage(error: unknown, fallback: string): string {
-  const message = (error as { message?: unknown } | null)?.message;
+  const message =
+    typeof error === "object" && error !== null && "message" in error ? error.message : undefined;
   return typeof message === "string" && message.length > 0 ? message : fallback;
 }
 
-/** The milestone kinds a staff member can create (labels reused from the client format map). */
-export const MILESTONE_TYPE_OPTIONS: ReadonlyArray<{
-  readonly value: BookingMilestoneType;
+// --- Field checks: undefined when the text is acceptable, else the error line that names the field ---
+
+/** Rupees: "Enter the fee" when a required one is empty, a format hint when it will not parse. */
+export function amountError(text: string, field: string, required: boolean): string | undefined {
+  const trimmed = text.trim();
+  if (trimmed === "") return required ? `Enter the ${field}` : undefined;
+  return rupeesToMinor(trimmed) === null
+    ? `Enter the ${field} in rupees, such as 25000`
+    : undefined;
+}
+
+/** A calendar date typed as YYYY-MM-DD (the forms have no date picker yet). */
+export function dateError(text: string, field: string, required: boolean): string | undefined {
+  const trimmed = text.trim();
+  if (trimmed === "") return required ? `Enter the ${field}` : undefined;
+  return isIsoDate(trimmed) ? undefined : `Enter the ${field} as YYYY-MM-DD`;
+}
+
+/** Free text that must not be blank. */
+export function textError(text: string, message: string): string | undefined {
+  return text.trim().length > 0 ? undefined : message;
+}
+
+// --- Choices -----------------------------------------------------------------------------------------
+
+/** One choice in a chip or segment picker: the wire value and its label. */
+export interface ChoiceOption<T extends string> {
+  readonly value: T;
   readonly label: string;
-}> = (
+}
+
+/** The milestone kinds a staff member can create (labels reused from the client format map). */
+export const MILESTONE_TYPE_OPTIONS: ReadonlyArray<ChoiceOption<BookingMilestoneType>> = (
   [
     "hold_placed",
     "contract_sent",
@@ -59,18 +92,50 @@ export const MILESTONE_TYPE_OPTIONS: ReadonlyArray<{
   ] as const
 ).map((value) => ({ value, label: milestoneTypeLabel(value) }));
 
+const RATE_ITEM_LABEL: Record<HotelRateItemType, string> = {
+  room_rate: "Room rate",
+  venue_rental: "Venue rental",
+  per_plate_veg: "Per plate (veg)",
+  per_plate_non_veg: "Per plate (non-veg)",
+  wedding_package: "Wedding package",
+  beverage_package: "Beverage package",
+  service_charge: "Service charge",
+  tax: "Tax",
+  other: "Other",
+};
+
 /** The line-item kinds on a proposal line (the hotel_rate_items enum, data-model §6). */
-export const RATE_ITEM_OPTIONS: ReadonlyArray<{
-  readonly value: HotelRateItemType;
-  readonly label: string;
-}> = [
-  { value: "room_rate", label: "Room rate" },
-  { value: "venue_rental", label: "Venue rental" },
-  { value: "per_plate_veg", label: "Per plate (veg)" },
-  { value: "per_plate_non_veg", label: "Per plate (non-veg)" },
-  { value: "wedding_package", label: "Wedding package" },
-  { value: "beverage_package", label: "Beverage package" },
-  { value: "service_charge", label: "Service charge" },
-  { value: "tax", label: "Tax" },
-  { value: "other", label: "Other" },
-];
+export const RATE_ITEM_OPTIONS: ReadonlyArray<ChoiceOption<HotelRateItemType>> = (
+  [
+    "room_rate",
+    "venue_rental",
+    "per_plate_veg",
+    "per_plate_non_veg",
+    "wedding_package",
+    "beverage_package",
+    "service_charge",
+    "tax",
+    "other",
+  ] as const
+).map((value) => ({ value, label: RATE_ITEM_LABEL[value] }));
+
+/** A proposal line's kind as staff read it ("Room rate"). */
+export function rateItemLabel(type: HotelRateItemType): string {
+  return RATE_ITEM_LABEL[type];
+}
+
+const FEE_STRUCTURE_LABEL: Record<ServiceFeeStructure, string> = {
+  fixed: "Fixed",
+  percentage: "Percentage",
+  milestones: "Milestones",
+};
+
+/** How a service agreement's fee is charged. */
+export const FEE_STRUCTURE_OPTIONS: ReadonlyArray<ChoiceOption<ServiceFeeStructure>> = (
+  ["fixed", "percentage", "milestones"] as const
+).map((value) => ({ value, label: FEE_STRUCTURE_LABEL[value] }));
+
+/** A fee structure as staff read it ("Fixed"). */
+export function feeStructureLabel(structure: ServiceFeeStructure): string {
+  return FEE_STRUCTURE_LABEL[structure];
+}

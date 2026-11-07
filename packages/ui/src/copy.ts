@@ -29,4 +29,78 @@ export const uiCopy = {
     title: "Something went wrong",
     description: "Please try again. If it keeps happening, tell the AMPM team.",
   },
+  // Peacock Night components. Each component owns its section; strings are fallbacks for props.
+  offlineBanner: {
+    title: "Offline",
+    queued: (count: number) => (count === 1 ? "1 update queued" : `${count} updates queued`),
+    description: "They sync when signal returns.",
+    // With nothing queued yet, "They" has nothing to refer to.
+    idleDescription: "Changes you make sync when signal returns.",
+  },
+  internalPanel: {
+    label: "Internal · never sent to clients",
+  },
+  screenHeader: {
+    back: "Back",
+  },
+  stat: {
+    summary: (label: string, value: string, caption?: string) =>
+      caption ? `${label}: ${value} ${caption}` : `${label}: ${value}`,
+  },
+  avatar: {
+    overflow: (count: number) => `+${count}`,
+    group: (names: readonly string[], more: number) =>
+      (more > 0 ? [...names, `${more} more`] : names).join(", "),
+  },
+  tabBar: {
+    label: "Main navigation",
+    locked: "Locked",
+    badge: (count: number) => `${count} waiting`,
+  },
+  navRail: {
+    label: "Workspace navigation",
+    collapse: "Collapse navigation",
+    expand: "Expand navigation",
+    badge: (count: number) => `${count} waiting`,
+  },
+  otp: {
+    // One labelled field: the cells are drawn for sight and hidden from screen readers.
+    label: "Verification code",
+  },
+  stepper: {
+    done: "done",
+    current: "current step",
+    upcoming: "not started",
+  },
+  progress: {
+    label: "Progress",
+    steps: (filled: number, total: number) => `${filled} of ${total}`,
+  },
+  photo: {
+    placeholder: "Photo",
+  },
+  moneyText: {
+    // Spoken form of "₹16,000–24,000": screen readers read an en dash inconsistently.
+    range: (low: string, high: string) => `${low} to ${high}`,
+  },
+  badge: {
+    capped: (max: number) => `${max}+`,
+    cappedSpoken: (max: number) => `More than ${max}`,
+  },
+  filterChip: {
+    withCount: (label: string, count: number) => `${label} · ${count}`,
+    spokenWithCount: (label: string, count: number) => `${label}, ${count}`,
+  },
+  segmentedControl: {
+    // "Waiting · 4" (P7, C4); screen readers hear "Waiting, 4" instead of the middle dot.
+    withBadge: (label: string, badge: number | string) => `${label} · ${badge}`,
+    spokenWithBadge: (label: string, badge: number | string) => `${label}, ${badge}`,
+  },
+  queryError: {
+    // A session that has ended; screens name what the sign-in is for ("Sign in to view leads").
+    signIn: {
+      title: "Sign in to continue",
+      action: "Sign in",
+    },
+  },
 } as const;

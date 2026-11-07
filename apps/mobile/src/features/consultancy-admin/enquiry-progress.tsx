@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 import {
   useStaffBookingMilestones,
   useStaffSiteVisits,
@@ -11,18 +13,31 @@ import {
   type SiteVisitStaffView,
   type SiteVisitStatus,
 } from "@ampm/core";
-import { Card, MoneyText, Row, Skeleton, Stack, StatusChip, Text, useToast } from "@ampm/ui";
+import {
+  Card,
+  InternalPanel,
+  MoneyText,
+  Row,
+  Stack,
+  StatusChip,
+  Stepper,
+  Text,
+  useToast,
+  type StepperStep,
+} from "@ampm/ui";
 
 import {
-  formatDate,
-  milestoneBadge,
+  formatPickedDay,
+  milestoneStepStates,
   milestoneTypeLabel,
-  visitBadge,
 } from "../consultancy/consultancy.format";
 import { SectionError } from "../consultancy/section-error";
-import { TransitionRow } from "./transition-row";
+import { SectionSkeleton } from "../consultancy/section-skeleton";
+import { staffMilestoneBadge, staffVisitBadge, visitStepState } from "./consultancy-admin.format";
 import { CreateToggle } from "./consultancy-admin.widgets";
 import { MilestoneCreateForm } from "./milestone-create-form";
+import { SectionShell } from "./section-parts";
+import { TransitionRow } from "./transition-row";
 import { VisitCreateForm } from "./visit-create-form";
 
 const VISIT_NEXT: Record<SiteVisitStatus, readonly SiteVisitStatus[]> = {
@@ -39,32 +54,49 @@ const MILESTONE_NEXT: Record<BookingMilestoneStatus, readonly BookingMilestoneSt
   cancelled: [],
 };
 
-/** The site visits for this enquiry; staff read the internal attendees/outcome and move the status. */
+const VISITS_TITLE = "Site visits";
+const MILESTONES_TITLE = "Booking milestones";
+
+const byScheduledAt = (a: SiteVisitStaffView, b: SiteVisitStaffView): number =>
+  Date.parse(a.scheduledAt) - Date.parse(b.scheduledAt);
+
+/**
+ * The site visits on a vertical Stepper, oldest first: a completed visit done, a proposed or confirmed
+ * one current, a cancelled one off the line. Staff read the internal attendees and outcome and move
+ * the status.
+ */
 export function VisitsSection({ enquiryId }: { readonly enquiryId: string }) {
   const visits = useStaffSiteVisits(enquiryId);
-  if (visits.isPending) return <SectionSkeleton title="Site visits" />;
+  if (visits.isPending) return <SectionSkeleton title={VISITS_TITLE} />;
   if (visits.isError)
     return (
       <SectionError
-        title="Site visits"
+        title={VISITS_TITLE}
         error={visits.error}
         onRetry={() => void visits.refetch()}
       />
     );
+  const steps = [...visits.data.items].sort(byScheduledAt).map((visit): StepperStep => ({
+    key: visit.id,
+    label: formatPickedDay(visit.scheduledAt),
+    state: visitStepState[visit.status],
+    content: <VisitStep visit={visit} enquiryId={enquiryId} />,
+  }));
   return (
-    <Stack gap={2}>
-      <Text variant="subheading">Site visits</Text>
-      {visits.data.items.map((visit) => (
-        <VisitCard key={visit.id} visit={visit} enquiryId={enquiryId} />
-      ))}
+    <ProgressSection
+      title={VISITS_TITLE}
+      steps={steps}
+      empty="No site visit yet. Schedule one when the client wants to see the hotel."
+      testID="site-visits"
+    >
       <CreateToggle label="New site visit">
         {(done) => <VisitCreateForm enquiryId={enquiryId} onDone={done} />}
       </CreateToggle>
-    </Stack>
+    </ProgressSection>
   );
 }
 
-function VisitCard({
+function VisitStep({
   visit,
   enquiryId,
 }: {
@@ -73,64 +105,82 @@ function VisitCard({
 }) {
   const toast = useToast();
   const transition = useTransitionSiteVisit(visit.id, enquiryId);
-  const badge = visitBadge[visit.status];
+  const badge = staffVisitBadge[visit.status];
   const move = (status: SiteVisitStatus): void =>
     transition.mutate(
       { status },
       { onError: () => toast.show({ title: "Could not move the visit", tone: "danger" }) },
     );
   return (
-    <Card>
-      <Stack gap={1}>
-        <Row gap={2} justify="between" align="start">
-          <Text variant="subheading" className="flex-1">
-            {formatDate(visit.scheduledAt)}
-          </Text>
-          <StatusChip label={badge.label} tone={badge.tone} size="sm" />
-        </Row>
-        {visit.attendeesText ? (
-          <Text tone="muted">{`Attendees: ${visit.attendeesText}`}</Text>
-        ) : null}
-        {visit.outcomeInternal ? (
-          <Text tone="muted">{`Outcome: ${visit.outcomeInternal}`}</Text>
-        ) : null}
-        {visit.clientFeedback ? <Text>{`Client: ${visit.clientFeedback}`}</Text> : null}
-        <TransitionRow
-          nexts={VISIT_NEXT[visit.status]}
-          pending={transition.isPending}
-          onMove={move}
-        />
-      </Stack>
-    </Card>
-  );
-}
-
-/** The booking milestones; staff see every amount and move pending ones to done (or cancelled). */
-export function MilestonesSection({ enquiryId }: { readonly enquiryId: string }) {
-  const milestones = useStaffBookingMilestones(enquiryId);
-  if (milestones.isPending) return <SectionSkeleton title="Booking milestones" />;
-  if (milestones.isError)
-    return (
-      <SectionError
-        title="Booking milestones"
-        error={milestones.error}
-        onRetry={() => void milestones.refetch()}
-      />
-    );
-  return (
     <Stack gap={2}>
-      <Text variant="subheading">Booking milestones</Text>
-      {milestones.data.items.map((milestone) => (
-        <MilestoneCard key={milestone.id} milestone={milestone} enquiryId={enquiryId} />
-      ))}
-      <CreateToggle label="New milestone">
-        {(done) => <MilestoneCreateForm enquiryId={enquiryId} onDone={done} />}
-      </CreateToggle>
+      <StatusChip label={badge.label} tone={badge.tone} size="sm" />
+      {visit.clientFeedback ? (
+        <Text variant="bodySmall" tone="body">{`Client: ${visit.clientFeedback}`}</Text>
+      ) : null}
+      <VisitInternalNotes visit={visit} />
+      <TransitionRow
+        nexts={VISIT_NEXT[visit.status]}
+        pending={transition.isPending}
+        onMove={move}
+      />
     </Stack>
   );
 }
 
-function MilestoneCard({
+/** The attendees and outcome a client never sees: internal notes, so they sit in an InternalPanel. */
+function VisitInternalNotes({ visit }: { readonly visit: SiteVisitStaffView }) {
+  if (!visit.attendeesText && !visit.outcomeInternal) return null;
+  return (
+    <InternalPanel className="rounded">
+      {visit.attendeesText ? (
+        <Text variant="bodySmall" tone="body">{`Attendees: ${visit.attendeesText}`}</Text>
+      ) : null}
+      {visit.outcomeInternal ? (
+        <Text variant="bodySmall" tone="body">{`Outcome: ${visit.outcomeInternal}`}</Text>
+      ) : null}
+    </InternalPanel>
+  );
+}
+
+/**
+ * The booking milestones on a vertical Stepper in the order they were added. Staff see every amount
+ * and move a pending or overdue milestone to done (or cancelled).
+ */
+export function MilestonesSection({ enquiryId }: { readonly enquiryId: string }) {
+  const milestones = useStaffBookingMilestones(enquiryId);
+  if (milestones.isPending) return <SectionSkeleton title={MILESTONES_TITLE} />;
+  if (milestones.isError)
+    return (
+      <SectionError
+        title={MILESTONES_TITLE}
+        error={milestones.error}
+        onRetry={() => void milestones.refetch()}
+      />
+    );
+  const items = milestones.data.items;
+  const states = milestoneStepStates(items.map((milestone) => milestone.status));
+  const steps = items.map((milestone, index): StepperStep => ({
+    key: milestone.id,
+    label: milestoneTypeLabel(milestone.milestoneType),
+    detail: milestone.dueAt ? `Due ${formatPickedDay(milestone.dueAt)}` : undefined,
+    state: states[index],
+    content: <MilestoneStep milestone={milestone} enquiryId={enquiryId} />,
+  }));
+  return (
+    <ProgressSection
+      title={MILESTONES_TITLE}
+      steps={steps}
+      empty="No milestone yet. Add them once the hotel holds the dates."
+      testID="milestones"
+    >
+      <CreateToggle label="New milestone">
+        {(done) => <MilestoneCreateForm enquiryId={enquiryId} onDone={done} />}
+      </CreateToggle>
+    </ProgressSection>
+  );
+}
+
+function MilestoneStep({
   milestone,
   enquiryId,
 }: {
@@ -139,43 +189,56 @@ function MilestoneCard({
 }) {
   const toast = useToast();
   const transition = useTransitionBookingMilestone(milestone.id, enquiryId);
-  const badge = milestoneBadge[milestone.status];
+  const badge = staffMilestoneBadge[milestone.status];
   const move = (status: BookingMilestoneStatus): void =>
     transition.mutate(
       { status },
       { onError: () => toast.show({ title: "Could not move the milestone", tone: "danger" }) },
     );
   return (
-    <Card>
-      <Stack gap={1}>
-        <Row gap={2} justify="between" align="start">
-          <Text variant="subheading" className="flex-1">
-            {milestoneTypeLabel(milestone.milestoneType)}
-          </Text>
-          <StatusChip label={badge.label} tone={badge.tone} size="sm" />
-        </Row>
-        {milestone.dueAt ? <Text tone="muted">{`Due ${formatDate(milestone.dueAt)}`}</Text> : null}
-        <Row gap={2} wrap>
-          {milestone.amount ? (
-            <MoneyText amount={clientAmount(milestone.amount.minor, milestone.amount.currency)} />
-          ) : null}
-          {milestone.documentId ? <StatusChip label="document" tone="info" size="sm" /> : null}
-        </Row>
-        <TransitionRow
-          nexts={MILESTONE_NEXT[milestone.status]}
-          pending={transition.isPending}
-          onMove={move}
-        />
-      </Stack>
-    </Card>
+    <Stack gap={2}>
+      <Row gap={2} wrap align="center">
+        <StatusChip label={badge.label} tone={badge.tone} size="sm" />
+        {milestone.documentId ? <StatusChip label="Document" tone="info" size="sm" /> : null}
+        {milestone.amount ? (
+          <MoneyText amount={clientAmount(milestone.amount.minor, milestone.amount.currency)} />
+        ) : null}
+      </Row>
+      <TransitionRow
+        nexts={MILESTONE_NEXT[milestone.status]}
+        pending={transition.isPending}
+        onMove={move}
+      />
+    </Stack>
   );
 }
 
-function SectionSkeleton({ title }: { readonly title: string }) {
+/**
+ * A progress section in the commercial sections' frame (SectionShell): its Gilda heading, the records
+ * on a vertical Stepper in one glass card (or, with none yet, the line that says what creates the
+ * first), then the section's "New …" action.
+ */
+function ProgressSection({
+  title,
+  steps,
+  empty,
+  testID,
+  children,
+}: {
+  readonly title: string;
+  readonly steps: readonly StepperStep[];
+  readonly empty: string;
+  readonly testID: string;
+  readonly children: ReactNode;
+}) {
   return (
-    <Stack gap={2}>
-      <Text variant="subheading">{title}</Text>
-      <Skeleton className="h-24 w-full" />
-    </Stack>
+    <SectionShell title={title} empty={steps.length === 0 ? empty : null}>
+      {steps.length > 0 ? (
+        <Card className="md:p-7">
+          <Stepper orientation="vertical" current={-1} steps={steps} testID={testID} />
+        </Card>
+      ) : null}
+      {children}
+    </SectionShell>
   );
 }

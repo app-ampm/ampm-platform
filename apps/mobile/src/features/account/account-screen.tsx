@@ -1,98 +1,71 @@
+import type { ReactNode } from "react";
+
 import { useMe } from "@ampm/api-client";
-import { isAppError, type MeResponse } from "@ampm/core";
 import {
-  Callout,
-  EmptyState,
-  ErrorState,
-  OfflineState,
-  Row,
+  Avatar,
+  QueryErrorState,
+  Screen,
+  ScreenHeader,
   Skeleton,
   Stack,
-  StatusChip,
-  Text,
+  type QueryErrorSignIn,
 } from "@ampm/ui";
-import { ScrollView } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+import { useGoToSignIn } from "@/navigation/sign-in";
+import { SignOutButton } from "@/navigation/sign-out-button";
+
+import { AccountDetails } from "./account-details";
+
+export interface AccountScreenProps {
+  /** The app's tab bar on a phone (the route passes `<AppTabBar />`); this screen is More. */
+  readonly tabBar?: ReactNode;
+}
+
+const SIGN_IN: QueryErrorSignIn = {
+  title: "Sign in to see your account",
+  description: "Development builds sign in with a seeded account.",
+};
 
 /**
- * `/me` with the shared states (standards §2.7 step 5): loading, signed out, offline, error, and the
- * principal with roles, memberships and entitlements. The sign-in flow arrives in sprint 2.
+ * More (P10, M10): `/me` with the shared states (standards §2.7 step 5): loading, signed out,
+ * offline, error, and the principal with roles, memberships and entitlements, the app's other
+ * pages, and sign-out. Without `/me` the navigation shows only this screen's tab, so sign-out stays
+ * in reach under the error when the account cannot be read (a server error, an account the API no
+ * longer resolves).
  */
-export function AccountScreen() {
-  const insets = useSafeAreaInsets();
+export function AccountScreen({ tabBar }: AccountScreenProps) {
   const me = useMe();
+  const goToSignIn = useGoToSignIn();
+  const avatar = me.data ? <Avatar name={me.data.principal.name} tone="highlight" /> : undefined;
   return (
-    <ScrollView
-      className="flex-1 bg-surface"
-      contentContainerClassName="gap-4 p-4 md:p-8"
-      style={{ paddingTop: insets.top }}
+    <Screen
+      width="content"
+      tabBar={tabBar}
+      header={<ScreenHeader title="More" trailing={avatar} />}
     >
-      <Text variant="title">Account</Text>
       {me.isPending ? (
         <AccountLoading />
       ) : me.isError ? (
-        <AccountError error={me.error} onRetry={() => void me.refetch()} />
+        <QueryErrorState
+          error={me.error}
+          onRetry={() => void me.refetch()}
+          onSignIn={goToSignIn}
+          signIn={SIGN_IN}
+          errorFooter={<SignOutButton />}
+        />
       ) : (
         <AccountDetails me={me.data} />
       )}
-    </ScrollView>
+    </Screen>
   );
 }
 
 function AccountLoading() {
   return (
-    <Stack gap={2} testID="account-loading">
+    <Stack gap={3} testID="account-loading">
+      <Skeleton className="h-32 w-full rounded-lg" />
+      <Skeleton className="h-24 w-full rounded-lg" />
       <Skeleton shape="text" className="w-48" />
-      <Skeleton shape="text" className="w-32" />
-      <Skeleton className="h-20 w-full" />
     </Stack>
   );
-}
-
-function AccountDetails({ me }: { me: MeResponse }) {
-  return (
-    <Stack gap={3}>
-      <Text variant="heading">{me.principal.name}</Text>
-      <Row gap={2} wrap>
-        <StatusChip label={me.principal.type} tone="brand" />
-        {me.roles.map((role) => (
-          <StatusChip key={role} label={role} tone="info" />
-        ))}
-        {me.isDemo ? <StatusChip label="demo" tone="warning" /> : null}
-      </Row>
-      <Text tone="muted">{me.principal.email ?? "No email"}</Text>
-      <Text variant="label">Memberships</Text>
-      {me.memberships.length === 0 ? (
-        <Text tone="muted">None yet.</Text>
-      ) : (
-        me.memberships.map((m) => (
-          <Callout key={m.projectId} kind="info" title={m.projectRole}>
-            {`${m.projectId}${m.clientSide ? ` · ${m.clientSide}` : ""}`}
-          </Callout>
-        ))
-      )}
-      {me.entitlements.modules.length > 0 ? (
-        <Row gap={2} wrap>
-          {me.entitlements.modules.map((module) => (
-            <StatusChip key={module} label={module} size="sm" tone="success" />
-          ))}
-        </Row>
-      ) : null}
-    </Stack>
-  );
-}
-
-function AccountError({ error, onRetry }: { error: unknown; onRetry: () => void }) {
-  if (isAppError(error) && error.code === "network_error")
-    return <OfflineState onRetry={onRetry} />;
-  if (isAppError(error) && error.code === "unauthenticated") {
-    return (
-      <EmptyState
-        icon="lock"
-        title="Sign in to see your account"
-        description="Sign-in arrives with the next sprint; development builds use a local token."
-      />
-    );
-  }
-  return <ErrorState onRetry={onRetry} />;
 }

@@ -2,15 +2,15 @@ import { useState } from "react";
 
 import { useTransitionEnquiry } from "@ampm/api-client";
 import type { HotelEnquiryOutcome, HotelEnquiryStatus } from "@ampm/core";
-import { Button, Callout, Row, Stack, Text, useToast } from "@ampm/ui";
+import { Button, Callout, Card, Row, Stack, Text, useToast } from "@ampm/ui";
 
 import { errorMessage } from "./consultancy-admin.form";
-import { staffEnquiryBadge } from "./consultancy-admin.format";
+import { staffEnquiryBadge, statusWords } from "./consultancy-admin.format";
 
 /**
  * The legal forward targets per status (the policy matrix §7 graph, role aside — the API still enforces
  * the per-role rule and the data guards, so e.g. →confirmed 409s until the milestones are done). `closed`
- * is split out because it needs an outcome.
+ * is split out because it needs an outcome. The first target is the pipeline's next step.
  */
 const NEXT: Record<HotelEnquiryStatus, readonly HotelEnquiryStatus[]> = {
   draft: ["submitted", "closed"],
@@ -32,19 +32,13 @@ const OUTCOMES: readonly HotelEnquiryOutcome[] = [
   "withdrawn",
 ];
 
-/** The enquiry status stepper: a button per legal next status, plus a close flow that needs an outcome. */
-export function EnquiryStatusActions({
-  enquiryId,
-  status,
-}: {
-  readonly enquiryId: string;
-  readonly status: HotelEnquiryStatus;
-}) {
+type Move = (to: HotelEnquiryStatus, outcome?: HotelEnquiryOutcome | null) => void;
+
+/** Moves the enquiry; a denied (403) or guard-blocked (409) move says why in a toast. */
+function useEnquiryMove(enquiryId: string): { readonly move: Move; readonly pending: boolean } {
   const toast = useToast();
   const transition = useTransitionEnquiry(enquiryId);
-  const [closing, setClosing] = useState(false);
-  const nexts = NEXT[status];
-  const move = (to: HotelEnquiryStatus, outcome: HotelEnquiryOutcome | null = null): void =>
+  const move: Move = (to, outcome = null) =>
     transition.mutate(
       { status: to, outcome, summary: null },
       {
@@ -52,26 +46,75 @@ export function EnquiryStatusActions({
           toast.show({ title: errorMessage(error, "Could not change the status"), tone: "danger" }),
       },
     );
+  return { move, pending: transition.isPending };
+}
+
+/**
+ * The enquiry's pipeline controls: the next step as the screen's one gold button, the other legal
+ * moves secondary, and a close flow that needs an outcome.
+ */
+export function EnquiryStatusActions({
+  enquiryId,
+  status,
+}: {
+  readonly enquiryId: string;
+  readonly status: HotelEnquiryStatus;
+}) {
+  const { move, pending } = useEnquiryMove(enquiryId);
+  const [closing, setClosing] = useState(false);
+  const nexts = NEXT[status];
   if (nexts.length === 0) return <Callout kind="info" title="This enquiry is closed." />;
   return (
-    <Stack gap={2}>
-      <Text variant="subheading">Advance</Text>
-      <Row gap={2} wrap>
-        {nexts
-          .filter((to) => to !== "closed")
-          .map((to) => (
-            <Button key={to} size="sm" loading={transition.isPending} onPress={() => move(to)}>
-              {staffEnquiryBadge[to].label}
-            </Button>
-          ))}
-        {nexts.includes("closed") ? (
-          <Button variant="ghost" size="sm" onPress={() => setClosing((open) => !open)}>
-            Close…
-          </Button>
-        ) : null}
-      </Row>
-      {closing ? <CloseOutcomes pending={transition.isPending} onClose={move} /> : null}
+    <Stack gap={3}>
+      <Text variant="heading">Advance</Text>
+      <Card className="md:p-7">
+        <Stack gap={4}>
+          <Row gap={2} wrap>
+            <ForwardButtons nexts={nexts} pending={pending} onMove={move} />
+            {nexts.includes("closed") ? (
+              <Button
+                variant="secondary"
+                size="sm"
+                aria-expanded={closing}
+                onPress={() => setClosing((open) => !open)}
+              >
+                Close…
+              </Button>
+            ) : null}
+          </Row>
+          {closing ? <CloseOutcomes pending={pending} onClose={move} /> : null}
+        </Stack>
+      </Card>
     </Stack>
+  );
+}
+
+/** Every legal move but closing: the first, the pipeline's next step, gold; the others secondary. */
+function ForwardButtons({
+  nexts,
+  pending,
+  onMove,
+}: {
+  readonly nexts: readonly HotelEnquiryStatus[];
+  readonly pending: boolean;
+  readonly onMove: Move;
+}) {
+  return (
+    <>
+      {nexts
+        .filter((to) => to !== "closed")
+        .map((to, index) => (
+          <Button
+            key={to}
+            variant={index === 0 ? "primary" : "secondary"}
+            size="sm"
+            loading={pending}
+            onPress={() => onMove(to)}
+          >
+            {staffEnquiryBadge[to].label}
+          </Button>
+        ))}
+    </>
   );
 }
 
@@ -80,10 +123,10 @@ function CloseOutcomes({
   onClose,
 }: {
   readonly pending: boolean;
-  readonly onClose: (to: HotelEnquiryStatus, outcome: HotelEnquiryOutcome) => void;
+  readonly onClose: Move;
 }) {
   return (
-    <Stack gap={1}>
+    <Stack gap={2}>
       <Text variant="label" tone="muted">
         Close with outcome
       </Text>
@@ -96,7 +139,7 @@ function CloseOutcomes({
             loading={pending}
             onPress={() => onClose("closed", outcome)}
           >
-            {outcome.replace(/_/g, " ")}
+            {statusWords(outcome)}
           </Button>
         ))}
       </Row>

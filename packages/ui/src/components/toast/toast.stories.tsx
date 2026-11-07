@@ -9,34 +9,50 @@ interface Demo {
   readonly toast: ToastOptions;
 }
 
-const DEMOS: readonly Demo[] = [
+const TONES: readonly Demo[] = [
+  { label: "Note", toast: { title: "Draft kept on this device", tone: "neutral" } },
+  {
+    label: "Info",
+    toast: {
+      title: "Request sent",
+      description: "The hotel team will answer within two days.",
+      tone: "info",
+    },
+  },
   { label: "Success", toast: { title: "Saved", tone: "success" } },
   {
-    label: "Sticky warning",
+    label: "Warning",
+    toast: { title: "Two rooms are allocated twice", tone: "warning" },
+  },
+  { label: "Danger", toast: { title: "Could not save", tone: "danger" } },
+];
+
+const BEHAVIOURS: readonly Demo[] = [
+  {
+    label: "Sticky",
     toast: {
       title: "You are offline",
       description: "Changes are kept on this device.",
-      tone: "warning",
+      tone: "info",
       durationMs: 0,
     },
   },
   {
     label: "With action",
     toast: {
-      title: "Request sent",
-      description: "The hotel team will answer within two days.",
-      tone: "info",
+      title: "Proposal shared",
+      description: "Version 2 is with the client.",
+      tone: "success",
       action: { label: "View", onPress: () => undefined },
     },
   },
-  { label: "Danger", toast: { title: "Could not save", tone: "danger" } },
 ];
 
-function ToastDemo() {
+function ToastDemo({ demos }: { demos: readonly Demo[] }) {
   const toast = useToast();
   return (
     <Row gap={2} wrap>
-      {DEMOS.map((demo) => (
+      {demos.map((demo) => (
         <Button
           key={demo.label}
           variant="secondary"
@@ -52,5 +68,13 @@ function ToastDemo() {
 
 export const stories = defineStories({
   title: "Toast",
-  stories: [{ name: "Show toasts", render: () => <ToastDemo /> }],
+  stories: [
+    {
+      name: "Tones",
+      description:
+        "Base glass; the icon carries the tone (peacock done, gold problems, pearl notes).",
+      render: () => <ToastDemo demos={TONES} />,
+    },
+    { name: "Sticky and with action", render: () => <ToastDemo demos={BEHAVIOURS} /> },
+  ],
 });

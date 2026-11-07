@@ -5,7 +5,6 @@
   "19": "User Flows and Status Transitions",
   "20": "Specification Amendments and Rules",
   "21": "Specification Data Model and Phases",
-  "22": "Web App Package & Next.js",
   "24": "Sign-in and RSVP Portal Screens",
   "25": "Subscription and Customer Journey",
   "30": "PNPM Workspace Catalog",
@@ -72,7 +71,6 @@
   "157": "Q23 — Post-Wedding Access",
   "158": "Q6 — Staff Access Control",
   "160": "Web PostCSS Config",
-  "161": "Web Tailwind Config and Tokens Preset",
   "162": "Q22 — No Vendor or Hotel Logins",
   "163": "Dependency: tsup",
   "165": "Commitlint Config",
@@ -82,7 +80,6 @@
   "169": "Requirement 11 — Internal Use Only",
   "170": "Phase 5 — Stabilisation & Launch",
   "171": "Post-commit Hook",
-  "172": "UI Jest Config",
   "173": "Tokens Package Readme",
   "174": "Prettier Config",
   "175": "Mobile Babel Config",
@@ -130,6 +127,5 @@
   "226": "core/tsconfig.json",
   "227": "scripts",
   "229": "nativewind",
-  "230": "react-native",
   "232": "react-native-svg"
 }

@@ -6,7 +6,10 @@ export interface ToastOptions {
   readonly title: string;
   readonly description?: string | undefined;
   readonly tone?: ToastTone | undefined;
-  /** 0 keeps the toast until dismissed. */
+  /**
+   * How long it stays, in milliseconds; 0 keeps it until dismissed. Defaults to 4 seconds, or until
+   * dismissed when it has an action, so its action can be reached by keyboard and screen reader.
+   */
   readonly durationMs?: number | undefined;
   readonly action?: { readonly label: string; readonly onPress: () => void } | undefined;
 }

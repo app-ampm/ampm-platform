@@ -1,5 +1,5 @@
 import { uiCopy } from "../../copy";
-import { announcementText, useAnnounce } from "../../hooks/use-announce";
+import { announcementText, politeLiveRegion, useAnnounce } from "../../hooks/use-announce";
 import { isHiddenFromVoiceOver } from "../../lib/accessibility-hidden";
 import { StateView, type StateViewProps } from "../state-view";
 
@@ -14,9 +14,11 @@ export interface OfflineStateProps extends Omit<
 }
 
 /**
- * The team app's offline screen (W-10): what is stale, what is kept, how to retry. Announced when it
- * appears, unless its props hide it from VoiceOver or display none: the live region on Android and the web,
- * useAnnounce on iOS.
+ * The team app's offline screen (W-10): what is stale, what is kept, how to retry. The wifi-off icon
+ * is peacock, the offline-safe colour (not a warning). Announced when it appears, unless its props hide
+ * it from VoiceOver or display none: its live region on Android, the page's live region on the web,
+ * VoiceOver on iOS (useAnnounce). For a screen that keeps working offline, show the OfflineBanner
+ * instead.
  *
  *   {isOffline ? <OfflineState onRetry={refetch} /> : null}
  */
@@ -28,15 +30,15 @@ export function OfflineState({
   ...rest
 }: OfflineStateProps) {
   // Polite, not an alert: being offline is a state to know about, not an error to act on now.
-  useAnnounce(announcementText(title, description), !isHiddenFromVoiceOver(rest));
+  useAnnounce(announcementText(title, description), !isHiddenFromVoiceOver(rest), { web: true });
   return (
     <StateView
       icon="wifi-off"
-      iconTone="warning"
+      iconTone="highlight"
       title={title}
       description={description}
       action={onRetry ? { label: retryLabel, onPress: onRetry } : undefined}
-      accessibilityLiveRegion="polite"
+      {...politeLiveRegion()}
       {...rest}
     />
   );

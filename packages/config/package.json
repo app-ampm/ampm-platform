@@ -2,17 +2,19 @@
   "name": "@ampm/config",
   "version": "0.0.0",
   "private": true,
-  "description": "Shared TypeScript, ESLint, Prettier and Tailwind configuration for the AMPM monorepo.",
+  "description": "Shared TypeScript, ESLint, Prettier and Tailwind configuration for the AMPM monorepo, and the Tailwind class audit (tailwind/class-audit.mjs) that the lint of both apps and @ampm/ui runs: it fails when a class is not generated on the web or on native.",
   "files": [
     "tsconfig.base.json",
     "tsconfig.react.json",
-    "eslint"
+    "eslint",
+    "tailwind"
   ],
   "exports": {
     "./tsconfig.base.json": "./tsconfig.base.json",
     "./tsconfig.react.json": "./tsconfig.react.json",
     "./eslint/boundaries": "./eslint/boundaries.mjs",
-    "./eslint": "./eslint/index.mjs"
+    "./eslint": "./eslint/index.mjs",
+    "./tailwind/class-audit": "./tailwind/class-audit.mjs"
   },
   "scripts": {
     "lint": "eslint ."

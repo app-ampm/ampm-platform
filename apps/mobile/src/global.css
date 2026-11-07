@@ -3,8 +3,15 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Web: the page behind the screens follows the scheme through the tokens' variables (no JavaScript colour). */
+/*
+ * Web export: Peacock Night is dark only, Gilda Display ships one weight (the browser must never fake a
+ * bold), and the page behind the screens is the midnight canvas through the tokens' variables.
+ */
 @layer base {
+  html {
+    color-scheme: dark;
+    font-synthesis: none;
+  }
   body {
     background-color: rgb(var(--color-surface));
   }

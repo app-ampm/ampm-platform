@@ -5,10 +5,9 @@ import { colors, type ColorName } from "@ampm/tokens";
 import { cn } from "../../lib/cn";
 import { useTheme } from "../../theme/theme-provider";
 import { icons, type IconName } from "./icon.registry";
+import type { IconSize, IconTone } from "./icon.types";
 
-export type IconSize = "sm" | "md" | "lg" | "xl";
-export type IconTone =
-  "primary" | "muted" | "brand" | "onBrand" | "success" | "warning" | "danger" | "info";
+export type { IconSize, IconTone } from "./icon.types";
 
 export interface IconProps {
   readonly name: IconName;
@@ -24,9 +23,12 @@ const SIZES: Record<IconSize, number> = { sm: 16, md: 20, lg: 24, xl: 32 };
 
 const TONE_COLOR: Record<IconTone, ColorName> = {
   primary: "primary",
+  body: "body",
   muted: "muted",
   brand: "brand",
+  highlight: "highlight",
   onBrand: "brand-ink",
+  onHighlight: "highlight-ink",
   success: "success",
   warning: "warning",
   danger: "danger",
@@ -35,7 +37,8 @@ const TONE_COLOR: Record<IconTone, ColorName> = {
 
 /**
  * The shared icon (Lucide through react-native-svg, identical on every platform). Colour comes from
- * the tokens for the current scheme, so an icon never carries a hex of its own.
+ * the tokens for the current scheme, so an icon never carries a hex of its own: pearl, gold or peacock
+ * (Peacock Night), or midnight on a gold or peacock fill.
  *
  *   <Icon name="check-circle" tone="success" label="Verified" />
  */
@@ -43,11 +46,14 @@ export function Icon({ name, size = "md", tone = "primary", label, className, te
   const { resolved } = useTheme();
   const Glyph = icons[name];
   const pixels = SIZES[size];
+  // Decorative: hidden on iOS and Android by the two native props, and on the web by aria-hidden,
+  // the one react-native-web forwards (it would otherwise expose the bare svg).
   const accessibility = label
     ? { accessible: true, accessibilityRole: "image" as const, accessibilityLabel: label }
     : {
         accessibilityElementsHidden: true,
         importantForAccessibility: "no-hide-descendants" as const,
+        "aria-hidden": true,
       };
   return (
     <View

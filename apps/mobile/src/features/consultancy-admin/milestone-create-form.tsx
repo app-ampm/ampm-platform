@@ -1,8 +1,8 @@
 import { useState } from "react";
 
 import { useCreateBookingMilestone } from "@ampm/api-client";
-import type { BookingMilestoneType } from "@ampm/core";
-import { Button, Card, Input, Row, Stack, Text, useToast } from "@ampm/ui";
+import type { BookingMilestoneCreateRequest, BookingMilestoneType } from "@ampm/core";
+import { useToast } from "@ampm/ui";
 
 import {
   errorMessage,
@@ -11,7 +11,54 @@ import {
   MILESTONE_TYPE_OPTIONS,
   moneyFromRupees,
 } from "./consultancy-admin.form";
-import { OptionButtons } from "./consultancy-admin.widgets";
+import { AmountInput, ChoiceChips, DateInput, FormCard } from "./consultancy-admin.form-widgets";
+
+interface MilestoneDraft {
+  readonly type: BookingMilestoneType | null;
+  readonly due: string;
+  readonly amount: string;
+}
+
+/** The create request once a type is chosen and any due date or amount typed parses, else null. */
+function milestoneRequest(
+  draft: MilestoneDraft,
+  enquiryId: string,
+): BookingMilestoneCreateRequest | null {
+  const due = draft.due.trim();
+  const amountText = draft.amount.trim();
+  const amount = amountText.length > 0 ? moneyFromRupees(amountText) : null;
+  if (draft.type === null) return null;
+  if (due.length > 0 && !isIsoDate(due)) return null;
+  if (amountText.length > 0 && amount === null) return null;
+  return {
+    enquiryId,
+    milestoneType: draft.type,
+    dueAt: due.length > 0 ? isoDateTimeFromDate(due) : null,
+    amount,
+    contractId: null,
+    documentId: null,
+  };
+}
+
+function useMilestoneForm(enquiryId: string, onDone: () => void) {
+  const toast = useToast();
+  const create = useCreateBookingMilestone(enquiryId);
+  const [draft, setDraft] = useState<MilestoneDraft>({ type: null, due: "", amount: "" });
+  const request = milestoneRequest(draft, enquiryId);
+  const submit = (): void => {
+    if (request === null || create.isPending) return;
+    create.mutate(request, {
+      onSuccess: () => {
+        toast.show({ title: "Milestone added", tone: "success" });
+        onDone();
+      },
+      onError: (error) =>
+        toast.show({ title: errorMessage(error, "Could not add the milestone"), tone: "danger" }),
+    });
+  };
+  const set = (patch: Partial<MilestoneDraft>): void => setDraft((prev) => ({ ...prev, ...patch }));
+  return { draft, set, ready: request !== null, pending: create.isPending, submit };
+}
 
 /**
  * Staff adds a booking milestone to the enquiry (SA/HT). The type is fixed at creation; the due date and
@@ -25,78 +72,60 @@ export function MilestoneCreateForm({
   readonly enquiryId: string;
   readonly onDone: () => void;
 }) {
-  const toast = useToast();
-  const create = useCreateBookingMilestone(enquiryId);
-  const [type, setType] = useState<BookingMilestoneType | null>(null);
-  const [due, setDue] = useState("");
-  const [amount, setAmount] = useState("");
-
-  const amountEntered = amount.trim().length > 0;
-  const amountValue = amountEntered ? moneyFromRupees(amount.trim()) : null;
-  const dueEntered = due.trim().length > 0;
-  const ready =
-    type !== null &&
-    (!dueEntered || isIsoDate(due.trim())) &&
-    (!amountEntered || amountValue !== null);
-
-  const submit = (): void => {
-    if (!ready || type === null || create.isPending) return;
-    create.mutate(
-      {
-        enquiryId,
-        milestoneType: type,
-        dueAt: dueEntered ? isoDateTimeFromDate(due.trim()) : null,
-        amount: amountValue,
-        contractId: null,
-        documentId: null,
-      },
-      {
-        onSuccess: () => {
-          toast.show({ title: "Milestone added", tone: "success" });
-          onDone();
-        },
-        onError: (error) =>
-          toast.show({ title: errorMessage(error, "Could not add the milestone"), tone: "danger" }),
-      },
-    );
-  };
-
+  const { draft, set, ready, pending, submit } = useMilestoneForm(enquiryId, onDone);
   return (
-    <Card>
-      <Stack gap={3}>
-        <Text variant="subheading">New milestone</Text>
-        <Stack gap={1}>
-          <Text variant="label">Type</Text>
-          <OptionButtons
-            options={MILESTONE_TYPE_OPTIONS}
-            selected={type}
-            onSelect={setType}
-            disabled={create.isPending}
-          />
-        </Stack>
-        <Input
-          label="Due date (YYYY-MM-DD, optional)"
-          value={due}
-          onChangeText={setDue}
-          placeholder="2027-01-31"
-          autoCapitalize="none"
-        />
-        <Input
-          label="Amount in ₹ (optional)"
-          value={amount}
-          onChangeText={setAmount}
-          placeholder="250000"
-          keyboardType="number-pad"
-        />
-        <Row gap={2}>
-          <Button fullWidth loading={create.isPending} disabled={!ready} onPress={submit}>
-            Add milestone
-          </Button>
-          <Button variant="ghost" disabled={create.isPending} onPress={onDone}>
-            Cancel
-          </Button>
-        </Row>
-      </Stack>
-    </Card>
+    <FormCard
+      title="New milestone"
+      description="The type is fixed once it is added; the due date and amount are optional."
+      submitLabel="Add milestone"
+      ready={ready}
+      pending={pending}
+      onSubmit={submit}
+      onCancel={onDone}
+      testID="milestone-create-form"
+    >
+      <MilestoneFields draft={draft} set={set} pending={pending} />
+    </FormCard>
+  );
+}
+
+interface MilestoneFieldsProps {
+  readonly draft: MilestoneDraft;
+  readonly set: (patch: Partial<MilestoneDraft>) => void;
+  readonly pending: boolean;
+}
+
+/** The kind (fixed once added), then the optional due date and amount. */
+function MilestoneFields({ draft, set, pending }: MilestoneFieldsProps) {
+  return (
+    <>
+      <ChoiceChips
+        label="Type"
+        required
+        options={MILESTONE_TYPE_OPTIONS}
+        selected={draft.type}
+        onSelect={(type) => set({ type })}
+        disabled={pending}
+        testID="milestone-type"
+      />
+      <DateInput
+        label="Due date"
+        field="due date"
+        testID="milestone-due"
+        value={draft.due}
+        onChangeText={(due) => set({ due })}
+        placeholder="2027-01-31"
+        helpText="Optional · YYYY-MM-DD"
+      />
+      <AmountInput
+        label="Amount"
+        field="amount"
+        testID="milestone-amount"
+        value={draft.amount}
+        onChangeText={(amount) => set({ amount })}
+        placeholder="250000"
+        helpText="Optional"
+      />
+    </>
   );
 }

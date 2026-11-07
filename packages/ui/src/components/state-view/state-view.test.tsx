@@ -1,12 +1,16 @@
 import { Platform } from "react-native";
 
+import { colors } from "@ampm/tokens";
+
 import { uiCopy } from "../../copy";
 import { spyOnAnnounce } from "../../test/announce";
-import { fireEvent, renderWithProviders, screen } from "../../test/render";
+import { classes, fireEvent, renderWithProviders, screen } from "../../test/render";
 import { EmptyState } from "../empty-state";
 import { ErrorState } from "../error-state";
+import { glassRecipes } from "../glass-panel";
 import { OfflineState } from "../offline-state";
 import { StateView } from "./state-view";
+import { stateIconStyles } from "./state-view.styles";
 
 interface Region {
   readonly prop: "accessibilityRole" | "accessibilityLiveRegion";
@@ -27,6 +31,86 @@ function regionAround(text: string, { prop, value }: Region) {
 }
 
 describe("state views", () => {
+  it("draws the state on base glass, centred, with the icon in a pearl disc", async () => {
+    await renderWithProviders(
+      <StateView
+        icon="inbox"
+        title="No hotels found"
+        description="Try a different search."
+        testID="state"
+      />,
+    );
+    const panel = classes(screen.getByTestId("state").props.className);
+    expect(panel).toEqual(
+      expect.arrayContaining([
+        glassRecipes.base.stroke,
+        "rounded-xl",
+        "p-6",
+        "items-center",
+        "gap-3",
+      ]),
+    );
+    const tree = JSON.stringify(screen.toJSON());
+    expect(tree).toContain(glassRecipes.base.fill);
+    expect(tree).toContain(stateIconStyles);
+    expect(stateIconStyles).toContain("bg-primary/8");
+    expect(stateIconStyles).toContain("border-primary/16");
+    expect(classes(screen.getByText("Try a different search.").props.className)).toContain(
+      "text-body",
+    );
+  });
+
+  // The Button aligns itself to the start unless it is full width, which pinned the action to the
+  // panel's left edge under a centred icon and title.
+  it("centres the action under the icon and title", async () => {
+    await renderWithProviders(
+      <StateView
+        icon="inbox"
+        title="No requests"
+        action={{ label: "New request", onPress: jest.fn() }}
+      />,
+    );
+    const action = classes(screen.getByRole("button", { name: "New request" }).props.className);
+    expect(action).toContain("self-center");
+    expect(action).not.toContain("self-start");
+  });
+
+  it("goes flat inside another panel", async () => {
+    await renderWithProviders(<StateView icon="inbox" title="Nothing yet" />);
+    expect(JSON.stringify(screen.toJSON())).toContain("ExpoBlur");
+    await renderWithProviders(<StateView icon="inbox" title="Nothing yet" blur={false} />);
+    expect(JSON.stringify(screen.toJSON())).not.toContain("ExpoBlur");
+  });
+
+  it("keeps the action secondary unless the screen makes it its gold primary", async () => {
+    const onPress = jest.fn();
+    await renderWithProviders(
+      <StateView icon="inbox" title="No requests" action={{ label: "New request", onPress }} />,
+    );
+    expect(
+      classes(screen.getByRole("button", { name: "New request" }).props.className),
+    ).not.toContain("bg-brand");
+    await renderWithProviders(
+      <StateView
+        icon="inbox"
+        title="No requests"
+        action={{ label: "Add hotel", onPress, variant: "primary" }}
+      />,
+    );
+    expect(classes(screen.getByRole("button", { name: "Add hotel" }).props.className)).toContain(
+      "bg-brand",
+    );
+  });
+
+  it("colours the icon per state: pearl empty, gold error, peacock offline", async () => {
+    await renderWithProviders(<EmptyState title="No requests yet" />);
+    expect(JSON.stringify(screen.toJSON())).toContain(`"stroke":"${colors.primary.light}"`);
+    await renderWithProviders(<ErrorState />);
+    expect(JSON.stringify(screen.toJSON())).toContain(`"stroke":"${colors.brand.light}"`);
+    await renderWithProviders(<OfflineState />);
+    expect(JSON.stringify(screen.toJSON())).toContain(`"stroke":"${colors.highlight.light}"`);
+  });
+
   it("renders an empty state with its action", async () => {
     const onPress = jest.fn();
     await renderWithProviders(

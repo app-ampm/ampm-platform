@@ -23,6 +23,11 @@ export interface FieldNotesController {
   readonly pendingCount: number;
   readonly isOnline: boolean;
   readonly isSyncing: boolean;
+  /**
+   * The last sync reached the API and was refused or failed (a role that may not send field notes, a
+   * wedding outside the person's): the screen says so, never "Synced", and the queue is kept.
+   */
+  readonly hasSyncFailed: boolean;
   readonly isLoading: boolean;
   readonly engine: string;
   readonly addNote: (body: string) => void;
@@ -38,6 +43,7 @@ const INITIAL_STATE: NotesState = {
   pendingCount: 0,
   isOnline: true,
   isSyncing: false,
+  hasSyncFailed: false,
   isLoading: true,
   engine: "",
 };
@@ -75,7 +81,11 @@ async function replayQueue(api: ApiClient, store: OfflineStore): Promise<void> {
   await store.cacheServerNotes(list.items);
 }
 
-/** One sync at a time; a failed fetch means offline, the queue is kept and the next sync retries it. */
+/**
+ * One sync at a time. A fetch that cannot reach the API means offline; any other failure (forbidden,
+ * not found, a server error) is a failed sync the screen shows (offline.md: a rejected change is shown,
+ * never dropped silently). Either way the queue is kept and the next sync retries it.
+ */
 function useSync(api: ApiClient, storeRef: StoreRef, patch: Patch): () => Promise<void> {
   const syncingRef = useRef(false);
   return useCallback(async () => {
@@ -85,9 +95,10 @@ function useSync(api: ApiClient, storeRef: StoreRef, patch: Patch): () => Promis
     patch({ isSyncing: true });
     try {
       await replayQueue(api, store);
-      patch({ isOnline: true });
+      patch({ isOnline: true, hasSyncFailed: false });
     } catch (error) {
       if (isAppError(error) && error.code === "network_error") patch({ isOnline: false });
+      else patch({ isOnline: true, hasSyncFailed: true });
     } finally {
       syncingRef.current = false;
       patch({ isSyncing: false, ...(await snapshot(store)) });

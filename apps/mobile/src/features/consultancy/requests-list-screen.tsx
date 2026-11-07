@@ -1,115 +1,81 @@
-import { ScrollView } from "react-native";
+import type { ReactNode } from "react";
 import { useRouter } from "expo-router";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useHotelEnquiries } from "@ampm/api-client";
-import { isAppError, type HotelEnquiryClientView } from "@ampm/core";
-import {
-  Button,
-  Card,
-  EmptyState,
-  ErrorState,
-  OfflineState,
-  Row,
-  Skeleton,
-  Stack,
-  StatusChip,
-  Text,
-} from "@ampm/ui";
+import { Card, EmptyState, QueryErrorState, Screen, ScreenHeader, Skeleton, Stack } from "@ampm/ui";
 
-import { enquiryBadge, formatDateRange } from "./consultancy.format";
+import { useGoToSignIn } from "@/navigation/sign-in";
 
-/** CP: the client's hotel-assistance requests (their own enquiries). Tap one to see its progress. */
-export function RequestsListScreen() {
-  const insets = useSafeAreaInsets();
+import { RequestRow } from "./request-row";
+
+/**
+ * CP: the client's hotel-assistance requests (D8 "Enquiries"), each a row on one glass panel; tap one
+ * to see its progress. A top-level screen: the app's route supplies the tab bar.
+ */
+export function RequestsListScreen({ tabBar }: { readonly tabBar?: ReactNode }) {
   const router = useRouter();
   const enquiries = useHotelEnquiries();
   return (
-    <ScrollView
-      className="flex-1 bg-surface"
-      contentContainerClassName="gap-4 p-4 md:p-8"
-      style={{ paddingTop: insets.top }}
+    <Screen
+      width="content"
+      tabBar={tabBar}
+      header={<ScreenHeader title="Enquiries" onBack={() => router.back()} />}
     >
-      <Row justify="start">
-        <Button variant="ghost" size="sm" icon="arrow-left" onPress={() => router.back()}>
-          Back
-        </Button>
-      </Row>
-      <Text variant="title">Your hotel requests</Text>
       <RequestsBody enquiries={enquiries} />
-    </ScrollView>
+    </Screen>
   );
 }
 
 function RequestsBody({ enquiries }: { readonly enquiries: ReturnType<typeof useHotelEnquiries> }) {
   const router = useRouter();
+  const goToSignIn = useGoToSignIn();
   if (enquiries.isPending) return <ListLoading />;
-  if (enquiries.isError) {
-    if (isAppError(enquiries.error) && enquiries.error.code === "network_error")
-      return <OfflineState onRetry={() => void enquiries.refetch()} />;
-    if (isAppError(enquiries.error) && enquiries.error.code === "unauthenticated")
-      return (
-        <EmptyState
-          icon="lock"
-          title="Sign in to view your requests"
-          action={{ label: "Sign in", onPress: () => router.replace("/sign-in") }}
-        />
-      );
-    return <ErrorState onRetry={() => void enquiries.refetch()} />;
-  }
-  if (enquiries.data.items.length === 0) {
+  if (enquiries.isError)
     return (
-      <EmptyState
-        icon="inbox"
-        title="No hotel requests yet"
-        description="Open a hotel and tap “Request hotel assistance” to start one."
-        action={{ label: "Browse hotels", onPress: () => router.push("/hotels") }}
+      <QueryErrorState
+        error={enquiries.error}
+        onRetry={() => void enquiries.refetch()}
+        onSignIn={goToSignIn}
+        signIn={{ title: "Sign in to view your requests" }}
       />
     );
-  }
+  if (enquiries.data.items.length === 0)
+    return <NoRequests onBrowse={() => router.push("/hotels")} />;
   return (
-    <Stack gap={3}>
-      {enquiries.data.items.map((enquiry) => (
-        <RequestCard key={enquiry.id} enquiry={enquiry} />
-      ))}
-    </Stack>
-  );
-}
-
-function RequestCard({ enquiry }: { readonly enquiry: HotelEnquiryClientView }) {
-  const router = useRouter();
-  const badge = enquiryBadge[enquiry.status];
-  return (
-    <Card>
+    <Card padding="sm">
       <Stack gap={2}>
-        <Row gap={2} justify="between" align="start">
-          <Text variant="subheading" className="flex-1">
-            Hotel request
-          </Text>
-          <StatusChip label={badge.label} tone={badge.tone} size="sm" />
-        </Row>
-        <Text tone="muted">{formatDateRange(enquiry.dateFrom, enquiry.dateTo)}</Text>
-        <Text tone="muted">{`${enquiry.guestEstimate} guests`}</Text>
-        <Row justify="start">
-          <Button
-            variant="secondary"
-            size="sm"
-            icon="arrow-right"
-            onPress={() => router.push(`/portal/requests/${enquiry.id}`)}
-          >
-            View request
-          </Button>
-        </Row>
+        {enquiries.data.items.map((enquiry) => (
+          <RequestRow
+            key={enquiry.id}
+            enquiry={enquiry}
+            onOpen={() => router.push(`/portal/requests/${enquiry.id}`)}
+          />
+        ))}
       </Stack>
     </Card>
   );
 }
 
+/** No request yet: how one starts, and the way to the hotels as the screen's gold action. */
+function NoRequests({ onBrowse }: { readonly onBrowse: () => void }) {
+  return (
+    <EmptyState
+      icon="inbox"
+      title="No hotel requests yet"
+      description="Open a hotel and tap “Request hotel assistance” to start one."
+      action={{ label: "Browse hotels", onPress: onBrowse, variant: "primary" }}
+    />
+  );
+}
+
 function ListLoading() {
   return (
-    <Stack gap={3} testID="requests-loading">
-      <Skeleton className="h-28 w-full" />
-      <Skeleton className="h-28 w-full" />
-    </Stack>
+    <Card padding="sm" testID="requests-loading">
+      <Stack gap={2}>
+        <Skeleton className="h-20 w-full" />
+        <Skeleton className="h-20 w-full" />
+        <Skeleton className="h-20 w-full" />
+      </Stack>
+    </Card>
   );
 }

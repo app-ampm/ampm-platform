@@ -1,6 +1,10 @@
 import { FieldNotesScreen } from "@/features/field-notes/field-notes-screen";
+import { AppTabBar } from "@/navigation/app-tab-bar";
 
-/** Route for the sprint 2 offline spike (docs/review/build-plan.md §11.4); removed with the spike. */
+/**
+ * The staff workspace's Tasks area: the sprint 2 offline spike (docs/review/build-plan.md §11.4)
+ * until the real task screens replace it.
+ */
 export default function FieldNotesRoute() {
-  return <FieldNotesScreen />;
+  return <FieldNotesScreen tabBar={<AppTabBar />} />;
 }

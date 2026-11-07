@@ -14,7 +14,8 @@ export function useReducedMotion(): boolean {
     const subscription = AccessibilityInfo.addEventListener("reduceMotionChanged", setReduced);
     return () => {
       active = false;
-      subscription.remove();
+      // react-native-web returns no subscription where the browser has no matchMedia.
+      subscription?.remove();
     };
   }, []);
   return reduced;

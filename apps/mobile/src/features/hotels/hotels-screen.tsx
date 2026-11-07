@@ -1,101 +1,133 @@
-import { useState } from "react";
-import { ScrollView } from "react-native";
 import { useRouter } from "expo-router";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useState, type ReactNode } from "react";
 
-import { useHotels } from "@ampm/api-client";
-import { isAppError } from "@ampm/core";
-import {
-  Button,
-  EmptyState,
-  ErrorState,
-  Input,
-  OfflineState,
-  Row,
-  Skeleton,
-  Stack,
-  Text,
-} from "@ampm/ui";
+import { useHotels, useMe } from "@ampm/api-client";
+import type { HotelDestinationView } from "@ampm/core";
+import { Button, EmptyState, Input, QueryErrorState, Screen, ScreenHeader } from "@ampm/ui";
 
-import { HotelCard } from "./hotel-card";
+import { useGoToSignIn } from "@/navigation/sign-in";
 
-/** Hotel discovery (Module C): search the hotels the subscription unlocks; each card opens the detail. */
-export function HotelsScreen() {
-  const insets = useSafeAreaInsets();
+import { canBrowseHotels } from "../portal/portal.format";
+import { DestinationFilter } from "./destination-filter";
+import { HotelResults, HotelResultsLoading } from "./hotel-results";
+import { DISCOVERY_CLOSED, DISCOVERY_SIGN_IN, destinationOptions } from "./hotels.format";
+
+export interface HotelsScreenProps {
+  /** The app's tab bar; the route supplies it and the screen only gives it room. */
+  readonly tabBar?: ReactNode;
+}
+
+type Destination = HotelDestinationView | null;
+
+/**
+ * Hotel discovery (Module C; D5 search results, P3 hotel search): search the hotels the subscription
+ * unlocks by name, narrow them to a destination, open one. `/me` decides first: an account without
+ * hotel discovery (a client who has not paid yet, or whose subscription lapsed) is pointed to the plans
+ * and never searches, and the shortlist button shows only to an account that keeps a shortlist.
+ */
+export function HotelsScreen({ tabBar }: HotelsScreenProps) {
+  const router = useRouter();
+  const me = useMe();
+  const [destination, setDestination] = useState<Destination>(null);
+  const hasShortlist = me.data?.entitlements.modules.includes("saved_hotels") ?? false;
+  const header = (
+    <HotelsHeader
+      title={destination?.name ?? "Hotels"}
+      onOpenSaved={hasShortlist ? () => router.push("/hotels/saved") : undefined}
+    />
+  );
+  return (
+    <Screen tabBar={tabBar} width="content" header={header}>
+      <HotelsBody me={me} destination={destination} onDestination={setDestination} />
+    </Screen>
+  );
+}
+
+interface SearchProps {
+  readonly destination: Destination;
+  readonly onDestination: (destination: Destination) => void;
+}
+
+interface HotelsBodyProps extends SearchProps {
+  readonly me: ReturnType<typeof useMe>;
+}
+
+/** `/me` first: loading, its failures, the closed search with the way to the plans, or the search. */
+function HotelsBody({ me, destination, onDestination }: HotelsBodyProps) {
+  const router = useRouter();
+  const goToSignIn = useGoToSignIn();
+  if (!me.data) {
+    if (!me.isError) return <HotelResultsLoading />;
+    return (
+      <QueryErrorState
+        error={me.error}
+        onRetry={() => void me.refetch()}
+        onSignIn={goToSignIn}
+        signIn={DISCOVERY_SIGN_IN}
+      />
+    );
+  }
+  if (!canBrowseHotels(me.data))
+    return (
+      <EmptyState
+        {...DISCOVERY_CLOSED}
+        action={{
+          label: "See plans",
+          variant: "primary",
+          onPress: () => router.dismissTo("/portal"),
+        }}
+      />
+    );
+  return <HotelSearch destination={destination} onDestination={onDestination} />;
+}
+
+/** The search itself, mounted only for an account that holds hotel discovery. */
+function HotelSearch({ destination, onDestination }: SearchProps) {
   const router = useRouter();
   const [q, setQ] = useState("");
-  const hotels = useHotels({ q: q.trim() || undefined });
+  const hotels = useHotels({ q: q.trim() || undefined, destinationId: destination?.id });
   return (
-    <ScrollView
-      className="flex-1 bg-surface"
-      contentContainerClassName="gap-4 p-4 md:p-8"
-      style={{ paddingTop: insets.top }}
-    >
-      <Row gap={2} justify="between" align="center">
-        <Button variant="ghost" size="sm" icon="arrow-left" onPress={() => router.back()}>
-          Back
-        </Button>
-        <Button variant="ghost" size="sm" icon="star" onPress={() => router.push("/hotels/saved")}>
-          Saved
-        </Button>
-      </Row>
-      <Text variant="title">Hotels</Text>
+    <>
       <Input
         label="Search hotels"
         leadingIcon="search"
+        placeholder="Hotel name"
         value={q}
         onChangeText={setQ}
         returnKeyType="search"
       />
-      <HotelsList
+      <DestinationFilter
+        options={destinationOptions(hotels.data?.items ?? [], destination)}
+        selected={destination}
+        onChange={onDestination}
+      />
+      <HotelResults
         hotels={hotels}
         onOpen={(id) => router.push({ pathname: "/hotels/[id]", params: { id } })}
       />
-    </ScrollView>
+    </>
   );
 }
 
-function HotelsList({
-  hotels,
-  onOpen,
-}: {
-  readonly hotels: ReturnType<typeof useHotels>;
-  readonly onOpen: (id: string) => void;
-}) {
-  const router = useRouter();
-  if (hotels.isPending) return <HotelsLoading />;
-  if (hotels.isError) {
-    if (isAppError(hotels.error) && hotels.error.code === "network_error")
-      return <OfflineState onRetry={() => void hotels.refetch()} />;
-    if (isAppError(hotels.error) && hotels.error.code === "unauthenticated")
-      return (
-        <EmptyState
-          icon="lock"
-          title="Sign in to browse hotels"
-          action={{ label: "Sign in", onPress: () => router.replace("/sign-in") }}
-        />
-      );
-    return <ErrorState onRetry={() => void hotels.refetch()} />;
-  }
-  if (hotels.data.items.length === 0)
-    return (
-      <EmptyState icon="inbox" title="No hotels found" description="Try a different search." />
-    );
-  return (
-    <Stack gap={3}>
-      {hotels.data.items.map((hotel) => (
-        <HotelCard key={hotel.id} hotel={hotel} onPress={() => onOpen(hotel.id)} />
-      ))}
-    </Stack>
-  );
+interface HotelsHeaderProps {
+  readonly title: string;
+  /** Opens the shortlist; without it (no shortlist on the account) the button stays out. */
+  readonly onOpenSaved: (() => void) | undefined;
 }
 
-function HotelsLoading() {
+/** Titled by the chosen destination, as P3 heads its results ("Udaipur"), the shortlist at its right. */
+function HotelsHeader({ title, onOpenSaved }: HotelsHeaderProps) {
   return (
-    <Stack gap={3} testID="hotels-loading">
-      <Skeleton className="h-28 w-full" />
-      <Skeleton className="h-28 w-full" />
-      <Skeleton className="h-28 w-full" />
-    </Stack>
+    <ScreenHeader
+      eyebrow="Hotel discovery"
+      title={title}
+      trailing={
+        onOpenSaved ? (
+          <Button variant="glass" size="sm" icon="heart" onPress={onOpenSaved}>
+            Saved
+          </Button>
+        ) : undefined
+      }
+    />
   );
 }
