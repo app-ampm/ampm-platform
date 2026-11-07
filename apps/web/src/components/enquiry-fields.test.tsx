@@ -1,6 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
+import { RequestReceived } from "./contact/request-received";
 import {
   ConsentFields,
   EMPTY,
@@ -18,6 +19,17 @@ import {
  */
 function groupProps(errors: Record<string, string> = {}): FieldGroupProps {
   return { fields: EMPTY, errors, onText: () => () => undefined, onCheck: () => () => undefined };
+}
+
+/** The reply-way radio for `value`, whatever order React writes its attributes in. */
+function reachRadio(html: string, value: string): string {
+  return (
+    [...html.matchAll(/<input[^>]*>/g)]
+      .map((match) => match[0])
+      .find(
+        (tag) => tag.includes('name="contactPreference"') && tag.includes(`value="${value}"`),
+      ) ?? ""
+  );
 }
 
 describe("PUB-06 fields", () => {
@@ -53,9 +65,53 @@ describe("PUB-06 fields", () => {
     expect(html).toContain("wait a moment");
   });
 
+  it("offers Any after the three channels, so a chosen channel can be taken back", () => {
+    const chosen = renderToStaticMarkup(
+      <IdentityFields {...groupProps()} fields={{ ...EMPTY, contactPreference: "whatsapp" }} />,
+    );
+    expect(reachRadio(chosen, "whatsapp")).toContain('checked=""');
+    expect(reachRadio(chosen, "")).not.toContain('checked=""');
+    expect(chosen).toContain(">Any</span>");
+    const none = renderToStaticMarkup(<IdentityFields {...groupProps()} />);
+    expect(reachRadio(none, "")).toContain('checked=""');
+  });
+
   it("confirms with the visitor's first name and a status role (PUB-09)", () => {
-    const html = renderToStaticMarkup(<ThankYou firstName="Rhea" />);
+    const html = renderToStaticMarkup(
+      <ThankYou firstName="Rhea" request={{ phone: "+919876543210", requestedDemo: true }} />,
+    );
     expect(html).toContain('role="status"');
     expect(html).toContain("Rhea");
+  });
+});
+
+describe("PUB-09 actions (W7)", () => {
+  const base = {
+    title: "Thank you, Rhea.",
+    lead: "We have your enquiry.",
+    reach: null,
+    reachVia: { call: "", whatsapp: "", email: "" },
+    purpose: "",
+    steps: [],
+    backLabel: "Back to home",
+  } as const;
+
+  it("puts the gold chat first, beside the way home, once there is a channel to open", () => {
+    const html = renderToStaticMarkup(
+      <RequestReceived
+        {...base}
+        chat={{ label: "Chat with AMPM", href: "https://wa.me/910000000000" }}
+      />,
+    );
+    const chat = html.indexOf(">Chat with AMPM<");
+    expect(chat).toBeGreaterThan(-1);
+    expect(chat).toBeLessThan(html.indexOf(">Back to home<"));
+    expect(html).toMatch(/<a class="[^"]*\bbg-brand\b[^"]*" href="https:\/\/wa.me\/910000000000"/);
+  });
+
+  it("keeps only the way home without one", () => {
+    const html = renderToStaticMarkup(<RequestReceived {...base} />);
+    expect(html).not.toContain("Chat with AMPM");
+    expect(html).toContain(">Back to home<");
   });
 });

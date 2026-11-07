@@ -1,5 +1,6 @@
 import { AccountScreen } from "@/features/account/account-screen";
+import { AppTabBar } from "@/navigation/app-tab-bar";
 
 export default function AccountRoute() {
-  return <AccountScreen />;
+  return <AccountScreen tabBar={<AppTabBar />} />;
 }

@@ -1,47 +1,64 @@
-import { ScrollView } from "react-native";
 import { useRouter } from "expo-router";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useHotel, useHotelEnquiry } from "@ampm/api-client";
+import { isAppError, type HotelEnquiryClientDetailView } from "@ampm/core";
 import {
-  isAppError,
-  type HotelEnquiryClientDetailView,
-  type HotelEnquiryEventClientView,
-} from "@ampm/core";
-import {
-  Button,
+  Card,
   EmptyState,
   ErrorState,
   OfflineState,
-  Row,
+  Screen,
+  ScreenHeader,
   Skeleton,
   Stack,
   StatusChip,
-  Text,
 } from "@ampm/ui";
 
-import { enquiryBadge, eventLabel, formatDate, formatDateRange } from "./consultancy.format";
+import { enquiryChip } from "./consultancy.format";
+import { EnquiryActivity } from "./enquiry-activity";
+import { EnquirySummary } from "./enquiry-summary";
 import { AgreementSection, ProposalsSection } from "./request-commercial";
 import { MilestonesSection, VisitsSection } from "./request-progress";
 
-/** CP: one hotel request and everything hanging off it — the agreement, proposals, visits, milestones. */
+/**
+ * CP: one hotel request and everything hanging off it (D8): the stay and its status stepper, the
+ * agreement, the proposals, visits, milestones and the activity. A detail screen: a back button and
+ * no tab bar.
+ */
 export function RequestDetailScreen({ enquiryId }: { readonly enquiryId: string }) {
-  const insets = useSafeAreaInsets();
   const router = useRouter();
   const enquiry = useHotelEnquiry(enquiryId);
   return (
-    <ScrollView
-      className="flex-1 bg-surface"
-      contentContainerClassName="gap-4 p-4 md:p-8"
-      style={{ paddingTop: insets.top }}
+    <Screen
+      width="content"
+      header={<DetailHeader enquiry={enquiry.data} onBack={() => router.back()} />}
     >
-      <Row justify="start">
-        <Button variant="ghost" size="sm" icon="arrow-left" onPress={() => router.back()}>
-          Back
-        </Button>
-      </Row>
       <DetailBody enquiry={enquiry} enquiryId={enquiryId} />
-    </ScrollView>
+    </Screen>
+  );
+}
+
+/**
+ * The hotel's name as the title (read through the cached hotel query; "Hotel request" until it
+ * arrives, or if it cannot), and the enquiry's status chip at its right once the enquiry has loaded.
+ */
+function DetailHeader({
+  enquiry,
+  onBack,
+}: {
+  readonly enquiry: HotelEnquiryClientDetailView | undefined;
+  readonly onBack: () => void;
+}) {
+  // An empty id leaves the hotel query disabled until the enquiry names its hotel.
+  const hotel = useHotel(enquiry?.hotelId ?? "");
+  const chip = enquiry ? enquiryChip(enquiry) : null;
+  return (
+    <ScreenHeader
+      eyebrow="Enquiry"
+      title={hotel.data?.name ?? "Hotel request"}
+      onBack={onBack}
+      trailing={chip ? <StatusChip label={chip.label} tone={chip.tone} /> : null}
+    />
   );
 }
 
@@ -52,79 +69,58 @@ function DetailBody({
   readonly enquiry: ReturnType<typeof useHotelEnquiry>;
   readonly enquiryId: string;
 }) {
-  const router = useRouter();
   if (enquiry.isPending) return <DetailLoading />;
-  if (enquiry.isError) {
-    if (isAppError(enquiry.error) && enquiry.error.code === "network_error")
-      return <OfflineState onRetry={() => void enquiry.refetch()} />;
-    if (isAppError(enquiry.error) && enquiry.error.code === "unauthenticated")
-      return (
-        <EmptyState
-          icon="lock"
-          title="Sign in to view this request"
-          action={{ label: "Sign in", onPress: () => router.replace("/sign-in") }}
-        />
-      );
-    if (isAppError(enquiry.error) && enquiry.error.code === "not_found")
-      return <EmptyState icon="inbox" title="Request not found" />;
-    return <ErrorState onRetry={() => void enquiry.refetch()} />;
-  }
+  if (enquiry.isError)
+    return <DetailError error={enquiry.error} onRetry={() => void enquiry.refetch()} />;
   return (
-    <Stack gap={4}>
-      <EnquiryHeader enquiry={enquiry.data} />
+    <Stack gap={6}>
+      <EnquirySummary enquiry={enquiry.data} />
       <AgreementSection enquiryId={enquiryId} />
       <ProposalsSection enquiryId={enquiryId} />
       <VisitsSection enquiryId={enquiryId} />
       <MilestonesSection enquiryId={enquiryId} />
-      <Timeline events={enquiry.data.events} />
+      <EnquiryActivity events={enquiry.data.events} />
     </Stack>
   );
 }
 
-function EnquiryHeader({ enquiry }: { readonly enquiry: HotelEnquiryClientDetailView }) {
-  const hotel = useHotel(enquiry.hotelId);
-  const badge = enquiryBadge[enquiry.status];
-  const rooms = enquiry.roomsRequired !== null ? ` · ${enquiry.roomsRequired} rooms` : "";
-  return (
-    <Stack gap={2}>
-      <Row gap={2} justify="between" align="start">
-        <Text variant="title" className="flex-1">
-          {hotel.data?.name ?? "Hotel request"}
-        </Text>
-        <StatusChip label={badge.label} tone={badge.tone} />
-      </Row>
-      <Text tone="muted">{formatDateRange(enquiry.dateFrom, enquiry.dateTo)}</Text>
-      <Text tone="muted">{`${enquiry.guestEstimate} guests${rooms}`}</Text>
-      {enquiry.functionsSummary ? <Text>{enquiry.functionsSummary}</Text> : null}
-      {enquiry.notesClient ? <Text tone="muted">{enquiry.notesClient}</Text> : null}
-    </Stack>
-  );
-}
-
-function Timeline({ events }: { readonly events: readonly HotelEnquiryEventClientView[] }) {
-  if (events.length === 0) return null;
-  return (
-    <Stack gap={2}>
-      <Text variant="subheading">Activity</Text>
-      {events.map((event) => (
-        <Row key={event.id} gap={2} justify="between" align="start">
-          <Stack gap={0} className="flex-1">
-            <Text variant="label">{eventLabel(event.eventType)}</Text>
-            {event.summary ? <Text tone="muted">{event.summary}</Text> : null}
-          </Stack>
-          <Text tone="muted" variant="bodySmall">
-            {formatDate(event.occurredAt)}
-          </Text>
-        </Row>
-      ))}
-    </Stack>
-  );
+function DetailError({
+  error,
+  onRetry,
+}: {
+  readonly error: unknown;
+  readonly onRetry: () => void;
+}) {
+  const router = useRouter();
+  if (isAppError(error) && error.code === "network_error")
+    return <OfflineState onRetry={onRetry} />;
+  if (isAppError(error) && error.code === "unauthenticated") {
+    return (
+      <EmptyState
+        icon="lock"
+        title="Sign in to view this request"
+        action={{
+          label: "Sign in",
+          onPress: () => router.replace("/sign-in"),
+          variant: "primary",
+        }}
+      />
+    );
+  }
+  if (isAppError(error) && error.code === "not_found")
+    return <EmptyState icon="inbox" title="Request not found" />;
+  return <ErrorState onRetry={onRetry} />;
 }
 
 function DetailLoading() {
   return (
-    <Stack gap={3} testID="request-detail-loading">
-      <Skeleton className="h-10 w-full" />
+    <Stack gap={4} testID="request-detail-loading">
+      <Card padding="lg">
+        <Stack gap={4.5}>
+          <Skeleton shape="text" className="w-2/3" />
+          <Skeleton className="h-14 w-full" />
+        </Stack>
+      </Card>
       <Skeleton className="h-32 w-full" />
       <Skeleton className="h-32 w-full" />
     </Stack>

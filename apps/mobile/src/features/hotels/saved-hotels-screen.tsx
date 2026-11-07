@@ -1,125 +1,93 @@
-import { ScrollView } from "react-native";
 import { useRouter } from "expo-router";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import type { ReactNode } from "react";
 
-import { useSavedHotels, useUnsaveHotel } from "@ampm/api-client";
-import { isAppError, type SavedHotelView } from "@ampm/core";
-import {
-  Button,
-  EmptyState,
-  ErrorState,
-  OfflineState,
-  Row,
-  Skeleton,
-  Stack,
-  Text,
-  useToast,
-} from "@ampm/ui";
+import { useMe, useSavedHotels } from "@ampm/api-client";
+import { Card, EmptyState, Screen, ScreenHeader, Skeleton, Stack, Text } from "@ampm/ui";
 
-import { HotelCard } from "./hotel-card";
+import { canBrowseHotels } from "../portal/portal.format";
+import { hotelCountLabel } from "./hotels.format";
+import { HotelsQueryError } from "./hotels-query-error";
+import { SavedHotelRow } from "./saved-hotel-row";
 
-/** The account's hotel shortlist (Module C): the hotels saved from discovery, each removable. */
-export function SavedHotelsScreen() {
-  const insets = useSafeAreaInsets();
+export interface SavedHotelsScreenProps {
+  /** The app's tab bar; the route supplies it and the screen only gives it room. */
+  readonly tabBar?: ReactNode;
+}
+
+/**
+ * The account's hotel shortlist (Module C; D7 and P2 "My selection"): the hotels saved from
+ * discovery as rows in one glass card, each opening its hotel page or removed from the list. Empty,
+ * it offers the search when the account may search (a lapsed subscription keeps its saved names only).
+ */
+export function SavedHotelsScreen({ tabBar }: SavedHotelsScreenProps) {
   const router = useRouter();
   const saved = useSavedHotels();
+  const me = useMe();
+  const canBrowse = me.data ? canBrowseHotels(me.data) : false;
   return (
-    <ScrollView
-      className="flex-1 bg-surface"
-      contentContainerClassName="gap-4 p-4 md:p-8"
-      style={{ paddingTop: insets.top }}
+    <Screen
+      tabBar={tabBar}
+      width="content"
+      header={
+        <ScreenHeader eyebrow="Saved hotels" title="My selection" onBack={() => router.back()} />
+      }
     >
-      <Row justify="start">
-        <Button variant="ghost" size="sm" icon="arrow-left" onPress={() => router.back()}>
-          Back
-        </Button>
-      </Row>
-      <Text variant="title">Saved hotels</Text>
       <SavedList
         saved={saved}
         onOpen={(id) => router.push({ pathname: "/hotels/[id]", params: { id } })}
+        // Back to the search when it is already under this screen, instead of piling a second one on.
+        onBrowse={canBrowse ? () => router.dismissTo("/hotels") : undefined}
       />
-    </ScrollView>
+    </Screen>
   );
 }
 
-function SavedList({
-  saved,
-  onOpen,
-}: {
+interface SavedListProps {
   readonly saved: ReturnType<typeof useSavedHotels>;
-  readonly onOpen: (id: string) => void;
-}) {
-  const router = useRouter();
+  readonly onOpen: (hotelId: string) => void;
+  /** Opens the search from the empty shortlist; absent for an account that may not search. */
+  readonly onBrowse: (() => void) | undefined;
+}
+
+function SavedList({ saved, onOpen, onBrowse }: SavedListProps) {
   if (saved.isPending) return <SavedLoading />;
-  if (saved.isError) {
-    if (isAppError(saved.error) && saved.error.code === "network_error")
-      return <OfflineState onRetry={() => void saved.refetch()} />;
-    if (isAppError(saved.error) && saved.error.code === "unauthenticated")
-      return (
-        <EmptyState
-          icon="lock"
-          title="Sign in to view your shortlist"
-          action={{ label: "Sign in", onPress: () => router.replace("/sign-in") }}
-        />
-      );
-    return <ErrorState onRetry={() => void saved.refetch()} />;
-  }
-  if (saved.data.items.length === 0)
+  if (saved.isError)
+    return (
+      <HotelsQueryError
+        error={saved.error}
+        onRetry={() => void saved.refetch()}
+        signInTitle="Sign in to view your shortlist"
+      />
+    );
+  const { items, nextCursor } = saved.data;
+  if (items.length === 0)
     return (
       <EmptyState
         icon="inbox"
         title="No saved hotels yet"
         description="Save a hotel from discovery to build your shortlist."
+        action={
+          onBrowse ? { label: "Browse hotels", variant: "primary", onPress: onBrowse } : undefined
+        }
       />
     );
   return (
-    <Stack gap={3}>
-      {saved.data.items.map((item) => (
-        <SavedRow key={item.id} item={item} onOpen={() => onOpen(item.hotel.id)} />
+    <Card padding="sm" className="md:p-6">
+      <Text variant="eyebrow" className="pb-2">
+        {hotelCountLabel(items.length, nextCursor !== null)}
+      </Text>
+      {items.map((item) => (
+        <SavedHotelRow key={item.id} item={item} onOpen={() => onOpen(item.hotel.id)} />
       ))}
-    </Stack>
-  );
-}
-
-function SavedRow({
-  item,
-  onOpen,
-}: {
-  readonly item: SavedHotelView;
-  readonly onOpen: () => void;
-}) {
-  const toast = useToast();
-  const unsave = useUnsaveHotel(item.hotel.id);
-  const onRemove = (): void => {
-    unsave.mutate(undefined, {
-      onError: () => toast.show({ title: "Could not remove the hotel", tone: "danger" }),
-    });
-  };
-  return (
-    <Stack gap={1}>
-      <HotelCard hotel={item.hotel} onPress={onOpen} />
-      <Row justify="end">
-        <Button
-          variant="ghost"
-          size="sm"
-          icon="star"
-          loading={unsave.isPending}
-          onPress={onRemove}
-          accessibilityLabel={`Remove ${item.hotel.name} from your shortlist`}
-        >
-          Remove
-        </Button>
-      </Row>
-    </Stack>
+    </Card>
   );
 }
 
 function SavedLoading() {
   return (
     <Stack gap={3} testID="saved-hotels-loading">
-      <Skeleton className="h-28 w-full" />
-      <Skeleton className="h-28 w-full" />
+      <Skeleton className="h-16 w-full" />
+      <Skeleton className="h-16 w-full" />
     </Stack>
   );
 }

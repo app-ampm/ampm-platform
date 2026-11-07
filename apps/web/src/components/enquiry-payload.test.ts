@@ -40,6 +40,17 @@ describe("toPayload", () => {
     expect(payload.botToken).toBe("dev-bot-check");
   });
 
+  it("sends no reply way once the visitor goes back to Any after picking one", () => {
+    const picked = fields({ name: "Alice", phone: "9876500000", contactPreference: "whatsapp" });
+    expect(toPayload(picked).contactPreference).toBe("whatsapp");
+    // The Any radio's value is "", which the form stores as typed.
+    const backToAny = { ...picked, contactPreference: "" };
+    expect(toPayload(backToAny).contactPreference).toBeUndefined();
+    const parsed = leadEnquiryRequest.safeParse(toPayload(backToAny));
+    expect(parsed.success).toBe(true);
+    if (parsed.success) expect(parsed.data.contactPreference).toBeUndefined();
+  });
+
   it("produces a payload the shared enquiry schema accepts", () => {
     const parsed = leadEnquiryRequest.safeParse(
       toPayload(fields({ name: "Alice", phone: "9876500000" })),

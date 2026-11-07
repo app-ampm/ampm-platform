@@ -1,30 +1,44 @@
+import type { FieldNoteStatus } from "@ampm/core";
 import {
   Button,
   Callout,
   Card,
   EmptyState,
   Input,
+  OfflineBanner,
   Row,
+  Screen,
+  ScreenHeader,
   Skeleton,
   Stack,
   StatusChip,
   Text,
 } from "@ampm/ui";
-import { useState } from "react";
-import { ScrollView } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useState, type ReactNode } from "react";
 
 import type { LocalNote } from "./offline-store";
-import { useFieldNotes } from "./use-field-notes";
+import { useFieldNotes, type FieldNotesController } from "./use-field-notes";
+
+export interface FieldNotesScreenProps {
+  /** The app's tab bar on a phone (the route passes `<AppTabBar />`); this screen is Tasks. */
+  readonly tabBar?: ReactNode;
+}
+
+const STATUS_LABEL: Record<FieldNoteStatus, string> = {
+  open: "Open",
+  acknowledged: "Acknowledged",
+  resolved: "Resolved",
+};
 
 /**
- * SPIKE STAND-IN — sprint 2 offline spike (docs/review/build-plan.md §11.4). Records a field note
- * that saves on the device and syncs when the API is reachable; the banner always shows whether the
- * app is offline and how many changes are pending (.claude/rules/offline.md), built from the shared
- * packages/ui components only. Reached from the gallery; removed when the real screens arrive.
+ * SPIKE STAND-IN — sprint 2 offline spike (docs/review/build-plan.md §11.4), the staff workspace's
+ * Tasks area until the real task screens arrive (M5). Records a field note that saves on the device
+ * and syncs when the API is reachable; the screen always shows whether it is offline and how many
+ * changes are pending (.claude/rules/offline.md): a peacock banner while notes wait or the device is
+ * offline, a gold notice when the API refuses the sync, a "Synced" chip by the title once everything
+ * is sent.
  */
-export function FieldNotesScreen() {
-  const insets = useSafeAreaInsets();
+export function FieldNotesScreen({ tabBar }: FieldNotesScreenProps) {
   const controller = useFieldNotes();
   const [draft, setDraft] = useState("");
 
@@ -34,25 +48,36 @@ export function FieldNotesScreen() {
   };
 
   return (
-    <ScrollView
-      className="flex-1 bg-surface"
-      contentContainerClassName="gap-4 p-4 md:p-8"
-      style={{ paddingTop: insets.top }}
-    >
-      <Text variant="title">Field notes</Text>
-      <Text tone="muted">
-        {`Offline spike · ${controller.engine}. Notes save on the device and sync when the API is reachable.`}
-      </Text>
-      <SyncBanner isOnline={controller.isOnline} pendingCount={controller.pendingCount} />
-      <NoteComposer
-        draft={draft}
-        onChange={setDraft}
-        onSubmit={submit}
-        onSync={controller.sync}
-        isSyncing={controller.isSyncing}
+    <Screen width="content" tabBar={tabBar} header={<FieldNotesHeader controller={controller} />}>
+      <SyncBanner
+        isOnline={controller.isOnline}
+        pendingCount={controller.pendingCount}
+        hasSyncFailed={controller.hasSyncFailed}
       />
+      <Card>
+        <NoteComposer
+          draft={draft}
+          onChange={setDraft}
+          onSubmit={submit}
+          onSync={controller.sync}
+          isSyncing={controller.isSyncing}
+        />
+      </Card>
       <NoteList notes={controller.notes} isLoading={controller.isLoading} />
-    </ScrollView>
+    </Screen>
+  );
+}
+
+function FieldNotesHeader({ controller }: { readonly controller: FieldNotesController }) {
+  const { engine, isLoading, isOnline, pendingCount, hasSyncFailed } = controller;
+  const isSynced = !isLoading && isOnline && pendingCount === 0 && !hasSyncFailed;
+  const spike = engine ? `Offline spike · ${engine}` : "Offline spike";
+  return (
+    <ScreenHeader
+      title="Field notes"
+      subtitle={`${spike}. Notes save on the device and sync when the API is reachable.`}
+      trailing={isSynced ? <StatusChip label="Synced" tone="success" dot /> : undefined}
+    />
   );
 }
 
@@ -66,7 +91,7 @@ interface ComposerProps {
 
 function NoteComposer({ draft, onChange, onSubmit, onSync, isSyncing }: ComposerProps) {
   return (
-    <Stack gap={2}>
+    <Stack gap={3}>
       <Input
         label="New field note"
         value={draft}
@@ -86,27 +111,35 @@ function NoteComposer({ draft, onChange, onSubmit, onSync, isSyncing }: Composer
   );
 }
 
-function SyncBanner({
-  isOnline,
-  pendingCount,
-}: {
+interface SyncBannerProps {
   readonly isOnline: boolean;
   readonly pendingCount: number;
-}) {
-  const plural = pendingCount === 1 ? "" : "s";
-  if (!isOnline) {
+  readonly hasSyncFailed: boolean;
+}
+
+/**
+ * Offline, refused, or online with notes still waiting: the banner says so and counts them. A refused
+ * sync is gold (needs the person), since waiting for the signal will not send those notes.
+ */
+function SyncBanner({ isOnline, pendingCount, hasSyncFailed }: SyncBannerProps) {
+  if (!isOnline) return <OfflineBanner queuedCount={pendingCount} />;
+  if (hasSyncFailed) {
     return (
-      <Callout kind="offline">{`Offline · ${pendingCount} change${plural} waiting to sync.`}</Callout>
+      <Callout kind="danger" title="Notes could not sync">
+        The server did not accept the sync. Notes you record stay on this device.
+      </Callout>
     );
   }
   if (pendingCount > 0) {
-    return <Callout kind="pending-sync">{`${pendingCount} change${plural} syncing…`}</Callout>;
+    return (
+      <OfflineBanner
+        title="Syncing"
+        queuedCount={pendingCount}
+        description="They send as soon as the API answers."
+      />
+    );
   }
-  return (
-    <Callout kind="success" title="All changes synced">
-      Nothing is waiting to send.
-    </Callout>
-  );
+  return null;
 }
 
 function NoteList({
@@ -133,27 +166,33 @@ function NoteList({
     );
   }
   return (
-    <Stack gap={2}>
-      {notes.map((note) => (
-        <NoteCard key={note.id} note={note} />
-      ))}
-    </Stack>
+    <Card padding="sm">
+      <Stack gap={2}>
+        {notes.map((note) => (
+          <NoteRow key={note.id} note={note} />
+        ))}
+      </Stack>
+    </Card>
   );
 }
 
-function NoteCard({ note }: { readonly note: LocalNote }) {
+/**
+ * A note as a flat row: its whole text (a note runs to several lines, and there is no detail screen to
+ * read the rest on), its status, and whether it still waits to sync or which version it is.
+ */
+function NoteRow({ note }: { readonly note: LocalNote }) {
   return (
-    <Card>
-      <Stack gap={1}>
+    <Card tone="flat" padding="sm">
+      <Stack gap={1.5}>
+        <Text tone="primary">{note.body}</Text>
         <Row gap={2} wrap>
-          <StatusChip label={note.status} tone="info" size="sm" />
+          <StatusChip label={STATUS_LABEL[note.status]} tone="info" size="sm" />
           {note.pending ? (
-            <StatusChip label="pending" tone="warning" size="sm" />
+            <StatusChip label="Queued" tone="warning" size="sm" />
           ) : (
-            <StatusChip label={`v${note.version}`} tone="success" size="sm" />
+            <StatusChip label={`Synced · v${note.version}`} tone="success" size="sm" />
           )}
         </Row>
-        <Text>{note.body}</Text>
       </Stack>
     </Card>
   );

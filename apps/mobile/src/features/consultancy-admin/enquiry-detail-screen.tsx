@@ -1,47 +1,69 @@
-import { ScrollView } from "react-native";
 import { useRouter } from "expo-router";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useStaffEnquiry } from "@ampm/api-client";
 import { isAppError, type HotelEnquiryStaffDetailView } from "@ampm/core";
 import {
-  Button,
-  Callout,
   Card,
   EmptyState,
   ErrorState,
   OfflineState,
-  Row,
+  Screen,
+  ScreenHeader,
   Skeleton,
   Stack,
   StatusChip,
-  Text,
 } from "@ampm/ui";
 
-import { eventLabel, formatDate, formatDateRange } from "../consultancy/consultancy.format";
+import { enquiryFacts } from "../consultancy/consultancy.format";
 import { staffEnquiryBadge } from "./consultancy-admin.format";
+import { EnquiryActivity } from "./enquiry-activity";
 import { AgreementSection, ProposalsSection } from "./enquiry-commercial";
-import { EnquiryStatusActions } from "./enquiry-status-actions";
+import { EnquiryDetails } from "./enquiry-details";
 import { MilestonesSection, VisitsSection } from "./enquiry-progress";
+import { EnquiryStatusActions } from "./enquiry-status-actions";
 
-/** The staff view of one enquiry (consultancy-admin): the internal detail plus the pipeline controls. */
+type EnquiryQuery = ReturnType<typeof useStaffEnquiry>;
+
+/**
+ * The staff view of one enquiry (consultancy-admin, T6's detail): the stay as data over the title in
+ * Gilda and the status chip, then the internal detail and the pipeline controls. A detail screen: no
+ * tab bar, a back button to the queue.
+ */
 export function StaffEnquiryDetailScreen({ enquiryId }: { readonly enquiryId: string }) {
-  const insets = useSafeAreaInsets();
   const router = useRouter();
   const enquiry = useStaffEnquiry(enquiryId);
   return (
-    <ScrollView
-      className="flex-1 bg-surface"
-      contentContainerClassName="gap-4 p-4 md:p-8"
-      style={{ paddingTop: insets.top }}
+    <Screen
+      width="content"
+      header={<DetailHeader enquiry={enquiry.data} onBack={() => router.back()} />}
     >
-      <Row justify="start">
-        <Button variant="ghost" size="sm" icon="arrow-left" onPress={() => router.back()}>
-          Enquiries
-        </Button>
-      </Row>
       <DetailBody enquiry={enquiry} enquiryId={enquiryId} />
-    </ScrollView>
+    </Screen>
+  );
+}
+
+/**
+ * The header keeps its back button through every state; the reference line and the chip come with the
+ * enquiry. The staff view carries no hotel or client name, so the title is the functions summary: free
+ * text that can run long, so a phone sets it at 28 (M4's phone titles are smaller still) beside the chip.
+ */
+function DetailHeader({
+  enquiry,
+  onBack,
+}: {
+  readonly enquiry: HotelEnquiryStaffDetailView | undefined;
+  readonly onBack: () => void;
+}) {
+  const badge = enquiry ? staffEnquiryBadge[enquiry.status] : null;
+  return (
+    <ScreenHeader
+      onBack={onBack}
+      backLabel="Back to enquiries"
+      eyebrow={enquiry ? enquiryFacts(enquiry).toUpperCase() : undefined}
+      title={enquiry?.functionsSummary ?? "Hotel enquiry"}
+      titleClassName="text-3xl md:text-4xl"
+      trailing={badge ? <StatusChip label={badge.label} tone={badge.tone} /> : undefined}
+    />
   );
 }
 
@@ -49,101 +71,65 @@ function DetailBody({
   enquiry,
   enquiryId,
 }: {
-  readonly enquiry: ReturnType<typeof useStaffEnquiry>;
+  readonly enquiry: EnquiryQuery;
   readonly enquiryId: string;
 }) {
-  const router = useRouter();
   if (enquiry.isPending) return <DetailLoading />;
-  if (enquiry.isError) {
-    if (isAppError(enquiry.error) && enquiry.error.code === "network_error")
-      return <OfflineState onRetry={() => void enquiry.refetch()} />;
-    if (isAppError(enquiry.error) && enquiry.error.code === "unauthenticated")
-      return (
-        <EmptyState
-          icon="lock"
-          title="Sign in to view this enquiry"
-          action={{ label: "Sign in", onPress: () => router.replace("/sign-in") }}
-        />
-      );
-    if (isAppError(enquiry.error) && enquiry.error.code === "forbidden")
-      return <EmptyState icon="lock" title="Not available for your role" />;
-    if (isAppError(enquiry.error) && enquiry.error.code === "not_found")
-      return <EmptyState icon="inbox" title="Enquiry not found" />;
-    return <ErrorState onRetry={() => void enquiry.refetch()} />;
-  }
+  if (enquiry.isError)
+    return <DetailError error={enquiry.error} onRetry={() => void enquiry.refetch()} />;
   return (
     <Stack gap={4}>
-      <EnquiryHeader enquiry={enquiry.data} />
+      <EnquiryDetails enquiry={enquiry.data} />
       <EnquiryStatusActions enquiryId={enquiryId} status={enquiry.data.status} />
       <AgreementSection enquiryId={enquiryId} accountId={enquiry.data.accountId} />
       <ProposalsSection enquiryId={enquiryId} />
       <VisitsSection enquiryId={enquiryId} />
       <MilestonesSection enquiryId={enquiryId} />
-      <Timeline events={enquiry.data.events} />
+      <EnquiryActivity events={enquiry.data.events} />
     </Stack>
   );
 }
 
-function EnquiryHeader({ enquiry }: { readonly enquiry: HotelEnquiryStaffDetailView }) {
-  const badge = staffEnquiryBadge[enquiry.status];
-  return (
-    <Stack gap={2}>
-      <Row gap={2} justify="between" align="start">
-        <Text variant="title" className="flex-1">
-          {enquiry.functionsSummary ?? "Hotel enquiry"}
-        </Text>
-        <StatusChip label={badge.label} tone={badge.tone} />
-      </Row>
-      <Text tone="muted">{`${formatDateRange(enquiry.dateFrom, enquiry.dateTo)} · ${enquiry.guestEstimate} guests`}</Text>
-      {enquiry.notesClient ? <Text>{`Client note: ${enquiry.notesClient}`}</Text> : null}
-      {enquiry.notesInternal ? (
-        <Callout kind="info" title="Internal note">
-          {enquiry.notesInternal}
-        </Callout>
-      ) : null}
-      <Row gap={2} wrap>
-        <StatusChip
-          label={enquiry.assignedUserId ? "Assigned" : "Unassigned"}
-          tone={enquiry.assignedUserId ? "neutral" : "warning"}
-          size="sm"
-        />
-        <Text variant="bodySmall" tone="muted">{`Hotel ref ${enquiry.hotelId.slice(0, 8)}`}</Text>
-      </Row>
-    </Stack>
-  );
+function DetailError({
+  error,
+  onRetry,
+}: {
+  readonly error: unknown;
+  readonly onRetry: () => void;
+}) {
+  const router = useRouter();
+  if (isAppError(error) && error.code === "network_error")
+    return <OfflineState onRetry={onRetry} />;
+  if (isAppError(error) && error.code === "unauthenticated")
+    return (
+      <EmptyState
+        icon="lock"
+        title="Sign in to view this enquiry"
+        action={{
+          label: "Sign in",
+          variant: "primary",
+          onPress: () => router.replace("/sign-in"),
+        }}
+      />
+    );
+  if (isAppError(error) && error.code === "forbidden")
+    return <EmptyState icon="lock" title="Not available for your role" />;
+  if (isAppError(error) && error.code === "not_found")
+    return <EmptyState icon="inbox" title="Enquiry not found" />;
+  return <ErrorState onRetry={onRetry} />;
 }
 
-/** The full event timeline — including the internal-only events a client never sees. */
-function Timeline({ events }: { readonly events: HotelEnquiryStaffDetailView["events"] }) {
-  if (events.length === 0) return null;
-  return (
-    <Stack gap={2}>
-      <Text variant="subheading">Activity</Text>
-      {events.map((event) => (
-        <Card key={event.id}>
-          <Stack gap={1}>
-            <Row gap={2} justify="between" align="start">
-              <Text variant="label" className="flex-1">
-                {eventLabel(event.eventType)}
-              </Text>
-              {event.internalOnly ? <StatusChip label="internal" tone="warning" size="sm" /> : null}
-            </Row>
-            {event.summary ? <Text tone="muted">{event.summary}</Text> : null}
-            <Text variant="bodySmall" tone="muted">
-              {formatDate(event.occurredAt)}
-            </Text>
-          </Stack>
-        </Card>
-      ))}
-    </Stack>
-  );
-}
-
+/** The shapes of the loaded screen (details, then the pipeline panel), so nothing jumps on arrival. */
 function DetailLoading() {
   return (
-    <Stack gap={3} testID="staff-enquiry-loading">
-      <Skeleton className="h-8 w-full" />
-      <Skeleton className="h-40 w-full" />
+    <Stack gap={4} testID="staff-enquiry-loading">
+      <Card>
+        <Stack gap={3}>
+          <Skeleton shape="text" className="w-40" />
+          <Skeleton className="h-16 w-full" />
+        </Stack>
+      </Card>
+      <Skeleton className="h-36 w-full rounded-lg" />
     </Stack>
   );
 }

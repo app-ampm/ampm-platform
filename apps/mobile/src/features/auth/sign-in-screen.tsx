@@ -1,12 +1,22 @@
-import { useState } from "react";
-import { ScrollView } from "react-native";
-import { useRouter } from "expo-router";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "expo-router";
+import { useState } from "react";
 
 import { useDevLogin } from "@ampm/api-client";
 import { isAppError } from "@ampm/core";
-import { Button, Input, Link, Row, Stack, Text } from "@ampm/ui";
+import {
+  Button,
+  Card,
+  Input,
+  Link,
+  Row,
+  Screen,
+  ScreenHeader,
+  Stack,
+  Text,
+  useBreakpoint,
+  useIsClient,
+} from "@ampm/ui";
 
 import { setAccessToken } from "@/lib/session";
 
@@ -51,36 +61,88 @@ function useDevSignIn() {
   return { signIn, pending: devLogin.isPending, errorText };
 }
 
+type DevSignIn = ReturnType<typeof useDevSignIn>;
+
+/** The wordmark over "Welcome back." (P1, D1). */
+function SignInHeader() {
+  return (
+    <Stack gap={8}>
+      <Text variant="wordmark">AMPM</Text>
+      <ScreenHeader
+        title="Welcome"
+        emphasis="back."
+        subtitle="Development sign-in: use a seeded account."
+      />
+    </Stack>
+  );
+}
+
 /**
  * Development sign-in for the demo. A seeded staff or client email is exchanged for a local access token
- * via `/auth/dev-login` (refused outside a local, non-production config). Staff land in the Sales
- * workspace, clients in the portal. The production sign-in is Cognito, which ships with the hosting.
+ * via `/auth/dev-login` (refused outside a local, non-production config). Staff land in their first
+ * workspace area, clients in the portal. The production sign-in is Cognito, which ships with the
+ * hosting. P1 on a phone; from 768 up the D1 card, centred on the canvas.
  */
 export function SignInScreen() {
-  const insets = useSafeAreaInsets();
-  const { signIn, pending, errorText } = useDevSignIn();
+  const session = useDevSignIn();
+  const isClient = useIsClient();
+  const { atLeast } = useBreakpoint();
+  // The server knows no window: it renders the phone layout and the client takes over after hydration.
+  if (isClient && atLeast("md")) {
+    return (
+      <Screen glow="top" contentClassName="grow items-center justify-center">
+        <Card padding="lg" className="w-full max-w-md md:p-9">
+          <Stack gap={6}>
+            <SignInHeader />
+            <SignInChoices session={session} nested />
+          </Stack>
+        </Card>
+      </Screen>
+    );
+  }
   return (
-    <ScrollView
-      className="flex-1 bg-surface"
-      contentContainerClassName="gap-6 p-4 md:p-8"
-      style={{ paddingTop: insets.top }}
-    >
-      <Stack gap={1}>
-        <Text variant="title">AMPM</Text>
-        <Text tone="muted">Development sign-in — use a seeded account.</Text>
-      </Stack>
-      <EmailSignIn onSubmit={signIn} pending={pending} errorText={errorText} />
-      <QuickSignIn title="Staff" users={DEMO_STAFF} onPick={signIn} pending={pending} />
-      <QuickSignIn title="Client" users={DEMO_CLIENTS} onPick={signIn} pending={pending} />
+    <Screen glow="top" header={<SignInHeader />}>
+      <SignInChoices session={session} nested={false} />
+    </Screen>
+  );
+}
+
+interface ChoicesProps {
+  readonly session: DevSignIn;
+  /** Inside the desktop card: the groups are flat tints instead of glass cards of their own. */
+  readonly nested: boolean;
+}
+
+/** The email form (the one gold action), the seeded quick sign-ins and the gallery link. */
+function SignInChoices({ session, nested }: ChoicesProps) {
+  const { signIn, pending, errorText } = session;
+  const form = <EmailSignIn onSubmit={signIn} pending={pending} errorText={errorText} />;
+  return (
+    <>
+      {nested ? form : <Card>{form}</Card>}
+      <QuickSignIn
+        title="Staff"
+        users={DEMO_STAFF}
+        onPick={signIn}
+        pending={pending}
+        nested={nested}
+      />
+      <QuickSignIn
+        title="Clients"
+        users={DEMO_CLIENTS}
+        onPick={signIn}
+        pending={pending}
+        nested={nested}
+      />
       <Link
         href="/gallery"
-        variant="standalone"
-        tone="muted"
+        variant="nav"
         accessibilityLabel="Component gallery"
+        className="self-center"
       >
         Component gallery →
       </Link>
-    </ScrollView>
+    </>
   );
 }
 
@@ -95,7 +157,7 @@ function EmailSignIn({
 }) {
   const [email, setEmail] = useState("");
   return (
-    <Stack gap={3}>
+    <Stack gap={4}>
       <Input
         label="Work email"
         value={email}
@@ -109,6 +171,7 @@ function EmailSignIn({
       />
       <Button
         fullWidth
+        size="lg"
         loading={pending}
         disabled={email.trim().length === 0}
         onPress={() => onSubmit(email)}
@@ -124,30 +187,32 @@ function QuickSignIn({
   users,
   onPick,
   pending,
+  nested,
 }: {
   readonly title: string;
   readonly users: ReadonlyArray<{ readonly email: string; readonly label: string }>;
   readonly onPick: (email: string) => void;
   readonly pending: boolean;
+  readonly nested: boolean;
 }) {
   return (
-    <Stack gap={2}>
-      <Text variant="label" tone="muted">
-        {title}
-      </Text>
-      <Row gap={2} wrap>
-        {users.map((user) => (
-          <Button
-            key={user.email}
-            variant="secondary"
-            size="sm"
-            loading={pending}
-            onPress={() => onPick(user.email)}
-          >
-            {user.label}
-          </Button>
-        ))}
-      </Row>
-    </Stack>
+    <Card tone={nested ? "flat" : "glass"} padding={nested ? "sm" : "md"}>
+      <Stack gap={3}>
+        <Text variant="eyebrow">{title}</Text>
+        <Row gap={2} wrap>
+          {users.map((user) => (
+            <Button
+              key={user.email}
+              variant="secondary"
+              size="sm"
+              loading={pending}
+              onPress={() => onPick(user.email)}
+            >
+              {user.label}
+            </Button>
+          ))}
+        </Row>
+      </Stack>
+    </Card>
   );
 }
