@@ -1,15 +1,21 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  destinationView,
   hotelStaffDetailView,
   hotelStaffPage,
+  type DestinationView,
+  type HotelCreateRequest,
   type HotelStaffDetailView,
   type HotelStaffListQuery,
   type HotelStaffPage,
+  type HotelUpdateRequest,
 } from "@ampm/core";
+import { z } from "zod";
 
 import { useApiClient } from "../provider";
 
 export const STAFF_HOTELS_QUERY_KEY = ["hotels-admin", "hotels"] as const;
+export const STAFF_DESTINATIONS_QUERY_KEY = ["hotels-admin", "destinations"] as const;
 
 /** The query key for one staff hotel's detail. */
 export function staffHotelQueryKey(hotelId: string) {
@@ -51,5 +57,68 @@ export function useStaffHotel(hotelId: string) {
     queryKey: staffHotelQueryKey(hotelId),
     queryFn: ({ signal }) =>
       api.get(`/hotels-admin/hotels/${hotelId}`, hotelStaffDetailView, signal),
+  });
+}
+
+/** The staff destination list wrapper (`{ items: DestinationView[] }`). */
+const staffDestinationList = z.object({ items: z.array(destinationView) }).strict();
+
+/**
+ * Every destination a hotel can be filed under (`GET /hotels-admin/destinations`,
+ * `hotels.destinations.read`): the whole reference set, name-ordered and not reach-scoped — the picker
+ * source for the hotel profile editor, unlike the client browse which hides empty destinations.
+ * Staff-only, gated server-side.
+ */
+export function useStaffDestinations() {
+  const api = useApiClient();
+  return useQuery<DestinationView[]>({
+    queryKey: STAFF_DESTINATIONS_QUERY_KEY,
+    queryFn: async ({ signal }) =>
+      (await api.get("/hotels-admin/destinations", staffDestinationList, signal)).items,
+  });
+}
+
+/** Refresh the staff catalogue after a hotel write, plus the one hotel's detail when editing. */
+function useRefreshStaffHotels(): (hotelId?: string) => void {
+  const queryClient = useQueryClient();
+  return (hotelId) => {
+    void queryClient.invalidateQueries({ queryKey: STAFF_HOTELS_QUERY_KEY });
+    if (hotelId) void queryClient.invalidateQueries({ queryKey: staffHotelQueryKey(hotelId) });
+  };
+}
+
+/**
+ * Add a hotel to the staff catalogue (`POST /hotels-admin/hotels`,
+ * `hotels.hotel_profiles_client_fields.create`). Returns the new profile and refreshes the list.
+ */
+export function useCreateHotel() {
+  const api = useApiClient();
+  const refresh = useRefreshStaffHotels();
+  return useMutation<HotelStaffDetailView, Error, HotelCreateRequest>({
+    mutationFn: (body) =>
+      api.request("/hotels-admin/hotels", { method: "POST", body, schema: hotelStaffDetailView }),
+    onSuccess: (hotel) => refresh(hotel.id),
+  });
+}
+
+/**
+ * Edit a hotel's profile (`PATCH /hotels-admin/hotels/:id`,
+ * `hotels.hotel_profiles_client_fields.update`). Refreshes the catalogue and the hotel's detail.
+ */
+export function useUpdateHotel() {
+  const api = useApiClient();
+  const refresh = useRefreshStaffHotels();
+  return useMutation<
+    HotelStaffDetailView,
+    Error,
+    { readonly hotelId: string; readonly body: HotelUpdateRequest }
+  >({
+    mutationFn: ({ hotelId, body }) =>
+      api.request(`/hotels-admin/hotels/${hotelId}`, {
+        method: "PATCH",
+        body,
+        schema: hotelStaffDetailView,
+      }),
+    onSuccess: (hotel) => refresh(hotel.id),
   });
 }

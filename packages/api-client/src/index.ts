@@ -53,10 +53,14 @@ export { useSaveHotel } from "./hooks/use-save-hotel";
 export { useUnsaveHotel } from "./hooks/use-unsave-hotel";
 // H1.1 staff hotel catalogue + photo management (Module C + Module N media). Staff-only; gated server-side.
 export {
+  STAFF_DESTINATIONS_QUERY_KEY,
   STAFF_HOTELS_QUERY_KEY,
   staffHotelQueryKey,
+  useCreateHotel,
+  useStaffDestinations,
   useStaffHotel,
   useStaffHotels,
+  useUpdateHotel,
 } from "./hooks/use-staff-hotels";
 export {
   hotelMediaQueryKey,

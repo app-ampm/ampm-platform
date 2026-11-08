@@ -1,4 +1,4 @@
-import type { HotelStaffView, HotelStatus } from "@ampm/core";
+import type { DestinationView, HotelStaffView, HotelStatus } from "@ampm/core";
 import type { StatusTone } from "@ampm/ui";
 
 /* Presentation helpers for the staff hotel catalogue (H1.1). No fetching, no rules. */
@@ -24,4 +24,9 @@ export function hotelStatusTone(status: HotelStatus): StatusTone {
 /** A screen-reader summary of one hotel row. */
 export function hotelRowSummary(hotel: HotelStaffView): string {
   return `${hotel.name}, ${hotelStatusLabel(hotel.status).toLowerCase()}`;
+}
+
+/** A destination's name with its state (e.g. "Udaipur, Rajasthan"), for the hotel editor's picker. */
+export function destinationOption(destination: DestinationView): string {
+  return destination.state ? `${destination.name}, ${destination.state}` : destination.name;
 }

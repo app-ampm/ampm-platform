@@ -1,10 +1,11 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { useRouter } from "expo-router";
 import type { UseQueryResult } from "@tanstack/react-query";
 
 import { useStaffHotels } from "@ampm/api-client";
 import type { HotelStaffPage, HotelStaffView } from "@ampm/core";
 import {
+  Button,
   Card,
   DataTable,
   EmptyState,
@@ -20,6 +21,7 @@ import {
 
 import { useGoToSignIn } from "@/navigation/sign-in";
 
+import { HotelProfileEditSheet } from "./hotel-profile-edit-sheet";
 import { hotelRowSummary, hotelStatusLabel, hotelStatusTone } from "./hotels-admin.format";
 
 const COLUMNS: DataTableColumn<HotelStaffView>[] = [
@@ -113,20 +115,41 @@ export interface HotelsListScreenProps {
 }
 
 /**
- * The staff hotel catalogue (H1.1): the private hotel database, tap a hotel to manage its photos. The
- * profile editor, rooms, rate cards and import follow in later slices. Hotel team and Super Admin only,
- * gated server-side.
+ * The staff hotel catalogue (H1.1): the private hotel database. Add a hotel with "New hotel", or tap one
+ * to manage it (edit its profile, add photos). Rooms, rate cards and import follow in later slices. Hotel
+ * team and Super Admin only, gated server-side.
  *
  *   <HotelsListScreen tabBar={<AppTabBar />} />
  */
 export function HotelsListScreen({ tabBar }: HotelsListScreenProps) {
   const router = useRouter();
   const hotels = useStaffHotels();
+  const [creating, setCreating] = useState(false);
   const open = (hotel: HotelStaffView): void =>
     router.push({ pathname: "/hotels-admin/[hotelId]", params: { hotelId: hotel.id } });
   return (
-    <Screen tabBar={tabBar} header={<ScreenHeader eyebrow="Hotels" title="Hotel catalogue" />}>
+    <Screen
+      tabBar={tabBar}
+      header={
+        <ScreenHeader
+          eyebrow="Hotels"
+          title="Hotel catalogue"
+          trailing={
+            <Button
+              variant="primary"
+              size="sm"
+              icon="plus"
+              onPress={() => setCreating(true)}
+              testID="hotel-new"
+            >
+              New hotel
+            </Button>
+          }
+        />
+      }
+    >
       <HotelsBody hotels={hotels} onOpen={open} />
+      <HotelProfileEditSheet open={creating} hotel={null} onClose={() => setCreating(false)} />
     </Screen>
   );
 }
