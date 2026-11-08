@@ -5,6 +5,7 @@ import type { UseQueryResult } from "@tanstack/react-query";
 import { useLeads } from "@ampm/api-client";
 import type { LeadPage } from "@ampm/core";
 import {
+  Button,
   EmptyState,
   QueryErrorState,
   Row,
@@ -106,7 +107,23 @@ export function LeadsListScreen({ tabBar }: LeadsListScreenProps) {
   return (
     <Screen
       tabBar={tabBar}
-      header={<ScreenHeader eyebrow={pipelineEyebrow(leads.data)} title="Pipeline" />}
+      header={
+        <ScreenHeader
+          eyebrow={pipelineEyebrow(leads.data)}
+          title="Pipeline"
+          trailing={
+            <Button
+              variant="secondary"
+              size="sm"
+              icon="briefcase"
+              onPress={() => router.push("/leads/accounts")}
+              testID="leads-clients-link"
+            >
+              Clients
+            </Button>
+          }
+        />
+      }
     >
       <LeadsBody leads={leads} isBoard={isBoard} onOpen={openLead} />
     </Screen>
