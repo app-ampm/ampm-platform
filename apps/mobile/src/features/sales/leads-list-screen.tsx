@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { useRouter } from "expo-router";
 import type { UseQueryResult } from "@tanstack/react-query";
 
-import { useLeads } from "@ampm/api-client";
+import { useLeads, useMe } from "@ampm/api-client";
 import type { LeadPage } from "@ampm/core";
 import {
   Button,
@@ -17,10 +17,14 @@ import {
 } from "@ampm/ui";
 
 import { useGoToSignIn } from "@/navigation/sign-in";
+import { rolesGrant } from "@/navigation/staff-areas";
 
 import { LeadsBoard } from "./leads-board";
 import { LeadsList } from "./leads-list";
 import { isOpenLead } from "./sales.format";
+
+/** The lead-funnel report key (§5.16): Sales and the Super Admin only, so the Funnel link is theirs. */
+const FUNNEL_PERMISSION = "reports.lead_source_conversion_funnel.read";
 
 export interface LeadsListScreenProps {
   /** The app's tab bar (the route supplies it); the screen keeps room for it at the end. */
@@ -102,7 +106,9 @@ function LeadsBody({ leads, isBoard, onOpen }: BodyProps) {
 export function LeadsListScreen({ tabBar }: LeadsListScreenProps) {
   const router = useRouter();
   const leads = useLeads();
+  const me = useMe();
   const isBoard = useBreakpoint().atLeast("md");
+  const canRunFunnel = me.data ? rolesGrant(me.data.roles, FUNNEL_PERMISSION) : false;
   const openLead = (id: string): void => router.push({ pathname: "/leads/[id]", params: { id } });
   return (
     <Screen
@@ -112,15 +118,28 @@ export function LeadsListScreen({ tabBar }: LeadsListScreenProps) {
           eyebrow={pipelineEyebrow(leads.data)}
           title="Pipeline"
           trailing={
-            <Button
-              variant="secondary"
-              size="sm"
-              icon="briefcase"
-              onPress={() => router.push("/leads/accounts")}
-              testID="leads-clients-link"
-            >
-              Clients
-            </Button>
+            <Row gap={2}>
+              {canRunFunnel ? (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  icon="filter"
+                  onPress={() => router.push("/leads/funnel")}
+                  testID="leads-funnel-link"
+                >
+                  Funnel
+                </Button>
+              ) : null}
+              <Button
+                variant="secondary"
+                size="sm"
+                icon="briefcase"
+                onPress={() => router.push("/leads/accounts")}
+                testID="leads-clients-link"
+              >
+                Clients
+              </Button>
+            </Row>
           }
         />
       }

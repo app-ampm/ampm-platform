@@ -23,6 +23,7 @@ export { leadQueryKey, useLead } from "./hooks/use-lead";
 export { useLeadActivities } from "./hooks/use-lead-activities";
 export { useConvertLead } from "./hooks/use-convert-lead";
 export { useAddLeadActivity, useAssignLeadOwner, useUpdateLead } from "./hooks/use-lead-actions";
+export { LEAD_FUNNEL_QUERY_KEY, useLeadFunnel } from "./hooks/use-lead-funnel";
 // Module A admin console (feature 5.1): the staff directory (TW-90). Staff-only; gated server-side.
 export {
   STAFF_USERS_QUERY_KEY,
