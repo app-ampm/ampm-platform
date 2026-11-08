@@ -65,6 +65,10 @@ export const hotelView = z
     totalRooms: z.number().int().nullable(),
     streetViewRef: z.string().nullable(), // map / street-view reference (Q9; data-model.md §5)
     lastVerifiedAt: isoDateTime.nullable(), // freshness label (data-model.md §5)
+    // A short-lived signed link to a thumbnail of the hotel's primary client-visible image (the card
+    // cover) — the same gated derivative the detail gallery serves, never an object key (security.md).
+    // Null when the hotel has no client-eligible image, or in the media-free compare projection.
+    coverUrl: z.string().nullable(),
   })
   .strict();
 export type HotelView = z.infer<typeof hotelView>;

@@ -36,6 +36,7 @@ const hotel = {
   totalRooms: 84,
   streetViewRef: null,
   lastVerifiedAt: null,
+  coverUrl: null,
 };
 
 describe("hotelView (one client model per audience — security.md)", () => {
@@ -51,6 +52,17 @@ describe("hotelView (one client model per audience — security.md)", () => {
     );
     expect(hotelView.safeParse({ ...hotel, status: "active" }).success).toBe(false);
     expect(hotelView.safeParse({ ...hotel, demoVisible: true }).success).toBe(false);
+  });
+
+  it("carries a nullable cover link — a signed string or null, never another type", () => {
+    // The card cover: a signed thumbnail link (relative for the local store, so a plain string, not a URL).
+    expect(
+      hotelView.safeParse({ ...hotel, coverUrl: "/media/blob?key=k&exp=1&sig=s" }).success,
+    ).toBe(true);
+    expect(hotelView.safeParse({ ...hotel, coverUrl: null }).success).toBe(true);
+    expect(hotelView.safeParse({ ...hotel, coverUrl: 42 }).success).toBe(false);
+    const { coverUrl: _omit, ...withoutCover } = hotel;
+    expect(hotelView.safeParse(withoutCover).success).toBe(false); // required (null, not absent)
   });
 });
 

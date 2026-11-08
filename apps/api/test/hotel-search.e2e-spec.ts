@@ -1,4 +1,6 @@
-import type { HotelReach } from "@ampm/core";
+import { randomUUID } from "node:crypto";
+
+import type { HotelReach, MediaRightsStatus, MediaVisibility } from "@ampm/core";
 import type { Entitlements } from "@ampm/policy";
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -12,7 +14,7 @@ const TAG = "E2E-HotelSearch";
 const PREFIX = "e2e-hotelsearch-";
 const ACTOR = "00000000-0000-7000-8000-0000000000aa"; // a plain Uuid for created_by (no FK)
 
-function fakePrincipal(reach: HotelReach): Principal {
+function fakePrincipal(reach: HotelReach, type: "client" | "demo" = "client"): Principal {
   const entitlements: Entitlements = {
     modules: ["hotel_discovery"],
     readOnlyModules: [],
@@ -22,7 +24,7 @@ function fakePrincipal(reach: HotelReach): Principal {
     signInRefused: false,
   };
   return {
-    type: "client",
+    type,
     userId: "00000000-0000-7000-8000-000000000000",
     name: "T",
     email: null,
@@ -38,6 +40,7 @@ interface SeedOptions {
   slug: string;
   star: string;
   rooms: number;
+  demoVisible?: boolean;
   venue?: { banquet?: number; reception?: number; deleted?: boolean };
   card?: { status: "verified" | "stale" | "draft"; itemClientVisible: boolean };
 }
@@ -72,6 +75,7 @@ describe("Hotel discovery search filters (e2e)", () => {
     });
     await prisma.hotelRateCard.deleteMany({ where: { hotelId: { in: ids } } });
     await prisma.hotelVenue.deleteMany({ where: { hotelId: { in: ids } } });
+    await prisma.mediaAsset.deleteMany({ where: { ownerType: "hotel", ownerId: { in: ids } } });
     await prisma.hotel.deleteMany({ where: { id: { in: ids } } });
     await prisma.destination.deleteMany({ where: { slug: { startsWith: PREFIX } } });
   }
@@ -85,6 +89,7 @@ describe("Hotel discovery search filters (e2e)", () => {
         starCategory: opts.star,
         totalRooms: opts.rooms,
         descriptionClient: "A synthetic test hotel.",
+        demoVisible: opts.demoVisible ?? false,
         status: "active",
       },
       select: { id: true },
@@ -122,6 +127,39 @@ describe("Hotel discovery search filters (e2e)", () => {
     return hotel.id;
   }
 
+  /** A clean, client-eligible cover image on a hotel at a visibility, sort order and rights state. */
+  async function seedCoverImage(
+    hotelId: string,
+    visibility: MediaVisibility,
+    sortOrder: number,
+    rights: MediaRightsStatus = "owned",
+  ): Promise<void> {
+    const storageKey = `hotel/${hotelId}/${randomUUID()}`;
+    await prisma.mediaAsset.create({
+      data: {
+        ownerType: "hotel",
+        ownerId: hotelId,
+        kind: "image",
+        storageKey,
+        thumbnailKey: `${storageKey}.thumb`,
+        webKey: `${storageKey}.web`,
+        mimeType: "image/jpeg",
+        sizeBytes: 100,
+        scanStatus: "clean",
+        visibility,
+        rightsStatus: rights,
+        sortOrder,
+        createdBy: ACTOR,
+        uploadedBy: ACTOR,
+      },
+    });
+  }
+
+  /** The stable `key` of a signed /media/blob link — the handle two signings of one derivative share. */
+  function blobKey(url: string): string | null {
+    return new URL(url, "http://local").searchParams.get("key");
+  }
+
   beforeAll(async () => {
     ({ app } = await startApi());
     prisma = app.get(PrismaService);
@@ -138,11 +176,13 @@ describe("Hotel discovery search filters (e2e)", () => {
         select: { id: true },
       })
     ).id;
-    // The match: 5-star, 300 rooms, a 600-seat banquet venue, a verified client-visible card.
+    // The match: 5-star, 300 rooms, a 600-seat banquet venue, a verified client-visible card. Also
+    // demo-visible, so a demo prospect sees it — the cover test proves its client media is still demo-hidden.
     id.big = await seedHotel({
       slug: "big",
       star: "5",
       rooms: 300,
+      demoVisible: true,
       venue: { banquet: 600 },
       card: { status: "verified", itemClientVisible: true },
     });
@@ -210,5 +250,39 @@ describe("Hotel discovery search filters (e2e)", () => {
     const all = [id.big, id.small, id.stale, id.hidden, id.delven].sort();
     expect(await matched({ minRooms: 0 })).toEqual(all);
     expect(await matched({ minGuestCapacity: 0 })).toEqual(all);
+  });
+
+  it("gives each list card a cover: the lowest-sortOrder client-eligible image, gated by visibility and GP-20 rights (card thumbnails)", async () => {
+    // `big` gets, by sort order: an internal image and a consent-required client image (both at 0, both
+    // ineligible — visibility and rights), then two owned client images at 1 and 2. The cover is the
+    // eligible image with the lowest sort order — the owned client image at 1.
+    await seedCoverImage(id.big, "client", 2);
+    await seedCoverImage(id.big, "client", 1);
+    await seedCoverImage(id.big, "client", 0, "consent_required");
+    await seedCoverImage(id.big, "internal", 0);
+
+    const page = await hotels.list(fakePrincipal("all_hotels"), { destinationId, limit: 50 });
+    const bigCover = page.items.find((h) => h.id === id.big)?.coverUrl ?? null;
+    expect(bigCover).toContain("/media/blob?");
+
+    // It is the SAME photo as the detail hero — the gallery's first client image, re-signed (same key).
+    const detail = await hotels.get(fakePrincipal("all_hotels"), id.big);
+    const firstImage = detail.gallery.find((g) => g.kind === "image");
+    expect(blobKey(bigCover ?? "")).toBe(blobKey(firstImage?.thumbnailUrl ?? ""));
+
+    // A hotel with no eligible image has a null cover, so its card shows the placeholder (`small` has none).
+    expect(page.items.find((h) => h.id === id.small)?.coverUrl).toBeNull();
+
+    // A demo prospect SEES `big` (it is demo-visible) but its client-only images are never its cover (GP-20):
+    // the demo audience is scoped to public+demo media, so the card falls back to the placeholder.
+    const demoPage = await hotels.list(fakePrincipal("demo_hotels", "demo"), {
+      destinationId,
+      limit: 50,
+    });
+    const demoBig = demoPage.items.find((h) => h.id === id.big);
+    expect(demoBig).toBeDefined();
+    expect(demoBig?.coverUrl ?? null).toBeNull();
+
+    await prisma.mediaAsset.deleteMany({ where: { ownerType: "hotel", ownerId: id.big } });
   });
 });
