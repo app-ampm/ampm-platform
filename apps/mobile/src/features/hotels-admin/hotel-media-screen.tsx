@@ -199,6 +199,24 @@ function HotelDetailsLink({ hotelId }: { readonly hotelId: string }) {
   );
 }
 
+/** A link from the photo manager to the hotel's rate cards workspace. */
+function HotelRatesLink({ hotelId }: { readonly hotelId: string }) {
+  const router = useRouter();
+  return (
+    <Button
+      variant="secondary"
+      icon="receipt"
+      fullWidth
+      onPress={() =>
+        router.push({ pathname: "/hotels-admin/[hotelId]/rates", params: { hotelId } })
+      }
+      testID="hotel-rates-link"
+    >
+      Rate cards
+    </Button>
+  );
+}
+
 export interface HotelMediaScreenProps {
   readonly hotelId: string;
   readonly tabBar?: ReactNode;
@@ -236,6 +254,7 @@ export function HotelMediaScreen({ hotelId, tabBar }: HotelMediaScreenProps) {
     >
       <Stack gap={4}>
         <HotelDetailsLink hotelId={hotelId} />
+        <HotelRatesLink hotelId={hotelId} />
         <MediaBody media={media} onEdit={manager.startEdit} onDelete={manager.startDelete} />
       </Stack>
       <HotelProfileEditSheet
