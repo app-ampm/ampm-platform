@@ -1,4 +1,9 @@
-import type { HotelStaffView, MediaAssetView } from "@ampm/core";
+import type {
+  DestinationView,
+  HotelStaffDetailView,
+  HotelStaffView,
+  MediaAssetView,
+} from "@ampm/core";
 
 import { failure, TEST_API_BASE } from "../../test/api";
 
@@ -10,7 +15,7 @@ export { failure, ok, renderWithApi } from "../../test/api";
  */
 
 export const HOTEL_ID = "018f0000-0000-7000-8000-0000000c0001";
-const DESTINATION_ID = "018f0000-0000-7000-8000-0000000c0002";
+export const DESTINATION_ID = "018f0000-0000-7000-8000-0000000c0002";
 const UPLOADER_ID = "018f0000-0000-7000-8000-0000000c00aa";
 
 /** A hotel as `GET /hotels-admin/hotels` returns it; override for the other states. */
@@ -35,6 +40,36 @@ export function hotelStaffViewFixture(overrides: Partial<HotelStaffView> = {}): 
     totalRooms: 120,
     streetViewRef: null,
     lastVerifiedAt: null,
+    ...overrides,
+  };
+}
+
+/** A destination as `GET /hotels-admin/destinations` returns it. */
+export function destinationViewFixture(overrides: Partial<DestinationView> = {}): DestinationView {
+  return {
+    id: DESTINATION_ID,
+    name: "Udaipur",
+    slug: "udaipur",
+    region: null,
+    state: "Rajasthan",
+    country: "India",
+    description: null,
+    status: "active",
+    publicVisible: true,
+    ...overrides,
+  };
+}
+
+/** A hotel with its (empty) nested collections, as create / update / detail return it. */
+export function hotelStaffDetailViewFixture(
+  overrides: Partial<HotelStaffDetailView> = {},
+): HotelStaffDetailView {
+  return {
+    ...hotelStaffViewFixture(),
+    destination: destinationViewFixture(),
+    rooms: [],
+    venues: [],
+    contacts: [],
     ...overrides,
   };
 }

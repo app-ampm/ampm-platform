@@ -8,6 +8,7 @@ import {
   Card,
   EmptyState,
   QueryErrorState,
+  Row,
   Screen,
   ScreenHeader,
   Skeleton,
@@ -18,6 +19,7 @@ import {
 import { useGoToSignIn } from "@/navigation/sign-in";
 
 import { ConfirmSheet } from "../admin/confirm-sheet";
+import { HotelProfileEditSheet } from "./hotel-profile-edit-sheet";
 import { MediaEditSheet } from "./media-edit-sheet";
 import { MediaRow } from "./media-row";
 import { pickImageFile } from "./pick-image-file";
@@ -124,6 +126,60 @@ function MediaBody({ media, onEdit, onDelete }: BodyProps) {
   );
 }
 
+type MediaManager = ReturnType<typeof useMediaManager>;
+
+/** The hotel screen's header actions: edit the profile (once it has loaded) and add a photo. */
+function HotelScreenActions({
+  canEdit,
+  adding,
+  onEdit,
+  onAddPhoto,
+}: {
+  readonly canEdit: boolean;
+  readonly adding: boolean;
+  readonly onEdit: () => void;
+  readonly onAddPhoto: () => void;
+}) {
+  return (
+    <Row gap={2}>
+      {canEdit ? (
+        <Button variant="secondary" size="sm" onPress={onEdit} testID="hotel-edit-profile">
+          Edit profile
+        </Button>
+      ) : null}
+      <Button
+        variant="primary"
+        size="sm"
+        icon="plus"
+        loading={adding}
+        onPress={onAddPhoto}
+        testID="media-add"
+      >
+        Add photo
+      </Button>
+    </Row>
+  );
+}
+
+/** The confirm shown before a photo is removed from the hotel. */
+function DeletePhotoConfirm({ manager }: { readonly manager: MediaManager }) {
+  return (
+    <ConfirmSheet
+      open={manager.deleting !== null}
+      onClose={manager.cancelDelete}
+      title={
+        manager.deleting ? `Remove ${manager.deleting.caption ?? "this photo"}?` : "Remove photo?"
+      }
+      description="This removes the photo from the hotel. It will no longer appear to clients."
+      confirmLabel="Remove photo"
+      destructive
+      loading={manager.deletePending}
+      onConfirm={manager.confirmDelete}
+      testID="media-remove"
+    />
+  );
+}
+
 export interface HotelMediaScreenProps {
   readonly hotelId: string;
   readonly tabBar?: ReactNode;
@@ -140,6 +196,7 @@ export function HotelMediaScreen({ hotelId, tabBar }: HotelMediaScreenProps) {
   const hotel = useStaffHotel(hotelId);
   const media = useHotelMedia(hotelId);
   const manager = useMediaManager(hotelId);
+  const [editingProfile, setEditingProfile] = useState(false);
   return (
     <Screen
       tabBar={tabBar}
@@ -148,35 +205,24 @@ export function HotelMediaScreen({ hotelId, tabBar }: HotelMediaScreenProps) {
           eyebrow={hotel.data?.name ?? "Hotel"}
           title="Photos"
           trailing={
-            <Button
-              variant="primary"
-              size="sm"
-              icon="plus"
-              loading={manager.adding}
-              onPress={() => void manager.addPhoto()}
-              testID="media-add"
-            >
-              Add photo
-            </Button>
+            <HotelScreenActions
+              canEdit={hotel.data !== undefined}
+              adding={manager.adding}
+              onEdit={() => setEditingProfile(true)}
+              onAddPhoto={() => void manager.addPhoto()}
+            />
           }
         />
       }
     >
       <MediaBody media={media} onEdit={manager.startEdit} onDelete={manager.startDelete} />
-      <MediaEditSheet hotelId={hotelId} media={manager.editing} onClose={manager.closeEdit} />
-      <ConfirmSheet
-        open={manager.deleting !== null}
-        onClose={manager.cancelDelete}
-        title={
-          manager.deleting ? `Remove ${manager.deleting.caption ?? "this photo"}?` : "Remove photo?"
-        }
-        description="This removes the photo from the hotel. It will no longer appear to clients."
-        confirmLabel="Remove photo"
-        destructive
-        loading={manager.deletePending}
-        onConfirm={manager.confirmDelete}
-        testID="media-remove"
+      <HotelProfileEditSheet
+        open={editingProfile}
+        hotel={hotel.data ?? null}
+        onClose={() => setEditingProfile(false)}
       />
+      <MediaEditSheet hotelId={hotelId} media={manager.editing} onClose={manager.closeEdit} />
+      <DeletePhotoConfirm manager={manager} />
     </Screen>
   );
 }

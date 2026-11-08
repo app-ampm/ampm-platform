@@ -3,6 +3,7 @@ import { uiCopy } from "@ampm/ui";
 import { fireEvent, screen } from "../../test/render";
 import { HotelsListScreen } from "./hotels-list-screen";
 import {
+  destinationViewFixture,
   failure,
   HOTEL_ID,
   hotelStaffViewFixture,
@@ -23,7 +24,10 @@ jest.mock("react-native/Libraries/Utilities/useWindowDimensions", () => ({
 }));
 
 const hotelsFetch = (items = [hotelStaffViewFixture()]): FetchFn =>
-  routedFetch({ "/hotels-admin/hotels": () => ok({ items, nextCursor: null }) });
+  routedFetch({
+    "/hotels-admin/hotels": () => ok({ items, nextCursor: null }),
+    "/hotels-admin/destinations": () => ok({ items: [destinationViewFixture()] }),
+  });
 
 beforeEach(() => {
   mockPush.mockClear();
@@ -42,6 +46,12 @@ describe("HotelsListScreen", () => {
   it("says when there are no hotels", async () => {
     await renderWithApi(<HotelsListScreen />, hotelsFetch([]));
     expect(await screen.findByText("No hotels yet")).toBeOnTheScreen();
+  });
+
+  it("opens the editor to add a hotel", async () => {
+    await renderWithApi(<HotelsListScreen />, hotelsFetch());
+    await fireEvent.press(await screen.findByTestId("hotel-new"));
+    expect(await screen.findByTestId("hotel-profile-submit")).toBeOnTheScreen();
   });
 
   it("shows the error state when the API fails", async () => {

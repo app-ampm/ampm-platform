@@ -4,8 +4,10 @@ import { fireEvent, screen } from "../../test/render";
 import { HotelMediaScreen } from "./hotel-media-screen";
 import { pickImageFile } from "./pick-image-file";
 import {
+  destinationViewFixture,
   failure,
   HOTEL_ID,
+  hotelStaffDetailViewFixture,
   mediaAssetFixture,
   ok,
   renderWithApi,
@@ -39,6 +41,8 @@ function mediaFetch(
   items: MediaAssetView[] = [mediaAssetFixture({ id: CLEAN_ID })],
 ): FetchFn {
   return routedFetch({
+    [`/hotels-admin/hotels/${HOTEL_ID}`]: () => ok(hotelStaffDetailViewFixture()),
+    "/hotels-admin/destinations": () => ok({ items: [destinationViewFixture()] }),
     "/media": (init) => {
       if (init?.method === "POST") {
         captured.registered = JSON.parse(String(init.body));
@@ -83,6 +87,13 @@ describe("HotelMediaScreen", () => {
     expect(screen.getByText("Ready")).toBeOnTheScreen();
     expect(screen.getByText("Internal only")).toBeOnTheScreen();
     expect(screen.getByText("Consent needed")).toBeOnTheScreen();
+  });
+
+  it("opens the profile editor from the hotel's screen", async () => {
+    await renderManager({});
+    await fireEvent.press(await screen.findByTestId("hotel-edit-profile"));
+    expect(await screen.findByDisplayValue("The Lakeside Palace")).toBeOnTheScreen();
+    expect(screen.getByTestId("hotel-profile-submit")).toBeOnTheScreen();
   });
 
   it("adds a photo: picks a file, registers it and uploads the bytes", async () => {
