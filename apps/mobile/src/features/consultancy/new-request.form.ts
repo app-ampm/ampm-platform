@@ -1,4 +1,4 @@
-import type { HotelEnquiryCreateRequest } from "@ampm/core";
+import { isIsoDate, type HotelEnquiryCreateRequest } from "@ampm/core";
 
 /** What the person has typed into the CP-07 form, before it becomes a request. */
 export interface NewRequestDraft {
@@ -22,12 +22,8 @@ export interface DateErrors {
   readonly dateTo?: string | undefined;
 }
 
-/** A real YYYY-MM-DD calendar date, matching the server's `z.iso.date()` (rejects e.g. 2027-02-30). */
-export function isIsoDate(value: string): boolean {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
-  const parsed = new Date(`${value}T00:00:00.000Z`);
-  return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
-}
+/** The YYYY-MM-DD calendar-date check, now shared in `@ampm/core`; re-exported for this form's callers. */
+export { isIsoDate };
 
 /**
  * The inline errors for the two dates, each naming its field. They appear once both dates are entered

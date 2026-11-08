@@ -74,6 +74,20 @@ export {
   useUpdateVenue,
 } from "./hooks/use-hotel-subresources";
 export {
+  rateCardsQueryKey,
+  useAddRateItem,
+  useCreateRateCard,
+  useDeleteRateCard,
+  useDeleteRateItem,
+  useHotelRateCards,
+  useHotelVerifications,
+  useRecordVerification,
+  useUpdateRateCard,
+  useUpdateRateItem,
+  useVerifyRateCard,
+  verificationsQueryKey,
+} from "./hooks/use-hotel-rates";
+export {
   hotelMediaQueryKey,
   useAddHotelPhoto,
   useDeleteMedia,

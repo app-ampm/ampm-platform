@@ -5,6 +5,14 @@ export const CORE_VERSION = "0.2.0";
 
 export { clientAmount, formatAmount, internalAmount } from "./money";
 export type { ClientAmount, Currency, InternalAmount } from "./money";
+export {
+  isIsoDate,
+  isoDateTimeFromDate,
+  moneyFromRupees,
+  rupeesFromMinor,
+  rupeesToMinor,
+} from "./forms";
+export { RATE_ITEM_TYPES, rateItemTypeLabel } from "./labels";
 
 export { formatDay, formatDayRange } from "./dates";
 export type { DateFormatOptions, DateStyle, DayReading } from "./dates";

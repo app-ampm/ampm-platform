@@ -4,8 +4,11 @@ import type {
   HotelStaffDetailView,
   HotelStaffView,
   MediaAssetView,
+  RateCardView,
+  RateItemView,
   RoomCategoryView,
   VenueView,
+  VerificationView,
 } from "@ampm/core";
 
 import { failure, TEST_API_BASE } from "../../test/api";
@@ -22,6 +25,9 @@ export const DESTINATION_ID = "018f0000-0000-7000-8000-0000000c0002";
 export const ROOM_ID = "018f0000-0000-7000-8000-0000000c0d01";
 export const VENUE_ID = "018f0000-0000-7000-8000-0000000c0e01";
 export const CONTACT_ID = "018f0000-0000-7000-8000-0000000c0f01";
+export const RATE_CARD_ID = "018f0000-0000-7000-8000-0000000c1001";
+export const RATE_ITEM_ID = "018f0000-0000-7000-8000-0000000c1101";
+export const VERIFICATION_ID = "018f0000-0000-7000-8000-0000000c1201";
 const UPLOADER_ID = "018f0000-0000-7000-8000-0000000c00aa";
 
 /** A hotel as `GET /hotels-admin/hotels` returns it; override for the other states. */
@@ -127,6 +133,61 @@ export function hotelContactViewFixture(
     phone: "+91 98765 43210",
     email: "priya@lakeside.example",
     isPrimary: true,
+    ...overrides,
+  };
+}
+
+/** A rate item as a card nests it; a client-visible indicative range ₹16,000–24,000 per night. */
+export function rateItemViewFixture(overrides: Partial<RateItemView> = {}): RateItemView {
+  return {
+    id: RATE_ITEM_ID,
+    rateCardId: RATE_CARD_ID,
+    itemType: "room_rate",
+    roomCategoryId: null,
+    venueId: null,
+    amount: { minor: 1600000, currency: "INR" },
+    amountMax: { minor: 2400000, currency: "INR" },
+    isIndicative: true,
+    unit: "per_night",
+    minQuantity: null,
+    inclusionsText: null,
+    clientVisible: true,
+    ...overrides,
+  };
+}
+
+/** A rate card as `GET …/rate-cards` returns it (draft, with one item). */
+export function rateCardViewFixture(overrides: Partial<RateCardView> = {}): RateCardView {
+  return {
+    id: RATE_CARD_ID,
+    hotelId: HOTEL_ID,
+    name: "Wedding season 2027",
+    validFrom: null,
+    validTo: null,
+    currency: "INR",
+    status: "draft",
+    verificationId: null,
+    source: null,
+    internalNotes: null,
+    items: [rateItemViewFixture()],
+    ...overrides,
+  };
+}
+
+/** A verification record as `GET …/verifications` returns it (a verified "rates" group). */
+export function verificationViewFixture(
+  overrides: Partial<VerificationView> = {},
+): VerificationView {
+  return {
+    id: VERIFICATION_ID,
+    hotelId: HOTEL_ID,
+    fieldGroup: "rates",
+    verifiedAt: "2026-11-01T09:00:00Z",
+    verifiedBy: null,
+    source: "phone",
+    status: "verified",
+    nextDueAt: null,
+    notes: null,
     ...overrides,
   };
 }

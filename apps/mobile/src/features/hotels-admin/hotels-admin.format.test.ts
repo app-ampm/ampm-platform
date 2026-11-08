@@ -3,9 +3,15 @@ import {
   hotelRowSummary,
   hotelStatusLabel,
   hotelStatusTone,
+  rateCardStatusLabel,
+  rateCardStatusTone,
+  rateItemTypeLabel,
+  rateUnitLabel,
   roomSummary,
   venueSummary,
   venueTypeLabel,
+  verificationFieldGroupLabel,
+  verificationSourceLabel,
 } from "./hotels-admin.format";
 import {
   hotelContactViewFixture,
@@ -80,5 +86,15 @@ describe("hotels-admin.format", () => {
         contactSummary(hotelContactViewFixture({ roleTitle: null, phone: null, email: null })),
       ).toBe("");
     });
+  });
+
+  it("labels and tones rate cards, items, units and verification sources", () => {
+    expect(rateCardStatusLabel("verified")).toBe("Verified");
+    expect(rateCardStatusTone("stale")).toBe("warning");
+    expect(rateCardStatusTone("verified")).toBe("success");
+    expect(rateItemTypeLabel("per_plate_veg")).toBe("Per plate (veg)");
+    expect(rateUnitLabel("per_night")).toBe("per night");
+    expect(verificationSourceLabel("site_visit")).toBe("Site visit");
+    expect(verificationFieldGroupLabel("rates")).toBe("Rates");
   });
 });

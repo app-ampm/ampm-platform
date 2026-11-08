@@ -1,12 +1,14 @@
-import type {
-  BookingMilestoneType,
-  HotelRateItemType,
-  Money,
-  ServiceFeeStructure,
+import {
+  isIsoDate,
+  RATE_ITEM_TYPES,
+  rateItemTypeLabel,
+  rupeesToMinor,
+  type BookingMilestoneType,
+  type HotelRateItemType,
+  type ServiceFeeStructure,
 } from "@ampm/core";
 
 import { milestoneTypeLabel } from "../consultancy/consultancy.format";
-import { isIsoDate } from "../consultancy/new-request.form";
 
 /**
  * Shared parsing, validation and option lists for the staff create forms (Slice 3). The forms are plain
@@ -16,30 +18,13 @@ import { isIsoDate } from "../consultancy/new-request.form";
  * §5: "inline gold helper text that names the field").
  */
 
-/** The client request form's calendar-date check, the one copy both audiences' forms use. */
-export { isIsoDate };
-
-/** A YYYY-MM-DD date as an ISO datetime at midnight UTC, for a `z.iso.datetime()` field. */
-export function isoDateTimeFromDate(date: string): string {
-  return `${date}T00:00:00.000Z`;
-}
-
-/** Parse a rupees string ("12,50,000" or "1250000.50") to whole paise with NO floating-point on the money
- *  path (data.md): the rupees and the up-to-two-digit paise are combined as integers. Null unless the text
- *  is a non-negative amount with at most two decimal places. */
-export function rupeesToMinor(text: string): number | null {
-  const cleaned = text.replace(/[,\s₹]/g, "");
-  if (!/^\d+(\.\d{1,2})?$/.test(cleaned)) return null;
-  const [whole, fraction = ""] = cleaned.split(".");
-  const minor = Number(whole) * 100 + Number(fraction.padEnd(2, "0"));
-  return Number.isSafeInteger(minor) ? minor : null;
-}
-
-/** A money object for a request body from a rupees string, or null when the text is not a valid amount. */
-export function moneyFromRupees(text: string): Money | null {
-  const minor = rupeesToMinor(text);
-  return minor === null ? null : { minor, currency: "INR" };
-}
+/**
+ * The shared, framework-free money + date parsing (code.md reuse; defined in `@ampm/core`): rupees <->
+ * wire paise and the YYYY-MM-DD check both audiences' forms use. Re-exported so this module stays the
+ * staff forms' single import for parsing, option lists and field checks.
+ */
+export { isIsoDate, rupeesToMinor };
+export { isoDateTimeFromDate, moneyFromRupees } from "@ampm/core";
 
 /** A denied (403) or guard-blocked (409) write carries a useful message; surface it over the fallback. */
 export function errorMessage(error: unknown, fallback: string): string {
@@ -92,37 +77,12 @@ export const MILESTONE_TYPE_OPTIONS: ReadonlyArray<ChoiceOption<BookingMilestone
   ] as const
 ).map((value) => ({ value, label: milestoneTypeLabel(value) }));
 
-const RATE_ITEM_LABEL: Record<HotelRateItemType, string> = {
-  room_rate: "Room rate",
-  venue_rental: "Venue rental",
-  per_plate_veg: "Per plate (veg)",
-  per_plate_non_veg: "Per plate (non-veg)",
-  wedding_package: "Wedding package",
-  beverage_package: "Beverage package",
-  service_charge: "Service charge",
-  tax: "Tax",
-  other: "Other",
-};
+/** A proposal line's kind as staff read it ("Room rate"); the label + order are shared from @ampm/core. */
+export { rateItemTypeLabel as rateItemLabel };
 
 /** The line-item kinds on a proposal line (the hotel_rate_items enum, data-model §6). */
-export const RATE_ITEM_OPTIONS: ReadonlyArray<ChoiceOption<HotelRateItemType>> = (
-  [
-    "room_rate",
-    "venue_rental",
-    "per_plate_veg",
-    "per_plate_non_veg",
-    "wedding_package",
-    "beverage_package",
-    "service_charge",
-    "tax",
-    "other",
-  ] as const
-).map((value) => ({ value, label: RATE_ITEM_LABEL[value] }));
-
-/** A proposal line's kind as staff read it ("Room rate"). */
-export function rateItemLabel(type: HotelRateItemType): string {
-  return RATE_ITEM_LABEL[type];
-}
+export const RATE_ITEM_OPTIONS: ReadonlyArray<ChoiceOption<HotelRateItemType>> =
+  RATE_ITEM_TYPES.map((value) => ({ value, label: rateItemTypeLabel(value) }));
 
 const FEE_STRUCTURE_LABEL: Record<ServiceFeeStructure, string> = {
   fixed: "Fixed",
