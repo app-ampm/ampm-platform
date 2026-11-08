@@ -22,6 +22,16 @@ services:
       WEB_APP_URL: "https://app.ampmverse.com"
       TRUST_PROXY: "1"
       IDENTITY_LOCAL_SECRET: *box-identity-secret
+      # Local object store (STORAGE_PROVIDER=local, the dev/staging adapter). The container root FS is
+      # read-only, so the store is a writable host bind-mount (below), owned by the container's node uid
+      # (1000); media uploaded through the photo manager lands here and the /media/blob download route
+      # reads it back. One-time host setup (mkdir + chown 1000) is in docs/engineering/test-deploy.md.
+      # Production uses S3 in Mumbai (infra.md), never a host disk — env.ts refuses `local` in production.
+      STORAGE_LOCAL_DIR: "/data/storage"
+    volumes:
+      # Host dir owned by uid 1000, created once (see test-deploy.md). The uploaded media is the only
+      # persistent state outside Postgres — a box rebuild keeps the photos only if this dir survives.
+      - /var/www/vhosts/app.ampmverse.com/ampm-storage:/data/storage
     deploy:
       resources:
         limits: { cpus: "1", memory: 1g }
@@ -29,6 +39,10 @@ services:
   worker:
     environment:
       IDENTITY_LOCAL_SECRET: *box-identity-secret
+      # The same object store as the API, so any worker job that touches media uses the same dir.
+      STORAGE_LOCAL_DIR: "/data/storage"
+    volumes:
+      - /var/www/vhosts/app.ampmverse.com/ampm-storage:/data/storage
     deploy:
       resources:
         limits: { cpus: "1", memory: 1g }
