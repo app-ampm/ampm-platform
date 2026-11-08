@@ -18,6 +18,7 @@ export {
   useAccountSubscriptions,
   useRecordPayment,
 } from "./hooks/use-subscriptions";
+export { PAYMENTS_QUERY_KEY, usePayments, type PaymentsQuery } from "./hooks/use-payments";
 export { leadQueryKey, useLead } from "./hooks/use-lead";
 export { useLeadActivities } from "./hooks/use-lead-activities";
 export { useConvertLead } from "./hooks/use-convert-lead";

@@ -33,7 +33,7 @@ describe("generated authorisation suite: §6 client, guest and demo principals",
       it(`${column} reaches exactly its cell "${row.cells[column] ?? ""}": ${row.label}`, () => {
         expect(clientReach(type, row.resource)).toEqual(cell);
         expect(clientReach(type, row.label)).toEqual(cell);
-        // §6 line 338: "Own" is the wedding or account the principal belongs to, for every grant.
+        // §6 line 339: "Own" is the wedding or account the principal belongs to, for every grant.
         for (const grant of cell) expect(grant.scope).toBe("own");
       });
 

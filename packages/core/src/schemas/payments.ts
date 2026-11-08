@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { isoDateTime, money, uuid } from "./common.js";
+import { cursorQuery, isoDateTime, money, page, uuid } from "./common.js";
 
 /*
  * Contracts for payments (Module B CRM; feature 8.3 handles inbound subscription payments). Visibility
@@ -83,3 +83,20 @@ export const manualPaymentRequest = z.object({
   paidAt: isoDateTime.optional(),
 });
 export type ManualPaymentRequest = z.infer<typeof manualPaymentRequest>;
+
+/**
+ * List the payment ledger (TW-14/finance, `crm.payments.read` — FA/SA only; every row is the
+ * RESTRICTED-FINANCE view). Cursor-paginated by payment id (newest first); `accountId` narrows to one
+ * client's payments and `direction` to inbound receipts or outbound settlements. The cursor is a UUID,
+ * validated at the edge so a malformed cursor is a 400, not a Postgres uuid-cast 500.
+ */
+export const paymentListQuery = cursorQuery.extend({
+  cursor: uuid.optional(),
+  accountId: uuid.optional(),
+  direction: paymentDirection.optional(),
+});
+export type PaymentListQuery = z.infer<typeof paymentListQuery>;
+
+/** A page of the finance payment ledger. Finance-only; never serialised to a client. */
+export const paymentPage = page(paymentFinanceView);
+export type PaymentPage = z.infer<typeof paymentPage>;

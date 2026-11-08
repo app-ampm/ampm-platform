@@ -50,6 +50,7 @@ export interface PaymentWriteData {
 
 export interface PaymentListFilters {
   readonly accountId?: string | undefined;
+  readonly direction?: PaymentDirection | undefined;
 }
 
 const PAYMENT_FIELDS = {
@@ -126,6 +127,7 @@ export class PaymentsRepository {
   ): Promise<{ rows: PaymentRow[]; nextCursor: string | null }> {
     const where: Prisma.PaymentWhereInput = { deletedAt: null };
     if (filters.accountId) where.accountId = filters.accountId;
+    if (filters.direction) where.direction = filters.direction;
     const payments = await this.prisma.payment.findMany({
       where,
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],

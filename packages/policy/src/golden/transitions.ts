@@ -133,7 +133,7 @@ function expectKind({ row, from, to, context }: Move, rows: readonly GoldenTrans
  * Asserts every move one row covers: each From to each To but itself, "previous" to every non-terminal status.
  *
  * @example
- * it("§7 line 422", () => expectRowMoves(row, TRANSITION_ROWS));
+ * it("§7 line 423", () => expectRowMoves(row, TRANSITION_ROWS));
  */
 export function expectRowMoves(row: GoldenTransition, rows: readonly GoldenTransition[]): void {
   const targets = row.to === "previous" ? restorable(row.entity) : row.to;

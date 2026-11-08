@@ -23,7 +23,7 @@ export interface AliasHolder {
  * A §10 alias key and the row it decides on; a role it does not list holds no grant.
  *
  * @example
- * const golden: AliasGolden = { line: 194, section: "5.5", label: "Project internal notes", key, holders };
+ * const golden: AliasGolden = { line: 195, section: "5.5", label: "Project internal notes", key, holders };
  */
 export interface AliasGolden {
   /** The §5 line of the row the key stands for, and its subsection and label (KEY_ALIASES). */
@@ -46,35 +46,35 @@ const ASSIGNED: AliasHolder = { scope: "assigned" };
  */
 export const KEY_ALIAS_GOLDEN: readonly AliasGolden[] = [
   {
-    line: 169,
+    line: 170,
     section: "5.3",
     label: "Hotel internal rating and notes",
     key: "hotels.hotel_profiles_client_fields.read_internal_notes",
     holders: { SA: ALL, SM: ALL, HT: ALL, PM: ALL },
   },
   {
-    line: 170,
+    line: 171,
     section: "5.3",
     label: "Hotel contacts",
     key: "hotels.hotel_profiles_client_fields.read_contacts",
     holders: { SA: ALL, SM: ALL, HT: ALL, PM: ALL, HL: ASSIGNED },
   },
   {
-    line: 183,
+    line: 184,
     section: "5.4",
     label: "Enquiry internal notes and internal-only events",
     key: "consultancy.enquiries.read_internal_notes",
     holders: { SA: ALL, SM: ALL, HT: ALL, PM: ASSIGNED },
   },
   {
-    line: 186,
+    line: 187,
     section: "5.4",
     label: "Hotel proposals, internal amounts",
     key: "consultancy.proposals.read_internal_amount",
     holders: { SA: ALL, HT: ALL, PM: ASSIGNED, FA: ALL },
   },
   {
-    line: 194,
+    line: 195,
     section: "5.5",
     label: "Project internal notes",
     key: "projects.wedding_projects.read_internal_notes",
@@ -82,14 +82,14 @@ export const KEY_ALIAS_GOLDEN: readonly AliasGolden[] = [
   },
   {
     // "A" for SA; PM "request only" holds nothing (Q10).
-    line: 207,
+    line: 208,
     section: "5.6",
     label: "Readiness exceptions (Q10: Eva's authorised personnel only)",
     key: "functions.readiness_exceptions.authorise_exception",
     holders: { SA: ALL },
   },
   {
-    line: 216,
+    line: 217,
     section: "5.7",
     label: "Budget lines, internal cost",
     key: "budget.budget_lines_client_facing.read_internal_cost",
@@ -102,56 +102,56 @@ export const KEY_ALIAS_GOLDEN: readonly AliasGolden[] = [
     },
   },
   {
-    line: 231,
+    line: 232,
     section: "5.8",
     label: "Vendor contacts",
     key: "vendors.vendor_profiles_client_fields.read_contacts",
     holders: { SA: ALL, PM: ASSIGNED, VC: ALL, HL: ASSIGNED },
   },
   {
-    line: 232,
+    line: 233,
     section: "5.8",
     label: "Vendor internal rating and notes",
     key: "vendors.vendor_profiles_client_fields.read_internal_notes",
     holders: { SA: ALL, PM: ASSIGNED, VC: ALL },
   },
   {
-    line: 237,
+    line: 238,
     section: "5.8",
     label: "Vendor proposals, internal cost",
     key: "vendors.vendor_proposals_client_amounts.read_internal_cost",
     holders: { SA: ALL, PM: ASSIGNED, VC: ALL, FA: ALL },
   },
   {
-    line: 240,
+    line: 241,
     section: "5.8",
     label: "Artist fee, internal",
     key: "vendors.artist_bookings.read_internal_cost",
     holders: { SA: ALL, PM: ASSIGNED, VC: ALL, FA: ALL },
   },
   {
-    line: 252,
+    line: 253,
     section: "5.9",
     label: "Approval decisions, on the client's behalf with evidence",
     key: "creative.approval_decisions_on_client.create_on_behalf",
     holders: { SA: ALL, PM: ASSIGNED },
   },
   {
-    line: 262,
+    line: 263,
     section: "5.10",
     label: "Guest sensitive fields (allergies, accessibility)",
     key: "guests.family_groups_guests_standard.read_sensitive",
     holders: { SA: ALL, PM: ASSIGNED, RG: ASSIGNED, HL: ASSIGNED },
   },
   {
-    line: 263,
+    line: 264,
     section: "5.10",
     label: "Guest internal notes",
     key: "guests.family_groups_guests_standard.read_internal_notes",
     holders: { SA: ALL, PM: ASSIGNED, RG: ASSIGNED, HL: ASSIGNED },
   },
   {
-    line: 264,
+    line: 265,
     section: "5.10",
     label: "Identity documents",
     key: "guests.family_groups_guests_standard.read_identity",
@@ -162,7 +162,7 @@ export const KEY_ALIAS_GOLDEN: readonly AliasGolden[] = [
     },
   },
   {
-    line: 275,
+    line: 276,
     section: "5.11",
     label: "Room blocks, internal rate",
     key: "rooms.room_blocks_client_fields.read_internal_cost",

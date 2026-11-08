@@ -1,5 +1,5 @@
 /**
- * A comment that quotes a §7 move with its line ("closure → closed" ... §7 line 419) sends the
+ * A comment that quotes a §7 move with its line ("closure → closed" ... §7 line 420) sends the
  * reader to that row of docs/permission-matrix.md, so the row on that line must be that move
  * (ENGINE-7). Every source of the package is read, its tests and generated files aside.
  */

@@ -5,7 +5,7 @@ import { STATUS_MACHINES, type StatusMachine } from "./statuses";
 /**
  * What the service knows about the record a principal wants to move (permission-matrix §7). A
  * client, guest or demo principal moves a record only on its own wedding or account (§1 line 52,
- * §6 line 338), so the service passes the record's projectId, or its accountId when the record
+ * §6 line 339), so the service passes the record's projectId, or its accountId when the record
  * belongs to an account before any wedding (a hotel enquiry); without either they move nothing.
  *
  * @example
@@ -14,7 +14,7 @@ import { STATUS_MACHINES, type StatusMachine } from "./statuses";
 export interface TransitionContext {
   /** The record's wedding: an assigned mover, "PM (a)", or a client must be a member of it. */
   readonly projectId?: string | undefined;
-  /** The record's client account, for a record that has no wedding yet (§7 line 400); ignored once projectId is set. */
+  /** The record's client account, for a record that has no wedding yet (§7 line 401); ignored once projectId is set. */
   readonly accountId?: string | undefined;
   /** The record's people, compared with the principal's userId for "The assignee" and the rest. */
   readonly assigneeId?: string | undefined;
@@ -51,7 +51,7 @@ function reaches(
   if (rule.kind !== null && rule.kind !== context.kind) return false;
   if (!rule.restore) return rule.to.includes(to);
   // A terminal status is never put on hold, so a saved one is bad data and must not skip the row
-  // that reaches it ("closure → closed" needs the checklist and FA's approval, §7 line 419).
+  // that reaches it ("closure → closed" needs the checklist and FA's approval, §7 line 420).
   return context.previousStatus === to && !machine.terminal.includes(to);
 }
 

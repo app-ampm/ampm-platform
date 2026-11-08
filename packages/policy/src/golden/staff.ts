@@ -74,7 +74,7 @@ export const explicit = (grant: GoldenGrant): GoldenGrant => ({ ...grant, explic
  * Builds a row.
  *
  * @example
- * row(237, "5.8", "Vendor proposals, internal cost", { SA: "RU", PM: assigned("R"), VC: "RU", FA: "R" });
+ * row(238, "5.8", "Vendor proposals, internal cost", { SA: "RU", PM: assigned("R"), VC: "RU", FA: "R" });
  */
 export function row(
   line: number,
@@ -138,7 +138,7 @@ function expectGrant(role: StaffRole, key: string, grant: GoldenGrant): void {
  * with its facts and refused outside it or without them, every other action no_grant.
  *
  * @example
- * it("§5.8 line 233: HT on vendor bank details", () => expectRow(bankDetails, "HT"));
+ * it("§5.8 line 234: HT on vendor bank details", () => expectRow(bankDetails, "HT"));
  */
 export function expectRow(golden: GoldenRow, role: StaffRole): void {
   const grants = grantsOf(golden.cells[role]);

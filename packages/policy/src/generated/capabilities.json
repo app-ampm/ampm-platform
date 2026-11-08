@@ -4152,6 +4152,21 @@
     ]
   },
   {
+    "id": "crm.payments.read:all",
+    "module": "crm",
+    "resource": "payments",
+    "action": "read",
+    "scope": "all",
+    "conditions": [],
+    "isStaffOnly": true,
+    "isEscalationLocked": false,
+    "label": "Read — Payment ledger",
+    "sourceRoles": [
+      "SA",
+      "FA"
+    ]
+  },
+  {
     "id": "crm.payments_inbound.create:all",
     "module": "crm",
     "resource": "payments_inbound",

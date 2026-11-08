@@ -19,6 +19,7 @@ import {
 
 import { useGoToSignIn } from "@/navigation/sign-in";
 
+import { AccountPayments } from "./account-payments";
 import { AccountSubscriptions } from "./account-subscriptions";
 import { accountStatusLabel, accountStatusTone } from "./accounts.format";
 import { RecordPaymentSheet } from "./record-payment-sheet";
@@ -120,6 +121,7 @@ function AccountDetailContent({
       <AccountOverview account={account} />
       <AccountContacts contacts={account.contacts} />
       <AccountSubscriptions accountId={accountId} onRecordPayment={setPayingSubscriptionId} />
+      <AccountPayments accountId={accountId} />
       {account.internalNotes ? (
         <InternalPanel>
           <Text variant="body" tone="body">

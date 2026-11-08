@@ -159,6 +159,7 @@ Legend: **C** create, **R** read, **U** update, **D** delete (soft), **A** appro
 | Payment milestones | CRUD | R | — | R (a) | — | — | — | — | CRUD |
 | Payments inbound from clients | CRUD | R | — | R (a) | — | — | — | — | CRUD |
 | Payments outbound to vendors and hotels | CRUD | — | R | R (a) | — | R (a) | — | — | CRUD |
+| Payment ledger | R | — | — | — | — | — | — | — | R |
 
 ### 5.3 Hotels
 

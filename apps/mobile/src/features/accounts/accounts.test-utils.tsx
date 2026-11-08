@@ -2,6 +2,8 @@ import type {
   AccountContactView,
   AccountDetailView,
   AccountView,
+  MeResponse,
+  PaymentFinanceView,
   PlanPublicView,
   SubscriptionView,
 } from "@ampm/core";
@@ -19,6 +21,55 @@ export const ACCOUNT_ID = "018f0000-0000-7000-8000-0000000d0001";
 export const CONTACT_ID = "018f0000-0000-7000-8000-0000000d0002";
 export const SUBSCRIPTION_ID = "018f0000-0000-7000-8000-0000000d0003";
 export const PLAN_ID = "018f0000-0000-7000-8000-0000000d0004";
+export const PAYMENT_ID = "018f0000-0000-7000-8000-0000000d0005";
+export const FINANCE_USER_ID = "018f0000-0000-7000-8000-0000000d00fe";
+
+/** A signed-in staff `/me` with the given roles — gates the Finance-only payment ledger. */
+export function staffMeFixture(roles: MeResponse["roles"]): MeResponse {
+  return {
+    principal: {
+      type: "staff",
+      userId: FINANCE_USER_ID,
+      name: "Farah Finance",
+      email: "finance@example.com",
+      phone: null,
+      status: "active",
+      lastLoginAt: null,
+    },
+    roles,
+    memberships: [],
+    entitlements: {
+      modules: [],
+      readOnlyModules: [],
+      hotelReach: [],
+      financeReach: [],
+      requestTypes: { wedding: [], account: [] },
+    },
+    isDemo: false,
+  };
+}
+
+export function paymentFinanceViewFixture(
+  overrides: Partial<PaymentFinanceView> = {},
+): PaymentFinanceView {
+  return {
+    id: PAYMENT_ID,
+    accountId: ACCOUNT_ID,
+    direction: "inbound",
+    purpose: "subscription",
+    amount: { minor: 2_500_000, currency: "INR" },
+    method: "bank_transfer",
+    status: "succeeded",
+    provider: null,
+    providerRef: "UTR-9001",
+    relatedType: "subscription",
+    relatedId: SUBSCRIPTION_ID,
+    paidAt: "2026-11-08T10:00:00Z",
+    recordedBy: FINANCE_USER_ID,
+    createdAt: "2026-11-08T09:00:00Z",
+    ...overrides,
+  };
+}
 
 export function accountViewFixture(overrides: Partial<AccountView> = {}): AccountView {
   return {
