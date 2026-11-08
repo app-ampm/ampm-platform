@@ -131,7 +131,7 @@ export interface NotificationsLogScreenProps {
 }
 
 /**
- * The notifications log (TW-91): the delivery history of every notice the platform sent — channel,
+ * The notifications log: the delivery history of every notice the platform sent — channel,
  * template, lifecycle status and timestamps — newest first, in a table. Tap a row for the full
  * record. A normal staff role reads its own notices; the Super Admin reads the whole log (the server
  * is the gate, by `admin.notifications.read` scope). Filters by channel/status/date are a later slice.

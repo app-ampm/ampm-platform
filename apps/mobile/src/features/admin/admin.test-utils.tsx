@@ -1,6 +1,7 @@
 import type {
   AuditEventView,
   CapabilityView,
+  ConfigView,
   NotificationView,
   RoleView,
   StaffUserView,
@@ -118,6 +119,26 @@ export function notificationFixture(overrides: Partial<NotificationView> = {}): 
     sentAt: "2026-11-05T12:30:05Z",
     deliveredAt: "2026-11-05T12:30:09Z",
     ...overrides,
+  };
+}
+
+/** The notification templates config as `GET /admin/configurations/notification.templates` returns it. */
+export function notificationTemplatesConfig(): ConfigView {
+  return {
+    key: "notification.templates",
+    value: {
+      "staff.invite": {
+        email: {
+          subject: "Your AMPM invitation",
+          html: "<p>Hi {{name}}, activate at {{activationUrl}}.</p>",
+          text: "Hi {{name}}, activate at {{activationUrl}}.",
+        },
+      },
+      "booking.reminder": {
+        sms: { text: "Your site visit is on {{date}}." },
+        push: { title: "Site visit", body: "Tomorrow at {{time}}." },
+      },
+    },
   };
 }
 
