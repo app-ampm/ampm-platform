@@ -7,6 +7,7 @@ import { fireEvent, screen, waitFor } from "../../test/render";
 import { HotelsScreen } from "./hotels-screen";
 import {
   clientMe,
+  COVER_URL,
   fail,
   fakeApi,
   hotelFixture,
@@ -92,6 +93,14 @@ describe("HotelsScreen", () => {
       pathname: "/hotels/[id]",
       params: { id: PAVILION.id },
     });
+  });
+
+  it("shows the hotel's cover photo on the card when one is set, replacing the placeholder", async () => {
+    const withCover = hotelFixture({ coverUrl: COVER_URL });
+    await renderWithApi(<HotelsScreen />, catalogue([withCover]).fetch);
+    // The real photo (its alt) appears, and the striped stand-in (role image, its label) is gone.
+    expect(await screen.findByLabelText("Photo of The Lake Pavilion")).toBeOnTheScreen();
+    expect(screen.queryByRole("image", { name: "Hotel photo · Udaipur" })).toBeNull();
   });
 
   it("searches by hotel name", async () => {

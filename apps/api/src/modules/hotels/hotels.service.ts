@@ -29,6 +29,11 @@ import {
   toSavedHotelView,
 } from "./hotels.view.js";
 
+/** The media audience for a principal: a demo prospect sees demo/public, every real client the client set. */
+function audienceFor(principal: Principal): "client" | "demo" {
+  return principal.type === "demo" ? "demo" : "client";
+}
+
 /**
  * Module C discovery business rules: gate on the client's entitlements (hotel_discovery to browse/read,
  * saved_hotels=write to save), scope the catalogue by hotelReach, resolve the caller's OWN account before
@@ -47,7 +52,14 @@ export class HotelsService {
   async list(principal: Principal, query: HotelListQuery): Promise<HotelPage> {
     const { ent } = this.gate(principal, "hotel_discovery", false);
     const { rows, nextCursor } = await this.hotels.list(ent.hotelReach, query);
-    return { items: rows.map(toHotelView), nextCursor };
+    // One batched Module N read resolves a client-visible cover thumbnail for the whole page (no N+1); a
+    // hotel with no eligible image gets a null cover and its card shows the placeholder.
+    const covers = await this.media.clientCovers(
+      "hotel",
+      rows.map((row) => row.id),
+      audienceFor(principal),
+    );
+    return { items: rows.map((row) => toHotelView(row, covers.get(row.id) ?? null)), nextCursor };
   }
 
   /**
@@ -68,9 +80,8 @@ export class HotelsService {
     // sees demo/public, a real client sees client/demo/public. Read through Module N, never its table.
     // References are same-module (Module C): only the consented, client-visible ones (GP-20). Both reads
     // run in parallel since the hotel is already confirmed in reach (the p95-under-400ms detail, AC-16).
-    const audience = principal.type === "demo" ? "demo" : "client";
     const [gallery, references] = await Promise.all([
-      this.media.clientGallery("hotel", hotelId, audience),
+      this.media.clientGallery("hotel", hotelId, audienceFor(principal)),
       this.references.clientReferences(hotelId),
     ]);
     return toHotelDetailView(hotel, gallery, references);
@@ -112,7 +123,16 @@ export class HotelsService {
     const { userId } = this.gate(principal, "saved_hotels", false);
     const accountId = await this.accountIdOrThrow(userId);
     const { rows, nextCursor } = await this.hotels.listSaved(accountId, query);
-    return { items: rows.map(toSavedHotelView), nextCursor };
+    // The shortlist card shows the same cover the search card does: one batched Module N read for the page.
+    const covers = await this.media.clientCovers(
+      "hotel",
+      rows.map((row) => row.hotel.id),
+      audienceFor(principal),
+    );
+    return {
+      items: rows.map((row) => toSavedHotelView(row, covers.get(row.hotel.id) ?? null)),
+      nextCursor,
+    };
   }
 
   async save(principal: Principal, hotelId: string): Promise<SavedHotelView> {
@@ -121,7 +141,8 @@ export class HotelsService {
     if (!hotel) throw errors.notFound(); // cannot save what you cannot see
     const accountId = await this.accountIdOrThrow(userId);
     const saved = await this.hotels.save(accountId, hotelId, userId);
-    return toSavedHotelView(saved);
+    const covers = await this.media.clientCovers("hotel", [saved.hotel.id], audienceFor(principal));
+    return toSavedHotelView(saved, covers.get(saved.hotel.id) ?? null);
   }
 
   async unsave(principal: Principal, hotelId: string): Promise<SavedHotelRemovedResponse> {

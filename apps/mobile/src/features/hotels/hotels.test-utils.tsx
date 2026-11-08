@@ -87,9 +87,13 @@ export function hotelFixture(overrides: Partial<HotelView> = {}): HotelView {
     totalRooms: 84,
     streetViewRef: null,
     lastVerifiedAt: null,
+    coverUrl: null,
     ...overrides,
   };
 }
+
+/** A signed cover-thumbnail link as the API mints one — relative to the API origin for the local store. */
+export const COVER_URL = "/media/blob?key=hotel/cover.thumb&exp=4102444800&sig=abc";
 
 /** The exact shape `GET /hotels/:id` returns: the card plus its rates, gallery and references. */
 export function detailFixture(overrides: Partial<HotelDetailView> = {}): HotelDetailView {

@@ -1,6 +1,6 @@
 import { useUnsaveHotel } from "@ampm/api-client";
-import { formatDay, type SavedHotelView } from "@ampm/core";
-import { Button, ListItem, PhotoPlaceholder, Row, StatusChip, useToast } from "@ampm/ui";
+import { formatDay, type HotelView, type SavedHotelView } from "@ampm/core";
+import { Button, Image, ListItem, PhotoPlaceholder, Row, StatusChip, useToast } from "@ampm/ui";
 
 import { destinationLabel, starLabel } from "./hotels.format";
 
@@ -32,7 +32,7 @@ export function SavedHotelRow({ item, onOpen }: SavedHotelRowProps) {
         title={hotel.name}
         subtitle={where}
         meta={`Saved ${formatDay(item.savedAt, { style: "data" })}`}
-        leading={<Thumbnail destination={hotel.destination.name} />}
+        leading={<Thumbnail hotel={hotel} />}
         trailing={hotel.starCategory ? <StarChip starCategory={hotel.starCategory} /> : undefined}
         accessibilityLabel={`${hotel.name} in ${where}, saved ${savedOn}`}
         onPress={onOpen}
@@ -48,10 +48,17 @@ export function SavedHotelRow({ item, onOpen }: SavedHotelRowProps) {
   );
 }
 
-function Thumbnail({ destination }: { readonly destination: string }) {
-  return (
+function Thumbnail({ hotel }: { readonly hotel: HotelView }) {
+  return hotel.coverUrl ? (
+    <Image
+      source={{ uri: hotel.coverUrl }}
+      alt={`Photo of ${hotel.name}`}
+      radius="none"
+      className="h-10 w-12 rounded-sm"
+    />
+  ) : (
     <PhotoPlaceholder
-      label={`Hotel photo · ${destination}`}
+      label={`Hotel photo · ${hotel.destination.name}`}
       showLabel={false}
       className="h-10 w-12 rounded-sm"
     />
