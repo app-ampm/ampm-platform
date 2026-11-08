@@ -1,4 +1,4 @@
-import type { LeadActivityView, LeadView, MeResponse } from "@ampm/core";
+import type { LeadActivityView, LeadFunnelView, LeadView, MeResponse } from "@ampm/core";
 
 import { failure, TEST_API_BASE } from "../../test/api";
 
@@ -16,8 +16,8 @@ export const ACCOUNT_ID = "018f0000-0000-7000-8000-0000000002ac";
 export const STAFF_USER_ID = "018f0000-0000-7000-8000-00000000cafe";
 const RECEIVED_AT = "2026-11-01T16:18:00Z";
 
-/** The signed-in salesperson (`/me`): a staff SM whose id owns leads the test assigns "to me". */
-export function staffMeFixture(): MeResponse {
+/** The signed-in staff principal (`/me`); defaults to a Sales rep whose id owns leads assigned "to me". */
+export function staffMeFixture(roles: MeResponse["roles"] = ["SM"]): MeResponse {
   return {
     principal: {
       type: "staff",
@@ -28,7 +28,7 @@ export function staffMeFixture(): MeResponse {
       status: "active",
       lastLoginAt: null,
     },
-    roles: ["SM"],
+    roles,
     memberships: [],
     entitlements: {
       modules: [],
@@ -38,6 +38,24 @@ export function staffMeFixture(): MeResponse {
       requestTypes: { wedding: [], account: [] },
     },
     isDemo: false,
+  };
+}
+
+/** A lead funnel report: counts by stage and by source (TW-83). */
+export function leadFunnelViewFixture(overrides: Partial<LeadFunnelView> = {}): LeadFunnelView {
+  return {
+    total: 12,
+    byStatus: [
+      { status: "new", count: 6 },
+      { status: "contacted", count: 3 },
+      { status: "converted", count: 2 },
+      { status: "closed", count: 1 },
+    ],
+    bySource: [
+      { sourceKey: "instagram", name: "Instagram", count: 7 },
+      { sourceKey: "referral", name: "Referral", count: 5 },
+    ],
+    ...overrides,
   };
 }
 

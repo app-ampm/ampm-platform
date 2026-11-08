@@ -15,6 +15,7 @@ import {
   ok,
   renderWithApi,
   routedFetch,
+  staffMeFixture,
   type FetchFn,
 } from "./sales.test-utils";
 
@@ -55,6 +56,16 @@ function pipeline(): LeadView[] {
 
 const leadsFetch = (items: LeadView[], nextCursor: string | null = null): FetchFn =>
   routedFetch({ "/crm/leads": () => ok({ items, nextCursor }) });
+
+/** The pipeline plus a signed-in `/me` of the given roles, for the funnel-link gate. */
+const leadsFetchAs = (
+  items: LeadView[],
+  roles: ReturnType<typeof staffMeFixture>["roles"],
+): FetchFn =>
+  routedFetch({
+    "/crm/leads": () => ok({ items, nextCursor: null }),
+    "/me": () => ok(staffMeFixture(roles)),
+  });
 
 async function renderList(fetchImpl: FetchFn, tabBar?: ReactNode): Promise<void> {
   await renderWithApi(<LeadsListScreen tabBar={tabBar} />, fetchImpl);
@@ -170,5 +181,19 @@ describe("LeadsListScreen states", () => {
     expect(await screen.findByText("Sign in to view leads")).toBeOnTheScreen();
     await fireEvent.press(screen.getByText("Sign in"));
     expect(mockReplace).toHaveBeenCalledWith("/sign-in");
+  });
+});
+
+describe("LeadsListScreen funnel link", () => {
+  it("offers the Funnel report to a role that holds the report key", async () => {
+    await renderList(leadsFetchAs(pipeline(), ["SM"]));
+    await fireEvent.press(await screen.findByTestId("leads-funnel-link"));
+    expect(mockPush).toHaveBeenCalledWith("/leads/funnel");
+  });
+
+  it("hides the Funnel report from a role without the key, keeping Clients", async () => {
+    await renderList(leadsFetchAs(pipeline(), ["HT"]));
+    expect(await screen.findByTestId("leads-clients-link")).toBeOnTheScreen();
+    expect(screen.queryByTestId("leads-funnel-link")).toBeNull();
   });
 });
