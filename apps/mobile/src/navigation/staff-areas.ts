@@ -4,10 +4,11 @@ import type { IconName } from "@ampm/ui";
 
 import { isOnRoute } from "./routes";
 
-export type StaffAreaKey = "leads" | "enquiries" | "tasks" | "admin" | "settings";
+export type StaffAreaKey = "leads" | "enquiries" | "tasks" | "hotels" | "admin" | "settings";
 
 /** The routes of the staff workspace's areas: each is the area's top-level screen. */
-export type StaffAreaPath = "/leads" | "/enquiries" | "/field-notes" | "/admin" | "/account";
+export type StaffAreaPath =
+  "/leads" | "/enquiries" | "/field-notes" | "/hotels-admin" | "/admin" | "/account";
 
 export interface StaffArea {
   readonly key: StaffAreaKey;
@@ -51,6 +52,17 @@ export const STAFF_AREAS: readonly StaffArea[] = [
     // The key the area's only screen needs today: the field-notes spike reads and writes as incidents.
     // The real task screens (M5) will ask for "tasks.tasks.read" instead.
     permission: "tasks.incidents.read",
+  },
+  {
+    key: "hotels",
+    label: "Hotel catalogue",
+    tabLabel: "Hotels",
+    icon: "landmark",
+    href: "/hotels-admin",
+    // The catalogue + photo manager is the Hotel team's and Super Admin's surface (SM may manage media
+    // rights too). Hotel-profile reads reach every role for look-ups, so the area is gated on a
+    // media-management key only those roles hold, as the admin console is on a staff-management key.
+    permission: "hotels.hotel_media_rights_status.update",
   },
   {
     key: "admin",
