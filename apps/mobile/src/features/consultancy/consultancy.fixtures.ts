@@ -1,4 +1,5 @@
 import type {
+  HotelDetailView,
   HotelEnquiryClientDetailView,
   HotelEnquiryClientView,
   HotelProposalClientView,
@@ -21,8 +22,10 @@ export const PROPOSAL_ID = "018f0000-0000-7000-8000-0000000000c1";
 
 const AT = "2026-11-03T10:00:00.000Z";
 
-/** `GET /hotels/:id`: the client card plus the detail's rates, gallery and references. */
-export const HOTEL = {
+/** `GET /hotels/:id`: the client card plus the detail's rates, gallery and references. Typed as the
+ * client detail view so a change to the shared hotel schema fails here at compile time, not only at
+ * runtime when the screens parse it. */
+export const HOTEL: HotelDetailView = {
   id: HOTEL_ID,
   slug: "lake-pavilion-udaipur",
   name: "The Lake Pavilion",
@@ -42,6 +45,7 @@ export const HOTEL = {
   totalRooms: 84,
   streetViewRef: null,
   lastVerifiedAt: null,
+  coverUrl: null, // empty gallery ⟹ the server derives no cover
   rates: { status: "on_request", asOf: null, items: [] },
   gallery: [],
   references: [],
