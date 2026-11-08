@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { isoDateTime, uuid } from "./common";
+import { isoDateTime, page, uuid } from "./common";
 
 /** The delivery channels of a notification (`notifications.channel`, data-model.md). */
 export const notificationChannel = z.enum(["in_app", "email", "whatsapp", "sms", "push"]);
@@ -33,3 +33,7 @@ export const notificationView = z.object({
   deliveredAt: isoDateTime.nullable(),
 });
 export type NotificationView = z.infer<typeof notificationView>;
+
+/** A page of notifications (`GET /notifications`), cursor-paginated newest first. */
+export const notificationPage = page(notificationView);
+export type NotificationPage = z.infer<typeof notificationPage>;

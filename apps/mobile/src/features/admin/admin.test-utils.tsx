@@ -1,4 +1,10 @@
-import type { AuditEventView, CapabilityView, RoleView, StaffUserView } from "@ampm/core";
+import type {
+  AuditEventView,
+  CapabilityView,
+  NotificationView,
+  RoleView,
+  StaffUserView,
+} from "@ampm/core";
 
 import { failure, TEST_API_BASE } from "../../test/api";
 
@@ -95,6 +101,22 @@ export function auditEventFixture(overrides: Partial<AuditEventView> = {}): Audi
     ipAddress: "203.0.113.4",
     requestId: "req_abc123",
     occurredAt: "2026-11-05T12:30:00Z",
+    ...overrides,
+  };
+}
+
+/** One notification as `GET /notifications` returns it: the delivery view, with no recipient field. */
+export function notificationFixture(overrides: Partial<NotificationView> = {}): NotificationView {
+  return {
+    id: "018f0000-0000-7000-8000-0000000008a1",
+    channel: "email",
+    templateKey: "client.invite",
+    status: "delivered",
+    entityType: "client_account",
+    entityId: STAFF_USER_ID,
+    createdAt: "2026-11-05T12:30:00Z",
+    sentAt: "2026-11-05T12:30:05Z",
+    deliveredAt: "2026-11-05T12:30:09Z",
     ...overrides,
   };
 }

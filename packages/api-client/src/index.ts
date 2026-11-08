@@ -9,7 +9,6 @@ export type { ApiClient, ApiClientOptions, RequestOptions } from "./client";
 export { ApiProvider, createQueryClient, useApiClient } from "./provider";
 export type { ApiProviderProps } from "./provider";
 export { ME_QUERY_KEY, meQueryOptions, useMe, type UseMeOptions } from "./hooks/use-me";
-export { NOTIFICATIONS_QUERY_KEY, useNotifications } from "./hooks/use-notifications";
 export { useSubmitEnquiry } from "./hooks/use-submit-enquiry";
 export { LEADS_QUERY_KEY, useLeads } from "./hooks/use-leads";
 export { ACCOUNTS_QUERY_KEY, accountQueryKey, useAccount, useAccounts } from "./hooks/use-accounts";
@@ -51,6 +50,7 @@ export {
   useUpdateRole,
 } from "./hooks/use-staff-roles";
 export { AUDIT_EVENTS_QUERY_KEY, useAuditEvents } from "./hooks/use-audit-events";
+export { NOTIFICATIONS_QUERY_KEY, useNotifications } from "./hooks/use-notifications";
 export { useDevLogin } from "./hooks/use-dev-login";
 export { PLANS_QUERY_KEY, usePlans } from "./hooks/use-plans";
 export { usePortalSubscribe } from "./hooks/use-portal-subscribe";
