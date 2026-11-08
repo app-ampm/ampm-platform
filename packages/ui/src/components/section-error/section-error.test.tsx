@@ -1,18 +1,18 @@
 import { errors } from "@ampm/core";
-import { uiCopy } from "@ampm/ui";
 
+import { uiCopy } from "../../copy";
 import { fireEvent, renderWithProviders, screen } from "../../test/render";
 import { SectionError } from "./section-error";
 
-const TITLE = "Proposals";
+const TITLE = "Subscriptions";
 
 async function renderSection(error: unknown, onRetry: () => void = jest.fn()): Promise<void> {
   await renderWithProviders(<SectionError title={TITLE} error={error} onRetry={onRetry} />);
 }
 
 describe("SectionError", () => {
-  // security.md, denial equals absence: the API answers a record the reader may not see with the
-  // same 404 as a missing one, so a 404 hides the section exactly as a 403 does.
+  // security.md, denial equals absence: a record the reader may not see is answered with the same 404
+  // as a missing one, so a 404 hides the section exactly as a 403 does.
   it.each([
     ["403, a role without the section's grant", errors.forbidden()],
     ["404, a record outside the reader's reach", errors.notFound()],
