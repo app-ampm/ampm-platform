@@ -37,6 +37,13 @@ export function AdminConsoleScreen({ tabBar }: AdminConsoleScreenProps) {
             testID="admin-section-roles"
           />
           <ListItem
+            title="Notifications"
+            subtitle="Every notice the platform sent, and how it was delivered"
+            onPress={() => router.push("/admin/notifications")}
+            accessibilityLabel="Notifications: every notice the platform sent, and how it was delivered"
+            testID="admin-section-notifications"
+          />
+          <ListItem
             title="Audit log"
             subtitle="The append-only history of every change"
             onPress={() => router.push("/admin/audit")}

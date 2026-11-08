@@ -138,12 +138,14 @@ export type {
 } from "./identity";
 export {
   notificationChannel,
+  notificationPage,
   notificationStatus,
   notificationView,
   recipientType,
 } from "./notification";
 export type {
   NotificationChannel,
+  NotificationPage,
   NotificationStatus,
   NotificationView,
   RecipientType,
