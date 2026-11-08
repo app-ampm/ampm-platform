@@ -107,12 +107,12 @@ const CONTACT: ClassGolden = {
     HT: ["hotelSide", "hotelContacts", "hotelContactsUnassigned", "venuesHotelSide"],
     SM: ["hotelSide", "hotelContacts", "hotelContactsUnassigned"],
     VC: ["vendorSide", "vendorContacts", "vendorProfiles"],
-    // §5.3 line 170 gives PM "R" on every hotel's contacts: hotels belong to no wedding.
+    // §5.3 line 171 gives PM "R" on every hotel's contacts: hotels belong to no wedding.
     PM: [
       ...["hotelContacts", "hotelContactsUnassigned", "vendorContacts", "vendorProfiles"],
       ...["venues", "venuesHotelSide", "vehicles"],
     ],
-    // §5.8 line 231 gives HL "R (a)" on vendor contacts, though §4 line 124 does not list vendors.
+    // §5.8 line 232 gives HL "R (a)" on vendor contacts, though §4 line 124 does not list vendors.
     HL: [
       ...["hotelContacts", "vendorContacts", "vendorProfiles", "venues", "venuesHotelSide"],
       "vehicles",

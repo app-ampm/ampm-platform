@@ -15,7 +15,7 @@ const cd = { type: "staff", userId: "u-cd", roles: ["CD"], projectIds: ["p-1"] }
 const client = { type: "client", userId: "u-c", projectIds: ["p-1"] } as const;
 
 describe("decideBeforeRead", () => {
-  it("§5 legend line 136, §5.13 lines 293 and 295: an own-scope grant passes as 'own', for the repository to narrow", () => {
+  it("§5 legend line 136, §5.13 lines 294 and 295: an own-scope grant passes as 'own', for the repository to narrow", () => {
     expect(decideBeforeRead(fa, "tasks.tasks.read", { projectId: "p-9" })).toMatchObject({
       allowed: true,
       scope: "own",
@@ -25,7 +25,7 @@ describe("decideBeforeRead", () => {
     ).toMatchObject({ allowed: true, scope: "own" });
   });
 
-  it("§1 line 51, §5.13 line 293: a role's own scope survives another role's assigned miss", () => {
+  it("§1 line 51, §5.13 line 294: a role's own scope survives another role's assigned miss", () => {
     expect(decideBeforeRead(pmFa, "tasks.tasks.read", { projectId: "p-9" })).toMatchObject({
       allowed: true,
       scope: "own",
@@ -36,7 +36,7 @@ describe("decideBeforeRead", () => {
     });
   });
 
-  it("§5 legend line 136, §5.13 line 293: an owner the caller names is decided as named", () => {
+  it("§5 legend line 136, §5.13 line 294: an owner the caller names is decided as named", () => {
     // "(o)" reaches records the user created or owns: Bob's task is not FA's, whoever asks.
     expect(
       decideBeforeRead(fa, "tasks.tasks.update", { projectId: "p-1", ownerId: "u-bob" }),
@@ -46,7 +46,7 @@ describe("decideBeforeRead", () => {
     ).toMatchObject({ allowed: true, scope: "own" });
   });
 
-  it("§1 line 52, §5.13 line 296: assigned and unscoped grants decide as decide() does", () => {
+  it("§1 line 52, §5.13 line 297: assigned and unscoped grants decide as decide() does", () => {
     expect(decideBeforeRead(pm, "tasks.incidents.read", { projectId: "p-9" })).toMatchObject({
       allowed: false,
       reason: "not_assigned",
@@ -75,25 +75,25 @@ describe("readKeyFor", () => {
     expect(readKeyFor("tasks.incidents.create")).toBe("tasks.incidents.read");
     expect(readKeyFor("tasks.incidents.update:assigned")).toBe("tasks.incidents.read");
     expect(readKeyFor("tasks.incidents.read")).toBe("tasks.incidents.read");
-    // §10 line 547: the class alias reads the identity documents row.
+    // §10 line 548: the class alias reads the identity documents row.
     expect(readKeyFor("guests.family_groups_guests_standard.read_identity")).toBe(
       "guests.identity_documents.read",
     );
-    // §10 line 545: a key named from outside its row's subsection.
+    // §10 line 546: a key named from outside its row's subsection.
     expect(readKeyFor("vendors.quotes.read")).toBe("budget.vendor_quotes.read");
     expect(readKeyFor("nonsense")).toBeNull();
     expect(readKeyFor("tasks.unknown_row.read")).toBeNull();
   });
 
-  it("test-cases.md line 212: a class of a record's columns reads through the record's row", () => {
-    // §5.7 line 216 is the internal cost columns of the budget lines of line 215.
+  it("test-cases.md line 213: a class of a record's columns reads through the record's row", () => {
+    // §5.7 line 217 is the internal cost columns of the budget lines of line 216.
     expect(readKeyFor("budget.budget_lines_client_facing.read_internal_cost")).toBe(
       "budget.budget_lines_client_facing.read",
     );
     expect(readKeyFor("budget.budget_lines_internal_cost.update")).toBe(
       "budget.budget_lines_client_facing.read",
     );
-    // §5.8 line 231 and §5.3 line 169: columns of the vendor and hotel profiles (lines 230, 168).
+    // §5.8 and §5.3: columns of the vendor and hotel profiles (rows at lines 231 and 169).
     expect(readKeyFor("vendors.vendor_profiles_client_fields.read_contacts")).toBe(
       "vendors.vendor_profiles_client_fields.read",
     );
@@ -102,8 +102,8 @@ describe("readKeyFor", () => {
     );
   });
 
-  it("data-model.md §19 lines 1949 and 2002: a class kept in a table of its own reads its own row", () => {
-    // AC-10.9 (test-cases.md line 801): RG (a) without the grant gets 404 on the identity route.
+  it("data-model.md §19 lines 1950 and 2002: a class kept in a table of its own reads its own row", () => {
+    // AC-10.9 (test-cases.md line 802): RG (a) without the grant gets 404 on the identity route.
     expect(readKeyFor("guests.identity_documents.read:assigned")).toBe(
       "guests.identity_documents.read",
     );
@@ -129,23 +129,23 @@ describe("readKeyFor", () => {
     expect(readKeyFor("closure.archive_project_after_window.approve")).toBe(
       "projects.wedding_projects.read",
     );
-    // §5.15 line 314: the retention job's proposal (§8 line 507) is no one row's record.
+    // §5.15 line 315: the retention job's proposal (§8 line 508) is no one row's record.
     expect(readKeyFor("closure.approve_retention_deletion_proposed.approve")).toBeNull();
   });
 });
 
-describe("§10 line 550: functions.readiness.authorise_exception as the document spells it", () => {
+describe("§10 line 551: functions.readiness.authorise_exception as the document spells it", () => {
   const key = "functions.readiness.authorise_exception:assigned";
   const hl = { type: "staff", userId: "u-hl", roles: ["HL"], projectIds: ["p-1"] } as const;
 
-  it("reads through the readiness checklist items it acts on (§5.6 lines 206-207)", () => {
+  it("reads through the readiness checklist items it acts on (§5.6 lines 208-208)", () => {
     expect(readKeyFor(key)).toBe("functions.readiness_checklist_items.read");
     expect(readKeyFor("functions.readiness.authorise_exception")).toBe(
       "functions.readiness_checklist_items.read",
     );
   });
 
-  it("§5.6 line 207 (Q10), AC-13.2: SA authorises; PM and HL hold no grant", () => {
+  it("§5.6 line 208 (Q10), AC-13.2: SA authorises; PM and HL hold no grant", () => {
     expect(
       decide(sa, "functions.readiness.authorise_exception", { projectId: "p-1" }),
     ).toMatchObject({

@@ -1201,6 +1201,53 @@
       "exclusions": []
     },
     {
+      "section": "5.2",
+      "module": "crm",
+      "resource": "payments",
+      "label": "Payment ledger",
+      "provisional": false,
+      "cells": {
+        "SA": "R",
+        "SM": "—",
+        "HT": "—",
+        "PM": "—",
+        "CD": "—",
+        "VC": "—",
+        "RG": "—",
+        "HL": "—",
+        "FA": "R"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": [
+              "read"
+            ],
+            "scope": "all",
+            "conditions": []
+          }
+        ],
+        "SM": [],
+        "HT": [],
+        "PM": [],
+        "CD": [],
+        "VC": [],
+        "RG": [],
+        "HL": [],
+        "FA": [
+          {
+            "actions": [
+              "read"
+            ],
+            "scope": "all",
+            "conditions": []
+          }
+        ]
+      },
+      "aliases": [],
+      "exclusions": []
+    },
+    {
       "section": "5.3",
       "module": "hotels",
       "resource": "destinations",

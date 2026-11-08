@@ -9,7 +9,7 @@ import type { ClassAction, VerbAction } from "./keys";
  *
  * A key as §10 spells it resolves to its row through DOCUMENT_RESOURCES (document-keys.ts, the §10
  * resource names of the row's own module), OUTSIDE_KEYS (a row named from another module) or a
- * KEY_ALIASES row: `hotels.contacts.read` (§10 line 539) decides on "Hotel contacts". A new §10 key
+ * KEY_ALIASES row: `hotels.contacts.read` (§10 line 540) decides on "Hotel contacts". A new §10 key
  * that none of them covers fails keys.golden.test.ts and document-keys.test.ts.
  *
  * @example
@@ -60,6 +60,7 @@ export const RESOURCES: Record<string, Record<string, string>> = {
     "Payment milestones": "payment_milestones",
     "Payments inbound from clients": "payments_inbound",
     "Payments outbound to vendors and hotels": "payments_outbound",
+    "Payment ledger": "payments",
   },
   // Module D (consultancy): feature 10.1 curated the two enquiry rows, 10.3 the site-visit row, 10.4 the
   // proposals row, 10.5 the booking-milestones row. Only the client-amounts proposal row is curated here —
@@ -220,15 +221,15 @@ export interface OutsideKey {
  * OUTSIDE_KEYS["projects.close"]?.section; // "5.15"
  */
 export const OUTSIDE_KEYS: Record<string, OutsideKey> = {
-  // §10 line 545: raw vendor quotes are the §5.7 (budget) row of line 218.
+  // §10 line 546: raw vendor quotes are the §5.7 (budget) row of line 219.
   "vendors.quotes.read": { section: "5.7", label: "Vendor quotes", as: "read" },
-  // §10 line 546: recording a client decision with evidence is the §5.9 (creative) row of line 252.
+  // §10 line 547: recording a client decision with evidence is the §5.9 (creative) row of line 253.
   "approvals.decisions.create_on_behalf": {
     section: "5.9",
     label: "Approval decisions, on the client's behalf with evidence",
     as: "approve",
   },
-  // §10 line 551: closing a project is the §5.15 (closure) decision of line 312.
+  // §10 line 552: closing a project is the §5.15 (closure) decision of line 313.
   "projects.close": { section: "5.15", label: "Close the project", as: "approve" },
 };
 

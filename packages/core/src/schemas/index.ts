@@ -269,24 +269,10 @@ export type {
   SubscriptionStatus,
   SubscriptionView,
 } from "./subscriptions";
-export {
-  manualPaymentRequest,
-  paymentClientView,
-  paymentDirection,
-  paymentFinanceView,
-  paymentMethod,
-  paymentPurpose,
-  paymentStatus,
-} from "./payments";
-export type {
-  ManualPaymentRequest,
-  PaymentClientView,
-  PaymentDirection,
-  PaymentFinanceView,
-  PaymentMethod,
-  PaymentPurpose,
-  PaymentStatus,
-} from "./payments";
+// Payments (payments.ts): the finance ledger (`paymentFinanceView` + list/page), the client receipt and
+// the manual-payment request. A wildcard re-export keeps the barrel within the 300-line max-lines cap;
+// every payments name is `payment`-prefixed, so it cannot collide with another module's exports.
+export * from "./payments";
 // Module C hotels: client discovery (hotels.ts) and the staff workspace (hotels-admin.ts, feature 9.1).
 // Wildcard re-exports keep the barrel within the 300-line max-lines cap; each file exports only its
 // public contracts (module-private helpers are plain `const`, not re-exported), and their names do not

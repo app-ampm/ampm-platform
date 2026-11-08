@@ -7,6 +7,8 @@ import { ConfigModule } from "../../admin/config/config.module.js";
 import { NotificationModule } from "../../admin/notification/notification.module.js";
 import { PaymentWebhookController } from "./payment-webhook.controller.js";
 import { PaymentWebhookService } from "./payment-webhook.service.js";
+import { PaymentsController } from "./payments.controller.js";
+import { PaymentsService } from "./payments.service.js";
 import {
   PAYMENT_ADAPTER,
   RazorpayPaymentAdapter,
@@ -40,6 +42,7 @@ import { WebhookEventsRepository } from "./webhook-events.repository.js";
     PlansController,
     SubscriptionsController,
     PaymentWebhookController,
+    PaymentsController,
     PortalController,
   ],
   providers: [
@@ -51,6 +54,7 @@ import { WebhookEventsRepository } from "./webhook-events.repository.js";
     SubscriptionActivationService,
     SubscriptionExpiryService,
     PaymentsRepository,
+    PaymentsService,
     WebhookEventsRepository,
     PaymentWebhookService,
     {

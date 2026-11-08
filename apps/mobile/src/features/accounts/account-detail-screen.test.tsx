@@ -5,9 +5,12 @@ import {
   accountDetailViewFixture,
   failure,
   ok,
+  PAYMENT_ID,
+  paymentFinanceViewFixture,
   planPublicViewFixture,
   renderWithApi,
   routedFetch,
+  staffMeFixture,
   SUBSCRIPTION_ID,
   subscriptionViewFixture,
   type FetchFn,
@@ -31,10 +34,23 @@ function detailFetch(captured: Captured, subscriptions = [subscriptionViewFixtur
     [`/crm/accounts/${ACCOUNT_ID}`]: () => ok(accountDetailViewFixture()),
     "/crm/subscriptions": () => ok({ items: subscriptions, nextCursor: null }),
     "/crm/plans": () => ok({ items: [planPublicViewFixture()] }),
+    // Sales (no crm.payments.read) signs these tests; the Finance payment ledger stays hidden.
+    "/me": () => ok(staffMeFixture(["SM"])),
     [`/crm/subscriptions/${SUBSCRIPTION_ID}/record-payment`]: (init) => {
       captured.payment = JSON.parse(String(init?.body));
       return ok(subscriptionViewFixture({ status: "active" }));
     },
+  });
+}
+
+/** A detail fetch signed by the given roles, with the account's payment ledger answered. */
+function ledgerFetch(roles: ReturnType<typeof staffMeFixture>["roles"]): FetchFn {
+  return routedFetch({
+    [`/crm/accounts/${ACCOUNT_ID}`]: () => ok(accountDetailViewFixture()),
+    "/crm/subscriptions": () => ok({ items: [], nextCursor: null }),
+    "/crm/plans": () => ok({ items: [planPublicViewFixture()] }),
+    "/me": () => ok(staffMeFixture(roles)),
+    "/crm/payments": () => ok({ items: [paymentFinanceViewFixture()], nextCursor: null }),
   });
 }
 
@@ -78,5 +94,30 @@ describe("AccountDetailScreen", () => {
     await renderWithApi(<AccountDetailScreen accountId={ACCOUNT_ID} />, fetch);
     expect(await screen.findByText("Priya & Arjun")).toBeOnTheScreen();
     expect(await screen.findByText("Try again")).toBeOnTheScreen();
+  });
+
+  it("shows the finance payment ledger to a role that holds crm.payments.read", async () => {
+    await renderWithApi(<AccountDetailScreen accountId={ACCOUNT_ID} />, ledgerFetch(["FA"]));
+    expect(await screen.findByText("Priya & Arjun")).toBeOnTheScreen();
+    expect(await screen.findByTestId("account-payments")).toBeOnTheScreen();
+    expect(await screen.findByTestId(`payment-${PAYMENT_ID}`)).toBeOnTheScreen();
+    expect(screen.getByText("Inbound")).toBeOnTheScreen();
+    expect(screen.getByText(/25,000/)).toBeOnTheScreen();
+  });
+
+  it("hides the finance ledger from a role without the key and never queries it", async () => {
+    const paths: string[] = [];
+    const base = ledgerFetch(["SM"]);
+    const spyFetch: FetchFn = (input, init) => {
+      paths.push(String(input));
+      return base(input, init);
+    };
+    await renderWithApi(<AccountDetailScreen accountId={ACCOUNT_ID} />, spyFetch);
+    expect(await screen.findByText("Priya & Arjun")).toBeOnTheScreen();
+    // /me is read (the gate needs the role), but the RESTRICTED-FINANCE ledger is neither shown nor fetched.
+    await screen.findByText("Subscriptions");
+    expect(paths.some((p) => p.includes("/me"))).toBe(true);
+    expect(screen.queryByTestId("account-payments")).toBeNull();
+    expect(paths.some((p) => p.includes("/crm/payments"))).toBe(false);
   });
 });

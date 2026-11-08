@@ -17,7 +17,7 @@ const client: PolicyPrincipal = { type: "client", userId: "c-1", projectIds: ["p
 const onProject = { projectId: "p-1" };
 
 describe("§7 wedding project", () => {
-  it("§7 line 419, §5.15 line 312: FA cannot close a wedding; PM (a) and SA can", () => {
+  it("§7 line 420, §5.15 line 313: FA cannot close a wedding; PM (a) and SA can", () => {
     expect(canTransition(staff(["FA"]), "wedding_project", "closure", "closed", onProject)).toBe(
       null,
     );
@@ -28,7 +28,7 @@ describe("§7 wedding project", () => {
     expect(canTransition(staff(["SA"]), "wedding_project", "closure", "closed")).not.toBeNull();
   });
 
-  it("§7 line 421: on_hold goes back to the previous status only", () => {
+  it("§7 line 422: on_hold goes back to the previous status only", () => {
     const sa = staff(["SA"]);
     expect(
       canTransition(sa, "wedding_project", "on_hold", "planning", { previousStatus: "planning" }),
@@ -45,7 +45,7 @@ describe("§7 wedding project", () => {
     ).not.toBeNull();
   });
 
-  it("§7 lines 420-422: a hold never restores a wedding to closed, whatever status was saved", () => {
+  it("§7 lines 422-423: a hold never restores a wedding to closed, whatever status was saved", () => {
     const savedClosed = { ...onProject, previousStatus: "closed" };
     expect(canTransition(staff(["PM"]), "wedding_project", "on_hold", "closed", savedClosed)).toBe(
       null,
@@ -55,14 +55,14 @@ describe("§7 wedding project", () => {
     );
   });
 
-  it("§7 line 422: only the Super Admin reopens a closed wedding", () => {
+  it("§7 line 423: only the Super Admin reopens a closed wedding", () => {
     expect(canTransition(staff(["SA"]), "wedding_project", "closed", "closure")).not.toBeNull();
     expect(
       canTransition(staff(["PM"]), "wedding_project", "closed", "closure", onProject),
     ).toBeNull();
   });
 
-  it("§7 lines 420 and 422, AC-15.7: 'any → on_hold' never takes a wedding out of closed", () => {
+  it("§7 lines 421 and 422, AC-15.7: 'any → on_hold' never takes a wedding out of closed", () => {
     expect(canTransition(staff(["PM"]), "wedding_project", "closed", "on_hold", onProject)).toBe(
       null,
     );
@@ -76,12 +76,12 @@ describe("§7 wedding project", () => {
 describe("§7 a plain 'any' reaches every status but the terminal ones", () => {
   const pm = staff(["PM"]);
 
-  it("§7 lines 394-395: an expired subscription is not cancelled; a suspended one is", () => {
+  it("§7 lines 396-396: an expired subscription is not cancelled; a suspended one is", () => {
     expect(canTransition(staff(["SA"]), "subscription", "expired", "cancelled")).toBeNull();
     expect(canTransition(staff(["SA"]), "subscription", "suspended", "cancelled")).not.toBeNull();
   });
 
-  it("§7 line 439: a completed or declined vendor assignment is not cancelled", () => {
+  it("§7 line 440: a completed or declined vendor assignment is not cancelled", () => {
     for (const from of ["completed", "declined"]) {
       expect(canTransition(pm, "vendor_assignment", from, "cancelled", onProject)).toBeNull();
     }
@@ -90,7 +90,7 @@ describe("§7 a plain 'any' reaches every status but the terminal ones", () => {
     ).not.toBeNull();
   });
 
-  it("§7 lines 464 and 473: completed tasks and checked-out rooms are not cancelled", () => {
+  it("§7 lines 465 and 473: completed tasks and checked-out rooms are not cancelled", () => {
     expect(canTransition(pm, "task", "completed", "cancelled", onProject)).toBeNull();
     expect(canTransition(pm, "task", "in_progress", "cancelled", onProject)).not.toBeNull();
     expect(canTransition(pm, "room_allocation", "checked_out", "cancelled", onProject)).toBeNull();
@@ -99,7 +99,7 @@ describe("§7 a plain 'any' reaches every status but the terminal ones", () => {
     ).not.toBeNull();
   });
 
-  it("§7 line 483: the requester does not withdraw a rejected, implemented or closed request", () => {
+  it("§7 line 484: the requester does not withdraw a rejected, implemented or closed request", () => {
     const mine = { ...onProject, requesterId: "c-1" };
     for (const from of ["rejected", "implemented", "closed"]) {
       expect(canTransition(client, "client_request", from, "withdrawn", mine)).toBeNull();
@@ -107,7 +107,7 @@ describe("§7 a plain 'any' reaches every status but the terminal ones", () => {
     expect(canTransition(client, "client_request", "accepted", "withdrawn", mine)).not.toBeNull();
   });
 
-  it("§7 lines 408 and 429: a confirmed enquiry still closes; an approved approval is still superseded", () => {
+  it("§7 lines 409 and 429: a confirmed enquiry still closes; an approved approval is still superseded", () => {
     expect(canTransition(staff(["HT"]), "hotel_enquiry", "confirmed", "closed")).not.toBeNull();
     expect(canTransition(system, "approval", "approved", "superseded")).not.toBeNull();
   });
@@ -120,7 +120,7 @@ describe("§7 a plain 'any' reaches every status but the terminal ones", () => {
 });
 
 describe("§7 'any <qualifier>' rows never reach terminal states", () => {
-  it("§7 line 455: a resolved or closed incident is not escalated by 'any open state'", () => {
+  it("§7 line 456: a resolved or closed incident is not escalated by 'any open state'", () => {
     const pm = staff(["PM"]);
     for (const from of ["resolved", "closed"]) {
       expect(canTransition(pm, "incident", from, "escalated", onProject)).toBeNull();
@@ -134,7 +134,7 @@ describe("§7 'any <qualifier>' rows never reach terminal states", () => {
     ).not.toBeNull();
   });
 
-  it("§7 line 405: a confirmed or closed enquiry does not return to proposal_received", () => {
+  it("§7 line 406: a confirmed or closed enquiry does not return to proposal_received", () => {
     const ht = staff(["HT"]);
     expect(canTransition(ht, "hotel_enquiry", "closed", "proposal_received")).toBeNull();
     expect(canTransition(ht, "hotel_enquiry", "confirmed", "proposal_received")).toBeNull();
@@ -143,7 +143,7 @@ describe("§7 'any <qualifier>' rows never reach terminal states", () => {
 });
 
 describe("§7 client request", () => {
-  it("§7 lines 478-480: the assigned staff member reviews, questions and answers a request", () => {
+  it("§7 lines 480-481: the assigned staff member reviews, questions and answers a request", () => {
     const assignee = staff(["RG"]);
     const assigned = { assigneeId: "u-1" };
     expect(
@@ -175,7 +175,7 @@ describe("§7 client request", () => {
     ).toBeNull();
   });
 
-  it("§7 line 481: PM (a) or SA accept or reject a change request, not a question", () => {
+  it("§7 line 482: PM (a) or SA accept or reject a change request, not a question", () => {
     const pm = staff(["PM"]);
     const change = { ...onProject, kind: "change_request" };
     expect(canTransition(pm, "client_request", "under_review", "rejected", change)).not.toBeNull();
@@ -193,7 +193,7 @@ describe("§7 client request", () => {
     ).not.toBeNull();
   });
 
-  it("§7 line 483: the requester withdraws their own request", () => {
+  it("§7 line 484: the requester withdraws their own request", () => {
     expect(
       canTransition(client, "client_request", "submitted", "withdrawn", {
         ...onProject,
@@ -215,7 +215,7 @@ describe("§7 client request", () => {
 });
 
 describe("§7 function readiness and subscriptions", () => {
-  it("§7 line 446, data-model.md lines 849 and 1838: only the System derives readiness, even past an exception", () => {
+  it("§7 line 447, data-model.md lines 850 and 1838: only the System derives readiness, even past an exception", () => {
     expect(canTransition(system, "function_readiness", "blocked", "ready")).not.toBeNull();
     expect(canTransition(system, "function_readiness", "not_started", "ready")).not.toBeNull();
     // AC-13.2: SA authorises the exception on the checklist item (decide() on readiness_exceptions);
@@ -227,7 +227,7 @@ describe("§7 function readiness and subscriptions", () => {
     }
   });
 
-  it("§7 line 447: a ready function goes live by PM (a) or HL (a) on the day", () => {
+  it("§7 line 448: a ready function goes live by PM (a) or HL (a) on the day", () => {
     expect(
       canTransition(staff(["HL"]), "function_readiness", "ready", "live", onProject),
     ).not.toBeNull();
@@ -236,13 +236,13 @@ describe("§7 function readiness and subscriptions", () => {
     );
   });
 
-  it("§7 line 389: the System activates on payment; FA or SA manually; never Sales", () => {
+  it("§7 line 390: the System activates on payment; FA or SA manually; never Sales", () => {
     expect(canTransition(system, "subscription", "pending_payment", "active")).not.toBeNull();
     expect(canTransition(staff(["FA"]), "subscription", "trial", "active")).not.toBeNull();
     expect(canTransition(staff(["SM"]), "subscription", "pending_payment", "active")).toBeNull();
   });
 
-  it("§7 lines 394-395: a client asks to cancel through a request; an expired row is never reactivated", () => {
+  it("§7 lines 396-396: a client asks to cancel through a request; an expired row is never reactivated", () => {
     expect(canTransition(client, "subscription", "active", "cancelled")).toBeNull();
     expect(canTransition(staff(["SM"]), "subscription", "active", "cancelled")).not.toBeNull();
     for (const from of ["expired", "cancelled"]) {

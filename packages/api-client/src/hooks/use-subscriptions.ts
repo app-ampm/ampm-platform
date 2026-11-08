@@ -14,7 +14,8 @@ import { ACCOUNTS_QUERY_KEY } from "./use-accounts";
  * Subscriptions (Module B CRM, feature 8.3). Staff read (`crm.subscriptions.read`) is CLIENT-class (status,
  * dates, auto-renew — no payment internals). Finance records a manual bank transfer against a pending
  * subscription (`crm.subscriptions.update`): the amount is taken from the plan, not the request, and the
- * same activation runs as the gateway webhook. The RESTRICTED-FINANCE payment ledger has no read route yet.
+ * same activation runs as the gateway webhook. The RESTRICTED-FINANCE payment ledger is read separately
+ * through `usePayments` (`crm.payments.read`, FA/SA).
  */
 
 export const SUBSCRIPTIONS_QUERY_KEY = ["crm", "subscriptions"] as const;

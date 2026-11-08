@@ -20,7 +20,7 @@ const demo: PolicyPrincipal = { type: "demo", userId: "u-1", projectIds: ["p-1"]
 const mine = { projectId: "p-1", requesterId: "u-1" };
 
 describe("§7 actors are bound to the principals the record allows", () => {
-  it("§7 line 483 with §6 line 366: a guest or the demo withdraws the request they submitted", () => {
+  it("§7 line 484 with §6 line 367: a guest or the demo withdraws the request they submitted", () => {
     for (const principal of [client, guest, demo]) {
       expect(
         canTransition(principal, "client_request", "submitted", "withdrawn", mine),
@@ -31,11 +31,11 @@ describe("§7 actors are bound to the principals the record allows", () => {
     expect(canTransition(guest, "client_request", "submitted", "withdrawn", theirs)).toBeNull();
   });
 
-  it("§7 line 483 with §5.9 line 250: a client request's requester is a client, guest or demo", () => {
+  it("§7 line 484 with §5.9 line 251: a client request's requester is a client, guest or demo", () => {
     expect(canTransition(staffMember, "client_request", "submitted", "withdrawn", mine)).toBeNull();
   });
 
-  it("§7 lines 462-464 with §6 line 370: a task's owner and creator are staff; a client only reads tasks", () => {
+  it("§7 lines 464-465 with §6 line 371: a task's owner and creator are staff; a client only reads tasks", () => {
     const owned = { projectId: "p-1", ownerId: "u-1", creatorId: "u-1" };
     expect(canTransition(staffMember, "task", "not_started", "completed", owned)).not.toBeNull();
     expect(canTransition(staffMember, "task", "in_progress", "cancelled", owned)).not.toBeNull();
@@ -45,18 +45,18 @@ describe("§7 actors are bound to the principals the record allows", () => {
     }
   });
 
-  it("§7 line 427 with §5.9 line 251: an approval's requester is staff; clients decide, not submit", () => {
+  it("§7 line 428 with §5.9 line 252: an approval's requester is staff; clients decide, not submit", () => {
     expect(canTransition(staffMember, "approval", "draft", "submitted", mine)).not.toBeNull();
     expect(canTransition(client, "approval", "draft", "submitted", mine)).toBeNull();
   });
 
-  it("§1 line 52, §7 line 483: a guest's request on another wedding is out of reach", () => {
+  it("§1 line 52, §7 line 484: a guest's request on another wedding is out of reach", () => {
     const elsewhere = { projectId: "p-9", requesterId: "u-1" };
     expect(canTransition(guest, "client_request", "submitted", "withdrawn", elsewhere)).toBeNull();
     expect(canTransition(client, "client_request", "submitted", "withdrawn", elsewhere)).toBeNull();
   });
 
-  it("§7 lines 454-456: an incident's assignee is staff", () => {
+  it("§7 lines 456-457: an incident's assignee is staff", () => {
     const assigned = { projectId: "p-1", assigneeId: "u-1" };
     expect(
       canTransition(staffMember, "incident", "assigned", "in_progress", assigned),
@@ -70,14 +70,14 @@ describe("§7 'Either CR' means the representatives of that wedding or account",
   const noMembership: PolicyPrincipal = { type: "client", userId: "c-0" };
   const onProject = { projectId: "p-1" };
 
-  it("§1 line 52, §6 line 338, §7 line 428: another wedding's representative does not decide an approval", () => {
+  it("§1 line 52, §6 line 339, §7 line 429: another wedding's representative does not decide an approval", () => {
     expect(canTransition(client, "approval", "submitted", "approved", onProject)).not.toBeNull();
     expect(canTransition(otherWedding, "approval", "submitted", "approved", onProject)).toBeNull();
     expect(canTransition(noMembership, "approval", "submitted", "approved", onProject)).toBeNull();
     expect(canTransition(client, "approval", "submitted", "approved")).toBeNull();
   });
 
-  it("§1 line 52, §7 lines 434-435: vendor decisions belong to that wedding's representatives", () => {
+  it("§1 line 52, §7 lines 436-436: vendor decisions belong to that wedding's representatives", () => {
     for (const [from, to] of [
       ["option", "shortlisted"],
       ["option", "declined"],
@@ -89,7 +89,7 @@ describe("§7 'Either CR' means the representatives of that wedding or account",
     }
   });
 
-  it("§6 line 338, §7 line 400: an enquiry before any wedding is the account's", () => {
+  it("§6 line 339, §7 line 401: an enquiry before any wedding is the account's", () => {
     const accountClient: PolicyPrincipal = { type: "client", userId: "c-1", accountIds: ["a-1"] };
     const ownAccount = { accountId: "a-1" };
     expect(

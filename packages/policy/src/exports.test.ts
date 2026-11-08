@@ -97,20 +97,20 @@ describe("export shape", () => {
     expect(exportableClasses(["PM"]).has("RESTRICTED-FINANCE")).toBe(false);
   });
 
-  it("§5.16 lines 324 and 332: a report's exclusions apply unless the role is excepted", () => {
+  it("§5.16 lines 325 and 332: a report's exclusions apply unless the role is excepted", () => {
     expect(exportableClasses(["HT"], HOTELS).has("RESTRICTED-FINANCE")).toBe(false);
     expect(exportableClasses(["SA"], HOTELS).has("RESTRICTED-FINANCE")).toBe(true);
     expect(exportableClasses(["SA"], HOTELS).has("INTERNAL")).toBe(true);
     expect(() => exportableClasses(["SA"], "no_such_report")).toThrow();
   });
 
-  it("§5.16 line 324: Finance may not export the hotel shortlist report, so it has no shape", () => {
+  it("§5.16 line 325: Finance may not export the hotel shortlist report, so it has no shape", () => {
     expect(() => exportShape(["FA"], HOTELS)).toThrow(/export/);
     expect(() => exportableClasses(["FA"], HOTELS)).toThrow(/export/);
     expect(exportShape(["HT"], HOTELS).classes.has("RESTRICTED-FINANCE")).toBe(false);
   });
 
-  it("§5.16 line 330: the hotel rooming list carries names, dates and room category only", () => {
+  it("§5.16 line 331: the hotel rooming list carries names, dates and room category only", () => {
     const hotelList = exportShape(["HL"], ROOMING, "hotel_rooming_list");
     expect(hotelList.onlyFields).toEqual(["names", "dates", "room_category"]);
     expect(hotelList.classes.has("RESTRICTED-IDENTITY")).toBe(false);
@@ -119,7 +119,7 @@ describe("export shape", () => {
     expect(manifest.classes.has("RESTRICTED-IDENTITY")).toBe(false);
   });
 
-  it("§5.16 line 330: PM may run the rooming list but not export it; a variant must be the report's", () => {
+  it("§5.16 line 331: PM may run the rooming list but not export it; a variant must be the report's", () => {
     expect(() => exportShape(["PM"], ROOMING)).toThrow(/export/);
     expect(() => exportShape(["SA"], ROOMING, "spreadsheet")).toThrow(/spreadsheet/);
     const funnel = "lead_source_conversion_funnel";
