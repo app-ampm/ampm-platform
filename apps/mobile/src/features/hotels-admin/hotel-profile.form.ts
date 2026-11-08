@@ -1,5 +1,9 @@
 import type { HotelCreateRequest, HotelStaffView, HotelStatus } from "@ampm/core";
 
+import { intOrNull, isWholeNumber, numberToText, textOrNull } from "./hotel-form-fields";
+
+export { hasErrors } from "./hotel-form-fields";
+
 /*
  * The hotel profile editor's form logic (H1.1b), kept pure so it is tested without rendering: the
  * draft the form holds (text as strings), the client-side checks that must pass before submit, and the
@@ -24,10 +28,6 @@ export interface HotelProfileDraft {
   readonly internalNotes: string;
 }
 
-function numberToText(value: number | null): string {
-  return value === null ? "" : String(value);
-}
-
 /** Edit seeds from the hotel's current profile; create starts empty with the draft status. */
 export function draftFromHotel(hotel: HotelStaffView | null): HotelProfileDraft {
   return {
@@ -47,16 +47,12 @@ export function draftFromHotel(hotel: HotelStaffView | null): HotelProfileDraft 
   };
 }
 
-export interface HotelProfileErrors {
+export type HotelProfileErrors = {
   readonly name: string | undefined;
   readonly destinationId: string | undefined;
   readonly totalRooms: string | undefined;
   readonly internalRating: string | undefined;
-}
-
-function isWholeNumber(value: string): boolean {
-  return /^\d+$/.test(value.trim());
-}
+};
 
 function ratingError(value: string): string | undefined {
   const trimmed = value.trim();
@@ -76,20 +72,6 @@ export function validateDraft(draft: HotelProfileDraft): HotelProfileErrors {
         : undefined,
     internalRating: ratingError(draft.internalRating),
   };
-}
-
-export function hasErrors(errors: HotelProfileErrors): boolean {
-  return Object.values(errors).some((error) => error !== undefined);
-}
-
-function textOrNull(value: string): string | null {
-  const trimmed = value.trim();
-  return trimmed === "" ? null : trimmed;
-}
-
-function intOrNull(value: string): number | null {
-  const trimmed = value.trim();
-  return trimmed === "" ? null : Number(trimmed);
 }
 
 /**
