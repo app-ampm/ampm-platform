@@ -51,6 +51,22 @@ export { hotelQueryKey, useHotel } from "./hooks/use-hotel";
 export { SAVED_HOTELS_QUERY_KEY, useSavedHotels } from "./hooks/use-saved-hotels";
 export { useSaveHotel } from "./hooks/use-save-hotel";
 export { useUnsaveHotel } from "./hooks/use-unsave-hotel";
+// H1.1 staff hotel catalogue + photo management (Module C + Module N media). Staff-only; gated server-side.
+export {
+  STAFF_HOTELS_QUERY_KEY,
+  staffHotelQueryKey,
+  useStaffHotel,
+  useStaffHotels,
+} from "./hooks/use-staff-hotels";
+export {
+  hotelMediaQueryKey,
+  useAddHotelPhoto,
+  useDeleteMedia,
+  useHotelMedia,
+  useMediaDownloadUrl,
+  useUpdateMedia,
+  type AddHotelPhotoInput,
+} from "./hooks/use-hotel-media";
 // Module D consultancy (feature 10.1): the client side of hotel enquiries (CP-07/08).
 export {
   HOTEL_ENQUIRIES_QUERY_KEY,

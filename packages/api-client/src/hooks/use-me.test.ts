@@ -39,6 +39,10 @@ function recordingApi(): { readonly api: ApiClient; readonly asked: string[] } {
       asked.push(path);
       return Promise.resolve(schema.parse(ME));
     },
+    upload: (path, { schema }) => {
+      asked.push(path);
+      return Promise.resolve(schema.parse(ME));
+    },
   };
   return { api, asked };
 }
