@@ -6,12 +6,14 @@ import { LeadDetailScreen } from "./lead-detail-screen";
 import {
   ACCOUNT_ID,
   LEAD_ID,
+  STAFF_USER_ID,
   activityFixture,
   failure,
   leadFixture,
   ok,
   renderWithApi,
   routedFetch,
+  staffMeFixture,
   type FetchFn,
 } from "./sales.test-utils";
 
@@ -66,6 +68,7 @@ function detailFetch(lead: LeadView, routes: Routes = {}): FetchFn {
   return routedFetch({
     [LEAD_PATH]: () => ok(lead),
     [`${LEAD_PATH}/activities`]: () => ok({ items: [] }),
+    "/me": () => ok(staffMeFixture()),
     ...routes,
   });
 }
@@ -219,6 +222,78 @@ describe("LeadDetailScreen", () => {
     await renderDetail(detailFetch(leadFixture()));
     await screen.findByTestId("lead-facts");
     expect(panelOrder()).toEqual(["lead-facts", "lead-demo", "lead-invite"]);
+  });
+
+  it("logs an activity from the detail and sends it to the server", async () => {
+    mockWindow.width = 1280;
+    const bodies: unknown[] = [];
+    const routes: Routes = {
+      [`${LEAD_PATH}/activities`]: (init) => {
+        if (init?.method === "POST") {
+          bodies.push(JSON.parse(String(init.body)));
+          return ok(activityFixture());
+        }
+        return ok({ items: [] });
+      },
+    };
+    await renderDetail(detailFetch(leadFixture(), routes));
+    await fireEvent.press(await screen.findByTestId("lead-activity-add"));
+    await fireEvent.press(await screen.findByText("WhatsApp"));
+    await fireEvent.press(screen.getByTestId("lead-activity-submit"));
+    expect(await screen.findByText("Activity logged")).toBeOnTheScreen();
+    expect(bodies).toEqual([{ activityType: "whatsapp" }]);
+  });
+
+  it("advances an owned lead one funnel stage", async () => {
+    const owned = leadFixture({ ownerUserId: STAFF_USER_ID, ownerName: "Sameer Sales" });
+    const bodies: unknown[] = [];
+    const routes: Routes = {
+      [LEAD_PATH]: (init) => {
+        if (init?.method === "PATCH") {
+          bodies.push(JSON.parse(String(init.body)));
+          return ok({ ...owned, status: "contacted" });
+        }
+        return ok(owned);
+      },
+    };
+    await renderDetail(detailFetch(owned, routes));
+    await fireEvent.press(await screen.findByTestId("lead-advance"));
+    expect(await screen.findByText("Moved to Contacted")).toBeOnTheScreen();
+    expect(bodies).toEqual([{ status: "contacted" }]);
+  });
+
+  it("hides Advance on an unowned lead and points to assigning an owner first", async () => {
+    // The server refuses a move past `new` without an owner, so the UI gates Advance on ownership.
+    await renderDetail(detailFetch(leadFixture()));
+    expect(await screen.findByTestId("lead-advance-needs-owner")).toBeOnTheScreen();
+    expect(screen.queryByTestId("lead-advance")).toBeNull();
+    expect(await screen.findByTestId("lead-assign-me")).toBeOnTheScreen();
+  });
+
+  it("assigns the unowned lead to the signed-in salesperson", async () => {
+    const bodies: unknown[] = [];
+    const routes: Routes = {
+      [`${LEAD_PATH}/owner`]: (init) => {
+        bodies.push(JSON.parse(String(init?.body)));
+        return ok(leadFixture({ ownerUserId: STAFF_USER_ID, ownerName: "Sameer Sales" }));
+      },
+    };
+    await renderDetail(detailFetch(leadFixture(), routes));
+    await fireEvent.press(await screen.findByTestId("lead-assign-me"));
+    expect(await screen.findByText("Assigned to you")).toBeOnTheScreen();
+    expect(bodies).toEqual([{ ownerUserId: STAFF_USER_ID }]);
+  });
+
+  it("hides the working actions on a terminal lead", async () => {
+    const lead = leadFixture({
+      status: "converted",
+      convertedAccountId: ACCOUNT_ID,
+      convertedAt: CONVERTED_AT,
+    });
+    await renderDetail(detailFetch(lead));
+    expect(await screen.findByText("Converted to a client account")).toBeOnTheScreen();
+    expect(screen.queryByTestId("lead-manage")).toBeNull();
+    expect(screen.queryByTestId("lead-activity-add")).toBeNull();
   });
 });
 

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useRouter } from "expo-router";
 import type { UseQueryResult } from "@tanstack/react-query";
 
@@ -17,10 +18,12 @@ import {
 import { useGoToSignIn } from "@/navigation/sign-in";
 
 import { LeadActivityCard } from "./lead-activity-card";
+import { LeadActivitySheet } from "./lead-activity-sheet";
 import { LeadDemoCard } from "./lead-demo-card";
 import { LeadFactsCard } from "./lead-facts-card";
 import { LeadInviteCard } from "./lead-invite-card";
-import { statusLabel, statusTone } from "./sales.format";
+import { LeadManageCard } from "./lead-manage-card";
+import { isOpenLead, statusLabel, statusTone } from "./sales.format";
 
 /**
  * A phone or tablet reads one column with the action early: facts, invite, demo, activity. From 1024
@@ -28,27 +31,35 @@ import { statusLabel, statusTone } from "./sales.format";
  */
 function LeadDetailBody({ lead }: { readonly lead: LeadView }) {
   const isWide = useBreakpoint().atLeast("lg");
-  if (!isWide) {
-    return (
-      <Stack gap={4}>
-        <LeadFactsCard lead={lead} />
-        <LeadInviteCard lead={lead} />
-        <LeadDemoCard lead={lead} />
-        <LeadActivityCard leadId={lead.id} />
-      </Stack>
-    );
-  }
+  const [logging, setLogging] = useState(false);
+  const open = isOpenLead(lead.status);
+  const onAdd = open ? () => setLogging(true) : undefined;
+  const manage = open ? <LeadManageCard lead={lead} /> : null;
   return (
-    <Row gap={4.5} align="start">
-      <Stack gap={4.5} className="flex-1">
-        <LeadFactsCard lead={lead} />
-        <LeadActivityCard leadId={lead.id} />
-      </Stack>
-      <Stack gap={4.5} className="w-96">
-        <LeadDemoCard lead={lead} />
-        <LeadInviteCard lead={lead} />
-      </Stack>
-    </Row>
+    <>
+      {isWide ? (
+        <Row gap={4.5} align="start">
+          <Stack gap={4.5} className="flex-1">
+            <LeadFactsCard lead={lead} />
+            <LeadActivityCard leadId={lead.id} onAdd={onAdd} />
+          </Stack>
+          <Stack gap={4.5} className="w-96">
+            {manage}
+            <LeadDemoCard lead={lead} />
+            <LeadInviteCard lead={lead} />
+          </Stack>
+        </Row>
+      ) : (
+        <Stack gap={4}>
+          <LeadFactsCard lead={lead} />
+          {manage}
+          <LeadInviteCard lead={lead} />
+          <LeadDemoCard lead={lead} />
+          <LeadActivityCard leadId={lead.id} onAdd={onAdd} />
+        </Stack>
+      )}
+      <LeadActivitySheet leadId={logging ? lead.id : null} onClose={() => setLogging(false)} />
+    </>
   );
 }
 

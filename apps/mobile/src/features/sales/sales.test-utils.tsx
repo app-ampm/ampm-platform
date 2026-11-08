@@ -1,4 +1,4 @@
-import type { LeadActivityView, LeadView } from "@ampm/core";
+import type { LeadActivityView, LeadView, MeResponse } from "@ampm/core";
 
 import { failure, TEST_API_BASE } from "../../test/api";
 
@@ -13,8 +13,33 @@ export { failure, ok, renderWithApi } from "../../test/api";
 export const LEAD_ID = "018f0000-0000-7000-8000-0000000001ad";
 export const SECOND_LEAD_ID = "018f0000-0000-7000-8000-0000000001ae";
 export const ACCOUNT_ID = "018f0000-0000-7000-8000-0000000002ac";
-const STAFF_USER_ID = "018f0000-0000-7000-8000-00000000cafe";
+export const STAFF_USER_ID = "018f0000-0000-7000-8000-00000000cafe";
 const RECEIVED_AT = "2026-11-01T16:18:00Z";
+
+/** The signed-in salesperson (`/me`): a staff SM whose id owns leads the test assigns "to me". */
+export function staffMeFixture(): MeResponse {
+  return {
+    principal: {
+      type: "staff",
+      userId: STAFF_USER_ID,
+      name: "Sameer Sales",
+      email: "sales@example.com",
+      phone: null,
+      status: "active",
+      lastLoginAt: null,
+    },
+    roles: ["SM"],
+    memberships: [],
+    entitlements: {
+      modules: [],
+      readOnlyModules: [],
+      hotelReach: [],
+      financeReach: [],
+      requestTypes: { wedding: [], account: [] },
+    },
+    isDemo: false,
+  };
+}
 
 /** A website lead asking for a demo: no owner yet, dates, destination and guests given. */
 export function leadFixture(overrides: Partial<LeadView> = {}): LeadView {

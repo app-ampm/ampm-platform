@@ -1,6 +1,6 @@
 import { useLeadActivities } from "@ampm/api-client";
 import type { LeadActivityView } from "@ampm/core";
-import { Card, Stack, Stepper, Text, type StepperStep } from "@ampm/ui";
+import { Button, Card, Row, Stack, Stepper, Text, type StepperStep } from "@ampm/ui";
 
 import { activityLabel, formatMoment } from "./sales.format";
 
@@ -16,28 +16,60 @@ function activityStep(activity: LeadActivityView): StepperStep {
   };
 }
 
-/**
- * A lead's activity timeline (T3), newest first, as a vertical stepper of logged steps with their
- * time and summary. The timeline is secondary context: nothing shows while it loads, if it fails or
- * while the lead has no activity.
- *
- *   <LeadActivityCard leadId={lead.id} />
- */
-export function LeadActivityCard({ leadId }: { readonly leadId: string }) {
+/** The timeline itself, newest first; secondary context, so nothing shows while it loads or if it fails. */
+function Timeline({ leadId }: { readonly leadId: string }) {
   const activities = useLeadActivities(leadId);
-  if (activities.isPending || activities.isError || activities.data.items.length === 0) return null;
+  if (activities.isPending || activities.isError) return null;
+  if (activities.data.items.length === 0) {
+    return (
+      <Text variant="bodySmall" tone="muted">
+        No activity logged yet.
+      </Text>
+    );
+  }
   const steps = activities.data.items.map(activityStep);
+  return (
+    <Stepper
+      orientation="vertical"
+      steps={steps}
+      current={steps.length}
+      stateLabels={STATE_LABELS}
+      testID="lead-activity-timeline"
+    />
+  );
+}
+
+export interface LeadActivityCardProps {
+  readonly leadId: string;
+  /** Opens the log-activity sheet; omitted on a terminal (read-only) lead, so the action is hidden. */
+  readonly onAdd?: (() => void) | undefined;
+}
+
+/**
+ * A lead's activity timeline (T3) with the action to log a new touch (`crm.leads.update`). The timeline
+ * is secondary context; the card always shows so a salesperson can log the first activity.
+ *
+ *   <LeadActivityCard leadId={lead.id} onAdd={openSheet} />
+ */
+export function LeadActivityCard({ leadId, onAdd }: LeadActivityCardProps) {
   return (
     <Card className="md:p-6" testID="lead-activity">
       <Stack gap={4}>
-        <Text variant="subheading">Activity</Text>
-        <Stepper
-          orientation="vertical"
-          steps={steps}
-          current={steps.length}
-          stateLabels={STATE_LABELS}
-          testID="lead-activity-timeline"
-        />
+        <Row gap={2} align="center" justify="between">
+          <Text variant="subheading">Activity</Text>
+          {onAdd ? (
+            <Button
+              variant="secondary"
+              size="sm"
+              icon="plus"
+              onPress={onAdd}
+              testID="lead-activity-add"
+            >
+              Log activity
+            </Button>
+          ) : null}
+        </Row>
+        <Timeline leadId={leadId} />
       </Stack>
     </Card>
   );
