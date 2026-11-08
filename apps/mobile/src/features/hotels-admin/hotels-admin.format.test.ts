@@ -1,5 +1,18 @@
-import { hotelRowSummary, hotelStatusLabel, hotelStatusTone } from "./hotels-admin.format";
-import { hotelStaffViewFixture } from "./hotels-admin.test-utils";
+import {
+  contactSummary,
+  hotelRowSummary,
+  hotelStatusLabel,
+  hotelStatusTone,
+  roomSummary,
+  venueSummary,
+  venueTypeLabel,
+} from "./hotels-admin.format";
+import {
+  hotelContactViewFixture,
+  hotelStaffViewFixture,
+  roomCategoryViewFixture,
+  venueViewFixture,
+} from "./hotels-admin.test-utils";
 
 describe("hotels-admin.format", () => {
   it("labels and tones the hotel status", () => {
@@ -13,5 +26,59 @@ describe("hotels-admin.format", () => {
     expect(hotelRowSummary(hotelStaffViewFixture({ name: "Taj", status: "active" }))).toBe(
       "Taj, active",
     );
+  });
+
+  it("labels every venue type", () => {
+    expect(venueTypeLabel("ballroom")).toBe("Ballroom");
+    expect(venueTypeLabel("poolside")).toBe("Poolside");
+    expect(venueTypeLabel("other")).toBe("Other");
+  });
+
+  describe("roomSummary", () => {
+    it("joins the counts, occupancy and size that are set", () => {
+      expect(roomSummary(roomCategoryViewFixture())).toBe("20 rooms · sleeps 3 · 45 sqm");
+    });
+
+    it("singularises a single room and drops the empty parts", () => {
+      expect(
+        roomSummary(roomCategoryViewFixture({ roomCount: 1, maxOccupancy: null, sizeSqm: null })),
+      ).toBe("1 room");
+    });
+
+    it("is empty when nothing is set", () => {
+      expect(
+        roomSummary(
+          roomCategoryViewFixture({ roomCount: null, maxOccupancy: null, sizeSqm: null }),
+        ),
+      ).toBe("");
+    });
+  });
+
+  describe("venueSummary", () => {
+    it("names the type, indoor/outdoor and banquet capacity", () => {
+      expect(venueSummary(venueViewFixture())).toBe("Ballroom · Indoor · 300 banquet");
+    });
+
+    it("marks an outdoor venue and drops a missing banquet capacity", () => {
+      expect(
+        venueSummary(
+          venueViewFixture({ venueType: "lawn", isIndoor: false, capacityBanquet: null }),
+        ),
+      ).toBe("Lawn · Outdoor");
+    });
+  });
+
+  describe("contactSummary", () => {
+    it("joins the role, phone and email that are set", () => {
+      expect(contactSummary(hotelContactViewFixture())).toBe(
+        "Events Manager · +91 98765 43210 · priya@lakeside.example",
+      );
+    });
+
+    it("is empty when only the name is known", () => {
+      expect(
+        contactSummary(hotelContactViewFixture({ roleTitle: null, phone: null, email: null })),
+      ).toBe("");
+    });
   });
 });

@@ -1,8 +1,11 @@
 import type {
   DestinationView,
+  HotelContactView,
   HotelStaffDetailView,
   HotelStaffView,
   MediaAssetView,
+  RoomCategoryView,
+  VenueView,
 } from "@ampm/core";
 
 import { failure, TEST_API_BASE } from "../../test/api";
@@ -16,6 +19,9 @@ export { failure, ok, renderWithApi } from "../../test/api";
 
 export const HOTEL_ID = "018f0000-0000-7000-8000-0000000c0001";
 export const DESTINATION_ID = "018f0000-0000-7000-8000-0000000c0002";
+export const ROOM_ID = "018f0000-0000-7000-8000-0000000c0d01";
+export const VENUE_ID = "018f0000-0000-7000-8000-0000000c0e01";
+export const CONTACT_ID = "018f0000-0000-7000-8000-0000000c0f01";
 const UPLOADER_ID = "018f0000-0000-7000-8000-0000000c00aa";
 
 /** A hotel as `GET /hotels-admin/hotels` returns it; override for the other states. */
@@ -70,6 +76,57 @@ export function hotelStaffDetailViewFixture(
     rooms: [],
     venues: [],
     contacts: [],
+    ...overrides,
+  };
+}
+
+/** A room category as the staff hotel detail nests it. */
+export function roomCategoryViewFixture(
+  overrides: Partial<RoomCategoryView> = {},
+): RoomCategoryView {
+  return {
+    id: ROOM_ID,
+    hotelId: HOTEL_ID,
+    name: "Deluxe Lake View",
+    roomCount: 20,
+    maxOccupancy: 3,
+    sizeSqm: 45,
+    facilities: ["wifi", "minibar"],
+    description: null,
+    ...overrides,
+  };
+}
+
+/** A venue as the staff hotel detail nests it. */
+export function venueViewFixture(overrides: Partial<VenueView> = {}): VenueView {
+  return {
+    id: VENUE_ID,
+    hotelId: HOTEL_ID,
+    name: "Grand Ballroom",
+    venueType: "ballroom",
+    isIndoor: true,
+    areaSqm: 500,
+    capacityBanquet: 300,
+    capacityTheatre: 400,
+    capacityReception: 500,
+    facilities: ["stage", "AV"],
+    description: null,
+    ...overrides,
+  };
+}
+
+/** A hotel contact as the staff hotel detail nests it (RESTRICTED-CONTACT). */
+export function hotelContactViewFixture(
+  overrides: Partial<HotelContactView> = {},
+): HotelContactView {
+  return {
+    id: CONTACT_ID,
+    hotelId: HOTEL_ID,
+    name: "Priya Sharma",
+    roleTitle: "Events Manager",
+    phone: "+91 98765 43210",
+    email: "priya@lakeside.example",
+    isPrimary: true,
     ...overrides,
   };
 }

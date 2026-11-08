@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from "react";
+import { useRouter } from "expo-router";
 import type { UseQueryResult } from "@tanstack/react-query";
 
 import { useAddHotelPhoto, useDeleteMedia, useHotelMedia, useStaffHotel } from "@ampm/api-client";
@@ -180,6 +181,24 @@ function DeletePhotoConfirm({ manager }: { readonly manager: MediaManager }) {
   );
 }
 
+/** A link from the photo manager to the hotel's rooms, venues and contacts workspace. */
+function HotelDetailsLink({ hotelId }: { readonly hotelId: string }) {
+  const router = useRouter();
+  return (
+    <Button
+      variant="secondary"
+      icon="landmark"
+      fullWidth
+      onPress={() =>
+        router.push({ pathname: "/hotels-admin/[hotelId]/details", params: { hotelId } })
+      }
+      testID="hotel-details-link"
+    >
+      Rooms, venues & contacts
+    </Button>
+  );
+}
+
 export interface HotelMediaScreenProps {
   readonly hotelId: string;
   readonly tabBar?: ReactNode;
@@ -215,7 +234,10 @@ export function HotelMediaScreen({ hotelId, tabBar }: HotelMediaScreenProps) {
         />
       }
     >
-      <MediaBody media={media} onEdit={manager.startEdit} onDelete={manager.startDelete} />
+      <Stack gap={4}>
+        <HotelDetailsLink hotelId={hotelId} />
+        <MediaBody media={media} onEdit={manager.startEdit} onDelete={manager.startDelete} />
+      </Stack>
       <HotelProfileEditSheet
         open={editingProfile}
         hotel={hotel.data ?? null}

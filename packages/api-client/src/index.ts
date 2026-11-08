@@ -63,6 +63,17 @@ export {
   useUpdateHotel,
 } from "./hooks/use-staff-hotels";
 export {
+  useCreateContact,
+  useCreateRoom,
+  useCreateVenue,
+  useDeleteContact,
+  useDeleteRoom,
+  useDeleteVenue,
+  useUpdateContact,
+  useUpdateRoom,
+  useUpdateVenue,
+} from "./hooks/use-hotel-subresources";
+export {
   hotelMediaQueryKey,
   useAddHotelPhoto,
   useDeleteMedia,
