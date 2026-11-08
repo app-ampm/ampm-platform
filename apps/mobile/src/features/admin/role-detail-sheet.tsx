@@ -1,5 +1,5 @@
 import type { CapabilityView, RoleView } from "@ampm/core";
-import { Row, Sheet, Stack, StatusChip, Text } from "@ampm/ui";
+import { Button, Row, Sheet, Stack, StatusChip, Text } from "@ampm/ui";
 
 import {
   capabilityGroups,
@@ -52,11 +52,38 @@ function ModuleGroup({
 export interface RoleDetailSheetProps {
   readonly role: RoleView | null;
   readonly onClose: () => void;
+  /** Provided where custom roles can be managed; a system role is always read-only. */
+  readonly onEdit?: ((role: RoleView) => void) | undefined;
+  readonly onDelete?: ((role: RoleView) => void) | undefined;
 }
 
 /** What one role can do: its kind, how many permissions it grants, and every one grouped by module. */
-export function RoleDetailSheet({ role, onClose }: RoleDetailSheetProps) {
+export function RoleDetailSheet({ role, onClose, onEdit, onDelete }: RoleDetailSheetProps) {
   const groups = role ? capabilityGroups(role.capabilities) : [];
+  // A custom role can be edited and deleted; a system role is immutable, so no actions.
+  const footer =
+    role && !role.isSystem && onEdit && onDelete ? (
+      <Stack gap={2}>
+        <Button
+          fullWidth
+          variant="secondary"
+          icon="edit"
+          onPress={() => onEdit(role)}
+          testID="role-manage-edit"
+        >
+          Edit role
+        </Button>
+        <Button
+          fullWidth
+          variant="destructive"
+          icon="trash"
+          onPress={() => onDelete(role)}
+          testID="role-manage-delete"
+        >
+          Delete role
+        </Button>
+      </Stack>
+    ) : undefined;
   return (
     <Sheet
       open={role !== null}
@@ -64,6 +91,7 @@ export function RoleDetailSheet({ role, onClose }: RoleDetailSheetProps) {
       title={role?.name ?? "Role"}
       size="full"
       testID="role-detail"
+      footer={footer}
     >
       {role ? (
         <Stack gap={4}>

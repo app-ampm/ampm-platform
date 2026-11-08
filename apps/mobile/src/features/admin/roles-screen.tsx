@@ -1,9 +1,10 @@
 import { useState, type ReactNode } from "react";
 import type { UseQueryResult } from "@tanstack/react-query";
 
-import { useAssignableRoles } from "@ampm/api-client";
+import { useAssignableRoles, useDeleteRole } from "@ampm/api-client";
 import type { RoleView } from "@ampm/core";
 import {
+  Button,
   Card,
   DataTable,
   EmptyState,
@@ -14,12 +15,15 @@ import {
   Stack,
   StatusChip,
   Text,
+  useToast,
   type DataTableColumn,
 } from "@ampm/ui";
 
 import { useGoToSignIn } from "@/navigation/sign-in";
 
+import { ConfirmSheet } from "./confirm-sheet";
 import { RoleDetailSheet } from "./role-detail-sheet";
+import { RoleEditSheet } from "./role-edit-sheet";
 import { roleSummary, roleTypeLabel, roleTypeTone } from "./roles.format";
 
 const COLUMNS: DataTableColumn<RoleView>[] = [
@@ -108,27 +112,109 @@ function RolesBody({
   );
 }
 
+interface Editing {
+  readonly role: RoleView | null;
+}
+
+/** The detail / create / edit / delete sheet state for the custom-role editor, kept out of the view. */
+function useRolesEditor() {
+  const toast = useToast();
+  const remove = useDeleteRole();
+  const [selected, setSelected] = useState<RoleView | null>(null);
+  const [editing, setEditing] = useState<Editing | null>(null);
+  const [deleting, setDeleting] = useState<RoleView | null>(null);
+  const confirmDelete = (): void => {
+    if (!deleting || remove.isPending) return;
+    const { id, name } = deleting;
+    remove.mutate(id, {
+      onSuccess: () => {
+        toast.show({ title: `${name} deleted`, tone: "success" });
+        setDeleting(null);
+      },
+      onError: () => toast.show({ title: "Could not delete the role", tone: "danger" }),
+    });
+  };
+  return {
+    selected,
+    editing,
+    deleting,
+    deletePending: remove.isPending,
+    openDetail: (role: RoleView): void => setSelected(role),
+    closeDetail: (): void => setSelected(null),
+    startCreate: (): void => setEditing({ role: null }),
+    startEdit: (role: RoleView): void => {
+      setSelected(null);
+      setEditing({ role });
+    },
+    startDelete: (role: RoleView): void => {
+      setSelected(null);
+      setDeleting(role);
+    },
+    closeEditor: (): void => setEditing(null),
+    cancelDelete: (): void => setDeleting(null),
+    confirmDelete,
+  };
+}
+
 export interface RolesScreenProps {
   readonly tabBar?: ReactNode;
 }
 
 /**
- * The roles-and-permissions viewer (TW-91): every role — the nine built-in system roles and any
- * custom ones — in a table, tap a row for exactly what it can do, grouped by module. The read side of
- * the role surface the staff directory assigns from; Super Admin only, gated server-side.
+ * The roles-and-permissions surface (TW-91): every role in a table (tap for its permissions, grouped
+ * by module), plus the custom-role editor (D-036) — a Super Admin creates a role from the capability
+ * pick-list, and edits or deletes a custom one from its detail sheet. System roles are read-only. All
+ * of it is Super-Admin only, gated server-side.
  *
  *   <RolesScreen tabBar={<AppTabBar />} />
  */
 export function RolesScreen({ tabBar }: RolesScreenProps) {
   const roles = useAssignableRoles();
-  const [selected, setSelected] = useState<RoleView | null>(null);
+  const editor = useRolesEditor();
   return (
     <Screen
       tabBar={tabBar}
-      header={<ScreenHeader eyebrow="Admin console" title="Roles and permissions" />}
+      header={
+        <ScreenHeader
+          eyebrow="Admin console"
+          title="Roles and permissions"
+          trailing={
+            <Button
+              variant="primary"
+              size="sm"
+              icon="plus"
+              onPress={editor.startCreate}
+              testID="role-new"
+            >
+              New role
+            </Button>
+          }
+        />
+      }
     >
-      <RolesBody roles={roles} onOpen={setSelected} />
-      <RoleDetailSheet role={selected} onClose={() => setSelected(null)} />
+      <RolesBody roles={roles} onOpen={editor.openDetail} />
+      <RoleDetailSheet
+        role={editor.selected}
+        onClose={editor.closeDetail}
+        onEdit={editor.startEdit}
+        onDelete={editor.startDelete}
+      />
+      <RoleEditSheet
+        open={editor.editing !== null}
+        role={editor.editing?.role ?? null}
+        onClose={editor.closeEditor}
+      />
+      <ConfirmSheet
+        open={editor.deleting !== null}
+        onClose={editor.cancelDelete}
+        title={editor.deleting ? `Delete ${editor.deleting.name}?` : "Delete role?"}
+        description="This removes the role for everyone who holds it, and signs them out."
+        confirmLabel="Delete role"
+        destructive
+        loading={editor.deletePending}
+        onConfirm={editor.confirmDelete}
+        testID="role-delete"
+      />
     </Screen>
   );
 }

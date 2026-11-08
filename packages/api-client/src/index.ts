@@ -30,11 +30,16 @@ export {
 } from "./hooks/use-staff-user-mutations";
 export {
   ASSIGNABLE_ROLES_QUERY_KEY,
+  CAPABILITIES_QUERY_KEY,
   ROLES_QUERY_KEY,
   useAssignableRoles,
   useAssignStaffRole,
+  useCapabilities,
+  useCreateRole,
+  useDeleteRole,
   useRoles,
   useUnassignStaffRole,
+  useUpdateRole,
 } from "./hooks/use-staff-roles";
 export { AUDIT_EVENTS_QUERY_KEY, useAuditEvents } from "./hooks/use-audit-events";
 export { useDevLogin } from "./hooks/use-dev-login";
