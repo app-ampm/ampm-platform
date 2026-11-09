@@ -12,6 +12,7 @@
 #   WEB_SSH          (required) ssh target for the box
 #   WEB_HTTPDOCS     (required) absolute path to the box's httpdocs
 #   EXPO_PUBLIC_API_URL  (default https://app.ampmverse.com/_api) the API base the UI calls
+#   EXPO_PUBLIC_DEMO     (default true) show the demo-environment banner on this test deploy
 set -euo pipefail
 
 : "${WEB_SSH:?set WEB_SSH=user@host}"
@@ -22,7 +23,8 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT/apps/mobile"
 
 echo "Exporting apps/mobile web build (API=$API_URL) ..."
-EXPO_PUBLIC_API_URL="$API_URL" pnpm exec expo export --platform web --output-dir dist
+EXPO_PUBLIC_API_URL="$API_URL" EXPO_PUBLIC_DEMO="${EXPO_PUBLIC_DEMO:-true}" \
+  pnpm exec expo export --platform web --output-dir dist
 
 echo "Syncing dist/ -> $WEB_SSH:$WEB_HTTPDOCS ..."
 # --delete prunes stale assets, but NEVER the box's hand-placed control files, which live outside the

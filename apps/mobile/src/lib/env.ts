@@ -6,6 +6,8 @@ const schema = z.object({
   EXPO_PUBLIC_API_URL: z.string().url().default("http://localhost:3900"),
   /** Development only: a local access token until the sign-in screens arrive (sprint 2). */
   EXPO_PUBLIC_DEV_ACCESS_TOKEN: z.string().optional(),
+  /** "true" on the demo/test deploy so the app shows the demo banner; unset in a real build. */
+  EXPO_PUBLIC_DEMO: z.string().optional(),
 });
 
 /**
@@ -18,4 +20,5 @@ const schema = z.object({
 export const env = parseEnv(schema, {
   EXPO_PUBLIC_API_URL: process.env.EXPO_PUBLIC_API_URL,
   EXPO_PUBLIC_DEV_ACCESS_TOKEN: __DEV__ ? process.env.EXPO_PUBLIC_DEV_ACCESS_TOKEN : undefined,
+  EXPO_PUBLIC_DEMO: process.env.EXPO_PUBLIC_DEMO,
 });
