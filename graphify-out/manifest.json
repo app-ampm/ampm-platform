@@ -336,9 +336,9 @@
     "semantic_hash": ""
   },
   "apps/mobile/src/app/_layout.tsx": {
-    "mtime": 1793993403.4172611,
-    "seen": 1793998319.3113751,
-    "ast_hash": "8d37971bf22ebd4834f7776cfcd33d9e",
+    "mtime": 1794252220.845826,
+    "seen": 1794252426.57167,
+    "ast_hash": "9642d5826839ed4c88946238d53d9064",
     "semantic_hash": ""
   },
   "apps/mobile/src/app/index.tsx": {
@@ -1626,15 +1626,15 @@
     "semantic_hash": ""
   },
   "apps/mobile/src/features/account/account-screen.tsx": {
-    "mtime": 1794014021.6040695,
-    "seen": 1794014314.4830852,
-    "ast_hash": "0b7c38d67dd3a30e266c3fddd0d55af6",
+    "mtime": 1794252397.8437295,
+    "seen": 1794252426.572287,
+    "ast_hash": "566786436d3c6f6b1463e676ee1d319c",
     "semantic_hash": ""
   },
   "apps/mobile/src/lib/env.ts": {
-    "mtime": 1793992366.2381914,
-    "seen": 1793998319.311408,
-    "ast_hash": "dd3305dcbe02069bf1d0986aefa5f2a1",
+    "mtime": 1794252220.8461664,
+    "seen": 1794252426.576746,
+    "ast_hash": "b68a7b1e455339e420902de40cf35eb3",
     "semantic_hash": ""
   },
   "apps/mobile/src/lib/session.ts": {
@@ -1872,9 +1872,9 @@
     "semantic_hash": ""
   },
   "apps/mobile/src/features/field-notes/field-notes-screen.tsx": {
-    "mtime": 1794011807.2750487,
-    "seen": 1794014314.4839401,
-    "ast_hash": "a8764b326b43db05b9e937817f87e122",
+    "mtime": 1794252342.4651983,
+    "seen": 1794252426.5745568,
+    "ast_hash": "97a9a1bc4dcd9c44fd80fb2e1c2f4853",
     "semantic_hash": ""
   },
   "apps/mobile/src/features/field-notes/memory-store.ts": {
@@ -5022,9 +5022,9 @@
     "semantic_hash": ""
   },
   "deploy/deploy-web.sh": {
-    "mtime": 1793992418.596809,
-    "seen": 1793998319.311428,
-    "ast_hash": "1a6bedbda526f8b6ee79f9200965e62c",
+    "mtime": 1794252220.8468223,
+    "seen": 1794252426.5793579,
+    "ast_hash": "70755efcfa2dee1ef34f05e82e8b0d7d",
     "semantic_hash": ""
   },
   "docs/tools/monday_sync_test.py": {
@@ -5916,9 +5916,9 @@
     "semantic_hash": ""
   },
   "docs/design/peacock-night.md": {
-    "mtime": 1794250855.8686748,
-    "seen": 1794250929.1854331,
-    "ast_hash": "90e6412a33f91ed9b438b58ace1e0241",
+    "mtime": 1794252363.7271533,
+    "seen": 1794252426.589154,
+    "ast_hash": "85fe5ec8d178101f9c8ac9acb0d70768",
     "semantic_hash": ""
   },
   "reference_docs/design/peacock-night/README.md": {
@@ -8547,6 +8547,24 @@
     "mtime": 1794249540.26741,
     "seen": 1794250929.185566,
     "ast_hash": "5926ad966874b4277d3a68a560f5da3b",
+    "semantic_hash": ""
+  },
+  "apps/mobile/src/navigation/demo-banner.env.test.tsx": {
+    "mtime": 1794252220.8462908,
+    "seen": 1794252426.576948,
+    "ast_hash": "1df787f08c070855ce8eb572f2e9361f",
+    "semantic_hash": ""
+  },
+  "apps/mobile/src/navigation/demo-banner.test.tsx": {
+    "mtime": 1794252220.8463848,
+    "seen": 1794252426.576948,
+    "ast_hash": "de99681c0f7cf8a7ead8ceee69e51114",
+    "semantic_hash": ""
+  },
+  "apps/mobile/src/navigation/demo-banner.tsx": {
+    "mtime": 1794252220.846506,
+    "seen": 1794252426.576949,
+    "ast_hash": "96f836f17ced555a102de530f39f2c62",
     "semantic_hash": ""
   }
 }
