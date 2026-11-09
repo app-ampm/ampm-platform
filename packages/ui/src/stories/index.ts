@@ -15,6 +15,7 @@ import { stories as internalPanel } from "../components/internal-panel/internal-
 import { stories as layout } from "../components/layout/layout.stories";
 import { stories as link } from "../components/link/link.stories";
 import { stories as listItem } from "../components/list-item/list-item.stories";
+import { stories as loadMore } from "../components/load-more/load-more.stories";
 import { stories as moneyText } from "../components/money-text/money-text.stories";
 import { stories as navRail } from "../components/nav-rail/nav-rail.stories";
 import { stories as offlineBanner } from "../components/offline-banner/offline-banner.stories";
@@ -62,6 +63,7 @@ export const allStories: readonly StoryModule[] = [
   card,
   listItem,
   dataTable,
+  loadMore,
   internalPanel,
   stat,
   avatar,

@@ -1,6 +1,15 @@
 import { useMe, usePayments } from "@ampm/api-client";
 import type { PaymentFinanceView } from "@ampm/core";
-import { InternalPanel, Row, SectionError, Skeleton, Stack, StatusChip, Text } from "@ampm/ui";
+import {
+  InternalPanel,
+  LoadMore,
+  Row,
+  SectionError,
+  Skeleton,
+  Stack,
+  StatusChip,
+  Text,
+} from "@ampm/ui";
 
 import { rolesGrant } from "@/navigation/staff-areas";
 
@@ -76,7 +85,7 @@ export function AccountPayments({ accountId }: AccountPaymentsProps) {
       />
     );
   }
-  const items = payments.data?.items ?? [];
+  const items = payments.items;
   return (
     <Stack gap={2} testID="account-payments">
       <Text variant="heading">Payments</Text>
@@ -92,6 +101,13 @@ export function AccountPayments({ accountId }: AccountPaymentsProps) {
             {items.map((payment) => (
               <PaymentRow key={payment.id} payment={payment} />
             ))}
+            <LoadMore
+              hasMore={payments.hasMore}
+              loading={payments.isLoadingMore}
+              failed={payments.loadMoreError}
+              onLoadMore={payments.loadMore}
+              testID="payments-load-more"
+            />
           </Stack>
         )}
       </InternalPanel>

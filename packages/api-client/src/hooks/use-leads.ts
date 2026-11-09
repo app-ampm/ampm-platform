@@ -1,7 +1,7 @@
-import { useQuery } from "@tanstack/react-query";
-import { leadPage, type LeadListQuery, type LeadPage } from "@ampm/core";
+import { leadPage, type LeadListQuery, type LeadView } from "@ampm/core";
 
 import { useApiClient } from "../provider";
+import { useCursorList } from "./use-cursor-list";
 
 export const LEADS_QUERY_KEY = ["crm", "leads"] as const;
 
@@ -19,8 +19,7 @@ function leadsPath(query: Partial<LeadListQuery>): string {
 /** The Sales lead pipeline (`GET /crm/leads`, `crm.leads.read`), cursor-paginated by lead id. */
 export function useLeads(query: Partial<LeadListQuery> = {}) {
   const api = useApiClient();
-  return useQuery<LeadPage>({
-    queryKey: [...LEADS_QUERY_KEY, query],
-    queryFn: ({ signal }) => api.get(leadsPath(query), leadPage, signal),
-  });
+  return useCursorList<LeadView>([...LEADS_QUERY_KEY, query], (cursor, signal) =>
+    api.get(leadsPath({ ...query, cursor }), leadPage, signal),
+  );
 }

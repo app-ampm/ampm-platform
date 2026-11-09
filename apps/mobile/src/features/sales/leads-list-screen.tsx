@@ -1,12 +1,12 @@
 import type { ReactNode } from "react";
 import { useRouter } from "expo-router";
-import type { UseQueryResult } from "@tanstack/react-query";
 
-import { useLeads, useMe } from "@ampm/api-client";
-import type { LeadPage } from "@ampm/core";
+import { useLeads, useMe, type CursorListResult } from "@ampm/api-client";
+import type { LeadView } from "@ampm/core";
 import {
   Button,
   EmptyState,
+  LoadMore,
   QueryErrorState,
   Row,
   Screen,
@@ -31,11 +31,11 @@ export interface LeadsListScreenProps {
   readonly tabBar?: ReactNode;
 }
 
-/** "Leads and clients · 24 open", with a "+" while more pages wait beyond the loaded one. */
-function pipelineEyebrow(page: LeadPage | undefined): string {
-  if (!page) return "Leads and clients";
-  const open = page.items.filter((lead) => isOpenLead(lead.status)).length;
-  return `Leads and clients · ${open}${page.nextCursor ? "+" : ""} open`;
+/** "Leads and clients · 24 open", with a "+" while more pages wait beyond the loaded ones. */
+function pipelineEyebrow(leads: CursorListResult<LeadView>): string {
+  if (leads.isPending) return "Leads and clients";
+  const open = leads.items.filter((lead) => isOpenLead(lead.status)).length;
+  return `Leads and clients · ${open}${leads.hasMore ? "+" : ""} open`;
 }
 
 /** Skeletons in the shape the leads will take: three columns on the board, rows on a phone. */
@@ -59,7 +59,7 @@ function LeadsLoading({ isBoard }: { readonly isBoard: boolean }) {
 }
 
 interface BodyProps {
-  readonly leads: UseQueryResult<LeadPage>;
+  readonly leads: CursorListResult<LeadView>;
   readonly isBoard: boolean;
   readonly onOpen: (leadId: string) => void;
 }
@@ -71,7 +71,7 @@ function LeadsBody({ leads, isBoard, onOpen }: BodyProps) {
     return (
       <QueryErrorState
         error={leads.error}
-        onRetry={() => void leads.refetch()}
+        onRetry={leads.refetch}
         onSignIn={goToSignIn}
         signIn={{
           title: "Sign in to view leads",
@@ -80,7 +80,7 @@ function LeadsBody({ leads, isBoard, onOpen }: BodyProps) {
       />
     );
   }
-  if (leads.data.items.length === 0) {
+  if (leads.items.length === 0) {
     return (
       <EmptyState
         icon="inbox"
@@ -89,10 +89,21 @@ function LeadsBody({ leads, isBoard, onOpen }: BodyProps) {
       />
     );
   }
-  return isBoard ? (
-    <LeadsBoard leads={leads.data.items} onOpen={onOpen} />
-  ) : (
-    <LeadsList leads={leads.data.items} onOpen={onOpen} />
+  return (
+    <Stack gap={4}>
+      {isBoard ? (
+        <LeadsBoard leads={leads.items} onOpen={onOpen} />
+      ) : (
+        <LeadsList leads={leads.items} onOpen={onOpen} />
+      )}
+      <LoadMore
+        hasMore={leads.hasMore}
+        loading={leads.isLoadingMore}
+        failed={leads.loadMoreError}
+        onLoadMore={leads.loadMore}
+        testID="leads-load-more"
+      />
+    </Stack>
   );
 }
 
@@ -115,7 +126,7 @@ export function LeadsListScreen({ tabBar }: LeadsListScreenProps) {
       tabBar={tabBar}
       header={
         <ScreenHeader
-          eyebrow={pipelineEyebrow(leads.data)}
+          eyebrow={pipelineEyebrow(leads)}
           title="Pipeline"
           trailing={
             <Row gap={2}>
