@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 
 import { uiCopy } from "@ampm/ui";
 
-import { fireEvent, screen } from "../../test/render";
+import { fireEvent, screen, waitFor } from "../../test/render";
 import { AuditLogScreen } from "./audit-log-screen";
 import {
   auditEventFixture,
@@ -72,5 +72,27 @@ describe("AuditLogScreen", () => {
     expect(await screen.findByText("Sign in to view the audit log")).toBeOnTheScreen();
     await fireEvent.press(screen.getByText("Sign in"));
     expect(mockReplace).toHaveBeenCalledWith("/sign-in");
+  });
+
+  it("refetches the log bounded by a chosen date range", async () => {
+    const urls: string[] = [];
+    const fetchImpl: FetchFn = (input) => {
+      urls.push(String(input));
+      return Promise.resolve(ok({ items: [auditEventFixture()], nextCursor: null }));
+    };
+    await renderLog(fetchImpl);
+    expect(await screen.findByText("Update")).toBeOnTheScreen();
+    // The initial load carries no date bounds.
+    expect(urls.some((url) => url.includes("from="))).toBe(false);
+    await fireEvent.press(screen.getByTestId("audit-range"));
+    await fireEvent.press(screen.getByTestId("audit-range-preset-last_30"));
+    await waitFor(() => {
+      const url = urls.find((u) => u.includes("from=") && u.includes("to="));
+      expect(url).toBeDefined();
+      const params = new URLSearchParams(url!.slice(url!.indexOf("?")));
+      // from is the day start; to covers the whole end day (inclusive).
+      expect(params.get("from")).toMatch(/T00:00:00\.000Z$/);
+      expect(params.get("to")).toMatch(/T23:59:59\.999Z$/);
+    });
   });
 });

@@ -1,11 +1,17 @@
-import { useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import type { UseQueryResult } from "@tanstack/react-query";
 
 import { useAuditEvents } from "@ampm/api-client";
-import type { AuditEventPage, AuditEventView } from "@ampm/core";
+import {
+  isoDateTimeFromDate,
+  type AuditEventPage,
+  type AuditEventQuery,
+  type AuditEventView,
+} from "@ampm/core";
 import {
   Card,
   DataTable,
+  DateRangeField,
   EmptyState,
   QueryErrorState,
   Screen,
@@ -15,6 +21,7 @@ import {
   StatusChip,
   Text,
   type DataTableColumn,
+  type DateRange,
 } from "@ampm/ui";
 
 import { useGoToSignIn } from "@/navigation/sign-in";
@@ -68,6 +75,14 @@ const COLUMNS: DataTableColumn<AuditEventView>[] = [
 function auditEyebrow(page: AuditEventPage | undefined): string {
   if (!page) return "Admin console";
   return `Audit log · ${page.items.length}${page.nextCursor ? "+" : ""}`;
+}
+
+/** The event query for a chosen range: the `to` bound covers the whole end day (inclusive). */
+function auditQuery(range: DateRange): Partial<AuditEventQuery> {
+  return {
+    from: range.from ? isoDateTimeFromDate(range.from) : undefined,
+    to: range.to ? `${range.to}T23:59:59.999Z` : undefined,
+  };
 }
 
 function AuditLoading() {
@@ -129,20 +144,25 @@ export interface AuditLogScreenProps {
 
 /**
  * The audit log (TW-96): the append-only history of every change, newest first, in a table — tap a
- * row for the full record with its before/after images. Super Admin only. Filters (actor, entity,
- * action, date) and export are the next slice; they need the Select and date-range primitives.
+ * row for the full record with its before/after images, and filter by date range (the date-range
+ * primitive). Super Admin only. Action/actor/entity filters (over the Select primitive) and export
+ * are the next slice.
  *
  *   <AuditLogScreen tabBar={<AppTabBar />} />
  */
 export function AuditLogScreen({ tabBar }: AuditLogScreenProps) {
-  const events = useAuditEvents();
+  const [range, setRange] = useState<DateRange>({});
+  const events = useAuditEvents(useMemo(() => auditQuery(range), [range]));
   const [selected, setSelected] = useState<AuditEventView | null>(null);
   return (
     <Screen
       tabBar={tabBar}
       header={<ScreenHeader eyebrow={auditEyebrow(events.data)} title="Audit log" />}
     >
-      <AuditBody events={events} onOpen={setSelected} />
+      <Stack gap={3}>
+        <DateRangeField label="Date range" value={range} onChange={setRange} testID="audit-range" />
+        <AuditBody events={events} onOpen={setSelected} />
+      </Stack>
       <AuditEventDetailSheet event={selected} onClose={() => setSelected(null)} />
     </Screen>
   );

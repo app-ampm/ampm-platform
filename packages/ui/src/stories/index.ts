@@ -6,6 +6,7 @@ import { stories as card } from "../components/card/card.stories";
 import { stories as checkbox } from "../components/checkbox/checkbox.stories";
 import { stories as confirmSheet } from "../components/confirm-sheet/confirm-sheet.stories";
 import { stories as dataTable } from "../components/data-table/data-table.stories";
+import { stories as dateRangeField } from "../components/date-range-field/date-range-field.stories";
 import { stories as filterChip } from "../components/filter-chip/filter-chip.stories";
 import { stories as glass } from "../components/glass-panel/glass-panel.stories";
 import { stories as glowBackdrop } from "../components/glow-backdrop/glow-backdrop.stories";
@@ -61,6 +62,7 @@ export const allStories: readonly StoryModule[] = [
   toggle,
   checkbox,
   select,
+  dateRangeField,
   statusChip,
   badge,
   card,
