@@ -93,6 +93,7 @@ export {
   useStaffHotels,
   useUpdateHotel,
 } from "./hooks/use-staff-hotels";
+export { useHotelImport } from "./hooks/use-hotel-import";
 export {
   useCreateContact,
   useCreateRoom,

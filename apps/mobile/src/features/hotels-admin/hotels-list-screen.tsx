@@ -10,6 +10,7 @@ import {
   DataTable,
   EmptyState,
   QueryErrorState,
+  Row,
   Screen,
   ScreenHeader,
   Skeleton,
@@ -115,8 +116,8 @@ export interface HotelsListScreenProps {
 }
 
 /**
- * The staff hotel catalogue (H1.1): the private hotel database. Add a hotel with "New hotel", or tap one
- * to manage it (edit its profile, add photos). Rooms, rate cards and import follow in later slices. Hotel
+ * The staff hotel catalogue (H1.1): the private hotel database. Add a hotel with "New hotel", bulk-load
+ * many from a CSV with "Import", or tap one to manage it (edit its profile, add photos, rate cards). Hotel
  * team and Super Admin only, gated server-side.
  *
  *   <HotelsListScreen tabBar={<AppTabBar />} />
@@ -135,15 +136,26 @@ export function HotelsListScreen({ tabBar }: HotelsListScreenProps) {
           eyebrow="Hotels"
           title="Hotel catalogue"
           trailing={
-            <Button
-              variant="primary"
-              size="sm"
-              icon="plus"
-              onPress={() => setCreating(true)}
-              testID="hotel-new"
-            >
-              New hotel
-            </Button>
+            <Row gap={2}>
+              <Button
+                variant="secondary"
+                size="sm"
+                icon="upload"
+                onPress={() => router.push("/hotels-admin/import")}
+                testID="hotel-import-link"
+              >
+                Import
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                icon="plus"
+                onPress={() => setCreating(true)}
+                testID="hotel-new"
+              >
+                New hotel
+              </Button>
+            </Row>
           }
         />
       }
