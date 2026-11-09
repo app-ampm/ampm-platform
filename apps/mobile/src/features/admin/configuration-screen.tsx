@@ -54,6 +54,7 @@ const COLUMNS: DataTableColumn<ConfigEntry>[] = [
     key: "value",
     header: "Value",
     width: 240,
+    grow: true,
     render: (entry) => (
       <Text variant="bodySmall" tone="muted" numberOfLines={1}>
         {configSummary(entry.value)}

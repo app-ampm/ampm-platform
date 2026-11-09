@@ -1,7 +1,7 @@
 # Graph Report - design-system-implementation-4f0038  (2026-11-10)
 
 ## Corpus Check
-- 1444 files · ~827,157 words
+- 1444 files · ~827,374 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 25 file(s) not represented in the graph (top: (none) 11, .example 4, .conf 3)
 
@@ -11,7 +11,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `1f5b9056`
+- Built from commit: `1acda647`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -1993,14 +1993,14 @@ Nodes (11): src/identity - Cognito & local adapters behind one interface, Manage
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `Recording a confirmation from AMPM` connect `Part B: developer drafts` to `site_build.mjs`, `memory_hook.sh`, `Generated files and their generators`, `re`?**
-  _High betweenness centrality (0.077) - this node is a cross-community bridge._
+- **Why does `AMPM Platform Data Model and ER Diagrams` connect `AMPM Platform Data Model and ER Diagrams` to `guests`, `Generated files and their generators`, `Round-Two Open Questions (R1 to R19)`, `AMPM Technical Architecture and Integration Plan (DRAFT v0.2)`, `wedding projects`, `Decision Brief Open Areas`, `Part B: developer drafts`, `AMPM User-Flow Diagrams (DRAFT v0.2)`, `Sign-in and RSVP Portal Screens`, `AMPM Developer Technical Specification v1.0 (20 October 2026)`, `wireframes.md`?**
+  _High betweenness centrality (0.074) - this node is a cross-community bridge._
 - **What connects `RFC-4180`, `./tsconfig.json`, `RFC-4180` to the rest of the system?**
   _267 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `principal.types.ts` be split into smaller, more focused modules?**
   _Cohesion score 0.02261089073205914 - nodes in this community are weakly interconnected._
-- **Why does `AMPM Platform Data Model and ER Diagrams` connect `AMPM Platform Data Model and ER Diagrams` to `guests`, `Generated files and their generators`, `Round-Two Open Questions (R1 to R19)`, `AMPM Technical Architecture and Integration Plan (DRAFT v0.2)`, `wedding projects`, `Decision Brief Open Areas`, `Part B: developer drafts`, `AMPM User-Flow Diagrams (DRAFT v0.2)`, `Sign-in and RSVP Portal Screens`, `AMPM Developer Technical Specification v1.0 (20 October 2026)`, `wireframes.md`?**
-  _High betweenness centrality (0.066) - this node is a cross-community bridge._
+- **Why does `Recording a confirmation from AMPM` connect `Part B: developer drafts` to `site_build.mjs`, `memory_hook.sh`, `Generated files and their generators`, `re`?**
+  _High betweenness centrality (0.056) - this node is a cross-community bridge._
 - **Should `Button` be split into smaller, more focused modules?**
   _Cohesion score 0.024295910832952426 - nodes in this community are weakly interconnected._
 

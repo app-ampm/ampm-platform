@@ -43,6 +43,7 @@ const COLUMNS: DataTableColumn<TemplateEntry>[] = [
     key: "template",
     header: "Template",
     width: 200,
+    grow: true,
     render: (entry) => (
       <Text variant="bodySmall" numberOfLines={1}>
         {notificationTemplateLabel(entry.key)}

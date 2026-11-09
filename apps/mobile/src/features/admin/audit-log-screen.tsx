@@ -68,6 +68,7 @@ const COLUMNS: DataTableColumn<AuditEventView>[] = [
     key: "entity",
     header: "Entity",
     width: 170,
+    grow: true,
     render: (event) => (
       <Text variant="bodySmall" numberOfLines={1}>
         {event.entityType}

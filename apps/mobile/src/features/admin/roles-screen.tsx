@@ -30,6 +30,7 @@ const COLUMNS: DataTableColumn<RoleView>[] = [
     key: "role",
     header: "Role",
     width: 220,
+    grow: true,
     render: (role) => (
       <Text variant="body" numberOfLines={1}>
         {role.name}
