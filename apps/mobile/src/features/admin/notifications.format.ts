@@ -4,7 +4,7 @@ import type { StatusTone } from "@ampm/ui";
 import { formatMoment } from "./audit-log.format";
 
 /*
- * Presentation helpers for the notifications log (TW-91): the label per channel, the chip treatment per
+ * Presentation helpers for the notifications log: the label per channel, the chip treatment per
  * delivery status, and a readable template name. No fetching, no rules.
  */
 

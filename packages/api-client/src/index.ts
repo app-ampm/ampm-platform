@@ -51,6 +51,10 @@ export {
 } from "./hooks/use-staff-roles";
 export { AUDIT_EVENTS_QUERY_KEY, useAuditEvents } from "./hooks/use-audit-events";
 export { NOTIFICATIONS_QUERY_KEY, useNotifications } from "./hooks/use-notifications";
+export {
+  NOTIFICATION_TEMPLATES_QUERY_KEY,
+  useNotificationTemplates,
+} from "./hooks/use-notification-templates";
 export { useDevLogin } from "./hooks/use-dev-login";
 export { PLANS_QUERY_KEY, usePlans } from "./hooks/use-plans";
 export { usePortalSubscribe } from "./hooks/use-portal-subscribe";

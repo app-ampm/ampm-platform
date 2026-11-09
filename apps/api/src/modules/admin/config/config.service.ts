@@ -48,6 +48,22 @@ export class ConfigService {
   get(key: "consultancy.chargeable_services"): Promise<ConsultancyChargeablePolicy>;
   get(key: "consultancy.milestone_amounts_visible"): Promise<ConsultancyMilestoneVisibilityPolicy>;
   async get(key: ConfigKey): Promise<unknown> {
+    return this.resolve(key);
+  }
+
+  /**
+   * Reads one configuration value for the admin console (`GET /admin/configurations/:key`): an unknown
+   * key is absence (404), a known key is loaded, schema-checked and returned as its `{ key, value }`
+   * view. Not audited — configuration values are not restricted (a Super Admin or Finance reads any key;
+   * `admin.configurations.read`). Writes stay Super-Admin only (`admin.configurations.update`).
+   */
+  async read(key: string): Promise<ConfigView> {
+    if (!isConfigKey(key)) throw errors.notFound("Unknown configuration key");
+    return { key, value: await this.resolve(key) };
+  }
+
+  /** Loads a known key from the cache or its row, validates it against the key's schema, and returns it. */
+  private async resolve(key: ConfigKey): Promise<unknown> {
     const cached = this.cache.get(key);
     const raw = cached !== undefined ? cached : await this.load(key);
     const parsed = CONFIG_REGISTRY[key].schema.safeParse(raw);
