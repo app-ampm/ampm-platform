@@ -104,12 +104,14 @@ describe("Configuration (e2e)", () => {
     expect(response.body.data.value["staff.invite"].email.subject).toBe("Your AMPM invitation");
   });
 
-  it("lets Finance read a configuration value but not write one", async () => {
+  it("lets Finance read a configuration value but refuses a write with 403, not 404", async () => {
     const token = await mint("local:fa");
-    // Finance holds admin.configurations.read (matrix §5.1) ...
+    // Finance holds admin.configurations.read (matrix §5.1), so it reads any key ...
     await get(token, "notification.templates").expect(200);
-    // ... but not admin.configurations.update, so the write is absence (404).
-    await put(token, "feature.flags", { beta: true }).expect(404);
+    // ... but not admin.configurations.update. Because Finance MAY see configuration, the refused
+    // write is 403 (forbidden on a visible resource), not the 404 absence a principal without the
+    // read key gets (the Project Manager above) — the guard's denial split (refusalFor, AC-12.1).
+    await put(token, "feature.flags", { beta: true }).expect(403);
   });
 
   it("refuses a non-Super-Admin read (denial is absence)", async () => {
