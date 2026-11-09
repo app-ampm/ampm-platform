@@ -55,7 +55,12 @@ export {
   NOTIFICATION_TEMPLATES_QUERY_KEY,
   useNotificationTemplates,
 } from "./hooks/use-notification-templates";
-export { CONFIGURATIONS_QUERY_KEY, useConfigurations } from "./hooks/use-configurations";
+export {
+  CONFIGURATIONS_QUERY_KEY,
+  useConfigurations,
+  useUpdateConfiguration,
+  type UpdateConfigurationInput,
+} from "./hooks/use-configurations";
 export { useDevLogin } from "./hooks/use-dev-login";
 export { PLANS_QUERY_KEY, usePlans } from "./hooks/use-plans";
 export { usePortalSubscribe } from "./hooks/use-portal-subscribe";
