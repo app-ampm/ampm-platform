@@ -54,6 +54,32 @@ function ledgerFetch(roles: ReturnType<typeof staffMeFixture>["roles"]): FetchFn
   });
 }
 
+const SECOND_PAYMENT_ID = "018f0000-0000-7000-8000-0000000e0002";
+
+/** A Finance ledger whose payments paginate: page 1 (more waiting) then page 2 (the end) by cursor. */
+const paginatedLedgerFetch = (): FetchFn => (input) => {
+  const url = new URL(String(input));
+  if (url.pathname === `/crm/accounts/${ACCOUNT_ID}`) {
+    return Promise.resolve(ok(accountDetailViewFixture()));
+  }
+  if (url.pathname === "/crm/subscriptions")
+    return Promise.resolve(ok({ items: [], nextCursor: null }));
+  if (url.pathname === "/crm/plans")
+    return Promise.resolve(ok({ items: [planPublicViewFixture()] }));
+  if (url.pathname === "/me") return Promise.resolve(ok(staffMeFixture(["FA"])));
+  if (url.pathname === "/crm/payments") {
+    const cursor = url.searchParams.get("cursor");
+    return Promise.resolve(
+      ok(
+        cursor
+          ? { items: [paymentFinanceViewFixture({ id: SECOND_PAYMENT_ID })], nextCursor: null }
+          : { items: [paymentFinanceViewFixture()], nextCursor: "p2" },
+      ),
+    );
+  }
+  return Promise.resolve(failure("not_found", 404));
+};
+
 describe("AccountDetailScreen", () => {
   it("shows the account, its contact and the subscription with the plan price", async () => {
     await renderWithApi(<AccountDetailScreen accountId={ACCOUNT_ID} />, detailFetch({}));
@@ -103,6 +129,15 @@ describe("AccountDetailScreen", () => {
     expect(await screen.findByTestId(`payment-${PAYMENT_ID}`)).toBeOnTheScreen();
     expect(screen.getByText("Inbound")).toBeOnTheScreen();
     expect(screen.getByText(/25,000/)).toBeOnTheScreen();
+  });
+
+  it("loads more payments from the ledger footer and hides it at the end", async () => {
+    await renderWithApi(<AccountDetailScreen accountId={ACCOUNT_ID} />, paginatedLedgerFetch());
+    expect(await screen.findByTestId(`payment-${PAYMENT_ID}`)).toBeOnTheScreen();
+    await fireEvent.press(await screen.findByTestId("payments-load-more"));
+    expect(await screen.findByTestId(`payment-${SECOND_PAYMENT_ID}`)).toBeOnTheScreen();
+    expect(screen.getByTestId(`payment-${PAYMENT_ID}`)).toBeOnTheScreen();
+    expect(screen.queryByTestId("payments-load-more")).toBeNull();
   });
 
   it("hides the finance ledger from a role without the key and never queries it", async () => {

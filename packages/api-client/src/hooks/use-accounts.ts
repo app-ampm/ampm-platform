@@ -4,10 +4,11 @@ import {
   accountPage,
   type AccountDetailView,
   type AccountListQuery,
-  type AccountPage,
+  type AccountView,
 } from "@ampm/core";
 
 import { useApiClient } from "../provider";
+import { useCursorList } from "./use-cursor-list";
 
 /*
  * Client accounts (Module B CRM, feature 8.2). Staff read views (`crm.accounts.read`): the operational
@@ -34,10 +35,9 @@ function accountsPath(query: Partial<AccountListQuery>): string {
 /** The client accounts list (`GET /crm/accounts`, `crm.accounts.read`), cursor-paginated by account id. */
 export function useAccounts(query: Partial<AccountListQuery> = {}) {
   const api = useApiClient();
-  return useQuery<AccountPage>({
-    queryKey: [...ACCOUNTS_QUERY_KEY, query],
-    queryFn: ({ signal }) => api.get(accountsPath(query), accountPage, signal),
-  });
+  return useCursorList<AccountView>([...ACCOUNTS_QUERY_KEY, query], (cursor, signal) =>
+    api.get(accountsPath({ ...query, cursor }), accountPage, signal),
+  );
 }
 
 /** One client account with its contacts (`GET /crm/accounts/:id`). */

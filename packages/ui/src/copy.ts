@@ -7,6 +7,8 @@ export const uiCopy = {
   close: "Close",
   dismiss: "Dismiss",
   retry: "Try again",
+  loadMore: "Load more",
+  loadMoreRetry: "Couldn't load more — tap to retry",
   required: "required",
   callout: {
     indicative: "Indicative",

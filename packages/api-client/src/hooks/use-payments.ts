@@ -1,7 +1,7 @@
-import { useQuery } from "@tanstack/react-query";
-import { paymentPage, type PaymentDirection, type PaymentPage } from "@ampm/core";
+import { paymentPage, type PaymentDirection, type PaymentFinanceView } from "@ampm/core";
 
 import { useApiClient } from "../provider";
+import { useCursorList } from "./use-cursor-list";
 
 /*
  * The finance payment ledger (Module B CRM; `crm.payments.read` — FA/SA). The RESTRICTED-FINANCE view
@@ -16,18 +16,23 @@ export interface PaymentsQuery {
   readonly direction?: PaymentDirection | undefined;
 }
 
-/** The payment ledger (`GET /crm/payments`, `crm.payments.read`); `enabled` gates it on the role. */
+function paymentsPath(query: PaymentsQuery, cursor: string | undefined): string {
+  const params = new URLSearchParams({ limit: "50" });
+  if (query.accountId) params.set("accountId", query.accountId);
+  if (query.direction) params.set("direction", query.direction);
+  if (cursor) params.set("cursor", cursor);
+  return `/crm/payments?${params.toString()}`;
+}
+
+/** The payment ledger (`GET /crm/payments`, `crm.payments.read`), cursor-paginated; `enabled` gates the role. */
 export function usePayments(
   query: PaymentsQuery = {},
   options: { readonly enabled?: boolean } = {},
 ) {
   const api = useApiClient();
-  const params = new URLSearchParams({ limit: "50" });
-  if (query.accountId) params.set("accountId", query.accountId);
-  if (query.direction) params.set("direction", query.direction);
-  return useQuery<PaymentPage>({
-    queryKey: [...PAYMENTS_QUERY_KEY, query],
-    queryFn: ({ signal }) => api.get(`/crm/payments?${params.toString()}`, paymentPage, signal),
-    enabled: options.enabled ?? true,
-  });
+  return useCursorList<PaymentFinanceView>(
+    [...PAYMENTS_QUERY_KEY, query],
+    (cursor, signal) => api.get(paymentsPath(query, cursor), paymentPage, signal),
+    { enabled: options.enabled ?? true },
+  );
 }

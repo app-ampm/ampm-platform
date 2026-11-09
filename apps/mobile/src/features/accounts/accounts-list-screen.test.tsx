@@ -20,6 +20,23 @@ function accountsFetch(items = [accountViewFixture()]): FetchFn {
   return routedFetch({ "/crm/accounts": () => ok({ items, nextCursor: null }) });
 }
 
+const SECOND_ACCOUNT_ID = "018f0000-0000-7000-8000-0000000d0002";
+
+/** Page 1 (one account, more waiting) then page 2 (one more, the end) by cursor. */
+const paginatedAccountsFetch = (): FetchFn => (input) => {
+  const cursor = new URL(String(input)).searchParams.get("cursor");
+  return Promise.resolve(
+    ok(
+      cursor
+        ? {
+            items: [accountViewFixture({ id: SECOND_ACCOUNT_ID, name: "The Verma wedding" })],
+            nextCursor: null,
+          }
+        : { items: [accountViewFixture()], nextCursor: "cursor-2" },
+    ),
+  );
+};
+
 describe("AccountsListScreen", () => {
   beforeEach(() => mockPush.mockClear());
 
@@ -50,5 +67,24 @@ describe("AccountsListScreen", () => {
       pathname: "/leads/accounts/[accountId]",
       params: { accountId: ACCOUNT_ID },
     });
+  });
+
+  it("loads the next page from the footer, appends it, and hides the footer at the end", async () => {
+    await renderWithApi(<AccountsListScreen />, paginatedAccountsFetch());
+    expect(await screen.findByText("The Sharma wedding")).toBeOnTheScreen();
+    await fireEvent.press(await screen.findByTestId("accounts-load-more"));
+    expect(await screen.findByText("The Verma wedding")).toBeOnTheScreen();
+    expect(screen.getByText("The Sharma wedding")).toBeOnTheScreen();
+    expect(screen.queryByTestId("accounts-load-more")).toBeNull();
+  });
+
+  it("marks the client count as a floor while more pages wait", async () => {
+    await renderWithApi(
+      <AccountsListScreen />,
+      routedFetch({
+        "/crm/accounts": () => ok({ items: [accountViewFixture()], nextCursor: "cursor-2" }),
+      }),
+    );
+    expect(await screen.findByText("Clients · 1+")).toBeOnTheScreen();
   });
 });

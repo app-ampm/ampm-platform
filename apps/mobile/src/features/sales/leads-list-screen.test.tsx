@@ -57,6 +57,22 @@ function pipeline(): LeadView[] {
 const leadsFetch = (items: LeadView[], nextCursor: string | null = null): FetchFn =>
   routedFetch({ "/crm/leads": () => ok({ items, nextCursor }) });
 
+const THIRD_LEAD_ID = "018f0000-0000-7000-8000-0000000003c3";
+
+/** Page 1 (the pipeline, more waiting) then page 2 (one more lead, the end) by cursor; answers /me too. */
+const paginatedLeadsFetch = (): FetchFn => (input) => {
+  const url = new URL(String(input));
+  if (url.pathname === "/me") return Promise.resolve(ok(staffMeFixture(["SM"])));
+  const cursor = url.searchParams.get("cursor");
+  return Promise.resolve(
+    ok(
+      cursor
+        ? { items: [leadFixture({ id: THIRD_LEAD_ID, name: "Priya Nair" })], nextCursor: null }
+        : { items: pipeline(), nextCursor: "cursor-2" },
+    ),
+  );
+};
+
 /** The pipeline plus a signed-in `/me` of the given roles, for the funnel-link gate. */
 const leadsFetchAs = (
   items: LeadView[],
@@ -117,6 +133,46 @@ describe("LeadsListScreen on a phone", () => {
     await renderList(leadsFetch(pipeline()), <Text testID="app-tab-bar">Tabs</Text>);
     expect(await screen.findByText("Rohit Malhotra")).toBeOnTheScreen();
     expect(screen.getByTestId("app-tab-bar")).toBeOnTheScreen();
+  });
+
+  it("loads the next page from the footer, appends it, and hides the footer at the end", async () => {
+    await renderList(paginatedLeadsFetch());
+    expect(await screen.findByText("Rohit Malhotra")).toBeOnTheScreen();
+    await fireEvent.press(await screen.findByTestId("leads-load-more"));
+    // The second page's lead appears, the first page is kept, and there is nothing left to load.
+    expect(await screen.findByText("Priya Nair")).toBeOnTheScreen();
+    expect(screen.getByText("Rohit Malhotra")).toBeOnTheScreen();
+    expect(screen.queryByTestId("leads-load-more")).toBeNull();
+  });
+
+  it("keeps the loaded leads when Load more fails, and retries from the footer", async () => {
+    let pageTwoAttempts = 0;
+    const flaky: FetchFn = (input) => {
+      const url = new URL(String(input));
+      if (url.pathname === "/me") return Promise.resolve(ok(staffMeFixture(["SM"])));
+      if (!url.searchParams.get("cursor")) {
+        return Promise.resolve(ok({ items: pipeline(), nextCursor: "cursor-2" }));
+      }
+      pageTwoAttempts += 1;
+      return pageTwoAttempts === 1
+        ? Promise.resolve(failure("internal", 500))
+        : Promise.resolve(
+            ok({
+              items: [leadFixture({ id: THIRD_LEAD_ID, name: "Priya Nair" })],
+              nextCursor: null,
+            }),
+          );
+    };
+    await renderList(flaky);
+    expect(await screen.findByText("Rohit Malhotra")).toBeOnTheScreen();
+    await fireEvent.press(await screen.findByTestId("leads-load-more"));
+    // The page-2 failure does NOT wipe the list: page 1 stays and the footer offers a retry.
+    expect(await screen.findByText("Couldn't load more — tap to retry")).toBeOnTheScreen();
+    expect(screen.getByText("Rohit Malhotra")).toBeOnTheScreen();
+    // Retrying from the footer succeeds and appends page 2.
+    await fireEvent.press(screen.getByTestId("leads-load-more"));
+    expect(await screen.findByText("Priya Nair")).toBeOnTheScreen();
+    expect(screen.queryByTestId("leads-load-more")).toBeNull();
   });
 });
 

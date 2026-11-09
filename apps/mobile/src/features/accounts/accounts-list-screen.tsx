@@ -1,19 +1,26 @@
 import type { ReactNode } from "react";
 import { useRouter } from "expo-router";
-import type { UseQueryResult } from "@tanstack/react-query";
 
-import { useAccounts } from "@ampm/api-client";
-import type { AccountPage } from "@ampm/core";
-import { EmptyState, QueryErrorState, Screen, ScreenHeader, Skeleton, Stack } from "@ampm/ui";
+import { useAccounts, type CursorListResult } from "@ampm/api-client";
+import type { AccountView } from "@ampm/core";
+import {
+  EmptyState,
+  LoadMore,
+  QueryErrorState,
+  Screen,
+  ScreenHeader,
+  Skeleton,
+  Stack,
+} from "@ampm/ui";
 
 import { useGoToSignIn } from "@/navigation/sign-in";
 
 import { AccountsList } from "./accounts-list";
 
-/** "Clients · 12", with a "+" while more pages wait beyond the loaded one. */
-function clientsEyebrow(page: AccountPage | undefined): string {
-  if (!page) return "Clients";
-  return `Clients · ${page.items.length}${page.nextCursor ? "+" : ""}`;
+/** "Clients · 12", with a "+" while more pages wait beyond the loaded ones. */
+function clientsEyebrow(accounts: CursorListResult<AccountView>): string {
+  if (accounts.isPending) return "Clients";
+  return `Clients · ${accounts.items.length}${accounts.hasMore ? "+" : ""}`;
 }
 
 function AccountsLoading() {
@@ -30,7 +37,7 @@ function AccountsBody({
   accounts,
   onOpen,
 }: {
-  readonly accounts: UseQueryResult<AccountPage>;
+  readonly accounts: CursorListResult<AccountView>;
   readonly onOpen: (accountId: string) => void;
 }) {
   const goToSignIn = useGoToSignIn();
@@ -39,7 +46,7 @@ function AccountsBody({
     return (
       <QueryErrorState
         error={accounts.error}
-        onRetry={() => void accounts.refetch()}
+        onRetry={accounts.refetch}
         onSignIn={goToSignIn}
         signIn={{
           title: "Sign in to view clients",
@@ -48,7 +55,7 @@ function AccountsBody({
       />
     );
   }
-  if (accounts.data.items.length === 0) {
+  if (accounts.items.length === 0) {
     return (
       <EmptyState
         icon="briefcase"
@@ -57,7 +64,18 @@ function AccountsBody({
       />
     );
   }
-  return <AccountsList accounts={accounts.data.items} onOpen={onOpen} />;
+  return (
+    <Stack gap={4}>
+      <AccountsList accounts={accounts.items} onOpen={onOpen} />
+      <LoadMore
+        hasMore={accounts.hasMore}
+        loading={accounts.isLoadingMore}
+        failed={accounts.loadMoreError}
+        onLoadMore={accounts.loadMore}
+        testID="accounts-load-more"
+      />
+    </Stack>
+  );
 }
 
 export interface AccountsListScreenProps {
@@ -81,7 +99,7 @@ export function AccountsListScreen({ tabBar }: AccountsListScreenProps) {
       tabBar={tabBar}
       header={
         <ScreenHeader
-          eyebrow={clientsEyebrow(accounts.data)}
+          eyebrow={clientsEyebrow(accounts)}
           title="Clients"
           onBack={() => router.back()}
         />
