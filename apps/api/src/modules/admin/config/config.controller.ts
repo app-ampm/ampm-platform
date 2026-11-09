@@ -1,5 +1,10 @@
 import { Controller, Get, Put } from "@nestjs/common";
-import { configWriteRequest, type ConfigView, type ConfigWriteRequest } from "@ampm/core";
+import {
+  configWriteRequest,
+  type ConfigListView,
+  type ConfigView,
+  type ConfigWriteRequest,
+} from "@ampm/core";
 import { z } from "zod";
 
 import { ZodBody, ZodParams } from "../../../common/zod.js";
@@ -10,7 +15,8 @@ const keyParams = z.object({ key: z.string().min(1) });
 type KeyParams = z.infer<typeof keyParams>;
 
 /**
- * `/admin/configurations/:key` — a Super Admin or Finance reads (`GET`, `admin.configurations.read`);
+ * `/admin/configurations` lists every key; `/admin/configurations/:key` — a Super Admin or Finance
+ * reads (`GET`, `admin.configurations.read`);
  * a Super Admin sets (`PUT`, `admin.configurations.update`) a configuration value: plans, limits,
  * thresholds, notification templates, feature switches (permission-matrix §5.1). An unknown key is
  * absence (404). The write
@@ -20,6 +26,12 @@ type KeyParams = z.infer<typeof keyParams>;
 @Controller("admin/configurations")
 export class ConfigController {
   constructor(private readonly config: ConfigService) {}
+
+  @Get()
+  @RequirePermission("admin.configurations.read")
+  list(): Promise<ConfigListView> {
+    return this.config.list();
+  }
 
   @Get(":key")
   @RequirePermission("admin.configurations.read")

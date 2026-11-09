@@ -30,6 +30,12 @@ describe("AdminConsoleScreen", () => {
     expect(mockPush).toHaveBeenCalledWith("/admin/notification-templates");
   });
 
+  it("opens the configuration inventory from its tile", async () => {
+    await renderWithApi(<AdminConsoleScreen />, routedFetch({}));
+    await fireEvent.press(screen.getByTestId("admin-section-configuration"));
+    expect(mockPush).toHaveBeenCalledWith("/admin/configuration");
+  });
+
   it("opens the audit log from its tile", async () => {
     await renderWithApi(<AdminConsoleScreen />, routedFetch({}));
     await fireEvent.press(screen.getByTestId("admin-section-audit"));

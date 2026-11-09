@@ -162,3 +162,11 @@ export type ConfigWriteRequest = z.infer<typeof configWriteRequest>;
 /** A configuration key and its current value, returned by a read or a write. */
 export const configView = z.object({ key: z.string(), value: z.unknown() });
 export type ConfigView = z.infer<typeof configView>;
+
+/**
+ * Every configuration key and its current value, returned by the admin inventory read
+ * (`GET /admin/configurations`). The registry is a fixed, small set (data.md: keys are code), so the
+ * inventory is returned whole — not cursor-paginated like a dynamic table.
+ */
+export const configListView = z.object({ entries: z.array(configView) });
+export type ConfigListView = z.infer<typeof configListView>;

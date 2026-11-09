@@ -39,6 +39,11 @@ describe("Configuration (e2e)", () => {
       .get(`/admin/configurations/${key}`)
       .set("authorization", `Bearer ${bearer}`);
 
+  const getList = (bearer: string) =>
+    request(app.getHttpServer())
+      .get("/admin/configurations")
+      .set("authorization", `Bearer ${bearer}`);
+
   it("lets a Super Admin write a value, persists it, and audits the change", async () => {
     const token = await mint("local:admin");
     const response = await put(token, "feature.flags", { beta: true }).expect(200);
@@ -122,5 +127,31 @@ describe("Configuration (e2e)", () => {
   it("refuses an unknown configuration key on read", async () => {
     const token = await mint("local:admin");
     await get(token, "nope.not_a_key").expect(404);
+  });
+
+  it("lists every configuration key with its value for a Super Admin", async () => {
+    const token = await mint("local:admin");
+    const response = await getList(token).expect(200);
+    const entries = response.body.data.entries as { key: string; value: unknown }[];
+    const keys = entries.map((entry) => entry.key);
+    // The whole fixed registry, each as a {key,value} view (no cursor — the set is not a paged table).
+    expect(keys).toEqual(
+      expect.arrayContaining(["session.idle_timeouts", "notification.templates"]),
+    );
+    expect(entries.length).toBeGreaterThanOrEqual(8);
+    const idle = entries.find((entry) => entry.key === "session.idle_timeouts");
+    expect(idle?.value).toMatchObject({ staffMinutes: expect.any(Number) });
+  });
+
+  it("lets Finance read the configuration inventory", async () => {
+    const token = await mint("local:fa");
+    const response = await getList(token).expect(200);
+    expect(Array.isArray(response.body.data.entries)).toBe(true);
+    expect(response.body.data.entries.length).toBeGreaterThanOrEqual(8);
+  });
+
+  it("refuses the configuration inventory to a non-reader (denial is absence)", async () => {
+    const token = await mint("local:pm");
+    await getList(token).expect(404);
   });
 });

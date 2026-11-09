@@ -51,6 +51,13 @@ export function AdminConsoleScreen({ tabBar }: AdminConsoleScreenProps) {
             testID="admin-section-notification-templates"
           />
           <ListItem
+            title="Configuration"
+            subtitle="Platform thresholds, policies and feature switches"
+            onPress={() => router.push("/admin/configuration")}
+            accessibilityLabel="Configuration: platform thresholds, policies and feature switches"
+            testID="admin-section-configuration"
+          />
+          <ListItem
             title="Audit log"
             subtitle="The append-only history of every change"
             onPress={() => router.push("/admin/audit")}
