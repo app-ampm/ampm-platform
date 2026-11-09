@@ -12,11 +12,14 @@ import {
   routedFetch,
   type FetchFn,
 } from "./admin.test-utils";
+import { downloadCsv } from "./download-csv";
 
 const mockReplace = jest.fn();
 jest.mock("expo-router", () => ({
   useRouter: () => ({ back: jest.fn(), replace: mockReplace, push: jest.fn() }),
 }));
+
+jest.mock("./download-csv", () => ({ downloadCsv: jest.fn(() => true) }));
 
 const mockWindow = { width: 1280 };
 jest.mock("react-native/Libraries/Utilities/useWindowDimensions", () => ({
@@ -33,6 +36,7 @@ async function renderLog(fetchImpl: FetchFn, tabBar?: ReactNode): Promise<void> 
 
 beforeEach(() => {
   mockReplace.mockClear();
+  jest.mocked(downloadCsv).mockClear();
 });
 
 describe("AuditLogScreen", () => {
@@ -94,5 +98,75 @@ describe("AuditLogScreen", () => {
       expect(params.get("from")).toMatch(/T00:00:00\.000Z$/);
       expect(params.get("to")).toMatch(/T23:59:59\.999Z$/);
     });
+  });
+
+  it("filters the log by action", async () => {
+    const urls: string[] = [];
+    const fetchImpl: FetchFn = (input) => {
+      urls.push(String(input));
+      return Promise.resolve(ok({ items: [auditEventFixture()], nextCursor: null }));
+    };
+    await renderLog(fetchImpl);
+    expect(await screen.findByText("Update")).toBeOnTheScreen();
+    await fireEvent.press(screen.getByTestId("audit-action"));
+    await fireEvent.press(screen.getByTestId("audit-action-option-delete"));
+    await waitFor(() => {
+      expect(urls.some((url) => url.includes("action=delete"))).toBe(true);
+    });
+  });
+
+  const exportSnapshot = { generatedAt: "2026-11-05T18:02:00.000Z", truncated: false, filters: {} };
+
+  it("exports the filtered audit log to a CSV download, carrying the current filters", async () => {
+    const urls: string[] = [];
+    const exportFetch: FetchFn = (input) => {
+      const url = String(input);
+      urls.push(url);
+      if (url.includes("/admin/audit-events/export")) {
+        return Promise.resolve(ok({ ...exportSnapshot, rowCount: 1, rows: [auditEventFixture()] }));
+      }
+      return Promise.resolve(ok({ items: [auditEventFixture()], nextCursor: null }));
+    };
+    await renderLog(exportFetch);
+    expect(await screen.findByText("Update")).toBeOnTheScreen();
+    await fireEvent.press(screen.getByTestId("audit-action"));
+    await fireEvent.press(screen.getByTestId("audit-action-option-delete"));
+    await fireEvent.press(screen.getByTestId("audit-export"));
+    expect(await screen.findByText("Exported 1 events")).toBeOnTheScreen();
+    expect(jest.mocked(downloadCsv)).toHaveBeenCalledWith(
+      "audit-log.csv",
+      expect.stringContaining("When (UTC)"),
+    );
+    // The export must request the currently-filtered set, not the whole log.
+    expect(urls.find((url) => url.includes("/admin/audit-events/export"))).toContain(
+      "action=delete",
+    );
+  });
+
+  it("guides the user to the web when a file cannot be saved (native)", async () => {
+    jest.mocked(downloadCsv).mockReturnValueOnce(false);
+    const exportFetch: FetchFn = (input) =>
+      Promise.resolve(
+        String(input).includes("/admin/audit-events/export")
+          ? ok({ ...exportSnapshot, rowCount: 1, rows: [auditEventFixture()] })
+          : ok({ items: [auditEventFixture()], nextCursor: null }),
+      );
+    await renderLog(exportFetch);
+    expect(await screen.findByText("Update")).toBeOnTheScreen();
+    await fireEvent.press(screen.getByTestId("audit-export"));
+    expect(await screen.findByText("Export from the web workspace")).toBeOnTheScreen();
+    expect(screen.queryByText("Exported 1 events")).toBeNull();
+  });
+
+  it("shows an error toast when the export request fails", async () => {
+    const exportFetch: FetchFn = (input) =>
+      String(input).includes("/admin/audit-events/export")
+        ? Promise.resolve(failure("internal", 500))
+        : Promise.resolve(ok({ items: [auditEventFixture()], nextCursor: null }));
+    await renderLog(exportFetch);
+    expect(await screen.findByText("Update")).toBeOnTheScreen();
+    await fireEvent.press(screen.getByTestId("audit-export"));
+    expect(await screen.findByText("Could not export the audit log")).toBeOnTheScreen();
+    expect(jest.mocked(downloadCsv)).not.toHaveBeenCalled();
   });
 });
