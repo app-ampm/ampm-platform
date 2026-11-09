@@ -99,6 +99,12 @@ export const uiCopy = {
     withBadge: (label: string, badge: number | string) => `${label} · ${badge}`,
     spokenWithBadge: (label: string, badge: number | string) => `${label}, ${badge}`,
   },
+  select: {
+    placeholder: "Select…",
+    search: "Search",
+    empty: "No options",
+    noMatches: "No matches",
+  },
   queryError: {
     // A session that has ended; screens name what the sign-in is for ("Sign in to view leads").
     signIn: {

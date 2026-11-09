@@ -28,6 +28,7 @@ import { stories as screenHeader } from "../components/screen-header/screen-head
 import { stories as sectionError } from "../components/section-error/section-error.stories";
 import { stories as screen } from "../components/screen/screen.stories";
 import { stories as segmentedControl } from "../components/segmented-control/segmented-control.stories";
+import { stories as select } from "../components/select/select.stories";
 import { stories as sheet } from "../components/sheet/sheet.stories";
 import { stories as skeleton } from "../components/skeleton/skeleton.stories";
 import { stories as stat } from "../components/stat/stat.stories";
@@ -59,6 +60,7 @@ export const allStories: readonly StoryModule[] = [
   otpInput,
   toggle,
   checkbox,
+  select,
   statusChip,
   badge,
   card,

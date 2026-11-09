@@ -44,6 +44,7 @@ export * from "./components/input";
 export * from "./components/otp-input";
 export * from "./components/toggle";
 export * from "./components/checkbox";
+export * from "./components/select";
 
 // Status and progress.
 export * from "./components/status-chip";
