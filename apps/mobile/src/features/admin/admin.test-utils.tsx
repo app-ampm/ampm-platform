@@ -3,6 +3,7 @@ import type {
   CapabilityView,
   ConfigListView,
   ConfigView,
+  MeResponse,
   NotificationView,
   RoleView,
   StaffUserView,
@@ -162,6 +163,31 @@ export function configurationsList(): ConfigListView {
         value: { "staff.invite": { email: { subject: "x", html: "y", text: "z" } } },
       },
     ],
+  };
+}
+
+/** The signed-in principal as `GET /me` returns it; a staff Super Admin by default. */
+export function meFixture(roles: MeResponse["roles"] = ["SA"]): MeResponse {
+  return {
+    principal: {
+      type: "staff",
+      userId: "018f0000-0000-7000-8000-00000000c0f1",
+      name: "Eva Menon",
+      email: "eva@example.com",
+      phone: null,
+      status: "active",
+      lastLoginAt: null,
+    },
+    roles,
+    memberships: [],
+    entitlements: {
+      modules: [],
+      readOnlyModules: [],
+      hotelReach: [],
+      financeReach: [],
+      requestTypes: { wedding: [], account: [] },
+    },
+    isDemo: false,
   };
 }
 

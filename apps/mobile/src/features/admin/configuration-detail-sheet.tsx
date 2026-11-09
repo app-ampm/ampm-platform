@@ -1,4 +1,4 @@
-import { Sheet, Stack, Text } from "@ampm/ui";
+import { Button, Sheet, Stack, Text } from "@ampm/ui";
 
 import {
   configDescription,
@@ -23,14 +23,21 @@ function Field({ label, value }: { readonly label: string; readonly value: strin
 export interface ConfigurationDetailSheetProps {
   readonly entry: ConfigEntry | null;
   readonly onClose: () => void;
+  /** Present only for a Super Admin on an editable key; opens the edit form. */
+  readonly onEdit?: (() => void) | undefined;
 }
 
 /**
  * The full value of one configuration key: its key, what it controls, and each field of the value
- * rendered readably (booleans as On/Off, lists joined). Read-only — a Super Admin edits a value as
- * configuration (`admin.configurations.update`); editing from here is a later slice.
+ * rendered readably (booleans as On/Off, lists joined). Read-only for everyone; a Super Admin gets an
+ * Edit action (`onEdit`) that opens the typed editor (`admin.configurations.update`). Finance and other
+ * readers see no Edit action — the server is the real gate either way.
  */
-export function ConfigurationDetailSheet({ entry, onClose }: ConfigurationDetailSheetProps) {
+export function ConfigurationDetailSheet({
+  entry,
+  onClose,
+  onEdit,
+}: ConfigurationDetailSheetProps) {
   const fields = entry ? configFields(entry.value) : [];
   const description = entry ? configDescription(entry.key) : "";
   return (
@@ -40,6 +47,13 @@ export function ConfigurationDetailSheet({ entry, onClose }: ConfigurationDetail
       title={entry ? configLabel(entry.key) : "Configuration"}
       size="full"
       testID="configuration-detail"
+      footer={
+        onEdit ? (
+          <Button fullWidth variant="secondary" onPress={onEdit} testID="configuration-edit-open">
+            Edit
+          </Button>
+        ) : undefined
+      }
     >
       {entry ? (
         <Stack gap={3}>

@@ -1,12 +1,14 @@
 import type { ReactNode } from "react";
 
+import type { MeResponse } from "@ampm/core";
 import { uiCopy } from "@ampm/ui";
 
-import { fireEvent, screen } from "../../test/render";
+import { fireEvent, screen, waitFor } from "../../test/render";
 import { ConfigurationScreen } from "./configuration-screen";
 import {
   configurationsList,
   failure,
+  meFixture,
   ok,
   renderWithApi,
   routedFetch,
@@ -26,8 +28,10 @@ jest.mock("react-native/Libraries/Utilities/useWindowDimensions", () => ({
 
 const CONFIG_PATH = "/admin/configurations";
 
-const configFetch = (list: ReturnType<typeof configurationsList> = configurationsList()): FetchFn =>
-  routedFetch({ [CONFIG_PATH]: () => ok(list) });
+const configFetch = (
+  list: ReturnType<typeof configurationsList> = configurationsList(),
+  me: MeResponse = meFixture(),
+): FetchFn => routedFetch({ [CONFIG_PATH]: () => ok(list), "/me": () => ok(me) });
 
 async function renderScreen(fetchImpl: FetchFn, tabBar?: ReactNode): Promise<void> {
   await renderWithApi(<ConfigurationScreen tabBar={tabBar} />, fetchImpl);
@@ -91,5 +95,47 @@ describe("ConfigurationScreen", () => {
     expect(await screen.findByText("Sign in to view configuration")).toBeOnTheScreen();
     await fireEvent.press(screen.getByText("Sign in"));
     expect(mockReplace).toHaveBeenCalledWith("/sign-in");
+  });
+
+  it("lets a Super Admin open the typed editor from a setting", async () => {
+    await renderScreen(configFetch());
+    await fireEvent.press(await screen.findByLabelText(/Session idle timeouts, Access/));
+    await fireEvent.press(await screen.findByTestId("configuration-edit-open"));
+    // The read sheet gives way to the editor, with a typed field for the value.
+    expect(await screen.findByTestId("config-field-staffMinutes")).toBeOnTheScreen();
+    expect(screen.getByTestId("configuration-edit-submit")).toBeOnTheScreen();
+  });
+
+  it("offers no Edit action to a reader without the update permission (Finance)", async () => {
+    await renderScreen(configFetch(configurationsList(), meFixture(["FA"])));
+    await fireEvent.press(await screen.findByLabelText(/Session idle timeouts, Access/));
+    // The read sheet opens, but Finance (read-only) gets no Edit action.
+    expect(await screen.findByText("session.idle_timeouts")).toBeOnTheScreen();
+    expect(screen.queryByTestId("configuration-edit-open")).toBeNull();
+  });
+
+  it("refreshes the inventory after a Super Admin saves an edit", async () => {
+    let listHits = 0;
+    const fetchImpl = routedFetch({
+      [CONFIG_PATH]: () => {
+        listHits += 1;
+        return ok(configurationsList());
+      },
+      "/me": () => ok(meFixture()),
+      "/admin/configurations/session.idle_timeouts": () =>
+        ok({
+          key: "session.idle_timeouts",
+          value: { staffMinutes: 600, clientMinutes: 43200, demoMinutes: 43200 },
+        }),
+    });
+    await renderScreen(fetchImpl);
+    await fireEvent.press(await screen.findByLabelText(/Session idle timeouts, Access/));
+    await fireEvent.press(await screen.findByTestId("configuration-edit-open"));
+    await fireEvent.changeText(await screen.findByTestId("config-field-staffMinutes"), "600");
+    const before = listHits;
+    await fireEvent.press(screen.getByTestId("configuration-edit-submit"));
+    expect(await screen.findByText("Setting saved")).toBeOnTheScreen();
+    // Saving invalidates the inventory query, so the active list refetches.
+    await waitFor(() => expect(listHits).toBeGreaterThan(before));
   });
 });
