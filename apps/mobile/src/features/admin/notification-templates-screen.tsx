@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from "react";
 import type { UseQueryResult } from "@tanstack/react-query";
 
-import { useNotificationTemplates } from "@ampm/api-client";
+import { useMe, useNotificationTemplates } from "@ampm/api-client";
 import type { NotificationTemplates } from "@ampm/core";
 import {
   Card,
@@ -17,14 +17,19 @@ import {
 } from "@ampm/ui";
 
 import { useGoToSignIn } from "@/navigation/sign-in";
+import { rolesGrant } from "@/navigation/staff-areas";
 
 import { NotificationTemplateDetailSheet } from "./notification-template-detail-sheet";
+import { NotificationTemplateEditSheet } from "./notification-template-edit-sheet";
 import {
   notificationTemplateLabel,
   templateChannelsSummary,
   templateSummary,
   type TemplateEntry,
 } from "./notification-templates.format";
+
+/** The capability a Super Admin needs to edit templates; Finance may read them but not write. */
+const CONFIG_UPDATE_PERMISSION = "admin.configurations.update";
 
 /** The templates record as sorted, keyed rows for the table (stable order by template key). */
 function toEntries(templates: NotificationTemplates): TemplateEntry[] {
@@ -122,15 +127,18 @@ export interface NotificationTemplatesScreenProps {
 /**
  * The notification templates (TW-94): the per-channel message bodies the platform sends — email,
  * SMS, WhatsApp and push — one row per `templateKey`. Tap a row to read the full content and the
- * `{{variables}}` it fills. Read-only; the server is the gate — reads by `admin.configurations.read`
- * (Super Admin and Finance), edits by `admin.configurations.update` (Super Admin). Editing from here
- * is a later slice.
+ * `{{variables}}` it fills; a Super Admin can edit it from there. The server is the gate — reads by
+ * `admin.configurations.read` (Super Admin and Finance), edits by `admin.configurations.update` (Super
+ * Admin). Finance sees no Edit action.
  *
  *   <NotificationTemplatesScreen tabBar={<AppTabBar />} />
  */
 export function NotificationTemplatesScreen({ tabBar }: NotificationTemplatesScreenProps) {
   const templates = useNotificationTemplates();
+  const me = useMe();
+  const canEdit = me.data ? rolesGrant(me.data.roles, CONFIG_UPDATE_PERMISSION) : false;
   const [selected, setSelected] = useState<TemplateEntry | null>(null);
+  const [editing, setEditing] = useState<TemplateEntry | null>(null);
   return (
     <Screen
       tabBar={tabBar}
@@ -139,7 +147,23 @@ export function NotificationTemplatesScreen({ tabBar }: NotificationTemplatesScr
       }
     >
       <TemplatesBody templates={templates} onOpen={setSelected} />
-      <NotificationTemplateDetailSheet entry={selected} onClose={() => setSelected(null)} />
+      <NotificationTemplateDetailSheet
+        entry={selected}
+        onClose={() => setSelected(null)}
+        onEdit={
+          canEdit && selected !== null
+            ? () => {
+                setEditing(selected);
+                setSelected(null);
+              }
+            : undefined
+        }
+      />
+      <NotificationTemplateEditSheet
+        entry={editing}
+        allTemplates={templates.data ?? {}}
+        onClose={() => setEditing(null)}
+      />
     </Screen>
   );
 }
