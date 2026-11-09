@@ -141,6 +141,7 @@ export function NotificationTemplatesScreen({ tabBar }: NotificationTemplatesScr
   const [editing, setEditing] = useState<TemplateEntry | null>(null);
   return (
     <Screen
+      width="wide"
       tabBar={tabBar}
       header={
         <ScreenHeader eyebrow={templatesEyebrow(templates.data)} title="Notification templates" />

@@ -183,10 +183,10 @@ Every component is a folder with its test and stories; the Gallery shows every v
 | `OfflineBanner` | Peacock glass pill: "Offline · 3 updates queued", "They sync when signal returns." |
 | `OfflineState`, `EmptyState`, `ErrorState` | Full-area states on glass; error accents are gold. |
 | `Skeleton` | Pearl 6% with a pearl 10% shimmer. |
-| `Sheet`, `Toast` | Glass on a midnight 70% scrim; sheets radius 28. |
+| `Sheet`, `Toast` | Glass on a midnight 70% scrim; sheets radius 28. A `Sheet` slides up from the bottom edge on a phone and is a centred dialog (max 512) on a desktop — a desktop has no edge to reach for. Every create, add or edit is a `Sheet`, so it is a modal on both; `ConfirmSheet` too. |
 | `PhotoPlaceholder` | Striped, tinted stand-in for photography with its label ("PALACE PHOTO · LAKE PICHOLA"). |
 | `GlowBackdrop` | The orbs behind a screen. |
-| `Screen` | The screen scaffold: midnight canvas, orbs, safe areas, the 18px phone gutter, room for a floating tab bar or a sticky footer. |
+| `Screen` | The screen scaffold: midnight canvas, orbs, safe areas, the 18px phone gutter, room for a floating tab bar or a sticky footer. `width` bounds the content column on a desktop — `full` (edge to edge), `content` (768, reading and forms) or `wide` (1152, dashboards and tables), both centred. |
 | `ScreenHeader` | Back button, eyebrow, Gilda title, subtitle, trailing action. |
 | `TabBar` | Floating glass pill 14 from the sides and 26 from the bottom; the active tab is a peacock pill with a midnight label; locked tabs at pearl 32%. |
 | `NavRail` | The admin workspace rail: glass, 232 wide, active item a peacock pill; collapses to icons between 768 and 1199. |
@@ -209,6 +209,9 @@ Every component is a folder with its test and stories; the Gallery shows every v
 - The rail shows only the areas the person's role grants (`packages/policy`); a hidden area is still
   refused by the server.
 - Screens use `Screen` and `ScreenHeader`, never a hand-rolled `ScrollView` with padding and insets.
+- Every admin-workspace screen passes `Screen` `width="wide"`, so the header and the content share one
+  centred 1152 column at every window — the console reads as one width, not a mix of full-bleed and
+  narrow pages. Client-portal reading and form screens stay `content` (768).
 
 ## 8. Status chips
 

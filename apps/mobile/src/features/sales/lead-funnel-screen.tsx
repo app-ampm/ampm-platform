@@ -167,6 +167,7 @@ export function LeadFunnelScreen({ tabBar }: { readonly tabBar?: ReactNode }) {
   const funnel = useLeadFunnel(range, { enabled: canRun });
   return (
     <Screen
+      width="wide"
       tabBar={tabBar}
       header={
         <ScreenHeader

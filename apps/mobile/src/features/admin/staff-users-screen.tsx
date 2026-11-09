@@ -89,6 +89,7 @@ export function StaffUsersScreen({ tabBar }: StaffUsersScreenProps) {
     router.push({ pathname: "/admin/users/[userId]", params: { userId } });
   return (
     <Screen
+      width="wide"
       tabBar={tabBar}
       header={
         <ScreenHeader

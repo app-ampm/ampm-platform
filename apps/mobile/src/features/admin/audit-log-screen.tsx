@@ -194,6 +194,7 @@ export function AuditLogScreen({ tabBar }: AuditLogScreenProps) {
   };
   return (
     <Screen
+      width="wide"
       tabBar={tabBar}
       header={<ScreenHeader eyebrow={auditEyebrow(events.data)} title="Audit log" />}
     >

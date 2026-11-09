@@ -38,7 +38,7 @@ export function StaffEnquiriesListScreen({ tabBar }: { readonly tabBar?: ReactNo
   const eyebrow = hasRows ? queueEyebrow(enquiries.data) : undefined;
   return (
     <Screen
-      width="content"
+      width="wide"
       tabBar={tabBar}
       header={<ScreenHeader eyebrow={eyebrow} title="Enquiries" />}
     >

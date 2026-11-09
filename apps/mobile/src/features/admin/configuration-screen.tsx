@@ -144,6 +144,7 @@ export function ConfigurationScreen({ tabBar }: ConfigurationScreenProps) {
   const canEditSelected = canEdit && selected !== null && isEditableConfigKey(selected.key);
   return (
     <Screen
+      width="wide"
       tabBar={tabBar}
       header={<ScreenHeader eyebrow={configEyebrow(configurations.data)} title="Configuration" />}
     >

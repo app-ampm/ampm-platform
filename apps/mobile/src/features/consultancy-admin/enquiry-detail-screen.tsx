@@ -26,7 +26,7 @@ export function StaffEnquiryDetailScreen({ enquiryId }: { readonly enquiryId: st
   const enquiry = useStaffEnquiry(enquiryId);
   return (
     <Screen
-      width="content"
+      width="wide"
       header={<DetailHeader enquiry={enquiry.data} onBack={() => router.back()} />}
     >
       <DetailBody enquiry={enquiry} enquiryId={enquiryId} />
