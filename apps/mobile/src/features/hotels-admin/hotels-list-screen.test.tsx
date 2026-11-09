@@ -54,6 +54,12 @@ describe("HotelsListScreen", () => {
     expect(await screen.findByTestId("hotel-profile-submit")).toBeOnTheScreen();
   });
 
+  it("navigates to the bulk import from the header", async () => {
+    await renderWithApi(<HotelsListScreen />, hotelsFetch());
+    await fireEvent.press(await screen.findByTestId("hotel-import-link"));
+    expect(mockPush).toHaveBeenCalledWith("/hotels-admin/import");
+  });
+
   it("shows the error state when the API fails", async () => {
     await renderWithApi(
       <HotelsListScreen />,
