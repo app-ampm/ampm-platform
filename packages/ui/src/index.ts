@@ -45,6 +45,7 @@ export * from "./components/otp-input";
 export * from "./components/toggle";
 export * from "./components/checkbox";
 export * from "./components/select";
+export * from "./components/date-range-field";
 
 // Status and progress.
 export * from "./components/status-chip";

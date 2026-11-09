@@ -105,6 +105,23 @@ export const uiCopy = {
     empty: "No options",
     noMatches: "No matches",
   },
+  dateRange: {
+    custom: "Custom range",
+    from: "From",
+    to: "To",
+    datePlaceholder: "YYYY-MM-DD",
+    invalidDate: "Enter the date as YYYY-MM-DD.",
+    apply: "Apply range",
+    orderError: "The end date is before the start date.",
+    presets: {
+      all: "All time",
+      last_7: "Last 7 days",
+      last_30: "Last 30 days",
+      last_90: "Last 90 days",
+      this_month: "This month",
+      this_year: "This year",
+    },
+  },
   queryError: {
     // A session that has ended; screens name what the sign-in is for ("Sign in to view leads").
     signIn: {
