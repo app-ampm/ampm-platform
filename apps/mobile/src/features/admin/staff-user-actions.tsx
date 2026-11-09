@@ -2,9 +2,7 @@ import { useState } from "react";
 
 import { useReinviteStaffUser, useSetStaffUserStatus, useUpdateStaffUser } from "@ampm/api-client";
 import type { StaffUserView } from "@ampm/core";
-import { Button, Card, Stack, Text, useToast } from "@ampm/ui";
-
-import { ConfirmSheet } from "./confirm-sheet";
+import { Button, Card, ConfirmSheet, Stack, Text, useToast } from "@ampm/ui";
 
 type Confirm = "disable" | "reset" | null;
 

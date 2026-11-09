@@ -1,9 +1,8 @@
 import { useState, type ReactNode } from "react";
 import type { UseMutationResult } from "@tanstack/react-query";
 
-import { useToast } from "@ampm/ui";
+import { ConfirmSheet, useToast } from "@ampm/ui";
 
-import { ConfirmSheet } from "../admin/confirm-sheet";
 import { SubresourceRow, SubresourceSection } from "./subresource-section";
 
 /** The minimum a managed subresource needs: a stable id and a display name. */

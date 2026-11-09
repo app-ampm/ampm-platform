@@ -7,6 +7,7 @@ import { isAppError, type MediaAssetPage, type MediaAssetView } from "@ampm/core
 import {
   Button,
   Card,
+  ConfirmSheet,
   EmptyState,
   QueryErrorState,
   Row,
@@ -19,7 +20,6 @@ import {
 
 import { useGoToSignIn } from "@/navigation/sign-in";
 
-import { ConfirmSheet } from "../admin/confirm-sheet";
 import { HotelProfileEditSheet } from "./hotel-profile-edit-sheet";
 import { MediaEditSheet } from "./media-edit-sheet";
 import { MediaRow } from "./media-row";

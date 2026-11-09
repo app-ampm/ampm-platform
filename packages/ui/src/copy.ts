@@ -5,6 +5,7 @@
  */
 export const uiCopy = {
   close: "Close",
+  cancel: "Cancel",
   dismiss: "Dismiss",
   retry: "Try again",
   loadMore: "Load more",
