@@ -96,6 +96,7 @@ export function AccountsListScreen({ tabBar }: AccountsListScreenProps) {
     router.push({ pathname: "/leads/accounts/[accountId]", params: { accountId } });
   return (
     <Screen
+      width="wide"
       tabBar={tabBar}
       header={
         <ScreenHeader

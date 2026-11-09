@@ -236,6 +236,7 @@ export function HotelMediaScreen({ hotelId, tabBar }: HotelMediaScreenProps) {
   const [editingProfile, setEditingProfile] = useState(false);
   return (
     <Screen
+      width="wide"
       tabBar={tabBar}
       header={
         <ScreenHeader

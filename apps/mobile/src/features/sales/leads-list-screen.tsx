@@ -123,6 +123,7 @@ export function LeadsListScreen({ tabBar }: LeadsListScreenProps) {
   const openLead = (id: string): void => router.push({ pathname: "/leads/[id]", params: { id } });
   return (
     <Screen
+      width="wide"
       tabBar={tabBar}
       header={
         <ScreenHeader

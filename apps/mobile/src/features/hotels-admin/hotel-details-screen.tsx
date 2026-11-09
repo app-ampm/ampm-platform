@@ -124,6 +124,7 @@ export function HotelDetailsScreen({ hotelId, tabBar }: HotelDetailsScreenProps)
   const hotel = useStaffHotel(hotelId);
   return (
     <Screen
+      width="wide"
       tabBar={tabBar}
       header={
         <ScreenHeader

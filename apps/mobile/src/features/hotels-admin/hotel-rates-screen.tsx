@@ -119,6 +119,7 @@ export function HotelRatesScreen({ hotelId, tabBar }: HotelRatesScreenProps) {
   const cards = useHotelRateCards(hotelId);
   return (
     <Screen
+      width="wide"
       tabBar={tabBar}
       header={
         <ScreenHeader

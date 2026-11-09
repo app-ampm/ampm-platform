@@ -197,6 +197,7 @@ export function HotelImportScreen({ tabBar }: HotelImportScreenProps) {
   const { content, setContent, result, run, pending } = useHotelImportForm();
   return (
     <Screen
+      width="wide"
       tabBar={tabBar}
       header={<ScreenHeader eyebrow="Hotels" title="Import hotels" onBack={() => router.back()} />}
     >

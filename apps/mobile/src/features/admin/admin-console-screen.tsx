@@ -19,7 +19,11 @@ export interface AdminConsoleScreenProps {
 export function AdminConsoleScreen({ tabBar }: AdminConsoleScreenProps) {
   const router = useRouter();
   return (
-    <Screen tabBar={tabBar} header={<ScreenHeader eyebrow="Admin console" title="Settings" />}>
+    <Screen
+      width="wide"
+      tabBar={tabBar}
+      header={<ScreenHeader eyebrow="Admin console" title="Settings" />}
+    >
       <Card padding="sm" testID="admin-sections">
         <Stack gap={2}>
           <ListItem

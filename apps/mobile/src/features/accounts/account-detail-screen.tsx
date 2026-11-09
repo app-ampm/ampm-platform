@@ -180,6 +180,7 @@ export function AccountDetailScreen({ accountId, tabBar }: AccountDetailScreenPr
   const account = useAccount(accountId);
   return (
     <Screen
+      width="wide"
       tabBar={tabBar}
       header={
         <ScreenHeader

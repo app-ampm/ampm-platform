@@ -143,6 +143,7 @@ export function NotificationsLogScreen({ tabBar }: NotificationsLogScreenProps) 
   const [selected, setSelected] = useState<NotificationView | null>(null);
   return (
     <Screen
+      width="wide"
       tabBar={tabBar}
       header={
         <ScreenHeader eyebrow={notificationsEyebrow(notifications.data)} title="Notifications" />

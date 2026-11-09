@@ -172,6 +172,7 @@ export function RolesScreen({ tabBar }: RolesScreenProps) {
   const editor = useRolesEditor();
   return (
     <Screen
+      width="wide"
       tabBar={tabBar}
       header={
         <ScreenHeader

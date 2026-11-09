@@ -130,6 +130,7 @@ export function HotelsListScreen({ tabBar }: HotelsListScreenProps) {
     router.push({ pathname: "/hotels-admin/[hotelId]", params: { hotelId: hotel.id } });
   return (
     <Screen
+      width="wide"
       tabBar={tabBar}
       header={
         <ScreenHeader
