@@ -30,6 +30,7 @@ const COLUMNS: DataTableColumn<HotelStaffView>[] = [
     key: "name",
     header: "Hotel",
     width: 240,
+    grow: true,
     render: (hotel) => (
       <Text variant="body" numberOfLines={1}>
         {hotel.name}

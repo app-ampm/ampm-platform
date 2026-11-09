@@ -33,6 +33,8 @@ const COLUMNS: DataTableColumn<Event>[] = [
     key: "entity",
     header: "Entity",
     width: 160,
+    // The primary column grows, so the table fills the width of its card instead of ending short.
+    grow: true,
     render: (event) => <Text variant="bodySmall">{event.entity}</Text>,
   },
 ];

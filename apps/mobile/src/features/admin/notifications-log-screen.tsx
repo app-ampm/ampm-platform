@@ -48,6 +48,7 @@ const COLUMNS: DataTableColumn<NotificationView>[] = [
     key: "template",
     header: "Template",
     width: 180,
+    grow: true,
     render: (notification) => (
       <Text variant="bodySmall" numberOfLines={1}>
         {notificationTemplateLabel(notification.templateKey)}
