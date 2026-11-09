@@ -54,6 +54,7 @@ export { NOTIFICATIONS_QUERY_KEY, useNotifications } from "./hooks/use-notificat
 export {
   NOTIFICATION_TEMPLATES_QUERY_KEY,
   useNotificationTemplates,
+  useUpdateNotificationTemplates,
 } from "./hooks/use-notification-templates";
 export {
   CONFIGURATIONS_QUERY_KEY,

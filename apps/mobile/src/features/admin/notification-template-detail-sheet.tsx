@@ -1,5 +1,5 @@
 import type { NotificationTemplate } from "@ampm/core";
-import { Sheet, Stack, Text } from "@ampm/ui";
+import { Button, Sheet, Stack, Text } from "@ampm/ui";
 
 import {
   definedChannels,
@@ -76,16 +76,20 @@ function ChannelSection({
 export interface NotificationTemplateDetailSheetProps {
   readonly entry: TemplateEntry | null;
   readonly onClose: () => void;
+  /** Present only for a Super Admin; opens the template editor. */
+  readonly onEdit?: (() => void) | undefined;
 }
 
 /**
  * The full content of one notification template: its key, the channels it defines, the `{{variables}}`
  * it fills, and each channel's message blocks (email subject/HTML/text, SMS, WhatsApp, push). Read-only
- * — a Super Admin edits the templates as configuration.
+ * for everyone; a Super Admin gets an Edit action (`onEdit`) that opens the editor
+ * (`admin.configurations.update`). Finance and other readers see no Edit action — the server is the gate.
  */
 export function NotificationTemplateDetailSheet({
   entry,
   onClose,
+  onEdit,
 }: NotificationTemplateDetailSheetProps) {
   const variables = entry ? templatePlaceholders(entry.template) : [];
   return (
@@ -95,6 +99,18 @@ export function NotificationTemplateDetailSheet({
       title={entry ? notificationTemplateLabel(entry.key) : "Template"}
       size="full"
       testID="notification-template-detail"
+      footer={
+        onEdit ? (
+          <Button
+            fullWidth
+            variant="secondary"
+            onPress={onEdit}
+            testID="notification-template-edit-open"
+          >
+            Edit
+          </Button>
+        ) : undefined
+      }
     >
       {entry ? (
         <Stack gap={3}>
