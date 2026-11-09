@@ -38,11 +38,7 @@ export function AccountScreen({ tabBar }: AccountScreenProps) {
   const goToSignIn = useGoToSignIn();
   const avatar = me.data ? <Avatar name={me.data.principal.name} tone="highlight" /> : undefined;
   return (
-    <Screen
-      width="content"
-      tabBar={tabBar}
-      header={<ScreenHeader title="More" trailing={avatar} />}
-    >
+    <Screen width="wide" tabBar={tabBar} header={<ScreenHeader title="More" trailing={avatar} />}>
       {me.isPending ? (
         <AccountLoading />
       ) : me.isError ? (

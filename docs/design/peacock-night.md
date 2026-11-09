@@ -209,9 +209,12 @@ Every component is a folder with its test and stories; the Gallery shows every v
 - The rail shows only the areas the person's role grants (`packages/policy`); a hidden area is still
   refused by the server.
 - Screens use `Screen` and `ScreenHeader`, never a hand-rolled `ScrollView` with padding and insets.
-- Every admin-workspace screen passes `Screen` `width="wide"`, so the header and the content share one
-  centred 1152 column at every window — the console reads as one width, not a mix of full-bleed and
-  narrow pages. Client-portal reading and form screens stay `content` (768).
+- Every staff rail area passes `Screen` `width="wide"` — Leads & Clients, Hotel enquiries, Tasks &
+  Operations (field notes), Hotel catalogue, Admin console and Settings (the shared account screen) — so
+  the header and the content share one centred 1152 column at every window and the console reads as one
+  width, never a mix of full-bleed and narrow pages. `wide` only caps the column on a tablet or desktop;
+  a phone is full-width either way, so the mobile layout is unchanged. The client portal's own browsing
+  and reading screens (hotels, consultancy, portal home) stay `content` (768), their mobile-first design.
 
 ## 8. Status chips
 
