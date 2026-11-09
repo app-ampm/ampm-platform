@@ -74,6 +74,7 @@ export * from "./components/offline-state";
 export * from "./components/query-error-state";
 export * from "./components/section-error";
 export * from "./components/sheet";
+export * from "./components/confirm-sheet";
 export * from "./components/toast";
 
 // Screen scaffold and navigation.

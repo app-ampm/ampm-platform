@@ -6,6 +6,7 @@ import type { RoleView } from "@ampm/core";
 import {
   Button,
   Card,
+  ConfirmSheet,
   DataTable,
   EmptyState,
   QueryErrorState,
@@ -20,8 +21,6 @@ import {
 } from "@ampm/ui";
 
 import { useGoToSignIn } from "@/navigation/sign-in";
-
-import { ConfirmSheet } from "./confirm-sheet";
 import { RoleDetailSheet } from "./role-detail-sheet";
 import { RoleEditSheet } from "./role-edit-sheet";
 import { roleSummary, roleTypeLabel, roleTypeTone } from "./roles.format";

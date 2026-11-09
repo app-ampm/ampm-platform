@@ -5,6 +5,7 @@ import {
   type LeadActivityCreateRequest,
   type LeadActivityView,
   type LeadAssignRequest,
+  type LeadMergeRequest,
   type LeadUpdateRequest,
   type LeadView,
 } from "@ampm/core";
@@ -56,6 +57,23 @@ export function useAssignLeadOwner(leadId: string) {
   return useMutation<LeadView, Error, LeadAssignRequest>({
     mutationFn: (body) =>
       api.request(`/crm/leads/${leadId}/owner`, { method: "PATCH", body, schema: leadView }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: LEADS_QUERY_KEY });
+    },
+  });
+}
+
+/**
+ * Merge a duplicate lead into a survivor the Sales user picks (`POST /crm/leads/:id/merge`, AC-01.6): the
+ * duplicate's activity moves to the survivor and the duplicate closes. Invalidates the LEADS prefix so
+ * both the duplicate and the survivor refresh.
+ */
+export function useMergeLead(leadId: string) {
+  const api = useApiClient();
+  const queryClient = useQueryClient();
+  return useMutation<LeadView, Error, LeadMergeRequest>({
+    mutationFn: (body) =>
+      api.request(`/crm/leads/${leadId}/merge`, { method: "POST", body, schema: leadView }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: LEADS_QUERY_KEY });
     },

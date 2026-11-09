@@ -1,4 +1,8 @@
-import { Button, Sheet, Stack, Text } from "@ampm/ui";
+import { uiCopy } from "../../copy";
+import { Button } from "../button";
+import { Stack } from "../layout";
+import { Sheet } from "../sheet";
+import { Text } from "../text";
 
 export interface ConfirmSheetProps {
   readonly open: boolean;
@@ -6,6 +10,8 @@ export interface ConfirmSheetProps {
   readonly title: string;
   readonly description: string;
   readonly confirmLabel: string;
+  /** The dismiss label; defaults to `uiCopy.cancel`. */
+  readonly cancelLabel?: string | undefined;
   /** A gold-outline confirm (never red) for a destructive step; peacock for a positive one. */
   readonly destructive?: boolean | undefined;
   readonly loading?: boolean | undefined;
@@ -14,9 +20,10 @@ export interface ConfirmSheetProps {
 }
 
 /**
- * A confirmation on the Peacock Night bottom sheet: the action, then Cancel. Used to confirm disabling
- * an account and resetting an authenticator. (A centred desktop dialog is a later H1.0 primitive; the
- * sheet is the cross-platform confirm we have today.)
+ * A confirmation on the Peacock Night bottom sheet: the action, then Cancel. Used to confirm a step that
+ * is consequential or hard to reverse — disabling an account, resetting an authenticator, closing or
+ * merging a lead. (A centred desktop dialog is a later H1.0 primitive; the sheet is the cross-platform
+ * confirm we have today.)
  *
  *   <ConfirmSheet open={open} onClose={close} title="Disable Eva?" description="…" confirmLabel="Disable" destructive onConfirm={disable} />
  */
@@ -26,6 +33,7 @@ export function ConfirmSheet({
   title,
   description,
   confirmLabel,
+  cancelLabel,
   destructive = false,
   loading = false,
   onConfirm,
@@ -49,7 +57,7 @@ export function ConfirmSheet({
             {confirmLabel}
           </Button>
           <Button fullWidth variant="secondary" disabled={loading} onPress={onClose}>
-            Cancel
+            {cancelLabel ?? uiCopy.cancel}
           </Button>
         </Stack>
       }

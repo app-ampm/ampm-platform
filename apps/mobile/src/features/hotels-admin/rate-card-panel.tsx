@@ -2,9 +2,8 @@ import { useState } from "react";
 
 import { useDeleteRateCard, useDeleteRateItem } from "@ampm/api-client";
 import type { RateCardView, RateItemView } from "@ampm/core";
-import { Button, Card, Row, Stack, StatusChip, Text, useToast } from "@ampm/ui";
+import { Button, Card, ConfirmSheet, Row, Stack, StatusChip, Text, useToast } from "@ampm/ui";
 
-import { ConfirmSheet } from "../admin/confirm-sheet";
 import { rateCardStatusLabel, rateCardStatusTone } from "./hotels-admin.format";
 import { RateCardEditSheet } from "./rate-card-edit-sheet";
 import { RateItemEditSheet } from "./rate-item-edit-sheet";
