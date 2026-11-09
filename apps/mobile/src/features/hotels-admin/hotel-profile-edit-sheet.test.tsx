@@ -47,7 +47,8 @@ describe("HotelProfileEditSheet", () => {
       editorFetch(captured),
     );
     await fireEvent.changeText(await screen.findByTestId("hotel-name"), "Cliff House");
-    await fireEvent.press(await screen.findByTestId(`hotel-destination-${DESTINATION_ID}`));
+    await fireEvent.press(await screen.findByTestId("hotel-destination"));
+    await fireEvent.press(await screen.findByTestId(`hotel-destination-option-${DESTINATION_ID}`));
     await fireEvent.press(screen.getByTestId("hotel-profile-submit"));
     expect(await screen.findByText("Hotel added")).toBeOnTheScreen();
     expect(captured.created).toMatchObject({
@@ -91,6 +92,15 @@ describe("HotelProfileEditSheet", () => {
     });
     await renderWithApi(<HotelProfileEditSheet open hotel={null} onClose={noop} />, fetch);
     await fireEvent.press(await screen.findByTestId("hotel-destination-retry"));
-    expect(await screen.findByTestId(`hotel-destination-${DESTINATION_ID}`)).toBeOnTheScreen();
+    expect(await screen.findByTestId("hotel-destination")).toBeOnTheScreen();
+  });
+
+  it("guides staff to add a destination first when none exist", async () => {
+    await renderWithApi(
+      <HotelProfileEditSheet open hotel={null} onClose={noop} />,
+      routedFetch({ "/hotels-admin/destinations": () => ok({ items: [] }) }),
+    );
+    expect(await screen.findByText("Add a destination before filing a hotel.")).toBeOnTheScreen();
+    expect(screen.queryByTestId("hotel-destination")).toBeNull();
   });
 });
