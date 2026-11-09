@@ -55,6 +55,7 @@ export {
   useUpdateRole,
 } from "./hooks/use-staff-roles";
 export { AUDIT_EVENTS_QUERY_KEY, useAuditEvents } from "./hooks/use-audit-events";
+export { useAuditExport } from "./hooks/use-audit-export";
 export { NOTIFICATIONS_QUERY_KEY, useNotifications } from "./hooks/use-notifications";
 export {
   NOTIFICATION_TEMPLATES_QUERY_KEY,
