@@ -48,6 +48,7 @@ export type {
 } from "./permission-sets";
 export {
   CONFIG_REGISTRY,
+  configListView,
   configView,
   configWriteRequest,
   consultancyChargeablePolicy,
@@ -64,6 +65,7 @@ export {
 export type {
   ConfigKey,
   ConfigValue,
+  ConfigListView,
   ConfigView,
   ConfigWriteRequest,
   ConsultancyChargeablePolicy,

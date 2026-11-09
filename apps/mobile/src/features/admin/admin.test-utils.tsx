@@ -1,6 +1,7 @@
 import type {
   AuditEventView,
   CapabilityView,
+  ConfigListView,
   ConfigView,
   NotificationView,
   RoleView,
@@ -139,6 +140,28 @@ export function notificationTemplatesConfig(): ConfigView {
         push: { title: "Site visit", body: "Tomorrow at {{time}}." },
       },
     },
+  };
+}
+
+/** The configuration inventory as `GET /admin/configurations` returns it (a representative subset). */
+export function configurationsList(): ConfigListView {
+  return {
+    entries: [
+      {
+        key: "session.idle_timeouts",
+        value: { staffMinutes: 720, clientMinutes: 43200, demoMinutes: 43200 },
+      },
+      { key: "feature.flags", value: {} },
+      { key: "hotel.verification_policy", value: { maxAgeDays: 90 } },
+      {
+        key: "consultancy.chargeable_services",
+        value: { chargeableServiceKeys: ["negotiation", "site_visit"] },
+      },
+      {
+        key: "notification.templates",
+        value: { "staff.invite": { email: { subject: "x", html: "y", text: "z" } } },
+      },
+    ],
   };
 }
 
