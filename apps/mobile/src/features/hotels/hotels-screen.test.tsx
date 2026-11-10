@@ -139,6 +139,12 @@ describe("HotelsScreen", () => {
     expect(mockPush).toHaveBeenCalledWith("/hotels/saved");
   });
 
+  it("opens the destinations browse from the header", async () => {
+    await renderWithApi(<HotelsScreen />, catalogue([PAVILION]).fetch);
+    await fireEvent.press(await screen.findByRole("button", { name: "Browse destinations" }));
+    expect(mockPush).toHaveBeenCalledWith("/hotels/destinations");
+  });
+
   it("says when nothing matches", async () => {
     await renderWithApi(<HotelsScreen />, catalogue([]).fetch);
     expect(await screen.findByText("No hotels found")).toBeOnTheScreen();
@@ -222,6 +228,7 @@ describe("HotelsScreen without hotel discovery", () => {
     await renderWithApi(<HotelsScreen />, api.fetch);
     expect(await screen.findByText("Subscribe to unlock hotel discovery")).toBeOnTheScreen();
     expect(screen.queryByLabelText("Search hotels")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Browse destinations" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Saved" })).toBeNull();
     expect(searched(api.calls)).toBe(false);
     await fireEvent.press(screen.getByRole("button", { name: "See plans" }));
