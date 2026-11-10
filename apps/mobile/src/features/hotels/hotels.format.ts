@@ -1,12 +1,16 @@
 import {
   clientAmount,
+  formatAmount,
   formatDay,
   type ClientAmount,
   type ClientRateItemView,
   type DestinationBrowseItem,
+  type HotelCapacityRange,
+  type HotelCardSummary,
   type HotelDestinationView,
   type HotelDetailView,
   type HotelListQuery,
+  type HotelPriceRange,
   type HotelRateItemType,
   type HotelRateItemUnit,
   type HotelRatesView,
@@ -180,6 +184,64 @@ export function rateFreshnessChip(rates: HotelRatesView): RateChip {
     return { label: day ? `Stale · checked ${day}` : "Stale", tone: "neutral", dot: false };
   }
   return { label: "Rates on request", tone: "info", dot: false };
+}
+
+/**
+ * A discovery card's compact freshness chip (B11): the detail spells out "Verified on <date> by AMPM", but
+ * the card has no room for the date, so it shows just the one-word state (the date lives on the detail).
+ */
+export function cardFreshnessChip(summary: HotelCardSummary): RateChip {
+  if (summary.ratesFreshness === "verified")
+    return { label: "Verified", tone: "success", dot: true };
+  if (summary.ratesFreshness === "stale") return { label: "Stale", tone: "neutral", dot: false };
+  return { label: "On request", tone: "info", dot: false };
+}
+
+/** The card's indicative price range as the two client amounts MoneyText renders (B11). */
+export function priceRangeAmounts(range: HotelPriceRange): {
+  readonly amount: ClientAmount;
+  readonly amountMax: ClientAmount;
+} {
+  return {
+    amount: clientAmount(range.min.minor, range.min.currency),
+    amountMax: clientAmount(range.max.minor, range.max.currency),
+  };
+}
+
+/** The unit a card's price range is quoted in ("/ night" for a room rate, else the plain unit label). */
+export function priceRangeUnit(unit: HotelRateItemUnit): string {
+  return unit === "per_night" ? "/ night" : rateUnitLabel(unit);
+}
+
+/** A card's seated-guest capacity as a short label (B11): "Seats 500–900", or "Seats 500" when it is one value. */
+export function capacityRangeLabel(capacity: HotelCapacityRange): string {
+  return capacity.min === capacity.max
+    ? `Seats ${capacity.min}`
+    : `Seats ${capacity.min}–${capacity.max}`;
+}
+
+/**
+ * The card summary spoken for assistive tech (B11): the indicative price with its unit, the rates' freshness
+ * as words, and the seating — in "<low> to <high>" form, not glyphs. The whole card is one pressable, which
+ * collapses its children, so this is folded into the card's accessible name: a screen-reader user hears the
+ * same at-a-glance figures a sighted user sees, without opening the detail (WCAG 1.3.1).
+ */
+export function cardSummaryAccessibilityLabel(summary: HotelCardSummary): string {
+  const parts: string[] = [];
+  if (summary.priceRange) {
+    const { amount, amountMax } = priceRangeAmounts(summary.priceRange);
+    parts.push(
+      `${formatAmount(amount)} to ${formatAmount(amountMax)} ${rateUnitLabel(summary.priceRange.unit)}`,
+    );
+  }
+  parts.push(
+    `Rates ${summary.ratesFreshness === "on_request" ? "on request" : summary.ratesFreshness}`,
+  );
+  if (summary.capacity) {
+    const { min, max } = summary.capacity;
+    parts.push(min === max ? `Seats ${min}` : `Seats ${min} to ${max}`);
+  }
+  return parts.join(". ");
 }
 
 const HEADLINE_TYPES: readonly HotelRateItemType[] = ["room_rate", "wedding_package"];

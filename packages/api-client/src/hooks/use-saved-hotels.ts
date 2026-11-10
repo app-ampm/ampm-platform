@@ -1,7 +1,7 @@
-import { useQuery } from "@tanstack/react-query";
-import { savedHotelPage, type SavedHotelListQuery, type SavedHotelPage } from "@ampm/core";
+import { savedHotelPage, type SavedHotelListQuery, type SavedHotelView } from "@ampm/core";
 
 import { useApiClient } from "../provider";
+import { useCursorList } from "./use-cursor-list";
 
 export const SAVED_HOTELS_QUERY_KEY = ["hotels", "saved"] as const;
 
@@ -12,11 +12,10 @@ function savedHotelsPath(query: Partial<SavedHotelListQuery>): string {
   return `/hotels/saved?${params.toString()}`;
 }
 
-/** The account's hotel shortlist (`GET /hotels/saved`), cursor-paginated by saved-hotel id. */
+/** The account's hotel shortlist (`GET /hotels/saved`), cursor-paginated by saved-hotel id with a "Load more" footer (B10). */
 export function useSavedHotels(query: Partial<SavedHotelListQuery> = {}) {
   const api = useApiClient();
-  return useQuery<SavedHotelPage>({
-    queryKey: [...SAVED_HOTELS_QUERY_KEY, query],
-    queryFn: ({ signal }) => api.get(savedHotelsPath(query), savedHotelPage, signal),
-  });
+  return useCursorList<SavedHotelView>([...SAVED_HOTELS_QUERY_KEY, query], (cursor, signal) =>
+    api.get(savedHotelsPath({ ...query, cursor }), savedHotelPage, signal),
+  );
 }

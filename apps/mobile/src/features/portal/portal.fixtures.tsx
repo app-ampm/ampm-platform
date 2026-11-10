@@ -92,11 +92,13 @@ export function apiFetch(handlers: Readonly<Record<string, Handler>>): typeof fe
 /** Never answers: the request stays pending. */
 export const pending: Handler = () => new Promise<Response>(() => {});
 
-/** The client's own data: `/me` and the plan catalogue. */
+/** The client's own data: `/me`, the plan catalogue, and the home's empty shortlist + destinations (B16). */
 export function portalApi(me: MeResponse, extra: Readonly<Record<string, Handler>> = {}) {
   return apiFetch({
     "GET /me": () => jsonResponse({ data: me }),
     "GET /crm/plans": () => jsonResponse({ data: { items: [PLAN] } }),
+    "GET /hotels/saved": () => jsonResponse({ data: { items: [], nextCursor: null } }),
+    "GET /hotels/destinations": () => jsonResponse({ data: { items: [] } }),
     ...extra,
   });
 }

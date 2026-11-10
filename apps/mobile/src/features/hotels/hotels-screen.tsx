@@ -111,7 +111,7 @@ function HotelSearch({ destination, onDestination }: SearchProps) {
         returnKeyType="search"
       />
       <DestinationFilter
-        options={destinationOptions(hotels.data?.items ?? [], destination)}
+        options={destinationOptions(hotels.items, destination)}
         selected={destination}
         onChange={onDestination}
       />

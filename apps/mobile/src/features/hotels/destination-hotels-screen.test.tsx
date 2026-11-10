@@ -27,7 +27,7 @@ describe("DestinationHotelsScreen", () => {
     );
     expect(await screen.findByRole("header", { name: "Udaipur" })).toBeOnTheScreen();
     expect(
-      await screen.findByRole("button", { name: "The Lake Pavilion in Udaipur, Rajasthan" }),
+      await screen.findByRole("button", { name: /The Lake Pavilion in Udaipur, Rajasthan/ }),
     ).toBeOnTheScreen();
     expect(api.calls.some((call) => call.includes(`destinationId=${DEST_ID}`))).toBe(true);
   });

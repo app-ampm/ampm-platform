@@ -2,7 +2,16 @@ import type { ReactNode } from "react";
 import { useRouter } from "expo-router";
 
 import { useHotelEnquiries } from "@ampm/api-client";
-import { Card, EmptyState, QueryErrorState, Screen, ScreenHeader, Skeleton, Stack } from "@ampm/ui";
+import {
+  Card,
+  EmptyState,
+  LoadMore,
+  QueryErrorState,
+  Screen,
+  ScreenHeader,
+  Skeleton,
+  Stack,
+} from "@ampm/ui";
 
 import { useGoToSignIn } from "@/navigation/sign-in";
 
@@ -39,18 +48,24 @@ function RequestsBody({ enquiries }: { readonly enquiries: ReturnType<typeof use
         signIn={{ title: "Sign in to view your requests" }}
       />
     );
-  if (enquiries.data.items.length === 0)
-    return <NoRequests onBrowse={() => router.push("/hotels")} />;
+  if (enquiries.items.length === 0) return <NoRequests onBrowse={() => router.push("/hotels")} />;
   return (
     <Card padding="sm">
       <Stack gap={2}>
-        {enquiries.data.items.map((enquiry) => (
+        {enquiries.items.map((enquiry) => (
           <RequestRow
             key={enquiry.id}
             enquiry={enquiry}
             onOpen={() => router.push(`/portal/requests/${enquiry.id}`)}
           />
         ))}
+        <LoadMore
+          hasMore={enquiries.hasMore}
+          loading={enquiries.isLoadingMore}
+          failed={enquiries.loadMoreError}
+          onLoadMore={enquiries.loadMore}
+          testID="requests-load-more"
+        />
       </Stack>
     </Card>
   );

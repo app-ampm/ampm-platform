@@ -1,7 +1,7 @@
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { hotelPage, type HotelListQuery, type HotelPage } from "@ampm/core";
+import { hotelPage, type HotelListQuery, type HotelView } from "@ampm/core";
 
 import { useApiClient } from "../provider";
+import { useCursorList } from "./use-cursor-list";
 
 export const HOTELS_QUERY_KEY = ["hotels"] as const;
 
@@ -21,15 +21,16 @@ function hotelsPath(query: Partial<HotelListQuery>): string {
 }
 
 /**
- * Browse/search the hotel catalogue the entitlement unlocks (`GET /hotels`), cursor-paginated by id.
- * Each filter combination is its own query key; `keepPreviousData` holds the last results on screen while
- * the next load runs, so a live-applied filter refines the list in place instead of flashing a skeleton.
+ * Browse/search the hotel catalogue the entitlement unlocks (`GET /hotels`), cursor-paginated by id with a
+ * "Load more" footer (B10). Each filter combination is its own query key; `keepPreviousData` holds the last
+ * results on screen while the next load runs, so a live-applied filter refines the list in place instead of
+ * flashing a skeleton.
  */
 export function useHotels(query: Partial<HotelListQuery> = {}) {
   const api = useApiClient();
-  return useQuery<HotelPage>({
-    queryKey: [...HOTELS_QUERY_KEY, query],
-    queryFn: ({ signal }) => api.get(hotelsPath(query), hotelPage, signal),
-    placeholderData: keepPreviousData,
-  });
+  return useCursorList<HotelView>(
+    [...HOTELS_QUERY_KEY, query],
+    (cursor, signal) => api.get(hotelsPath({ ...query, cursor }), hotelPage, signal),
+    { keepPreviousData: true },
+  );
 }

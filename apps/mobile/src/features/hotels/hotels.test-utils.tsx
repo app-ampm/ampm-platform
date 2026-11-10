@@ -1,5 +1,6 @@
 import type {
   EntitlementModule,
+  HotelCardSummary,
   HotelDestinationView,
   HotelDetailView,
   HotelView,
@@ -72,6 +73,21 @@ export const JAIPUR: HotelDestinationView = {
   country: "India",
 };
 
+/** A card summary (B11) as `GET /hotels` derives it: a verified room-rate range and a venue capacity range. */
+export function summaryFixture(overrides: Partial<HotelCardSummary> = {}): HotelCardSummary {
+  return {
+    ratesFreshness: "verified",
+    ratesAsOf: "2026-11-02T06:30:00.000Z",
+    priceRange: {
+      min: { minor: 1800000, currency: "INR" },
+      max: { minor: 2400000, currency: "INR" },
+      unit: "per_night",
+    },
+    capacity: { min: 500, max: 900 },
+    ...overrides,
+  };
+}
+
 /** A hotel card as `GET /hotels` lists it. */
 export function hotelFixture(overrides: Partial<HotelView> = {}): HotelView {
   return {
@@ -88,6 +104,7 @@ export function hotelFixture(overrides: Partial<HotelView> = {}): HotelView {
     streetViewRef: null,
     lastVerifiedAt: null,
     coverUrl: null,
+    summary: summaryFixture(),
     ...overrides,
   };
 }

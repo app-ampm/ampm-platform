@@ -1,7 +1,7 @@
 import type { useHotels } from "@ampm/api-client";
-import type { HotelView } from "@ampm/core";
 import {
   EmptyState,
+  LoadMore,
   politeLiveRegion,
   QueryErrorState,
   Skeleton,
@@ -45,8 +45,7 @@ export function HotelResults({
         notFound={DISCOVERY_CLOSED}
       />
     );
-  const { items, nextCursor } = hotels.data;
-  if (items.length === 0)
+  if (hotels.items.length === 0)
     return filtersActive && onClearFilters ? (
       <EmptyState
         icon="inbox"
@@ -63,30 +62,37 @@ export function HotelResults({
         announce
       />
     );
-  return <HotelResultList items={items} nextCursor={nextCursor} onOpen={onOpen} />;
+  return <HotelResultList hotels={hotels} onOpen={onOpen} />;
 }
 
 interface HotelResultListProps {
-  readonly items: readonly HotelView[];
-  readonly nextCursor: string | null;
+  readonly hotels: ReturnType<typeof useHotels>;
   readonly onOpen: (hotelId: string) => void;
 }
 
 /**
  * The found hotels, led by a polite live-region count so a live-applied filter is announced to a screen
- * reader (WCAG 4.1.3): the count going from "14 hotels" to "3 hotels" is spoken, not only shown.
+ * reader (WCAG 4.1.3): the count going from "14 hotels" to "3 hotels" is spoken, not only shown. Below them
+ * a "Load more" footer fetches the next page (B10); `hasMore` also drives the count's "+" when a page is cut.
  */
-function HotelResultList({ items, nextCursor, onOpen }: HotelResultListProps) {
-  const countLabel = hotelCountLabel(items.length, nextCursor !== null);
+function HotelResultList({ hotels, onOpen }: HotelResultListProps) {
+  const countLabel = hotelCountLabel(hotels.items.length, hotels.hasMore);
   useAnnounce(countLabel, true, { web: true });
   return (
     <Stack gap={3}>
       <Text variant="eyebrow" {...politeLiveRegion()}>
         {countLabel}
       </Text>
-      {items.map((hotel) => (
+      {hotels.items.map((hotel) => (
         <HotelCard key={hotel.id} hotel={hotel} onPress={() => onOpen(hotel.id)} />
       ))}
+      <LoadMore
+        hasMore={hotels.hasMore}
+        loading={hotels.isLoadingMore}
+        failed={hotels.loadMoreError}
+        onLoadMore={hotels.loadMore}
+        testID="hotels-load-more"
+      />
     </Stack>
   );
 }
