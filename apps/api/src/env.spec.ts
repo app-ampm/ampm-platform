@@ -101,6 +101,24 @@ describe("loadEnv", () => {
     ).toThrow(/local identity provider/);
   });
 
+  it("accepts both Cognito provisioning credentials together", () => {
+    const env = loadEnv({
+      ...prodValid,
+      COGNITO_PROVISIONING_ACCESS_KEY_ID: "AKIA_EXAMPLE",
+      COGNITO_PROVISIONING_SECRET_ACCESS_KEY: "secret-example",
+    });
+    expect(env.COGNITO_PROVISIONING_ACCESS_KEY_ID).toBe("AKIA_EXAMPLE");
+  });
+
+  it("refuses a half-set provisioning credential pair", () => {
+    expect(() =>
+      loadEnv({ ...prodValid, COGNITO_PROVISIONING_ACCESS_KEY_ID: "AKIA_EXAMPLE" }),
+    ).toThrow(/COGNITO_PROVISIONING_SECRET_ACCESS_KEY/);
+    expect(() =>
+      loadEnv({ ...prodValid, COGNITO_PROVISIONING_SECRET_ACCESS_KEY: "secret-example" }),
+    ).toThrow(/COGNITO_PROVISIONING_ACCESS_KEY_ID/);
+  });
+
   it("requires REDIS_URL in production (A6)", () => {
     const { REDIS_URL: _omit, ...withoutRedis } = prodValid;
     expect(() => loadEnv(withoutRedis)).toThrow(/REDIS_URL/);

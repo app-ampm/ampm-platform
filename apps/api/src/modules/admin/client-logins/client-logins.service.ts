@@ -12,6 +12,10 @@ import { PrismaService } from "../../../db/prisma.service.js";
 import { ENV, type Env } from "../../../env.js";
 import { Prisma } from "../../../generated/prisma/client.js";
 import { AuthTokenService } from "../../../identity/auth-token.service.js";
+import {
+  IDENTITY_PROVISIONER,
+  type IdentityProvisioner,
+} from "../../../identity/identity.types.js";
 import { AuditService } from "../../../policy/audit.service.js";
 import { SessionService } from "../../../policy/session.service.js";
 import { NotificationService } from "../notification/notification.service.js";
@@ -53,6 +57,7 @@ export class ClientLoginsService {
     private readonly authTokens: AuthTokenService,
     private readonly notifications: NotificationService,
     private readonly logger: AppLogger,
+    @Inject(IDENTITY_PROVISIONER) private readonly provisioner: IdentityProvisioner,
     @Inject(ENV) private readonly env: Env,
   ) {}
 
@@ -81,6 +86,9 @@ export class ClientLoginsService {
       throw errors.conflict("A user with that email already exists");
     }
     const { userId, inviteToken } = await this.insertClientLogin(projectId, request, actorId);
+    // Provision the Cognito sign-in account before the invite goes out, so the rep can sign in and
+    // activate. Best-effort after commit, like delivery below (see provision()).
+    await this.provision(userId, request.email, request.phone ?? null);
     // Delivery is best-effort and after commit: the login and its invite token are already saved, so a
     // transient queue failure must not fail the create or be mistaken for a conflict (it can be re-sent).
     // The failure is logged (not swallowed silently) so an undelivered invite is visible and re-sendable.
@@ -114,10 +122,25 @@ export class ClientLoginsService {
       );
       return token;
     });
+    // Re-provision idempotently: the recovery path when the first create's provisioning never ran.
+    await this.provision(userId, before.email, before.phone);
     await this.queueInvite(userId, before.name, inviteToken).catch((error: unknown) =>
       this.logger.warn("client.reinvite.notify_failed", { userId, error: String(error) }),
     );
     return this.get(projectId, userId);
+  }
+
+  /**
+   * Best-effort Cognito provisioning (cognito-setup §6); a no-op under `IDENTITY_PROVIDER=local`. Logged,
+   * not fatal: the AMPM login and its invite already committed, and reinvite re-provisions idempotently, so
+   * a transient AWS failure (or a client with no phone to host OTP sign-in) must not fail the invite.
+   */
+  private async provision(userId: string, email: string, phone: string | null): Promise<void> {
+    await this.provisioner
+      .provisionUser({ kind: "client", email, phone })
+      .catch((error: unknown) =>
+        this.logger.warn("client.provision.failed", { userId, error: String(error) }),
+      );
   }
 
   async update(

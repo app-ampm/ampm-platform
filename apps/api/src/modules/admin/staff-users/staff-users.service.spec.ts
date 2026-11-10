@@ -6,6 +6,7 @@ import type { PrismaService } from "../../../db/prisma.service.js";
 import type { Env } from "../../../env.js";
 import { Prisma } from "../../../generated/prisma/client.js";
 import type { AuthTokenService } from "../../../identity/auth-token.service.js";
+import type { IdentityProvisioner } from "../../../identity/identity.types.js";
 import type { SessionService } from "../../../policy/session.service.js";
 import type { NotificationService } from "../notification/notification.service.js";
 import { StaffUsersRepository, type StaffUserRow } from "./staff-users.repository.js";
@@ -48,6 +49,8 @@ function harness(repo: FakeRepository) {
   const notifications = { queue } as unknown as NotificationService;
   const warn = vi.fn();
   const logger = { warn, info: vi.fn(), error: vi.fn(), debug: vi.fn() } as unknown as AppLogger;
+  const provisionUser = vi.fn(async () => undefined);
+  const provisioner = { provisionUser } as unknown as IdentityProvisioner;
   const env = { WEB_APP_URL: "https://app.example" } as unknown as Env;
   return {
     service: new StaffUsersService(
@@ -58,6 +61,7 @@ function harness(repo: FakeRepository) {
       authTokens,
       notifications,
       logger,
+      provisioner,
       env,
     ),
     record,
@@ -66,6 +70,7 @@ function harness(repo: FakeRepository) {
     queue,
     warn,
     userCount,
+    provisionUser,
   };
 }
 
@@ -107,10 +112,19 @@ describe("StaffUsersService", () => {
 
   it("creates an invited staff user, mints an invite, queues the delivery, and audits it", async () => {
     const repo = new FakeRepository({ "user-new": row("user-new", "invited") });
-    const { service, record, issueInvite, queue } = harness(repo);
-    const view = await service.create({ name: "New Staff", email: "new@example.com" }, "sa");
+    const { service, record, issueInvite, queue, provisionUser } = harness(repo);
+    const view = await service.create(
+      { name: "New Staff", email: "new@example.com", phone: "+911234567890" },
+      "sa",
+    );
     expect(repo.create).toHaveBeenCalled();
     expect(view.status).toBe("invited");
+    // Provisioned as staff (sign-in by email) before the invite is delivered (cognito-setup §6).
+    expect(provisionUser).toHaveBeenCalledWith({
+      kind: "staff",
+      email: "new@example.com",
+      phone: "+911234567890",
+    });
     expect(issueInvite).toHaveBeenCalledWith("user-new", expect.anything());
     expect(queue).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -126,6 +140,25 @@ describe("StaffUsersService", () => {
     expect(record).toHaveBeenCalledWith(
       expect.objectContaining({ action: "create", entityType: "user" }),
       expect.anything(),
+    );
+  });
+
+  it("still invites when provisioning fails: the failure is logged, not fatal (best-effort §6)", async () => {
+    const repo = new FakeRepository({ "user-new": row("user-new", "invited") });
+    const { service, queue, warn, provisionUser } = harness(repo);
+    (provisionUser as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error("AWS down"));
+    const view = await service.create({ name: "New Staff", email: "new@example.com" }, "sa");
+    expect(view.status).toBe("invited"); // create succeeded despite the provisioning error
+    expect(queue).toHaveBeenCalled(); // the invite still went out
+    expect(warn).toHaveBeenCalledWith("staff.provision.failed", expect.objectContaining({ userId: "user-new" }));
+  });
+
+  it("re-provisions idempotently on reinvite", async () => {
+    const repo = new FakeRepository({ u: row("u", "invited") });
+    const { service, provisionUser } = harness(repo);
+    await service.reinvite("u");
+    expect(provisionUser).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: "staff", email: "u@example.com" }),
     );
   });
 

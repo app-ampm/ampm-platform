@@ -29,7 +29,8 @@ One file per **trust zone**, so each container loads only the secrets it needs:
 | `PGBACKREST_REPO1_CIPHER_PASS`            | postgres                | encrypts the backup repository                    | **never** rotate without re-encrypting the repo (losing it loses the backups) |
 | `PGBACKREST_REPO1_S3_KEY` / `_KEY_SECRET` | postgres                | pgBackRest → the Mumbai S3 bucket                 | yearly; immediately if the IAM user is exposed                                |
 | `REDIS_PASSWORD` / `REDIS_URL`            | redis, app              | Redis auth                                        | yearly                                                                        |
-| `COGNITO_*`                               | app                     | identity verification                             | managed in Cognito; update on pool/client change                              |
+| `COGNITO_REGION`/`_USER_POOL_ID`/`_CLIENT_ID` | app                 | identity verification (public ids, not secrets)   | managed in Cognito; update on pool/client change                              |
+| `COGNITO_PROVISIONING_ACCESS_KEY_ID` / `_SECRET_ACCESS_KEY` | app    | Cognito user provisioning at invite time (cognito-setup §6) | yearly; immediately if exposed (the only AWS key the app holds) |
 | `SMTP_USER` / `SMTP_PASSWORD`             | app                     | transactional email (SES)                         | yearly; immediately on exposure                                               |
 | `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` | app                     | payments (when they land)                         | per Razorpay policy; test keys on staging only                                |
 | `SENTRY_DSN`                              | app                     | api/worker error reporting (feature 6.7)          | on Sentry project change; separate DSN per environment                        |
@@ -37,6 +38,34 @@ One file per **trust zone**, so each container loads only the secrets it needs:
 | age private key                           | host + password manager | sops decrypt at deploy                            | on operator change or exposure (re-encrypt every file)                        |
 
 Keep this table current: every new secret gets a row before it ships.
+
+## Cognito provisioning IAM credentials (cognito-setup §6)
+
+The verify path is credential-free, but provisioning Cognito users at invite time needs **scoped** admin
+credentials — the only AWS key the app holds. Create a dedicated IAM user (no console access) in the account
+that owns the pool, attach **only** the actions the code calls, scoped to the pool ARN, and put its access
+key in the app zone as `COGNITO_PROVISIONING_ACCESS_KEY_ID` / `COGNITO_PROVISIONING_SECRET_ACCESS_KEY`.
+Least-privilege policy (replace the ARN with the real pool):
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [{
+    "Effect": "Allow",
+    "Action": [
+      "cognito-idp:AdminCreateUser",
+      "cognito-idp:AdminSetUserPassword",
+      "cognito-idp:AdminUpdateUserAttributes"
+    ],
+    "Resource": "arn:aws:cognito-idp:ap-south-1:<ACCOUNT_ID>:userpool/ap-south-1_xxxxxxxxx"
+  }]
+}
+```
+
+Both keys are set together or not at all (a half-set pair is refused at startup); omit both to run a node
+verify-only. The lifecycle actions (`AdminDisableUser`, `AdminUserGlobalSignOut`) are added with the
+deprovision/forced-sign-out build (cognito-setup §10), not before. Creating this IAM user is a founder
+action (it needs the AWS console); nothing here provisions it automatically.
 
 ## One-time: the age key
 

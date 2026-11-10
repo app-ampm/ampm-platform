@@ -15,6 +15,10 @@ import { PrismaService } from "../../../db/prisma.service.js";
 import { ENV, type Env } from "../../../env.js";
 import { Prisma } from "../../../generated/prisma/client.js";
 import { AuthTokenService } from "../../../identity/auth-token.service.js";
+import {
+  IDENTITY_PROVISIONER,
+  type IdentityProvisioner,
+} from "../../../identity/identity.types.js";
 import { AuditService } from "../../../policy/audit.service.js";
 import { SessionService } from "../../../policy/session.service.js";
 import { assertNotLastSuperAdmin } from "../last-super-admin.js";
@@ -67,6 +71,7 @@ export class StaffUsersService {
     private readonly authTokens: AuthTokenService,
     private readonly notifications: NotificationService,
     private readonly logger: AppLogger,
+    @Inject(IDENTITY_PROVISIONER) private readonly provisioner: IdentityProvisioner,
     @Inject(ENV) private readonly env: Env,
   ) {}
 
@@ -88,6 +93,9 @@ export class StaffUsersService {
       throw errors.conflict("A user with that email already exists");
     }
     const { id, inviteToken } = await this.insertInvited(request, actorId);
+    // Provision the Cognito sign-in account before the invite goes out, so the invitee can sign in and
+    // activate. Best-effort after commit, like delivery below (see provision()).
+    await this.provision(id, request.email, request.phone ?? null);
     // Best-effort delivery after commit: the user and its invite token are already saved, so a queue
     // failure cannot be mistaken for a duplicate-email conflict, roll back the account, or fail create.
     // The failure is logged (not swallowed silently) so an undelivered invite is visible and re-sendable.
@@ -115,10 +123,26 @@ export class StaffUsersService {
       );
       return token;
     });
+    // Re-provision idempotently: the recovery path when the first create's provisioning never ran.
+    await this.provision(id, user.email, user.phone);
     await this.queueInvite(id, user.name, inviteToken).catch((error: unknown) =>
       this.logger.warn("staff.reinvite.notify_failed", { userId: id, error: String(error) }),
     );
     return this.get(id);
+  }
+
+  /**
+   * Best-effort Cognito provisioning (cognito-setup §6); a no-op under `IDENTITY_PROVIDER=local`. Logged,
+   * not fatal: the AMPM user and its invite already committed, and reinvite re-provisions idempotently, so
+   * a transient AWS failure must not fail the invite. Staff sign in by email; the phone is carried for audit
+   * parity only (staff provisioning stamps the verified email).
+   */
+  private async provision(userId: string, email: string, phone: string | null): Promise<void> {
+    await this.provisioner
+      .provisionUser({ kind: "staff", email, phone })
+      .catch((error: unknown) =>
+        this.logger.warn("staff.provision.failed", { userId, error: String(error) }),
+      );
   }
 
   /** Creates the invited user and its invite in one transaction; a lost unique-email race maps to 409. */

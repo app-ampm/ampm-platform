@@ -12,6 +12,14 @@ const fields = z.object({
   COGNITO_REGION: z.string().min(1).optional(),
   COGNITO_USER_POOL_ID: z.string().min(1).optional(),
   COGNITO_CLIENT_ID: z.string().min(1).optional(),
+  /**
+   * Scoped admin IAM credentials for provisioning Cognito users at invite time (cognito-setup §6) — the
+   * only AWS credentials the API holds; the verify path needs none. Optional: absent, provisioning uses the
+   * default AWS provider chain (so a verify-only node boots), and a provisioning call then fails best-effort
+   * and is logged, never fatal. The pair is all-or-nothing (below). Lives in the SOPS app zone, never code.
+   */
+  COGNITO_PROVISIONING_ACCESS_KEY_ID: z.string().min(1).optional(),
+  COGNITO_PROVISIONING_SECRET_ACCESS_KEY: z.string().min(1).optional(),
   /** The job queue's Redis; absent in development and tests, where jobs run inline (D-031). */
   REDIS_URL: z.string().url().optional(),
   /** `true` in the worker process only; the API process enqueues but does not consume (D-031). */
@@ -122,6 +130,16 @@ function identityIssues(value: EnvFields): EnvIssue[] {
     if (!value[key]) {
       issues.push({ path: [key], message: "required with the Cognito identity provider" });
     }
+  }
+  // Provisioning credentials are optional, but a half-set pair is a misconfiguration: one key without the
+  // other silently falls back to the default AWS chain and looks like working provisioning that isn't.
+  const hasKeyId = Boolean(value.COGNITO_PROVISIONING_ACCESS_KEY_ID);
+  const hasSecret = Boolean(value.COGNITO_PROVISIONING_SECRET_ACCESS_KEY);
+  if (hasKeyId !== hasSecret) {
+    issues.push({
+      path: [hasKeyId ? "COGNITO_PROVISIONING_SECRET_ACCESS_KEY" : "COGNITO_PROVISIONING_ACCESS_KEY_ID"],
+      message: "set both COGNITO_PROVISIONING_ACCESS_KEY_ID and COGNITO_PROVISIONING_SECRET_ACCESS_KEY, or neither",
+    });
   }
   return issues;
 }
