@@ -4,6 +4,8 @@ import type {
   HotelCompareItem,
   HotelDetailView,
   HotelRatesView,
+  HotelRoomClientView,
+  HotelVenueClientView,
   HotelView,
   MediaGalleryItem,
   SavedHotelView,
@@ -74,6 +76,44 @@ export function toDestinationBrowseItem(row: DestinationBrowseRow): DestinationB
 }
 
 type DetailCard = HotelDetailRow["rateCards"][number];
+type DetailVenue = HotelDetailRow["venues"][number];
+type DetailRoom = HotelDetailRow["rooms"][number];
+
+/** The facilities_json column (a string array on write) narrowed to the client's string[] — never other JSON. */
+function toFacilities(value: unknown): string[] | null {
+  return Array.isArray(value)
+    ? value.filter((entry): entry is string => typeof entry === "string")
+    : null;
+}
+
+/** A venue row → the client view (CP-05): every column is descriptive, so this is a straight projection. */
+function toVenueClientView(venue: DetailVenue): HotelVenueClientView {
+  return {
+    id: venue.id,
+    name: venue.name,
+    venueType: venue.venueType,
+    isIndoor: venue.isIndoor,
+    areaSqm: venue.areaSqm,
+    capacityBanquet: venue.capacityBanquet,
+    capacityTheatre: venue.capacityTheatre,
+    capacityReception: venue.capacityReception,
+    facilities: toFacilities(venue.facilities),
+    description: venue.description,
+  };
+}
+
+/** A room-category row → the client view (CP-05). */
+function toRoomClientView(room: DetailRoom): HotelRoomClientView {
+  return {
+    id: room.id,
+    name: room.name,
+    roomCount: room.roomCount,
+    maxOccupancy: room.maxOccupancy,
+    sizeSqm: room.sizeSqm,
+    facilities: toFacilities(room.facilities),
+    description: room.description,
+  };
+}
 
 /**
  * The hotel detail: the discovery card, its client-facing freshness-labelled pricing (AC-04), the
@@ -90,6 +130,8 @@ export function toHotelDetailView(
   return {
     ...toHotelView(row, coverFromGallery(gallery)),
     rates: toRatesView(row.rateCards),
+    venues: row.venues.map(toVenueClientView),
+    rooms: row.rooms.map(toRoomClientView),
     gallery,
     references,
   };

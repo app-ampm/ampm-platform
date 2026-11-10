@@ -47,6 +47,37 @@ const DETAIL_HOTEL_SELECT = {
       },
     },
   },
+  // Venues and room categories a client weighs on the detail (CP-05). Soft-deleted rows are excluded; every
+  // selected column is descriptive (PUBLIC/CLIENT) — a venue/room carries no RESTRICTED field.
+  venues: {
+    where: { deletedAt: null },
+    orderBy: { name: "asc" },
+    select: {
+      id: true,
+      name: true,
+      venueType: true,
+      isIndoor: true,
+      areaSqm: true,
+      capacityBanquet: true,
+      capacityTheatre: true,
+      capacityReception: true,
+      facilities: true,
+      description: true,
+    },
+  },
+  rooms: {
+    where: { deletedAt: null },
+    orderBy: { name: "asc" },
+    select: {
+      id: true,
+      name: true,
+      roomCount: true,
+      maxOccupancy: true,
+      sizeSqm: true,
+      facilities: true,
+      description: true,
+    },
+  },
 } as const satisfies Prisma.HotelSelect;
 
 const SAVED_SELECT = {

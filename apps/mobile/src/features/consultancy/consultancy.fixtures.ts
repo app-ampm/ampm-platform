@@ -47,6 +47,8 @@ export const HOTEL: HotelDetailView = {
   lastVerifiedAt: null,
   coverUrl: null, // empty gallery ⟹ the server derives no cover
   rates: { status: "on_request", asOf: null, items: [] },
+  venues: [],
+  rooms: [],
   gallery: [],
   references: [],
 };

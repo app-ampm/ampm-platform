@@ -1,10 +1,23 @@
 import { View } from "react-native";
 
-import type { HotelDetailView, MediaGalleryItem, WeddingReferenceClientItem } from "@ampm/core";
+import type {
+  HotelDetailView,
+  HotelRoomClientView,
+  HotelVenueClientView,
+  MediaGalleryItem,
+  WeddingReferenceClientItem,
+} from "@ampm/core";
 import { Icon, Image, ListItem, Row, Stack, Text } from "@ampm/ui";
 
 import { HotelRates } from "./hotel-rates";
-import { galleryImages, type HotelSection } from "./hotels.format";
+import {
+  facilitiesLine,
+  galleryImages,
+  roomMetaLine,
+  venueCapacities,
+  venueKindLine,
+  type HotelSection,
+} from "./hotels.format";
 
 export interface HotelSectionBodyProps {
   readonly hotel: HotelDetailView;
@@ -14,6 +27,8 @@ export interface HotelSectionBodyProps {
 /** The content under the hotel page's tab strip, one section at a time. */
 export function HotelSectionBody({ hotel, section }: HotelSectionBodyProps) {
   if (section === "overview") return <HotelOverview hotel={hotel} />;
+  if (section === "venues") return <HotelVenues venues={hotel.venues} />;
+  if (section === "rooms") return <HotelRooms rooms={hotel.rooms} />;
   if (section === "gallery") return <HotelGallery images={galleryImages(hotel)} />;
   if (section === "weddings") return <HotelWeddings references={hotel.references} />;
   return <HotelRates rates={hotel.rates} />;
@@ -30,6 +45,91 @@ function HotelOverview({ hotel }: { readonly hotel: HotelDetailView }) {
             {hotel.address}
           </Text>
         </Row>
+      ) : null}
+    </Stack>
+  );
+}
+
+/** The function/event spaces a client weighs (CP-05 "Venues"): kind, capacities, amenities. */
+function HotelVenues({ venues }: { readonly venues: readonly HotelVenueClientView[] }) {
+  return (
+    <Stack gap={4}>
+      {venues.map((venue) => (
+        <VenueRow key={venue.id} venue={venue} />
+      ))}
+    </Stack>
+  );
+}
+
+function VenueRow({ venue }: { readonly venue: HotelVenueClientView }) {
+  const capacities = venueCapacities(venue);
+  const facilities = facilitiesLine(venue.facilities);
+  return (
+    <Stack gap={1}>
+      <Text variant="label" tone="primary">
+        {venue.name}
+      </Text>
+      <Text variant="bodySmall" tone="muted">
+        {venueKindLine(venue)}
+      </Text>
+      {capacities ? (
+        <Row gap={2} align="start">
+          <Icon name="users" size="sm" tone="muted" />
+          <Text variant="bodySmall" className="flex-1">
+            {capacities}
+          </Text>
+        </Row>
+      ) : null}
+      {venue.description ? (
+        <Text variant="bodySmall" tone="muted">
+          {venue.description}
+        </Text>
+      ) : null}
+      {facilities ? (
+        <Text variant="caption" tone="muted">
+          {facilities}
+        </Text>
+      ) : null}
+    </Stack>
+  );
+}
+
+/** The room categories a client weighs (CP-05 "Rooms"): count, occupancy, size, amenities. */
+function HotelRooms({ rooms }: { readonly rooms: readonly HotelRoomClientView[] }) {
+  return (
+    <Stack gap={4}>
+      {rooms.map((room) => (
+        <RoomRow key={room.id} room={room} />
+      ))}
+    </Stack>
+  );
+}
+
+function RoomRow({ room }: { readonly room: HotelRoomClientView }) {
+  const meta = roomMetaLine(room);
+  const facilities = facilitiesLine(room.facilities);
+  return (
+    <Stack gap={1}>
+      <Text variant="label" tone="primary">
+        {room.name}
+      </Text>
+      {meta ? (
+        <Row gap={2} align="start">
+          <Icon name="bed" size="sm" tone="muted" />
+          <Text variant="bodySmall" className="flex-1">
+            {meta}
+          </Text>
+        </Row>
+      ) : null}
+      {room.description ? (
+        <Text variant="bodySmall" tone="muted">
+          {room.description}
+        </Text>
+      ) : null}
+      {facilities ? (
+        <Text variant="caption" tone="muted">
+          {facilities}
+        </Text>
       ) : null}
     </Stack>
   );

@@ -8,6 +8,9 @@ import {
   type HotelRateItemType,
   type HotelRateItemUnit,
   type HotelRatesView,
+  type HotelRoomClientView,
+  type HotelVenueClientView,
+  type HotelVenueType,
   type HotelView,
 } from "@ampm/core";
 import type { StatusTone } from "@ampm/ui";
@@ -164,7 +167,55 @@ export function headlineCaption(item: ClientRateItemView, rates: HotelRatesView)
   return rates.status === "stale" ? `Stale · ${unit}` : unit;
 }
 
-export type HotelSection = "overview" | "rates" | "gallery" | "weddings";
+const VENUE_TYPE_LABEL: Readonly<Record<HotelVenueType, string>> = {
+  ballroom: "Ballroom",
+  lawn: "Lawn",
+  poolside: "Poolside",
+  rooftop: "Rooftop",
+  courtyard: "Courtyard",
+  beach: "Beach",
+  other: "Venue",
+};
+
+export function venueTypeLabel(type: HotelVenueType): string {
+  return VENUE_TYPE_LABEL[type];
+}
+
+/** A venue's type and setting as one line: "Ballroom · Indoor". */
+export function venueKindLine(venue: HotelVenueClientView): string {
+  return `${venueTypeLabel(venue.venueType)} · ${venue.isIndoor ? "Indoor" : "Outdoor"}`;
+}
+
+/** A venue's capacities and area, most-used first; "" when none are known (so the caller can omit it). */
+export function venueCapacities(venue: HotelVenueClientView): string {
+  return [
+    venue.capacityBanquet === null ? null : `Banquet ${venue.capacityBanquet}`,
+    venue.capacityReception === null ? null : `Reception ${venue.capacityReception}`,
+    venue.capacityTheatre === null ? null : `Theatre ${venue.capacityTheatre}`,
+    venue.areaSqm === null ? null : `${venue.areaSqm} m²`,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+}
+
+/** A room category's size line: "40 rooms · Sleeps 3 · 45 m²" (only the known parts; "" when none). */
+export function roomMetaLine(room: HotelRoomClientView): string {
+  return [
+    room.roomCount === null ? null : roomsLabel(room.roomCount),
+    room.maxOccupancy === null ? null : `Sleeps ${room.maxOccupancy}`,
+    room.sizeSqm === null ? null : `${room.sizeSqm} m²`,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+}
+
+/** A facilities list as one line, or null when there are none: "Wi-Fi · Parking · Spa". */
+export function facilitiesLine(facilities: readonly string[] | null): string | null {
+  if (!facilities || facilities.length === 0) return null;
+  return facilities.join(" · ");
+}
+
+export type HotelSection = "overview" | "venues" | "rooms" | "rates" | "gallery" | "weddings";
 
 export interface HotelSectionOption {
   readonly value: HotelSection;
@@ -179,11 +230,16 @@ export function galleryImages(hotel: HotelDetailView): HotelDetailView["gallery"
 
 /**
  * The hotel page's tabs, only for what the API sent: an overview when there is a description or an
- * address, the rates (always: on request is an answer too), the gallery and the previous weddings.
+ * address, the venues and room categories when any exist, the rates (always: on request is an answer
+ * too), the gallery and the previous weddings.
  */
 export function hotelSections(hotel: HotelDetailView): HotelSectionOption[] {
   const sections: HotelSectionOption[] = [];
   if (hotel.description || hotel.address) sections.push({ value: "overview", label: "Overview" });
+  if (hotel.venues.length > 0)
+    sections.push({ value: "venues", label: "Venues", badge: hotel.venues.length });
+  if (hotel.rooms.length > 0)
+    sections.push({ value: "rooms", label: "Rooms", badge: hotel.rooms.length });
   sections.push({ value: "rates", label: "Rates" });
   const images = galleryImages(hotel).length;
   if (images > 0) sections.push({ value: "gallery", label: "Gallery", badge: images });
