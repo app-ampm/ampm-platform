@@ -8,6 +8,7 @@ import {
   Card,
   Checkbox,
   EmptyState,
+  LoadMore,
   politeLiveRegion,
   QueryErrorState,
   Row,
@@ -65,7 +66,7 @@ export function SavedHotelsScreen({ tabBar }: SavedHotelsScreenProps) {
   const me = useMe();
   const canBrowse = me.data ? canBrowseHotels(me.data) : false;
   const compare = useCompareSelection();
-  const canCompare = canBrowse && (saved.data?.items.length ?? 0) >= HOTEL_COMPARE_MIN;
+  const canCompare = canBrowse && saved.items.length >= HOTEL_COMPARE_MIN;
   return (
     <Screen
       tabBar={tabBar}
@@ -147,8 +148,7 @@ function SavedList({ saved, comparing, selected, onToggle, onOpen, onBrowse }: S
         signIn={{ title: "Sign in to view your shortlist" }}
       />
     );
-  const { items, nextCursor } = saved.data;
-  if (items.length === 0)
+  if (saved.items.length === 0)
     return (
       <EmptyState
         icon="inbox"
@@ -160,17 +160,43 @@ function SavedList({ saved, comparing, selected, onToggle, onOpen, onBrowse }: S
       />
     );
   return (
+    <SavedCardList
+      saved={saved}
+      comparing={comparing}
+      selected={selected}
+      onToggle={onToggle}
+      onOpen={onOpen}
+    />
+  );
+}
+
+/** The shortlist as its glass card: the count, the rows (or the 2–4 compare picks), and a "Load more" footer (B10). */
+function SavedCardList({
+  saved,
+  comparing,
+  selected,
+  onToggle,
+  onOpen,
+}: Omit<SavedListProps, "onBrowse">) {
+  return (
     <Card padding="sm" className="md:p-6">
       <Text variant="eyebrow" className="pb-2">
-        {hotelCountLabel(items.length, nextCursor !== null)}
+        {hotelCountLabel(saved.items.length, saved.hasMore)}
       </Text>
-      {items.map((item) =>
+      {saved.items.map((item) =>
         comparing ? (
           <CompareCheckbox key={item.id} item={item} selected={selected} onToggle={onToggle} />
         ) : (
           <SavedHotelRow key={item.id} item={item} onOpen={() => onOpen(item.hotel.id)} />
         ),
       )}
+      <LoadMore
+        hasMore={saved.hasMore}
+        loading={saved.isLoadingMore}
+        failed={saved.loadMoreError}
+        onLoadMore={saved.loadMore}
+        testID="saved-load-more"
+      />
     </Card>
   );
 }

@@ -46,10 +46,54 @@ export const destinationBrowseResponse = z
 export type DestinationBrowseResponse = z.infer<typeof destinationBrowseResponse>;
 
 /**
+ * The freshness of a hotel's verified, client-visible rate card(s) (CP-05; AC-04): `verified` with `asOf`
+ * renders "Verified on <asOf> by AMPM"; `stale` renders "Stale, last checked <asOf>" with amounts still
+ * shown; `on_request` shows no amounts and the assistance action. Never the word "confirmed" — a confirmed
+ * quotation is a Module D proposal, not discovery pricing. Availability is answered inside an enquiry (AC-04.7).
+ */
+export const hotelRateFreshness = z.enum(["verified", "stale", "on_request"]);
+export type HotelRateFreshness = z.infer<typeof hotelRateFreshness>;
+
+/**
+ * An indicative client price range for a discovery card (B11), drawn from ONE rate type's verified/stale
+ * client-visible items so units never mix: `min` the lowest amount, `max` the highest (an item's upper
+ * bound when it carries one, else its amount), `unit` the shared rate unit. Derived from the same cards the
+ * detail shows (security.md) — never an internal cost, margin or vendor figure.
+ */
+export const hotelPriceRange = z
+  .object({ min: money, max: money, unit: hotelRateItemUnit })
+  .strict();
+export type HotelPriceRange = z.infer<typeof hotelPriceRange>;
+
+/** A card's seated-guest capacity range (B11): min/max across the hotel's venues' banquet/reception seats. */
+export const hotelCapacityRange = z
+  .object({ min: z.number().int(), max: z.number().int() })
+  .strict();
+export type HotelCapacityRange = z.infer<typeof hotelCapacityRange>;
+
+/**
+ * The at-a-glance summary a discovery card shows (B11, CP-05/AC-04): the rate-card freshness label, an
+ * indicative client price range and the venue capacity range — all derived from the same verified/stale,
+ * client-visible rate cards and descriptive venue capacities the detail already serves, so the card leaks
+ * nothing new. `priceRange`/`capacity` are null when there is no client-visible priced item / no known
+ * capacity; `ratesFreshness` is `on_request` when no verified or stale card carries a client item.
+ */
+export const hotelCardSummary = z
+  .object({
+    ratesFreshness: hotelRateFreshness,
+    ratesAsOf: isoDateTime.nullable(),
+    priceRange: hotelPriceRange.nullable(),
+    capacity: hotelCapacityRange.nullable(),
+  })
+  .strict();
+export type HotelCardSummary = z.infer<typeof hotelCardSummary>;
+
+/**
  * A hotel as a client/demo principal sees it in discovery (CP-11; permission-matrix §4, PUBLIC+CLIENT
  * classes only). Strict and flat — the list card and the detail base. No status, demo_visible,
- * public_showcase, internal_rating/notes, latitude/longitude or contacts. An indicative price range is a
- * later increment (derived from verified, client-visible rate cards — Module C rate tables, deferred).
+ * public_showcase, internal_rating/notes, latitude/longitude or contacts. `summary` carries the card's
+ * freshness label, indicative price range and capacity range (B11), each derived from verified,
+ * client-visible rate cards and descriptive venue capacities — never an internal or vendor figure.
  */
 export const hotelView = z
   .object({
@@ -69,20 +113,12 @@ export const hotelView = z
     // cover) — the same gated derivative the detail gallery serves, never an object key (security.md).
     // Null when the hotel has no client-eligible image, or in the media-free compare projection.
     coverUrl: z.string().nullable(),
+    summary: hotelCardSummary,
   })
   .strict();
 export type HotelView = z.infer<typeof hotelView>;
 
-/**
- * A hotel's indicative pricing as a client sees it (CP-05; AC-04). `status` is the freshness of the
- * verified, client-visible rate card(s): `verified` with `asOf` renders "Verified on <asOf> by AMPM";
- * `stale` renders "Stale, last checked <asOf>" with the amounts still shown; `on_request` shows no
- * amounts and the assistance action. Never the word "confirmed" — a confirmed quotation is a Module D
- * proposal, not discovery pricing. Availability is answered inside an enquiry, never shown here (AC-04.7).
- */
-export const hotelRateFreshness = z.enum(["verified", "stale", "on_request"]);
-export type HotelRateFreshness = z.infer<typeof hotelRateFreshness>;
-
+/** One line of a hotel's client-facing rate card (CP-05): an amount or indicative range, its unit and inclusions. */
 export const clientRateItemView = z
   .object({
     itemType: hotelRateItemType,

@@ -254,6 +254,12 @@ describe("Hotel discovery (e2e)", () => {
     const ids = (list.body.data.items as { id: string }[]).map((h) => h.id);
     expect(ids.sort()).toEqual([hotelA, hotelB, hotelC].sort()); // active only — the inactive hotel is absent
     expect(ids).not.toContain(hotelD);
+    // B11: every card carries a derived summary (freshness + price/capacity range) that parses the strict
+    // schema; these hotels carry no verified rate cards, so the freshness is "on request" and no price shows.
+    const summary = (list.body.data.items as { summary: Record<string, unknown> }[])[0]!.summary;
+    expect(["verified", "stale", "on_request"]).toContain(summary.ratesFreshness);
+    expect(summary).toHaveProperty("priceRange");
+    expect(summary).toHaveProperty("capacity");
 
     const detail = await http()
       .get(`/hotels/${hotelA}`)

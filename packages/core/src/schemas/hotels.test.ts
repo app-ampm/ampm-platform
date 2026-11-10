@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   destinationBrowseItem,
+  hotelCardSummary,
   hotelCompareItem,
   hotelCompareQuery,
   hotelDetailView,
@@ -23,6 +24,17 @@ const destination = {
   country: "India",
 };
 
+const summary = {
+  ratesFreshness: "verified" as const,
+  ratesAsOf: "2026-11-02T06:30:00.000Z",
+  priceRange: {
+    min: { minor: 1800000, currency: "INR" },
+    max: { minor: 2400000, currency: "INR" },
+    unit: "per_night" as const,
+  },
+  capacity: { min: 500, max: 900 },
+};
+
 const hotel = {
   id: HOTEL_ID,
   slug: "lake-pavilion-udaipur",
@@ -37,6 +49,7 @@ const hotel = {
   streetViewRef: null,
   lastVerifiedAt: null,
   coverUrl: null,
+  summary,
 };
 
 describe("hotelView (one client model per audience — security.md)", () => {
@@ -63,6 +76,36 @@ describe("hotelView (one client model per audience — security.md)", () => {
     expect(hotelView.safeParse({ ...hotel, coverUrl: 42 }).success).toBe(false);
     const { coverUrl: _omit, ...withoutCover } = hotel;
     expect(hotelView.safeParse(withoutCover).success).toBe(false); // required (null, not absent)
+  });
+
+  it("requires the card summary (B11) — absent is rejected", () => {
+    const { summary: _omit, ...withoutSummary } = hotel;
+    expect(hotelView.safeParse(withoutSummary).success).toBe(false);
+  });
+});
+
+describe("hotelCardSummary (B11 — derived card figures, never internal data)", () => {
+  it("accepts a freshness label with an indicative range and a capacity range", () => {
+    expect(hotelCardSummary.safeParse(summary).success).toBe(true);
+  });
+
+  it("accepts an on-request card with no price or capacity", () => {
+    expect(
+      hotelCardSummary.safeParse({
+        ratesFreshness: "on_request",
+        ratesAsOf: null,
+        priceRange: null,
+        capacity: null,
+      }).success,
+    ).toBe(true);
+  });
+
+  it("is strict — rejects a non-freshness status or any extra field", () => {
+    // "confirmed" is a Module D quotation, never discovery pricing; an internal figure must never ride along.
+    expect(hotelCardSummary.safeParse({ ...summary, ratesFreshness: "confirmed" }).success).toBe(
+      false,
+    );
+    expect(hotelCardSummary.safeParse({ ...summary, internalCost: 100 }).success).toBe(false);
   });
 });
 

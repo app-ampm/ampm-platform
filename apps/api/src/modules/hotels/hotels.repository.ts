@@ -80,6 +80,20 @@ const DETAIL_HOTEL_SELECT = {
   },
 } as const satisfies Prisma.HotelSelect;
 
+/*
+ * The source rows a card summary needs (B11): the SAME verified/stale, client-visible rate cards the detail
+ * uses — so a card's indicative range is the identical client figure, never an internal cost — plus the
+ * venues' seating capacities. Nothing else, and nothing RESTRICTED, is selected.
+ */
+const SUMMARY_SELECT = {
+  id: true,
+  rateCards: DETAIL_HOTEL_SELECT.rateCards,
+  venues: {
+    where: { deletedAt: null },
+    select: { capacityBanquet: true, capacityReception: true },
+  },
+} as const satisfies Prisma.HotelSelect;
+
 const SAVED_SELECT = {
   id: true,
   note: true,
@@ -89,6 +103,7 @@ const SAVED_SELECT = {
 
 export type HotelRow = Prisma.HotelGetPayload<{ select: typeof HOTEL_SELECT }>;
 export type HotelDetailRow = Prisma.HotelGetPayload<{ select: typeof DETAIL_HOTEL_SELECT }>;
+export type HotelSummaryRow = Prisma.HotelGetPayload<{ select: typeof SUMMARY_SELECT }>;
 export type SavedHotelRow = Prisma.SavedHotelGetPayload<{ select: typeof SAVED_SELECT }>;
 
 /** A destination plus its in-reach active-hotel count, composed from a grouped count (feature 9.4b). */
@@ -209,6 +224,22 @@ export class HotelsRepository {
     return this.prisma.hotel.findMany({
       where: { AND: [this.reachWhere(reach), { id: { in: [...hotelIds] } }] },
       select: DETAIL_HOTEL_SELECT,
+    });
+  }
+
+  /**
+   * The card-summary source rows (B11) for a bounded set of hotel ids, in ONE batched read (no N+1 — the
+   * media-cover pattern). Re-applies the reach guard (AND-composed, as findInReach), so an out-of-reach
+   * saved hotel yields no row and its card falls back to "on request" — never a price it must not see.
+   */
+  async cardSummaryRows(
+    reach: readonly HotelReach[],
+    hotelIds: readonly string[],
+  ): Promise<HotelSummaryRow[]> {
+    if (hotelIds.length === 0) return [];
+    return this.prisma.hotel.findMany({
+      where: { AND: [this.reachWhere(reach), { id: { in: [...hotelIds] } }] },
+      select: SUMMARY_SELECT,
     });
   }
 

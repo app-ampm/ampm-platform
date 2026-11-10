@@ -1,17 +1,17 @@
 import type { ReactNode } from "react";
 import { View } from "react-native";
-import { useRouter } from "expo-router";
 
 import type { MeResponse } from "@ampm/core";
 import { Avatar, Screen, ScreenHeader } from "@ampm/ui";
 
 import { useWindowClass } from "@/navigation/use-window-class";
 
+import { DestinationChips } from "./destination-chips";
 import { DiscoveryStatusCard } from "./discovery-status-card";
 import { EnquiriesPanel } from "./enquiries-panel";
-import { EntryPanel } from "./entry-panel";
 import { HotelSearchEntry } from "./hotel-search-entry";
 import { greeting, hasHotelAssistance } from "./portal.format";
+import { SavedPreview } from "./saved-preview";
 import { WeddingLockedCard } from "./wedding-locked-card";
 
 export interface SubscriberHomeProps {
@@ -42,22 +42,15 @@ function HomeHeader({ name }: { readonly name: string }) {
  * first for screen readers, as on a phone) and the three panels stand side by side, as in D4.
  */
 export function SubscriberHome({ me, tabBar }: SubscriberHomeProps) {
-  const router = useRouter();
   return (
     <Screen width="wide" tabBar={tabBar} header={<HomeHeader name={me.principal.name} />}>
       <View className="gap-4 lg:flex-row-reverse lg:items-center">
         <DiscoveryStatusCard className="lg:w-96" />
         <HotelSearchEntry className="lg:flex-1" />
       </View>
+      <DestinationChips />
+      <SavedPreview />
       <View className="gap-4 lg:flex-row lg:items-stretch">
-        <EntryPanel
-          heading="My selection"
-          title="Saved hotels"
-          subtitle="The hotels on your shortlist."
-          icon="heart"
-          onPress={() => router.push("/hotels/saved")}
-          className="lg:flex-1"
-        />
         {hasHotelAssistance(me) ? <EnquiriesPanel className="lg:flex-1" /> : null}
         <WeddingLockedCard className="lg:flex-1" />
       </View>

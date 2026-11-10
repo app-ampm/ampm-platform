@@ -82,7 +82,7 @@ describe("HotelsScreen", () => {
   it("lists the results as glass cards that open the hotel", async () => {
     await renderWithApi(<HotelsScreen />, catalogue([PAVILION, HAVELI]).fetch);
     const card = await screen.findByRole("button", {
-      name: "The Lake Pavilion in Udaipur, Rajasthan",
+      name: /The Lake Pavilion in Udaipur, Rajasthan/,
     });
     expect(screen.getByText("2 hotels")).toBeOnTheScreen();
     expect(screen.getByText("Udaipur, Rajasthan · 84 rooms")).toBeOnTheScreen();
@@ -109,6 +109,28 @@ describe("HotelsScreen", () => {
     await screen.findByText("1 hotel");
     await fireEvent.changeText(screen.getByLabelText("Search hotels"), " Lake ");
     await waitFor(() => expect(api.calls).toContain("GET /hotels?q=Lake&limit=50"));
+  });
+
+  it("loads the next page of results from the footer (B10)", async () => {
+    const api = fakeApi((method, url) => {
+      if (url.pathname === "/me") return ok(SUBSCRIBER);
+      if (method !== "GET" || url.pathname !== "/hotels") return undefined;
+      // Page 1 has a cursor; page 2 (requested with it) is the last.
+      return url.searchParams.get("cursor") === "p2"
+        ? ok(pageOf([HAVELI]))
+        : ok(pageOf([PAVILION], "p2"));
+    });
+    await renderWithApi(<HotelsScreen />, api.fetch);
+    await screen.findByRole("button", { name: /The Lake Pavilion in Udaipur, Rajasthan/ });
+    await fireEvent.press(screen.getByTestId("hotels-load-more"));
+    expect(
+      await screen.findByRole("button", { name: /Amber Haveli in Jaipur, Rajasthan/ }),
+    ).toBeOnTheScreen();
+    // The first page stays on screen — the next page is appended, not replaced.
+    expect(
+      screen.getByRole("button", { name: /The Lake Pavilion in Udaipur, Rajasthan/ }),
+    ).toBeOnTheScreen();
+    expect(api.calls).toContain("GET /hotels?cursor=p2&limit=50");
   });
 
   it("narrows the results to a destination chip and clears it on a second tap", async () => {

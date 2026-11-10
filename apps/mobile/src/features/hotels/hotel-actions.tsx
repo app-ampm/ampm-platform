@@ -28,7 +28,7 @@ function useShortlistToggle(hotel: HotelView) {
   const saved = useSavedHotels();
   const save = useSaveHotel(hotel.id);
   const unsave = useUnsaveHotel(hotel.id);
-  const isSaved = saved.data?.items.some((item) => item.hotel.id === hotel.id) ?? false;
+  const isSaved = saved.items.some((item) => item.hotel.id === hotel.id);
   const toggle = (): void => {
     const mutation = isSaved ? unsave : save;
     mutation.mutate(undefined, {
