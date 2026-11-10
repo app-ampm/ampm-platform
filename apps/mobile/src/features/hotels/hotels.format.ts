@@ -32,6 +32,18 @@ export function activeFilterCount(filters: HotelFilters): number {
   );
 }
 
+/**
+ * The compare route's `ids` query to a list (CP-06). Expo-router hands a repeated key back as an array and
+ * a single one as a string, so both are normalised before splitting; the screen and hook apply the 2–4 bound.
+ */
+export function parseCompareIds(ids: string | string[] | undefined): string[] {
+  const joined = Array.isArray(ids) ? ids.join(",") : (ids ?? "");
+  return joined
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean);
+}
+
 /** Where a hotel sits, as one line: "Udaipur, Rajasthan". */
 export function destinationLabel(destination: HotelDestinationView): string {
   return [destination.name, destination.state].filter(Boolean).join(", ");

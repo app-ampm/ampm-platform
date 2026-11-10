@@ -183,6 +183,10 @@ export type HotelDetailView = z.infer<typeof hotelDetailView>;
 export const hotelCompareItem = hotelView.extend({ rates: hotelRatesView }).strict();
 export type HotelCompareItem = z.infer<typeof hotelCompareItem>;
 
+/** A compare request holds 2 to 4 distinct saved hotels (CP-06); the client picker and screen share these. */
+export const HOTEL_COMPARE_MIN = 2;
+export const HOTEL_COMPARE_MAX = 4;
+
 /**
  * Compare a handful of the caller's saved hotels by id (CP-06). `ids` is a comma-separated list of 2 to 4
  * DISTINCT hotel ids; only ids on the caller's own shortlist and in reach are returned (denial equals
@@ -204,8 +208,8 @@ export const hotelCompareQuery = z
       .pipe(
         z
           .array(uuid)
-          .min(2)
-          .max(4)
+          .min(HOTEL_COMPARE_MIN)
+          .max(HOTEL_COMPARE_MAX)
           .refine((ids) => new Set(ids).size === ids.length, {
             message: "hotel ids must be distinct",
           }),
