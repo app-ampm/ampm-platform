@@ -18,11 +18,16 @@ import { ApiProvider } from "@ampm/api-client";
 import { fontFaces } from "@ampm/tokens";
 import { ThemeProvider, ToastProvider } from "@ampm/ui";
 
+import { configureAmplify } from "@/lib/amplify";
 import { env } from "@/lib/env";
-import { getAccessToken } from "@/lib/session";
+import { getAccessToken, initAuthSession } from "@/lib/session";
 import { AppStack } from "@/navigation/app-stack";
 
 SplashScreen.preventAutoHideAsync();
+
+// Configure Cognito once and seed/track the signed-in state before anything reads the session.
+configureAmplify();
+initAuthSession();
 
 /** Peacock Night's faces as the tokens name them (packages/tokens/src/typography.ts), loaded under exactly those names. */
 const FONTS = {
