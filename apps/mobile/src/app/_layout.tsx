@@ -13,6 +13,7 @@ import { useFonts } from "expo-font";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
+import { View } from "react-native";
 
 import { ApiProvider } from "@ampm/api-client";
 import { fontFaces } from "@ampm/tokens";
@@ -22,6 +23,7 @@ import { configureAmplify } from "@/lib/amplify";
 import { env } from "@/lib/env";
 import { getAccessToken, initAuthSession } from "@/lib/session";
 import { AppStack } from "@/navigation/app-stack";
+import { DemoBanner } from "@/navigation/demo-banner";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -56,7 +58,10 @@ export default function RootLayout() {
       <ThemeProvider initialPreference="dark">
         <StatusBar style="light" />
         <ToastProvider>
-          <AppStack />
+          <View className="flex-1">
+            <DemoBanner />
+            <AppStack />
+          </View>
         </ToastProvider>
       </ThemeProvider>
     </ApiProvider>

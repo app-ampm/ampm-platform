@@ -39,7 +39,7 @@ describe("visibility classes", () => {
     expect(staffReadableClasses(["VC"], { side: "hotel" }).has("RESTRICTED-CONTACT")).toBe(false);
   });
 
-  it("§4 line 122, §5.3 line 169: hotel internal notes for SA, SM, HT and PM, never CD, VC, RG, HL or FA", () => {
+  it("§4 line 122, §5.3 line 170: hotel internal notes for SA, SM, HT and PM, never CD, VC, RG, HL or FA", () => {
     for (const role of ["SA", "SM", "HT", "PM"] as const) {
       expect(staffReadableClasses([role], { resource: HOTELS }).has("RESTRICTED-NOTES")).toBe(true);
     }
@@ -49,7 +49,7 @@ describe("visibility classes", () => {
     }
   });
 
-  it("§5.8 line 232: vendor internal notes for SA and VC, PM on assigned weddings only", () => {
+  it("§5.8 line 233: vendor internal notes for SA and VC, PM on assigned weddings only", () => {
     expect(staffReadableClasses(["VC"], { resource: VENDORS }).has("RESTRICTED-NOTES")).toBe(true);
     expect(staffReadableClasses(["PM"], { resource: VENDORS }).has("RESTRICTED-NOTES")).toBe(false);
     expect(
@@ -61,7 +61,7 @@ describe("visibility classes", () => {
     }
   });
 
-  it("§5.10 line 263: guest internal notes for RG, PM and HL on assigned weddings, never FA", () => {
+  it("§5.10 line 264: guest internal notes for RG, PM and HL on assigned weddings, never FA", () => {
     expect(
       staffReadableClasses(["RG"], { resource: GUESTS, assigned: true }).has("RESTRICTED-NOTES"),
     ).toBe(true);
@@ -71,7 +71,7 @@ describe("visibility classes", () => {
     ).toBe(false);
   });
 
-  it("§4 lines 122 and 124, §5.3 line 169, §5.8 line 232: a contacts row's notes are its table's notes", () => {
+  it("§4 lines 122 and 124, §5.3 line 170, §5.8 line 233: a contacts row's notes are its table's notes", () => {
     const vendorContacts = "vendors.vendor_contacts";
     const hotelContacts = "hotels.hotel_contacts";
     for (const resource of [vendorContacts, hotelContacts]) {
@@ -98,8 +98,8 @@ describe("visibility classes", () => {
     expect(contact(["HL"])).toBe(false);
     expect(contact(["HL"], GUESTS)).toBe(false);
     expect(contact(["PM"], GUESTS)).toBe(false);
-    // Hotel contacts (§5.3 line 170), drivers' phones (§5.11 line 278) and venue contacts (§5.5
-    // line 195), on assigned weddings.
+    // Hotel contacts (§5.3 line 171), drivers' phones (§5.11 line 279) and venue contacts (§5.5
+    // line 196), on assigned weddings.
     for (const resource of [
       "hotels.hotel_contacts",
       "rooms.vehicles_transfers_passengers",
@@ -108,14 +108,14 @@ describe("visibility classes", () => {
       expect(contact(["HL"], resource), resource).toBe(true);
       expect(contact(["HL"], resource, false), resource).toBe(false);
     }
-    // §5.8 line 231 gives HL "R (a)" on vendor contacts, though §4 line 124 does not list vendors.
+    // §5.8 line 232 gives HL "R (a)" on vendor contacts, though §4 line 124 does not list vendors.
     expect(contact(["HL"], "vendors.vendor_contacts")).toBe(true);
     expect(contact(["PM"], VENDORS)).toBe(true);
-    // RG reads the vehicles (§5.11 line 278) but §4 gives RG no contacts.
+    // RG reads the vehicles (§5.11 line 279) but §4 gives RG no contacts.
     expect(contact(["RG"], "rooms.vehicles_transfers_passengers")).toBe(false);
   });
 
-  it("§4 line 127, §5.10 line 264, P-5 line 21: identity documents need break-glass, an explicit grant or check-in", () => {
+  it("§4 line 127, §5.10 line 265, P-5 line 21: identity documents need break-glass, an explicit grant or check-in", () => {
     const identity = (roles: readonly StaffRole[], context: ClassContext = {}) =>
       staffReadableClasses(roles, context).has("RESTRICTED-IDENTITY");
     expect(identity(["SA"])).toBe(false);
@@ -150,19 +150,19 @@ describe("visibility classes", () => {
     ).toBe(false);
   });
 
-  it("§4 lines 120-121, §5.8 line 233: a role that cannot read the record's row gets public fields only", () => {
+  it("§4 lines 120-121, §5.8 line 234: a role that cannot read the record's row gets public fields only", () => {
     const bank = "vendors.vendor_bank_details";
     expect([...staffReadableClasses(["CD"], { resource: bank, assigned: true })]).toEqual([
       "PUBLIC",
     ]);
     expect(staffReadableClasses(["FA"], { resource: bank }).has("RESTRICTED-BANK")).toBe(true);
-    // §5.5 line 194: PM reads project notes on assigned weddings only.
+    // §5.5 line 195: PM reads project notes on assigned weddings only.
     const notes = "projects.project_internal_notes";
     expect([...staffReadableClasses(["PM"], { resource: notes })]).toEqual(["PUBLIC"]);
     expect(staffReadableClasses(["PM"], { resource: notes, assigned: true }).has("INTERNAL")).toBe(
       true,
     );
-    // A conditioned read counts with its facts only (§5.7 line 216, HT "RU hotel lines").
+    // A conditioned read counts with its facts only (§5.7 line 217, HT "RU hotel lines").
     const cost = "budget.budget_lines_internal_cost";
     expect([...staffReadableClasses(["HT"], { resource: cost })]).toEqual(["PUBLIC"]);
     expect(
@@ -171,7 +171,7 @@ describe("visibility classes", () => {
     expect([...staffReadableClasses(["SA"], { resource: "hotels.nowhere" })]).toEqual(["PUBLIC"]);
   });
 
-  it("§6 line 359 over §4 line 126: a client representative never reads SENSITIVE-GUEST", () => {
+  it("§6 line 360 over §4 line 126: a client representative never reads SENSITIVE-GUEST", () => {
     expect([...principalReadableClasses("client")]).toEqual(["PUBLIC", "CLIENT"]);
     expect(principalReadableClasses("client", { ownRow: true }).has("SENSITIVE-GUEST")).toBe(false);
     expect(principalReadableClasses("guest", { ownRow: true }).has("SENSITIVE-GUEST")).toBe(true);

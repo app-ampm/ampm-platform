@@ -1,11 +1,12 @@
 import type { ReactNode } from "react";
 import { useRouter } from "expo-router";
-import type { UseQueryResult } from "@tanstack/react-query";
 
-import { useLeads } from "@ampm/api-client";
-import type { LeadPage } from "@ampm/core";
+import { useLeads, useMe, type CursorListResult } from "@ampm/api-client";
+import type { LeadView } from "@ampm/core";
 import {
+  Button,
   EmptyState,
+  LoadMore,
   QueryErrorState,
   Row,
   Screen,
@@ -16,21 +17,25 @@ import {
 } from "@ampm/ui";
 
 import { useGoToSignIn } from "@/navigation/sign-in";
+import { rolesGrant } from "@/navigation/staff-areas";
 
 import { LeadsBoard } from "./leads-board";
 import { LeadsList } from "./leads-list";
 import { isOpenLead } from "./sales.format";
+
+/** The lead-funnel report key (§5.16): Sales and the Super Admin only, so the Funnel link is theirs. */
+const FUNNEL_PERMISSION = "reports.lead_source_conversion_funnel.read";
 
 export interface LeadsListScreenProps {
   /** The app's tab bar (the route supplies it); the screen keeps room for it at the end. */
   readonly tabBar?: ReactNode;
 }
 
-/** "Leads and clients · 24 open", with a "+" while more pages wait beyond the loaded one. */
-function pipelineEyebrow(page: LeadPage | undefined): string {
-  if (!page) return "Leads and clients";
-  const open = page.items.filter((lead) => isOpenLead(lead.status)).length;
-  return `Leads and clients · ${open}${page.nextCursor ? "+" : ""} open`;
+/** "Leads and clients · 24 open", with a "+" while more pages wait beyond the loaded ones. */
+function pipelineEyebrow(leads: CursorListResult<LeadView>): string {
+  if (leads.isPending) return "Leads and clients";
+  const open = leads.items.filter((lead) => isOpenLead(lead.status)).length;
+  return `Leads and clients · ${open}${leads.hasMore ? "+" : ""} open`;
 }
 
 /** Skeletons in the shape the leads will take: three columns on the board, rows on a phone. */
@@ -54,7 +59,7 @@ function LeadsLoading({ isBoard }: { readonly isBoard: boolean }) {
 }
 
 interface BodyProps {
-  readonly leads: UseQueryResult<LeadPage>;
+  readonly leads: CursorListResult<LeadView>;
   readonly isBoard: boolean;
   readonly onOpen: (leadId: string) => void;
 }
@@ -66,7 +71,7 @@ function LeadsBody({ leads, isBoard, onOpen }: BodyProps) {
     return (
       <QueryErrorState
         error={leads.error}
-        onRetry={() => void leads.refetch()}
+        onRetry={leads.refetch}
         onSignIn={goToSignIn}
         signIn={{
           title: "Sign in to view leads",
@@ -75,7 +80,7 @@ function LeadsBody({ leads, isBoard, onOpen }: BodyProps) {
       />
     );
   }
-  if (leads.data.items.length === 0) {
+  if (leads.items.length === 0) {
     return (
       <EmptyState
         icon="inbox"
@@ -84,10 +89,21 @@ function LeadsBody({ leads, isBoard, onOpen }: BodyProps) {
       />
     );
   }
-  return isBoard ? (
-    <LeadsBoard leads={leads.data.items} onOpen={onOpen} />
-  ) : (
-    <LeadsList leads={leads.data.items} onOpen={onOpen} />
+  return (
+    <Stack gap={4}>
+      {isBoard ? (
+        <LeadsBoard leads={leads.items} onOpen={onOpen} />
+      ) : (
+        <LeadsList leads={leads.items} onOpen={onOpen} />
+      )}
+      <LoadMore
+        hasMore={leads.hasMore}
+        loading={leads.isLoadingMore}
+        failed={leads.loadMoreError}
+        onLoadMore={leads.loadMore}
+        testID="leads-load-more"
+      />
+    </Stack>
   );
 }
 
@@ -101,12 +117,44 @@ function LeadsBody({ leads, isBoard, onOpen }: BodyProps) {
 export function LeadsListScreen({ tabBar }: LeadsListScreenProps) {
   const router = useRouter();
   const leads = useLeads();
+  const me = useMe();
   const isBoard = useBreakpoint().atLeast("md");
+  const canRunFunnel = me.data ? rolesGrant(me.data.roles, FUNNEL_PERMISSION) : false;
   const openLead = (id: string): void => router.push({ pathname: "/leads/[id]", params: { id } });
   return (
     <Screen
+      width="wide"
       tabBar={tabBar}
-      header={<ScreenHeader eyebrow={pipelineEyebrow(leads.data)} title="Pipeline" />}
+      header={
+        <ScreenHeader
+          eyebrow={pipelineEyebrow(leads)}
+          title="Pipeline"
+          trailing={
+            <Row gap={2}>
+              {canRunFunnel ? (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  icon="filter"
+                  onPress={() => router.push("/leads/funnel")}
+                  testID="leads-funnel-link"
+                >
+                  Funnel
+                </Button>
+              ) : null}
+              <Button
+                variant="secondary"
+                size="sm"
+                icon="briefcase"
+                onPress={() => router.push("/leads/accounts")}
+                testID="leads-clients-link"
+              >
+                Clients
+              </Button>
+            </Row>
+          }
+        />
+      }
     >
       <LeadsBody leads={leads} isBoard={isBoard} onOpen={openLead} />
     </Screen>

@@ -79,6 +79,18 @@ export function activityLabel(type: LeadActivityType): string {
   return ACTIVITY_LABEL[type];
 }
 
+/**
+ * The funnel stage "Advance" moves an open lead to, or `null` where there is no linear next move: at
+ * `follow_up` the lead is converted (its own gold action) or closed, and a terminal lead cannot move. The
+ * server's status machine is the authority; this offers only a valid forward transition — but a move past
+ * `new` also needs an owner (OWNED_STATUSES), which the caller gates before showing Advance.
+ */
+export function nextLeadStatus(status: LeadStatus): LeadStatus | null {
+  const index = PIPELINE_STATUSES.indexOf(status);
+  if (index < 0 || index >= PIPELINE_STATUSES.indexOf("follow_up")) return null;
+  return PIPELINE_STATUSES[index + 1] ?? null;
+}
+
 /** What the list says about a lead after its name: its stage and the flags Sales acts on. */
 export function leadSummary(lead: LeadView): string {
   return [

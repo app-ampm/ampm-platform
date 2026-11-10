@@ -82,6 +82,16 @@ const fields = z.object({
   STORAGE_PROVIDER: z.enum(["local", "s3"]).default("local"),
   STORAGE_LOCAL_DIR: z.string().min(1).default(".storage"),
   MEDIA_SIGNING_SECRET: z.string().min(32).optional(),
+  /**
+   * Allows `STORAGE_PROVIDER=local` in production for the single-VPS deployment where STORAGE_LOCAL_DIR is
+   * a persistent, backed-up host volume (D-106; infra.md). Off by default so the local store is never
+   * shipped to production by accident; when on, MEDIA_SIGNING_SECRET is required to sign download URLs. The
+   * cloud path (`STORAGE_PROVIDER=s3`, feature 6.4) supersedes this when AMPM moves off the single box.
+   */
+  STORAGE_LOCAL_PERSISTENT: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((value) => value === "true"),
 });
 
 type EnvFields = z.infer<typeof fields>;
@@ -236,15 +246,32 @@ function proxyIssues(value: EnvFields): EnvIssue[] {
   return [];
 }
 
-/** Media store: the local filesystem store is refused in production; the S3 bucket arrives in feature 6.4. */
+/**
+ * Media store in production. The S3 bucket + CDN (feature 6.4) is the default. The local filesystem store
+ * is also allowed, but only for the single-VPS deployment and only deliberately: STORAGE_LOCAL_PERSISTENT
+ * must confirm STORAGE_LOCAL_DIR is a persistent, backed-up host volume (D-106, infra.md), and
+ * MEDIA_SIGNING_SECRET must be set so the 15-minute download URLs are signed. Without the opt-in the local
+ * store stays refused in production, so it is never shipped there by accident.
+ */
 function storageIssues(value: EnvFields): EnvIssue[] {
-  if (value.NODE_ENV === "production" && value.STORAGE_PROVIDER === "local") {
+  if (value.NODE_ENV !== "production" || value.STORAGE_PROVIDER !== "local") return [];
+  if (!value.STORAGE_LOCAL_PERSISTENT) {
     return [
       {
         path: ["STORAGE_PROVIDER"],
         message:
-          "the local filesystem media store is development and staging only; production serves media " +
-          "from the S3 bucket and CDN (feature 6.4)",
+          "the local filesystem media store is refused in production unless STORAGE_LOCAL_PERSISTENT=true " +
+          "confirms STORAGE_LOCAL_DIR is a persistent, backed-up volume (single-VPS deployment, D-106); " +
+          "otherwise serve media from the S3 bucket and CDN (feature 6.4)",
+      },
+    ];
+  }
+  if (!value.MEDIA_SIGNING_SECRET) {
+    return [
+      {
+        path: ["MEDIA_SIGNING_SECRET"],
+        message:
+          "required with the local media store in production: it signs the 15-minute download URLs",
       },
     ];
   }

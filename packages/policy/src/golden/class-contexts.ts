@@ -26,7 +26,7 @@ export interface ClassGolden {
  * A context read through one row of §5, with the facts the row's cell needs.
  *
  * @example
- * on(ROWS.functions, { assigned: true, fields: ["theme"] }); // CD's §5.6 cell, line 203
+ * on(ROWS.functions, { assigned: true, fields: ["theme"] }); // CD's §5.6 cell, line 204
  */
 export const on = (resource: string, facts: ClassContext = {}): ClassContext => ({
   ...facts,

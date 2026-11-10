@@ -65,6 +65,10 @@ export const hotelView = z
     totalRooms: z.number().int().nullable(),
     streetViewRef: z.string().nullable(), // map / street-view reference (Q9; data-model.md §5)
     lastVerifiedAt: isoDateTime.nullable(), // freshness label (data-model.md §5)
+    // A short-lived signed link to a thumbnail of the hotel's primary client-visible image (the card
+    // cover) — the same gated derivative the detail gallery serves, never an object key (security.md).
+    // Null when the hotel has no client-eligible image, or in the media-free compare projection.
+    coverUrl: z.string().nullable(),
   })
   .strict();
 export type HotelView = z.infer<typeof hotelView>;
@@ -99,16 +103,72 @@ export const hotelRatesView = z
   .strict();
 export type HotelRatesView = z.infer<typeof hotelRatesView>;
 
+/** Function/event venue kinds (HotelVenueType in the Prisma schema; keep the two in step). */
+export const hotelVenueType = z.enum([
+  "ballroom",
+  "lawn",
+  "poolside",
+  "rooftop",
+  "courtyard",
+  "beach",
+  "other",
+]);
+export type HotelVenueType = z.infer<typeof hotelVenueType>;
+
+/** A free-text list of amenities a client sees on a venue or room (facilities_json; read-only output). */
+const facilitiesClientView = z.array(z.string());
+
 /**
- * The hotel detail (CP-05): the discovery card, its indicative freshness-labelled pricing, the
- * client-visible gallery, and the consented previous-wedding references. `gallery` holds only the media
- * at or below the caller's visibility level (AC-24.4), each a signed link to a metadata-stripped
- * derivative — never an object key (security.md). `references` holds only the `client_visible` references
- * whose consent is on file (GP-20), each the social-proof content alone (no internal project/consent key).
+ * A function/event venue a client sees on the hotel detail (CP-05 "Venues"): its kind, whether it is
+ * indoor, its area and its seated/standing capacities, the amenities and a short note. Every field is
+ * descriptive (PUBLIC/CLIENT) — a venue carries no restricted field — and strict so nothing can leak.
+ */
+export const hotelVenueClientView = z
+  .object({
+    id: uuid,
+    name: z.string(),
+    venueType: hotelVenueType,
+    isIndoor: z.boolean(),
+    areaSqm: z.number().int().nullable(),
+    capacityBanquet: z.number().int().nullable(),
+    capacityTheatre: z.number().int().nullable(),
+    capacityReception: z.number().int().nullable(),
+    facilities: facilitiesClientView.nullable(),
+    description: z.string().nullable(),
+  })
+  .strict();
+export type HotelVenueClientView = z.infer<typeof hotelVenueClientView>;
+
+/**
+ * A room category a client sees on the hotel detail (CP-05 "Rooms"): its name, the number of rooms, the
+ * maximum occupancy, the size, the amenities and a short note. All descriptive (PUBLIC/CLIENT), strict.
+ */
+export const hotelRoomClientView = z
+  .object({
+    id: uuid,
+    name: z.string(),
+    roomCount: z.number().int().nullable(),
+    maxOccupancy: z.number().int().nullable(),
+    sizeSqm: z.number().int().nullable(),
+    facilities: facilitiesClientView.nullable(),
+    description: z.string().nullable(),
+  })
+  .strict();
+export type HotelRoomClientView = z.infer<typeof hotelRoomClientView>;
+
+/**
+ * The hotel detail (CP-05): the discovery card, its indicative freshness-labelled pricing, the venues and
+ * room categories a planner weighs, the client-visible gallery, and the consented previous-wedding
+ * references. `gallery` holds only the media at or below the caller's visibility level (AC-24.4), each a
+ * signed link to a metadata-stripped derivative — never an object key (security.md). `references` holds
+ * only the `client_visible` references whose consent is on file (GP-20), each the social-proof content
+ * alone (no internal project/consent key).
  */
 export const hotelDetailView = hotelView
   .extend({
     rates: hotelRatesView,
+    venues: z.array(hotelVenueClientView),
+    rooms: z.array(hotelRoomClientView),
     gallery: z.array(mediaGalleryItem),
     references: z.array(weddingReferenceClientItem),
   })
@@ -122,6 +182,10 @@ export type HotelDetailView = z.infer<typeof hotelDetailView>;
  */
 export const hotelCompareItem = hotelView.extend({ rates: hotelRatesView }).strict();
 export type HotelCompareItem = z.infer<typeof hotelCompareItem>;
+
+/** A compare request holds 2 to 4 distinct saved hotels (CP-06); the client picker and screen share these. */
+export const HOTEL_COMPARE_MIN = 2;
+export const HOTEL_COMPARE_MAX = 4;
 
 /**
  * Compare a handful of the caller's saved hotels by id (CP-06). `ids` is a comma-separated list of 2 to 4
@@ -144,8 +208,8 @@ export const hotelCompareQuery = z
       .pipe(
         z
           .array(uuid)
-          .min(2)
-          .max(4)
+          .min(HOTEL_COMPARE_MIN)
+          .max(HOTEL_COMPARE_MAX)
           .refine((ids) => new Set(ids).size === ids.length, {
             message: "hotel ids must be distinct",
           }),

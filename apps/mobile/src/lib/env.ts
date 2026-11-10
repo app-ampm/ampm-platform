@@ -15,6 +15,8 @@ const schema = z.object({
   EXPO_PUBLIC_COGNITO_CLIENT_ID: z.string().optional(),
   /** Development only: a local access token until the sign-in screens arrive (sprint 2). */
   EXPO_PUBLIC_DEV_ACCESS_TOKEN: z.string().optional(),
+  /** "true" on the demo/test deploy so the app shows the demo banner; unset in a real build. */
+  EXPO_PUBLIC_DEMO: z.string().optional(),
 });
 
 /**
@@ -31,4 +33,5 @@ export const env = parseEnv(schema, {
   EXPO_PUBLIC_COGNITO_USER_POOL_ID: process.env.EXPO_PUBLIC_COGNITO_USER_POOL_ID,
   EXPO_PUBLIC_COGNITO_CLIENT_ID: process.env.EXPO_PUBLIC_COGNITO_CLIENT_ID,
   EXPO_PUBLIC_DEV_ACCESS_TOKEN: __DEV__ ? process.env.EXPO_PUBLIC_DEV_ACCESS_TOKEN : undefined,
+  EXPO_PUBLIC_DEMO: process.env.EXPO_PUBLIC_DEMO,
 });

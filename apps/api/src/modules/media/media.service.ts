@@ -153,6 +153,39 @@ export class MediaService {
     return rows.filter(isGalleryReady).map((row) => this.toGalleryItem(row));
   }
 
+  /**
+   * One signed cover thumbnail per owner for a page of owners (card thumbnails; the Module C hotel list and
+   * shortlist, feature 9.4). The cover is the owner's primary client-visible image — the lowest-sortOrder
+   * clean, rights-cleared image at or below the audience's level (AC-24.4), the same photo and gate the
+   * detail gallery's first tile uses — as a short-lived signed thumbnail link. Resolved in one batched read,
+   * so a list of hotels costs a single media query, never one per card. An owner with no eligible image is
+   * absent from the map, and its card falls back to the placeholder. No object key crosses the boundary.
+   */
+  async clientCovers(
+    ownerType: MediaOwnerType,
+    ownerIds: readonly string[],
+    audience: "client" | "demo",
+  ): Promise<Map<string, string>> {
+    if (ownerIds.length === 0) return new Map();
+    const visibilities = audience === "demo" ? DEMO_VISIBILITIES : CLIENT_VISIBILITIES;
+    const rows = await this.repo.listCovers(
+      ownerType,
+      [...new Set(ownerIds)],
+      [...visibilities],
+      [...PUBLISHABLE_RIGHTS],
+    );
+    const covers = new Map<string, string>();
+    for (const row of rows) {
+      // The WHERE already excludes a null thumbnail key; this guard keeps the type honest (no `as`, api.md).
+      if (row.thumbnailKey === null) continue;
+      covers.set(
+        row.ownerId,
+        this.storage.signDownloadUrl(row.thumbnailKey, DOWNLOAD_TTL_SECONDS).url,
+      );
+    }
+    return covers;
+  }
+
   async update(
     id: string,
     patch: MediaAssetUpdateRequest,

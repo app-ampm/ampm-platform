@@ -10,7 +10,7 @@ import { FIELD_GROUPS, SUBJECTS, VIEWS } from "../conditions";
 import { refusedVariants } from "./facts";
 
 describe("refusedVariants", () => {
-  it("§5.9 line 249: 'hotel threads' is refused widened by every other subject, guest included", () => {
+  it("§5.9 line 250: 'hotel threads' is refused widened by every other subject, guest included", () => {
     const variants = refusedVariants({ subjects: ["hotel"] });
     expect(variants).toContainEqual({ subjects: [] });
     for (const subject of SUBJECTS.filter((candidate) => candidate !== "hotel")) {
@@ -18,7 +18,7 @@ describe("refusedVariants", () => {
     }
   });
 
-  it("§5.9 line 251, §5.6 line 203: a list of several values is widened by each value it leaves out", () => {
+  it("§5.9 line 252, §5.6 line 204: a list of several values is widened by each value it leaves out", () => {
     const designs = refusedVariants({ subjects: ["design", "invitation"] });
     expect(designs).toContainEqual({ subjects: ["design", "invitation", "guest"] });
     const listed: readonly string[] = ["theme", "dress_code"];
@@ -29,7 +29,7 @@ describe("refusedVariants", () => {
     }
   });
 
-  it("§6 line 358: the view is left out and changed to every other view; the side likewise", () => {
+  it("§6 line 359: the view is left out and changed to every other view; the side likewise", () => {
     const summary = refusedVariants({ view: "summary", checks: ["approved"] });
     expect(summary).toContainEqual({ view: undefined, checks: ["approved"] });
     expect(summary).toContainEqual({ view: "summary", checks: [] });

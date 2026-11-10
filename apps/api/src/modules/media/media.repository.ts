@@ -3,6 +3,7 @@ import type {
   MediaAssetCreateRequest,
   MediaAssetUpdateRequest,
   MediaListQuery,
+  MediaRightsStatus,
   MediaScanStatus,
   MediaVisibility,
 } from "@ampm/core";
@@ -51,6 +52,18 @@ const GALLERY_SELECT = {
 } as const satisfies Prisma.MediaAssetSelect;
 
 export type MediaGalleryRow = Prisma.MediaAssetGetPayload<{ select: typeof GALLERY_SELECT }>;
+
+/*
+ * The cover projection (card thumbnails): just the owner id to key the result map and the thumbnail key to
+ * sign. Like GALLERY_SELECT the SECRET key never leaves the service. The full client-eligibility gate lives
+ * in the query's WHERE so DISTINCT ON returns exactly one ready cover per owner.
+ */
+const COVER_SELECT = {
+  ownerId: true,
+  thumbnailKey: true,
+} as const satisfies Prisma.MediaAssetSelect;
+
+export type MediaCoverRow = Prisma.MediaAssetGetPayload<{ select: typeof COVER_SELECT }>;
 
 /**
  * How long an upload claim is honoured before it is considered stale and stealable (feature 9.3 slice 5c).
@@ -187,6 +200,38 @@ export class MediaRepository {
       },
       orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
       select: GALLERY_SELECT,
+    });
+  }
+
+  /**
+   * One client-eligible cover image per owner for a page of owners (card thumbnails). The whole GP-20 gate is
+   * pushed into the WHERE — clean, an image, at or below the audience's visibility, publishable rights, and
+   * both derivatives present — so `DISTINCT ON (owner_id)` with the same order listGallery uses returns the
+   * single lowest-sortOrder ready image per owner in one round trip (no N+1 across a list). An owner with no
+   * eligible image is simply absent from the result. The thumbnail key stays in the service, which signs it.
+   */
+  async listCovers(
+    ownerType: MediaAssetRow["ownerType"],
+    ownerIds: string[],
+    visibilities: MediaVisibility[],
+    rights: MediaRightsStatus[],
+  ): Promise<MediaCoverRow[]> {
+    if (ownerIds.length === 0) return [];
+    return this.prisma.mediaAsset.findMany({
+      where: {
+        ownerType,
+        ownerId: { in: ownerIds },
+        deletedAt: null,
+        scanStatus: "clean",
+        kind: "image",
+        visibility: { in: visibilities },
+        rightsStatus: { in: rights },
+        thumbnailKey: { not: null },
+        webKey: { not: null },
+      },
+      orderBy: [{ ownerId: "asc" }, { sortOrder: "asc" }, { id: "asc" }],
+      distinct: ["ownerId"],
+      select: COVER_SELECT,
     });
   }
 

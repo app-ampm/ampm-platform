@@ -20,7 +20,7 @@ export interface GoldenTransition {
   readonly line: number;
   readonly entity: string;
   readonly from: readonly string[];
-  /** "previous" restores the status saved before the hold (line 421). */
+  /** "previous" restores the status saved before the hold (line 422). */
   readonly to: readonly string[] | "previous";
   /** The record kind a parenthesised qualifier limits the row to ("answered (question)"). */
   readonly kind?: string;

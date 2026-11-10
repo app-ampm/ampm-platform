@@ -48,7 +48,7 @@ export function FieldNotesScreen({ tabBar }: FieldNotesScreenProps) {
   };
 
   return (
-    <Screen width="content" tabBar={tabBar} header={<FieldNotesHeader controller={controller} />}>
+    <Screen width="wide" tabBar={tabBar} header={<FieldNotesHeader controller={controller} />}>
       <SyncBanner
         isOnline={controller.isOnline}
         pendingCount={controller.pendingCount}

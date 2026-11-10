@@ -4,6 +4,8 @@ import type {
   HotelCompareItem,
   HotelDetailView,
   HotelRatesView,
+  HotelRoomClientView,
+  HotelVenueClientView,
   HotelView,
   MediaGalleryItem,
   SavedHotelView,
@@ -23,7 +25,7 @@ import type {
  * view, so TypeScript rejects any extra field — the structural guarantee, alongside the repository's
  * CLIENT-only select, that no RESTRICTED hotel field can reach a client (security.md).
  */
-export function toHotelView(row: HotelRow): HotelView {
+export function toHotelView(row: HotelRow, coverUrl: string | null): HotelView {
   return {
     id: row.id,
     slug: row.slug,
@@ -44,13 +46,17 @@ export function toHotelView(row: HotelRow): HotelView {
     totalRooms: row.totalRooms,
     streetViewRef: row.streetViewRef,
     lastVerifiedAt: row.lastVerifiedAt ? row.lastVerifiedAt.toISOString() : null,
+    // A signed cover thumbnail resolved through Module N (or null) — never read from the hotel row, which
+    // carries no media (the C→N boundary). The caller passes it in: a batched cover for the list/shortlist,
+    // the gallery's first image for the detail, null for the media-free compare.
+    coverUrl,
   };
 }
 
-export function toSavedHotelView(row: SavedHotelRow): SavedHotelView {
+export function toSavedHotelView(row: SavedHotelRow, coverUrl: string | null): SavedHotelView {
   return {
     id: row.id,
-    hotel: toHotelView(row.hotel),
+    hotel: toHotelView(row.hotel, coverUrl),
     note: row.note,
     savedAt: row.createdAt.toISOString(),
   };
@@ -70,6 +76,44 @@ export function toDestinationBrowseItem(row: DestinationBrowseRow): DestinationB
 }
 
 type DetailCard = HotelDetailRow["rateCards"][number];
+type DetailVenue = HotelDetailRow["venues"][number];
+type DetailRoom = HotelDetailRow["rooms"][number];
+
+/** The facilities_json column (a string array on write) narrowed to the client's string[] — never other JSON. */
+function toFacilities(value: unknown): string[] | null {
+  return Array.isArray(value)
+    ? value.filter((entry): entry is string => typeof entry === "string")
+    : null;
+}
+
+/** A venue row → the client view (CP-05): every column is descriptive, so this is a straight projection. */
+function toVenueClientView(venue: DetailVenue): HotelVenueClientView {
+  return {
+    id: venue.id,
+    name: venue.name,
+    venueType: venue.venueType,
+    isIndoor: venue.isIndoor,
+    areaSqm: venue.areaSqm,
+    capacityBanquet: venue.capacityBanquet,
+    capacityTheatre: venue.capacityTheatre,
+    capacityReception: venue.capacityReception,
+    facilities: toFacilities(venue.facilities),
+    description: venue.description,
+  };
+}
+
+/** A room-category row → the client view (CP-05). */
+function toRoomClientView(room: DetailRoom): HotelRoomClientView {
+  return {
+    id: room.id,
+    name: room.name,
+    roomCount: room.roomCount,
+    maxOccupancy: room.maxOccupancy,
+    sizeSqm: room.sizeSqm,
+    facilities: toFacilities(room.facilities),
+    description: room.description,
+  };
+}
 
 /**
  * The hotel detail: the discovery card, its client-facing freshness-labelled pricing (AC-04), the
@@ -83,7 +127,19 @@ export function toHotelDetailView(
   gallery: MediaGalleryItem[],
   references: WeddingReferenceClientItem[],
 ): HotelDetailView {
-  return { ...toHotelView(row), rates: toRatesView(row.rateCards), gallery, references };
+  return {
+    ...toHotelView(row, coverFromGallery(gallery)),
+    rates: toRatesView(row.rateCards),
+    venues: row.venues.map(toVenueClientView),
+    rooms: row.rooms.map(toRoomClientView),
+    gallery,
+    references,
+  };
+}
+
+/** The card cover is the gallery's first image — the same photo the detail hero shows (the list cover too). */
+function coverFromGallery(gallery: MediaGalleryItem[]): string | null {
+  return gallery.find((item) => item.kind === "image")?.thumbnailUrl ?? null;
 }
 
 /**
@@ -92,7 +148,8 @@ export function toHotelDetailView(
  * carries no RESTRICTED field either — compare stays a light read over the shortlist.
  */
 export function toHotelCompareItem(row: HotelDetailRow): HotelCompareItem {
-  return { ...toHotelView(row), rates: toRatesView(row.rateCards) };
+  // Compare is a deliberately media-free light read (it never touches Module N), so it carries no cover.
+  return { ...toHotelView(row, null), rates: toRatesView(row.rateCards) };
 }
 
 /**

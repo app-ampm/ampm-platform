@@ -16,7 +16,7 @@ import type { PrincipalType, StaffRole } from "./roles";
 export interface ExplicitGrant {
   /**
    * The key, as §10 spells it or as its base key: a scope suffix or a §10 alias of the same row
-   * names the same grant (`guests.identity_documents.read:assigned`, line 547).
+   * names the same grant (`guests.identity_documents.read:assigned`, line 548).
    */
   readonly key: string;
   readonly projectId: string;
@@ -34,7 +34,7 @@ export interface PolicyPrincipal {
   readonly roles?: readonly StaffRole[] | undefined;
   /** Projects the principal is an active member of; for a guest token, the wedding of its link. */
   readonly projectIds?: readonly string[] | undefined;
-  /** Client accounts a client principal belongs to: "own" is its wedding or account (§6 line 338). */
+  /** Client accounts a client principal belongs to: "own" is its wedding or account (§6 line 339). */
   readonly accountIds?: readonly string[] | undefined;
   readonly explicitGrants?: readonly ExplicitGrant[] | undefined;
   /**
@@ -217,7 +217,7 @@ export function decideBeforeRead(
  * The read key of the record a key acts on (record-rows.ts recordRowOf): its own row's, its
  * table's for a class of a record's columns, the record's for a decision no role reads; null for a
  * key that names no row or a decision on no one row's record. A principal who holds it may see the
- * records, so a refused action on them is a 403, not a 404 (test-cases.md line 212).
+ * records, so a refused action on them is a 403, not a 404 (test-cases.md line 213).
  *
  * @example
  * readKeyFor("tasks.incidents.update:assigned"); // "tasks.incidents.read"

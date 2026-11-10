@@ -3,14 +3,21 @@ import { useState, type ReactNode } from "react";
 
 import { useHotels, useMe } from "@ampm/api-client";
 import type { HotelDestinationView } from "@ampm/core";
-import { Button, EmptyState, Input, QueryErrorState, Screen, ScreenHeader } from "@ampm/ui";
+import { Button, EmptyState, Input, QueryErrorState, Row, Screen, ScreenHeader } from "@ampm/ui";
 
 import { useGoToSignIn } from "@/navigation/sign-in";
 
 import { canBrowseHotels } from "../portal/portal.format";
 import { DestinationFilter } from "./destination-filter";
+import { HotelFilterBar } from "./hotel-filters";
 import { HotelResults, HotelResultsLoading } from "./hotel-results";
-import { DISCOVERY_CLOSED, DISCOVERY_SIGN_IN, destinationOptions } from "./hotels.format";
+import {
+  activeFilterCount,
+  DISCOVERY_CLOSED,
+  DISCOVERY_SIGN_IN,
+  destinationOptions,
+  type HotelFilters,
+} from "./hotels.format";
 
 export interface HotelsScreenProps {
   /** The app's tab bar; the route supplies it and the screen only gives it room. */
@@ -30,9 +37,11 @@ export function HotelsScreen({ tabBar }: HotelsScreenProps) {
   const me = useMe();
   const [destination, setDestination] = useState<Destination>(null);
   const hasShortlist = me.data?.entitlements.modules.includes("saved_hotels") ?? false;
+  const canBrowse = me.data ? canBrowseHotels(me.data) : false;
   const header = (
     <HotelsHeader
       title={destination?.name ?? "Hotels"}
+      onBrowseDestinations={canBrowse ? () => router.push("/hotels/destinations") : undefined}
       onOpenSaved={hasShortlist ? () => router.push("/hotels/saved") : undefined}
     />
   );
@@ -85,7 +94,12 @@ function HotelsBody({ me, destination, onDestination }: HotelsBodyProps) {
 function HotelSearch({ destination, onDestination }: SearchProps) {
   const router = useRouter();
   const [q, setQ] = useState("");
-  const hotels = useHotels({ q: q.trim() || undefined, destinationId: destination?.id });
+  const [filters, setFilters] = useState<HotelFilters>({});
+  const hotels = useHotels({
+    q: q.trim() || undefined,
+    destinationId: destination?.id,
+    ...filters,
+  });
   return (
     <>
       <Input
@@ -101,9 +115,12 @@ function HotelSearch({ destination, onDestination }: SearchProps) {
         selected={destination}
         onChange={onDestination}
       />
+      <HotelFilterBar value={filters} onChange={setFilters} />
       <HotelResults
         hotels={hotels}
         onOpen={(id) => router.push({ pathname: "/hotels/[id]", params: { id } })}
+        filtersActive={activeFilterCount(filters) > 0}
+        onClearFilters={() => setFilters({})}
       />
     </>
   );
@@ -111,22 +128,35 @@ function HotelSearch({ destination, onDestination }: SearchProps) {
 
 interface HotelsHeaderProps {
   readonly title: string;
+  /** Opens the destinations browse; absent for an account that may not browse discovery. */
+  readonly onBrowseDestinations: (() => void) | undefined;
   /** Opens the shortlist; without it (no shortlist on the account) the button stays out. */
   readonly onOpenSaved: (() => void) | undefined;
 }
 
-/** Titled by the chosen destination, as P3 heads its results ("Udaipur"), the shortlist at its right. */
-function HotelsHeader({ title, onOpenSaved }: HotelsHeaderProps) {
+/** Titled by the chosen destination, as P3 heads its results; browse-by-destination and the shortlist at its right. */
+function HotelsHeader({ title, onBrowseDestinations, onOpenSaved }: HotelsHeaderProps) {
   return (
     <ScreenHeader
       eyebrow="Hotel discovery"
       title={title}
       trailing={
-        onOpenSaved ? (
-          <Button variant="glass" size="sm" icon="heart" onPress={onOpenSaved}>
-            Saved
-          </Button>
-        ) : undefined
+        <Row gap={2}>
+          {onBrowseDestinations ? (
+            <Button
+              variant="glass"
+              size="sm"
+              icon="map-pin"
+              onPress={onBrowseDestinations}
+              accessibilityLabel="Browse destinations"
+            />
+          ) : null}
+          {onOpenSaved ? (
+            <Button variant="glass" size="sm" icon="heart" onPress={onOpenSaved}>
+              Saved
+            </Button>
+          ) : null}
+        </Row>
       }
     />
   );

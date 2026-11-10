@@ -23,7 +23,7 @@ export type { Breakpoint, BreakpointInfo } from "./hooks/use-breakpoint";
 export { useReducedMotion } from "./hooks/use-reduced-motion";
 export { useGlassBlur } from "./hooks/use-glass-blur";
 export { useIsClient } from "./hooks/use-is-client";
-export { announcementText, useAnnounce } from "./hooks/use-announce";
+export { announcementText, politeLiveRegion, useAnnounce } from "./hooks/use-announce";
 export { uiCopy } from "./copy";
 
 // Foundations: type, glass, the glow behind a screen, icons, layout.
@@ -44,6 +44,8 @@ export * from "./components/input";
 export * from "./components/otp-input";
 export * from "./components/toggle";
 export * from "./components/checkbox";
+export * from "./components/select";
+export * from "./components/date-range-field";
 
 // Status and progress.
 export * from "./components/status-chip";
@@ -54,6 +56,8 @@ export * from "./components/stepper";
 // Surfaces and content.
 export * from "./components/card";
 export * from "./components/list-item";
+export * from "./components/data-table";
+export * from "./components/load-more";
 export * from "./components/internal-panel";
 export * from "./components/stat";
 export * from "./components/avatar";
@@ -70,7 +74,9 @@ export * from "./components/empty-state";
 export * from "./components/error-state";
 export * from "./components/offline-state";
 export * from "./components/query-error-state";
+export * from "./components/section-error";
 export * from "./components/sheet";
+export * from "./components/confirm-sheet";
 export * from "./components/toast";
 
 // Screen scaffold and navigation.

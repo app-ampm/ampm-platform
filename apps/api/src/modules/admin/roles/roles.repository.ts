@@ -37,6 +37,8 @@ export abstract class RolesRepository {
   ): Promise<void>;
   abstract findById(id: string): Promise<RoleRow | null>;
   abstract listCustom(): Promise<RoleRow[]>;
+  /** Every live role, system first — the read model for assignment and the permissions viewer. */
+  abstract listAll(): Promise<RoleRow[]>;
   abstract userIdsWithRole(roleId: string): Promise<string[]>;
   abstract assign(userId: string, roleId: string, client: Prisma.TransactionClient): Promise<void>;
   abstract unassign(
@@ -143,6 +145,18 @@ export class PrismaRolesRepository extends RolesRepository {
     const roles = await this.prisma.role.findMany({
       where: { isSystem: false, deletedAt: null },
       orderBy: { createdAt: "asc" },
+      select: { id: true, roleKey: true, name: true, isSystem: true, ...WITH_GRANTS },
+    });
+    return roles.map(toRow);
+  }
+
+  async listAll(): Promise<RoleRow[]> {
+    // System roles first (they are seeded in matrix order), then custom roles oldest-first; a system
+    // role carries no grant rows, so its capabilityKeys come back empty and the service resolves them
+    // from the matrix catalog instead.
+    const roles = await this.prisma.role.findMany({
+      where: { deletedAt: null },
+      orderBy: [{ isSystem: "desc" }, { createdAt: "asc" }],
       select: { id: true, roleKey: true, name: true, isSystem: true, ...WITH_GRANTS },
     });
     return roles.map(toRow);

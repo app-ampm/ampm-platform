@@ -16,9 +16,24 @@ export interface RequestOptions<T> {
   readonly signal?: AbortSignal | undefined;
 }
 
+export interface UploadOptions<T> {
+  /** The raw bytes to send (a File/Blob on web, or an ArrayBuffer/Uint8Array). */
+  readonly body: BodyInit;
+  /** The content type to send them as; for the media upload path this is `application/octet-stream`. */
+  readonly contentType: string;
+  /** The response schema; the upload still returns the API's `{ data }` envelope. */
+  readonly schema: ZodType<T>;
+  readonly signal?: AbortSignal | undefined;
+}
+
 export interface ApiClient {
   request<T>(path: string, options: RequestOptions<T>): Promise<T>;
   get<T>(path: string, schema: ZodType<T>, signal?: AbortSignal): Promise<T>;
+  /**
+   * POST raw bytes at a chosen content type (the media byte-upload path, AC-20), keeping the Bearer auth
+   * and the `{ data }` envelope response. Unlike {@link request} it does not JSON-encode the body.
+   */
+  upload<T>(path: string, options: UploadOptions<T>): Promise<T>;
 }
 
 /**
@@ -30,22 +45,18 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
   const doFetch = options.fetch ?? fetch;
   const base = options.baseUrl.replace(/\/+$/, "");
 
-  async function request<T>(
-    path: string,
-    { method = "GET", body, schema, signal }: RequestOptions<T>,
-  ): Promise<T> {
+  async function authHeaders(extra: Record<string, string>): Promise<Record<string, string>> {
     const token = options.getAccessToken ? await options.getAccessToken() : null;
-    const headers: Record<string, string> = { accept: "application/json" };
+    const headers: Record<string, string> = { accept: "application/json", ...extra };
     if (token) headers["authorization"] = `Bearer ${token}`;
-    if (body !== undefined) headers["content-type"] = "application/json";
+    return headers;
+  }
+
+  /** Fetch, unwrap the envelope, map a failure to AppError, and validate the data against the schema. */
+  async function run<T>(path: string, init: RequestInit, schema: ZodType<T>): Promise<T> {
     let response: Response;
     try {
-      response = await doFetch(`${base}${path}`, {
-        method,
-        headers,
-        ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-        ...(signal ? { signal } : {}),
-      });
+      response = await doFetch(`${base}${path}`, init);
     } catch {
       throw errors.network();
     }
@@ -63,8 +74,36 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
     return schema.parse(envelope.data);
   }
 
+  async function request<T>(
+    path: string,
+    { method = "GET", body, schema, signal }: RequestOptions<T>,
+  ): Promise<T> {
+    const headers = await authHeaders(
+      body === undefined ? {} : { "content-type": "application/json" },
+    );
+    return run(
+      path,
+      {
+        method,
+        headers,
+        ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+        ...(signal ? { signal } : {}),
+      },
+      schema,
+    );
+  }
+
+  async function upload<T>(
+    path: string,
+    { body, contentType, schema, signal }: UploadOptions<T>,
+  ): Promise<T> {
+    const headers = await authHeaders({ "content-type": contentType });
+    return run(path, { method: "POST", headers, body, ...(signal ? { signal } : {}) }, schema);
+  }
+
   return {
     request,
     get: (path, schema, signal) => request(path, { schema, signal }),
+    upload,
   };
 }

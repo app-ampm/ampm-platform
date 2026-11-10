@@ -1,5 +1,5 @@
 /**
- * Golden table of §6 (docs/permission-matrix.md lines 342-374), written by hand from the document
+ * Golden table of §6 (docs/permission-matrix.md lines 344-375), written by hand from the document
  * and never read from matrix.json: for every row and every column (CR, GU, DP), the actions the
  * cell allows and the facts its note needs, in full. decideReach() must allow each with its facts,
  * refuse it when a fact is missing or a list is widened, and refuse every action the cell does not
@@ -52,75 +52,75 @@ const SUMMARIES: Cell = { read: { view: "summary" } };
 
 const ROWS: readonly Row[] = [
   {
-    line: 342,
+    line: 343,
     label: "Hotel discovery (per entitlement §3)",
     CR: plain("read"),
     DP: { read: { view: "masked" } },
   },
   {
-    line: 343,
+    line: 344,
     label: "Saved hotels and compare",
     CR: CRUD,
     DP: each(["create", "read", "update", "delete"], { checks: ["demo_record"] }),
   },
-  { line: 344, label: "Hotel assistance requests", CR: CRU, DP: ROUTED },
+  { line: 345, label: "Hotel assistance requests", CR: CRU, DP: ROUTED },
   {
-    line: 345,
+    line: 346,
     label: "Enquiry status, non-internal events, site visit dates, client feedback",
     CR: { read: {}, update: { fields: ["feedback"] } },
     DP: SAMPLE,
   },
-  { line: 346, label: "Hotel proposals, client amounts", CR: plain("read", "approve"), DP: SAMPLE },
-  { line: 347, label: "Wedding dashboard, overview, milestones", CR: plain("read"), DP: SAMPLE },
+  { line: 347, label: "Hotel proposals, client amounts", CR: plain("read", "approve"), DP: SAMPLE },
+  { line: 348, label: "Wedding dashboard, overview, milestones", CR: plain("read"), DP: SAMPLE },
   {
-    line: 348,
+    line: 349,
     label: "Family and decision-maker contacts (`account_contacts`)",
     CR: plain("read"),
   },
   {
-    line: 349,
+    line: 350,
     label: "Functions and shared programme",
     CR: plain("read"),
     GU: { read: { checks: ["invited"] } },
     DP: SAMPLE,
   },
   {
-    line: 350,
+    line: 351,
     label: "Client budget: estimate, approved, actual amounts of client-visible lines",
     DP: { read: { checks: ["demo_record"], view: "masked" } },
   },
-  { line: 351, label: "Invoices issued to the client, inbound payments, milestones" },
-  { line: 352, label: "Pay a milestone online (A-2)" },
+  { line: 352, label: "Invoices issued to the client, inbound payments, milestones" },
+  { line: 353, label: "Pay a milestone online (A-2)" },
   {
-    line: 353,
+    line: 354,
     label: "Vendor options, client descriptions, portfolios",
     CR: plain("read"),
     DP: SAMPLE,
   },
   {
-    line: 354,
+    line: 355,
     label: "Vendor decision (interested, shortlisted, selected, declined)",
     CR: plain("update"),
   },
   {
-    line: 355,
+    line: 356,
     label: "Vendor proposals, client amounts",
     CR: plain("read", "approve"),
     DP: SAMPLE,
   },
   {
-    line: 356,
+    line: 357,
     label: "Shared design versions",
     CR: { read: {}, create: { subjects: ["comment"] }, approve: {} },
     DP: SAMPLE,
   },
   {
-    line: 357,
+    line: 358,
     label: "Invitations and save-the-dates, shared versions",
     CR: plain("read", "approve"),
   },
   {
-    line: 358,
+    line: 359,
     label: "Family groups and guests, standard fields",
     CR: { read: { view: "summary", checks: ["approved"] } },
     GU: {
@@ -130,31 +130,31 @@ const ROWS: readonly Row[] = [
     },
   },
   {
-    line: 359,
+    line: 360,
     label: "Guest sensitive fields (allergies, accessibility)",
     GU: plain("read", "update"),
   },
-  { line: 360, label: "Guest internal notes" },
+  { line: 361, label: "Guest internal notes" },
   {
-    line: 361,
+    line: 362,
     label: "Identity documents",
     GU: { create: { checks: ["identity_required"] }, read: { view: "status_only" } },
   },
   {
-    line: 362,
+    line: 363,
     label: "Attendance and RSVP progress",
     CR: SUMMARIES,
     GU: plain("read", "update"),
     DP: SAMPLE,
   },
   {
-    line: 363,
+    line: 364,
     label: "Rooming (own guests)",
     CR: SUMMARIES,
     GU: { read: { checks: ["allocation_confirmed"] } },
   },
   {
-    line: 364,
+    line: 365,
     label: "Travel and transport (own guests)",
     CR: SUMMARIES,
     GU: each(["create", "read", "update"], {
@@ -162,28 +162,28 @@ const ROWS: readonly Row[] = [
       checks: ["travel_requested"],
     }),
   },
-  { line: 365, label: "Menus, shared versions", CR: plain("read", "approve"), DP: SAMPLE },
+  { line: 366, label: "Menus, shared versions", CR: plain("read", "approve"), DP: SAMPLE },
   {
-    line: 366,
+    line: 367,
     label: "Client requests: questions, change requests, support",
     CR: CRU,
     GU: { create: { subjects: ["support_request"] } },
     DP: ROUTED,
   },
-  { line: 367, label: "Approval decisions", CR: plain("approve") },
+  { line: 368, label: "Approval decisions", CR: plain("approve") },
   {
-    line: 368,
+    line: 369,
     label: "Shared documents",
     CR: plain("read"),
     GU: { read: { checks: ["shared_with_guests"] } },
     DP: SAMPLE,
   },
-  { line: 369, label: "Upload documents (signed contract, guest list file)", CR: plain("create") },
-  { line: 370, label: "Tasks flagged client-visible (pending decisions)", CR: plain("read") },
-  { line: 371, label: "Notification preferences", CR: CRUD, DP: CRUD },
-  { line: 372, label: "Feedback after the wedding", CR: plain("create") },
-  { line: 373, label: "Exports" },
-  { line: 374, label: "Live chat (Q20)", CR: CRU, DP: ROUTED },
+  { line: 370, label: "Upload documents (signed contract, guest list file)", CR: plain("create") },
+  { line: 371, label: "Tasks flagged client-visible (pending decisions)", CR: plain("read") },
+  { line: 372, label: "Notification preferences", CR: CRUD, DP: CRUD },
+  { line: 373, label: "Feedback after the wedding", CR: plain("create") },
+  { line: 374, label: "Exports" },
+  { line: 375, label: "Live chat (Q20)", CR: CRU, DP: ROUTED },
 ];
 
 function expectCell(type: ReachPrincipal, label: string, cell: Cell): void {

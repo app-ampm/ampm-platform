@@ -5,8 +5,11 @@
  */
 export const uiCopy = {
   close: "Close",
+  cancel: "Cancel",
   dismiss: "Dismiss",
   retry: "Try again",
+  loadMore: "Load more",
+  loadMoreRetry: "Couldn't load more — tap to retry",
   required: "required",
   callout: {
     indicative: "Indicative",
@@ -95,6 +98,29 @@ export const uiCopy = {
     // "Waiting · 4" (P7, C4); screen readers hear "Waiting, 4" instead of the middle dot.
     withBadge: (label: string, badge: number | string) => `${label} · ${badge}`,
     spokenWithBadge: (label: string, badge: number | string) => `${label}, ${badge}`,
+  },
+  select: {
+    placeholder: "Select…",
+    search: "Search",
+    empty: "No options",
+    noMatches: "No matches",
+  },
+  dateRange: {
+    custom: "Custom range",
+    from: "From",
+    to: "To",
+    datePlaceholder: "YYYY-MM-DD",
+    invalidDate: "Enter the date as YYYY-MM-DD.",
+    apply: "Apply range",
+    orderError: "The end date is before the start date.",
+    presets: {
+      all: "All time",
+      last_7: "Last 7 days",
+      last_30: "Last 30 days",
+      last_90: "Last 90 days",
+      this_month: "This month",
+      this_year: "This year",
+    },
   },
   queryError: {
     // A session that has ended; screens name what the sign-in is for ("Sign in to view leads").

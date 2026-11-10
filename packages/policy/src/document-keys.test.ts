@@ -1,5 +1,5 @@
 /**
- * Golden table of the §10 permission keys (docs/permission-matrix.md lines 537-552), written by
+ * Golden table of the §10 permission keys (docs/permission-matrix.md lines 539-553), written by
  * hand from the document: every key as §10 spells it resolves to its §5 row, and exactly the roles
  * the §5 cells grant hold it. Where §10's holder list differs from §5, the comment says so.
  */
@@ -22,47 +22,47 @@ interface Golden {
 }
 
 const GOLDEN: readonly Golden[] = [
-  { line: 537, key: "hotels.profiles.update", allowed: ["SA", "HT"] },
-  { line: 538, key: "hotels.rate_cards.read", allowed: ["SA", "SM", "HT", "PM", "FA"] },
-  { line: 539, key: "hotels.contacts.read", allowed: ["SA", "SM", "HT", "PM", "HL"] },
-  { line: 540, key: "consultancy.proposals.share", allowed: ["SA", "HT", "PM"] },
+  { line: 538, key: "hotels.profiles.update", allowed: ["SA", "HT"] },
+  { line: 539, key: "hotels.rate_cards.read", allowed: ["SA", "SM", "HT", "PM", "FA"] },
+  { line: 540, key: "hotels.contacts.read", allowed: ["SA", "SM", "HT", "PM", "HL"] },
+  { line: 541, key: "consultancy.proposals.share", allowed: ["SA", "HT", "PM"] },
   {
-    line: 541,
+    line: 542,
     key: "consultancy.proposals.read_internal_amount",
     allowed: ["SA", "HT", "PM", "FA"],
   },
-  // §10 names PM for the scoped key; SA holds the unscoped one (§5.5 line 196).
-  { line: 542, key: "projects.members.update:assigned", allowed: ["SA", "PM"] },
-  // The scope suffix does not change the row: lines 543 and 544 decide alike (§5.7 line 216; HT
+  // §10 names PM for the scoped key; SA holds the unscoped one (§5.5 line 197).
+  { line: 543, key: "projects.members.update:assigned", allowed: ["SA", "PM"] },
+  // The scope suffix does not change the row: lines 544 and 544 decide alike (§5.7 line 217; HT
   // and VC hold it for their side's lines only).
-  { line: 543, key: "budget.lines.read_internal_cost:assigned", allowed: ["SA", "PM", "FA"] },
-  { line: 544, key: "budget.lines.read_internal_cost", allowed: ["SA", "PM", "FA"] },
-  // §5.7 line 218 also gives PM "R (a)", which §10's holder list leaves out.
-  { line: 545, key: "vendors.quotes.read", allowed: ["SA", "PM", "VC", "FA"] },
-  { line: 546, key: "approvals.decisions.create_on_behalf:assigned", allowed: ["SA", "PM"] },
+  { line: 544, key: "budget.lines.read_internal_cost:assigned", allowed: ["SA", "PM", "FA"] },
+  { line: 545, key: "budget.lines.read_internal_cost", allowed: ["SA", "PM", "FA"] },
+  // §5.7 line 219 also gives PM "R (a)", which §10's holder list leaves out.
+  { line: 546, key: "vendors.quotes.read", allowed: ["SA", "PM", "VC", "FA"] },
+  { line: 547, key: "approvals.decisions.create_on_behalf:assigned", allowed: ["SA", "PM"] },
   {
-    line: 547,
+    line: 548,
     key: "guests.identity_documents.read:assigned",
     allowed: ["RG", "HL"],
     facts: { checks: ["check_in"] },
     grant: true,
   },
   {
-    line: 548,
+    line: 549,
     key: "guests.identity_documents.read",
     allowed: ["SA"],
     facts: { checks: ["break_glass"] },
   },
-  { line: 549, key: "guests.sensitive.read:assigned", allowed: ["SA", "PM", "RG", "HL"] },
-  // §10 still names PM; §5.6 line 207 (Q10) leaves the authorisation to SA alone (AC-13.2).
-  { line: 550, key: "functions.readiness.authorise_exception:assigned", allowed: ["SA"] },
+  { line: 550, key: "guests.sensitive.read:assigned", allowed: ["SA", "PM", "RG", "HL"] },
+  // §10 still names PM; §5.6 line 208 (Q10) leaves the authorisation to SA alone (AC-13.2).
+  { line: 551, key: "functions.readiness.authorise_exception:assigned", allowed: ["SA"] },
   {
-    line: 551,
+    line: 552,
     key: "projects.close:assigned",
     allowed: ["SA", "PM"],
     facts: { checks: ["closure_ready"] },
   },
-  { line: 552, key: "reports.budget_internal.export", allowed: ["SA", "FA"] },
+  { line: 553, key: "reports.budget_internal.export", allowed: ["SA", "FA"] },
 ];
 
 function member(role: StaffRole, golden: Golden): PolicyPrincipal {
@@ -78,7 +78,7 @@ function allowedRoles(golden: Golden): StaffRole[] {
 }
 
 describe("§10 permission keys as the document spells them", () => {
-  it("§10 lines 537-552: the golden table has every key of the document, in order", () => {
+  it("§10 lines 539-553: the golden table has every key of the document, in order", () => {
     const document = documentTableRows("## 10.", "## 11.");
     expect(GOLDEN.map((golden) => [golden.line, `\`${golden.key}\``])).toEqual(
       document.map((row) => [row.line, row.cells[0]]),

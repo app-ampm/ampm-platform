@@ -4,6 +4,7 @@ import {
   errors,
   isConfigKey,
   type ConfigKey,
+  type ConfigListView,
   type ConfigView,
   type ConsultancyChargeablePolicy,
   type ConsultancyMilestoneVisibilityPolicy,
@@ -48,6 +49,36 @@ export class ConfigService {
   get(key: "consultancy.chargeable_services"): Promise<ConsultancyChargeablePolicy>;
   get(key: "consultancy.milestone_amounts_visible"): Promise<ConsultancyMilestoneVisibilityPolicy>;
   async get(key: ConfigKey): Promise<unknown> {
+    return this.resolve(key);
+  }
+
+  /**
+   * Reads one configuration value for the admin console (`GET /admin/configurations/:key`): an unknown
+   * key is absence (404), a known key is loaded, schema-checked and returned as its `{ key, value }`
+   * view. Not audited — configuration values are not restricted (a Super Admin or Finance reads any key;
+   * `admin.configurations.read`). Writes stay Super-Admin only (`admin.configurations.update`).
+   */
+  async read(key: string): Promise<ConfigView> {
+    if (!isConfigKey(key)) throw errors.notFound("Unknown configuration key");
+    return { key, value: await this.resolve(key) };
+  }
+
+  /**
+   * Reads every configuration key for the admin inventory (`GET /admin/configurations`): each registry
+   * key is resolved, schema-checked and returned as its `{ key, value }` view. The registry is a fixed,
+   * small set behind a five-minute cache, so the keys resolve together and the list is returned whole.
+   * Not audited — the same read right as a single key (`admin.configurations.read`; Super Admin, Finance).
+   */
+  async list(): Promise<ConfigListView> {
+    const keys = Object.keys(CONFIG_REGISTRY) as ConfigKey[];
+    const entries = await Promise.all(
+      keys.map(async (key) => ({ key, value: await this.resolve(key) })),
+    );
+    return { entries };
+  }
+
+  /** Loads a known key from the cache or its row, validates it against the key's schema, and returns it. */
+  private async resolve(key: ConfigKey): Promise<unknown> {
     const cached = this.cache.get(key);
     const raw = cached !== undefined ? cached : await this.load(key);
     const parsed = CONFIG_REGISTRY[key].schema.safeParse(raw);

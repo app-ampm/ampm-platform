@@ -1,4 +1,4 @@
-import { Text } from "react-native";
+import { AccessibilityInfo, Text } from "react-native";
 
 import type { HotelView, MeResponse } from "@ampm/core";
 import { uiCopy } from "@ampm/ui";
@@ -7,6 +7,7 @@ import { fireEvent, screen, waitFor } from "../../test/render";
 import { HotelsScreen } from "./hotels-screen";
 import {
   clientMe,
+  COVER_URL,
   fail,
   fakeApi,
   hotelFixture,
@@ -94,6 +95,14 @@ describe("HotelsScreen", () => {
     });
   });
 
+  it("shows the hotel's cover photo on the card when one is set, replacing the placeholder", async () => {
+    const withCover = hotelFixture({ coverUrl: COVER_URL });
+    await renderWithApi(<HotelsScreen />, catalogue([withCover]).fetch);
+    // The real photo (its alt) appears, and the striped stand-in (role image, its label) is gone.
+    expect(await screen.findByLabelText("Photo of The Lake Pavilion")).toBeOnTheScreen();
+    expect(screen.queryByRole("image", { name: "Hotel photo · Udaipur" })).toBeNull();
+  });
+
   it("searches by hotel name", async () => {
     const api = catalogue([PAVILION]);
     await renderWithApi(<HotelsScreen />, api.fetch);
@@ -130,9 +139,57 @@ describe("HotelsScreen", () => {
     expect(mockPush).toHaveBeenCalledWith("/hotels/saved");
   });
 
+  it("opens the destinations browse from the header", async () => {
+    await renderWithApi(<HotelsScreen />, catalogue([PAVILION]).fetch);
+    await fireEvent.press(await screen.findByRole("button", { name: "Browse destinations" }));
+    expect(mockPush).toHaveBeenCalledWith("/hotels/destinations");
+  });
+
   it("says when nothing matches", async () => {
     await renderWithApi(<HotelsScreen />, catalogue([]).fetch);
     expect(await screen.findByText("No hotels found")).toBeOnTheScreen();
+  });
+
+  it("filters to verified rates only and carries it to the search", async () => {
+    const api = catalogue([PAVILION]);
+    await renderWithApi(<HotelsScreen />, api.fetch);
+    await screen.findByText("1 hotel");
+    await fireEvent.press(screen.getByRole("button", { name: "Verified rates only" }));
+    await waitFor(() => expect(api.calls).toContain("GET /hotels?verifiedRatesOnly=true&limit=50"));
+  });
+
+  it("sends the chosen guest-capacity minimum", async () => {
+    const api = catalogue([PAVILION]);
+    await renderWithApi(<HotelsScreen />, api.fetch);
+    await screen.findByText("1 hotel");
+    await fireEvent.press(screen.getByTestId("hotel-filter-capacity"));
+    await fireEvent.press(await screen.findByTestId("hotel-filter-capacity-option-500"));
+    await waitFor(() => expect(api.calls).toContain("GET /hotels?minGuestCapacity=500&limit=50"));
+  });
+
+  it("offers to clear the filters when none match, and restores the results", async () => {
+    const api = fakeApi((method, url) => {
+      if (url.pathname === "/me") return ok(SUBSCRIBER);
+      if (method !== "GET" || url.pathname !== "/hotels") return undefined;
+      // Nothing meets the capacity filter; without it the one hotel shows.
+      return ok(pageOf(url.searchParams.has("minGuestCapacity") ? [] : [PAVILION]));
+    });
+    await renderWithApi(<HotelsScreen />, api.fetch);
+    await screen.findByText("1 hotel");
+    await fireEvent.press(screen.getByTestId("hotel-filter-capacity"));
+    await fireEvent.press(await screen.findByTestId("hotel-filter-capacity-option-1000"));
+    expect(await screen.findByText("No hotels match these filters")).toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole("button", { name: "Clear filters" }));
+    expect(await screen.findByText("1 hotel")).toBeOnTheScreen();
+  });
+
+  it("announces the result count to assistive tech when a search settles", async () => {
+    const announce = jest.spyOn(AccessibilityInfo, "announceForAccessibilityWithOptions");
+    announce.mockClear();
+    await renderWithApi(<HotelsScreen />, catalogue([PAVILION, HAVELI]).fetch);
+    await screen.findByText("2 hotels");
+    expect(announce).toHaveBeenCalledWith("2 hotels", { queue: true });
+    announce.mockRestore();
   });
 
   it("asks a signed-out client to sign in", async () => {
@@ -171,6 +228,7 @@ describe("HotelsScreen without hotel discovery", () => {
     await renderWithApi(<HotelsScreen />, api.fetch);
     expect(await screen.findByText("Subscribe to unlock hotel discovery")).toBeOnTheScreen();
     expect(screen.queryByLabelText("Search hotels")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Browse destinations" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Saved" })).toBeNull();
     expect(searched(api.calls)).toBe(false);
     await fireEvent.press(screen.getByRole("button", { name: "See plans" }));

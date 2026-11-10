@@ -21,7 +21,7 @@ describe("§5 golden tables: staff roles", () => {
     expect(ROWS.map((golden) => [golden.line, golden.section, golden.label])).toEqual(
       document.map((row) => [row.line, row.heading.split(" ")[0], row.cells[0]]),
     );
-    expect(ROWS).toHaveLength(105);
+    expect(ROWS).toHaveLength(106);
   });
 
   for (const golden of ROWS) {

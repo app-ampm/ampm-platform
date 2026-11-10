@@ -1,6 +1,8 @@
 import type {
   ClientRateItemView,
   HotelDetailView,
+  HotelRoomClientView,
+  HotelVenueClientView,
   MediaGalleryItem,
   WeddingReferenceClientItem,
 } from "@ampm/core";
@@ -44,6 +46,29 @@ const REFERENCE: WeddingReferenceClientItem = {
   eventYear: 2025,
   guestCount: 320,
   descriptionClient: "A three-day lakeside wedding.",
+};
+
+const VENUE: HotelVenueClientView = {
+  id: "018f0000-0000-7000-8000-000000000a01",
+  name: "The Durbar Ballroom",
+  venueType: "ballroom",
+  isIndoor: true,
+  areaSqm: 1200,
+  capacityBanquet: 500,
+  capacityTheatre: 700,
+  capacityReception: 900,
+  facilities: ["Stage", "Dance floor", "Air conditioning"],
+  description: "A pillarless hall overlooking the lake.",
+};
+
+const ROOM_CATEGORY: HotelRoomClientView = {
+  id: "018f0000-0000-7000-8000-000000000b01",
+  name: "Lake-View Suite",
+  roomCount: 24,
+  maxOccupancy: 3,
+  sizeSqm: 65,
+  facilities: ["Balcony", "Mini-bar"],
+  description: "Corner suites facing Lake Pichola.",
 };
 
 function rates(status: "verified" | "stale"): HotelDetailView["rates"] {
@@ -130,5 +155,28 @@ describe("HotelDetailScreen sections", () => {
     await renderDetail(detailFixture({ description: null, address: null }));
     expect(screen.queryByRole("tab")).toBeNull();
     expect(screen.getByLabelText("Rates on request")).toBeOnTheScreen();
+  });
+
+  it("lists the venues with their kind, capacities and amenities", async () => {
+    await renderDetail(detailFixture({ venues: [VENUE] }));
+    await openTab("Venues, 1");
+    expect(screen.getByRole("tab", { name: "Venues, 1" })).toBeSelected();
+    expect(screen.getByText("The Durbar Ballroom")).toBeOnTheScreen();
+    expect(screen.getByText("Ballroom · Indoor")).toBeOnTheScreen();
+    expect(
+      screen.getByText("Banquet 500 · Reception 900 · Theatre 700 · 1200 m²"),
+    ).toBeOnTheScreen();
+    expect(screen.getByText("A pillarless hall overlooking the lake.")).toBeOnTheScreen();
+    expect(screen.getByText("Stage · Dance floor · Air conditioning")).toBeOnTheScreen();
+  });
+
+  it("lists the room categories with their size and occupancy", async () => {
+    await renderDetail(detailFixture({ rooms: [ROOM_CATEGORY] }));
+    await openTab("Rooms, 1");
+    expect(screen.getByRole("tab", { name: "Rooms, 1" })).toBeSelected();
+    expect(screen.getByText("Lake-View Suite")).toBeOnTheScreen();
+    expect(screen.getByText("24 rooms · Sleeps 3 · 65 m²")).toBeOnTheScreen();
+    expect(screen.getByText("Corner suites facing Lake Pichola.")).toBeOnTheScreen();
+    expect(screen.getByText("Balcony · Mini-bar")).toBeOnTheScreen();
   });
 });

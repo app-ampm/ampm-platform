@@ -104,6 +104,42 @@ describe("Admin roles (e2e)", () => {
       .expect(404);
   });
 
+  it("lists every assignable role (system first) with resolved capabilities", async () => {
+    const admin = await sa();
+    const made = await http()
+      .post("/admin/roles")
+      .set("authorization", admin)
+      .send({ name: "Assignable view", capabilityIds: ["admin.configurations.update:all"] })
+      .expect(201);
+    const customId: string = made.body.data.id;
+
+    const res = await http().get("/admin/roles/assignable").set("authorization", admin).expect(200);
+    const roles: Array<{
+      id: string;
+      roleKey: string;
+      isSystem: boolean;
+      capabilities: { id: string }[];
+    }> = res.body.data;
+
+    // The nine seeded system roles come back, and every system role precedes every custom one.
+    expect(roles.filter((role) => role.isSystem).map((role) => role.roleKey)).toEqual(
+      expect.arrayContaining(["super_admin", "sales", "finance"]),
+    );
+    expect(roles.findIndex((role) => !role.isSystem)).toBeGreaterThan(
+      roles.map((role) => role.isSystem).lastIndexOf(true),
+    );
+
+    // A system role carries no stored grants; its capabilities resolve from the matrix catalog.
+    const superAdmin = roles.find((role) => role.roleKey === "super_admin");
+    expect(superAdmin?.capabilities.length ?? 0).toBeGreaterThan(0);
+
+    // The custom role is listed with exactly its stored grant.
+    const custom = roles.find((role) => role.id === customId);
+    expect(custom?.capabilities.map((capability) => capability.id)).toEqual([
+      "admin.configurations.update:all",
+    ]);
+  });
+
   it("holds the guardrails: non-SA, escalation-locked, and system roles", async () => {
     const admin = await sa();
 

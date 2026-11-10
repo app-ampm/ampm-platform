@@ -33,6 +33,10 @@ class FakeRepository extends RolesRepository {
   softDelete = vi.fn(async () => undefined);
   findById = vi.fn(async (id: string) => this.roles[id] ?? null);
   listCustom = vi.fn(async () => Object.values(this.roles).filter((role) => !role.isSystem));
+  listAll = vi.fn(async () => [
+    ...Object.values(this.roles).filter((role) => role.isSystem),
+    ...Object.values(this.roles).filter((role) => !role.isSystem),
+  ]);
   userIdsWithRole = vi.fn(async () => []);
   assign = vi.fn(async () => undefined);
   unassign = vi.fn(async () => 1);
@@ -111,6 +115,24 @@ describe("RolesService guardrails", () => {
       expect.anything(),
     );
     expect(view.capabilities.map((capability) => capability.id)).toEqual([
+      "admin.configurations.update:all",
+    ]);
+  });
+
+  it("lists every role system-first, resolving a system role's capabilities from the matrix catalog", async () => {
+    const repo = new FakeRepository({ [customRole.id]: customRole, [systemRole.id]: systemRole });
+    const [sa, custom] = await service(repo).assignable();
+    // System role first, then custom — the order a staff user's roles are offered and viewed in.
+    expect(sa?.roleKey).toBe("super_admin");
+    expect(custom?.roleKey).toBe("custom_config");
+    // A system role carries no stored grants; its capabilities resolve from the catalog and include
+    // the escalation-locked role-administration ones only a built-in role holds.
+    expect(sa?.capabilities.length ?? 0).toBeGreaterThan(0);
+    expect(sa?.capabilities.some((capability) => capability.isEscalationLocked) ?? false).toBe(
+      true,
+    );
+    // A custom role's capabilities are exactly its stored direct grants.
+    expect(custom?.capabilities.map((capability) => capability.id)).toEqual([
       "admin.configurations.update:all",
     ]);
   });

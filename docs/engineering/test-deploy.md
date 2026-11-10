@@ -65,6 +65,37 @@ Then:
   demo, not a Flow-2 client.
 - **Staff**: sign in as `admin@example.com` (Super Admin) for the staff workspace (Slice 2).
 
+## Media object store (local files)
+
+Media uploads — the hotel photo manager, `POST /media/:id/upload` — go to an object store. On the box that
+is the **local filesystem adapter** (`STORAGE_PROVIDER=local`, the dev/staging store); production uses S3 in
+Mumbai and `env.ts` refuses `local` there (infra.md). The API container runs with a **read-only root
+filesystem**, so the store is a **writable host bind-mount**, not a path inside the image. Without it every
+upload fails with `EROFS` / `ENOENT mkdir '.storage'` and the client hotel cards show no cover.
+
+One-time host setup — the dir must be owned by the container's `node` uid (1000); the SSH user cannot `chown`
+to another uid, so do it through a throwaway root container:
+
+```bash
+STORE=/var/www/vhosts/app.ampmverse.com/ampm-storage
+mkdir -p "$STORE"
+docker run --rm --user 0 -v "$STORE:/s" node:24.22.1-bookworm-slim chown -R 1000:1000 /s
+```
+
+The box override then mounts it into **api and worker** and sets `STORAGE_LOCAL_DIR=/data/storage` (see
+[`compose.test-override.example.yml`](../../deploy/app-ampmverse/compose.test-override.example.yml)); recreate
+the two services so they pick it up:
+
+```bash
+docker compose -f infra/compose/local/compose.yml -f infra/compose/local/compose.test-override.yml \
+  up -d --no-deps --wait api worker
+```
+
+The uploaded media is the only persistent state outside Postgres — it lives in this host dir and survives
+container rebuilds, but a box reinstall keeps the photos only if the dir is preserved. The seed plants no
+hotel media, so a fresh box shows placeholder covers until photos are uploaded through the photo manager (an
+HT/SA signs in, opens a hotel, adds a photo, and sets visibility `client` + a cleared rights status, GP-20).
+
 ## Deploy the API at latest main
 
 Get the latest source onto the box (its checkout has no git remote of its own — ship it with

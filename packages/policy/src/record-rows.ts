@@ -34,43 +34,43 @@ const WEDDING_PROJECTS: RowName = {
 
 /**
  * The record each §5 row that no role reads acts on, from the document by hand: whether the
- * principal may see that record decides a refusal's 403 or 404 (test-cases.md line 212).
+ * principal may see that record decides a refusal's 403 or 404 (test-cases.md line 213).
  * record-rows.test.ts fails when the matrix gains such a row that is not listed here.
  *
  * @example
  * RECORD_ROWS.find((entry) => entry.row.label === "Close the project")?.record?.section; // "5.5"
  */
 export const RECORD_ROWS: readonly RecordRow[] = [
-  // §5.6 line 207 authorises an exception on a readiness checklist item (line 206), which turns
-  // `exception` with `exception_authorised_by` (data-model.md line 1822; AC-13.2, line 925).
+  // §5.6 line 208 authorises an exception on a readiness checklist item (line 207), which turns
+  // `exception` with `exception_authorised_by` (data-model.md line 1823; AC-13.2, line 926).
   {
     row: { section: "5.6", label: "Readiness exceptions (Q10: Eva's authorised personnel only)" },
     record: { section: "5.6", label: "Readiness checklist items" },
   },
-  // §5.6 line 208 sets a function's `status` (line 203; data-model.md line 814).
+  // §5.6 line 209 sets a function's `status` (line 204; data-model.md line 815).
   {
     row: { section: "5.6", label: "Function status (planned, confirmed, cancelled)" },
     record: { section: "5.6", label: "Functions" },
   },
-  // §5.9 line 252 records the client's decision on an approval (line 251), as an
-  // `approval_decisions` row with `recorded_on_behalf_by` (data-model.md line 1245).
+  // §5.9 line 253 records the client's decision on an approval (line 252), as an
+  // `approval_decisions` row with `recorded_on_behalf_by` (data-model.md line 1246).
   {
     row: { section: "5.9", label: "Approval decisions, on the client's behalf with evidence" },
     record: { section: "5.9", label: "Approvals, submit for decision" },
   },
-  // §5.14 line 303 sets a document's `visibility` (line 302; data-model.md line 1728).
+  // §5.14 line 304 sets a document's `visibility` (line 303; data-model.md line 1729).
   {
     row: { section: "5.14", label: "Set client visibility on a document" },
     record: { section: "5.14", label: "Documents on records the role can reach" },
   },
-  // §5.15 lines 312 and 313 close and archive the wedding of §5.5 line 193 (`closed_at` and
-  // `archived_at`, data-model.md lines 745 and 746).
+  // §5.15 lines 313 and 313 close and archive the wedding of §5.5 line 194 (`closed_at` and
+  // `archived_at`, data-model.md lines 746 and 746).
   { row: { section: "5.15", label: "Close the project" }, record: WEDDING_PROJECTS },
   {
     row: { section: "5.15", label: "Archive the project after the window (Q23)" },
     record: WEDDING_PROJECTS,
   },
-  // §5.15 line 314 approves a deletion the retention job proposed (§8 line 507): identity
+  // §5.15 line 315 approves a deletion the retention job proposed (§8 line 508): identity
   // documents, guest data or leads, so no one row's record.
   {
     row: {
@@ -84,15 +84,15 @@ export const RECORD_ROWS: readonly RecordRow[] = [
 /**
  * Class rows whose records are a table of their own (data-model.md §19, "whole table"): a key on
  * them acts on those records, not on the parent row their §10 key names, so a principal who may
- * not read them gets the 404 of a missing record (AC-10.9, test-cases.md line 801).
+ * not read them gets the 404 of a missing record (AC-10.9, test-cases.md line 802).
  *
  * @example
  * OWN_TABLE_ROWS.some((name) => name.label === "Identity documents"); // true
  */
 export const OWN_TABLE_ROWS: readonly RowName[] = [
-  // data-model.md line 1949: `hotel_contacts`.
+  // data-model.md line 1950: `hotel_contacts`.
   { section: "5.3", label: "Hotel contacts" },
-  // data-model.md line 2002: `identity_documents`.
+  // data-model.md line 2003: `identity_documents`.
   { section: "5.10", label: "Identity documents" },
 ];
 

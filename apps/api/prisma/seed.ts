@@ -37,6 +37,8 @@ export const SEED = {
   sales: { email: "sales@example.com", name: "Sameer Sales", subject: "local:sm" },
   // Hotel / Destination team: drives the hotel-enquiry pipeline's early stages (the SA cannot) — Slice 3.
   hotelTeam: { email: "hotel@example.com", name: "Hema Hotels", subject: "local:ht" },
+  // Finance / Accounts: subscriptions, the payment ledger and billing (permission-matrix §5.2, FA).
+  finance: { email: "finance@example.com", name: "Farah Finance", subject: "local:fa" },
   client: { email: "client@example.com", name: "Rhea Client", subject: "local:client" },
   disabled: { email: "disabled@example.com", name: "Dev Disabled", subject: "local:disabled" },
   projectId: "0192f3a0-7d3e-7b1a-9c2f-0000000000a1",
@@ -129,31 +131,24 @@ async function joinProject(userId: string, projectRole: "project_lead" | "staff"
   });
 }
 
-/** The Super Admin, the project's lead and creative, and a disabled account. */
+/** The Super Admin, the project lead and creative, Sales, the Hotel team, Finance, and a disabled account. */
 async function seedStaff(roleIds: ReadonlyMap<StaffRole, string>): Promise<void> {
-  const admin = await upsertAccount(SEED.superAdmin, {
-    userType: "staff",
-    phone: "+911234567001",
-    mfaEnabled: true,
-  });
-  await assignRole(admin.id, roleId(roleIds, "SA"));
-  const pm = await upsertAccount(SEED.projectManager, {
-    userType: "staff",
-    phone: "+911234567002",
-    mfaEnabled: true,
-  });
-  await assignRole(pm.id, roleId(roleIds, "PM"));
-  await joinProject(pm.id, "project_lead");
-  const creative = await upsertAccount(SEED.creative, {
-    userType: "staff",
-    phone: "+911234567004",
-  });
-  await assignRole(creative.id, roleId(roleIds, "CD"));
-  await joinProject(creative.id, "staff");
-  const sales = await upsertAccount(SEED.sales, { userType: "staff", mfaEnabled: true });
-  await assignRole(sales.id, roleId(roleIds, "SM"));
-  const hotelTeam = await upsertAccount(SEED.hotelTeam, { userType: "staff", mfaEnabled: true });
-  await assignRole(hotelTeam.id, roleId(roleIds, "HT"));
+  const member = async (
+    account: Account,
+    role: StaffRole,
+    options: Omit<AccountOptions, "userType"> = {},
+  ): Promise<string> => {
+    const user = await upsertAccount(account, { userType: "staff", ...options });
+    await assignRole(user.id, roleId(roleIds, role));
+    return user.id;
+  };
+  await member(SEED.superAdmin, "SA", { phone: "+911234567001", mfaEnabled: true });
+  const pm = await member(SEED.projectManager, "PM", { phone: "+911234567002", mfaEnabled: true });
+  await joinProject(pm, "project_lead");
+  await joinProject(await member(SEED.creative, "CD", { phone: "+911234567004" }), "staff");
+  await member(SEED.sales, "SM", { mfaEnabled: true });
+  await member(SEED.hotelTeam, "HT", { mfaEnabled: true });
+  await member(SEED.finance, "FA", { mfaEnabled: true });
   await upsertAccount(SEED.disabled, { userType: "staff", status: "disabled" });
 }
 

@@ -8,10 +8,12 @@ import { fireEvent, screen, waitFor } from "../../test/render";
 import { SavedHotelsScreen } from "./saved-hotels-screen";
 import {
   clientMe,
+  COVER_URL,
   fail,
   fakeApi,
   HOTEL_ID,
   hotelFixture,
+  JAIPUR,
   offlineFetch,
   ok,
   pageOf,
@@ -79,6 +81,25 @@ describe("SavedHotelsScreen", () => {
     expect(mockPush).toHaveBeenCalledWith({ pathname: "/hotels/[id]", params: { id: HOTEL_ID } });
   });
 
+  it("shows the saved hotel's cover photo when one is set, replacing the placeholder", async () => {
+    const entry = savedFixture(
+      hotelFixture({ coverUrl: COVER_URL }),
+      "018f0000-0000-7000-8000-0000000000a2",
+    );
+    const api = fakeApi((method, url) =>
+      method === "GET" && url.pathname === "/hotels/saved" ? ok(pageOf([entry])) : undefined,
+    );
+    await renderWithApi(<SavedHotelsScreen />, api.fetch);
+    // The row's Pressable collapses its children into one a11y element (the row names the hotel), so the
+    // decorative cover is hidden from the default query — it still renders, replacing the striped stand-in.
+    expect(
+      await screen.findByLabelText("Photo of The Lake Pavilion", { includeHiddenElements: true }),
+    ).toBeOnTheScreen();
+    expect(
+      screen.queryByRole("image", { name: "Hotel photo · Udaipur", includeHiddenElements: true }),
+    ).toBeNull();
+  });
+
   it("removes a hotel from the shortlist", async () => {
     const api = shortlistApi();
     await renderWithApi(<SavedHotelsScreen />, api.fetch);
@@ -135,5 +156,33 @@ describe("SavedHotelsScreen", () => {
   it("places the tab bar the route passes in", async () => {
     await renderWithApi(<SavedHotelsScreen tabBar={<Text>Tab bar</Text>} />, pendingFetch);
     expect(screen.getByText("Tab bar")).toBeOnTheScreen();
+  });
+
+  it("picks two saved hotels in compare mode and opens the side-by-side", async () => {
+    const a = savedFixture(hotelFixture(), "018f0000-0000-7000-8000-0000000000a1");
+    const b = savedFixture(
+      hotelFixture({
+        id: "018f0000-0000-7000-8000-00000000cafe",
+        slug: "amber-haveli-jaipur",
+        name: "Amber Haveli",
+        destination: JAIPUR,
+      }),
+      "018f0000-0000-7000-8000-0000000000a2",
+    );
+    const api = fakeApi((method, url) => {
+      if (url.pathname === "/me") return ok(clientMe(["hotel_discovery", "saved_hotels"]));
+      if (method === "GET" && url.pathname === "/hotels/saved") return ok(pageOf([a, b]));
+      return undefined;
+    });
+    await renderWithApi(<SavedHotelsScreen />, api.fetch);
+    await screen.findByText("2 hotels");
+    await fireEvent.press(await screen.findByRole("button", { name: "Compare" }));
+    await fireEvent.press(screen.getByTestId(`compare-select-${a.hotel.id}`));
+    await fireEvent.press(screen.getByTestId(`compare-select-${b.hotel.id}`));
+    await fireEvent.press(screen.getByRole("button", { name: "Compare" }));
+    expect(mockPush).toHaveBeenCalledWith({
+      pathname: "/hotels/compare",
+      params: { ids: `${a.hotel.id},${b.hotel.id}` },
+    });
   });
 });

@@ -33,7 +33,7 @@ describe("permission keys", () => {
     expect(grantsForRole("SM").has("admin.staff_users.update")).toBe(false);
   });
 
-  it("leaves conditioned grants out of the keys a role holds outright (§5.10 line 264)", () => {
+  it("leaves conditioned grants out of the keys a role holds outright (§5.10 line 265)", () => {
     expect(permissionKeysForRole("RG")).not.toContain("guests.identity_documents.read:assigned");
     expect(permissionKeysForRole("HL")).not.toContain("guests.identity_documents.read:assigned");
     expect(permissionKeysForRole("HT")).not.toContain("budget.budget_lines_internal_cost.read");
@@ -87,7 +87,7 @@ describe("client reach", () => {
     expect(clientReach("guest", "Hotel proposals, client amounts")).toEqual([]);
   });
 
-  it("§6 line 345: a representative updates the client feedback only", () => {
+  it("§6 line 346: a representative updates the client feedback only", () => {
     expect(decideReach("client", "enquiry_status_non_internal", "read").allowed).toBe(true);
     expect(decideReach("client", "enquiry_status_non_internal", "update").reason).toBe(
       "condition_unmet",
@@ -97,7 +97,7 @@ describe("client reach", () => {
     ).toMatchObject({ allowed: true, scope: "own" });
   });
 
-  it("§6 lines 344 and 362: the demo's creations go to Sales and its reads are sample data", () => {
+  it("§6 lines 345 and 362: the demo's creations go to Sales and its reads are sample data", () => {
     expect(decideReach("demo", "hotel_assistance_requests", "create").reason).toBe(
       "condition_unmet",
     );
@@ -117,7 +117,7 @@ describe("client reach", () => {
     expect(decideReach("demo", "attendance_rsvp_progress", "update").reason).toBe("no_grant");
   });
 
-  it("§6 line 371 and line 359: notification preferences are the principal's own; no sensitive fields", () => {
+  it("§6 line 372 and line 360: notification preferences are the principal's own; no sensitive fields", () => {
     expect(decideReach("client", "notification_preferences", "update").allowed).toBe(true);
     expect(decideReach("demo", "notification_preferences", "read").allowed).toBe(true);
     expect(decideReach("client", "guest_sensitive_fields", "read").reason).toBe("no_grant");
