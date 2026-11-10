@@ -9,8 +9,15 @@ import { useGoToSignIn } from "@/navigation/sign-in";
 
 import { canBrowseHotels } from "../portal/portal.format";
 import { DestinationFilter } from "./destination-filter";
+import { HotelFilterBar } from "./hotel-filters";
 import { HotelResults, HotelResultsLoading } from "./hotel-results";
-import { DISCOVERY_CLOSED, DISCOVERY_SIGN_IN, destinationOptions } from "./hotels.format";
+import {
+  activeFilterCount,
+  DISCOVERY_CLOSED,
+  DISCOVERY_SIGN_IN,
+  destinationOptions,
+  type HotelFilters,
+} from "./hotels.format";
 
 export interface HotelsScreenProps {
   /** The app's tab bar; the route supplies it and the screen only gives it room. */
@@ -85,7 +92,12 @@ function HotelsBody({ me, destination, onDestination }: HotelsBodyProps) {
 function HotelSearch({ destination, onDestination }: SearchProps) {
   const router = useRouter();
   const [q, setQ] = useState("");
-  const hotels = useHotels({ q: q.trim() || undefined, destinationId: destination?.id });
+  const [filters, setFilters] = useState<HotelFilters>({});
+  const hotels = useHotels({
+    q: q.trim() || undefined,
+    destinationId: destination?.id,
+    ...filters,
+  });
   return (
     <>
       <Input
@@ -101,9 +113,12 @@ function HotelSearch({ destination, onDestination }: SearchProps) {
         selected={destination}
         onChange={onDestination}
       />
+      <HotelFilterBar value={filters} onChange={setFilters} />
       <HotelResults
         hotels={hotels}
         onOpen={(id) => router.push({ pathname: "/hotels/[id]", params: { id } })}
+        filtersActive={activeFilterCount(filters) > 0}
+        onClearFilters={() => setFilters({})}
       />
     </>
   );

@@ -1,4 +1,4 @@
-import { Text } from "react-native";
+import { AccessibilityInfo, Text } from "react-native";
 
 import type { HotelView, MeResponse } from "@ampm/core";
 import { uiCopy } from "@ampm/ui";
@@ -142,6 +142,48 @@ describe("HotelsScreen", () => {
   it("says when nothing matches", async () => {
     await renderWithApi(<HotelsScreen />, catalogue([]).fetch);
     expect(await screen.findByText("No hotels found")).toBeOnTheScreen();
+  });
+
+  it("filters to verified rates only and carries it to the search", async () => {
+    const api = catalogue([PAVILION]);
+    await renderWithApi(<HotelsScreen />, api.fetch);
+    await screen.findByText("1 hotel");
+    await fireEvent.press(screen.getByRole("button", { name: "Verified rates only" }));
+    await waitFor(() => expect(api.calls).toContain("GET /hotels?verifiedRatesOnly=true&limit=50"));
+  });
+
+  it("sends the chosen guest-capacity minimum", async () => {
+    const api = catalogue([PAVILION]);
+    await renderWithApi(<HotelsScreen />, api.fetch);
+    await screen.findByText("1 hotel");
+    await fireEvent.press(screen.getByTestId("hotel-filter-capacity"));
+    await fireEvent.press(await screen.findByTestId("hotel-filter-capacity-option-500"));
+    await waitFor(() => expect(api.calls).toContain("GET /hotels?minGuestCapacity=500&limit=50"));
+  });
+
+  it("offers to clear the filters when none match, and restores the results", async () => {
+    const api = fakeApi((method, url) => {
+      if (url.pathname === "/me") return ok(SUBSCRIBER);
+      if (method !== "GET" || url.pathname !== "/hotels") return undefined;
+      // Nothing meets the capacity filter; without it the one hotel shows.
+      return ok(pageOf(url.searchParams.has("minGuestCapacity") ? [] : [PAVILION]));
+    });
+    await renderWithApi(<HotelsScreen />, api.fetch);
+    await screen.findByText("1 hotel");
+    await fireEvent.press(screen.getByTestId("hotel-filter-capacity"));
+    await fireEvent.press(await screen.findByTestId("hotel-filter-capacity-option-1000"));
+    expect(await screen.findByText("No hotels match these filters")).toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole("button", { name: "Clear filters" }));
+    expect(await screen.findByText("1 hotel")).toBeOnTheScreen();
+  });
+
+  it("announces the result count to assistive tech when a search settles", async () => {
+    const announce = jest.spyOn(AccessibilityInfo, "announceForAccessibilityWithOptions");
+    announce.mockClear();
+    await renderWithApi(<HotelsScreen />, catalogue([PAVILION, HAVELI]).fetch);
+    await screen.findByText("2 hotels");
+    expect(announce).toHaveBeenCalledWith("2 hotels", { queue: true });
+    announce.mockRestore();
   });
 
   it("asks a signed-out client to sign in", async () => {
