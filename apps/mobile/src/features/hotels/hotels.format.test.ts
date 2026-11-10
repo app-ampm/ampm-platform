@@ -15,6 +15,7 @@ import {
   hotelCountLabel,
   hotelMetaLine,
   hotelSections,
+  parseCompareIds,
   percentLabel,
   rateFreshnessChip,
   roomMetaLine,
@@ -270,5 +271,16 @@ describe("discovery filters", () => {
     // verifiedRatesOnly counts only when on; a 0 minimum is not a real filter (the backend ignores it).
     expect(activeFilterCount({ verifiedRatesOnly: false })).toBe(0);
     expect(activeFilterCount({ minRooms: 0 })).toBe(0);
+  });
+});
+
+describe("parseCompareIds", () => {
+  it("normalises the compare route's ids, whether a comma string, a repeated array, or absent", () => {
+    expect(parseCompareIds("a,b,c")).toEqual(["a", "b", "c"]);
+    expect(parseCompareIds(" a , , b ")).toEqual(["a", "b"]); // trims and drops blanks
+    // expo-router hands a repeated ?ids=a&ids=b back as an array — it must not crash on .split.
+    expect(parseCompareIds(["a", "b"])).toEqual(["a", "b"]);
+    expect(parseCompareIds(undefined)).toEqual([]);
+    expect(parseCompareIds("")).toEqual([]);
   });
 });

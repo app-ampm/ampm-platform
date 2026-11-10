@@ -13,6 +13,7 @@ import {
   fakeApi,
   HOTEL_ID,
   hotelFixture,
+  JAIPUR,
   offlineFetch,
   ok,
   pageOf,
@@ -155,5 +156,33 @@ describe("SavedHotelsScreen", () => {
   it("places the tab bar the route passes in", async () => {
     await renderWithApi(<SavedHotelsScreen tabBar={<Text>Tab bar</Text>} />, pendingFetch);
     expect(screen.getByText("Tab bar")).toBeOnTheScreen();
+  });
+
+  it("picks two saved hotels in compare mode and opens the side-by-side", async () => {
+    const a = savedFixture(hotelFixture(), "018f0000-0000-7000-8000-0000000000a1");
+    const b = savedFixture(
+      hotelFixture({
+        id: "018f0000-0000-7000-8000-00000000cafe",
+        slug: "amber-haveli-jaipur",
+        name: "Amber Haveli",
+        destination: JAIPUR,
+      }),
+      "018f0000-0000-7000-8000-0000000000a2",
+    );
+    const api = fakeApi((method, url) => {
+      if (url.pathname === "/me") return ok(clientMe(["hotel_discovery", "saved_hotels"]));
+      if (method === "GET" && url.pathname === "/hotels/saved") return ok(pageOf([a, b]));
+      return undefined;
+    });
+    await renderWithApi(<SavedHotelsScreen />, api.fetch);
+    await screen.findByText("2 hotels");
+    await fireEvent.press(await screen.findByRole("button", { name: "Compare" }));
+    await fireEvent.press(screen.getByTestId(`compare-select-${a.hotel.id}`));
+    await fireEvent.press(screen.getByTestId(`compare-select-${b.hotel.id}`));
+    await fireEvent.press(screen.getByRole("button", { name: "Compare" }));
+    expect(mockPush).toHaveBeenCalledWith({
+      pathname: "/hotels/compare",
+      params: { ids: `${a.hotel.id},${b.hotel.id}` },
+    });
   });
 });
