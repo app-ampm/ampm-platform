@@ -6,6 +6,7 @@ import type {
 } from "@ampm/core";
 
 import {
+  activeFilterCount,
   destinationLabel,
   destinationOptions,
   facilitiesLine,
@@ -251,5 +252,23 @@ describe("venues, rooms and their labels", () => {
     expect(facilitiesLine(["Wi-Fi", "Spa"])).toBe("Wi-Fi · Spa");
     expect(facilitiesLine([])).toBeNull();
     expect(facilitiesLine(null)).toBeNull();
+  });
+});
+
+describe("discovery filters", () => {
+  it("counts the active filters, ignoring the cleared or zero ones", () => {
+    expect(activeFilterCount({})).toBe(0);
+    expect(activeFilterCount({ star: "5" })).toBe(1);
+    expect(
+      activeFilterCount({
+        star: "5",
+        minGuestCapacity: 500,
+        minRooms: 100,
+        verifiedRatesOnly: true,
+      }),
+    ).toBe(4);
+    // verifiedRatesOnly counts only when on; a 0 minimum is not a real filter (the backend ignores it).
+    expect(activeFilterCount({ verifiedRatesOnly: false })).toBe(0);
+    expect(activeFilterCount({ minRooms: 0 })).toBe(0);
   });
 });

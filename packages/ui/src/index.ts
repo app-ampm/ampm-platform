@@ -23,7 +23,7 @@ export type { Breakpoint, BreakpointInfo } from "./hooks/use-breakpoint";
 export { useReducedMotion } from "./hooks/use-reduced-motion";
 export { useGlassBlur } from "./hooks/use-glass-blur";
 export { useIsClient } from "./hooks/use-is-client";
-export { announcementText, useAnnounce } from "./hooks/use-announce";
+export { announcementText, politeLiveRegion, useAnnounce } from "./hooks/use-announce";
 export { uiCopy } from "./copy";
 
 // Foundations: type, glass, the glow behind a screen, icons, layout.

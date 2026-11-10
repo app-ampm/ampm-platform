@@ -5,6 +5,7 @@ import {
   type ClientRateItemView,
   type HotelDestinationView,
   type HotelDetailView,
+  type HotelListQuery,
   type HotelRateItemType,
   type HotelRateItemUnit,
   type HotelRatesView,
@@ -14,6 +15,22 @@ import {
   type HotelView,
 } from "@ampm/core";
 import type { StatusTone } from "@ampm/ui";
+
+/** The client-set discovery filters beyond destination and name (feature 9.4, CP-04). */
+export type HotelFilters = Pick<
+  HotelListQuery,
+  "star" | "minRooms" | "minGuestCapacity" | "verifiedRatesOnly"
+>;
+
+/** How many discovery filters are active — drives the clear-filters affordance and the empty-state hint. */
+export function activeFilterCount(filters: HotelFilters): number {
+  return (
+    (filters.star ? 1 : 0) +
+    (filters.minRooms ? 1 : 0) +
+    (filters.minGuestCapacity ? 1 : 0) +
+    (filters.verifiedRatesOnly ? 1 : 0)
+  );
+}
 
 /** Where a hotel sits, as one line: "Udaipur, Rajasthan". */
 export function destinationLabel(destination: HotelDestinationView): string {
