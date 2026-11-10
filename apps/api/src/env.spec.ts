@@ -59,8 +59,25 @@ describe("loadEnv", () => {
     );
   });
 
-  it("refuses the local media store in production", () => {
+  it("refuses the local media store in production by default", () => {
     expect(() => loadEnv({ ...prodValid, STORAGE_PROVIDER: "local" })).toThrow(/STORAGE_PROVIDER/);
+  });
+
+  it("allows the local media store in production when it is a persistent, signed volume (D-106)", () => {
+    const env = loadEnv({
+      ...prodValid,
+      STORAGE_PROVIDER: "local",
+      STORAGE_LOCAL_PERSISTENT: "true",
+      MEDIA_SIGNING_SECRET: "a-production-media-signing-secret-key",
+    });
+    expect(env.STORAGE_PROVIDER).toBe("local");
+    expect(env.STORAGE_LOCAL_PERSISTENT).toBe(true);
+  });
+
+  it("requires MEDIA_SIGNING_SECRET for the local media store in production", () => {
+    expect(() =>
+      loadEnv({ ...prodValid, STORAGE_PROVIDER: "local", STORAGE_LOCAL_PERSISTENT: "true" }),
+    ).toThrow(/MEDIA_SIGNING_SECRET/);
   });
 
   it("refuses a localhost WEB_APP_URL in production", () => {
