@@ -7,6 +7,7 @@ import type {
 
 import {
   activeFilterCount,
+  destinationBrowseSubtitle,
   destinationLabel,
   destinationOptions,
   facilitiesLine,
@@ -282,5 +283,21 @@ describe("parseCompareIds", () => {
     expect(parseCompareIds(["a", "b"])).toEqual(["a", "b"]);
     expect(parseCompareIds(undefined)).toEqual([]);
     expect(parseCompareIds("")).toEqual([]);
+  });
+});
+
+describe("destinationBrowseSubtitle", () => {
+  it("counts the destination's hotels and names where it is", () => {
+    expect(destinationBrowseSubtitle({ ...UDAIPUR, hotelCount: 5 })).toBe("5 hotels · Rajasthan");
+    expect(destinationBrowseSubtitle({ ...UDAIPUR, hotelCount: 1 })).toBe("1 hotel · Rajasthan");
+  });
+
+  it("prefers the region over the state, and falls back to the count alone", () => {
+    expect(destinationBrowseSubtitle({ ...UDAIPUR, region: "Lake District", hotelCount: 2 })).toBe(
+      "2 hotels · Lake District",
+    );
+    expect(
+      destinationBrowseSubtitle({ ...UDAIPUR, region: null, state: null, hotelCount: 3 }),
+    ).toBe("3 hotels");
   });
 });

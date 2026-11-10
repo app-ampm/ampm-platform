@@ -3,6 +3,7 @@ import {
   formatDay,
   type ClientAmount,
   type ClientRateItemView,
+  type DestinationBrowseItem,
   type HotelDestinationView,
   type HotelDetailView,
   type HotelListQuery,
@@ -47,6 +48,13 @@ export function parseCompareIds(ids: string | string[] | undefined): string[] {
 /** Where a hotel sits, as one line: "Udaipur, Rajasthan". */
 export function destinationLabel(destination: HotelDestinationView): string {
   return [destination.name, destination.state].filter(Boolean).join(", ");
+}
+
+/** A browse destination's line: how many hotels it holds and where ("5 hotels · Rajasthan"). */
+export function destinationBrowseSubtitle(item: DestinationBrowseItem): string {
+  const count = hotelCountLabel(item.hotelCount, false);
+  const where = item.region ?? item.state;
+  return where ? `${count} · ${where}` : count;
 }
 
 /** "84 rooms". */

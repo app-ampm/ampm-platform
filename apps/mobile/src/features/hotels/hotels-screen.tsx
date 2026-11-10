@@ -3,7 +3,7 @@ import { useState, type ReactNode } from "react";
 
 import { useHotels, useMe } from "@ampm/api-client";
 import type { HotelDestinationView } from "@ampm/core";
-import { Button, EmptyState, Input, QueryErrorState, Screen, ScreenHeader } from "@ampm/ui";
+import { Button, EmptyState, Input, QueryErrorState, Row, Screen, ScreenHeader } from "@ampm/ui";
 
 import { useGoToSignIn } from "@/navigation/sign-in";
 
@@ -37,9 +37,11 @@ export function HotelsScreen({ tabBar }: HotelsScreenProps) {
   const me = useMe();
   const [destination, setDestination] = useState<Destination>(null);
   const hasShortlist = me.data?.entitlements.modules.includes("saved_hotels") ?? false;
+  const canBrowse = me.data ? canBrowseHotels(me.data) : false;
   const header = (
     <HotelsHeader
       title={destination?.name ?? "Hotels"}
+      onBrowseDestinations={canBrowse ? () => router.push("/hotels/destinations") : undefined}
       onOpenSaved={hasShortlist ? () => router.push("/hotels/saved") : undefined}
     />
   );
@@ -126,22 +128,35 @@ function HotelSearch({ destination, onDestination }: SearchProps) {
 
 interface HotelsHeaderProps {
   readonly title: string;
+  /** Opens the destinations browse; absent for an account that may not browse discovery. */
+  readonly onBrowseDestinations: (() => void) | undefined;
   /** Opens the shortlist; without it (no shortlist on the account) the button stays out. */
   readonly onOpenSaved: (() => void) | undefined;
 }
 
-/** Titled by the chosen destination, as P3 heads its results ("Udaipur"), the shortlist at its right. */
-function HotelsHeader({ title, onOpenSaved }: HotelsHeaderProps) {
+/** Titled by the chosen destination, as P3 heads its results; browse-by-destination and the shortlist at its right. */
+function HotelsHeader({ title, onBrowseDestinations, onOpenSaved }: HotelsHeaderProps) {
   return (
     <ScreenHeader
       eyebrow="Hotel discovery"
       title={title}
       trailing={
-        onOpenSaved ? (
-          <Button variant="glass" size="sm" icon="heart" onPress={onOpenSaved}>
-            Saved
-          </Button>
-        ) : undefined
+        <Row gap={2}>
+          {onBrowseDestinations ? (
+            <Button
+              variant="glass"
+              size="sm"
+              icon="map-pin"
+              onPress={onBrowseDestinations}
+              accessibilityLabel="Browse destinations"
+            />
+          ) : null}
+          {onOpenSaved ? (
+            <Button variant="glass" size="sm" icon="heart" onPress={onOpenSaved}>
+              Saved
+            </Button>
+          ) : null}
+        </Row>
       }
     />
   );
