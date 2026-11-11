@@ -18,6 +18,7 @@ import { Prisma, PrismaClient, type ServiceCategory } from "../src/generated/pri
 import { upsertDemoUser } from "../src/modules/demo/demo-baseline.js";
 import { seedConsultancyDemo } from "./seed-consultancy.js";
 import { seedHotels } from "./seed-hotels.js";
+import { seedHotelSubresources } from "./seed-hotel-subresources.js";
 
 const url = process.env["DATABASE_URL"];
 if (!url) throw new Error("DATABASE_URL is required to seed");
@@ -345,6 +346,8 @@ async function main(): Promise<void> {
   await seedPlans();
   await seedServiceTypes();
   await seedHotels(prisma);
+  // Venues, rooms and a verified client-visible rate card per hotel, so discovery renders with real figures.
+  await seedHotelSubresources(prisma);
   // Depends on the discovery plan, the negotiation service type and the Lake Pavilion hotel seeded above.
   await seedConsultancyDemo(prisma, clientUserId);
   await seedGrantableCapabilities();
