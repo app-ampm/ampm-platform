@@ -218,4 +218,26 @@ describe("Hotel compare (e2e)", () => {
       .expect(200);
     expect(res.body.data.ids).toEqual([]);
   });
+
+  it("edits and clears the client's own note on a saved hotel, and 404s for an unsaved one (B15)", async () => {
+    // Set a note (trimmed), then clear it with blank (stored as null).
+    const set = await http()
+      .patch(`/hotels/${alpha}/save`)
+      .set("authorization", auth(clientToken))
+      .send({ note: "  great lawn  " })
+      .expect(200);
+    expect(set.body.data.note).toBe("great lawn");
+    const cleared = await http()
+      .patch(`/hotels/${alpha}/save`)
+      .set("authorization", auth(clientToken))
+      .send({ note: "   " })
+      .expect(200);
+    expect(cleared.body.data.note).toBeNull();
+    // Annotating a hotel that is not on the shortlist is a 404 (nothing to annotate — denial equals absence).
+    await http()
+      .patch(`/hotels/${charlie}/save`)
+      .set("authorization", auth(clientToken))
+      .send({ note: "x" })
+      .expect(404);
+  });
 });

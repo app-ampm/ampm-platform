@@ -1,8 +1,9 @@
-import { Controller, Delete, Get, HttpCode, Post } from "@nestjs/common";
+import { Controller, Delete, Get, HttpCode, Patch, Post } from "@nestjs/common";
 import {
   hotelCompareQuery,
   hotelListQuery,
   savedHotelListQuery,
+  savedHotelNoteUpdateRequest,
   uuid,
   type DestinationBrowseResponse,
   type HotelCompareQuery,
@@ -12,13 +13,14 @@ import {
   type HotelPage,
   type SavedHotelIdsResponse,
   type SavedHotelListQuery,
+  type SavedHotelNoteUpdateRequest,
   type SavedHotelPage,
   type SavedHotelRemovedResponse,
   type SavedHotelView,
 } from "@ampm/core";
 import { z } from "zod";
 
-import { ZodParams, ZodQuery } from "../../common/zod.js";
+import { ZodBody, ZodParams, ZodQuery } from "../../common/zod.js";
 import { AuditExempt, CurrentPrincipal } from "../../policy/decorators.js";
 import type { Principal } from "../../policy/principal.types.js";
 import { HotelsService } from "./hotels.service.js";
@@ -94,6 +96,18 @@ export class HotelsController {
     @CurrentPrincipal() principal: Principal,
   ): Promise<SavedHotelView> {
     return this.hotels.save(principal, params.hotelId);
+  }
+
+  @Patch(":hotelId/save")
+  @AuditExempt(
+    "a client edits their own free-text note on their account shortlist; a convenience annotation, not a §9 internal-user action",
+  )
+  updateNote(
+    @ZodParams(hotelParam) params: HotelParam,
+    @ZodBody(savedHotelNoteUpdateRequest) body: SavedHotelNoteUpdateRequest,
+    @CurrentPrincipal() principal: Principal,
+  ): Promise<SavedHotelView> {
+    return this.hotels.updateNote(principal, params.hotelId, body);
   }
 
   @Delete(":hotelId/save")
