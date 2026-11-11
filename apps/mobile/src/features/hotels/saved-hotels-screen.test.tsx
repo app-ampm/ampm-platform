@@ -185,4 +185,38 @@ describe("SavedHotelsScreen", () => {
       params: { ids: `${a.hotel.id},${b.hotel.id}` },
     });
   });
+
+  it("shows a saved hotel's note under its row, with an Edit affordance", async () => {
+    const withNote = { ...ENTRY, note: "Great lawn, waiting on a quote" };
+    const api = fakeApi((method, url) => {
+      if (url.pathname === "/me") return ok(clientMe(["hotel_discovery", "saved_hotels"]));
+      return method === "GET" && url.pathname === "/hotels/saved"
+        ? ok(pageOf([withNote]))
+        : undefined;
+    });
+    await renderWithApi(<SavedHotelsScreen />, api.fetch);
+    expect(await screen.findByText("Great lawn, waiting on a quote")).toBeOnTheScreen();
+    // With a note the editor affordance reads "Edit", not "Add".
+    expect(
+      screen.getByRole("button", { name: "Edit note for The Lake Pavilion" }),
+    ).toBeOnTheScreen();
+  });
+
+  it("edits a saved hotel's note from the sheet (PATCH /hotels/:id/save)", async () => {
+    const api = fakeApi((method, url) => {
+      if (url.pathname === "/me") return ok(clientMe(["hotel_discovery", "saved_hotels"]));
+      if (method === "GET" && url.pathname === "/hotels/saved") return ok(pageOf([ENTRY]));
+      if (method === "PATCH" && url.pathname === `/hotels/${HOTEL_ID}/save`)
+        return ok({ ...ENTRY, note: "Great lawn" });
+      return undefined;
+    });
+    await renderWithApi(<SavedHotelsScreen />, api.fetch);
+    // ENTRY has no note, so the affordance is "Add a note"; it opens the editor sheet.
+    await fireEvent.press(
+      await screen.findByRole("button", { name: "Add a note for The Lake Pavilion" }),
+    );
+    await fireEvent.changeText(await screen.findByLabelText("Your note"), "Great lawn");
+    await fireEvent.press(screen.getByRole("button", { name: "Save note" }));
+    await waitFor(() => expect(api.calls).toContain(`PATCH /hotels/${HOTEL_ID}/save`));
+  });
 });

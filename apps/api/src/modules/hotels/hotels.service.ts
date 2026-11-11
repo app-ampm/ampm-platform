@@ -12,6 +12,7 @@ import {
   type HotelReach,
   type SavedHotelListQuery,
   type SavedHotelIdsResponse,
+  type SavedHotelNoteUpdateRequest,
   type SavedHotelPage,
   type SavedHotelRemovedResponse,
   type SavedHotelView,
@@ -194,6 +195,34 @@ export class HotelsService {
     const accountId = await this.accountIdOrThrow(userId);
     await this.hotels.unsave(accountId, hotelId, userId);
     return { hotelId };
+  }
+
+  /**
+   * Edit the client's own note on a shortlisted hotel (D7). A write on the caller's own shortlist, so it
+   * gates on saved_hotels=write and resolves the caller's own account; the note is trimmed and blank is
+   * stored as null. Not reach-gated — you may annotate a saved hotel even after it has fallen out of reach
+   * — but a hotel that is not on the shortlist is a 404 (nothing to annotate; denial equals absence). The
+   * card summary still re-applies reach, so an out-of-reach row shows the name without a price it must not see.
+   */
+  async updateNote(
+    principal: Principal,
+    hotelId: string,
+    body: SavedHotelNoteUpdateRequest,
+  ): Promise<SavedHotelView> {
+    const { ent, userId } = this.gate(principal, "saved_hotels", true);
+    const accountId = await this.accountIdOrThrow(userId);
+    const note = body.note?.trim() ? body.note.trim() : null;
+    const saved = await this.hotels.updateSavedNote(accountId, hotelId, note, userId);
+    if (!saved) throw errors.notFound(); // not on the shortlist — nothing to annotate
+    const [covers, summaries] = await Promise.all([
+      this.media.clientCovers("hotel", [saved.hotel.id], audienceFor(principal)),
+      this.cardSummaries(ent.hotelReach, [saved.hotel.id]),
+    ]);
+    return toSavedHotelView(
+      saved,
+      covers.get(saved.hotel.id) ?? null,
+      summaries.get(saved.hotel.id) ?? ON_REQUEST_SUMMARY,
+    );
   }
 
   /**

@@ -275,6 +275,28 @@ export class HotelsRepository {
     });
   }
 
+  /**
+   * Set the client's note on a LIVE shortlist row (null clears it); returns the updated row, or null when
+   * the hotel is not on the shortlist (nothing to annotate). Scoped to the account and the live row, so a
+   * soft-deleted (removed) row is never revived or edited.
+   */
+  async updateSavedNote(
+    accountId: string,
+    hotelId: string,
+    note: string | null,
+    userId: string,
+  ): Promise<SavedHotelRow | null> {
+    const updated = await this.prisma.savedHotel.updateMany({
+      where: { accountId, hotelId, deletedAt: null },
+      data: { note, updatedBy: userId },
+    });
+    if (updated.count === 0) return null;
+    return this.prisma.savedHotel.findFirst({
+      where: { accountId, hotelId, deletedAt: null },
+      select: SAVED_SELECT,
+    });
+  }
+
   async listSaved(
     accountId: string,
     query: SavedHotelListQuery,

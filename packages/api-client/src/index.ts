@@ -88,6 +88,7 @@ export { useSaveHotels } from "./hooks/use-save-hotels";
 export { useCompare } from "./hooks/use-compare";
 export { DESTINATIONS_QUERY_KEY, useDestinations } from "./hooks/use-destinations";
 export { useUnsaveHotel } from "./hooks/use-unsave-hotel";
+export { useUpdateSavedNote } from "./hooks/use-update-saved-note";
 // H1.1 staff hotel catalogue + photo management (Module C + Module N media). Staff-only; gated server-side.
 export {
   STAFF_DESTINATIONS_QUERY_KEY,

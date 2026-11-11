@@ -321,3 +321,12 @@ export type SavedHotelRemovedResponse = z.infer<typeof savedHotelRemovedResponse
  */
 export const savedHotelIdsResponse = z.object({ ids: z.array(uuid) }).strict();
 export type SavedHotelIdsResponse = z.infer<typeof savedHotelIdsResponse>;
+
+/**
+ * A client edits their own free-text note on a shortlisted hotel (D7 "My selection"). Client-authored and
+ * client-visible; the service trims it and stores blank as null (a cleared note), so "no note" is one state.
+ */
+export const savedHotelNoteUpdateRequest = z
+  .object({ note: z.string().max(1000).nullable() })
+  .strict();
+export type SavedHotelNoteUpdateRequest = z.infer<typeof savedHotelNoteUpdateRequest>;
