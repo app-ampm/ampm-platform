@@ -86,7 +86,8 @@ export class CognitoIdentityProvisioner implements IdentityProvisioner {
 /** A client's username is their phone (their sign-in handle); staff sign in by email. */
 function usernameFor(input: ProvisionUserInput): string {
   if (input.kind === "client") {
-    if (!input.phone) throw new Error("a client login needs a phone number to provision OTP sign-in");
+    if (!input.phone)
+      throw new Error("a client login needs a phone number to provision OTP sign-in");
     return input.phone;
   }
   return input.email;

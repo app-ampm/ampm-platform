@@ -22,20 +22,20 @@ One file per **trust zone**, so each container loads only the secrets it needs:
 
 ## Secret registry
 
-| Secret                                    | Zone                    | Used by                                           | Rotation                                                                      |
-| ----------------------------------------- | ----------------------- | ------------------------------------------------- | ----------------------------------------------------------------------------- |
-| `POSTGRES_PASSWORD` / `PGPASSWORD`        | postgres                | Postgres auth; pgBackRest + the job_runs recorder | on suspicion; yearly otherwise                                                |
-| `DATABASE_URL`                            | postgres, app           | the app and the backup sidecar                    | follows `POSTGRES_PASSWORD`                                                   |
-| `PGBACKREST_REPO1_CIPHER_PASS`            | postgres                | encrypts the backup repository                    | **never** rotate without re-encrypting the repo (losing it loses the backups) |
-| `PGBACKREST_REPO1_S3_KEY` / `_KEY_SECRET` | postgres                | pgBackRest → the Mumbai S3 bucket                 | yearly; immediately if the IAM user is exposed                                |
-| `REDIS_PASSWORD` / `REDIS_URL`            | redis, app              | Redis auth                                        | yearly                                                                        |
-| `COGNITO_REGION`/`_USER_POOL_ID`/`_CLIENT_ID` | app                 | identity verification (public ids, not secrets)   | managed in Cognito; update on pool/client change                              |
-| `COGNITO_PROVISIONING_ACCESS_KEY_ID` / `_SECRET_ACCESS_KEY` | app    | Cognito user provisioning at invite time (cognito-setup §6) | yearly; immediately if exposed (the only AWS key the app holds) |
-| `SMTP_USER` / `SMTP_PASSWORD`             | app                     | transactional email (SES)                         | yearly; immediately on exposure                                               |
-| `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` | app                     | payments (when they land)                         | per Razorpay policy; test keys on staging only                                |
-| `SENTRY_DSN`                              | app                     | api/worker error reporting (feature 6.7)          | on Sentry project change; separate DSN per environment                        |
-| `ALERT_WEBHOOK_URL`                       | monitoring              | Alertmanager paging (feature 6.7)                 | on channel change or exposure; separate URL per environment                   |
-| age private key                           | host + password manager | sops decrypt at deploy                            | on operator change or exposure (re-encrypt every file)                        |
+| Secret                                                      | Zone                    | Used by                                                     | Rotation                                                                      |
+| ----------------------------------------------------------- | ----------------------- | ----------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| `POSTGRES_PASSWORD` / `PGPASSWORD`                          | postgres                | Postgres auth; pgBackRest + the job_runs recorder           | on suspicion; yearly otherwise                                                |
+| `DATABASE_URL`                                              | postgres, app           | the app and the backup sidecar                              | follows `POSTGRES_PASSWORD`                                                   |
+| `PGBACKREST_REPO1_CIPHER_PASS`                              | postgres                | encrypts the backup repository                              | **never** rotate without re-encrypting the repo (losing it loses the backups) |
+| `PGBACKREST_REPO1_S3_KEY` / `_KEY_SECRET`                   | postgres                | pgBackRest → the Mumbai S3 bucket                           | yearly; immediately if the IAM user is exposed                                |
+| `REDIS_PASSWORD` / `REDIS_URL`                              | redis, app              | Redis auth                                                  | yearly                                                                        |
+| `COGNITO_REGION`/`_USER_POOL_ID`/`_CLIENT_ID`               | app                     | identity verification (public ids, not secrets)             | managed in Cognito; update on pool/client change                              |
+| `COGNITO_PROVISIONING_ACCESS_KEY_ID` / `_SECRET_ACCESS_KEY` | app                     | Cognito user provisioning at invite time (cognito-setup §6) | yearly; immediately if exposed (the only AWS key the app holds)               |
+| `SMTP_USER` / `SMTP_PASSWORD`                               | app                     | transactional email (SES)                                   | yearly; immediately on exposure                                               |
+| `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET`                   | app                     | payments (when they land)                                   | per Razorpay policy; test keys on staging only                                |
+| `SENTRY_DSN`                                                | app                     | api/worker error reporting (feature 6.7)                    | on Sentry project change; separate DSN per environment                        |
+| `ALERT_WEBHOOK_URL`                                         | monitoring              | Alertmanager paging (feature 6.7)                           | on channel change or exposure; separate URL per environment                   |
+| age private key                                             | host + password manager | sops decrypt at deploy                                      | on operator change or exposure (re-encrypt every file)                        |
 
 Keep this table current: every new secret gets a row before it ships.
 
@@ -50,15 +50,17 @@ Least-privilege policy (replace the ARN with the real pool):
 ```json
 {
   "Version": "2012-10-17",
-  "Statement": [{
-    "Effect": "Allow",
-    "Action": [
-      "cognito-idp:AdminCreateUser",
-      "cognito-idp:AdminSetUserPassword",
-      "cognito-idp:AdminUpdateUserAttributes"
-    ],
-    "Resource": "arn:aws:cognito-idp:ap-south-1:<ACCOUNT_ID>:userpool/ap-south-1_xxxxxxxxx"
-  }]
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "cognito-idp:AdminCreateUser",
+        "cognito-idp:AdminSetUserPassword",
+        "cognito-idp:AdminUpdateUserAttributes"
+      ],
+      "Resource": "arn:aws:cognito-idp:ap-south-1:<ACCOUNT_ID>:userpool/ap-south-1_xxxxxxxxx"
+    }
+  ]
 }
 ```
 

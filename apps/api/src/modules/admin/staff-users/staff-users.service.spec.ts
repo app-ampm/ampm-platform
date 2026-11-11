@@ -150,7 +150,10 @@ describe("StaffUsersService", () => {
     const view = await service.create({ name: "New Staff", email: "new@example.com" }, "sa");
     expect(view.status).toBe("invited"); // create succeeded despite the provisioning error
     expect(queue).toHaveBeenCalled(); // the invite still went out
-    expect(warn).toHaveBeenCalledWith("staff.provision.failed", expect.objectContaining({ userId: "user-new" }));
+    expect(warn).toHaveBeenCalledWith(
+      "staff.provision.failed",
+      expect.objectContaining({ userId: "user-new" }),
+    );
   });
 
   it("re-provisions idempotently on reinvite", async () => {

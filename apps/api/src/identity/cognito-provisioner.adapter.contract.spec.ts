@@ -22,7 +22,10 @@ describe("CognitoIdentityProvisioner (offline SDK contract)", () => {
   function harness(sendImpl?: (command: unknown) => Promise<unknown>) {
     const send = vi.fn(sendImpl ?? (async () => ({})));
     const client = { send } as unknown as CognitoIdentityProviderClient;
-    const provisioner = new CognitoIdentityProvisioner({ region: "ap-south-1", userPoolId: POOL_ID }, client);
+    const provisioner = new CognitoIdentityProvisioner(
+      { region: "ap-south-1", userPoolId: POOL_ID },
+      client,
+    );
     return { provisioner, send };
   }
 

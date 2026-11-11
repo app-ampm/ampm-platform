@@ -137,8 +137,11 @@ function identityIssues(value: EnvFields): EnvIssue[] {
   const hasSecret = Boolean(value.COGNITO_PROVISIONING_SECRET_ACCESS_KEY);
   if (hasKeyId !== hasSecret) {
     issues.push({
-      path: [hasKeyId ? "COGNITO_PROVISIONING_SECRET_ACCESS_KEY" : "COGNITO_PROVISIONING_ACCESS_KEY_ID"],
-      message: "set both COGNITO_PROVISIONING_ACCESS_KEY_ID and COGNITO_PROVISIONING_SECRET_ACCESS_KEY, or neither",
+      path: [
+        hasKeyId ? "COGNITO_PROVISIONING_SECRET_ACCESS_KEY" : "COGNITO_PROVISIONING_ACCESS_KEY_ID",
+      ],
+      message:
+        "set both COGNITO_PROVISIONING_ACCESS_KEY_ID and COGNITO_PROVISIONING_SECRET_ACCESS_KEY, or neither",
     });
   }
   return issues;
