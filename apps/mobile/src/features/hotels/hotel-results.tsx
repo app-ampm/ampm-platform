@@ -1,8 +1,9 @@
 import { View } from "react-native";
 
-import type { useHotels } from "@ampm/api-client";
-import type { HotelView } from "@ampm/core";
+import { type useHotels, useSaveHotels } from "@ampm/api-client";
+import { HOTEL_COMPARE_MIN, type HotelView } from "@ampm/core";
 import {
+  Button,
   EmptyState,
   LoadMore,
   politeLiveRegion,
@@ -12,13 +13,25 @@ import {
   Stack,
   Text,
   useAnnounce,
+  useToast,
 } from "@ampm/ui";
 
 import { useGoToSignIn } from "@/navigation/sign-in";
 
 import { SaveHeartButton, useHotelPagePermissions } from "./hotel-actions";
 import { HotelCard } from "./hotel-card";
-import { DISCOVERY_CLOSED, DISCOVERY_SIGN_IN, hotelCountLabel } from "./hotels.format";
+import {
+  CompareBar,
+  HotelCompareCheckbox,
+  useHotelCompareSelection,
+  type HotelCompareSelection,
+} from "./hotel-compare-select";
+import {
+  DISCOVERY_CLOSED,
+  DISCOVERY_SIGN_IN,
+  destinationLabel,
+  hotelCountLabel,
+} from "./hotels.format";
 
 export interface HotelResultsProps {
   readonly hotels: ReturnType<typeof useHotels>;
@@ -76,22 +89,45 @@ interface HotelResultListProps {
 }
 
 /**
+ * Discovery's compare mode (B12b): the shared 2–4 pick, but a picked hotel is saved to the shortlist before
+ * the compare opens, because the compare endpoint returns only saved hotels — so comparing a browse card
+ * first adds it to the shortlist. A failed save keeps the picks and tells the user, so the compare never
+ * opens missing a column.
+ */
+function useDiscoveryCompare(): HotelCompareSelection {
+  const saveHotels = useSaveHotels();
+  const toast = useToast();
+  return useHotelCompareSelection(async (ids) => {
+    try {
+      await saveHotels.mutateAsync(ids);
+    } catch (error) {
+      toast.show({ title: "Could not add those hotels to compare", tone: "danger" });
+      throw error;
+    }
+  });
+}
+
+/**
  * The found hotels, led by a polite live-region count so a live-applied filter is announced to a screen
- * reader (WCAG 4.1.3): the count going from "14 hotels" to "3 hotels" is spoken, not only shown. Below them
- * a "Load more" footer fetches the next page (B10); `hasMore` also drives the count's "+" when a page is cut.
+ * reader (WCAG 4.1.3). "Compare" turns the cards into a 2–4 pick that opens the side-by-side (B12b); below
+ * them a "Load more" footer fetches the next page (B10), and `hasMore` drives the count's "+" when cut.
  */
 function HotelResultList({ hotels, onOpen }: HotelResultListProps) {
   const countLabel = hotelCountLabel(hotels.items.length, hotels.hasMore);
   const { canSave } = useHotelPagePermissions();
+  const compare = useDiscoveryCompare();
+  const canCompare = canSave && hotels.items.length >= HOTEL_COMPARE_MIN;
   useAnnounce(countLabel, true, { web: true });
   return (
     <Stack gap={3}>
-      <Text variant="eyebrow" {...politeLiveRegion()}>
-        {countLabel}
-      </Text>
-      {hotels.items.map((hotel) => (
-        <HotelResultCard key={hotel.id} hotel={hotel} canSave={canSave} onOpen={onOpen} />
-      ))}
+      <CompareToggleRow
+        countLabel={countLabel}
+        comparing={compare.comparing}
+        show={canCompare || compare.comparing}
+        onToggle={compare.comparing ? compare.exit : compare.start}
+      />
+      {compare.comparing ? <CompareShortlistNote /> : null}
+      <HotelResultItems hotels={hotels} compare={compare} canSave={canSave} onOpen={onOpen} />
       <LoadMore
         hasMore={hotels.hasMore}
         loading={hotels.isLoadingMore}
@@ -99,7 +135,76 @@ function HotelResultList({ hotels, onOpen }: HotelResultListProps) {
         onLoadMore={hotels.loadMore}
         testID="hotels-load-more"
       />
+      {compare.comparing ? (
+        <CompareBar
+          count={compare.selected.length}
+          opening={compare.opening}
+          onCompare={compare.open}
+        />
+      ) : null}
     </Stack>
+  );
+}
+
+interface CompareToggleRowProps {
+  readonly countLabel: string;
+  readonly comparing: boolean;
+  /** Whether the compare toggle shows: the account can compare, or is already in compare mode. */
+  readonly show: boolean;
+  readonly onToggle: () => void;
+}
+
+/** The result count, with the compare toggle beside it (enter the 2–4 pick, or leave it). */
+function CompareToggleRow({ countLabel, comparing, show, onToggle }: CompareToggleRowProps) {
+  return (
+    <Row gap={3} justify="between" align="center">
+      <Text variant="eyebrow" {...politeLiveRegion()}>
+        {countLabel}
+      </Text>
+      {show ? (
+        <Button variant="glass" size="sm" icon={comparing ? "x" : "list-checks"} onPress={onToggle}>
+          {comparing ? "Cancel" : "Compare"}
+        </Button>
+      ) : null}
+    </Row>
+  );
+}
+
+/** Compare saves before it opens, so comparing adds the picks to the shortlist — say so plainly. */
+function CompareShortlistNote() {
+  return (
+    <Text variant="caption" tone="muted">
+      Hotels you compare are added to your shortlist.
+    </Text>
+  );
+}
+
+interface HotelResultItemsProps {
+  readonly hotels: ReturnType<typeof useHotels>;
+  readonly compare: HotelCompareSelection;
+  readonly canSave: boolean;
+  readonly onOpen: (hotelId: string) => void;
+}
+
+/** The found hotels: compare picks while comparing, otherwise the result cards with their save heart. */
+function HotelResultItems({ hotels, compare, canSave, onOpen }: HotelResultItemsProps) {
+  return (
+    <>
+      {hotels.items.map((hotel) =>
+        compare.comparing ? (
+          <HotelCompareCheckbox
+            key={hotel.id}
+            hotelId={hotel.id}
+            name={hotel.name}
+            destinationText={destinationLabel(hotel.destination)}
+            selected={compare.selected}
+            onToggle={compare.toggle}
+          />
+        ) : (
+          <HotelResultCard key={hotel.id} hotel={hotel} canSave={canSave} onOpen={onOpen} />
+        ),
+      )}
+    </>
   );
 }
 
