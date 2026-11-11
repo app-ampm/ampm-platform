@@ -83,6 +83,7 @@ export { HOTELS_QUERY_KEY, useHotels } from "./hooks/use-hotels";
 export { hotelQueryKey, useHotel } from "./hooks/use-hotel";
 export { SAVED_HOTELS_QUERY_KEY, useSavedHotels } from "./hooks/use-saved-hotels";
 export { useSaveHotel } from "./hooks/use-save-hotel";
+export { useSaveHotels } from "./hooks/use-save-hotels";
 export { useCompare } from "./hooks/use-compare";
 export { DESTINATIONS_QUERY_KEY, useDestinations } from "./hooks/use-destinations";
 export { useUnsaveHotel } from "./hooks/use-unsave-hotel";

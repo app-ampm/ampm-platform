@@ -1,58 +1,31 @@
 import { useRouter } from "expo-router";
-import { useState, type ReactNode } from "react";
+import { type ReactNode } from "react";
 
 import { useMe, useSavedHotels } from "@ampm/api-client";
-import { HOTEL_COMPARE_MAX, HOTEL_COMPARE_MIN, type SavedHotelView } from "@ampm/core";
+import { HOTEL_COMPARE_MIN } from "@ampm/core";
 import {
   Button,
   Card,
-  Checkbox,
   EmptyState,
   LoadMore,
-  politeLiveRegion,
   QueryErrorState,
-  Row,
   Screen,
   ScreenHeader,
   Skeleton,
   Stack,
   Text,
-  useAnnounce,
 } from "@ampm/ui";
 
 import { useGoToSignIn } from "@/navigation/sign-in";
 
 import { canBrowseHotels } from "../portal/portal.format";
+import { CompareBar, HotelCompareCheckbox, useHotelCompareSelection } from "./hotel-compare-select";
 import { destinationLabel, hotelCountLabel } from "./hotels.format";
 import { SavedHotelRow } from "./saved-hotel-row";
 
 export interface SavedHotelsScreenProps {
   /** The app's tab bar; the route supplies it and the screen only gives it room. */
   readonly tabBar?: ReactNode;
-}
-
-/** Compare-mode state: which saved hotels are picked (2–4) and opening the side-by-side with them. */
-function useCompareSelection() {
-  const router = useRouter();
-  const [comparing, setComparing] = useState(false);
-  const [selected, setSelected] = useState<readonly string[]>([]);
-  const toggle = (hotelId: string): void =>
-    setSelected((current) =>
-      current.includes(hotelId)
-        ? current.filter((id) => id !== hotelId)
-        : current.length >= HOTEL_COMPARE_MAX
-          ? current
-          : [...current, hotelId],
-    );
-  const exit = (): void => {
-    setComparing(false);
-    setSelected([]);
-  };
-  const open = (): void => {
-    router.push({ pathname: "/hotels/compare", params: { ids: selected.join(",") } });
-    exit();
-  };
-  return { comparing, selected, start: () => setComparing(true), exit, toggle, open };
 }
 
 /**
@@ -65,7 +38,7 @@ export function SavedHotelsScreen({ tabBar }: SavedHotelsScreenProps) {
   const saved = useSavedHotels();
   const me = useMe();
   const canBrowse = me.data ? canBrowseHotels(me.data) : false;
-  const compare = useCompareSelection();
+  const compare = useHotelCompareSelection();
   const canCompare = canBrowse && saved.items.length >= HOTEL_COMPARE_MIN;
   return (
     <Screen
@@ -185,7 +158,14 @@ function SavedCardList({
       </Text>
       {saved.items.map((item) =>
         comparing ? (
-          <CompareCheckbox key={item.id} item={item} selected={selected} onToggle={onToggle} />
+          <HotelCompareCheckbox
+            key={item.id}
+            hotelId={item.hotel.id}
+            name={item.hotel.name}
+            destinationText={destinationLabel(item.hotel.destination)}
+            selected={selected}
+            onToggle={onToggle}
+          />
         ) : (
           <SavedHotelRow key={item.id} item={item} onOpen={() => onOpen(item.hotel.id)} />
         ),
@@ -198,57 +178,6 @@ function SavedCardList({
         testID="saved-load-more"
       />
     </Card>
-  );
-}
-
-interface CompareCheckboxProps {
-  readonly item: SavedHotelView;
-  readonly selected: readonly string[];
-  readonly onToggle: (hotelId: string) => void;
-}
-
-/** A saved hotel as a compare pick: checked when selected, disabled once the maximum is chosen. */
-function CompareCheckbox({ item, selected, onToggle }: CompareCheckboxProps) {
-  const checked = selected.includes(item.hotel.id);
-  return (
-    <Checkbox
-      label={item.hotel.name}
-      description={destinationLabel(item.hotel.destination)}
-      checked={checked}
-      onCheckedChange={() => onToggle(item.hotel.id)}
-      disabled={!checked && selected.length >= HOTEL_COMPARE_MAX}
-      testID={`compare-select-${item.hotel.id}`}
-      className="border-t border-primary/16 py-3"
-    />
-  );
-}
-
-/** The compare picker's footer: how many are chosen, the cap once it is reached, and the action (2–4 only). */
-function CompareBar({
-  count,
-  onCompare,
-}: {
-  readonly count: number;
-  readonly onCompare: () => void;
-}) {
-  const ready = count >= HOTEL_COMPARE_MIN && count <= HOTEL_COMPARE_MAX;
-  const atMax = count >= HOTEL_COMPARE_MAX;
-  const message =
-    count === 0
-      ? `Pick ${HOTEL_COMPARE_MIN}–${HOTEL_COMPARE_MAX} hotels to compare`
-      : atMax
-        ? `Maximum ${HOTEL_COMPARE_MAX} — uncheck one to swap`
-        : `${count} selected`;
-  useAnnounce(atMax ? message : undefined, atMax, { web: true });
-  return (
-    <Row gap={3} justify="between" align="center" className="border-t border-primary/16 pt-3">
-      <Text variant="caption" tone="muted" className="shrink" {...politeLiveRegion()}>
-        {message}
-      </Text>
-      <Button variant="primary" size="sm" disabled={!ready} onPress={onCompare}>
-        Compare
-      </Button>
-    </Row>
   );
 }
 
