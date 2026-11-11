@@ -313,3 +313,11 @@ export type SavedHotelPage = z.infer<typeof savedHotelPage>;
  */
 export const savedHotelRemovedResponse = z.object({ hotelId: uuid }).strict();
 export type SavedHotelRemovedResponse = z.infer<typeof savedHotelRemovedResponse>;
+
+/**
+ * Every hotel id on the account's shortlist, in one bounded read (a client's shortlist is a handful to a
+ * few dozen hotels). The discovery cards and the hotel page use it for a reliable "saved" state: scanning
+ * the first page of the paginated shortlist missed a hotel saved further down (B12/B12b), this does not.
+ */
+export const savedHotelIdsResponse = z.object({ ids: z.array(uuid) }).strict();
+export type SavedHotelIdsResponse = z.infer<typeof savedHotelIdsResponse>;

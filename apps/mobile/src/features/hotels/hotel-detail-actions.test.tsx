@@ -14,6 +14,7 @@ import {
   pageOf,
   renderWithApi,
   savedFixture,
+  savedIds,
 } from "./hotels.test-utils";
 
 const mockPush = jest.fn();
@@ -42,6 +43,7 @@ function accountApi({ me, saved, refuseWrites = false }: Account) {
         : ok({ hotelId: HOTEL_ID });
     }
     if (url.pathname === `/hotels/${HOTEL_ID}`) return ok(detailFixture());
+    if (url.pathname === "/hotels/saved/ids") return ok(savedIds(saved ? [HOTEL_ID] : []));
     if (url.pathname === "/hotels/saved") return ok(pageOf(shortlist));
     if (url.pathname === "/me") return ok(me);
     return undefined;

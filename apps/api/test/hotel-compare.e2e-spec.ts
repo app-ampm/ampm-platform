@@ -199,4 +199,23 @@ describe("Hotel compare (e2e)", () => {
       .set("authorization", auth(clientToken))
       .expect(400);
   });
+
+  it("lists every saved hotel id for the account, including one now out of reach (/hotels/saved/ids)", async () => {
+    // Unlike compare, the saved-ids set is NOT reach-scoped: delta is on the shortlist but inactive, and it
+    // still appears — a hotel is saved whether or not the caller can still open it. The hearts on the cards
+    // read this complete set (B12/B12b), so a hotel saved beyond the first shortlist page still shows saved.
+    const res = await http()
+      .get("/hotels/saved/ids")
+      .set("authorization", auth(clientToken))
+      .expect(200);
+    expect([...res.body.data.ids].sort()).toEqual([alpha, bravo, delta].sort());
+  });
+
+  it("never returns another account's saved ids (the saved-ids set is account-scoped)", async () => {
+    const res = await http()
+      .get("/hotels/saved/ids")
+      .set("authorization", auth(intruderToken))
+      .expect(200);
+    expect(res.body.data.ids).toEqual([]);
+  });
 });

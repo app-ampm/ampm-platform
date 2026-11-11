@@ -11,6 +11,7 @@ import {
   type HotelPage,
   type HotelReach,
   type SavedHotelListQuery,
+  type SavedHotelIdsResponse,
   type SavedHotelPage,
   type SavedHotelRemovedResponse,
   type SavedHotelView,
@@ -157,6 +158,18 @@ export class HotelsService {
       ),
       nextCursor,
     };
+  }
+
+  /**
+   * Every hotel id on the caller's shortlist, in one bounded read (CP-05), for a reliable per-card "saved"
+   * state on the discovery cards and the hotel page: unlike scanning the first page of the paginated
+   * shortlist, this never misses a hotel saved further down (B12/B12b). Gated on saved_hotels like the
+   * shortlist read; a lapsed account that still keeps names returns them (reach does not change ownership).
+   */
+  async savedIds(principal: Principal): Promise<SavedHotelIdsResponse> {
+    const { userId } = this.gate(principal, "saved_hotels", false);
+    const accountId = await this.accountIdOrThrow(userId);
+    return { ids: await this.hotels.allSavedHotelIds(accountId) };
   }
 
   async save(principal: Principal, hotelId: string): Promise<SavedHotelView> {

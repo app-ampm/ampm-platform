@@ -82,6 +82,7 @@ export { useCompletePayment } from "./hooks/use-complete-payment";
 export { HOTELS_QUERY_KEY, useHotels } from "./hooks/use-hotels";
 export { hotelQueryKey, useHotel } from "./hooks/use-hotel";
 export { SAVED_HOTELS_QUERY_KEY, useSavedHotels } from "./hooks/use-saved-hotels";
+export { SAVED_HOTEL_IDS_QUERY_KEY, useSavedHotelIds } from "./hooks/use-saved-hotel-ids";
 export { useSaveHotel } from "./hooks/use-save-hotel";
 export { useSaveHotels } from "./hooks/use-save-hotels";
 export { useCompare } from "./hooks/use-compare";

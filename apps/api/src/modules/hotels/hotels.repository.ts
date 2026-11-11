@@ -307,6 +307,18 @@ export class HotelsRepository {
   }
 
   /**
+   * Every hotel id on the account's shortlist (bounded — a client saves a handful). Not reach-scoped: a
+   * hotel is saved whether or not it is still in reach, and the caller only checks ids it already shows.
+   */
+  async allSavedHotelIds(accountId: string): Promise<string[]> {
+    const rows = await this.prisma.savedHotel.findMany({
+      where: { accountId, deletedAt: null },
+      select: { hotelId: true },
+    });
+    return rows.map((r) => r.hotelId);
+  }
+
+  /**
    * Active destinations that have at least one active hotel in the caller's reach, each with that in-reach
    * count (CP-01/02, AC-04.5). The count uses the same reach predicate as the catalogue, so a destination's
    * number matches the hotels the caller can open; an empty reach yields none, and a draft destination is

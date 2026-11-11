@@ -10,6 +10,7 @@ import {
   type HotelDetailView,
   type HotelListQuery,
   type HotelPage,
+  type SavedHotelIdsResponse,
   type SavedHotelListQuery,
   type SavedHotelPage,
   type SavedHotelRemovedResponse,
@@ -50,6 +51,12 @@ export class HotelsController {
     @CurrentPrincipal() principal: Principal,
   ): Promise<SavedHotelPage> {
     return this.hotels.listSaved(principal, query);
+  }
+
+  // Declared before `:hotelId` so "saved/ids" resolves here, not to the hotel-detail param handler.
+  @Get("saved/ids")
+  savedIds(@CurrentPrincipal() principal: Principal): Promise<SavedHotelIdsResponse> {
+    return this.hotels.savedIds(principal);
   }
 
   // Declared before `:hotelId` so "destinations" resolves here, not to the hotel-detail param handler.
