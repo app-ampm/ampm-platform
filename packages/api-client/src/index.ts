@@ -8,6 +8,7 @@ export { createApiClient } from "./client";
 export type { ApiClient, ApiClientOptions, RequestOptions } from "./client";
 export { ApiProvider, createQueryClient, useApiClient } from "./provider";
 export type { ApiProviderProps } from "./provider";
+export { useMediaUrl } from "./hooks/use-media-url";
 export { ME_QUERY_KEY, meQueryOptions, useMe, type UseMeOptions } from "./hooks/use-me";
 export { useSubmitEnquiry } from "./hooks/use-submit-enquiry";
 export { LEADS_QUERY_KEY, useLeads } from "./hooks/use-leads";

@@ -4,7 +4,6 @@ import { useUnsaveHotel, useUpdateSavedNote } from "@ampm/api-client";
 import { formatDay, type HotelView, type SavedHotelView } from "@ampm/core";
 import {
   Button,
-  Image,
   Input,
   ListItem,
   PhotoPlaceholder,
@@ -15,6 +14,8 @@ import {
   Text,
   useToast,
 } from "@ampm/ui";
+
+import { MediaImage } from "@/components/media-image";
 
 import { destinationLabel, starLabel } from "./hotels.format";
 
@@ -166,8 +167,8 @@ function NoteSheet({ open, onClose, hotel, note }: NoteSheetProps) {
 
 function Thumbnail({ hotel }: { readonly hotel: HotelView }) {
   return hotel.coverUrl ? (
-    <Image
-      source={{ uri: hotel.coverUrl }}
+    <MediaImage
+      uri={hotel.coverUrl}
       alt={`Photo of ${hotel.name}`}
       radius="none"
       className="h-10 w-12 rounded-sm"

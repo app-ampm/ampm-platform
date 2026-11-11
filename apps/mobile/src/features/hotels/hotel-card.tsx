@@ -1,7 +1,9 @@
 import { View } from "react-native";
 
 import type { HotelCardSummary, HotelView } from "@ampm/core";
-import { Card, Image, MoneyText, PhotoPlaceholder, Row, Stack, StatusChip, Text } from "@ampm/ui";
+import { Card, MoneyText, PhotoPlaceholder, Row, Stack, StatusChip, Text } from "@ampm/ui";
+
+import { MediaImage } from "@/components/media-image";
 
 import {
   capacityRangeLabel,
@@ -22,8 +24,8 @@ export interface HotelCardProps {
 /** The card's photo: the hotel's cover when it has a client-visible image, else the striped stand-in. */
 function HotelCardPhoto({ hotel }: { readonly hotel: HotelView }) {
   return hotel.coverUrl ? (
-    <Image
-      source={{ uri: hotel.coverUrl }}
+    <MediaImage
+      uri={hotel.coverUrl}
       alt={`Photo of ${hotel.name}`}
       radius="none"
       className="h-32 w-full rounded md:h-auto md:min-h-32 md:w-48"

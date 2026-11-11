@@ -43,6 +43,7 @@ function recordingApi(): { readonly api: ApiClient; readonly asked: string[] } {
       asked.push(path);
       return Promise.resolve(schema.parse(ME));
     },
+    mediaUrl: (url) => url ?? null,
   };
   return { api, asked };
 }

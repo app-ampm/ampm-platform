@@ -7,7 +7,9 @@ import type {
   MediaGalleryItem,
   WeddingReferenceClientItem,
 } from "@ampm/core";
-import { Icon, Image, ListItem, Row, Stack, Text } from "@ampm/ui";
+import { Icon, ListItem, Row, Stack, Text } from "@ampm/ui";
+
+import { MediaImage } from "@/components/media-image";
 
 import { HotelRates } from "./hotel-rates";
 import {
@@ -151,9 +153,9 @@ function HotelGallery({ images }: { readonly images: readonly MediaGalleryItem[]
       {rowsOf(images, COLUMNS).map((row) => (
         <Row key={row[0]?.id} gap={2}>
           {row.map((item) => (
-            <Image
+            <MediaImage
               key={item.id}
-              source={{ uri: item.thumbnailUrl }}
+              uri={item.thumbnailUrl}
               alt={item.caption ?? "Hotel photo"}
               className="aspect-square flex-1"
             />

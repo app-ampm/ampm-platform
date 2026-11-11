@@ -2,7 +2,9 @@ import { View } from "react-native";
 
 import { useMediaDownloadUrl } from "@ampm/api-client";
 import type { MediaAssetView } from "@ampm/core";
-import { Button, Icon, Image, Row, Stack, StatusChip, Text } from "@ampm/ui";
+import { Button, Icon, Row, Stack, StatusChip, Text } from "@ampm/ui";
+
+import { MediaImage } from "@/components/media-image";
 
 import {
   rightsLabel,
@@ -20,8 +22,8 @@ function MediaThumb({ media }: { readonly media: MediaAssetView }) {
   const link = useMediaDownloadUrl(media.id, "thumbnail", clean);
   if (clean && link.data) {
     return (
-      <Image
-        source={{ uri: link.data.url }}
+      <MediaImage
+        uri={link.data.url}
         alt={media.caption ?? ""}
         className="h-16 w-16"
         radius="md"
