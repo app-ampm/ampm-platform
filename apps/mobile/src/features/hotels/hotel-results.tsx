@@ -1,9 +1,13 @@
+import { View } from "react-native";
+
 import type { useHotels } from "@ampm/api-client";
+import type { HotelView } from "@ampm/core";
 import {
   EmptyState,
   LoadMore,
   politeLiveRegion,
   QueryErrorState,
+  Row,
   Skeleton,
   Stack,
   Text,
@@ -12,6 +16,7 @@ import {
 
 import { useGoToSignIn } from "@/navigation/sign-in";
 
+import { SaveHeartButton, useHotelPagePermissions } from "./hotel-actions";
 import { HotelCard } from "./hotel-card";
 import { DISCOVERY_CLOSED, DISCOVERY_SIGN_IN, hotelCountLabel } from "./hotels.format";
 
@@ -77,6 +82,7 @@ interface HotelResultListProps {
  */
 function HotelResultList({ hotels, onOpen }: HotelResultListProps) {
   const countLabel = hotelCountLabel(hotels.items.length, hotels.hasMore);
+  const { canSave } = useHotelPagePermissions();
   useAnnounce(countLabel, true, { web: true });
   return (
     <Stack gap={3}>
@@ -84,7 +90,7 @@ function HotelResultList({ hotels, onOpen }: HotelResultListProps) {
         {countLabel}
       </Text>
       {hotels.items.map((hotel) => (
-        <HotelCard key={hotel.id} hotel={hotel} onPress={() => onOpen(hotel.id)} />
+        <HotelResultCard key={hotel.id} hotel={hotel} canSave={canSave} onOpen={onOpen} />
       ))}
       <LoadMore
         hasMore={hotels.hasMore}
@@ -94,6 +100,31 @@ function HotelResultList({ hotels, onOpen }: HotelResultListProps) {
         testID="hotels-load-more"
       />
     </Stack>
+  );
+}
+
+interface HotelResultCardProps {
+  readonly hotel: HotelView;
+  /** Whether the account keeps a shortlist; the heart shows only then (the server still decides). */
+  readonly canSave: boolean;
+  readonly onOpen: (hotelId: string) => void;
+}
+
+/**
+ * A result card with its shortlist heart (B12, D5): the heart sits BESIDE the pressable card, never inside
+ * it, so pressing it saves the hotel instead of opening it and a screen reader reaches it on its own (the
+ * pressable Card collapses its children — WCAG 1.3.1; the same idiom as the saved-hotel row's remove button,
+ * and clear of the card's photo caption and star chip). The heart names the hotel (WCAG 2.4.4) and shows
+ * only for an account that keeps a shortlist.
+ */
+function HotelResultCard({ hotel, canSave, onOpen }: HotelResultCardProps) {
+  return (
+    <Row gap={2} align="start">
+      <View className="flex-1">
+        <HotelCard hotel={hotel} onPress={() => onOpen(hotel.id)} />
+      </View>
+      {canSave ? <SaveHeartButton hotel={hotel} namedLabel /> : null}
+    </Row>
   );
 }
 
