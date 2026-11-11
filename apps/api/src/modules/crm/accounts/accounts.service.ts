@@ -9,11 +9,16 @@ import {
   type LeadStatus,
 } from "@ampm/core";
 
+import { AppLogger } from "../../../common/logger.service.js";
 import { PrismaService } from "../../../db/prisma.service.js";
 import { ENV, type Env } from "../../../env.js";
 import { Prisma } from "../../../generated/prisma/client.js";
 import { AuthTokenService } from "../../../identity/auth-token.service.js";
 import { ClientUserService } from "../../../identity/client-user.service.js";
+import {
+  IDENTITY_PROVISIONER,
+  type IdentityProvisioner,
+} from "../../../identity/identity.types.js";
 import { AuditService } from "../../../policy/audit.service.js";
 import { NotificationService } from "../../admin/notification/notification.service.js";
 import { LeadsRepository } from "../leads/leads.repository.js";
@@ -58,6 +63,8 @@ export class AccountsService {
     private readonly authTokens: AuthTokenService,
     private readonly clientUsers: ClientUserService,
     private readonly notifications: NotificationService,
+    private readonly logger: AppLogger,
+    @Inject(IDENTITY_PROVISIONER) private readonly provisioner: IdentityProvisioner,
     @Inject(ENV) private readonly env: Env,
   ) {}
 
@@ -73,6 +80,18 @@ export class AccountsService {
 
     const plan = buildConvertPlan(leadId, lead, request, actorId);
     const created = await this.runConvert(plan);
+    // Provision the Cognito sign-in account (cognito-setup §6) before the invite is queued. Best-effort
+    // after the conversion commits and outside its transaction (an AWS call must not hold a DB tx open),
+    // and a no-op under IDENTITY_PROVIDER=local; a failure is logged, not fatal — the account and its
+    // invite already exist and the client-login reinvite path re-provisions idempotently.
+    await this.provisioner
+      .provisionUser({ kind: "client", email: plan.contact.email, phone: plan.contact.phone })
+      .catch((error: unknown) =>
+        this.logger.warn("account.convert.provision_failed", {
+          userId: created.userId,
+          error: String(error),
+        }),
+      );
     const inviteQueued = await this.queueInvite(
       created.userId,
       plan.contact.name,

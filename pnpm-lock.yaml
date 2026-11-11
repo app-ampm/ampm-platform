@@ -274,6 +274,9 @@ importers:
       '@ampm/policy':
         specifier: workspace:*
         version: link:../../packages/policy
+      '@aws-sdk/client-cognito-identity-provider':
+        specifier: ^3.1164.0
+        version: 3.1164.0
       '@nestjs/common':
         specifier: ^12.0.1
         version: 12.2.0(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@8.1.1)
@@ -878,6 +881,10 @@ packages:
 
   '@aws-crypto/util@5.2.0':
     resolution: {integrity: sha512-4RkU9EsI6ZpBve5fseQlGNUWKMa1RLPQ1dnjnQoe07ldfIzcsGb5hC5W0Dm7u423KWzawlrpbjXBrXCEv9zazQ==}
+
+  '@aws-sdk/client-cognito-identity-provider@3.1164.0':
+    resolution: {integrity: sha512-IDHVBph/a92Dfw8eOCoUyS5ieGy4n9cJABQviNWQshtJwTV2d4FE1DMrSGGfVRBp1PyJ4GTh2pPj56aN2jE3sg==}
+    engines: {node: '>=20.0.0'}
 
   '@aws-sdk/client-firehose@3.1164.0':
     resolution: {integrity: sha512-egb7OuTPKCyv1Gk0UqbY0vX3PVi433jEguzDO5tbgedQ0ji+SfvoJu/Arp9D/UVmiOyA7r+yvogNPigXufc/oQ==}
@@ -8686,6 +8693,17 @@ snapshots:
     dependencies:
       '@aws-sdk/types': 3.975.0
       '@smithy/util-utf8': 2.3.0
+      tslib: 2.8.1
+
+  '@aws-sdk/client-cognito-identity-provider@3.1164.0':
+    dependencies:
+      '@aws-sdk/core': 3.980.1
+      '@aws-sdk/credential-provider-node': 3.972.94
+      '@aws-sdk/types': 3.975.0
+      '@smithy/core': 3.39.0
+      '@smithy/fetch-http-handler': 5.8.1
+      '@smithy/node-http-handler': 4.14.2
+      '@smithy/types': 4.20.0
       tslib: 2.8.1
 
   '@aws-sdk/client-firehose@3.1164.0':

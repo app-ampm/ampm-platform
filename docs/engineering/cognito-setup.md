@@ -267,7 +267,21 @@ export const handler = async (event) => {
 
 ## 6. Provision Cognito users at invite time — the #1 integration gap
 
-Today's invite path ([`client-logins.service.ts`](../../apps/api/src/modules/admin/client-logins/client-logins.service.ts) `create()` and [`client-user.service.ts`](../../apps/api/src/identity/client-user.service.ts) `provisionInvitedClient()`) creates only the AMPM `users` row + a hashed invite token + an email. **Nothing touches Cognito.** Because the identity seam deliberately has no `provisionUser` ([[D-041]]), unless something creates the Cognito user **at or before invite time**, the invitee can never sign in, never gets an access token, and every `/auth/activate` dead‑ends. **This silently breaks every production invite.**
+> **Built (D-116, additive adapter method).** The provisioning seam now exists: an `IdentityProvisioner`
+> port ([`identity.types.ts`](../../apps/api/src/identity/identity.types.ts)) with a `CognitoIdentityProvisioner`
+> ([`cognito-provisioner.adapter.ts`](../../apps/api/src/identity/cognito-provisioner.adapter.ts), the `@aws-sdk`
+> admin client) and a no-op `LocalIdentityProvisioner`, selected by `IDENTITY_PROVIDER` in
+> [`identity.module.ts`](../../apps/api/src/identity/identity.module.ts). `provisionUser({kind,email,phone})` is
+> **idempotent** (a `UsernameExistsException` reconciles the verified attributes) and is wired **best-effort
+> after commit** into `StaffUsersService.create/reinvite`, `ClientLoginsService.create/reinvite` and
+> `AccountsService.convert` — a provisioning failure is logged, never fails the invite, and reinvite re-runs
+> it. Credentials: `COGNITO_PROVISIONING_ACCESS_KEY_ID` / `_SECRET_ACCESS_KEY` (SOPS app zone; scoped IAM
+> policy and the founder handoff in [secrets.md](../../infra/runbooks/secrets.md)); both or neither. **Still
+> deferred:** staff first-run credential delivery (the suppressed temp password is not surfaced yet — §7
+> activation screen), the client OTP broker (§5), and the real IAM key in SOPS + cutover (§9). Flag stays
+> `local` until those land, so this changes nothing live.
+
+Today's invite path ([`client-logins.service.ts`](../../apps/api/src/modules/admin/client-logins/client-logins.service.ts) `create()` and [`client-user.service.ts`](../../apps/api/src/identity/client-user.service.ts) `provisionInvitedClient()`) created only the AMPM `users` row + a hashed invite token + an email. Because the identity seam deliberately had no `provisionUser` ([[D-041]]), unless something creates the Cognito user **at or before invite time**, the invitee can never sign in, never gets an access token, and every `/auth/activate` dead‑ends. **This silently broke every production invite** — closed by the provisioner above.
 
 **What provisioning must do, per audience (admin control plane — needs `@aws-sdk/client-cognito-identity-provider` + scoped IAM creds):**
 
