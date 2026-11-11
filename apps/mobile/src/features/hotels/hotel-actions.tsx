@@ -22,7 +22,14 @@ export function useHotelPagePermissions(): HotelPagePermissions {
   return { canSave: writes("saved_hotels"), canRequest: writes("hotel_assistance") };
 }
 
-/** Whether the hotel is on the shortlist, and the toggle that adds or removes it. */
+/**
+ * Whether the hotel is on the shortlist, and the toggle that adds or removes it. `isSaved` reads the first
+ * page of the shortlist (useSavedHotels, 50 rows) and does not distinguish the list's loading/error from
+ * "not saved": a hotel saved beyond the first page, or read while the shortlist is still loading or has
+ * failed, shows as unsaved (saving again is a server-idempotent no-op, so state is never corrupted). Reliable
+ * per-card saved state wants a lightweight saved-ids lookup or a server `isSaved` flag — a follow-up, now that
+ * B12 shows this heart on every result card, not only on the one-hotel detail page.
+ */
 function useShortlistToggle(hotel: HotelView) {
   const toast = useToast();
   const saved = useSavedHotels();
@@ -38,7 +45,15 @@ function useShortlistToggle(hotel: HotelView) {
   return { isSaved, toggle, pending: save.isPending || unsave.isPending };
 }
 
-const savedLabel = (isSaved: boolean) => (isSaved ? "Saved to shortlist" : "Save hotel");
+/** The heart/button label. In a repeated LIST control (B12) a hotel name makes each action's target unambiguous (WCAG 2.4.4); the single detail page omits it. */
+const savedLabel = (isSaved: boolean, hotelName?: string): string =>
+  hotelName
+    ? isSaved
+      ? `${hotelName} saved to shortlist`
+      : `Save ${hotelName}`
+    : isSaved
+      ? "Saved to shortlist"
+      : "Save hotel";
 
 /**
  * The shortlist toggle as the footer's gold action, for an account that may save but not ask for
@@ -62,16 +77,23 @@ export function SaveButton({ hotel }: { readonly hotel: HotelView }) {
 
 /**
  * The same toggle as P4's heart over the photo, when the footer's gold action is the availability
- * check: a glass circle, peacock once the hotel is saved (D6 "♥ Saved").
+ * check: a glass circle, peacock once the hotel is saved (D6 "♥ Saved"). On a result card (B12) pass
+ * `namedLabel` so the accessible name carries the hotel, since the list repeats the control (WCAG 2.4.4).
  */
-export function SaveHeartButton({ hotel }: { readonly hotel: HotelView }) {
+export function SaveHeartButton({
+  hotel,
+  namedLabel = false,
+}: {
+  readonly hotel: HotelView;
+  readonly namedLabel?: boolean;
+}) {
   const { isSaved, toggle, pending } = useShortlistToggle(hotel);
   return (
     <Button
       variant={isSaved ? "highlight" : "glass"}
       icon="heart"
       loading={pending}
-      accessibilityLabel={savedLabel(isSaved)}
+      accessibilityLabel={savedLabel(isSaved, namedLabel ? hotel.name : undefined)}
       onPress={toggle}
     />
   );
