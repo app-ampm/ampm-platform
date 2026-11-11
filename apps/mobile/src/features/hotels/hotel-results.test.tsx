@@ -13,6 +13,7 @@ import {
   pageOf,
   renderWithApi,
   savedFixture,
+  savedIds,
 } from "./hotels.test-utils";
 
 const mockPush = jest.fn();
@@ -39,6 +40,7 @@ function discovery(me: MeResponse, saved: readonly SavedHotelView[] = []) {
   return fakeApi((method, url) => {
     if (url.pathname === "/me") return ok(me);
     if (method === "GET" && url.pathname === "/hotels") return ok(pageOf([PAVILION]));
+    if (url.pathname === "/hotels/saved/ids") return ok(savedIds(saved.map((s) => s.hotel.id)));
     if (method === "GET" && url.pathname === "/hotels/saved") return ok(pageOf(saved));
     if (method === "POST" && url.pathname === `/hotels/${PAVILION.id}/save`)
       return { status: 201, body: { data: savedFixture(PAVILION, SAVED_ID) } };
@@ -62,6 +64,7 @@ function compareApi(me: MeResponse, { failSave = false }: { readonly failSave?: 
   return fakeApi((method, url) => {
     if (url.pathname === "/me") return ok(me);
     if (method === "GET" && url.pathname === "/hotels") return ok(pageOf([PAVILION, HAVELI]));
+    if (url.pathname === "/hotels/saved/ids") return ok(savedIds([]));
     if (method === "GET" && url.pathname === "/hotels/saved") return ok(pageOf([]));
     if (method === "POST" && /^\/hotels\/[^/]+\/save$/.test(url.pathname)) {
       if (failSave) return fail("internal", 500);
@@ -92,6 +95,22 @@ describe("HotelResults — save heart on a result card (B12)", () => {
       await screen.findByRole("button", { name: "The Lake Pavilion saved to shortlist" }),
     ).toBeOnTheScreen();
     expect(screen.queryByRole("button", { name: "Save The Lake Pavilion" })).toBeNull();
+  });
+
+  it("reads saved state from the complete ids set, even when the first shortlist page omits the hotel", async () => {
+    // The bug this fixes: isSaved used to scan the first page of /hotels/saved, so a hotel saved further
+    // down showed as unsaved. The heart now reads the complete /hotels/saved/ids set.
+    const api = fakeApi((method, url) => {
+      if (url.pathname === "/me") return ok(SUBSCRIBER);
+      if (method === "GET" && url.pathname === "/hotels") return ok(pageOf([PAVILION]));
+      if (url.pathname === "/hotels/saved/ids") return ok(savedIds([PAVILION.id])); // saved, per the set
+      if (method === "GET" && url.pathname === "/hotels/saved") return ok(pageOf([])); // but not on page one
+      return undefined;
+    });
+    await renderWithApi(<HotelsScreen />, api.fetch);
+    expect(
+      await screen.findByRole("button", { name: "The Lake Pavilion saved to shortlist" }),
+    ).toBeOnTheScreen();
   });
 
   it("omits the heart for an account that may browse but not save", async () => {

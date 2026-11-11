@@ -130,6 +130,11 @@ export function savedFixture(hotel: HotelView, id: string): SavedHotelView {
   return { id, hotel, note: null, savedAt: "2026-11-02T06:30:00.000Z" };
 }
 
+/** The `GET /hotels/saved/ids` body: every hotel id on the shortlist (the heart's reliable saved state). */
+export function savedIds(ids: readonly string[]): { readonly ids: string[] } {
+  return { ids: [...ids] };
+}
+
 /** A page of a cursor-paginated list. */
 export function pageOf<T>(items: readonly T[], nextCursor: string | null = null) {
   return { items, nextCursor };

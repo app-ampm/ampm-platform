@@ -1,6 +1,6 @@
 import { useRouter } from "expo-router";
 
-import { useMe, useSaveHotel, useSavedHotels, useUnsaveHotel } from "@ampm/api-client";
+import { useMe, useSaveHotel, useSavedHotelIds, useUnsaveHotel } from "@ampm/api-client";
 import type { EntitlementModule, HotelView } from "@ampm/core";
 import { Button, useToast } from "@ampm/ui";
 
@@ -23,19 +23,18 @@ export function useHotelPagePermissions(): HotelPagePermissions {
 }
 
 /**
- * Whether the hotel is on the shortlist, and the toggle that adds or removes it. `isSaved` reads the first
- * page of the shortlist (useSavedHotels, 50 rows) and does not distinguish the list's loading/error from
- * "not saved": a hotel saved beyond the first page, or read while the shortlist is still loading or has
- * failed, shows as unsaved (saving again is a server-idempotent no-op, so state is never corrupted). Reliable
- * per-card saved state wants a lightweight saved-ids lookup or a server `isSaved` flag — a follow-up, now that
- * B12 shows this heart on every result card, not only on the one-hotel detail page.
+ * Whether the hotel is on the shortlist, and the toggle that adds or removes it. `isSaved` comes from the
+ * complete saved-ids lookup (useSavedHotelIds), so a hotel saved anywhere on the shortlist — not only its
+ * first page — reads as saved. While the lookup loads or if it fails the hotel reads as unsaved, a brief and
+ * benign default (saving again is a server-idempotent no-op). Saving or removing invalidates the
+ * `["hotels","saved"]` prefix, which the ids lookup shares, so the heart flips once the mutation settles.
  */
 function useShortlistToggle(hotel: HotelView) {
   const toast = useToast();
-  const saved = useSavedHotels();
+  const savedIds = useSavedHotelIds();
   const save = useSaveHotel(hotel.id);
   const unsave = useUnsaveHotel(hotel.id);
-  const isSaved = saved.items.some((item) => item.hotel.id === hotel.id);
+  const isSaved = savedIds.ids.has(hotel.id);
   const toggle = (): void => {
     const mutation = isSaved ? unsave : save;
     mutation.mutate(undefined, {
