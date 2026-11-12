@@ -78,6 +78,35 @@ describe("HotelDetailScreen", () => {
     expect(screen.getByText("Lake Road, Udaipur")).toBeOnTheScreen();
   });
 
+  it("links out to the hotel's website and its location on the map", async () => {
+    const withLinks = detailFixture({
+      website: "https://lakepavilion.example",
+      streetViewRef: "24.5760,73.6833",
+    });
+    await renderScreen(detailApi(withLinks).fetch);
+    expect(
+      await screen.findByRole("link", { name: "Visit website for The Lake Pavilion" }),
+    ).toBeOnTheScreen();
+    expect(
+      screen.getByRole("link", { name: "Open in maps for The Lake Pavilion" }),
+    ).toBeOnTheScreen();
+  });
+
+  it("maps from the address alone and hides the website link when there is none", async () => {
+    await renderScreen(detailApi(DETAIL).fetch);
+    expect(
+      await screen.findByRole("link", { name: "Open in maps for The Lake Pavilion" }),
+    ).toBeOnTheScreen();
+    expect(screen.queryByRole("link", { name: /website/ })).toBeNull();
+  });
+
+  it("never turns a non-http website scheme into a link", async () => {
+    const unsafe = detailFixture({ website: "javascript:alert(document.cookie)" });
+    await renderScreen(detailApi(unsafe).fetch);
+    await screen.findByRole("tab", { name: "Overview" });
+    expect(screen.queryByRole("link", { name: /website/ })).toBeNull();
+  });
+
   it("shows rates on request without amounts, in the rates tab and the sticky footer", async () => {
     await renderScreen(detailApi(DETAIL).fetch);
     await fireEvent.press(await screen.findByRole("tab", { name: "Rates" }));

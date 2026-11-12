@@ -314,6 +314,36 @@ export function facilitiesLine(facilities: readonly string[] | null): string | n
   return facilities.join(" · ");
 }
 
+/** Google's cross-platform Maps URL: opens the Maps app when it is installed, the browser otherwise. */
+const MAPS_SEARCH_URL = "https://www.google.com/maps/search/?api=1&query=";
+
+/**
+ * Where to open a hotel on a map (B13 / CP-05). A street-view reference that is already a URL opens as
+ * given (an admin pasted a map or Street View link); any other reference — a place id, a plus code, a
+ * "lat,lng" — is searched, as is the hotel's name and address when there is no reference. Null when there
+ * is nothing to locate it by (no reference and no address), so the caller can omit the action. The client
+ * view carries no latitude/longitude by design, so a map is a link out, not an embed (no provider key).
+ */
+export function hotelMapUrl(
+  hotel: Pick<HotelView, "name" | "address" | "streetViewRef">,
+): string | null {
+  const ref = hotel.streetViewRef?.trim();
+  if (ref) return /^https?:\/\//i.test(ref) ? ref : MAPS_SEARCH_URL + encodeURIComponent(ref);
+  const address = hotel.address?.trim();
+  if (!address) return null;
+  return MAPS_SEARCH_URL + encodeURIComponent(`${hotel.name}, ${address}`);
+}
+
+/**
+ * A URL safe to hand to the system browser from a client screen: the value only when it is an http(s)
+ * URL, else null. A hotel website is URL-validated on write but NOT scheme-restricted, so a javascript:,
+ * data:, tel: or app-scheme value (admin- or import-sourced) must never reach Linking.openURL — drop it.
+ */
+export function externalHttpUrl(value: string | null): string | null {
+  const url = value?.trim();
+  return url && /^https?:\/\//i.test(url) ? url : null;
+}
+
 export type HotelSection = "overview" | "venues" | "rooms" | "rates" | "gallery" | "weddings";
 
 export interface HotelSectionOption {
@@ -328,13 +358,16 @@ export function galleryImages(hotel: HotelDetailView): HotelDetailView["gallery"
 }
 
 /**
- * The hotel page's tabs, only for what the API sent: an overview when there is a description or an
- * address, the venues and room categories when any exist, the rates (always: on request is an answer
- * too), the gallery and the previous weddings.
+ * The hotel page's tabs, only for what the API sent: an overview when there is a description, an
+ * address, a website or a mappable location, the venues and room categories when any exist, the rates
+ * (always: on request is an answer too), the gallery and the previous weddings.
  */
 export function hotelSections(hotel: HotelDetailView): HotelSectionOption[] {
   const sections: HotelSectionOption[] = [];
-  if (hotel.description || hotel.address) sections.push({ value: "overview", label: "Overview" });
+  // Mirrors exactly what HotelOverview renders — description, address, a safe website link or a map link
+  // — so the tab never appears over an empty body (e.g. a whitespace-only or non-http reference).
+  if (hotel.description || hotel.address || externalHttpUrl(hotel.website) || hotelMapUrl(hotel))
+    sections.push({ value: "overview", label: "Overview" });
   if (hotel.venues.length > 0)
     sections.push({ value: "venues", label: "Venues", badge: hotel.venues.length });
   if (hotel.rooms.length > 0)
