@@ -581,6 +581,7 @@ erDiagram
         text internal_notes "RESTRICTED"
         int total_rooms
         string street_view_ref "map or street view reference (Q9)"
+        json facilities_json
         datetime last_verified_at "denormalised from hotel_verifications"
     }
     hotel_contacts {

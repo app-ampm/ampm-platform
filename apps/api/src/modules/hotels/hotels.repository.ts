@@ -34,6 +34,8 @@ const HOTEL_SELECT = {
  */
 const DETAIL_HOTEL_SELECT = {
   ...HOTEL_SELECT,
+  // The curated hotel-level amenity list (B14). Detail-only — the list/card/compare/saved paths stay lean.
+  facilities: true,
   rateCards: {
     where: { deletedAt: null, status: { in: ["verified", "stale"] } },
     orderBy: { name: "asc" },

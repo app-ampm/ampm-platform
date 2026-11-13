@@ -282,6 +282,7 @@ C,hotels,Hotel data entry,internal_rating,int,,,integer 1 to 5,HT; SA,RESTRICTED
 C,hotels,Hotel data entry,internal_notes,text,,,"text, up to 10,000 characters",HT; SA,RESTRICTED-NOTES,Optional,"Never serialised to client, guest or demo principals","A-9 (Q9), A-28 (AM-8), RK-1"
 C,hotels,Hotel data entry,total_rooms,int,,,"integer, 0 or more",HT; SA,CLIENT,Optional,—,"A-9 (Q9), A-28 (AM-8), RK-1"
 C,hotels,Hotel data entry,street_view_ref,string,,,"string, up to 255 characters; map or street view reference (Q9)",HT; SA,CLIENT,Optional,—,"A-9 (Q9), A-28 (AM-8), RK-1"
+C,hotels,Hotel data entry,facilities_json,json,,,valid JSON matching the registered schema,HT; SA,CLIENT,Optional,—,"A-9 (Q9), A-28 (AM-8), RK-1"
 C,hotels,Hotel data entry,last_verified_at,datetime,,,timestamp (UTC); denormalised from hotel_verifications,SYS,CLIENT,System,Denormalised by the verification job; drives the freshness label,"A-9 (Q9), A-28 (AM-8), RK-1"
 C,hotel_contacts,Hotel data entry,id,uuid,PK,,"UUID v7, generated",SYS,RESTRICTED-CONTACT,System,—,P-3 contact tier
 C,hotel_contacts,Hotel data entry,hotel_id,uuid,FK,,references hotels,HT; SA,RESTRICTED-CONTACT,At creation,—,P-3 contact tier

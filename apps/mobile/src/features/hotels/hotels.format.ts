@@ -364,9 +364,15 @@ export function galleryImages(hotel: HotelDetailView): HotelDetailView["gallery"
  */
 export function hotelSections(hotel: HotelDetailView): HotelSectionOption[] {
   const sections: HotelSectionOption[] = [];
-  // Mirrors exactly what HotelOverview renders — description, address, a safe website link or a map link
-  // — so the tab never appears over an empty body (e.g. a whitespace-only or non-http reference).
-  if (hotel.description || hotel.address || externalHttpUrl(hotel.website) || hotelMapUrl(hotel))
+  // Mirrors exactly what HotelOverview renders — description, facilities, address, a safe website link or
+  // a map link — so the tab never appears over an empty body (e.g. a whitespace-only or non-http ref).
+  if (
+    hotel.description ||
+    hotel.facilities.length > 0 ||
+    hotel.address ||
+    externalHttpUrl(hotel.website) ||
+    hotelMapUrl(hotel)
+  )
     sections.push({ value: "overview", label: "Overview" });
   if (hotel.venues.length > 0)
     sections.push({ value: "venues", label: "Venues", badge: hotel.venues.length });

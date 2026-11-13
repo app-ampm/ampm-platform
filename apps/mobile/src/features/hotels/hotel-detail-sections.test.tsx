@@ -179,4 +179,12 @@ describe("HotelDetailScreen sections", () => {
     expect(screen.getByText("Corner suites facing Lake Pichola.")).toBeOnTheScreen();
     expect(screen.getByText("Balcony · Mini-bar")).toBeOnTheScreen();
   });
+
+  it("shows the hotel's facilities as chips on the overview", async () => {
+    await renderDetail(detailFixture({ facilities: ["Spa", "Valet parking", "Late licence"] }));
+    expect(screen.getByText("Facilities")).toBeOnTheScreen();
+    expect(screen.getByText("Spa")).toBeOnTheScreen();
+    expect(screen.getByText("Valet parking")).toBeOnTheScreen();
+    expect(screen.getByText("Late licence")).toBeOnTheScreen();
+  });
 });

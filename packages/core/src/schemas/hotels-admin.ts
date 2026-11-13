@@ -206,6 +206,7 @@ const hotelStaffBase = z.object({
   totalRooms: z.number().int().nullable(),
   streetViewRef: z.string().nullable(),
   lastVerifiedAt: isoDateTime.nullable(),
+  facilities: facilities.nullable(),
 });
 
 /** A hotel in the staff list (HT/SA): the full profile, no nested collections. */
@@ -239,6 +240,7 @@ const hotelProfileFields = {
   internalNotes: z.string().trim().max(10_000).nullish(),
   totalRooms: z.number().int().min(0).nullish(),
   streetViewRef: z.string().trim().max(255).nullish(),
+  facilities: facilities.nullish(),
 };
 
 export const hotelCreateRequest = z

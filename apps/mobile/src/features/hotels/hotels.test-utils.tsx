@@ -117,6 +117,7 @@ export function detailFixture(overrides: Partial<HotelDetailView> = {}): HotelDe
   return {
     ...hotelFixture(),
     rates: { status: "on_request", asOf: null, items: [] },
+    facilities: [],
     venues: [],
     rooms: [],
     gallery: [],

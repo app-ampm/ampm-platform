@@ -1,6 +1,6 @@
 # AMPM Platform — Field Matrix
 
-**Status:** DRAFT v0.1, generated 2026-11-03 from [data-model.md](data-model.md) by `docs/tools/field_matrix_build.py`. Do not edit by hand; change the data model or `docs/tools/field_rules.py` and rebuild.
+**Status:** DRAFT v0.1, generated 2026-11-13 from [data-model.md](data-model.md) by `docs/tools/field_matrix_build.py`. Do not edit by hand; change the data model or `docs/tools/field_rules.py` and rebuild.
 **Companions:** [requirements-audit.md](requirements-audit.md) (Q numbers), [data-model.md](data-model.md) (assumptions A-1 to A-30), [permission-matrix.md](permission-matrix.md) (role codes, visibility classes, assumptions P-1 to P-11).
 **Spreadsheet version:** [field-matrix.csv](field-matrix.csv) has the same rows for filtering.
 
@@ -22,7 +22,7 @@ Global conventions that apply to every row: money is `numeric(14,2)` with a sibl
 |---|---|---|---|---|---|
 | A — Identity, access and administration | 19 | 116 | 59 | 10 | 1 |
 | B — CRM, subscriptions and commercial agreements | 13 | 139 | 55 | 90 | 4 |
-| C — Hotel intelligence | 10 | 100 | 38 | 82 | 11 |
+| C — Hotel intelligence | 10 | 101 | 38 | 83 | 11 |
 | D — Hotel consultancy | 6 | 70 | 28 | 65 | 3 |
 | E — Wedding project | 3 | 36 | 13 | 29 | 3 |
 | F — Functions, programme and run-of-show | 4 | 43 | 17 | 27 | 1 |
@@ -37,9 +37,9 @@ Global conventions that apply to every row: money is `numeric(14,2)` with a sibl
 | O — Checklists, closure and feedback | 4 | 30 | 17 | 7 | 0 |
 | P — Public website content (dormant) | 2 | 17 | 8 | 17 | 0 |
 | Q — Live chat | 2 | 16 | 6 | 16 | 0 |
-| **Total** | **116** | **1154** | **500** | **646** | **104** |
+| **Total** | **116** | **1155** | **500** | **647** | **104** |
 
-Fields by visibility class: CLIENT 613, INTERNAL 347, Other (per record, recipient or parent) 57, RESTRICTED-NOTES 34, PUBLIC 33, RESTRICTED-FINANCE 31, RESTRICTED-CONTACT 13, RESTRICTED-IDENTITY 13, SECRET 7, RESTRICTED-BANK 4, SENSITIVE-GUEST 2.
+Fields by visibility class: CLIENT 614, INTERNAL 347, Other (per record, recipient or parent) 57, RESTRICTED-NOTES 34, PUBLIC 33, RESTRICTED-FINANCE 31, RESTRICTED-CONTACT 13, RESTRICTED-IDENTITY 13, SECRET 7, RESTRICTED-BANK 4, SENSITIVE-GUEST 2.
 
 ---
 
@@ -573,6 +573,7 @@ Created at stage: **Hotel data entry** · Default editor: HT; SA · Default visi
 | `internal_notes` | text, up to 10,000 characters |  | HT; SA | RESTRICTED-NOTES | Optional | Never serialised to client, guest or demo principals |
 | `total_rooms` | integer, 0 or more |  | HT; SA | CLIENT | Optional | — |
 | `street_view_ref` | string, up to 255 characters; map or street view reference (Q9) |  | HT; SA | CLIENT | Optional | — |
+| `facilities_json` | valid JSON matching the registered schema |  | HT; SA | CLIENT | Optional | — |
 | `last_verified_at` | timestamp (UTC); denormalised from hotel_verifications |  | SYS | CLIENT | System | Denormalised by the verification job; drives the freshness label |
 
 ### `hotel_contacts`

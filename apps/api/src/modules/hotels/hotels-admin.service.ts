@@ -212,6 +212,7 @@ function toHotelWriteData(
     internalNotes: request.internalNotes ?? null,
     totalRooms: request.totalRooms ?? null,
     streetViewRef: request.streetViewRef ?? null,
+    facilities: request.facilities ?? null,
   };
 }
 
@@ -235,6 +236,7 @@ function toHotelUpdatePatch(request: HotelUpdateRequest): HotelUpdatePatch {
   if (request.internalNotes !== undefined) patch.internalNotes = request.internalNotes ?? null;
   if (request.totalRooms !== undefined) patch.totalRooms = request.totalRooms ?? null;
   if (request.streetViewRef !== undefined) patch.streetViewRef = request.streetViewRef ?? null;
+  if (request.facilities !== undefined) patch.facilities = request.facilities ?? null;
   return patch;
 }
 

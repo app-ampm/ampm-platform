@@ -181,6 +181,14 @@ describe("hotelSections", () => {
     ).toEqual(["rates"]);
   });
 
+  it("offers the overview for a hotel whose only content is its facilities", () => {
+    expect(
+      hotelSections(
+        detailFixture({ description: null, address: null, facilities: ["Spa", "Valet parking"] }),
+      ).map((s) => s.value),
+    ).toEqual(["overview", "rates"]);
+  });
+
   it("counts pictures, not videos, for the gallery", () => {
     const media = (id: string, kind: "image" | "video") => ({
       id,
