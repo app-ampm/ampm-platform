@@ -97,6 +97,11 @@ describe("HotelDetailScreen sections", () => {
     expect(screen.getByText("₹3,200–3,800")).toBeOnTheScreen();
     expect(screen.getByText("per night · Breakfast for two")).toBeOnTheScreen();
     expect(screen.getByText("18%")).toBeOnTheScreen();
+    // B18: the items are grouped — accommodation and venue, then food and beverage, then charges —
+    // each label a heading so assistive tech can jump between the categories.
+    expect(screen.getByRole("header", { name: "Rooms & venues" })).toBeOnTheScreen();
+    expect(screen.getByRole("header", { name: "Food & beverage" })).toBeOnTheScreen();
+    expect(screen.getByRole("header", { name: "Charges & taxes" })).toBeOnTheScreen();
     expect(screen.getByText(/^Indicative ranges, not a quote\./)).toBeOnTheScreen();
   });
 

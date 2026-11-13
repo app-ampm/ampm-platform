@@ -11,6 +11,7 @@ import {
   rateItemLabel,
   rateUnitLabel,
 } from "./hotels.format";
+import { groupRateItems, type RateGroup } from "./hotels.format.rates";
 
 /**
  * The hotel's indicative pricing (D6, P4 "Rates"): its freshness first (verified with the date, the
@@ -33,16 +34,30 @@ export function HotelRates({ rates }: { readonly rates: HotelRatesView }) {
 
 function RateList({ items }: { readonly items: readonly ClientRateItemView[] }) {
   return (
-    <Stack gap={3}>
-      <View>
-        {items.map((item, index) => (
-          <RateRow key={`${item.itemType}-${index}`} item={item} />
-        ))}
-      </View>
+    <Stack gap={4}>
+      {groupRateItems(items).map((group) => (
+        <RateGroupSection key={group.label} group={group} />
+      ))}
       <Text variant="bodySmall" tone="muted">
         Indicative ranges, not a quote. Ask for availability and the hotel team confirms prices for
         your dates.
       </Text>
+    </Stack>
+  );
+}
+
+/** One category of rates (B18): its label, then a row per client-visible item in that category. */
+function RateGroupSection({ group }: { readonly group: RateGroup }) {
+  return (
+    <Stack gap={1}>
+      <Text variant="eyebrow" accessibilityRole="header">
+        {group.label}
+      </Text>
+      <View>
+        {group.items.map((item, index) => (
+          <RateRow key={`${item.itemType}-${index}`} item={item} />
+        ))}
+      </View>
     </Stack>
   );
 }
