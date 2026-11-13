@@ -117,6 +117,7 @@ describe("hotelDetailView (GET /hotels/:id — the card plus rates, venues, room
   const detail = {
     ...hotel,
     rates: { status: "on_request", asOf: null, items: [] },
+    facilities: [],
     venues: [],
     rooms: [],
     gallery: [],
@@ -158,6 +159,15 @@ describe("hotelDetailView (GET /hotels/:id — the card plus rates, venues, room
     expect(hotelDetailView.safeParse(withoutVenues).success).toBe(false);
     const { rooms: _rooms, ...withoutRooms } = detail;
     expect(hotelDetailView.safeParse(withoutRooms).success).toBe(false);
+  });
+
+  it("carries the hotel's combined facilities as a required string array (B14)", () => {
+    expect(
+      hotelDetailView.safeParse({ ...detail, facilities: ["Spa", "Valet parking"] }).success,
+    ).toBe(true);
+    const { facilities: _facilities, ...withoutFacilities } = detail;
+    expect(hotelDetailView.safeParse(withoutFacilities).success).toBe(false);
+    expect(hotelDetailView.safeParse({ ...detail, facilities: [42] }).success).toBe(false);
   });
 
   it("is strict over each venue and room, so no restricted or extra field rides along (security.md)", () => {

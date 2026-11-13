@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 
+import type { HotelRoomClientView, HotelVenueClientView } from "@ampm/core";
+
 import { Prisma } from "../../generated/prisma/client.js";
-import { toCardSummary } from "./hotels.view.js";
+import { hotelFacilities, toCardSummary } from "./hotels.view.js";
 import type { HotelDetailRow } from "./hotels.repository.js";
 
 type Card = HotelDetailRow["rateCards"][number];
@@ -112,5 +114,50 @@ describe("toCardSummary (B11 — the card figures derived from the detail's own 
       priceRange: null,
       capacity: { min: 400, max: 400 },
     });
+  });
+});
+
+const room = (facilities: string[] | null): HotelRoomClientView => ({
+  id: "018f0000-0000-7000-8000-000000000b01",
+  name: "Room",
+  roomCount: null,
+  maxOccupancy: null,
+  sizeSqm: null,
+  facilities,
+  description: null,
+});
+
+const venue = (facilities: string[] | null): HotelVenueClientView => ({
+  id: "018f0000-0000-7000-8000-000000000a01",
+  name: "Venue",
+  venueType: "ballroom",
+  isIndoor: true,
+  areaSqm: null,
+  capacityBanquet: null,
+  capacityTheatre: null,
+  capacityReception: null,
+  facilities,
+  description: null,
+});
+
+describe("hotelFacilities (B14 — the curated column, else the deduped room/venue union)", () => {
+  it("uses the curated hotel list whenever it carries a label, deduped", () => {
+    expect(
+      hotelFacilities(["Spa", "Valet parking"], [room(["Balcony"])], [venue(["Stage"])]),
+    ).toEqual(["Spa", "Valet parking"]);
+    // A curated list with repeated labels is deduped too, so the client never gets duplicate chip keys.
+    expect(hotelFacilities(["Spa", "Spa", "Pool"], [], [])).toEqual(["Spa", "Pool"]);
+  });
+
+  it("derives the deduped union of room and venue facilities when none is curated", () => {
+    expect(
+      hotelFacilities(null, [room(["Balcony", "Wi-Fi"])], [venue(["Stage", "Wi-Fi"])]),
+    ).toEqual(["Balcony", "Wi-Fi", "Stage"]);
+    expect(hotelFacilities([], [room(["Balcony"])], [venue(null)])).toEqual(["Balcony"]);
+  });
+
+  it("is an empty list when nothing is curated or on a room or venue", () => {
+    expect(hotelFacilities(null, [room(null)], [venue(null)])).toEqual([]);
+    expect(hotelFacilities("not a json array", [], [])).toEqual([]);
   });
 });

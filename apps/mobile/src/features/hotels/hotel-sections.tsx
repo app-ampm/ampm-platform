@@ -7,7 +7,7 @@ import type {
   MediaGalleryItem,
   WeddingReferenceClientItem,
 } from "@ampm/core";
-import { Icon, Link, ListItem, Row, Stack, Text } from "@ampm/ui";
+import { Icon, Link, ListItem, Row, Stack, StatusChip, Text } from "@ampm/ui";
 
 import { MediaImage } from "@/components/media-image";
 
@@ -42,6 +42,7 @@ function HotelOverview({ hotel }: { readonly hotel: HotelDetailView }) {
   return (
     <Stack gap={3}>
       {hotel.description ? <Text>{hotel.description}</Text> : null}
+      <HotelFacilities hotel={hotel} />
       {hotel.address ? (
         <Row gap={2} align="start">
           <Icon name="map-pin" size="sm" tone="muted" />
@@ -51,6 +52,25 @@ function HotelOverview({ hotel }: { readonly hotel: HotelDetailView }) {
         </Row>
       ) : null}
       <HotelLinks hotel={hotel} />
+    </Stack>
+  );
+}
+
+/**
+ * The hotel's amenities (B14 / CP-05): the curated hotel facilities, or the amenities drawn from its
+ * rooms and venues when none are curated (the API combines the two into one list). Shown as neutral
+ * chips, like the facts under the hotel name; omitted when the hotel lists none.
+ */
+function HotelFacilities({ hotel }: { readonly hotel: HotelDetailView }) {
+  if (hotel.facilities.length === 0) return null;
+  return (
+    <Stack gap={2}>
+      <Text variant="eyebrow">Facilities</Text>
+      <Row gap={2} wrap>
+        {hotel.facilities.map((name) => (
+          <StatusChip key={name} label={name} tone="neutral" size="sm" />
+        ))}
+      </Row>
     </Stack>
   );
 }

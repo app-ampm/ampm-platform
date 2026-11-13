@@ -203,6 +203,7 @@ export type HotelRoomClientView = z.infer<typeof hotelRoomClientView>;
 export const hotelDetailView = hotelView
   .extend({
     rates: hotelRatesView,
+    facilities: facilitiesClientView,
     venues: z.array(hotelVenueClientView),
     rooms: z.array(hotelRoomClientView),
     gallery: z.array(mediaGalleryItem),

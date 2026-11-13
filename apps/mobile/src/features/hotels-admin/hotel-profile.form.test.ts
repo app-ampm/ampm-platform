@@ -33,6 +33,12 @@ describe("hotel profile form", () => {
       expect(draft.brand).toBe("");
       expect(draft.totalRooms).toBe("");
     });
+
+    it("seeds the facilities draft as a comma-separated list", () => {
+      const draft = draftFromHotel(hotelStaffViewFixture({ facilities: ["Spa", "Valet parking"] }));
+      expect(draft.facilities).toBe("Spa, Valet parking");
+      expect(draftFromHotel(hotelStaffViewFixture({ facilities: null })).facilities).toBe("");
+    });
   });
 
   describe("validateDraft", () => {
@@ -80,6 +86,13 @@ describe("hotel profile form", () => {
       });
       expect("slug" in body).toBe(false);
       expect("latitude" in body).toBe(false);
+    });
+
+    it("parses the comma-separated facilities into a list, or null when blank", () => {
+      expect(
+        buildHotelBody({ ...draftFromHotel(null), facilities: "Spa, Valet parking , " }).facilities,
+      ).toEqual(["Spa", "Valet parking"]);
+      expect(buildHotelBody({ ...draftFromHotel(null), facilities: "   " }).facilities).toBeNull();
     });
   });
 });

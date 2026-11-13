@@ -1,6 +1,13 @@
 import type { HotelCreateRequest, HotelStaffView, HotelStatus } from "@ampm/core";
 
-import { intOrNull, isWholeNumber, numberToText, textOrNull } from "./hotel-form-fields";
+import {
+  facilitiesToText,
+  intOrNull,
+  isWholeNumber,
+  numberToText,
+  textOrNull,
+  textToFacilities,
+} from "./hotel-form-fields";
 
 export { hasErrors } from "./hotel-form-fields";
 
@@ -20,6 +27,7 @@ export interface HotelProfileDraft {
   readonly address: string;
   readonly website: string;
   readonly descriptionClient: string;
+  readonly facilities: string;
   readonly totalRooms: string;
   readonly status: HotelStatus;
   readonly demoVisible: boolean;
@@ -38,6 +46,7 @@ export function draftFromHotel(hotel: HotelStaffView | null): HotelProfileDraft 
     address: hotel?.address ?? "",
     website: hotel?.website ?? "",
     descriptionClient: hotel?.descriptionClient ?? "",
+    facilities: facilitiesToText(hotel?.facilities ?? null),
     totalRooms: numberToText(hotel?.totalRooms ?? null),
     status: hotel?.status ?? "draft",
     demoVisible: hotel?.demoVisible ?? false,
@@ -88,6 +97,7 @@ export function buildHotelBody(draft: HotelProfileDraft): HotelCreateRequest {
     address: textOrNull(draft.address),
     website: textOrNull(draft.website),
     descriptionClient: textOrNull(draft.descriptionClient),
+    facilities: textToFacilities(draft.facilities),
     totalRooms: intOrNull(draft.totalRooms),
     status: draft.status,
     demoVisible: draft.demoVisible,

@@ -111,6 +111,24 @@ function toFacilities(value: unknown): string[] | null {
     : null;
 }
 
+/**
+ * The hotel's amenity list for the Overview (B14): the curated Hotel.facilities column when it carries any
+ * label (option A), else the union of the room and venue facilities already on the detail (option B). The
+ * result is always DEDUPLICATED and a concrete list — empty when nothing is known — so the client renders
+ * one keyed chip per label without repeated keys or a null check (neither the curated write path nor the
+ * union guarantees uniqueness). Reads only already-client-visible facilities, so no RESTRICTED field enters.
+ */
+export function hotelFacilities(
+  curated: unknown,
+  rooms: HotelRoomClientView[],
+  venues: HotelVenueClientView[],
+): string[] {
+  const own = toFacilities(curated);
+  const combined =
+    own && own.length > 0 ? own : [...rooms, ...venues].flatMap((item) => item.facilities ?? []);
+  return [...new Set(combined)];
+}
+
 /** A venue row → the client view (CP-05): every column is descriptive, so this is a straight projection. */
 function toVenueClientView(venue: DetailVenue): HotelVenueClientView {
   return {
@@ -152,11 +170,14 @@ export function toHotelDetailView(
   gallery: MediaGalleryItem[],
   references: WeddingReferenceClientItem[],
 ): HotelDetailView {
+  const venues = row.venues.map(toVenueClientView);
+  const rooms = row.rooms.map(toRoomClientView);
   return {
     ...toHotelView(row, coverFromGallery(gallery), toCardSummary(row.rateCards, row.venues)),
     rates: toRatesView(row.rateCards),
-    venues: row.venues.map(toVenueClientView),
-    rooms: row.rooms.map(toRoomClientView),
+    facilities: hotelFacilities(row.facilities, rooms, venues),
+    venues,
+    rooms,
     gallery,
     references,
   };
