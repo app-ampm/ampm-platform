@@ -95,6 +95,7 @@ function build(overrides: Partial<Record<string, unknown>> = {}) {
     create: vi.fn(async () => makeRow()),
     findByIdForAccount: vi.fn(async () => makeRow()),
     updateNotesClient: vi.fn(async () => undefined),
+    updateStatusFrom: vi.fn(async () => 1),
     listForAccount: vi.fn(async () => ({ rows: [], nextCursor: null })),
     ...overrides,
   };
@@ -114,7 +115,7 @@ function build(overrides: Partial<Record<string, unknown>> = {}) {
     prisma as unknown as PrismaService,
     logger as unknown as AppLogger,
   );
-  return { service, enquiries, hotels, bus };
+  return { service, enquiries, hotels, bus, events };
 }
 
 describe("EnquiriesClientService.requestAssistance", () => {
@@ -176,5 +177,73 @@ describe("EnquiriesClientService.requestAssistance", () => {
     expect(result.enquiry).not.toHaveProperty("assignedUserId");
     expect(result.enquiry).not.toHaveProperty("serviceAgreementId");
     expect(result.enquiry).not.toHaveProperty("requestedByUserId");
+  });
+});
+
+describe("EnquiriesClientService.withdrawOwn (CP-09)", () => {
+  it("closes an active enquiry withdrawn and records a client-visible status event", async () => {
+    const { service, enquiries, events } = build({
+      findByIdForAccount: vi.fn(async () => makeRow({ status: "negotiating" })),
+    });
+    const result = await service.withdrawOwn(client("client", entitlements()), "enq-1");
+    expect(enquiries.updateStatusFrom).toHaveBeenCalledWith(
+      "enq-1",
+      expect.arrayContaining(["submitted", "client_decision"]),
+      expect.objectContaining({
+        status: "closed",
+        outcome: "withdrawn",
+        closedAt: expect.any(Date),
+      }),
+      "usr-1",
+      expect.anything(),
+    );
+    expect(events.create).toHaveBeenCalledWith(
+      expect.objectContaining({ eventType: "status_change", internalOnly: false, summary: null }),
+      "usr-1",
+      expect.anything(),
+    );
+    expect(result).not.toHaveProperty("notesInternal");
+  });
+
+  it("is a 409 with no event when the guarded write moves 0 rows (a lost race)", async () => {
+    const { service, events } = build({
+      findByIdForAccount: vi.fn(async () => makeRow({ status: "negotiating" })),
+      updateStatusFrom: vi.fn(async () => 0),
+    });
+    await expect(
+      service.withdrawOwn(client("client", entitlements()), "enq-1"),
+    ).rejects.toMatchObject({ code: "conflict" });
+    expect(events.create).not.toHaveBeenCalled();
+  });
+
+  it("refuses a closed enquiry (409) and a confirmed booking (409), writing nothing", async () => {
+    const closed = build({
+      findByIdForAccount: vi.fn(async () => makeRow({ status: "closed", outcome: "declined" })),
+    });
+    await expect(
+      closed.service.withdrawOwn(client("client", entitlements()), "enq-1"),
+    ).rejects.toMatchObject({ code: "conflict" });
+
+    const confirmed = build({
+      findByIdForAccount: vi.fn(async () => makeRow({ status: "confirmed" })),
+    });
+    await expect(
+      confirmed.service.withdrawOwn(client("client", entitlements()), "enq-1"),
+    ).rejects.toMatchObject({ code: "conflict" });
+    expect(confirmed.enquiries.updateStatusFrom).not.toHaveBeenCalled();
+  });
+
+  it("is absence (404) for an enquiry on another account", async () => {
+    const { service } = build({ findByIdForAccount: vi.fn(async () => null) });
+    await expect(
+      service.withdrawOwn(client("client", entitlements()), "enq-x"),
+    ).rejects.toMatchObject({ code: "not_found" });
+  });
+
+  it("is absence (404) for a read-only hotel_assistance (lapsed) — withdraw is a write", async () => {
+    const principal = client("client", entitlements({ readOnlyModules: ["hotel_assistance"] }));
+    await expect(build().service.withdrawOwn(principal, "enq-1")).rejects.toMatchObject({
+      code: "not_found",
+    });
   });
 });

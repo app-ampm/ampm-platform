@@ -199,6 +199,43 @@ describe("RequestDetailScreen", () => {
     expect(screen.queryByRole("button", { name: "Add a note" })).toBeNull();
   });
 
+  it("lets the client withdraw a live enquiry, after confirming (POST .../withdraw)", async () => {
+    const calls: FakeCall[] = [];
+    await renderDetail(
+      enquiryApi(
+        {
+          [`POST /consultancy/enquiries/${ENQUIRY_ID}/withdraw`]: ok({
+            ...ENQUIRY_DETAIL,
+            status: "closed",
+            outcome: "withdrawn",
+          }),
+        },
+        calls,
+      ),
+    );
+    await fireEvent.press(await screen.findByTestId("enquiry-withdraw"));
+    await fireEvent.press(await screen.findByTestId("enquiry-withdraw-sheet-confirm"));
+    await waitFor(() =>
+      expect(calls).toContainEqual({
+        route: `POST /consultancy/enquiries/${ENQUIRY_ID}/withdraw`,
+        body: undefined,
+      }),
+    );
+  });
+
+  it("offers no withdraw on a confirmed booking (not client-withdrawable)", async () => {
+    await renderDetail(
+      enquiryApi({
+        [`GET /consultancy/enquiries/${ENQUIRY_ID}`]: ok({
+          ...ENQUIRY_DETAIL,
+          status: "confirmed",
+        }),
+      }),
+    );
+    expect(await screen.findByText("The Lake Pavilion")).toBeOnTheScreen();
+    expect(screen.queryByTestId("enquiry-withdraw")).toBeNull();
+  });
+
   it("goes back from its header", async () => {
     await renderDetail(() => new Promise<Response>(() => {}));
     await fireEvent.press(screen.getByRole("button", { name: "Back" }));

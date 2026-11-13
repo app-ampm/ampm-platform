@@ -9,6 +9,7 @@ import { useGoToSignIn } from "@/navigation/sign-in";
 import { enquiryChip } from "./consultancy.format";
 import { EnquiryActivity } from "./enquiry-activity";
 import { EnquirySummary } from "./enquiry-summary";
+import { EnquiryWithdraw } from "./enquiry-withdraw";
 import { AgreementSection, ProposalsSection } from "./request-commercial";
 import { MilestonesSection, VisitsSection } from "./request-progress";
 
@@ -81,6 +82,7 @@ function DetailBody({
       <VisitsSection enquiryId={enquiryId} />
       <MilestonesSection enquiryId={enquiryId} />
       <EnquiryActivity events={enquiry.data.events} />
+      <EnquiryWithdraw enquiry={enquiry.data} />
     </Stack>
   );
 }
