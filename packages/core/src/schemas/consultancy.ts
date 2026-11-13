@@ -31,6 +31,26 @@ export type HotelEnquiryStatus = z.infer<typeof hotelEnquiryStatus>;
 export const hotelEnquiryOutcome = z.enum(["booked", "declined", "no_availability", "withdrawn"]);
 export type HotelEnquiryOutcome = z.infer<typeof hotelEnquiryOutcome>;
 
+/**
+ * The statuses a client may withdraw their own enquiry from (CP-09): the active pipeline, before it is
+ * `confirmed` (a booking) or `closed` (terminal); a `draft` is never a client's. Withdrawing closes the
+ * enquiry with outcome `withdrawn`. The server enforces this (EnquiriesClientService) and the client app
+ * hides the action outside it; the two must agree, so both read this one list.
+ */
+export const hotelEnquiryWithdrawableStatuses = [
+  "submitted",
+  "awaiting_hotel",
+  "response_received",
+  "negotiating",
+  "visit_scheduled",
+  "proposal_received",
+  "client_decision",
+] as const satisfies readonly HotelEnquiryStatus[];
+
+export function isHotelEnquiryWithdrawable(status: HotelEnquiryStatus): boolean {
+  return (hotelEnquiryWithdrawableStatuses as readonly HotelEnquiryStatus[]).includes(status);
+}
+
 export const hotelEnquiryEventType = z.enum([
   "submitted",
   "sent_to_hotel",

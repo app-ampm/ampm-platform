@@ -68,4 +68,16 @@ export class EnquiriesClientController {
   ): Promise<HotelEnquiryClientView> {
     return this.enquiries.updateOwnNote(principal, params.enquiryId, body);
   }
+
+  @Post("enquiries/:enquiryId/withdraw")
+  @HttpCode(200)
+  @AuditExempt(
+    "client withdraws their own enquiry; the enquiry row and its timeline event are the record, not a §9 internal-user action",
+  )
+  withdraw(
+    @ZodParams(enquiryParam) params: { enquiryId: string },
+    @CurrentPrincipal() principal: Principal,
+  ): Promise<HotelEnquiryClientView> {
+    return this.enquiries.withdrawOwn(principal, params.enquiryId);
+  }
 }

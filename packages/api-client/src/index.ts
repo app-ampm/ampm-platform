@@ -146,6 +146,7 @@ export {
 } from "./hooks/use-hotel-enquiries";
 export { useRequestHotelAssistance } from "./hooks/use-request-hotel-assistance";
 export { useUpdateEnquiryNote } from "./hooks/use-update-enquiry-note";
+export { useWithdrawEnquiry } from "./hooks/use-withdraw-enquiry";
 export {
   SERVICE_AGREEMENTS_QUERY_KEY,
   serviceAgreementQueryKey,

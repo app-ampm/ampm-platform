@@ -4,6 +4,8 @@ import {
   hotelEnquiryClientView,
   hotelEnquiryCreateRequest,
   hotelEnquiryEventClientView,
+  hotelEnquiryWithdrawableStatuses,
+  isHotelEnquiryWithdrawable,
 } from "./consultancy.js";
 
 const validClientView = {
@@ -91,5 +93,20 @@ describe("hotelEnquiryCreateRequest", () => {
     expect(hotelEnquiryCreateRequest.safeParse({ ...base, notesInternal: "x" }).success).toBe(
       false,
     );
+  });
+});
+
+describe("isHotelEnquiryWithdrawable (CP-09)", () => {
+  it("is true for every active pipeline status (7 of them)", () => {
+    for (const status of hotelEnquiryWithdrawableStatuses) {
+      expect(isHotelEnquiryWithdrawable(status)).toBe(true);
+    }
+    expect(hotelEnquiryWithdrawableStatuses).toHaveLength(7);
+  });
+
+  it("is false for a draft, a confirmed booking and a closed enquiry", () => {
+    expect(isHotelEnquiryWithdrawable("draft")).toBe(false);
+    expect(isHotelEnquiryWithdrawable("confirmed")).toBe(false);
+    expect(isHotelEnquiryWithdrawable("closed")).toBe(false);
   });
 });
