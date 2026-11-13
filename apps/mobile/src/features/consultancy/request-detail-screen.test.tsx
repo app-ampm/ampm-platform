@@ -135,6 +135,70 @@ describe("RequestDetailScreen", () => {
     expect(await screen.findByText(uiCopy.offline.title)).toBeOnTheScreen();
   });
 
+  it("lets the client add their own note to the request (PATCH /consultancy/enquiries/:id)", async () => {
+    const calls: FakeCall[] = [];
+    await renderDetail(
+      enquiryApi(
+        {
+          [`PATCH /consultancy/enquiries/${ENQUIRY_ID}`]: ok({
+            ...ENQUIRY_DETAIL,
+            notesClient: "We can be flexible on the dates.",
+          }),
+        },
+        calls,
+      ),
+    );
+    // ENQUIRY_DETAIL carries no note, so the affordance is "Add a note"; it opens the editor sheet.
+    await fireEvent.press(await screen.findByRole("button", { name: "Add a note" }));
+    await fireEvent.changeText(
+      await screen.findByLabelText("Your note"),
+      "We can be flexible on the dates.",
+    );
+    await fireEvent.press(screen.getByRole("button", { name: "Save note" }));
+    await waitFor(() =>
+      expect(calls).toContainEqual({
+        route: `PATCH /consultancy/enquiries/${ENQUIRY_ID}`,
+        body: { notesClient: "We can be flexible on the dates." },
+      }),
+    );
+  });
+
+  it("clears the note when the field is saved blank (notesClient: null)", async () => {
+    const calls: FakeCall[] = [];
+    const withNote = { ...ENQUIRY_DETAIL, notesClient: "an old note" };
+    await renderDetail(
+      enquiryApi(
+        {
+          [`GET /consultancy/enquiries/${ENQUIRY_ID}`]: ok(withNote),
+          [`PATCH /consultancy/enquiries/${ENQUIRY_ID}`]: ok({ ...withNote, notesClient: null }),
+        },
+        calls,
+      ),
+    );
+    await fireEvent.press(await screen.findByRole("button", { name: "Edit your note" }));
+    await fireEvent.changeText(await screen.findByLabelText("Your note"), "   ");
+    await fireEvent.press(screen.getByRole("button", { name: "Save note" }));
+    await waitFor(() =>
+      expect(calls).toContainEqual({
+        route: `PATCH /consultancy/enquiries/${ENQUIRY_ID}`,
+        body: { notesClient: null },
+      }),
+    );
+  });
+
+  it("shows a closed enquiry's note read-only, with no editor (the API makes it read-only)", async () => {
+    const closed = {
+      ...ENQUIRY_DETAIL,
+      status: "closed" as const,
+      outcome: "no_availability" as const,
+      notesClient: "we went another way",
+    };
+    await renderDetail(enquiryApi({ [`GET /consultancy/enquiries/${ENQUIRY_ID}`]: ok(closed) }));
+    expect(await screen.findByText("we went another way")).toBeOnTheScreen();
+    expect(screen.queryByRole("button", { name: "Edit your note" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Add a note" })).toBeNull();
+  });
+
   it("goes back from its header", async () => {
     await renderDetail(() => new Promise<Response>(() => {}));
     await fireEvent.press(screen.getByRole("button", { name: "Back" }));

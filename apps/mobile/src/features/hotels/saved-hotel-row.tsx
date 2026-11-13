@@ -1,14 +1,12 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { useUnsaveHotel, useUpdateSavedNote } from "@ampm/api-client";
 import { formatDay, type HotelView, type SavedHotelView } from "@ampm/core";
 import {
   Button,
-  Input,
   ListItem,
   PhotoPlaceholder,
   Row,
-  Sheet,
   Stack,
   StatusChip,
   Text,
@@ -16,6 +14,7 @@ import {
 } from "@ampm/ui";
 
 import { MediaImage } from "@/components/media-image";
+import { NoteEditorSheet } from "@/components/note-editor-sheet";
 
 import { destinationLabel, starLabel } from "./hotels.format";
 
@@ -115,53 +114,30 @@ interface NoteSheetProps {
   readonly note: string | null;
 }
 
-/** The draft and the save for the note sheet: seeded from the saved note each open, blank saved as a clear. */
-function useNoteDraft(hotelId: string, note: string | null, open: boolean, onClose: () => void) {
+/** The note editor for a saved hotel (B15): the shared sheet wired to this hotel's save-note mutation. */
+function NoteSheet({ open, onClose, hotel, note }: NoteSheetProps) {
   const toast = useToast();
-  const update = useUpdateSavedNote(hotelId);
-  const [draft, setDraft] = useState(note ?? "");
-  // Reseed the field each time the sheet opens; the saved note may have changed since the last edit.
-  useEffect(() => {
-    if (open) setDraft(note ?? "");
-  }, [open, note]);
-  const save = (): void => {
+  const update = useUpdateSavedNote(hotel.id);
+  const save = (value: string | null): void =>
     update.mutate(
-      { note: draft.trim() ? draft : null },
+      { note: value },
       {
         onSuccess: onClose,
         onError: () => toast.show({ title: "Could not save your note", tone: "danger" }),
       },
     );
-  };
-  return { draft, setDraft, save, saving: update.isPending };
-}
-
-/** The note editor as a sheet: a multiline field seeded with the saved note, saving blank as a cleared note. */
-function NoteSheet({ open, onClose, hotel, note }: NoteSheetProps) {
-  const { draft, setDraft, save, saving } = useNoteDraft(hotel.id, note, open, onClose);
   return (
-    <Sheet
+    <NoteEditorSheet
       open={open}
       onClose={onClose}
       title={`Note · ${hotel.name}`}
-      size="auto"
+      initialNote={note}
+      onSave={save}
+      saving={update.isPending}
+      maxLength={NOTE_MAX}
+      placeholder="e.g. great lawn, waiting on a quote"
       testID="saved-note-sheet"
-      footer={
-        <Button variant="primary" loading={saving} onPress={save} className="self-stretch">
-          Save note
-        </Button>
-      }
-    >
-      <Input
-        label="Your note"
-        multiline
-        numberOfLines={4}
-        value={draft}
-        onChangeText={setDraft}
-        maxLength={NOTE_MAX}
-        placeholder="e.g. great lawn, waiting on a quote"
-      />
-    </Sheet>
+    />
   );
 }
 
