@@ -19,6 +19,7 @@ import { upsertDemoUser } from "../src/modules/demo/demo-baseline.js";
 import { seedConsultancyDemo } from "./seed-consultancy.js";
 import { seedHotels } from "./seed-hotels.js";
 import { seedHotelSubresources } from "./seed-hotel-subresources.js";
+import { seedLeads } from "./seed-leads.js";
 
 const url = process.env["DATABASE_URL"];
 if (!url) throw new Error("DATABASE_URL is required to seed");
@@ -343,6 +344,7 @@ async function main(): Promise<void> {
   await upsertDemoUser(prisma);
   await seedConfigurations();
   await seedLeadSources();
+  await seedLeads(prisma);
   await seedPlans();
   await seedServiceTypes();
   await seedHotels(prisma);
