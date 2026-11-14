@@ -84,6 +84,39 @@ describe("NewRequestScreen", () => {
     });
   });
 
+  it("sends the optional rooms, contact preference and notes when they are given", async () => {
+    const calls: FakeCall[] = [];
+    await renderForm(requestApi(ok({ kind: "enquiry", enquiry: ENQUIRY }), calls));
+    await fillForm();
+    await fireEvent.changeText(screen.getByPlaceholderText("40"), "40");
+    await fireEvent.changeText(
+      screen.getByPlaceholderText("WhatsApp, evenings after 6pm"),
+      "WhatsApp after 6pm",
+    );
+    await fireEvent.changeText(
+      screen.getByPlaceholderText("Catering, suppliers, must-have amenities"),
+      "Sea-facing rooms please",
+    );
+    await fireEvent.press(sendButton());
+    await waitFor(() =>
+      expect(mockRouter.replace).toHaveBeenCalledWith(`/portal/requests/${ENQUIRY_ID}`),
+    );
+    expect(calls.find((call) => call.route === CREATE)?.body).toMatchObject({
+      roomsRequired: 40,
+      contactPreference: "WhatsApp after 6pm",
+      notesClient: "Sea-facing rooms please",
+    });
+  });
+
+  it("flags a rooms count that is not a whole number and keeps Send disabled", async () => {
+    await renderForm(requestApi(ok({ kind: "routed_to_sales" })));
+    await fillForm();
+    expect(sendButton()).toBeEnabled();
+    await fireEvent.changeText(screen.getByPlaceholderText("40"), "3.5");
+    expect(screen.getByText("Enter rooms as a whole number, or leave it blank.")).toBeOnTheScreen();
+    expect(sendButton()).toBeDisabled();
+  });
+
   it("routes a demo prospect's request to Sales: a toast, then back", async () => {
     await renderForm(requestApi(ok({ kind: "routed_to_sales" })));
     await fillForm();
