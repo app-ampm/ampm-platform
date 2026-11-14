@@ -124,7 +124,7 @@ describe("Media AC-20/AC-24 acceptance (e2e)", () => {
     // decode, and both failures are validation_failed/400 — so the message is the only distinguisher.
     // Without this assertion, removing the size guard would still pass here (the bytes would 400 at the
     // sharp decode instead), leaving the AC-20 ceiling untested.
-    expect(res.body.error.message).toMatch(/byte limit/i);
+    expect(res.body.error.message).toMatch(/exceeds the \d+ MB limit/i);
   });
 
   it("stops serving a minted link once the owning asset is removed (AC-20.5, access follows the record)", async () => {

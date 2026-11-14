@@ -2,8 +2,14 @@ import { useState, type ReactNode } from "react";
 import { useRouter } from "expo-router";
 import type { UseQueryResult } from "@tanstack/react-query";
 
-import { useAddHotelPhoto, useDeleteMedia, useHotelMedia, useStaffHotel } from "@ampm/api-client";
-import { isAppError, type MediaAssetPage, type MediaAssetView } from "@ampm/core";
+import { useAddHotelMedia, useDeleteMedia, useHotelMedia, useStaffHotel } from "@ampm/api-client";
+import {
+  isAppError,
+  MAX_MEDIA_UPLOAD_BYTES,
+  type MediaAssetPage,
+  type MediaAssetView,
+  type MediaKind,
+} from "@ampm/core";
 import {
   Button,
   Card,
@@ -23,48 +29,69 @@ import { useGoToSignIn } from "@/navigation/sign-in";
 import { HotelProfileEditSheet } from "./hotel-profile-edit-sheet";
 import { MediaEditSheet } from "./media-edit-sheet";
 import { MediaRow } from "./media-row";
-import { pickImageFile } from "./pick-image-file";
+import { pickMediaFile } from "./pick-media-file";
 
-/** The add / edit / delete orchestration for the photo manager, kept out of the view. */
-function useMediaManager(hotelId: string) {
+/** Filenames a blank browser MIME still identifies as a video the server can sniff (ISO-BMFF ftyp). */
+const VIDEO_FILE = /\.(mp4|m4v|mov)$/i;
+
+/** Pick a photo or video, register it with the kind its content declares, and upload the bytes. */
+function useMediaAdder(hotelId: string) {
   const toast = useToast();
-  const add = useAddHotelPhoto(hotelId);
-  const remove = useDeleteMedia(hotelId);
-  const [editing, setEditing] = useState<MediaAssetView | null>(null);
-  const [deleting, setDeleting] = useState<MediaAssetView | null>(null);
-  const addPhoto = async (): Promise<void> => {
+  const add = useAddHotelMedia(hotelId);
+  const addMedia = async (): Promise<void> => {
     if (add.isPending) return;
-    const picked = await pickImageFile();
+    const picked = await pickMediaFile("image/*,video/*");
     if (!picked) {
-      toast.show({ title: "Add photos from the web workspace", tone: "info" });
+      toast.show({ title: "Add media from the web workspace", tone: "info" });
       return;
     }
+    // Declare the kind from the MIME type or the extension, so a video whose browser type is blank is not
+    // sent as an image (which the content sniff would then reject). The server's sniff is the final word.
+    const isVideo = picked.mimeType.startsWith("video/") || VIDEO_FILE.test(picked.name);
+    const noun = isVideo ? "video" : "photo";
+    if (picked.sizeBytes > MAX_MEDIA_UPLOAD_BYTES) {
+      const limitMb = MAX_MEDIA_UPLOAD_BYTES / (1024 * 1024);
+      toast.show({ title: `This ${noun} is over the ${limitMb} MB limit`, tone: "danger" });
+      return;
+    }
+    const kind: MediaKind = isVideo ? "video" : "image";
     add.mutate(
-      { file: picked.file, mimeType: picked.mimeType, sizeBytes: picked.sizeBytes },
+      { file: picked.file, mimeType: picked.mimeType, sizeBytes: picked.sizeBytes, kind },
       {
-        onSuccess: () => toast.show({ title: "Photo added", tone: "success" }),
+        onSuccess: () =>
+          toast.show({ title: isVideo ? "Video added" : "Photo added", tone: "success" }),
         onError: (error) =>
           toast.show({
-            title: isAppError(error) ? error.message : "Could not add the photo",
+            title: isAppError(error) ? error.message : `Could not add the ${noun}`,
             tone: "danger",
           }),
       },
     );
   };
+  return { addMedia, adding: add.isPending };
+}
+
+/** The add / edit / delete orchestration for the media manager, kept out of the view. */
+function useMediaManager(hotelId: string) {
+  const toast = useToast();
+  const adder = useMediaAdder(hotelId);
+  const remove = useDeleteMedia(hotelId);
+  const [editing, setEditing] = useState<MediaAssetView | null>(null);
+  const [deleting, setDeleting] = useState<MediaAssetView | null>(null);
   const confirmDelete = (): void => {
     if (!deleting || remove.isPending) return;
-    const name = deleting.caption ?? "Photo";
+    const noun = deleting.kind === "video" ? "video" : "photo";
+    const name = deleting.caption ?? (deleting.kind === "video" ? "Video" : "Photo");
     remove.mutate(deleting.id, {
       onSuccess: () => {
         toast.show({ title: `${name} removed`, tone: "success" });
         setDeleting(null);
       },
-      onError: () => toast.show({ title: "Could not remove the photo", tone: "danger" }),
+      onError: () => toast.show({ title: `Could not remove the ${noun}`, tone: "danger" }),
     });
   };
   return {
-    addPhoto,
-    adding: add.isPending,
+    ...adder,
     editing,
     startEdit: (media: MediaAssetView): void => setEditing(media),
     closeEdit: (): void => setEditing(null),
@@ -101,7 +128,7 @@ function MediaBody({ media, onEdit, onDelete }: BodyProps) {
         onRetry={() => void media.refetch()}
         onSignIn={goToSignIn}
         signIn={{
-          title: "Sign in to manage photos",
+          title: "Sign in to manage media",
           description: "Your session has ended. Sign in again to continue.",
         }}
       />
@@ -111,8 +138,8 @@ function MediaBody({ media, onEdit, onDelete }: BodyProps) {
     return (
       <EmptyState
         icon="image"
-        title="No photos yet"
-        description="Add photos to show this hotel in client discovery."
+        title="No media yet"
+        description="Add photos and videos to show this hotel in client discovery."
       />
     );
   }
@@ -129,17 +156,17 @@ function MediaBody({ media, onEdit, onDelete }: BodyProps) {
 
 type MediaManager = ReturnType<typeof useMediaManager>;
 
-/** The hotel screen's header actions: edit the profile (once it has loaded) and add a photo. */
+/** The hotel screen's header actions: edit the profile (once it has loaded) and add a photo or video. */
 function HotelScreenActions({
   canEdit,
   adding,
   onEdit,
-  onAddPhoto,
+  onAddMedia,
 }: {
   readonly canEdit: boolean;
   readonly adding: boolean;
   readonly onEdit: () => void;
-  readonly onAddPhoto: () => void;
+  readonly onAddMedia: () => void;
 }) {
   return (
     <Row gap={2}>
@@ -153,26 +180,27 @@ function HotelScreenActions({
         size="sm"
         icon="plus"
         loading={adding}
-        onPress={onAddPhoto}
+        onPress={onAddMedia}
         testID="media-add"
       >
-        Add photo
+        Add media
       </Button>
     </Row>
   );
 }
 
-/** The confirm shown before a photo is removed from the hotel. */
-function DeletePhotoConfirm({ manager }: { readonly manager: MediaManager }) {
+/** The confirm shown before a photo or video is removed from the hotel. */
+function DeleteMediaConfirm({ manager }: { readonly manager: MediaManager }) {
+  const noun = manager.deleting?.kind === "video" ? "video" : "photo";
   return (
     <ConfirmSheet
       open={manager.deleting !== null}
       onClose={manager.cancelDelete}
       title={
-        manager.deleting ? `Remove ${manager.deleting.caption ?? "this photo"}?` : "Remove photo?"
+        manager.deleting ? `Remove ${manager.deleting.caption ?? `this ${noun}`}?` : "Remove media?"
       }
-      description="This removes the photo from the hotel. It will no longer appear to clients."
-      confirmLabel="Remove photo"
+      description="This removes it from the hotel. It will no longer appear to clients."
+      confirmLabel={`Remove ${noun}`}
       destructive
       loading={manager.deletePending}
       onConfirm={manager.confirmDelete}
@@ -181,7 +209,7 @@ function DeletePhotoConfirm({ manager }: { readonly manager: MediaManager }) {
   );
 }
 
-/** A link from the photo manager to the hotel's rooms, venues and contacts workspace. */
+/** A link from the media manager to the hotel's rooms, venues and contacts workspace. */
 function HotelDetailsLink({ hotelId }: { readonly hotelId: string }) {
   const router = useRouter();
   return (
@@ -199,7 +227,7 @@ function HotelDetailsLink({ hotelId }: { readonly hotelId: string }) {
   );
 }
 
-/** A link from the photo manager to the hotel's rate cards workspace. */
+/** A link from the media manager to the hotel's rate cards workspace. */
 function HotelRatesLink({ hotelId }: { readonly hotelId: string }) {
   const router = useRouter();
   return (
@@ -223,9 +251,10 @@ export interface HotelMediaScreenProps {
 }
 
 /**
- * The hotel photo manager (H1.1): add photos (register → upload → fail-closed scan), caption them and
- * set who sees them and their rights. A scan-clean, client-visible, rights-cleared photo shows in the
- * client's hotel gallery automatically. Hotel team and Super Admin only, gated server-side.
+ * The hotel media manager (H1.1): add photos and videos (register → upload → fail-closed scan), caption
+ * them and set who sees them and their rights. A scan-clean, client-visible, rights-cleared photo shows in
+ * the client's hotel gallery and a video in its Video tab automatically. Hotel team and Super Admin only,
+ * gated server-side.
  *
  *   <HotelMediaScreen hotelId={id} tabBar={<AppTabBar />} />
  */
@@ -241,13 +270,13 @@ export function HotelMediaScreen({ hotelId, tabBar }: HotelMediaScreenProps) {
       header={
         <ScreenHeader
           eyebrow={hotel.data?.name ?? "Hotel"}
-          title="Photos"
+          title="Media"
           trailing={
             <HotelScreenActions
               canEdit={hotel.data !== undefined}
               adding={manager.adding}
               onEdit={() => setEditingProfile(true)}
-              onAddPhoto={() => void manager.addPhoto()}
+              onAddMedia={() => void manager.addMedia()}
             />
           }
         />
@@ -264,7 +293,7 @@ export function HotelMediaScreen({ hotelId, tabBar }: HotelMediaScreenProps) {
         onClose={() => setEditingProfile(false)}
       />
       <MediaEditSheet hotelId={hotelId} media={manager.editing} onClose={manager.closeEdit} />
-      <DeletePhotoConfirm manager={manager} />
+      <DeleteMediaConfirm manager={manager} />
     </Screen>
   );
 }

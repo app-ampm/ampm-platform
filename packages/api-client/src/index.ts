@@ -131,12 +131,12 @@ export {
 } from "./hooks/use-hotel-rates";
 export {
   hotelMediaQueryKey,
-  useAddHotelPhoto,
+  useAddHotelMedia,
   useDeleteMedia,
   useHotelMedia,
   useMediaDownloadUrl,
   useUpdateMedia,
-  type AddHotelPhotoInput,
+  type AddHotelMediaInput,
 } from "./hooks/use-hotel-media";
 // Module D consultancy (feature 10.1): the client side of hotel enquiries (CP-07/08).
 export {

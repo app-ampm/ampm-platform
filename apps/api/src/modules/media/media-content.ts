@@ -1,4 +1,4 @@
-import type { MediaRightsStatus, MediaVisibility } from "@ampm/core";
+import { MAX_MEDIA_UPLOAD_BYTES, type MediaRightsStatus, type MediaVisibility } from "@ampm/core";
 
 /**
  * Content and rendition rules for gallery media (feature 9.3): how an upload's type is sniffed, how its
@@ -46,8 +46,8 @@ export function detectMedia(bytes: Buffer): DetectedMedia | null {
   return hit ? hit.detected : null;
 }
 
-/** The flat upload ceiling the API buffers and stores (AC-20.2). Per-type config limits are a later slice. */
-export const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
+/** The flat upload ceiling the API buffers and stores (AC-20.2); one shared constant with the client (core). */
+export const MAX_UPLOAD_BYTES = MAX_MEDIA_UPLOAD_BYTES;
 
 /**
  * The image types the derivative step can downscale and re-encode (feature 9.3c, AC-24.1). GIF is

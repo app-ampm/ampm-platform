@@ -17,10 +17,12 @@ import {
 
 /** The thumbnail: a signed link for a scanned-clean photo, or a status-coloured placeholder otherwise. */
 function MediaThumb({ media }: { readonly media: MediaAssetView }) {
+  const isVideo = media.kind === "video";
   const clean = media.scanStatus === "clean";
-  // A download URL is minted only for a clean asset, so the query is disabled until the scan passes.
-  const link = useMediaDownloadUrl(media.id, "thumbnail", clean);
-  if (clean && link.data) {
+  // A download URL is minted only for a clean asset; a video has no thumbnail derivative (that download is a
+  // 404), so only an image mints a preview — a video keeps the film placeholder.
+  const link = useMediaDownloadUrl(media.id, "thumbnail", clean && !isVideo);
+  if (clean && !isVideo && link.data) {
     return (
       <MediaImage
         uri={link.data.url}
@@ -31,12 +33,13 @@ function MediaThumb({ media }: { readonly media: MediaAssetView }) {
       />
     );
   }
+  const placeholder = media.scanStatus === "rejected" ? "x-circle" : isVideo ? "video" : "image";
   return (
     <View
       className="h-16 w-16 items-center justify-center rounded-md bg-primary/6"
       testID={`media-thumb-${media.id}`}
     >
-      <Icon name={media.scanStatus === "rejected" ? "x-circle" : "image"} tone="muted" />
+      <Icon name={placeholder} tone="muted" label={isVideo ? "Video" : undefined} />
     </View>
   );
 }
@@ -47,9 +50,9 @@ export interface MediaRowProps {
   readonly onDelete: (media: MediaAssetView) => void;
 }
 
-/** One photo in the manager: thumbnail, caption, its scan/visibility/rights chips, and edit/delete. */
+/** One asset in the manager: thumbnail, caption, its scan/visibility/rights chips, and edit/delete. */
 export function MediaRow({ media, onEdit, onDelete }: MediaRowProps) {
-  const name = media.caption ?? "Untitled photo";
+  const name = media.caption ?? (media.kind === "video" ? "Untitled video" : "Untitled photo");
   return (
     <Row gap={3} align="center" justify="between">
       <Row gap={3} align="center" className="flex-1">
