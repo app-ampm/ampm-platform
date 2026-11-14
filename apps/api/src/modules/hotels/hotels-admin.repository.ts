@@ -3,6 +3,7 @@ import type { HotelStatus } from "@ampm/core";
 
 import { PrismaService } from "../../db/prisma.service.js";
 import { Prisma } from "../../generated/prisma/client.js";
+import { facilitiesInput } from "./hotel-facilities.js";
 
 /*
  * The STAFF hotel catalogue repository (HT/SA; feature 9.1). Unlike the client discovery repository,
@@ -32,6 +33,7 @@ const STAFF_HOTEL_SELECT = {
   internalNotes: true,
   totalRooms: true,
   streetViewRef: true,
+  facilities: true,
   lastVerifiedAt: true,
 } as const;
 
@@ -103,8 +105,8 @@ export type DestinationRow = Prisma.DestinationGetPayload<{ select: typeof DESTI
 /** The columns the import or a create writes to a hotel; `destinationId`/`slug`/`name` are always set. */
 export type HotelWriteData = Omit<
   Prisma.HotelUncheckedCreateInput,
-  "id" | "createdAt" | "updatedAt" | "createdBy" | "updatedBy" | "deletedAt"
->;
+  "id" | "createdAt" | "updatedAt" | "createdBy" | "updatedBy" | "deletedAt" | "facilities"
+> & { facilities?: string[] | null };
 export type HotelUpdatePatch = Partial<Omit<HotelWriteData, "slug">>;
 export type DestinationWriteData = Omit<
   Prisma.DestinationUncheckedCreateInput,
@@ -161,7 +163,12 @@ export class HotelsAdminRepository {
 
   async createHotel(data: HotelWriteData, actorId: string): Promise<string> {
     const row = await this.prisma.hotel.create({
-      data: { ...data, createdBy: actorId, updatedBy: actorId },
+      data: {
+        ...data,
+        facilities: facilitiesInput(data.facilities),
+        createdBy: actorId,
+        updatedBy: actorId,
+      },
       select: { id: true },
     });
     return row.id;
@@ -175,7 +182,7 @@ export class HotelsAdminRepository {
   ): Promise<void> {
     await (tx ?? this.prisma).hotel.update({
       where: { id: hotelId },
-      data: { ...patch, updatedBy: actorId },
+      data: { ...patch, facilities: facilitiesInput(patch.facilities), updatedBy: actorId },
     });
   }
 
@@ -254,7 +261,12 @@ export class HotelsAdminRepository {
     tx: Prisma.TransactionClient,
   ): Promise<string> {
     const row = await tx.hotel.create({
-      data: { ...data, createdBy: actorId, updatedBy: actorId },
+      data: {
+        ...data,
+        facilities: facilitiesInput(data.facilities),
+        createdBy: actorId,
+        updatedBy: actorId,
+      },
       select: { id: true },
     });
     return row.id;

@@ -10,6 +10,7 @@ import type {
 
 import { PrismaService } from "../../db/prisma.service.js";
 import { Prisma } from "../../generated/prisma/client.js";
+import { facilitiesInput } from "./hotel-facilities.js";
 
 /*
  * Writes for a hotel's room categories, venues and contacts (feature 9.1, staff). The selects match the
@@ -56,15 +57,6 @@ const CONTACT_SELECT = {
 export type RoomRow = Prisma.HotelRoomCategoryGetPayload<{ select: typeof ROOM_SELECT }>;
 export type VenueRow = Prisma.HotelVenueGetPayload<{ select: typeof VENUE_SELECT }>;
 export type ContactRow = Prisma.HotelContactGetPayload<{ select: typeof CONTACT_SELECT }>;
-
-/** A nullable JSON column takes a JSON value, or Prisma.DbNull for SQL NULL; `undefined` leaves it alone. */
-function facilitiesInput(
-  value: string[] | null | undefined,
-): Prisma.InputJsonValue | typeof Prisma.DbNull | undefined {
-  if (value === undefined) return undefined;
-  if (value === null) return Prisma.DbNull;
-  return value;
-}
 
 @Injectable()
 export class HotelSubresourcesRepository {

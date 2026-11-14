@@ -103,3 +103,29 @@ describe("StubPaymentAdapter", () => {
     expect(adapter.verifyWebhookSignature(body, "wrong")).toBe(false);
   });
 });
+
+describe("verifyCheckoutSignature (Razorpay Standard Checkout callback)", () => {
+  it("accepts a genuine HMAC of `<orderId>|<paymentId>` with the KEY SECRET, fails closed otherwise", () => {
+    const adapter = new RazorpayPaymentAdapter("rzp_test_key", "secret", "whsecret", logger);
+    const good = createHmac("sha256", "secret").update("order_1|pay_1").digest("hex");
+    expect(adapter.verifyCheckoutSignature("order_1", "pay_1", good)).toBe(true);
+    expect(adapter.verifyCheckoutSignature("order_1", "pay_1", "deadbeef")).toBe(false);
+    expect(adapter.verifyCheckoutSignature("order_1", "pay_1", undefined)).toBe(false);
+    // The signature binds BOTH ids: a different order id (or payment id) does not verify.
+    expect(adapter.verifyCheckoutSignature("order_2", "pay_1", good)).toBe(false);
+  });
+
+  it("the stub verifies a signature made with its public dev key secret (no network)", () => {
+    const adapter = new StubPaymentAdapter();
+    const good = createHmac("sha256", StubPaymentAdapter.KEY_SECRET).update("o1|p1").digest("hex");
+    expect(adapter.verifyCheckoutSignature("o1", "p1", good)).toBe(true);
+    expect(adapter.verifyCheckoutSignature("o1", "p1", "wrong")).toBe(false);
+  });
+});
+
+describe("adapter.provider", () => {
+  it("names the active gateway so the client portal branches between checkout and the dev endpoint", () => {
+    expect(new RazorpayPaymentAdapter("k", "s", "w", logger).provider).toBe("razorpay");
+    expect(new StubPaymentAdapter().provider).toBe("stub");
+  });
+});

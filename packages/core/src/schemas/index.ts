@@ -78,8 +78,7 @@ export type {
   SessionIdleTimeouts,
   SubscriptionPolicy,
 } from "./config";
-export { activateRequest, activateResponse, devLoginRequest, devLoginResponse } from "./auth";
-export type { ActivateRequest, ActivateResponse, DevLoginRequest, DevLoginResponse } from "./auth";
+export * from "./auth";
 export {
   clientLoginCreateRequest,
   clientLoginList,
@@ -250,6 +249,8 @@ export {
   devCompletePaymentRequest,
   devCompletePaymentResponse,
   portalSubscriptionCreateRequest,
+  portalVerifyPaymentRequest,
+  portalVerifyPaymentResponse,
   subscriptionClientView,
   subscriptionCreateRequest,
   subscriptionCreateResponse,
@@ -264,6 +265,8 @@ export type {
   DevCompletePaymentRequest,
   DevCompletePaymentResponse,
   PortalSubscriptionCreateRequest,
+  PortalVerifyPaymentRequest,
+  PortalVerifyPaymentResponse,
   SubscriptionClientView,
   SubscriptionCreateRequest,
   SubscriptionCreateResponse,

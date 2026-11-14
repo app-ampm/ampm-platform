@@ -9,6 +9,8 @@ export interface PlanActionProps {
   /** primary: the screen's one gold action (a lone plan); secondary when several plans compete. */
   readonly payVariant: "primary" | "secondary";
   readonly subscribing: boolean;
+  /** The pending payment is the dev stub, so the control completes it directly rather than reopening checkout. */
+  readonly demo: boolean;
   readonly onSubscribe: () => void;
   readonly onComplete: () => void;
 }
@@ -16,14 +18,15 @@ export interface PlanActionProps {
 interface PendingPaymentProps {
   /** The payment is on its way: the button stays busy and disabled so it can't be sent twice. */
   readonly activating: boolean;
+  readonly demo: boolean;
   readonly onComplete: () => void;
 }
 
 /**
- * A started subscription waits for its payment: the development stub's stand-in for the hosted
- * checkout completes it, a peacock confirm action.
+ * A started subscription waits for its payment: the dev stub completes it directly (a demo control), while
+ * a real Razorpay order reopens the hosted checkout to resume the payment. A peacock confirm action.
  */
-function PendingPayment({ activating, onComplete }: PendingPaymentProps) {
+function PendingPayment({ activating, demo, onComplete }: PendingPaymentProps) {
   return (
     <Stack gap={3}>
       <Callout
@@ -39,7 +42,7 @@ function PendingPayment({ activating, onComplete }: PendingPaymentProps) {
         disabled={activating}
         onPress={onComplete}
       >
-        Complete payment (demo)
+        {demo ? "Complete payment (demo)" : "Resume payment"}
       </Button>
     </Stack>
   );
@@ -51,11 +54,14 @@ export function PlanAction({
   price,
   payVariant,
   subscribing,
+  demo,
   onSubscribe,
   onComplete,
 }: PlanActionProps) {
   if (phase !== "idle") {
-    return <PendingPayment activating={phase === "activating"} onComplete={onComplete} />;
+    return (
+      <PendingPayment activating={phase === "activating"} demo={demo} onComplete={onComplete} />
+    );
   }
   return (
     <Stack gap={3}>

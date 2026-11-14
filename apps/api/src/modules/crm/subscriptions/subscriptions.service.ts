@@ -65,7 +65,7 @@ export class SubscriptionsService {
       subscriptionId,
       status: "pending_payment",
       order: {
-        provider: "razorpay",
+        provider: this.adapter.provider,
         orderId: order.orderId,
         amount: toClientMoney(plan.priceAmount),
         keyId: order.keyId,

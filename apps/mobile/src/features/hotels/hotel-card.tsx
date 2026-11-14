@@ -1,9 +1,20 @@
 import { View } from "react-native";
 
-import type { HotelView } from "@ampm/core";
-import { Card, Image, PhotoPlaceholder, Row, StatusChip, Text } from "@ampm/ui";
+import type { HotelCardSummary, HotelView } from "@ampm/core";
+import { Card, MoneyText, PhotoPlaceholder, Row, Stack, StatusChip, Text } from "@ampm/ui";
 
-import { destinationLabel, hotelMetaLine, starLabel } from "./hotels.format";
+import { MediaImage } from "@/components/media-image";
+
+import {
+  capacityRangeLabel,
+  cardFreshnessChip,
+  cardSummaryAccessibilityLabel,
+  destinationLabel,
+  hotelMetaLine,
+  priceRangeAmounts,
+  priceRangeUnit,
+  starLabel,
+} from "./hotels.format";
 
 export interface HotelCardProps {
   readonly hotel: HotelView;
@@ -13,8 +24,8 @@ export interface HotelCardProps {
 /** The card's photo: the hotel's cover when it has a client-visible image, else the striped stand-in. */
 function HotelCardPhoto({ hotel }: { readonly hotel: HotelView }) {
   return hotel.coverUrl ? (
-    <Image
-      source={{ uri: hotel.coverUrl }}
+    <MediaImage
+      uri={hotel.coverUrl}
       alt={`Photo of ${hotel.name}`}
       radius="none"
       className="h-32 w-full rounded md:h-auto md:min-h-32 md:w-48"
@@ -28,18 +39,50 @@ function HotelCardPhoto({ hotel }: { readonly hotel: HotelView }) {
 }
 
 /**
- * A search result (D5, P3): a glass card with the hotel's cover photo on top (beside the text from a
- * tablet up), the name in Gilda Display, where the hotel is as data, its star category and two lines
- * of description. The whole card opens the hotel. The cover is the hotel's primary client-visible image
- * (a signed link); a hotel with no such image keeps the striped stand-in. The list view carries no
- * rates, so the card shows no price or verified-rate chip.
+ * The card's at-a-glance figures (B11): an indicative client price range with a compact freshness chip and
+ * the venue capacity range. Every figure is derived from the same verified/stale, client-visible rate cards
+ * and descriptive venue capacities the detail serves — the card leaks nothing new (security.md). A hotel
+ * with no client-visible price shows the freshness chip alone ("On request"); one with no venues omits seats.
+ */
+function CardSummary({ summary }: { readonly summary: HotelCardSummary }) {
+  const chip = cardFreshnessChip(summary);
+  return (
+    <Stack gap={1}>
+      <Row gap={2} justify="between" align="center">
+        {summary.priceRange ? (
+          <Row gap={1} align="center" className="flex-1">
+            <MoneyText {...priceRangeAmounts(summary.priceRange)} variant="label" />
+            <Text variant="caption" tone="muted">
+              {priceRangeUnit(summary.priceRange.unit)}
+            </Text>
+          </Row>
+        ) : (
+          <View className="flex-1" />
+        )}
+        <StatusChip label={chip.label} tone={chip.tone} dot={chip.dot} size="sm" />
+      </Row>
+      {summary.capacity ? (
+        <Text variant="data" tone="muted" numberOfLines={1}>
+          {capacityRangeLabel(summary.capacity)}
+        </Text>
+      ) : null}
+    </Stack>
+  );
+}
+
+/**
+ * A search result (D5, P3): a glass card with the hotel's cover photo on top (beside the text from a tablet
+ * up), the name in Gilda Display, where the hotel is as data, its star category, two lines of description
+ * and, at a glance, the indicative price range, rates freshness and capacity (B11). The whole card opens the
+ * hotel. The cover is the hotel's primary client-visible image (a signed link); a hotel with no such image
+ * keeps the striped stand-in.
  */
 export function HotelCard({ hotel, onPress }: HotelCardProps) {
   return (
     <Card
       padding="none"
       onPress={onPress}
-      accessibilityLabel={`${hotel.name} in ${destinationLabel(hotel.destination)}`}
+      accessibilityLabel={`${hotel.name} in ${destinationLabel(hotel.destination)}. ${cardSummaryAccessibilityLabel(hotel.summary)}`}
       className="gap-1 p-2 md:flex-row md:gap-4"
     >
       <HotelCardPhoto hotel={hotel} />
@@ -60,6 +103,7 @@ export function HotelCard({ hotel, onPress }: HotelCardProps) {
             {hotel.description}
           </Text>
         ) : null}
+        <CardSummary summary={hotel.summary} />
       </View>
     </Card>
   );

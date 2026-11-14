@@ -43,6 +43,7 @@ function useMediaEditForm(hotelId: string, media: MediaAssetView | null, onClose
   }, [media]);
   const submit = (): void => {
     if (!media || update.isPending) return;
+    const label = media.kind === "video" ? "Video" : "Photo";
     update.mutate(
       {
         mediaId: media.id,
@@ -54,13 +55,13 @@ function useMediaEditForm(hotelId: string, media: MediaAssetView | null, onClose
       },
       {
         onSuccess: () => {
-          toast.show({ title: "Photo updated", tone: "success" });
+          toast.show({ title: `${label} updated`, tone: "success" });
           onClose();
         },
         // The server enforces GP-20 (client visibility needs cleared rights); surface its message.
         onError: (error) =>
           toast.show({
-            title: isAppError(error) ? error.message : "Could not save the photo",
+            title: isAppError(error) ? error.message : `Could not save the ${label.toLowerCase()}`,
             tone: "danger",
           }),
       },
@@ -81,8 +82,8 @@ export interface MediaEditSheetProps {
 }
 
 /**
- * Edit one photo (H1.1): its caption, who can see it and its rights. A photo only reaches clients when
- * its rights are cleared (GP-20, server-enforced); the form warns before a save the server would refuse.
+ * Edit one photo or video (H1.1): its caption, who can see it and its rights. An asset only reaches clients
+ * when its rights are cleared (GP-20, server-enforced); the form warns before a save the server would refuse.
  */
 export function MediaEditSheet({ hotelId, media, onClose }: MediaEditSheetProps) {
   const { draft, set, pending, submit } = useMediaEditForm(hotelId, media, onClose);
@@ -91,12 +92,12 @@ export function MediaEditSheet({ hotelId, media, onClose }: MediaEditSheetProps)
     <Sheet
       open={media !== null}
       onClose={onClose}
-      title="Edit photo"
+      title={media?.kind === "video" ? "Edit video" : "Edit photo"}
       size="full"
       testID="media-edit"
       footer={
         <Button fullWidth loading={pending} onPress={submit} testID="media-edit-submit">
-          Save photo
+          {media?.kind === "video" ? "Save video" : "Save photo"}
         </Button>
       }
     >

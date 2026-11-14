@@ -8,6 +8,7 @@ import {
   type MediaAssetUpdateRequest,
   type MediaAssetView,
   type MediaDownloadUrl,
+  type MediaKind,
   type MediaRemovedResponse,
   type MediaVariant,
 } from "@ampm/core";
@@ -33,28 +34,30 @@ export function useHotelMedia(hotelId: string) {
   });
 }
 
-export interface AddHotelPhotoInput {
+export interface AddHotelMediaInput {
   /** The raw file bytes (a File/Blob on web). */
   readonly file: BodyInit;
   readonly mimeType: string;
   readonly sizeBytes: number;
+  /** image or video: the registered kind. The server verifies it against the bytes' content (AC-20.2). */
+  readonly kind: MediaKind;
 }
 
 /**
- * Add a photo to a hotel: register the asset (`POST /media`), then upload its raw bytes
- * (`POST /media/:id/upload`, octet-stream). The server scans the bytes fail-closed and generates the
- * web/thumbnail derivatives before returning, so the result already carries the final `scanStatus`. The
- * photo starts `internal` / `consent_required`; make it client-visible with {@link useUpdateMedia}
- * (the GP-20 gate needs rights cleared). Refreshes the hotel's media list.
+ * Add a photo or video to a hotel: register the asset (`POST /media`), then upload its raw bytes
+ * (`POST /media/:id/upload`, octet-stream). The server sniffs the bytes fail-closed; an image also gets its
+ * web/thumbnail derivatives while a video keeps only its original (feature 9.3c) — either way the result
+ * carries the final `scanStatus`. The asset starts `internal` / `consent_required`; make it client-visible
+ * with {@link useUpdateMedia} (the GP-20 gate needs rights cleared). Refreshes the hotel's media list.
  */
-export function useAddHotelPhoto(hotelId: string) {
+export function useAddHotelMedia(hotelId: string) {
   const api = useApiClient();
   const queryClient = useQueryClient();
-  return useMutation<MediaAssetView, Error, AddHotelPhotoInput>({
-    mutationFn: async ({ file, mimeType, sizeBytes }) => {
+  return useMutation<MediaAssetView, Error, AddHotelMediaInput>({
+    mutationFn: async ({ file, mimeType, sizeBytes, kind }) => {
       const asset = await api.request("/media", {
         method: "POST",
-        body: { ownerType: "hotel", ownerId: hotelId, kind: "image", mimeType, sizeBytes },
+        body: { ownerType: "hotel", ownerId: hotelId, kind, mimeType, sizeBytes },
         schema: mediaAssetView,
       });
       return api.upload(`/media/${asset.id}/upload`, {

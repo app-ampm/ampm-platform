@@ -72,4 +72,23 @@ describe("createApiClient", () => {
     // The raw bytes go on the wire as-is — never JSON-encoded.
     expect(capture.init?.body).toBe(bytes);
   });
+
+  it("resolves a signed media URL against the API base, passing absolutes and empties through", () => {
+    const api = createApiClient({
+      baseUrl: "https://app.ampmverse.com/_api/",
+      fetch: fakeFetch(200, { data: { ok: true } }),
+    });
+    // A root-relative /media/blob URL becomes absolute under the API base (so on the box it reaches /_api,
+    // not the app's own origin where the SPA shell would answer instead of the picture).
+    expect(api.mediaUrl("/media/blob?key=abc&sig=1")).toBe(
+      "https://app.ampmverse.com/_api/media/blob?key=abc&sig=1",
+    );
+    // An absolute URL (a future S3/CDN link, feature 6.4) is left untouched.
+    expect(api.mediaUrl("https://cdn.example.com/x.jpg")).toBe("https://cdn.example.com/x.jpg");
+    // A protocol-relative URL (//host/…) is already loadable — it must not get the base prepended.
+    expect(api.mediaUrl("//cdn.example.com/x.jpg")).toBe("//cdn.example.com/x.jpg");
+    // No URL stays null.
+    expect(api.mediaUrl(null)).toBeNull();
+    expect(api.mediaUrl(undefined)).toBeNull();
+  });
 });

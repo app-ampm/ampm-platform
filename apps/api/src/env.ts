@@ -12,6 +12,14 @@ const fields = z.object({
   COGNITO_REGION: z.string().min(1).optional(),
   COGNITO_USER_POOL_ID: z.string().min(1).optional(),
   COGNITO_CLIENT_ID: z.string().min(1).optional(),
+  /**
+   * Scoped admin IAM credentials for provisioning Cognito users at invite time (cognito-setup §6) — the
+   * only AWS credentials the API holds; the verify path needs none. Optional: absent, provisioning uses the
+   * default AWS provider chain (so a verify-only node boots), and a provisioning call then fails best-effort
+   * and is logged, never fatal. The pair is all-or-nothing (below). Lives in the SOPS app zone, never code.
+   */
+  COGNITO_PROVISIONING_ACCESS_KEY_ID: z.string().min(1).optional(),
+  COGNITO_PROVISIONING_SECRET_ACCESS_KEY: z.string().min(1).optional(),
   /** The job queue's Redis; absent in development and tests, where jobs run inline (D-031). */
   REDIS_URL: z.string().url().optional(),
   /** `true` in the worker process only; the API process enqueues but does not consume (D-031). */
@@ -82,6 +90,16 @@ const fields = z.object({
   STORAGE_PROVIDER: z.enum(["local", "s3"]).default("local"),
   STORAGE_LOCAL_DIR: z.string().min(1).default(".storage"),
   MEDIA_SIGNING_SECRET: z.string().min(32).optional(),
+  /**
+   * Allows `STORAGE_PROVIDER=local` in production for the single-VPS deployment where STORAGE_LOCAL_DIR is
+   * a persistent, backed-up host volume (D-106; infra.md). Off by default so the local store is never
+   * shipped to production by accident; when on, MEDIA_SIGNING_SECRET is required to sign download URLs. The
+   * cloud path (`STORAGE_PROVIDER=s3`, feature 6.4) supersedes this when AMPM moves off the single box.
+   */
+  STORAGE_LOCAL_PERSISTENT: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((value) => value === "true"),
 });
 
 type EnvFields = z.infer<typeof fields>;
@@ -112,6 +130,19 @@ function identityIssues(value: EnvFields): EnvIssue[] {
     if (!value[key]) {
       issues.push({ path: [key], message: "required with the Cognito identity provider" });
     }
+  }
+  // Provisioning credentials are optional, but a half-set pair is a misconfiguration: one key without the
+  // other silently falls back to the default AWS chain and looks like working provisioning that isn't.
+  const hasKeyId = Boolean(value.COGNITO_PROVISIONING_ACCESS_KEY_ID);
+  const hasSecret = Boolean(value.COGNITO_PROVISIONING_SECRET_ACCESS_KEY);
+  if (hasKeyId !== hasSecret) {
+    issues.push({
+      path: [
+        hasKeyId ? "COGNITO_PROVISIONING_SECRET_ACCESS_KEY" : "COGNITO_PROVISIONING_ACCESS_KEY_ID",
+      ],
+      message:
+        "set both COGNITO_PROVISIONING_ACCESS_KEY_ID and COGNITO_PROVISIONING_SECRET_ACCESS_KEY, or neither",
+    });
   }
   return issues;
 }
@@ -236,15 +267,32 @@ function proxyIssues(value: EnvFields): EnvIssue[] {
   return [];
 }
 
-/** Media store: the local filesystem store is refused in production; the S3 bucket arrives in feature 6.4. */
+/**
+ * Media store in production. The S3 bucket + CDN (feature 6.4) is the default. The local filesystem store
+ * is also allowed, but only for the single-VPS deployment and only deliberately: STORAGE_LOCAL_PERSISTENT
+ * must confirm STORAGE_LOCAL_DIR is a persistent, backed-up host volume (D-106, infra.md), and
+ * MEDIA_SIGNING_SECRET must be set so the 15-minute download URLs are signed. Without the opt-in the local
+ * store stays refused in production, so it is never shipped there by accident.
+ */
 function storageIssues(value: EnvFields): EnvIssue[] {
-  if (value.NODE_ENV === "production" && value.STORAGE_PROVIDER === "local") {
+  if (value.NODE_ENV !== "production" || value.STORAGE_PROVIDER !== "local") return [];
+  if (!value.STORAGE_LOCAL_PERSISTENT) {
     return [
       {
         path: ["STORAGE_PROVIDER"],
         message:
-          "the local filesystem media store is development and staging only; production serves media " +
-          "from the S3 bucket and CDN (feature 6.4)",
+          "the local filesystem media store is refused in production unless STORAGE_LOCAL_PERSISTENT=true " +
+          "confirms STORAGE_LOCAL_DIR is a persistent, backed-up volume (single-VPS deployment, D-106); " +
+          "otherwise serve media from the S3 bucket and CDN (feature 6.4)",
+      },
+    ];
+  }
+  if (!value.MEDIA_SIGNING_SECRET) {
+    return [
+      {
+        path: ["MEDIA_SIGNING_SECRET"],
+        message:
+          "required with the local media store in production: it signs the 15-minute download URLs",
       },
     ];
   }

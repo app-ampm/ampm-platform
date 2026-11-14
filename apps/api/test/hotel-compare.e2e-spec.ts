@@ -199,4 +199,45 @@ describe("Hotel compare (e2e)", () => {
       .set("authorization", auth(clientToken))
       .expect(400);
   });
+
+  it("lists every saved hotel id for the account, including one now out of reach (/hotels/saved/ids)", async () => {
+    // Unlike compare, the saved-ids set is NOT reach-scoped: delta is on the shortlist but inactive, and it
+    // still appears — a hotel is saved whether or not the caller can still open it. The hearts on the cards
+    // read this complete set (B12/B12b), so a hotel saved beyond the first shortlist page still shows saved.
+    const res = await http()
+      .get("/hotels/saved/ids")
+      .set("authorization", auth(clientToken))
+      .expect(200);
+    expect([...res.body.data.ids].sort()).toEqual([alpha, bravo, delta].sort());
+  });
+
+  it("never returns another account's saved ids (the saved-ids set is account-scoped)", async () => {
+    const res = await http()
+      .get("/hotels/saved/ids")
+      .set("authorization", auth(intruderToken))
+      .expect(200);
+    expect(res.body.data.ids).toEqual([]);
+  });
+
+  it("edits and clears the client's own note on a saved hotel, and 404s for an unsaved one (B15)", async () => {
+    // Set a note (trimmed), then clear it with blank (stored as null).
+    const set = await http()
+      .patch(`/hotels/${alpha}/save`)
+      .set("authorization", auth(clientToken))
+      .send({ note: "  great lawn  " })
+      .expect(200);
+    expect(set.body.data.note).toBe("great lawn");
+    const cleared = await http()
+      .patch(`/hotels/${alpha}/save`)
+      .set("authorization", auth(clientToken))
+      .send({ note: "   " })
+      .expect(200);
+    expect(cleared.body.data.note).toBeNull();
+    // Annotating a hotel that is not on the shortlist is a 404 (nothing to annotate — denial equals absence).
+    await http()
+      .patch(`/hotels/${charlie}/save`)
+      .set("authorization", auth(clientToken))
+      .send({ note: "x" })
+      .expect(404);
+  });
 });

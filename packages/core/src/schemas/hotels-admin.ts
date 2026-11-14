@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { cursorQuery, isoDateTime, page, uuid } from "./common.js";
+import { hotelVenueType } from "./hotels.js";
 
 /*
  * Contracts for the STAFF hotel workspace (Module C "Hotel intelligence"; docs/data-model.md §5,
@@ -15,18 +16,6 @@ import { cursorQuery, isoDateTime, page, uuid } from "./common.js";
 /** Hotel and destination lifecycle (HotelStatus / DestinationStatus in the Prisma schema). */
 export const hotelStatus = z.enum(["draft", "active", "inactive"]);
 export type HotelStatus = z.infer<typeof hotelStatus>;
-
-/** Function/event venue kinds (HotelVenueType in the Prisma schema; keep the two in step). */
-export const hotelVenueType = z.enum([
-  "ballroom",
-  "lawn",
-  "poolside",
-  "rooftop",
-  "courtyard",
-  "beach",
-  "other",
-]);
-export type HotelVenueType = z.infer<typeof hotelVenueType>;
 
 /** A list of free-text facility labels (facilities_json; e.g. ["wifi", "pool", "spa"]). */
 const facilities = z.array(z.string().trim().min(1).max(120)).max(100);
@@ -217,6 +206,7 @@ const hotelStaffBase = z.object({
   totalRooms: z.number().int().nullable(),
   streetViewRef: z.string().nullable(),
   lastVerifiedAt: isoDateTime.nullable(),
+  facilities: facilities.nullable(),
 });
 
 /** A hotel in the staff list (HT/SA): the full profile, no nested collections. */
@@ -250,6 +240,7 @@ const hotelProfileFields = {
   internalNotes: z.string().trim().max(10_000).nullish(),
   totalRooms: z.number().int().min(0).nullish(),
   streetViewRef: z.string().trim().max(255).nullish(),
+  facilities: facilities.nullish(),
 };
 
 export const hotelCreateRequest = z

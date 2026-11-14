@@ -181,6 +181,26 @@ export class EnquiriesRepository {
     await client.hotelEnquiry.update({ where: { id }, data: { ...patch, updatedBy: actorId } });
   }
 
+  /**
+   * A race-guarded status write: moves the row only while its status is still one of `fromStatuses`, so a
+   * transition that raced a concurrent one moves 0 rows (the UPDATE's own WHERE is the guard) rather than
+   * clobbering the row. Returns the rows moved; the caller treats 0 as "already moved". The precondition
+   * (which statuses) is the service's, so the repository stays a generic conditional update.
+   */
+  async updateStatusFrom(
+    id: string,
+    fromStatuses: readonly HotelEnquiryStatus[],
+    patch: EnquiryStatusPatch,
+    actorId: string,
+    client: Prisma.TransactionClient | PrismaService = this.prisma,
+  ): Promise<number> {
+    const { count } = await client.hotelEnquiry.updateMany({
+      where: { id, status: { in: [...fromStatuses] }, deletedAt: null },
+      data: { ...patch, updatedBy: actorId },
+    });
+    return count;
+  }
+
   async updateStaffFields(
     id: string,
     patch: EnquiryStaffPatch,

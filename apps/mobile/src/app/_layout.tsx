@@ -19,12 +19,17 @@ import { ApiProvider } from "@ampm/api-client";
 import { fontFaces } from "@ampm/tokens";
 import { ThemeProvider, ToastProvider } from "@ampm/ui";
 
+import { configureAmplify } from "@/lib/amplify";
 import { env } from "@/lib/env";
-import { getAccessToken } from "@/lib/session";
+import { getAccessToken, initAuthSession, restoreLocalSession } from "@/lib/session";
 import { AppStack } from "@/navigation/app-stack";
 import { DemoBanner } from "@/navigation/demo-banner";
 
 SplashScreen.preventAutoHideAsync();
+
+// Configure Cognito once and seed/track the signed-in state before anything reads the session.
+configureAmplify();
+initAuthSession();
 
 /** Peacock Night's faces as the tokens name them (packages/tokens/src/typography.ts), loaded under exactly those names. */
 const FONTS = {
@@ -40,6 +45,12 @@ const FONTS = {
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts(FONTS);
   const ready = fontsLoaded || fontError !== null;
+
+  // Restore a persisted dev-login session on the web (local provider) in a client effect, so a page refresh
+  // keeps the presenter signed in during a demo. No-op under Cognito and where there is no localStorage.
+  useEffect(() => {
+    restoreLocalSession();
+  }, []);
 
   useEffect(() => {
     if (ready) void SplashScreen.hideAsync();

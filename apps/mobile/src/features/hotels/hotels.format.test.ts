@@ -1,15 +1,28 @@
-import type { ClientRateItemView, HotelRatesView } from "@ampm/core";
+import type {
+  ClientRateItemView,
+  HotelRatesView,
+  HotelRoomClientView,
+  HotelVenueClientView,
+} from "@ampm/core";
 
 import {
+  activeFilterCount,
+  destinationBrowseSubtitle,
   destinationLabel,
   destinationOptions,
+  facilitiesLine,
   headlineCaption,
   headlineRate,
   hotelCountLabel,
   hotelMetaLine,
   hotelSections,
+  parseCompareIds,
   percentLabel,
   rateFreshnessChip,
+  roomMetaLine,
+  venueCapacities,
+  venueKindLine,
+  venueTypeLabel,
 } from "./hotels.format";
 import { detailFixture, hotelFixture, JAIPUR, UDAIPUR } from "./hotels.test-utils";
 
@@ -31,6 +44,35 @@ function rates(
   items: readonly ClientRateItemView[],
 ): HotelRatesView {
   return { status, asOf: AS_OF, items: [...items] };
+}
+
+function venue(overrides: Partial<HotelVenueClientView> = {}): HotelVenueClientView {
+  return {
+    id: "018f0000-0000-7000-8000-000000000a01",
+    name: "The Durbar Ballroom",
+    venueType: "ballroom",
+    isIndoor: true,
+    areaSqm: 1200,
+    capacityBanquet: 500,
+    capacityTheatre: 700,
+    capacityReception: 900,
+    facilities: ["Stage", "Dance floor"],
+    description: "A pillarless hall.",
+    ...overrides,
+  };
+}
+
+function room(overrides: Partial<HotelRoomClientView> = {}): HotelRoomClientView {
+  return {
+    id: "018f0000-0000-7000-8000-000000000b01",
+    name: "Lake-View Suite",
+    roomCount: 24,
+    maxOccupancy: 3,
+    sizeSqm: 65,
+    facilities: ["Balcony"],
+    description: "Corner suites.",
+    ...overrides,
+  };
 }
 
 describe("hotel labels", () => {
@@ -139,6 +181,14 @@ describe("hotelSections", () => {
     ).toEqual(["rates"]);
   });
 
+  it("offers the overview for a hotel whose only content is its facilities", () => {
+    expect(
+      hotelSections(
+        detailFixture({ description: null, address: null, facilities: ["Spa", "Valet parking"] }),
+      ).map((s) => s.value),
+    ).toEqual(["overview", "rates"]);
+  });
+
   it("counts pictures, not videos, for the gallery", () => {
     const media = (id: string, kind: "image" | "video") => ({
       id,
@@ -161,5 +211,114 @@ describe("hotelSections", () => {
       "overview",
       "rates",
     ]);
+  });
+
+  it("adds a video tab for the hotel's videos (B17), counting them", () => {
+    const videos = [
+      { id: "018f0000-0000-7000-8000-0000000000e1", caption: "A tour", url: "/media/blob?key=v1" },
+      { id: "018f0000-0000-7000-8000-0000000000e2", caption: null, url: "/media/blob?key=v2" },
+    ];
+    expect(hotelSections(detailFixture({ videos }))).toContainEqual({
+      value: "video",
+      label: "Video",
+      badge: 2,
+    });
+    expect(hotelSections(detailFixture()).map((s) => s.value)).not.toContain("video");
+  });
+});
+
+describe("venues, rooms and their labels", () => {
+  it("adds venues and rooms to the tabs in exploration order, with a count", () => {
+    const venues = [venue(), venue({ id: "018f0000-0000-7000-8000-000000000a02" })];
+    expect(hotelSections(detailFixture({ venues, rooms: [room()] })).map((s) => s.value)).toEqual([
+      "overview",
+      "venues",
+      "rooms",
+      "rates",
+    ]);
+    expect(hotelSections(detailFixture({ venues }))).toContainEqual({
+      value: "venues",
+      label: "Venues",
+      badge: 2,
+    });
+    expect(hotelSections(detailFixture({ rooms: [room()] }))).toContainEqual({
+      value: "rooms",
+      label: "Rooms",
+      badge: 1,
+    });
+  });
+
+  it("names a venue's kind, setting and capacities", () => {
+    expect(venueTypeLabel("ballroom")).toBe("Ballroom");
+    expect(venueTypeLabel("other")).toBe("Venue");
+    expect(venueKindLine(venue({ venueType: "lawn", isIndoor: false }))).toBe("Lawn · Outdoor");
+    expect(venueCapacities(venue())).toBe("Banquet 500 · Reception 900 · Theatre 700 · 1200 m²");
+    expect(venueCapacities(venue({ capacityTheatre: null, areaSqm: null }))).toBe(
+      "Banquet 500 · Reception 900",
+    );
+    expect(
+      venueCapacities(
+        venue({
+          capacityBanquet: null,
+          capacityReception: null,
+          capacityTheatre: null,
+          areaSqm: null,
+        }),
+      ),
+    ).toBe("");
+  });
+
+  it("names a room category's size and lists amenities, dropping what is unknown", () => {
+    expect(roomMetaLine(room())).toBe("24 rooms · Sleeps 3 · 65 m²");
+    expect(roomMetaLine(room({ roomCount: 1, sizeSqm: null }))).toBe("1 room · Sleeps 3");
+    expect(roomMetaLine(room({ roomCount: null, maxOccupancy: null, sizeSqm: null }))).toBe("");
+    expect(facilitiesLine(["Wi-Fi", "Spa"])).toBe("Wi-Fi · Spa");
+    expect(facilitiesLine([])).toBeNull();
+    expect(facilitiesLine(null)).toBeNull();
+  });
+});
+
+describe("discovery filters", () => {
+  it("counts the active filters, ignoring the cleared or zero ones", () => {
+    expect(activeFilterCount({})).toBe(0);
+    expect(activeFilterCount({ star: "5" })).toBe(1);
+    expect(
+      activeFilterCount({
+        star: "5",
+        minGuestCapacity: 500,
+        minRooms: 100,
+        verifiedRatesOnly: true,
+      }),
+    ).toBe(4);
+    // verifiedRatesOnly counts only when on; a 0 minimum is not a real filter (the backend ignores it).
+    expect(activeFilterCount({ verifiedRatesOnly: false })).toBe(0);
+    expect(activeFilterCount({ minRooms: 0 })).toBe(0);
+  });
+});
+
+describe("parseCompareIds", () => {
+  it("normalises the compare route's ids, whether a comma string, a repeated array, or absent", () => {
+    expect(parseCompareIds("a,b,c")).toEqual(["a", "b", "c"]);
+    expect(parseCompareIds(" a , , b ")).toEqual(["a", "b"]); // trims and drops blanks
+    // expo-router hands a repeated ?ids=a&ids=b back as an array — it must not crash on .split.
+    expect(parseCompareIds(["a", "b"])).toEqual(["a", "b"]);
+    expect(parseCompareIds(undefined)).toEqual([]);
+    expect(parseCompareIds("")).toEqual([]);
+  });
+});
+
+describe("destinationBrowseSubtitle", () => {
+  it("counts the destination's hotels and names where it is", () => {
+    expect(destinationBrowseSubtitle({ ...UDAIPUR, hotelCount: 5 })).toBe("5 hotels · Rajasthan");
+    expect(destinationBrowseSubtitle({ ...UDAIPUR, hotelCount: 1 })).toBe("1 hotel · Rajasthan");
+  });
+
+  it("prefers the region over the state, and falls back to the count alone", () => {
+    expect(destinationBrowseSubtitle({ ...UDAIPUR, region: "Lake District", hotelCount: 2 })).toBe(
+      "2 hotels · Lake District",
+    );
+    expect(
+      destinationBrowseSubtitle({ ...UDAIPUR, region: null, state: null, hotelCount: 3 }),
+    ).toBe("3 hotels");
   });
 });

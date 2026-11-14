@@ -3,10 +3,11 @@ import {
   hotelEnquiryClientDetailView,
   hotelEnquiryClientPage,
   type HotelEnquiryClientDetailView,
-  type HotelEnquiryClientPage,
+  type HotelEnquiryClientView,
 } from "@ampm/core";
 
 import { useApiClient } from "../provider";
+import { useCursorList } from "./use-cursor-list";
 
 export const HOTEL_ENQUIRIES_QUERY_KEY = ["consultancy", "enquiries"] as const;
 
@@ -17,25 +18,23 @@ export function hotelEnquiryQueryKey(enquiryId: string) {
 
 export interface HotelEnquiriesQuery {
   readonly status?: string;
-  readonly cursor?: string;
 }
 
-/** The caller's own hotel enquiries (`GET /consultancy/enquiries`); CLIENT fields only. */
-export function useHotelEnquiries(query: HotelEnquiriesQuery = {}) {
-  const api = useApiClient();
+function hotelEnquiriesPath(query: HotelEnquiriesQuery, cursor: string | undefined): string {
   const params = new URLSearchParams();
   if (query.status) params.set("status", query.status);
-  if (query.cursor) params.set("cursor", query.cursor);
+  if (cursor) params.set("cursor", cursor);
   const suffix = params.toString();
-  return useQuery<HotelEnquiryClientPage>({
-    queryKey: [...HOTEL_ENQUIRIES_QUERY_KEY, query],
-    queryFn: ({ signal }) =>
-      api.get(
-        `/consultancy/enquiries${suffix ? `?${suffix}` : ""}`,
-        hotelEnquiryClientPage,
-        signal,
-      ),
-  });
+  return `/consultancy/enquiries${suffix ? `?${suffix}` : ""}`;
+}
+
+/** The caller's own hotel enquiries (`GET /consultancy/enquiries`), cursor-paginated with a "Load more" footer (B10); CLIENT fields only. */
+export function useHotelEnquiries(query: HotelEnquiriesQuery = {}) {
+  const api = useApiClient();
+  return useCursorList<HotelEnquiryClientView>(
+    [...HOTEL_ENQUIRIES_QUERY_KEY, query],
+    (cursor, signal) => api.get(hotelEnquiriesPath(query, cursor), hotelEnquiryClientPage, signal),
+  );
 }
 
 /** One of the caller's enquiries with its non-internal timeline (`GET /consultancy/enquiries/:id`). */

@@ -59,8 +59,25 @@ describe("loadEnv", () => {
     );
   });
 
-  it("refuses the local media store in production", () => {
+  it("refuses the local media store in production by default", () => {
     expect(() => loadEnv({ ...prodValid, STORAGE_PROVIDER: "local" })).toThrow(/STORAGE_PROVIDER/);
+  });
+
+  it("allows the local media store in production when it is a persistent, signed volume (D-106)", () => {
+    const env = loadEnv({
+      ...prodValid,
+      STORAGE_PROVIDER: "local",
+      STORAGE_LOCAL_PERSISTENT: "true",
+      MEDIA_SIGNING_SECRET: "a-production-media-signing-secret-key",
+    });
+    expect(env.STORAGE_PROVIDER).toBe("local");
+    expect(env.STORAGE_LOCAL_PERSISTENT).toBe(true);
+  });
+
+  it("requires MEDIA_SIGNING_SECRET for the local media store in production", () => {
+    expect(() =>
+      loadEnv({ ...prodValid, STORAGE_PROVIDER: "local", STORAGE_LOCAL_PERSISTENT: "true" }),
+    ).toThrow(/MEDIA_SIGNING_SECRET/);
   });
 
   it("refuses a localhost WEB_APP_URL in production", () => {
@@ -82,6 +99,24 @@ describe("loadEnv", () => {
         IDENTITY_LOCAL_SECRET: "a-development-secret-that-is-32chars",
       }),
     ).toThrow(/local identity provider/);
+  });
+
+  it("accepts both Cognito provisioning credentials together", () => {
+    const env = loadEnv({
+      ...prodValid,
+      COGNITO_PROVISIONING_ACCESS_KEY_ID: "AKIA_EXAMPLE",
+      COGNITO_PROVISIONING_SECRET_ACCESS_KEY: "secret-example",
+    });
+    expect(env.COGNITO_PROVISIONING_ACCESS_KEY_ID).toBe("AKIA_EXAMPLE");
+  });
+
+  it("refuses a half-set provisioning credential pair", () => {
+    expect(() =>
+      loadEnv({ ...prodValid, COGNITO_PROVISIONING_ACCESS_KEY_ID: "AKIA_EXAMPLE" }),
+    ).toThrow(/COGNITO_PROVISIONING_SECRET_ACCESS_KEY/);
+    expect(() =>
+      loadEnv({ ...prodValid, COGNITO_PROVISIONING_SECRET_ACCESS_KEY: "secret-example" }),
+    ).toThrow(/COGNITO_PROVISIONING_ACCESS_KEY_ID/);
   });
 
   it("requires REDIS_URL in production (A6)", () => {

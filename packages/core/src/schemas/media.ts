@@ -68,6 +68,13 @@ export const mediaAssetView = z
 export type MediaAssetView = z.infer<typeof mediaAssetView>;
 
 /**
+ * The flat upload ceiling the API buffers, scans and stores (AC-20.2, media-content.ts). The staff client
+ * pre-checks a pick against it so an oversize file (a long video especially) is refused instantly, with a
+ * human-readable limit, instead of after a doomed upload. A larger ceiling is a signed-URL slice.
+ */
+export const MAX_MEDIA_UPLOAD_BYTES = 25 * 1024 * 1024;
+
+/**
  * Register a media asset against an owner (create-by-reference). The server generates the object key; the
  * client never supplies one. The bytes are uploaded afterwards (slice 3b), so the row starts `pending`.
  */
@@ -157,3 +164,17 @@ export const mediaGalleryItem = z
   })
   .strict();
 export type MediaGalleryItem = z.infer<typeof mediaGalleryItem>;
+
+/**
+ * One client-visible video as a gallery shows it (feature 9.3c). A video has no web/thumbnail derivative
+ * (AC-24.1 renders images only), so there is no poster — just the caption and a short-lived signed link to
+ * the original the player streams. The object key never crosses the boundary (security.md), only the link.
+ */
+export const mediaVideoItem = z
+  .object({
+    id: uuid,
+    caption: z.string().nullable(),
+    url: z.string(), // signed link to the original (a video has no derivative)
+  })
+  .strict();
+export type MediaVideoItem = z.infer<typeof mediaVideoItem>;

@@ -1,8 +1,25 @@
-import { useUnsaveHotel } from "@ampm/api-client";
+import { useState } from "react";
+
+import { useUnsaveHotel, useUpdateSavedNote } from "@ampm/api-client";
 import { formatDay, type HotelView, type SavedHotelView } from "@ampm/core";
-import { Button, Image, ListItem, PhotoPlaceholder, Row, StatusChip, useToast } from "@ampm/ui";
+import {
+  Button,
+  ListItem,
+  PhotoPlaceholder,
+  Row,
+  Stack,
+  StatusChip,
+  Text,
+  useToast,
+} from "@ampm/ui";
+
+import { MediaImage } from "@/components/media-image";
+import { NoteEditorSheet } from "@/components/note-editor-sheet";
 
 import { destinationLabel, starLabel } from "./hotels.format";
+
+/** The longest note the API accepts (savedHotelNoteUpdateRequest); the editor caps input at the same length. */
+const NOTE_MAX = 1000;
 
 export interface SavedHotelRowProps {
   readonly item: SavedHotelView;
@@ -10,22 +27,58 @@ export interface SavedHotelRowProps {
 }
 
 /**
- * One hotel in "My selection" (D7, P2): a row with its photo stand-in, name, destination and the day
- * it was saved, opening the hotel; the remove button sits beside the row, never inside a pressable one.
+ * One hotel in "My selection" (D7, P2): a row with its photo stand-in, name, destination and the day it
+ * was saved, opening the hotel; the remove and note buttons sit BESIDE the row, never inside a pressable
+ * one. The client's own note (B15) shows under the row, and the note button opens a sheet to edit it.
  */
 export function SavedHotelRow({ item, onOpen }: SavedHotelRowProps) {
   const toast = useToast();
   const unsave = useUnsaveHotel(item.hotel.id);
-  const { hotel } = item;
-  const where = destinationLabel(hotel.destination);
-  const savedOn = formatDay(item.savedAt);
+  const [editing, setEditing] = useState(false);
   const onRemove = (): void => {
     unsave.mutate(undefined, {
       onError: () => toast.show({ title: "Could not remove the hotel", tone: "danger" }),
     });
   };
   return (
-    <Row gap={1} className="border-t border-primary/16">
+    <Stack gap={1} className="border-t border-primary/16">
+      <SavedRowBar
+        item={item}
+        onOpen={onOpen}
+        onEdit={() => setEditing(true)}
+        onRemove={onRemove}
+        removing={unsave.isPending}
+      />
+      {item.note ? (
+        <Text variant="caption" tone="muted" className="px-1 pb-1">
+          {item.note}
+        </Text>
+      ) : null}
+      <NoteSheet
+        open={editing}
+        onClose={() => setEditing(false)}
+        hotel={item.hotel}
+        note={item.note}
+      />
+    </Stack>
+  );
+}
+
+interface SavedRowBarProps {
+  readonly item: SavedHotelView;
+  readonly onOpen: () => void;
+  readonly onEdit: () => void;
+  readonly onRemove: () => void;
+  readonly removing: boolean;
+}
+
+/** The row itself: the pressable hotel, then the note and remove buttons beside it (never nested inside it). */
+function SavedRowBar({ item, onOpen, onEdit, onRemove, removing }: SavedRowBarProps) {
+  const { hotel } = item;
+  const where = destinationLabel(hotel.destination);
+  const savedOn = formatDay(item.savedAt);
+  return (
+    <Row gap={1}>
       <ListItem
         tone="plain"
         className="flex-1 border-t-0"
@@ -39,8 +92,14 @@ export function SavedHotelRow({ item, onOpen }: SavedHotelRowProps) {
       />
       <Button
         variant="ghost"
+        icon="edit"
+        onPress={onEdit}
+        accessibilityLabel={`${item.note ? "Edit" : "Add a"} note for ${hotel.name}`}
+      />
+      <Button
+        variant="ghost"
         icon="x"
-        loading={unsave.isPending}
+        loading={removing}
         onPress={onRemove}
         accessibilityLabel={`Remove ${hotel.name} from your shortlist`}
       />
@@ -48,10 +107,44 @@ export function SavedHotelRow({ item, onOpen }: SavedHotelRowProps) {
   );
 }
 
+interface NoteSheetProps {
+  readonly open: boolean;
+  readonly onClose: () => void;
+  readonly hotel: HotelView;
+  readonly note: string | null;
+}
+
+/** The note editor for a saved hotel (B15): the shared sheet wired to this hotel's save-note mutation. */
+function NoteSheet({ open, onClose, hotel, note }: NoteSheetProps) {
+  const toast = useToast();
+  const update = useUpdateSavedNote(hotel.id);
+  const save = (value: string | null): void =>
+    update.mutate(
+      { note: value },
+      {
+        onSuccess: onClose,
+        onError: () => toast.show({ title: "Could not save your note", tone: "danger" }),
+      },
+    );
+  return (
+    <NoteEditorSheet
+      open={open}
+      onClose={onClose}
+      title={`Note · ${hotel.name}`}
+      initialNote={note}
+      onSave={save}
+      saving={update.isPending}
+      maxLength={NOTE_MAX}
+      placeholder="e.g. great lawn, waiting on a quote"
+      testID="saved-note-sheet"
+    />
+  );
+}
+
 function Thumbnail({ hotel }: { readonly hotel: HotelView }) {
   return hotel.coverUrl ? (
-    <Image
-      source={{ uri: hotel.coverUrl }}
+    <MediaImage
+      uri={hotel.coverUrl}
       alt={`Photo of ${hotel.name}`}
       radius="none"
       className="h-10 w-12 rounded-sm"

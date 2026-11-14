@@ -28,6 +28,7 @@ const HOTELS = [
     website: "https://example.com/lake-pavilion",
     descriptionClient:
       "A heritage-style lakeside palace with courtyard lawns for destination weddings.",
+    facilities: ["Lake jetty", "Bridal suite", "Separate veg kitchen", "Spa", "Valet parking"],
   },
   {
     slug: "aravalli-retreat-udaipur",
@@ -52,6 +53,7 @@ const HOTELS = [
     address: "Amer Road, Jaipur, Rajasthan 302002",
     website: "https://example.com/rose-fort",
     descriptionClient: "A fort-palace with expansive courtyard lawns for large functions.",
+    facilities: ["Fort courtyard", "Palace spa", "Valet parking", "In-house decor"],
   },
   {
     slug: "candolim-sands-goa",
@@ -64,6 +66,7 @@ const HOTELS = [
     address: "Candolim Beach Road, North Goa 403515",
     website: "https://example.com/candolim-sands",
     descriptionClient: "A beachfront resort for seaside wedding events and sundown receptions.",
+    facilities: ["Private beach", "Beachfront lawn", "Poolside bar", "Spa", "Valet parking"],
   },
 ] as const;
 

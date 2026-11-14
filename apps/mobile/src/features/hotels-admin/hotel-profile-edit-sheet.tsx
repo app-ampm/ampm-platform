@@ -130,6 +130,15 @@ function DetailFields({ draft, patch, errors }: FieldsProps) {
         multiline
         testID="hotel-address"
       />
+      <ContentFields draft={draft} patch={patch} />
+    </>
+  );
+}
+
+/** The client-facing free text a hotel shows in discovery: its description and its amenities. */
+function ContentFields({ draft, patch }: Pick<FieldsProps, "draft" | "patch">) {
+  return (
+    <>
       <Input
         label="Client description"
         helpText="Shown to clients in discovery."
@@ -137,6 +146,13 @@ function DetailFields({ draft, patch, errors }: FieldsProps) {
         onChangeText={(descriptionClient) => patch({ descriptionClient })}
         multiline
         testID="hotel-description"
+      />
+      <Input
+        label="Facilities"
+        helpText="Comma-separated, e.g. spa, valet parking, pool."
+        value={draft.facilities}
+        onChangeText={(facilities) => patch({ facilities })}
+        testID="hotel-facilities"
       />
     </>
   );

@@ -1,9 +1,11 @@
-import { errors, type LogFields, type Logger } from "@ampm/core";
+import { errors, type LogFields } from "@ampm/core";
 
-import type {
-  NotificationAdapter,
-  NotificationDelivery,
-  NotificationResult,
+import {
+  type AdapterLogger,
+  type NotificationAdapter,
+  type NotificationDelivery,
+  type NotificationResult,
+  providerErrorCode,
 } from "./notification.adapter.js";
 
 /** The minimal mail transport the adapter needs; the module wires a nodemailer one, tests a fake. */
@@ -15,16 +17,6 @@ export interface MailTransport {
     readonly html: string;
     readonly text: string;
   }): Promise<{ readonly messageId: string }>;
-}
-
-type AdapterLogger = Pick<Logger, "info">;
-
-/** A provider error can echo the recipient address or the SMTP response; keep only its non-PII code. */
-function smtpErrorCode(error: unknown): string {
-  if (error && typeof error === "object" && "code" in error && typeof error.code === "string") {
-    return error.code;
-  }
-  return "unknown";
 }
 
 /**
@@ -57,7 +49,7 @@ export class SmtpEmailAdapter implements NotificationAdapter {
     } catch (error) {
       // The provider error may echo the recipient address or the message body; drop it and keep only a
       // non-PII code, so nothing personal reaches the logs or the job driver's error log (security.md).
-      throw errors.internal(`email delivery failed (${smtpErrorCode(error)})`);
+      throw errors.internal(`email delivery failed (${providerErrorCode(error)})`);
     }
     const fields: LogFields = {
       channel: delivery.channel,

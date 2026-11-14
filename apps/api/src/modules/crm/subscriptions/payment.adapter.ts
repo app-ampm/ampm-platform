@@ -38,6 +38,9 @@ export interface ParsedWebhookEvent {
 }
 
 export interface PaymentAdapter {
+  /** The active gateway: "razorpay", or "stub" for the in-process dev/staging gateway. The client portal
+   *  branches on it — a stub order completes through the dev endpoint, a razorpay order through checkout. */
+  readonly provider: "razorpay" | "stub";
   /** Create a hosted-checkout order (an HTTPS POST for the real gateway). */
   createOrder(input: CreateOrderInput): Promise<CreatedOrder>;
   /**
@@ -46,6 +49,16 @@ export interface PaymentAdapter {
    * Must receive the exact raw bytes — a re-serialised body would not match (AC-02.6).
    */
   verifyWebhookSignature(rawBody: Buffer, signature: string | undefined): boolean;
+  /**
+   * True when `signature` is a genuine HMAC-SHA256 of `<orderId>|<paymentId>` with the gateway KEY SECRET
+   * — the Razorpay Standard Checkout success signature the browser posts back. Never throws; a bad or
+   * absent signature is false (fail closed), so the verify route activates nothing.
+   */
+  verifyCheckoutSignature(
+    orderId: string,
+    paymentId: string,
+    signature: string | undefined,
+  ): boolean;
   /** Parse a verified webhook body into its event type and the order/payment references. */
   parseEvent(rawBody: Buffer): ParsedWebhookEvent;
 }
@@ -108,6 +121,8 @@ type PaymentLogger = Pick<Logger, "warn">;
  * injectable so the order call has an offline contract test.
  */
 export class RazorpayPaymentAdapter implements PaymentAdapter {
+  readonly provider = "razorpay";
+
   constructor(
     private readonly keyId: string,
     private readonly keySecret: string,
@@ -143,6 +158,18 @@ export class RazorpayPaymentAdapter implements PaymentAdapter {
     return verifyHmacSha256(rawBody, signature, this.webhookSecret);
   }
 
+  verifyCheckoutSignature(
+    orderId: string,
+    paymentId: string,
+    signature: string | undefined,
+  ): boolean {
+    return verifyHmacSha256(
+      Buffer.from(`${orderId}|${paymentId}`, "utf8"),
+      signature,
+      this.keySecret,
+    );
+  }
+
   parseEvent(rawBody: Buffer): ParsedWebhookEvent {
     return parseRazorpayEvent(rawBody);
   }
@@ -156,7 +183,10 @@ export class RazorpayPaymentAdapter implements PaymentAdapter {
  */
 export class StubPaymentAdapter implements PaymentAdapter {
   static readonly WEBHOOK_SECRET = "stub-not-a-real-secret";
+  static readonly KEY_SECRET = "stub-not-a-real-key-secret";
   static readonly KEY_ID = "rzp_test_stub";
+
+  readonly provider = "stub";
 
   createOrder(input: CreateOrderInput): Promise<CreatedOrder> {
     // A unique order id per call, like a real gateway (so a retried/reused purchase never collides on
@@ -169,6 +199,18 @@ export class StubPaymentAdapter implements PaymentAdapter {
 
   verifyWebhookSignature(rawBody: Buffer, signature: string | undefined): boolean {
     return verifyHmacSha256(rawBody, signature, StubPaymentAdapter.WEBHOOK_SECRET);
+  }
+
+  verifyCheckoutSignature(
+    orderId: string,
+    paymentId: string,
+    signature: string | undefined,
+  ): boolean {
+    return verifyHmacSha256(
+      Buffer.from(`${orderId}|${paymentId}`, "utf8"),
+      signature,
+      StubPaymentAdapter.KEY_SECRET,
+    );
   }
 
   parseEvent(rawBody: Buffer): ParsedWebhookEvent {

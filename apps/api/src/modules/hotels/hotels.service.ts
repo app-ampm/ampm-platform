@@ -3,6 +3,7 @@ import {
   errors,
   type DestinationBrowseResponse,
   type EntitlementModule,
+  type HotelCardSummary,
   type HotelCompareQuery,
   type HotelCompareResponse,
   type HotelDetailView,
@@ -10,6 +11,8 @@ import {
   type HotelPage,
   type HotelReach,
   type SavedHotelListQuery,
+  type SavedHotelIdsResponse,
+  type SavedHotelNoteUpdateRequest,
   type SavedHotelPage,
   type SavedHotelRemovedResponse,
   type SavedHotelView,
@@ -22,12 +25,21 @@ import type { Principal } from "../../policy/principal.types.js";
 import { HotelReferencesService } from "./hotel-references.service.js";
 import { HotelsRepository } from "./hotels.repository.js";
 import {
+  toCardSummary,
   toDestinationBrowseItem,
   toHotelCompareItem,
   toHotelDetailView,
   toHotelView,
   toSavedHotelView,
 } from "./hotels.view.js";
+
+/** A card summary for a hotel with no in-reach client-visible rates/capacity (out of reach, or none on file). */
+const ON_REQUEST_SUMMARY: HotelCardSummary = {
+  ratesFreshness: "on_request",
+  ratesAsOf: null,
+  priceRange: null,
+  capacity: null,
+};
 
 /** The media audience for a principal: a demo prospect sees demo/public, every real client the client set. */
 function audienceFor(principal: Principal): "client" | "demo" {
@@ -52,14 +64,20 @@ export class HotelsService {
   async list(principal: Principal, query: HotelListQuery): Promise<HotelPage> {
     const { ent } = this.gate(principal, "hotel_discovery", false);
     const { rows, nextCursor } = await this.hotels.list(ent.hotelReach, query);
-    // One batched Module N read resolves a client-visible cover thumbnail for the whole page (no N+1); a
-    // hotel with no eligible image gets a null cover and its card shows the placeholder.
-    const covers = await this.media.clientCovers(
-      "hotel",
-      rows.map((row) => row.id),
-      audienceFor(principal),
-    );
-    return { items: rows.map((row) => toHotelView(row, covers.get(row.id) ?? null)), nextCursor };
+    const hotelIds = rows.map((row) => row.id);
+    // Two batched reads for the whole page (no N+1): a client-visible cover thumbnail via Module N, and the
+    // card summaries (freshness, price range, capacity) via one rate/venue read. A hotel with no eligible
+    // image shows the placeholder; one with no client-visible rates shows the "on request" summary.
+    const [covers, summaries] = await Promise.all([
+      this.media.clientCovers("hotel", hotelIds, audienceFor(principal)),
+      this.cardSummaries(ent.hotelReach, hotelIds),
+    ]);
+    return {
+      items: rows.map((row) =>
+        toHotelView(row, covers.get(row.id) ?? null, summaries.get(row.id) ?? ON_REQUEST_SUMMARY),
+      ),
+      nextCursor,
+    };
   }
 
   /**
@@ -80,11 +98,12 @@ export class HotelsService {
     // sees demo/public, a real client sees client/demo/public. Read through Module N, never its table.
     // References are same-module (Module C): only the consented, client-visible ones (GP-20). Both reads
     // run in parallel since the hotel is already confirmed in reach (the p95-under-400ms detail, AC-16).
-    const [gallery, references] = await Promise.all([
+    const [gallery, videos, references] = await Promise.all([
       this.media.clientGallery("hotel", hotelId, audienceFor(principal)),
+      this.media.clientVideos("hotel", hotelId, audienceFor(principal)),
       this.references.clientReferences(hotelId),
     ]);
-    return toHotelDetailView(hotel, gallery, references);
+    return toHotelDetailView(hotel, gallery, videos, references);
   }
 
   /**
@@ -120,19 +139,39 @@ export class HotelsService {
   }
 
   async listSaved(principal: Principal, query: SavedHotelListQuery): Promise<SavedHotelPage> {
-    const { userId } = this.gate(principal, "saved_hotels", false);
+    // Entitlements (not just the user id): the saved-card summary's rates follow the caller's reach, so a
+    // lapsed-discovery client who keeps only the shortlist sees the names, never a price (an empty reach
+    // yields no summary row → "on request", matching compare, which also gates rates on hotel_discovery).
+    const { ent, userId } = this.gate(principal, "saved_hotels", false);
     const accountId = await this.accountIdOrThrow(userId);
     const { rows, nextCursor } = await this.hotels.listSaved(accountId, query);
-    // The shortlist card shows the same cover the search card does: one batched Module N read for the page.
-    const covers = await this.media.clientCovers(
-      "hotel",
-      rows.map((row) => row.hotel.id),
-      audienceFor(principal),
-    );
+    const hotelIds = rows.map((row) => row.hotel.id);
+    const [covers, summaries] = await Promise.all([
+      this.media.clientCovers("hotel", hotelIds, audienceFor(principal)),
+      this.cardSummaries(ent.hotelReach, hotelIds),
+    ]);
     return {
-      items: rows.map((row) => toSavedHotelView(row, covers.get(row.hotel.id) ?? null)),
+      items: rows.map((row) =>
+        toSavedHotelView(
+          row,
+          covers.get(row.hotel.id) ?? null,
+          summaries.get(row.hotel.id) ?? ON_REQUEST_SUMMARY,
+        ),
+      ),
       nextCursor,
     };
+  }
+
+  /**
+   * Every hotel id on the caller's shortlist, in one bounded read (CP-05), for a reliable per-card "saved"
+   * state on the discovery cards and the hotel page: unlike scanning the first page of the paginated
+   * shortlist, this never misses a hotel saved further down (B12/B12b). Gated on saved_hotels like the
+   * shortlist read; a lapsed account that still keeps names returns them (reach does not change ownership).
+   */
+  async savedIds(principal: Principal): Promise<SavedHotelIdsResponse> {
+    const { userId } = this.gate(principal, "saved_hotels", false);
+    const accountId = await this.accountIdOrThrow(userId);
+    return { ids: await this.hotels.allSavedHotelIds(accountId) };
   }
 
   async save(principal: Principal, hotelId: string): Promise<SavedHotelView> {
@@ -141,8 +180,15 @@ export class HotelsService {
     if (!hotel) throw errors.notFound(); // cannot save what you cannot see
     const accountId = await this.accountIdOrThrow(userId);
     const saved = await this.hotels.save(accountId, hotelId, userId);
-    const covers = await this.media.clientCovers("hotel", [saved.hotel.id], audienceFor(principal));
-    return toSavedHotelView(saved, covers.get(saved.hotel.id) ?? null);
+    const [covers, summaries] = await Promise.all([
+      this.media.clientCovers("hotel", [saved.hotel.id], audienceFor(principal)),
+      this.cardSummaries(ent.hotelReach, [saved.hotel.id]),
+    ]);
+    return toSavedHotelView(
+      saved,
+      covers.get(saved.hotel.id) ?? null,
+      summaries.get(saved.hotel.id) ?? ON_REQUEST_SUMMARY,
+    );
   }
 
   async unsave(principal: Principal, hotelId: string): Promise<SavedHotelRemovedResponse> {
@@ -150,6 +196,34 @@ export class HotelsService {
     const accountId = await this.accountIdOrThrow(userId);
     await this.hotels.unsave(accountId, hotelId, userId);
     return { hotelId };
+  }
+
+  /**
+   * Edit the client's own note on a shortlisted hotel (D7). A write on the caller's own shortlist, so it
+   * gates on saved_hotels=write and resolves the caller's own account; the note is trimmed and blank is
+   * stored as null. Not reach-gated — you may annotate a saved hotel even after it has fallen out of reach
+   * — but a hotel that is not on the shortlist is a 404 (nothing to annotate; denial equals absence). The
+   * card summary still re-applies reach, so an out-of-reach row shows the name without a price it must not see.
+   */
+  async updateNote(
+    principal: Principal,
+    hotelId: string,
+    body: SavedHotelNoteUpdateRequest,
+  ): Promise<SavedHotelView> {
+    const { ent, userId } = this.gate(principal, "saved_hotels", true);
+    const accountId = await this.accountIdOrThrow(userId);
+    const note = body.note?.trim() ? body.note.trim() : null;
+    const saved = await this.hotels.updateSavedNote(accountId, hotelId, note, userId);
+    if (!saved) throw errors.notFound(); // not on the shortlist — nothing to annotate
+    const [covers, summaries] = await Promise.all([
+      this.media.clientCovers("hotel", [saved.hotel.id], audienceFor(principal)),
+      this.cardSummaries(ent.hotelReach, [saved.hotel.id]),
+    ]);
+    return toSavedHotelView(
+      saved,
+      covers.get(saved.hotel.id) ?? null,
+      summaries.get(saved.hotel.id) ?? ON_REQUEST_SUMMARY,
+    );
   }
 
   /**
@@ -163,6 +237,19 @@ export class HotelsService {
     needWrite: boolean,
   ): { ent: Entitlements; userId: string } {
     return entitlementGate(principal, module, needWrite);
+  }
+
+  /**
+   * The card summaries (B11) for a page of hotel ids, keyed by id, in one batched rate/venue read. Re-applies
+   * the caller's reach, so an out-of-reach hotel (or a lapsed-discovery saved one) is absent from the map and
+   * its card falls back to ON_REQUEST_SUMMARY — the name without a price it must not see.
+   */
+  private async cardSummaries(
+    reach: readonly HotelReach[],
+    hotelIds: readonly string[],
+  ): Promise<Map<string, HotelCardSummary>> {
+    const rows = await this.hotels.cardSummaryRows(reach, hotelIds);
+    return new Map(rows.map((row) => [row.id, toCardSummary(row.rateCards, row.venues)]));
   }
 
   /** The caller's own account id, or a 404 when the client has none (portal.service.ts pattern). */

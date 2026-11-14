@@ -3,7 +3,7 @@ import { z } from "zod";
 import { cursorQuery, isoDateTime, money, page, uuid } from "./common.js";
 import { weddingReferenceClientItem } from "./hotel-references.js";
 import { hotelRateItemType, hotelRateItemUnit } from "./hotel-rates.js";
-import { mediaGalleryItem } from "./media.js";
+import { mediaGalleryItem, mediaVideoItem } from "./media.js";
 
 /*
  * Contracts for hotel discovery (Module C "Hotel intelligence"; docs/data-model.md §5, feature set C).
@@ -46,10 +46,54 @@ export const destinationBrowseResponse = z
 export type DestinationBrowseResponse = z.infer<typeof destinationBrowseResponse>;
 
 /**
+ * The freshness of a hotel's verified, client-visible rate card(s) (CP-05; AC-04): `verified` with `asOf`
+ * renders "Verified on <asOf> by AMPM"; `stale` renders "Stale, last checked <asOf>" with amounts still
+ * shown; `on_request` shows no amounts and the assistance action. Never the word "confirmed" — a confirmed
+ * quotation is a Module D proposal, not discovery pricing. Availability is answered inside an enquiry (AC-04.7).
+ */
+export const hotelRateFreshness = z.enum(["verified", "stale", "on_request"]);
+export type HotelRateFreshness = z.infer<typeof hotelRateFreshness>;
+
+/**
+ * An indicative client price range for a discovery card (B11), drawn from ONE rate type's verified/stale
+ * client-visible items so units never mix: `min` the lowest amount, `max` the highest (an item's upper
+ * bound when it carries one, else its amount), `unit` the shared rate unit. Derived from the same cards the
+ * detail shows (security.md) — never an internal cost, margin or vendor figure.
+ */
+export const hotelPriceRange = z
+  .object({ min: money, max: money, unit: hotelRateItemUnit })
+  .strict();
+export type HotelPriceRange = z.infer<typeof hotelPriceRange>;
+
+/** A card's seated-guest capacity range (B11): min/max across the hotel's venues' banquet/reception seats. */
+export const hotelCapacityRange = z
+  .object({ min: z.number().int(), max: z.number().int() })
+  .strict();
+export type HotelCapacityRange = z.infer<typeof hotelCapacityRange>;
+
+/**
+ * The at-a-glance summary a discovery card shows (B11, CP-05/AC-04): the rate-card freshness label, an
+ * indicative client price range and the venue capacity range — all derived from the same verified/stale,
+ * client-visible rate cards and descriptive venue capacities the detail already serves, so the card leaks
+ * nothing new. `priceRange`/`capacity` are null when there is no client-visible priced item / no known
+ * capacity; `ratesFreshness` is `on_request` when no verified or stale card carries a client item.
+ */
+export const hotelCardSummary = z
+  .object({
+    ratesFreshness: hotelRateFreshness,
+    ratesAsOf: isoDateTime.nullable(),
+    priceRange: hotelPriceRange.nullable(),
+    capacity: hotelCapacityRange.nullable(),
+  })
+  .strict();
+export type HotelCardSummary = z.infer<typeof hotelCardSummary>;
+
+/**
  * A hotel as a client/demo principal sees it in discovery (CP-11; permission-matrix §4, PUBLIC+CLIENT
  * classes only). Strict and flat — the list card and the detail base. No status, demo_visible,
- * public_showcase, internal_rating/notes, latitude/longitude or contacts. An indicative price range is a
- * later increment (derived from verified, client-visible rate cards — Module C rate tables, deferred).
+ * public_showcase, internal_rating/notes, latitude/longitude or contacts. `summary` carries the card's
+ * freshness label, indicative price range and capacity range (B11), each derived from verified,
+ * client-visible rate cards and descriptive venue capacities — never an internal or vendor figure.
  */
 export const hotelView = z
   .object({
@@ -69,20 +113,12 @@ export const hotelView = z
     // cover) — the same gated derivative the detail gallery serves, never an object key (security.md).
     // Null when the hotel has no client-eligible image, or in the media-free compare projection.
     coverUrl: z.string().nullable(),
+    summary: hotelCardSummary,
   })
   .strict();
 export type HotelView = z.infer<typeof hotelView>;
 
-/**
- * A hotel's indicative pricing as a client sees it (CP-05; AC-04). `status` is the freshness of the
- * verified, client-visible rate card(s): `verified` with `asOf` renders "Verified on <asOf> by AMPM";
- * `stale` renders "Stale, last checked <asOf>" with the amounts still shown; `on_request` shows no
- * amounts and the assistance action. Never the word "confirmed" — a confirmed quotation is a Module D
- * proposal, not discovery pricing. Availability is answered inside an enquiry, never shown here (AC-04.7).
- */
-export const hotelRateFreshness = z.enum(["verified", "stale", "on_request"]);
-export type HotelRateFreshness = z.infer<typeof hotelRateFreshness>;
-
+/** One line of a hotel's client-facing rate card (CP-05): an amount or indicative range, its unit and inclusions. */
 export const clientRateItemView = z
   .object({
     itemType: hotelRateItemType,
@@ -103,17 +139,75 @@ export const hotelRatesView = z
   .strict();
 export type HotelRatesView = z.infer<typeof hotelRatesView>;
 
+/** Function/event venue kinds (HotelVenueType in the Prisma schema; keep the two in step). */
+export const hotelVenueType = z.enum([
+  "ballroom",
+  "lawn",
+  "poolside",
+  "rooftop",
+  "courtyard",
+  "beach",
+  "other",
+]);
+export type HotelVenueType = z.infer<typeof hotelVenueType>;
+
+/** A free-text list of amenities a client sees on a venue or room (facilities_json; read-only output). */
+const facilitiesClientView = z.array(z.string());
+
 /**
- * The hotel detail (CP-05): the discovery card, its indicative freshness-labelled pricing, the
- * client-visible gallery, and the consented previous-wedding references. `gallery` holds only the media
- * at or below the caller's visibility level (AC-24.4), each a signed link to a metadata-stripped
- * derivative — never an object key (security.md). `references` holds only the `client_visible` references
- * whose consent is on file (GP-20), each the social-proof content alone (no internal project/consent key).
+ * A function/event venue a client sees on the hotel detail (CP-05 "Venues"): its kind, whether it is
+ * indoor, its area and its seated/standing capacities, the amenities and a short note. Every field is
+ * descriptive (PUBLIC/CLIENT) — a venue carries no restricted field — and strict so nothing can leak.
+ */
+export const hotelVenueClientView = z
+  .object({
+    id: uuid,
+    name: z.string(),
+    venueType: hotelVenueType,
+    isIndoor: z.boolean(),
+    areaSqm: z.number().int().nullable(),
+    capacityBanquet: z.number().int().nullable(),
+    capacityTheatre: z.number().int().nullable(),
+    capacityReception: z.number().int().nullable(),
+    facilities: facilitiesClientView.nullable(),
+    description: z.string().nullable(),
+  })
+  .strict();
+export type HotelVenueClientView = z.infer<typeof hotelVenueClientView>;
+
+/**
+ * A room category a client sees on the hotel detail (CP-05 "Rooms"): its name, the number of rooms, the
+ * maximum occupancy, the size, the amenities and a short note. All descriptive (PUBLIC/CLIENT), strict.
+ */
+export const hotelRoomClientView = z
+  .object({
+    id: uuid,
+    name: z.string(),
+    roomCount: z.number().int().nullable(),
+    maxOccupancy: z.number().int().nullable(),
+    sizeSqm: z.number().int().nullable(),
+    facilities: facilitiesClientView.nullable(),
+    description: z.string().nullable(),
+  })
+  .strict();
+export type HotelRoomClientView = z.infer<typeof hotelRoomClientView>;
+
+/**
+ * The hotel detail (CP-05): the discovery card, its indicative freshness-labelled pricing, the venues and
+ * room categories a planner weighs, the client-visible gallery, and the consented previous-wedding
+ * references. `gallery` holds only the media at or below the caller's visibility level (AC-24.4), each a
+ * signed link to a metadata-stripped derivative — never an object key (security.md). `references` holds
+ * only the `client_visible` references whose consent is on file (GP-20), each the social-proof content
+ * alone (no internal project/consent key).
  */
 export const hotelDetailView = hotelView
   .extend({
     rates: hotelRatesView,
+    facilities: facilitiesClientView,
+    venues: z.array(hotelVenueClientView),
+    rooms: z.array(hotelRoomClientView),
     gallery: z.array(mediaGalleryItem),
+    videos: z.array(mediaVideoItem),
     references: z.array(weddingReferenceClientItem),
   })
   .strict();
@@ -126,6 +220,10 @@ export type HotelDetailView = z.infer<typeof hotelDetailView>;
  */
 export const hotelCompareItem = hotelView.extend({ rates: hotelRatesView }).strict();
 export type HotelCompareItem = z.infer<typeof hotelCompareItem>;
+
+/** A compare request holds 2 to 4 distinct saved hotels (CP-06); the client picker and screen share these. */
+export const HOTEL_COMPARE_MIN = 2;
+export const HOTEL_COMPARE_MAX = 4;
 
 /**
  * Compare a handful of the caller's saved hotels by id (CP-06). `ids` is a comma-separated list of 2 to 4
@@ -148,8 +246,8 @@ export const hotelCompareQuery = z
       .pipe(
         z
           .array(uuid)
-          .min(2)
-          .max(4)
+          .min(HOTEL_COMPARE_MIN)
+          .max(HOTEL_COMPARE_MAX)
           .refine((ids) => new Set(ids).size === ids.length, {
             message: "hotel ids must be distinct",
           }),
@@ -217,3 +315,20 @@ export type SavedHotelPage = z.infer<typeof savedHotelPage>;
  */
 export const savedHotelRemovedResponse = z.object({ hotelId: uuid }).strict();
 export type SavedHotelRemovedResponse = z.infer<typeof savedHotelRemovedResponse>;
+
+/**
+ * Every hotel id on the account's shortlist, in one bounded read (a client's shortlist is a handful to a
+ * few dozen hotels). The discovery cards and the hotel page use it for a reliable "saved" state: scanning
+ * the first page of the paginated shortlist missed a hotel saved further down (B12/B12b), this does not.
+ */
+export const savedHotelIdsResponse = z.object({ ids: z.array(uuid) }).strict();
+export type SavedHotelIdsResponse = z.infer<typeof savedHotelIdsResponse>;
+
+/**
+ * A client edits their own free-text note on a shortlisted hotel (D7 "My selection"). Client-authored and
+ * client-visible; the service trims it and stores blank as null (a cleared note), so "no note" is one state.
+ */
+export const savedHotelNoteUpdateRequest = z
+  .object({ note: z.string().max(1000).nullable() })
+  .strict();
+export type SavedHotelNoteUpdateRequest = z.infer<typeof savedHotelNoteUpdateRequest>;
