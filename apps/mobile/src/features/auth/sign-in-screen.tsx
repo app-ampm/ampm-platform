@@ -20,6 +20,8 @@ import {
 
 import { setAccessToken } from "@/lib/session";
 
+import { MobileOtpSignIn } from "./mobile-otp-sign-in";
+
 /** Seeded accounts offered for one-tap sign-in in the demo (apps/api/prisma/seed.ts). */
 const DEMO_STAFF = [
   { email: "sales@example.com", label: "Sameer Sales" },
@@ -72,7 +74,7 @@ function SignInHeader() {
       <ScreenHeader
         title="Welcome"
         emphasis="back."
-        subtitle="Development sign-in: use a seeded account."
+        subtitle="Development sign-in — client mobile + one-time code, or a seeded account."
       />
     </Stack>
   );
@@ -117,9 +119,16 @@ interface ChoicesProps {
 /** The email form (the one gold action), the seeded quick sign-ins and the gallery link. */
 function SignInChoices({ session, nested }: ChoicesProps) {
   const { signIn, pending, errorText } = session;
+  const client = (
+    <Stack gap={3}>
+      <Text variant="eyebrow">Client sign-in</Text>
+      <MobileOtpSignIn />
+    </Stack>
+  );
   const form = <EmailSignIn onSubmit={signIn} pending={pending} errorText={errorText} />;
   return (
     <>
+      {nested ? client : <Card>{client}</Card>}
       {nested ? form : <Card>{form}</Card>}
       <QuickSignIn
         title="Staff"
@@ -173,6 +182,7 @@ function EmailSignIn({
       <Button
         fullWidth
         size="lg"
+        variant="secondary"
         loading={pending}
         disabled={email.trim().length === 0}
         onPress={() => onSubmit(email)}
