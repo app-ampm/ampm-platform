@@ -1,12 +1,15 @@
 import { Controller, Headers, HttpCode, Post } from "@nestjs/common";
 import {
   activateRequest,
+  devCreateClientRequest,
   devLoginRequest,
   devOtpSendRequest,
   devOtpVerifyRequest,
   errors,
   type ActivateRequest,
   type ActivateResponse,
+  type DevCreateClientRequest,
+  type DevCreateClientResponse,
   type DevLoginRequest,
   type DevLoginResponse,
   type DevOtpSendRequest,
@@ -86,5 +89,18 @@ export class ActivationController {
   )
   verifyOtp(@ZodBody(devOtpVerifyRequest) body: DevOtpVerifyRequest): Promise<DevLoginResponse> {
     return this.devOtp.verifyOtp(body.phone, body.code);
+  }
+
+  @Post("dev-login/create-client")
+  @Public()
+  @RateLimit({ name: "auth.dev_create_client", limit: 10, windowMs: 60_000 })
+  @HttpCode(201)
+  @AuditExempt(
+    "dev-only demo: creates a synthetic active prospect client for the mobile+OTP demo; dev-gated with no principal to attribute, and refused unless IDENTITY_PROVIDER=local and NODE_ENV is not production",
+  )
+  createClient(
+    @ZodBody(devCreateClientRequest) body: DevCreateClientRequest,
+  ): Promise<DevCreateClientResponse> {
+    return this.devOtp.createClient(body.name, body.phone);
   }
 }

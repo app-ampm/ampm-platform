@@ -1,7 +1,12 @@
-import { randomInt } from "node:crypto";
+import { randomInt, randomUUID } from "node:crypto";
 
 import { Inject, Injectable } from "@nestjs/common";
-import { errors, type DevLoginResponse, type DevOtpSendResponse } from "@ampm/core";
+import {
+  errors,
+  type DevCreateClientResponse,
+  type DevLoginResponse,
+  type DevOtpSendResponse,
+} from "@ampm/core";
 
 import { PrismaService } from "../db/prisma.service.js";
 import { ENV, type Env } from "../env.js";
@@ -77,6 +82,68 @@ export class DevOtpService {
       email: client.email,
     });
     return { accessToken, user: { id: client.id, name: client.name, email: client.email } };
+  }
+
+  /**
+   * Create a brand-new active client (a prospect account + its contact user) so a demo can add a client
+   * on the spot and then sign them in by mobile+OTP. Dev-only, the same gate as the OTP endpoints. The
+   * account is an ordinary prospect, never is_demo, so its OWN subscription purchase opens every hotel —
+   * the runtime twin of seedPortalDemoClient (apps/api/prisma/seed.ts). Refuses a mobile already in use,
+   * so the later OTP lookup (requireClient) stays unambiguous.
+   */
+  async createClient(name: string, phone: string): Promise<DevCreateClientResponse> {
+    this.assertDevOnly();
+    const taken = await this.prisma.user.findFirst({
+      where: { phone, userType: "client", status: "active", deletedAt: null },
+      select: { id: true },
+    });
+    if (taken) throw errors.conflict("A client already uses that mobile number");
+    const trimmed = name.trim();
+    const subject = `local:demo-${randomUUID()}`;
+    const email = `demo-${subject.slice(-12)}@example.com`;
+    const user = await this.prisma.user.create({
+      data: {
+        userType: "client",
+        status: "active",
+        name: trimmed,
+        email,
+        phone,
+        identitySubject: subject,
+      },
+      select: { id: true },
+    });
+    await this.createProspectAccount(user.id, trimmed, email);
+    return { userId: user.id, phone };
+  }
+
+  /**
+   * The prospect account AND — crucially — its `self` contact for the new demo client. The signed-in
+   * client resolves its account through `account_contacts.user_id` (both the entitlement reads in
+   * principal.repository.ts and the subscription purchase's `accountIdForUser`), NOT
+   * `primary_contact_user_id` — so without this contact row the client sees no hotels and the ₹50k
+   * purchase 404s. Mirrors seedPortalDemoClient (apps/api/prisma/seed.ts).
+   */
+  private async createProspectAccount(userId: string, name: string, email: string): Promise<void> {
+    const account = await this.prisma.clientAccount.create({
+      data: {
+        name: `${name} (demo)`,
+        status: "prospect",
+        primaryContactUserId: userId,
+        createdBy: userId,
+      },
+      select: { id: true },
+    });
+    await this.prisma.accountContact.create({
+      data: {
+        accountId: account.id,
+        userId,
+        name,
+        relation: "self",
+        email,
+        isDecisionMaker: true,
+        createdBy: userId,
+      },
+    });
   }
 
   private assertDevOnly(): void {
