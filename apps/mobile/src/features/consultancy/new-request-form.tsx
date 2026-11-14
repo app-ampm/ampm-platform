@@ -37,8 +37,8 @@ function StayFields({ form: { draft, update, errors } }: FieldsProps) {
   );
 }
 
-/** The party size and, optionally, the functions it is for. */
-function PartyFields({ form: { draft, update } }: FieldsProps) {
+/** The party size, the optional room count with its inline error, and optionally the functions. */
+function PartyFields({ form: { draft, update, errors } }: FieldsProps) {
   return (
     <>
       <Input
@@ -50,11 +50,44 @@ function PartyFields({ form: { draft, update } }: FieldsProps) {
         required
       />
       <Input
+        label="Rooms needed (optional)"
+        value={draft.rooms}
+        onChangeText={(value) => update("rooms", value)}
+        placeholder="40"
+        keyboardType="number-pad"
+        maxLength={4}
+        errorText={errors.rooms}
+      />
+      <Input
         label="Functions (optional)"
         value={draft.functions}
         onChangeText={(value) => update("functions", value)}
         placeholder="Sangeet, wedding, reception"
         multiline
+        maxLength={2000}
+      />
+    </>
+  );
+}
+
+/** How the client would like the hotel team to reach them, and anything else they want to add. */
+function ContactFields({ form: { draft, update } }: FieldsProps) {
+  return (
+    <>
+      <Input
+        label="Preferred contact (optional)"
+        value={draft.contactPreference}
+        onChangeText={(value) => update("contactPreference", value)}
+        placeholder="WhatsApp, evenings after 6pm"
+        maxLength={255}
+      />
+      <Input
+        label="Anything else we should know? (optional)"
+        value={draft.notes}
+        onChangeText={(value) => update("notes", value)}
+        placeholder="Catering, suppliers, must-have amenities"
+        multiline
+        maxLength={4000}
       />
     </>
   );
@@ -70,6 +103,7 @@ export function NewRequestForm({ form }: FieldsProps) {
       <Stack gap={4}>
         <StayFields form={form} />
         <PartyFields form={form} />
+        <ContactFields form={form} />
         <Button
           fullWidth
           loading={form.isSubmitting}
