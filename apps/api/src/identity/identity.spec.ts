@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { cognitoIdentityFromClaims } from "./cognito.adapter.js";
+import { LocalIdentityProvisioner } from "./local-provisioner.adapter.js";
 import { LocalIdentityAdapter } from "./local.adapter.js";
 
 const SECRET = "a-development-secret-that-is-long-enough-32";
@@ -24,6 +25,18 @@ describe("LocalIdentityAdapter", () => {
     await expect(
       new LocalIdentityAdapter("another-secret-that-is-also-32-chars!!").verifyAccessToken(token),
     ).rejects.toMatchObject({ code: "unauthenticated" });
+  });
+});
+
+describe("LocalIdentityProvisioner", () => {
+  it("is a no-op (local tokens come from the seed, not a provider account)", async () => {
+    await expect(
+      new LocalIdentityProvisioner().provisionUser({
+        kind: "client",
+        email: "x@example.com",
+        phone: "+15550001111",
+      }),
+    ).resolves.toBeUndefined();
   });
 });
 

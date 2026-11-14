@@ -65,6 +65,19 @@ const COVER_SELECT = {
 
 export type MediaCoverRow = Prisma.MediaAssetGetPayload<{ select: typeof COVER_SELECT }>;
 
+/*
+ * The client-video projection (feature 9.3c): the caption to show and the ORIGINAL object key to sign. A
+ * video has no web/thumbnail derivative, so there is no derivative key here; like the others the SECRET
+ * original key never leaves the service, which maps this row to the key-free MediaVideoItem.
+ */
+const VIDEO_SELECT = {
+  id: true,
+  caption: true,
+  storageKey: true,
+} as const satisfies Prisma.MediaAssetSelect;
+
+export type MediaVideoRow = Prisma.MediaAssetGetPayload<{ select: typeof VIDEO_SELECT }>;
+
 /**
  * How long an upload claim is honoured before it is considered stale and stealable (feature 9.3 slice 5c).
  * Longer than any real upload, short enough that a crashed upload self-heals without operator action.
@@ -232,6 +245,33 @@ export class MediaRepository {
       orderBy: [{ ownerId: "asc" }, { sortOrder: "asc" }, { id: "asc" }],
       distinct: ["ownerId"],
       select: COVER_SELECT,
+    });
+  }
+
+  /**
+   * The owner's client-eligible videos (feature 9.3c): the whole GP-20 gate in the WHERE — clean, a video, at
+   * or below the audience's visibility, publishable rights — ordered like the gallery. A video has no
+   * derivative, so eligibility is rights + clean (no derivative key to check); the original key stays in the
+   * service, which signs it. Returns [] for an owner with no eligible video.
+   */
+  async listVideos(
+    ownerType: MediaAssetRow["ownerType"],
+    ownerId: string,
+    visibilities: MediaVisibility[],
+    rights: MediaRightsStatus[],
+  ): Promise<MediaVideoRow[]> {
+    return this.prisma.mediaAsset.findMany({
+      where: {
+        ownerType,
+        ownerId,
+        deletedAt: null,
+        scanStatus: "clean",
+        kind: "video",
+        visibility: { in: visibilities },
+        rightsStatus: { in: rights },
+      },
+      orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
+      select: VIDEO_SELECT,
     });
   }
 

@@ -1,6 +1,8 @@
 import { Injectable } from "@nestjs/common";
 import {
   errors,
+  hotelEnquiryWithdrawableStatuses,
+  isHotelEnquiryWithdrawable,
   type EntitlementModule,
   type HotelAssistanceRequestResponse,
   type HotelEnquiryClientDetailView,
@@ -123,6 +125,55 @@ export class EnquiriesClientService {
     if (isTerminalEnquiry(row.status)) throw errors.conflict("A closed enquiry is read-only");
     await this.enquiries.updateNotesClient(id, request.notesClient, userId);
     return toEnquiryClientView(await this.requireOwn(id, accountId));
+  }
+
+  /**
+   * Withdraw the client's own enquiry (CP-09): close it with outcome `withdrawn` while it is still in the
+   * active pipeline. A confirmed or already-closed enquiry is not withdrawable (409) — the client app
+   * hides the action there, and this is the server's backstop. Closing frees the account to enquire about
+   * the hotel again (findOpenForAccountHotel excludes closed).
+   */
+  async withdrawOwn(principal: Principal, id: string): Promise<HotelEnquiryClientView> {
+    const { userId } = this.gate(principal, "hotel_assistance", true);
+    const accountId = await this.accountIdOrThrow(userId);
+    const current = await this.requireOwn(id, accountId);
+    if (isTerminalEnquiry(current.status)) throw errors.conflict("This enquiry is already closed");
+    if (!isHotelEnquiryWithdrawable(current.status)) {
+      throw errors.conflict("This enquiry can no longer be withdrawn");
+    }
+    await this.persistWithdrawal(current.id, userId);
+    return toEnquiryClientView(await this.requireOwn(id, accountId));
+  }
+
+  /**
+   * Close the enquiry withdrawn and append its client-visible timeline event, in one transaction. The
+   * status write is guarded to the withdrawable statuses, so a withdraw that raced a staff confirmation or
+   * a second withdraw moves 0 rows and is a 409 — never clobbering the row or doubling the event.
+   */
+  private async persistWithdrawal(id: string, userId: string): Promise<void> {
+    await this.prisma.$transaction(async (tx) => {
+      const moved = await this.enquiries.updateStatusFrom(
+        id,
+        hotelEnquiryWithdrawableStatuses,
+        { status: "closed", outcome: "withdrawn", closedAt: new Date() },
+        userId,
+        tx,
+      );
+      if (moved === 0) throw errors.conflict("This enquiry can no longer be withdrawn");
+      await this.events.create(
+        {
+          enquiryId: id,
+          eventType: "status_change",
+          occurredAt: new Date(),
+          userId,
+          summary: null,
+          internalOnly: false,
+          documentId: null,
+        },
+        userId,
+        tx,
+      );
+    });
   }
 
   private async create(

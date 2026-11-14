@@ -11,6 +11,7 @@ import {
   type MediaGalleryItem,
   type MediaListQuery,
   type MediaOwnerType,
+  type MediaVideoItem,
   type MediaRemovedResponse,
   type MediaRightsStatus,
   type MediaVariant,
@@ -184,6 +185,30 @@ export class MediaService {
       );
     }
     return covers;
+  }
+
+  /**
+   * The owner's client-visible videos (feature 9.3c), each a short-lived signed link to its ORIGINAL — a
+   * video carries no web/thumbnail derivative, so there is no poster (AC-24.1 renders images only). Same
+   * audience visibility ladder and GP-20 rights gate as the gallery; no object key crosses the boundary.
+   */
+  async clientVideos(
+    ownerType: MediaOwnerType,
+    ownerId: string,
+    audience: "client" | "demo",
+  ): Promise<MediaVideoItem[]> {
+    const visibilities = audience === "demo" ? DEMO_VISIBILITIES : CLIENT_VISIBILITIES;
+    const rows = await this.repo.listVideos(
+      ownerType,
+      ownerId,
+      [...visibilities],
+      [...PUBLISHABLE_RIGHTS],
+    );
+    return rows.map((row) => ({
+      id: row.id,
+      caption: row.caption,
+      url: this.storage.signDownloadUrl(row.storageKey, DOWNLOAD_TTL_SECONDS).url,
+    }));
   }
 
   async update(

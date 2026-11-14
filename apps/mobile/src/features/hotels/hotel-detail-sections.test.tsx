@@ -1,6 +1,8 @@
 import type {
   ClientRateItemView,
   HotelDetailView,
+  HotelRoomClientView,
+  HotelVenueClientView,
   MediaGalleryItem,
   WeddingReferenceClientItem,
 } from "@ampm/core";
@@ -46,6 +48,29 @@ const REFERENCE: WeddingReferenceClientItem = {
   descriptionClient: "A three-day lakeside wedding.",
 };
 
+const VENUE: HotelVenueClientView = {
+  id: "018f0000-0000-7000-8000-000000000a01",
+  name: "The Durbar Ballroom",
+  venueType: "ballroom",
+  isIndoor: true,
+  areaSqm: 1200,
+  capacityBanquet: 500,
+  capacityTheatre: 700,
+  capacityReception: 900,
+  facilities: ["Stage", "Dance floor", "Air conditioning"],
+  description: "A pillarless hall overlooking the lake.",
+};
+
+const ROOM_CATEGORY: HotelRoomClientView = {
+  id: "018f0000-0000-7000-8000-000000000b01",
+  name: "Lake-View Suite",
+  roomCount: 24,
+  maxOccupancy: 3,
+  sizeSqm: 65,
+  facilities: ["Balcony", "Mini-bar"],
+  description: "Corner suites facing Lake Pichola.",
+};
+
 function rates(status: "verified" | "stale"): HotelDetailView["rates"] {
   return { status, asOf: AS_OF, items: [ROOM, VEG_PLATE, TAX] };
 }
@@ -72,6 +97,11 @@ describe("HotelDetailScreen sections", () => {
     expect(screen.getByText("₹3,200–3,800")).toBeOnTheScreen();
     expect(screen.getByText("per night · Breakfast for two")).toBeOnTheScreen();
     expect(screen.getByText("18%")).toBeOnTheScreen();
+    // B18: the items are grouped — accommodation and venue, then food and beverage, then charges —
+    // each label a heading so assistive tech can jump between the categories.
+    expect(screen.getByRole("header", { name: "Rooms & venues" })).toBeOnTheScreen();
+    expect(screen.getByRole("header", { name: "Food & beverage" })).toBeOnTheScreen();
+    expect(screen.getByRole("header", { name: "Charges & taxes" })).toBeOnTheScreen();
     expect(screen.getByText(/^Indicative ranges, not a quote\./)).toBeOnTheScreen();
   });
 
@@ -130,5 +160,36 @@ describe("HotelDetailScreen sections", () => {
     await renderDetail(detailFixture({ description: null, address: null }));
     expect(screen.queryByRole("tab")).toBeNull();
     expect(screen.getByLabelText("Rates on request")).toBeOnTheScreen();
+  });
+
+  it("lists the venues with their kind, capacities and amenities", async () => {
+    await renderDetail(detailFixture({ venues: [VENUE] }));
+    await openTab("Venues, 1");
+    expect(screen.getByRole("tab", { name: "Venues, 1" })).toBeSelected();
+    expect(screen.getByText("The Durbar Ballroom")).toBeOnTheScreen();
+    expect(screen.getByText("Ballroom · Indoor")).toBeOnTheScreen();
+    expect(
+      screen.getByText("Banquet 500 · Reception 900 · Theatre 700 · 1200 m²"),
+    ).toBeOnTheScreen();
+    expect(screen.getByText("A pillarless hall overlooking the lake.")).toBeOnTheScreen();
+    expect(screen.getByText("Stage · Dance floor · Air conditioning")).toBeOnTheScreen();
+  });
+
+  it("lists the room categories with their size and occupancy", async () => {
+    await renderDetail(detailFixture({ rooms: [ROOM_CATEGORY] }));
+    await openTab("Rooms, 1");
+    expect(screen.getByRole("tab", { name: "Rooms, 1" })).toBeSelected();
+    expect(screen.getByText("Lake-View Suite")).toBeOnTheScreen();
+    expect(screen.getByText("24 rooms · Sleeps 3 · 65 m²")).toBeOnTheScreen();
+    expect(screen.getByText("Corner suites facing Lake Pichola.")).toBeOnTheScreen();
+    expect(screen.getByText("Balcony · Mini-bar")).toBeOnTheScreen();
+  });
+
+  it("shows the hotel's facilities as chips on the overview", async () => {
+    await renderDetail(detailFixture({ facilities: ["Spa", "Valet parking", "Late licence"] }));
+    expect(screen.getByText("Facilities")).toBeOnTheScreen();
+    expect(screen.getByText("Spa")).toBeOnTheScreen();
+    expect(screen.getByText("Valet parking")).toBeOnTheScreen();
+    expect(screen.getByText("Late licence")).toBeOnTheScreen();
   });
 });

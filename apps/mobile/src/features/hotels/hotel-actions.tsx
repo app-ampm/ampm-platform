@@ -1,6 +1,6 @@
 import { useRouter } from "expo-router";
 
-import { useMe, useSaveHotel, useSavedHotels, useUnsaveHotel } from "@ampm/api-client";
+import { useMe, useSaveHotel, useSavedHotelIds, useUnsaveHotel } from "@ampm/api-client";
 import type { EntitlementModule, HotelView } from "@ampm/core";
 import { Button, useToast } from "@ampm/ui";
 
@@ -22,13 +22,19 @@ export function useHotelPagePermissions(): HotelPagePermissions {
   return { canSave: writes("saved_hotels"), canRequest: writes("hotel_assistance") };
 }
 
-/** Whether the hotel is on the shortlist, and the toggle that adds or removes it. */
+/**
+ * Whether the hotel is on the shortlist, and the toggle that adds or removes it. `isSaved` comes from the
+ * complete saved-ids lookup (useSavedHotelIds), so a hotel saved anywhere on the shortlist — not only its
+ * first page — reads as saved. While the lookup loads or if it fails the hotel reads as unsaved, a brief and
+ * benign default (saving again is a server-idempotent no-op). Saving or removing invalidates the
+ * `["hotels","saved"]` prefix, which the ids lookup shares, so the heart flips once the mutation settles.
+ */
 function useShortlistToggle(hotel: HotelView) {
   const toast = useToast();
-  const saved = useSavedHotels();
+  const savedIds = useSavedHotelIds();
   const save = useSaveHotel(hotel.id);
   const unsave = useUnsaveHotel(hotel.id);
-  const isSaved = saved.data?.items.some((item) => item.hotel.id === hotel.id) ?? false;
+  const isSaved = savedIds.ids.has(hotel.id);
   const toggle = (): void => {
     const mutation = isSaved ? unsave : save;
     mutation.mutate(undefined, {
@@ -38,7 +44,15 @@ function useShortlistToggle(hotel: HotelView) {
   return { isSaved, toggle, pending: save.isPending || unsave.isPending };
 }
 
-const savedLabel = (isSaved: boolean) => (isSaved ? "Saved to shortlist" : "Save hotel");
+/** The heart/button label. In a repeated LIST control (B12) a hotel name makes each action's target unambiguous (WCAG 2.4.4); the single detail page omits it. */
+const savedLabel = (isSaved: boolean, hotelName?: string): string =>
+  hotelName
+    ? isSaved
+      ? `${hotelName} saved to shortlist`
+      : `Save ${hotelName}`
+    : isSaved
+      ? "Saved to shortlist"
+      : "Save hotel";
 
 /**
  * The shortlist toggle as the footer's gold action, for an account that may save but not ask for
@@ -62,16 +76,23 @@ export function SaveButton({ hotel }: { readonly hotel: HotelView }) {
 
 /**
  * The same toggle as P4's heart over the photo, when the footer's gold action is the availability
- * check: a glass circle, peacock once the hotel is saved (D6 "♥ Saved").
+ * check: a glass circle, peacock once the hotel is saved (D6 "♥ Saved"). On a result card (B12) pass
+ * `namedLabel` so the accessible name carries the hotel, since the list repeats the control (WCAG 2.4.4).
  */
-export function SaveHeartButton({ hotel }: { readonly hotel: HotelView }) {
+export function SaveHeartButton({
+  hotel,
+  namedLabel = false,
+}: {
+  readonly hotel: HotelView;
+  readonly namedLabel?: boolean;
+}) {
   const { isSaved, toggle, pending } = useShortlistToggle(hotel);
   return (
     <Button
       variant={isSaved ? "highlight" : "glass"}
       icon="heart"
       loading={pending}
-      accessibilityLabel={savedLabel(isSaved)}
+      accessibilityLabel={savedLabel(isSaved, namedLabel ? hotel.name : undefined)}
       onPress={toggle}
     />
   );

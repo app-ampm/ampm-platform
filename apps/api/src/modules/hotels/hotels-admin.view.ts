@@ -110,6 +110,7 @@ export function toHotelStaffView(row: StaffHotelRow): HotelStaffView {
     totalRooms: row.totalRooms,
     streetViewRef: row.streetViewRef,
     lastVerifiedAt: row.lastVerifiedAt ? row.lastVerifiedAt.toISOString() : null,
+    facilities: toFacilities(row.facilities),
   };
 }
 

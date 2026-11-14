@@ -52,6 +52,7 @@ export function hotelStaffViewFixture(overrides: Partial<HotelStaffView> = {}): 
     totalRooms: 120,
     streetViewRef: null,
     lastVerifiedAt: null,
+    facilities: null,
     ...overrides,
   };
 }

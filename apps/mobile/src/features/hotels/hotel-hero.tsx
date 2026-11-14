@@ -2,7 +2,9 @@ import type { ReactNode } from "react";
 import { View } from "react-native";
 
 import type { HotelDetailView } from "@ampm/core";
-import { Button, Image, PhotoPlaceholder, uiCopy } from "@ampm/ui";
+import { Button, PhotoPlaceholder, uiCopy } from "@ampm/ui";
+
+import { MediaImage } from "@/components/media-image";
 
 import { galleryImages } from "./hotels.format";
 
@@ -60,8 +62,8 @@ export function HotelHero({ hotel, onBack, trailing }: HotelHeroProps) {
   return (
     <HotelHeroFrame onBack={onBack} trailing={trailing}>
       {photo ? (
-        <Image
-          source={{ uri: photo.webUrl }}
+        <MediaImage
+          uri={photo.webUrl}
           alt={photo.caption ?? `Photo of ${hotel.name}`}
           radius="none"
           className="h-full w-full"

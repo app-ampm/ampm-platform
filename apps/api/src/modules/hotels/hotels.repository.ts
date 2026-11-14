@@ -34,6 +34,8 @@ const HOTEL_SELECT = {
  */
 const DETAIL_HOTEL_SELECT = {
   ...HOTEL_SELECT,
+  // The curated hotel-level amenity list (B14). Detail-only — the list/card/compare/saved paths stay lean.
+  facilities: true,
   rateCards: {
     where: { deletedAt: null, status: { in: ["verified", "stale"] } },
     orderBy: { name: "asc" },
@@ -47,6 +49,51 @@ const DETAIL_HOTEL_SELECT = {
       },
     },
   },
+  // Venues and room categories a client weighs on the detail (CP-05). Soft-deleted rows are excluded; every
+  // selected column is descriptive (PUBLIC/CLIENT) — a venue/room carries no RESTRICTED field.
+  venues: {
+    where: { deletedAt: null },
+    orderBy: { name: "asc" },
+    select: {
+      id: true,
+      name: true,
+      venueType: true,
+      isIndoor: true,
+      areaSqm: true,
+      capacityBanquet: true,
+      capacityTheatre: true,
+      capacityReception: true,
+      facilities: true,
+      description: true,
+    },
+  },
+  rooms: {
+    where: { deletedAt: null },
+    orderBy: { name: "asc" },
+    select: {
+      id: true,
+      name: true,
+      roomCount: true,
+      maxOccupancy: true,
+      sizeSqm: true,
+      facilities: true,
+      description: true,
+    },
+  },
+} as const satisfies Prisma.HotelSelect;
+
+/*
+ * The source rows a card summary needs (B11): the SAME verified/stale, client-visible rate cards the detail
+ * uses — so a card's indicative range is the identical client figure, never an internal cost — plus the
+ * venues' seating capacities. Nothing else, and nothing RESTRICTED, is selected.
+ */
+const SUMMARY_SELECT = {
+  id: true,
+  rateCards: DETAIL_HOTEL_SELECT.rateCards,
+  venues: {
+    where: { deletedAt: null },
+    select: { capacityBanquet: true, capacityReception: true },
+  },
 } as const satisfies Prisma.HotelSelect;
 
 const SAVED_SELECT = {
@@ -58,6 +105,7 @@ const SAVED_SELECT = {
 
 export type HotelRow = Prisma.HotelGetPayload<{ select: typeof HOTEL_SELECT }>;
 export type HotelDetailRow = Prisma.HotelGetPayload<{ select: typeof DETAIL_HOTEL_SELECT }>;
+export type HotelSummaryRow = Prisma.HotelGetPayload<{ select: typeof SUMMARY_SELECT }>;
 export type SavedHotelRow = Prisma.SavedHotelGetPayload<{ select: typeof SAVED_SELECT }>;
 
 /** A destination plus its in-reach active-hotel count, composed from a grouped count (feature 9.4b). */
@@ -182,6 +230,22 @@ export class HotelsRepository {
   }
 
   /**
+   * The card-summary source rows (B11) for a bounded set of hotel ids, in ONE batched read (no N+1 — the
+   * media-cover pattern). Re-applies the reach guard (AND-composed, as findInReach), so an out-of-reach
+   * saved hotel yields no row and its card falls back to "on request" — never a price it must not see.
+   */
+  async cardSummaryRows(
+    reach: readonly HotelReach[],
+    hotelIds: readonly string[],
+  ): Promise<HotelSummaryRow[]> {
+    if (hotelIds.length === 0) return [];
+    return this.prisma.hotel.findMany({
+      where: { AND: [this.reachWhere(reach), { id: { in: [...hotelIds] } }] },
+      select: SUMMARY_SELECT,
+    });
+  }
+
+  /**
    * The caller's own account from their contact row — never from the request (security.md). This reads a
    * CRM table (account_contacts) from Module C: a deliberate, recorded cross-module shortcut (D-063). The
    * same lookup lives in PortalService; both are to move onto the principal when consolidated.
@@ -210,6 +274,28 @@ export class HotelsRepository {
     await this.prisma.savedHotel.updateMany({
       where: { accountId, hotelId, deletedAt: null },
       data: { deletedAt: new Date(), updatedBy: userId },
+    });
+  }
+
+  /**
+   * Set the client's note on a LIVE shortlist row (null clears it); returns the updated row, or null when
+   * the hotel is not on the shortlist (nothing to annotate). Scoped to the account and the live row, so a
+   * soft-deleted (removed) row is never revived or edited.
+   */
+  async updateSavedNote(
+    accountId: string,
+    hotelId: string,
+    note: string | null,
+    userId: string,
+  ): Promise<SavedHotelRow | null> {
+    const updated = await this.prisma.savedHotel.updateMany({
+      where: { accountId, hotelId, deletedAt: null },
+      data: { note, updatedBy: userId },
+    });
+    if (updated.count === 0) return null;
+    return this.prisma.savedHotel.findFirst({
+      where: { accountId, hotelId, deletedAt: null },
+      select: SAVED_SELECT,
     });
   }
 
@@ -242,6 +328,18 @@ export class HotelsRepository {
       select: { hotelId: true },
     });
     return new Set(rows.map((r) => r.hotelId));
+  }
+
+  /**
+   * Every hotel id on the account's shortlist (bounded — a client saves a handful). Not reach-scoped: a
+   * hotel is saved whether or not it is still in reach, and the caller only checks ids it already shows.
+   */
+  async allSavedHotelIds(accountId: string): Promise<string[]> {
+    const rows = await this.prisma.savedHotel.findMany({
+      where: { accountId, deletedAt: null },
+      select: { hotelId: true },
+    });
+    return rows.map((r) => r.hotelId);
   }
 
   /**

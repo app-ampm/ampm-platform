@@ -12,6 +12,12 @@ name: ampm-local
 # Compose reads that file for interpolation; changing the key signs every tester out.
 x-box-identity-secret: &box-identity-secret "${AMPM_BOX_IDENTITY_SECRET:?set AMPM_BOX_IDENTITY_SECRET in infra/compose/local/.env on the box}"
 
+# The media download-signing key (D-106): media is stored on the box disk (STORAGE_PROVIDER=local with
+# STORAGE_LOCAL_PERSISTENT=true), and this HMAC key signs the 15-minute /media/blob URLs. Like the identity
+# key it lives only in infra/compose/local/.env on the box, appended there with
+#   umask 077; printf 'AMPM_BOX_MEDIA_SIGNING_SECRET=%s\n' "$(openssl rand -base64 48 | tr -d '/+=\n')" >> infra/compose/local/.env
+x-box-media-secret: &box-media-secret "${AMPM_BOX_MEDIA_SIGNING_SECRET:?set AMPM_BOX_MEDIA_SIGNING_SECRET in infra/compose/local/.env on the box}"
+
 services:
   api:
     ports:
@@ -22,12 +28,15 @@ services:
       WEB_APP_URL: "https://app.ampmverse.com"
       TRUST_PROXY: "1"
       IDENTITY_LOCAL_SECRET: *box-identity-secret
-      # Local object store (STORAGE_PROVIDER=local, the dev/staging adapter). The container root FS is
-      # read-only, so the store is a writable host bind-mount (below), owned by the container's node uid
-      # (1000); media uploaded through the photo manager lands here and the /media/blob download route
-      # reads it back. One-time host setup (mkdir + chown 1000) is in docs/engineering/test-deploy.md.
-      # Production uses S3 in Mumbai (infra.md), never a host disk — env.ts refuses `local` in production.
+      # Local object store on the box disk (D-106). The container root FS is read-only, so the store is a
+      # writable host bind-mount (below), owned by the container's node uid (1000); media uploaded through
+      # the photo manager lands here and the /media/blob download route reads it back. One-time host setup
+      # (mkdir + chown 1000) is in docs/engineering/test-deploy.md. STORAGE_LOCAL_PERSISTENT=true is what
+      # lets env.ts accept the local store once NODE_ENV=production (the volume is persistent + backed up);
+      # MEDIA_SIGNING_SECRET signs the download URLs. The S3-in-Mumbai path (infra.md) supersedes this later.
       STORAGE_LOCAL_DIR: "/data/storage"
+      STORAGE_LOCAL_PERSISTENT: "true"
+      MEDIA_SIGNING_SECRET: *box-media-secret
     volumes:
       # Host dir owned by uid 1000, created once (see test-deploy.md). The uploaded media is the only
       # persistent state outside Postgres — a box rebuild keeps the photos only if this dir survives.
@@ -39,8 +48,10 @@ services:
   worker:
     environment:
       IDENTITY_LOCAL_SECRET: *box-identity-secret
-      # The same object store as the API, so any worker job that touches media uses the same dir.
+      # The same object store as the API, so any worker job that touches media uses the same dir (D-106).
       STORAGE_LOCAL_DIR: "/data/storage"
+      STORAGE_LOCAL_PERSISTENT: "true"
+      MEDIA_SIGNING_SECRET: *box-media-secret
     volumes:
       - /var/www/vhosts/app.ampmverse.com/ampm-storage:/data/storage
     deploy:

@@ -1,4 +1,4 @@
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { keepPreviousData, useInfiniteQuery } from "@tanstack/react-query";
 
 /** One page of a cursor-paginated list: its items and the cursor for the next page (null at the end). */
 export interface CursorPage<T> {
@@ -10,6 +10,12 @@ export interface CursorPage<T> {
 export interface CursorListOptions {
   /** False disables the query (e.g. a role that may not read the list), like `useQuery`'s `enabled`. */
   readonly enabled?: boolean | undefined;
+  /**
+   * Keep the previously loaded list on screen while a CHANGED query key refetches, instead of dropping to
+   * the pending state — so a live-applied filter/search refines the list in place rather than flashing a
+   * skeleton. A fresh key with no previous data still shows the pending state (first load is not masked).
+   */
+  readonly keepPreviousData?: boolean | undefined;
 }
 
 /** A cursor-paginated list flattened for the UI: the loaded items plus the load-more affordances. */
@@ -52,6 +58,9 @@ export function useCursorList<T>(
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (last) => last.nextCursor ?? undefined,
     enabled: options.enabled ?? true,
+    // Hold the last list while a changed key loads (filter/search), like useQuery's keepPreviousData; the
+    // first load of a key (no previous pages) still shows the pending state.
+    ...(options.keepPreviousData ? { placeholderData: keepPreviousData } : {}),
   });
   const pages = query.data?.pages ?? [];
   return {

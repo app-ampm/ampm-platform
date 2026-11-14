@@ -1133,6 +1133,7 @@ model Hotel {
   internalNotes     String?     @map("internal_notes") @db.Text
   totalRooms        Int?        @map("total_rooms")
   streetViewRef     String?     @map("street_view_ref") @db.VarChar(255)
+  facilities        Json?       @map("facilities_json")
   lastVerifiedAt    DateTime?   @map("last_verified_at") @db.Timestamptz(6)
 
   createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)

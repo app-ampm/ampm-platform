@@ -46,8 +46,13 @@ export const HOTEL: HotelDetailView = {
   streetViewRef: null,
   lastVerifiedAt: null,
   coverUrl: null, // empty gallery ⟹ the server derives no cover
+  summary: { ratesFreshness: "on_request", ratesAsOf: null, priceRange: null, capacity: null },
   rates: { status: "on_request", asOf: null, items: [] },
+  facilities: [],
+  venues: [],
+  rooms: [],
   gallery: [],
+  videos: [],
   references: [],
 };
 

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   destinationBrowseItem,
+  hotelCardSummary,
   hotelCompareItem,
   hotelCompareQuery,
   hotelDetailView,
@@ -23,6 +24,17 @@ const destination = {
   country: "India",
 };
 
+const summary = {
+  ratesFreshness: "verified" as const,
+  ratesAsOf: "2026-11-02T06:30:00.000Z",
+  priceRange: {
+    min: { minor: 1800000, currency: "INR" },
+    max: { minor: 2400000, currency: "INR" },
+    unit: "per_night" as const,
+  },
+  capacity: { min: 500, max: 900 },
+};
+
 const hotel = {
   id: HOTEL_ID,
   slug: "lake-pavilion-udaipur",
@@ -37,6 +49,7 @@ const hotel = {
   streetViewRef: null,
   lastVerifiedAt: null,
   coverUrl: null,
+  summary,
 };
 
 describe("hotelView (one client model per audience — security.md)", () => {
@@ -64,9 +77,39 @@ describe("hotelView (one client model per audience — security.md)", () => {
     const { coverUrl: _omit, ...withoutCover } = hotel;
     expect(hotelView.safeParse(withoutCover).success).toBe(false); // required (null, not absent)
   });
+
+  it("requires the card summary (B11) — absent is rejected", () => {
+    const { summary: _omit, ...withoutSummary } = hotel;
+    expect(hotelView.safeParse(withoutSummary).success).toBe(false);
+  });
 });
 
-describe("hotelDetailView (GET /hotels/:id — the card plus rates, gallery, references)", () => {
+describe("hotelCardSummary (B11 — derived card figures, never internal data)", () => {
+  it("accepts a freshness label with an indicative range and a capacity range", () => {
+    expect(hotelCardSummary.safeParse(summary).success).toBe(true);
+  });
+
+  it("accepts an on-request card with no price or capacity", () => {
+    expect(
+      hotelCardSummary.safeParse({
+        ratesFreshness: "on_request",
+        ratesAsOf: null,
+        priceRange: null,
+        capacity: null,
+      }).success,
+    ).toBe(true);
+  });
+
+  it("is strict — rejects a non-freshness status or any extra field", () => {
+    // "confirmed" is a Module D quotation, never discovery pricing; an internal figure must never ride along.
+    expect(hotelCardSummary.safeParse({ ...summary, ratesFreshness: "confirmed" }).success).toBe(
+      false,
+    );
+    expect(hotelCardSummary.safeParse({ ...summary, internalCost: 100 }).success).toBe(false);
+  });
+});
+
+describe("hotelDetailView (GET /hotels/:id — the card plus rates, venues, rooms, gallery, references)", () => {
   // The exact shape the detail endpoint returns for a hotel with no verified rates or media — the
   // on_request/empty case that must still render (AC-04). Regression for the client reading the detail
   // endpoint with the strict card schema hotelView, which rejects these keys and throws (empty discovery
@@ -74,12 +117,68 @@ describe("hotelDetailView (GET /hotels/:id — the card plus rates, gallery, ref
   const detail = {
     ...hotel,
     rates: { status: "on_request", asOf: null, items: [] },
+    facilities: [],
+    venues: [],
+    rooms: [],
     gallery: [],
+    videos: [],
     references: [],
   };
 
-  it("accepts the detail payload", () => {
+  const venue = {
+    id: "018f0000-0000-7000-8000-000000000a01",
+    name: "The Durbar Ballroom",
+    venueType: "ballroom",
+    isIndoor: true,
+    areaSqm: 1200,
+    capacityBanquet: 500,
+    capacityTheatre: 700,
+    capacityReception: 900,
+    facilities: ["Stage", "Dance floor"],
+    description: "A pillarless hall.",
+  };
+
+  const roomCategory = {
+    id: "018f0000-0000-7000-8000-000000000b01",
+    name: "Lake-View Suite",
+    roomCount: 24,
+    maxOccupancy: 3,
+    sizeSqm: 65,
+    facilities: ["Balcony"],
+    description: "Corner suites.",
+  };
+
+  it("accepts the detail payload, with or without venues and rooms", () => {
     expect(hotelDetailView.safeParse(detail).success).toBe(true);
+    expect(
+      hotelDetailView.safeParse({ ...detail, venues: [venue], rooms: [roomCategory] }).success,
+    ).toBe(true);
+  });
+
+  it("requires the venues and rooms arrays (absent is not the same as empty)", () => {
+    const { venues: _venues, ...withoutVenues } = detail;
+    expect(hotelDetailView.safeParse(withoutVenues).success).toBe(false);
+    const { rooms: _rooms, ...withoutRooms } = detail;
+    expect(hotelDetailView.safeParse(withoutRooms).success).toBe(false);
+  });
+
+  it("carries the hotel's combined facilities as a required string array (B14)", () => {
+    expect(
+      hotelDetailView.safeParse({ ...detail, facilities: ["Spa", "Valet parking"] }).success,
+    ).toBe(true);
+    const { facilities: _facilities, ...withoutFacilities } = detail;
+    expect(hotelDetailView.safeParse(withoutFacilities).success).toBe(false);
+    expect(hotelDetailView.safeParse({ ...detail, facilities: [42] }).success).toBe(false);
+  });
+
+  it("is strict over each venue and room, so no restricted or extra field rides along (security.md)", () => {
+    expect(
+      hotelDetailView.safeParse({ ...detail, venues: [{ ...venue, internalNotes: "x" }] }).success,
+    ).toBe(false);
+    expect(
+      hotelDetailView.safeParse({ ...detail, rooms: [{ ...roomCategory, costPerNight: 1 }] })
+        .success,
+    ).toBe(false);
   });
 
   it("is not a hotelView — the strict card schema rejects the detail's extra keys", () => {
