@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 
 import { ActivationService } from "../../identity/activation.service.js";
 import { DevLoginService } from "../../identity/dev-login.service.js";
+import { DevOtpService } from "../../identity/dev-otp.service.js";
 import { IdentityModule } from "../../identity/identity.module.js";
 import { ActivationController } from "./activation.controller.js";
 
@@ -13,6 +14,6 @@ import { ActivationController } from "./activation.controller.js";
 @Module({
   imports: [IdentityModule],
   controllers: [ActivationController],
-  providers: [ActivationService, DevLoginService],
+  providers: [ActivationService, DevLoginService, DevOtpService],
 })
 export class AuthModule {}
