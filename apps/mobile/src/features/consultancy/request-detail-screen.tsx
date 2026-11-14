@@ -2,31 +2,33 @@ import { useRouter } from "expo-router";
 
 import { useHotel, useHotelEnquiry } from "@ampm/api-client";
 import type { HotelEnquiryClientDetailView } from "@ampm/core";
-import { Card, QueryErrorState, Screen, ScreenHeader, Skeleton, Stack, StatusChip } from "@ampm/ui";
-
-import { useGoToSignIn } from "@/navigation/sign-in";
+import { Screen, ScreenHeader, StatusChip, useLayoutAt } from "@ampm/ui";
 
 import { enquiryChip } from "./consultancy.format";
-import { EnquiryActivity } from "./enquiry-activity";
-import { EnquirySummary } from "./enquiry-summary";
-import { EnquiryWithdraw } from "./enquiry-withdraw";
-import { AgreementSection, ProposalsSection } from "./request-commercial";
-import { MilestonesSection, VisitsSection } from "./request-progress";
+import { EnquiryDetail } from "./enquiry-detail";
+import { RequestsSplit } from "./requests-split";
 
 /**
  * CP: one hotel request and everything hanging off it (D8): the stay and its status stepper, the
- * agreement, the proposals, visits, milestones and the activity. A detail screen: a back button and
- * no tab bar.
+ * agreement, the proposals, visits, milestones and the activity. On a phone and a tablet, a detail
+ * screen: a back button and no tab bar. From 1024, D8's list beside this enquiry, selected in it; the
+ * panel carries the title, so there is no page header. The same tree at every width: only the
+ * wrappers' props change, so the enquiry keeps its state when a tablet turns or the window resizes.
  */
 export function RequestDetailScreen({ enquiryId }: { readonly enquiryId: string }) {
+  const isSplit = useLayoutAt("lg");
   const router = useRouter();
   const enquiry = useHotelEnquiry(enquiryId);
   return (
     <Screen
-      width="content"
-      header={<DetailHeader enquiry={enquiry.data} onBack={() => router.back()} />}
+      width={isSplit ? "split" : "content"}
+      header={isSplit ? null : <DetailHeader enquiry={enquiry.data} onBack={() => router.back()} />}
     >
-      <DetailBody enquiry={enquiry} enquiryId={enquiryId} />
+      <RequestsSplit isSplit={isSplit} openId={enquiryId}>
+        {/* Keyed: choosing another enquiry in the list starts its detail afresh (no note carried
+            over); crossing 1024 changes no key, so what is under way stays. */}
+        <EnquiryDetail key={enquiryId} enquiryId={enquiryId} />
+      </RequestsSplit>
     </Screen>
   );
 }
@@ -52,52 +54,5 @@ function DetailHeader({
       onBack={onBack}
       trailing={chip ? <StatusChip label={chip.label} tone={chip.tone} /> : null}
     />
-  );
-}
-
-function DetailBody({
-  enquiry,
-  enquiryId,
-}: {
-  readonly enquiry: ReturnType<typeof useHotelEnquiry>;
-  readonly enquiryId: string;
-}) {
-  const goToSignIn = useGoToSignIn();
-  if (enquiry.isPending) return <DetailLoading />;
-  if (enquiry.isError)
-    return (
-      <QueryErrorState
-        error={enquiry.error}
-        onRetry={() => void enquiry.refetch()}
-        onSignIn={goToSignIn}
-        signIn={{ title: "Sign in to view this request" }}
-        notFound={{ title: "Request not found" }}
-      />
-    );
-  return (
-    <Stack gap={6}>
-      <EnquirySummary enquiry={enquiry.data} />
-      <AgreementSection enquiryId={enquiryId} />
-      <ProposalsSection enquiryId={enquiryId} />
-      <VisitsSection enquiryId={enquiryId} />
-      <MilestonesSection enquiryId={enquiryId} />
-      <EnquiryActivity events={enquiry.data.events} />
-      <EnquiryWithdraw enquiry={enquiry.data} />
-    </Stack>
-  );
-}
-
-function DetailLoading() {
-  return (
-    <Stack gap={4} testID="request-detail-loading">
-      <Card padding="lg">
-        <Stack gap={4.5}>
-          <Skeleton shape="text" className="w-2/3" />
-          <Skeleton className="h-14 w-full" />
-        </Stack>
-      </Card>
-      <Skeleton className="h-32 w-full" />
-      <Skeleton className="h-32 w-full" />
-    </Stack>
   );
 }

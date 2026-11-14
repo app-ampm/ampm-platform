@@ -9,6 +9,7 @@ import {
   segmentStyles,
   segmentTargetStyles,
   type SegmentedControlSize,
+  type SegmentedControlVariant,
 } from "./segmented-control.styles";
 
 export interface SegmentProps {
@@ -17,21 +18,25 @@ export interface SegmentProps {
   /** True once the sliding pill paints the selected segment; until then the segment paints itself. */
   readonly indicator: boolean;
   readonly size: SegmentedControlSize;
+  readonly variant: SegmentedControlVariant;
   readonly fullWidth: boolean;
   readonly onChange: (value: string) => void;
   readonly onLayout: (event: LayoutChangeEvent) => void;
   readonly testID: string | undefined;
 }
 
-type PillProps = Pick<SegmentProps, "option" | "selected" | "indicator" | "size" | "testID">;
+type PillProps = Pick<
+  SegmentProps,
+  "option" | "selected" | "indicator" | "size" | "variant" | "testID"
+>;
 
 /** The visible pill and its label; the pressable around it takes focus, hover and press. */
-function SegmentPill({ option, selected, indicator, size, testID }: PillProps) {
+function SegmentPill({ option, selected, indicator, size, variant, testID }: PillProps) {
   const disabled = option.disabled === true;
   const { label, badge } = option;
   return (
     <View
-      className={segmentStyles({ size, selected, indicator, disabled, nested: true })}
+      className={segmentStyles({ size, variant, selected, indicator, disabled, nested: true })}
       testID={testID ? `${testID}-pill` : undefined}
     >
       <Text
@@ -40,6 +45,7 @@ function SegmentPill({ option, selected, indicator, size, testID }: PillProps) {
         numberOfLines={1}
         className={segmentLabelStyles({
           state: selected ? "selected" : disabled ? "disabled" : "default",
+          variant,
         })}
       >
         {badge === undefined ? label : uiCopy.segmentedControl.withBadge(label, badge)}

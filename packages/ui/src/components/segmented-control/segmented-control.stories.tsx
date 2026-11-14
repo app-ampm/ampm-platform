@@ -36,6 +36,18 @@ export const stories = defineStories({
       ),
     },
     {
+      name: "Underline tabs",
+      description: "A record's sections over a sliding gold line, no track (T3, T5).",
+      render: () => (
+        <Demo
+          accessibilityLabel="Hotel record"
+          variant="underline"
+          options={HOTEL_SECTIONS.slice(0, 4)}
+          initial="rates"
+        />
+      ),
+    },
+    {
       name: "Full width with counts",
       description: "Waiting · 4 / Decided · 11 (P7) and the enquiry or demo switch (W6).",
       render: () => (

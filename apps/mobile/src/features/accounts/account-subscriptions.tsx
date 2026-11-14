@@ -13,12 +13,16 @@ import {
 } from "@ampm/ui";
 
 import { subscriptionStatusLabel, subscriptionStatusTone } from "./accounts.format";
+import { isAwaitingPayment } from "./use-pending-subscription";
 
 function planOf(plans: readonly PlanPublicView[], planId: string): PlanPublicView | undefined {
   return plans.find((plan) => plan.id === planId);
 }
 
-/** One subscription: its plan + price, status and dates, plus a Finance action to record a payment. */
+/**
+ * One subscription: its plan + price, status and dates, plus the action to record a payment when the
+ * reader may and the record header cannot carry it (more than one subscription waits).
+ */
 function SubscriptionRow({
   subscription,
   plan,
@@ -26,7 +30,7 @@ function SubscriptionRow({
 }: {
   readonly subscription: SubscriptionView;
   readonly plan: PlanPublicView | undefined;
-  readonly onRecordPayment: (subscriptionId: string) => void;
+  readonly onRecordPayment: ((subscriptionId: string) => void) | undefined;
 }) {
   return (
     <Stack gap={2} testID={`subscription-${subscription.id}`}>
@@ -44,7 +48,7 @@ function SubscriptionRow({
       {subscription.startsAt ? (
         <Text variant="bodySmall" tone="muted">{`Since ${formatDay(subscription.startsAt)}`}</Text>
       ) : null}
-      {subscription.status === "pending_payment" ? (
+      {onRecordPayment && isAwaitingPayment(subscription) ? (
         <Button
           variant="highlight"
           size="sm"
@@ -59,9 +63,40 @@ function SubscriptionRow({
   );
 }
 
+interface SubscriptionsCardProps {
+  readonly items: readonly SubscriptionView[];
+  readonly plans: readonly PlanPublicView[];
+  readonly onRecordPayment: ((subscriptionId: string) => void) | undefined;
+}
+
+/** The subscriptions as rows in one card. */
+function SubscriptionsCard({ items, plans, onRecordPayment }: SubscriptionsCardProps) {
+  // One waiting subscription is recorded from the header (useSolePendingSubscription); several each
+  // keep their own action here.
+  const rowAction = items.filter(isAwaitingPayment).length > 1 ? onRecordPayment : undefined;
+  return (
+    <Card padding="sm">
+      <Stack gap={4}>
+        {items.map((subscription) => (
+          <SubscriptionRow
+            key={subscription.id}
+            subscription={subscription}
+            plan={planOf(plans, subscription.planId)}
+            onRecordPayment={rowAction}
+          />
+        ))}
+      </Stack>
+    </Card>
+  );
+}
+
 export interface AccountSubscriptionsProps {
   readonly accountId: string;
-  readonly onRecordPayment: (subscriptionId: string) => void;
+  /**
+   * Opens the record-payment sheet; offered on the rows only while several subscriptions wait.
+   * Undefined for a reader who may not record a payment: no row offers it.
+   */
+  readonly onRecordPayment: ((subscriptionId: string) => void) | undefined;
 }
 
 /** The account's subscriptions (a sub-query of the account detail); the plan catalogue names + prices them. */
@@ -80,7 +115,6 @@ export function AccountSubscriptions({ accountId, onRecordPayment }: AccountSubs
     );
   }
   const items = subscriptions.data?.items ?? [];
-  const planList = plans.data?.items ?? [];
   return (
     <Stack gap={2} testID="account-subscriptions">
       <Text variant="heading">Subscriptions</Text>
@@ -91,18 +125,11 @@ export function AccountSubscriptions({ accountId, onRecordPayment }: AccountSubs
           No subscriptions yet. One appears when the client buys a plan.
         </Text>
       ) : (
-        <Card padding="sm">
-          <Stack gap={4}>
-            {items.map((subscription) => (
-              <SubscriptionRow
-                key={subscription.id}
-                subscription={subscription}
-                plan={planOf(planList, subscription.planId)}
-                onRecordPayment={onRecordPayment}
-              />
-            ))}
-          </Stack>
-        </Card>
+        <SubscriptionsCard
+          items={items}
+          plans={plans.data?.items ?? []}
+          onRecordPayment={onRecordPayment}
+        />
       )}
       {plans.isError ? (
         <Text variant="bodySmall" tone="muted">

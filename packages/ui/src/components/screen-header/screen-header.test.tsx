@@ -77,4 +77,78 @@ describe("ScreenHeader", () => {
     expect(String(screen.getByText("today?").props.className)).toContain("md:text-7xl");
     expect(screenHeaderStyles({ size: "display" })).toContain("md:gap-6");
   });
+
+  it("steps a screen title up on a desktop, and sets a hero as D1 does", async () => {
+    await renderWithProviders(
+      <>
+        <ScreenHeader title="Pipeline" />
+        <ScreenHeader
+          size="hero"
+          title="Welcome"
+          emphasis="back."
+          subtitle="Sign in with the mobile number AMPM has on file."
+        />
+      </>,
+    );
+    // 36 on a phone, 44 from 1024 (T 39, D and C 41–68).
+    const pipeline = String(screen.getByText("Pipeline").props.className);
+    expect(pipeline).toContain("text-4xl");
+    expect(pipeline).toContain("lg:text-5xl");
+    // The hero: 44 on a phone (P1's 49), 88 from 1024 (D1's 86), and the gold word with it.
+    const hero = String(screen.getByRole("header", { name: "Welcome back." }).props.className);
+    expect(hero).toContain("font-display");
+    expect(hero).toContain("text-5xl");
+    expect(hero).toContain("lg:text-7xl");
+    expect(String(screen.getByText("back.").props.className)).toContain("lg:text-7xl");
+    // Its lead paragraph is D1's 18, a reading line wide at most.
+    const lead = String(
+      screen.getByText("Sign in with the mobile number AMPM has on file.").props.className,
+    );
+    expect(lead).toContain("lg:text-xl");
+    expect(lead).toContain("lg:max-w-md");
+  });
+
+  it("puts the actions beside the text block from 768 and under it on a phone", async () => {
+    await renderWithProviders(
+      <ScreenHeader title="Pipeline" actions={<Text>New lead</Text>} testID="pipeline-header" />,
+    );
+    const actions = screen.getByText("New lead").parent;
+    expect(String(actions?.props.className)).toContain("flex-wrap");
+    // The actions give way (wrapping) before the title drops below its floor on a tablet.
+    expect(String(actions?.props.className)).toContain("md:shrink");
+    expect(String(actions?.props.className)).not.toContain("shrink-0");
+    expect(String(screen.getByRole("header").parent?.parent?.props.className)).toContain(
+      "md:min-w-56",
+    );
+    expect(String(actions?.parent?.props.className)).toContain("md:flex-row");
+  });
+
+  it("reads a badge right after the title, not pushed to the far right", async () => {
+    await renderWithProviders(
+      <ScreenHeader title="Rohit Malhotra" badge={<Text>Demo granted</Text>} />,
+    );
+    const heading = screen.getByRole("header", { name: "Rohit Malhotra" });
+    expect(String(heading.props.className)).not.toContain("flex-1");
+    expect(screen.getByText("Demo granted")).toBeOnTheScreen();
+  });
+
+  it("sets a record's header on its own glass panel", async () => {
+    await renderWithProviders(
+      <ScreenHeader variant="panel" title="Rohit Malhotra" testID="record-header" />,
+    );
+    const panel = screen.getByTestId("record-header");
+    expect(String(panel.props.className)).toContain("lg:px-7");
+    expect(String(panel.props.className)).toContain("rounded-xl");
+  });
+
+  it("keeps a panel's back button in the row beside the title, a plain header's above it", async () => {
+    const { rerender } = await renderWithProviders(
+      <ScreenHeader variant="panel" title="Prasad & Partner" onBack={jest.fn()} />,
+    );
+    const inPanel = screen.getByRole("button", { name: "Back" }).parent;
+    expect(String(inPanel?.props.className)).toContain("md:flex-row");
+    await rerender(<ScreenHeader title="Prasad & Partner" onBack={jest.fn()} />);
+    const inPlain = screen.getByRole("button", { name: "Back" }).parent;
+    expect(String(inPlain?.props.className)).not.toContain("md:flex-row");
+  });
 });

@@ -9,19 +9,29 @@ import {
   EmptyState,
   LoadMore,
   QueryErrorState,
+  Row,
   Screen,
   ScreenHeader,
   Skeleton,
   Stack,
   Text,
+  useLayoutAt,
 } from "@ampm/ui";
 
 import { useGoToSignIn } from "@/navigation/sign-in";
 
 import { canBrowseHotels } from "../portal/portal.format";
-import { CompareBar, HotelCompareCheckbox, useHotelCompareSelection } from "./hotel-compare-select";
+import {
+  CompareBar,
+  HotelCompareCheckbox,
+  useHotelCompareSelection,
+  type HotelCompareSelection,
+} from "./hotel-compare-select";
 import { destinationLabel, hotelCountLabel } from "./hotels.format";
+import { SavedHotelGrid } from "./saved-hotel-grid";
+import { SavedHotelNoteSheet } from "./saved-hotel-note-sheet";
 import { SavedHotelRow } from "./saved-hotel-row";
+import { useSavedNoteEditor } from "./use-saved-hotel-controls";
 
 export interface SavedHotelsScreenProps {
   /** The app's tab bar; the route supplies it and the screen only gives it room. */
@@ -30,69 +40,101 @@ export interface SavedHotelsScreenProps {
 
 /**
  * The account's hotel shortlist (Module C; D7 and P2 "My selection"): the hotels saved from discovery as
- * rows, each opening its page or removed. "Compare" turns the list into a 2–4 pick that opens the
- * side-by-side compare (CP-06); it shows only when the account can still browse and has at least two saved.
+ * rows on a phone and a tablet, and side by side as D7's columns on a desktop, each opening its page,
+ * annotated or removed. "Compare" turns the list into a 2–4 pick that opens the side-by-side compare
+ * (CP-06); it shows only when the account can still browse and has at least two saved.
  */
 export function SavedHotelsScreen({ tabBar }: SavedHotelsScreenProps) {
   const router = useRouter();
   const saved = useSavedHotels();
-  const me = useMe();
-  const canBrowse = me.data ? canBrowseHotels(me.data) : false;
+  const canBrowse = useCanBrowseHotels();
+  // Held above the phone list / desktop grid switch, so crossing 1024 keeps the picks and an open note.
   const compare = useHotelCompareSelection();
-  const canCompare = canBrowse && saved.items.length >= HOTEL_COMPARE_MIN;
+  const notes = useSavedNoteEditor();
+  const isDesktop = useLayoutAt("lg");
   return (
     <Screen
       tabBar={tabBar}
-      width="content"
+      width="wide"
       header={
         <SavedHeader
-          comparing={compare.comparing}
-          canCompare={canCompare}
+          compare={compare}
+          canCompare={canBrowse && saved.items.length >= HOTEL_COMPARE_MIN}
+          // The phone keeps the count in its card; a desktop sets it at the title's right, as D7 does.
+          count={isDesktop ? savedCount(saved) : undefined}
           onBack={() => router.back()}
-          onToggleMode={compare.comparing ? compare.exit : compare.start}
         />
       }
     >
       <SavedList
         saved={saved}
+        isDesktop={isDesktop}
         comparing={compare.comparing}
         selected={compare.selected}
         onToggle={compare.toggle}
         onOpen={(id) => router.push({ pathname: "/hotels/[id]", params: { id } })}
+        onEditNote={notes.start}
         // Back to the search when it is already under this screen, instead of piling a second one on.
         onBrowse={canBrowse ? () => router.dismissTo("/hotels") : undefined}
       />
       {compare.comparing ? (
         <CompareBar count={compare.selected.length} onCompare={compare.open} />
       ) : null}
+      <SavedHotelNoteSheet entries={saved.items} editor={notes} />
     </Screen>
   );
 }
 
+/** Whether the account may still search (a lapsed one keeps its saved names only); false while /me loads. */
+function useCanBrowseHotels(): boolean {
+  const me = useMe();
+  return me.data ? canBrowseHotels(me.data) : false;
+}
+
+/** "3 hotels", or nothing while the shortlist is loading or empty. */
+function savedCount(saved: ReturnType<typeof useSavedHotels>): string | undefined {
+  return saved.items.length > 0 ? hotelCountLabel(saved.items.length, saved.hasMore) : undefined;
+}
+
 interface SavedHeaderProps {
-  readonly comparing: boolean;
+  readonly compare: HotelCompareSelection;
   readonly canCompare: boolean;
+  /** "3 hotels" at the title's right on a desktop; absent on a phone, whose card says it. */
+  readonly count: string | undefined;
   readonly onBack: () => void;
-  readonly onToggleMode: () => void;
 }
 
 /** The shortlist header; its Compare toggle enters or leaves the 2–4 pick (only when comparing is possible). */
-function SavedHeader({ comparing, canCompare, onBack, onToggleMode }: SavedHeaderProps) {
+function SavedHeader({ compare, canCompare, count, onBack }: SavedHeaderProps) {
+  const { comparing } = compare;
+  const toggle = canCompare ? (
+    <Button
+      variant="glass"
+      size="sm"
+      icon={comparing ? "x" : "list-checks"}
+      onPress={comparing ? compare.exit : compare.start}
+    >
+      {comparing ? "Cancel" : "Compare"}
+    </Button>
+  ) : null;
   return (
     <ScreenHeader
+      size="display"
+      // D7's 53px title on a desktop; a phone keeps its 36.
+      titleClassName="text-4xl lg:text-6xl"
       eyebrow="Saved hotels"
       title="My selection"
       onBack={onBack}
       trailing={
-        canCompare ? (
-          <Button
-            variant="glass"
-            size="sm"
-            icon={comparing ? "x" : "list-checks"}
-            onPress={onToggleMode}
-          >
-            {comparing ? "Cancel" : "Compare"}
-          </Button>
+        count || toggle ? (
+          <Row gap={4} align="center">
+            {count ? (
+              <Text variant="bodySmall" tone="muted">
+                {count}
+              </Text>
+            ) : null}
+            {toggle}
+          </Row>
         ) : undefined
       }
     />
@@ -101,15 +143,17 @@ function SavedHeader({ comparing, canCompare, onBack, onToggleMode }: SavedHeade
 
 interface SavedListProps {
   readonly saved: ReturnType<typeof useSavedHotels>;
+  readonly isDesktop: boolean;
   readonly comparing: boolean;
   readonly selected: readonly string[];
   readonly onToggle: (hotelId: string) => void;
   readonly onOpen: (hotelId: string) => void;
+  readonly onEditNote: (entryId: string) => void;
   /** Opens the search from the empty shortlist; absent for an account that may not search. */
   readonly onBrowse: (() => void) | undefined;
 }
 
-function SavedList({ saved, comparing, selected, onToggle, onOpen, onBrowse }: SavedListProps) {
+function SavedList({ saved, isDesktop, onBrowse, ...picks }: SavedListProps) {
   const goToSignIn = useGoToSignIn();
   if (saved.isPending) return <SavedLoading />;
   if (saved.isError)
@@ -132,14 +176,10 @@ function SavedList({ saved, comparing, selected, onToggle, onOpen, onBrowse }: S
         }
       />
     );
-  return (
-    <SavedCardList
-      saved={saved}
-      comparing={comparing}
-      selected={selected}
-      onToggle={onToggle}
-      onOpen={onOpen}
-    />
+  return isDesktop ? (
+    <SavedHotelGrid saved={saved} {...picks} />
+  ) : (
+    <SavedCardList saved={saved} {...picks} />
   );
 }
 
@@ -150,7 +190,8 @@ function SavedCardList({
   selected,
   onToggle,
   onOpen,
-}: Omit<SavedListProps, "onBrowse">) {
+  onEditNote,
+}: Omit<SavedListProps, "onBrowse" | "isDesktop">) {
   return (
     <Card padding="sm" className="md:p-6">
       <Text variant="eyebrow" className="pb-2">
@@ -167,7 +208,7 @@ function SavedCardList({
             onToggle={onToggle}
           />
         ) : (
-          <SavedHotelRow key={item.id} item={item} onOpen={() => onOpen(item.hotel.id)} />
+          <SavedHotelRow key={item.id} item={item} onOpen={onOpen} onEditNote={onEditNote} />
         ),
       )}
       <LoadMore

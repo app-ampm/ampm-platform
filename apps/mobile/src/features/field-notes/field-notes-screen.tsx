@@ -1,11 +1,8 @@
 import type { FieldNoteStatus } from "@ampm/core";
 import {
-  Button,
-  Callout,
   Card,
+  Columns,
   EmptyState,
-  Input,
-  OfflineBanner,
   Row,
   Screen,
   ScreenHeader,
@@ -13,9 +10,11 @@ import {
   Stack,
   StatusChip,
   Text,
+  useLayoutAt,
 } from "@ampm/ui";
 import { useState, type ReactNode } from "react";
 
+import { FieldNotesSide } from "./field-notes-side";
 import type { LocalNote } from "./offline-store";
 import { useFieldNotes, type FieldNotesController } from "./use-field-notes";
 
@@ -41,29 +40,30 @@ const STATUS_LABEL: Record<FieldNoteStatus, string> = {
 export function FieldNotesScreen({ tabBar }: FieldNotesScreenProps) {
   const controller = useFieldNotes();
   const [draft, setDraft] = useState("");
+  const isDesktop = useLayoutAt("lg");
 
   const submit = () => {
     controller.addNote(draft);
     setDraft("");
   };
 
+  const list = <NoteList key="list" notes={controller.notes} isLoading={controller.isLoading} />;
+  const side = (
+    <FieldNotesSide
+      key="side"
+      controller={controller}
+      draft={draft}
+      onDraftChange={setDraft}
+      onSubmit={submit}
+    />
+  );
   return (
     <Screen width="wide" tabBar={tabBar} header={<FieldNotesHeader controller={controller} />}>
-      <SyncBanner
-        isOnline={controller.isOnline}
-        pendingCount={controller.pendingCount}
-        hasSyncFailed={controller.hasSyncFailed}
-      />
-      <Card>
-        <NoteComposer
-          draft={draft}
-          onChange={setDraft}
-          onSubmit={submit}
-          onSync={controller.sync}
-          isSyncing={controller.isSyncing}
-        />
-      </Card>
-      <NoteList notes={controller.notes} isLoading={controller.isLoading} />
+      {/* M11 (1.3fr 1fr): the notes, then the status and composer beside them from 1024; a phone keeps
+          the composer first. Keyed, so the swap moves the composer rather than remounting it. */}
+      <Columns ratios={[1.3, 1]} gap={4} align="start" testID="field-notes-columns">
+        {isDesktop ? [list, side] : [side, list]}
+      </Columns>
     </Screen>
   );
 }
@@ -79,67 +79,6 @@ function FieldNotesHeader({ controller }: { readonly controller: FieldNotesContr
       trailing={isSynced ? <StatusChip label="Synced" tone="success" dot /> : undefined}
     />
   );
-}
-
-interface ComposerProps {
-  readonly draft: string;
-  readonly onChange: (text: string) => void;
-  readonly onSubmit: () => void;
-  readonly onSync: () => void;
-  readonly isSyncing: boolean;
-}
-
-function NoteComposer({ draft, onChange, onSubmit, onSync, isSyncing }: ComposerProps) {
-  return (
-    <Stack gap={3}>
-      <Input
-        label="New field note"
-        value={draft}
-        onChangeText={onChange}
-        placeholder="e.g. Stage-left riser is wobbling"
-        onSubmitEditing={onSubmit}
-      />
-      <Row gap={2} wrap>
-        <Button onPress={onSubmit} disabled={draft.trim().length === 0}>
-          Record note
-        </Button>
-        <Button variant="secondary" icon="refresh" onPress={onSync} loading={isSyncing}>
-          Sync now
-        </Button>
-      </Row>
-    </Stack>
-  );
-}
-
-interface SyncBannerProps {
-  readonly isOnline: boolean;
-  readonly pendingCount: number;
-  readonly hasSyncFailed: boolean;
-}
-
-/**
- * Offline, refused, or online with notes still waiting: the banner says so and counts them. A refused
- * sync is gold (needs the person), since waiting for the signal will not send those notes.
- */
-function SyncBanner({ isOnline, pendingCount, hasSyncFailed }: SyncBannerProps) {
-  if (!isOnline) return <OfflineBanner queuedCount={pendingCount} />;
-  if (hasSyncFailed) {
-    return (
-      <Callout kind="danger" title="Notes could not sync">
-        The server did not accept the sync. Notes you record stay on this device.
-      </Callout>
-    );
-  }
-  if (pendingCount > 0) {
-    return (
-      <OfflineBanner
-        title="Syncing"
-        queuedCount={pendingCount}
-        description="They send as soon as the API answers."
-      />
-    );
-  }
-  return null;
 }
 
 function NoteList({
@@ -161,12 +100,12 @@ function NoteList({
     return (
       <EmptyState
         title="No field notes yet"
-        description="Record one above; it saves offline and syncs on reconnection."
+        description="Record one with the composer; it saves offline and syncs on reconnection."
       />
     );
   }
   return (
-    <Card padding="sm">
+    <Card padding="sm" testID="field-notes-list">
       <Stack gap={2}>
         {notes.map((note) => (
           <NoteRow key={note.id} note={note} />

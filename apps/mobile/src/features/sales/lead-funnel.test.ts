@@ -1,6 +1,6 @@
 import type { LeadFunnelView } from "@ampm/core";
 
-import { funnelRange, sourceBars, statusBars } from "./lead-funnel";
+import { funnelRange, funnelSummary, sourceBars, statusBars } from "./lead-funnel";
 
 // 2026-11-08T12:00:00Z, so the window offsets land on clean UTC days.
 const NOW = Date.UTC(2026, 10, 8, 12, 0, 0);
@@ -40,5 +40,20 @@ describe("lead-funnel", () => {
     const bars = sourceBars(view);
     expect(bars.map((bar) => bar.name)).toEqual(["Instagram", "Website"]);
     expect(bars[0].fraction).toBe(1);
+  });
+
+  it("sums the open and the converted leads for the KPI caption", () => {
+    const view: LeadFunnelView = {
+      total: 12,
+      byStatus: [
+        { status: "new", count: 6 },
+        { status: "follow_up", count: 3 },
+        { status: "converted", count: 2 },
+        { status: "closed", count: 1 },
+      ],
+      bySource: [],
+    };
+    expect(funnelSummary(view)).toBe("9 open · 2 converted");
+    expect(funnelSummary({ total: 0, byStatus: [], bySource: [] })).toBe("0 open · 0 converted");
   });
 });

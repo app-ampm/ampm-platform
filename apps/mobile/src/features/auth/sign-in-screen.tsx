@@ -4,37 +4,13 @@ import { useState } from "react";
 
 import { useDemoSignIn, useDevLogin } from "@ampm/api-client";
 import { isAppError, type DevLoginResponse } from "@ampm/core";
-import {
-  Button,
-  Card,
-  Input,
-  Link,
-  Row,
-  Screen,
-  ScreenHeader,
-  Stack,
-  Text,
-  useBreakpoint,
-  useIsClient,
-} from "@ampm/ui";
+import { SignInLayout, Text } from "@ampm/ui";
 
 import { setAccessToken } from "@/lib/session";
 
+import { DevSignInShortcuts } from "./dev-sign-in-shortcuts";
 import { MobileOtpSignIn } from "./mobile-otp-sign-in";
-
-/** Seeded accounts offered for one-tap sign-in in the demo (apps/api/prisma/seed.ts). */
-const DEMO_STAFF = [
-  { email: "sales@example.com", label: "Sameer Sales" },
-  { email: "admin@example.com", label: "Asha Admin" },
-  { email: "hotel@example.com", label: "Hema Hotels" },
-  { email: "finance@example.com", label: "Farah Finance" },
-] as const;
-const DEMO_CLIENTS = [
-  // Rhea is an entitled client (hotel assistance) — the Flow-2 client. Prasad is a demo prospect whose
-  // assistance request is routed to Sales (P-7), so he is not a consultancy client.
-  { email: "client@example.com", label: "Rhea Client" },
-  { email: "prospect@example.com", label: "Prasad Prospect" },
-] as const;
+import { SignInHero } from "./sign-in-hero";
 
 /** Signs in against the local dev endpoints, stores the token, and lets the entry gate route by role. */
 function useDevSignIn() {
@@ -42,6 +18,8 @@ function useDevSignIn() {
   const queryClient = useQueryClient();
   const devLogin = useDevLogin();
   const demo = useDemoSignIn();
+  // The typed work email lives here, above the layout, so it survives a change of arrangement.
+  const [email, setEmail] = useState("");
 
   // Clear (not just invalidate) so signing in as a different principal never shows the previous one's
   // cached data; the "/" gate then routes by principal type (staff, client or demo).
@@ -51,8 +29,8 @@ function useDevSignIn() {
     router.replace("/");
   };
 
-  const signIn = (email: string): void => {
-    const trimmed = email.trim();
+  const signIn = (address: string): void => {
+    const trimmed = address.trim();
     if (trimmed.length === 0 || devLogin.isPending) return;
     devLogin.mutate({ email: trimmed }, { onSuccess: applySession });
   };
@@ -64,194 +42,31 @@ function useDevSignIn() {
 
   const error = devLogin.error ?? demo.error;
   const errorText = isAppError(error) ? error.message : undefined;
-  return {
-    signIn,
-    enterDemo,
-    pending: devLogin.isPending,
-    demoPending: demo.isPending,
-    errorText,
-  };
-}
-
-type DevSignIn = ReturnType<typeof useDevSignIn>;
-
-/** The wordmark over "Welcome back." (P1, D1). */
-function SignInHeader() {
-  return (
-    <Stack gap={8}>
-      <Text variant="wordmark">AMPM</Text>
-      <ScreenHeader
-        title="Welcome"
-        emphasis="back."
-        subtitle="Development sign-in — client mobile + one-time code, or a seeded account."
-      />
-    </Stack>
-  );
+  const pending = devLogin.isPending;
+  return { signIn, enterDemo, pending, demoPending: demo.isPending, errorText, email, setEmail };
 }
 
 /**
  * Development sign-in for the demo. A seeded staff or client email is exchanged for a local access token
- * via `/auth/dev-login` (refused outside a local, non-production config). Staff land in their first
+ * via `/auth/dev-login`, and "Explore the demo" enters the seeded demo prospect (P-7) via
+ * `/auth/dev-login/demo`; both are refused outside a local, non-production config. Staff land in their first
  * workspace area, clients in the portal. The production sign-in is Cognito, which ships with the
- * hosting. P1 on a phone; from 768 up the D1 card, centred on the canvas.
+ * hosting. P1 on a phone, one centred card from 768, D1's split from 1024: the client mobile + code
+ * form alone in the glass card, the development shortcuts under it.
  */
 export function SignInScreen() {
   const session = useDevSignIn();
-  const isClient = useIsClient();
-  const { atLeast } = useBreakpoint();
-  // The server knows no window: it renders the phone layout and the client takes over after hydration.
-  if (isClient && atLeast("md")) {
-    return (
-      <Screen glow="top" contentClassName="grow items-center justify-center">
-        <Card padding="lg" className="w-full max-w-md md:p-9">
-          <Stack gap={6}>
-            <SignInHeader />
-            <SignInChoices session={session} nested />
-          </Stack>
-        </Card>
-      </Screen>
-    );
-  }
   return (
-    <Screen glow="top" header={<SignInHeader />}>
-      <SignInChoices session={session} nested={false} />
-    </Screen>
-  );
-}
-
-interface ChoicesProps {
-  readonly session: DevSignIn;
-  /** Inside the desktop card: the groups are flat tints instead of glass cards of their own. */
-  readonly nested: boolean;
-}
-
-/** The demo entry, the client and email sign-ins, and the seeded quick sign-ins. */
-function SignInChoices({ session, nested }: ChoicesProps) {
-  const { signIn, enterDemo, pending, demoPending, errorText } = session;
-  const demo = (
-    <Stack gap={3}>
-      <Text variant="eyebrow">Demo prospect</Text>
-      <Text variant="body" tone="muted">
-        Explore AMPM as a demo guest — a curated set of hotels with indicative prices.
-      </Text>
-      {/* Secondary, not gold: the client OTP step button is the screen's single gold action. */}
-      <Button
-        fullWidth
-        variant="secondary"
-        loading={demoPending}
-        onPress={enterDemo}
-        testID="demo-sign-in"
-      >
-        Explore the demo
-      </Button>
-    </Stack>
-  );
-  const client = (
-    <Stack gap={3}>
-      <Text variant="eyebrow">Client sign-in</Text>
-      <MobileOtpSignIn />
-    </Stack>
-  );
-  const form = <EmailSignIn onSubmit={signIn} pending={pending} errorText={errorText} />;
-  return (
-    <>
-      {nested ? demo : <Card>{demo}</Card>}
-      {nested ? client : <Card>{client}</Card>}
-      {nested ? form : <Card>{form}</Card>}
-      <QuickSignIn
-        title="Staff"
-        users={DEMO_STAFF}
-        onPick={signIn}
-        pending={pending}
-        nested={nested}
-      />
-      <QuickSignIn
-        title="Clients"
-        users={DEMO_CLIENTS}
-        onPick={signIn}
-        pending={pending}
-        nested={nested}
-      />
-      <Link
-        href="/gallery"
-        variant="nav"
-        accessibilityLabel="Component gallery"
-        className="self-center"
-      >
-        Component gallery →
-      </Link>
-    </>
-  );
-}
-
-function EmailSignIn({
-  onSubmit,
-  pending,
-  errorText,
-}: {
-  readonly onSubmit: (email: string) => void;
-  readonly pending: boolean;
-  readonly errorText: string | undefined;
-}) {
-  const [email, setEmail] = useState("");
-  return (
-    <Stack gap={4}>
-      <Input
-        label="Work email"
-        value={email}
-        onChangeText={setEmail}
-        placeholder="sales@example.com"
-        keyboardType="email-address"
-        autoCapitalize="none"
-        autoComplete="email"
-        errorText={errorText}
-        onSubmitEditing={() => onSubmit(email)}
-      />
-      <Button
-        fullWidth
-        size="lg"
-        variant="secondary"
-        loading={pending}
-        disabled={email.trim().length === 0}
-        onPress={() => onSubmit(email)}
-      >
-        Sign in
-      </Button>
-    </Stack>
-  );
-}
-
-function QuickSignIn({
-  title,
-  users,
-  onPick,
-  pending,
-  nested,
-}: {
-  readonly title: string;
-  readonly users: ReadonlyArray<{ readonly email: string; readonly label: string }>;
-  readonly onPick: (email: string) => void;
-  readonly pending: boolean;
-  readonly nested: boolean;
-}) {
-  return (
-    <Card tone={nested ? "flat" : "glass"} padding={nested ? "sm" : "md"}>
-      <Stack gap={3}>
-        <Text variant="eyebrow">{title}</Text>
-        <Row gap={2} wrap>
-          {users.map((user) => (
-            <Button
-              key={user.email}
-              variant="secondary"
-              size="sm"
-              loading={pending}
-              onPress={() => onPick(user.email)}
-            >
-              {user.label}
-            </Button>
-          ))}
-        </Row>
-      </Stack>
-    </Card>
+    <SignInLayout
+      testID="sign-in"
+      brand={<Text variant="wordmark">AMPM</Text>}
+      hero={
+        <SignInHero subtitle="Development sign-in — client mobile + one-time code, or a seeded account." />
+      }
+      cardTitle="Client sign-in"
+      card={<MobileOtpSignIn />}
+      aside={<DevSignInShortcuts {...session} />}
+      footer="No sign-up · AMPM invites every client"
+    />
   );
 }

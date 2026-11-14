@@ -24,6 +24,13 @@ const mockPush = jest.fn();
 const mockReplace = jest.fn();
 const mockDismissTo = jest.fn();
 
+// The window decides the arrangement: P3's Filters sheet on a phone, filter rows from 768, D5 from 1024.
+const mockWindow = { width: 390 };
+jest.mock("react-native/Libraries/Utilities/useWindowDimensions", () => ({
+  __esModule: true,
+  default: () => ({ width: mockWindow.width, height: 900, scale: 2, fontScale: 1 }),
+}));
+
 jest.mock("expo-router", () => ({
   useRouter: () => ({
     back: jest.fn(),
@@ -67,6 +74,7 @@ function catalogue(
 const searched = (calls: readonly string[]) => calls.some((call) => call.startsWith("GET /hotels"));
 
 beforeEach(() => {
+  mockWindow.width = 390;
   mockPush.mockClear();
   mockReplace.mockClear();
   mockDismissTo.mockClear();
@@ -180,10 +188,25 @@ describe("HotelsScreen", () => {
     await waitFor(() => expect(api.calls).toContain("GET /hotels?verifiedRatesOnly=true&limit=50"));
   });
 
-  it("sends the chosen guest-capacity minimum", async () => {
+  it("sends the guest-capacity minimum chosen in the phone's filter sheet (P3)", async () => {
     const api = catalogue([PAVILION]);
     await renderWithApi(<HotelsScreen />, api.fetch);
     await screen.findByText("1 hotel");
+    // A phone keeps the selects off its row, where they would truncate to "Any …".
+    expect(screen.queryByTestId("hotel-filter-capacity")).toBeNull();
+    await fireEvent.press(screen.getByRole("button", { name: "Filters" }));
+    await fireEvent.press(await screen.findByTestId("hotel-filter-capacity-option-500"));
+    await waitFor(() => expect(api.calls).toContain("GET /hotels?minGuestCapacity=500&limit=50"));
+    expect(screen.getByTestId("hotel-filter-capacity-option-500")).toBeSelected();
+  });
+
+  it("sends the guest-capacity minimum chosen in the select from 768", async () => {
+    mockWindow.width = 768;
+    const api = catalogue([PAVILION]);
+    await renderWithApi(<HotelsScreen />, api.fetch);
+    await screen.findByText("1 hotel");
+    expect(screen.queryByRole("button", { name: "Filters" })).toBeNull();
+    expect(screen.queryByTestId("hotel-search-pill")).toBeNull();
     await fireEvent.press(screen.getByTestId("hotel-filter-capacity"));
     await fireEvent.press(await screen.findByTestId("hotel-filter-capacity-option-500"));
     await waitFor(() => expect(api.calls).toContain("GET /hotels?minGuestCapacity=500&limit=50"));
@@ -196,11 +219,14 @@ describe("HotelsScreen", () => {
       // Nothing meets the capacity filter; without it the one hotel shows.
       return ok(pageOf(url.searchParams.has("minGuestCapacity") ? [] : [PAVILION]));
     });
+    mockWindow.width = 1440;
     await renderWithApi(<HotelsScreen />, api.fetch);
     await screen.findByText("1 hotel");
     await fireEvent.press(screen.getByTestId("hotel-filter-capacity"));
     await fireEvent.press(await screen.findByTestId("hotel-filter-capacity-option-1000"));
     expect(await screen.findByText("No hotels match these filters")).toBeOnTheScreen();
+    // The chips stay above the empty state, so the filters remain in reach.
+    expect(screen.getByRole("button", { name: "Verified rates only" })).toBeOnTheScreen();
     await fireEvent.press(screen.getByRole("button", { name: "Clear filters" }));
     expect(await screen.findByText("1 hotel")).toBeOnTheScreen();
   });

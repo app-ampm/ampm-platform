@@ -9,16 +9,16 @@ import type {
   MediaVideoItem,
   WeddingReferenceClientItem,
 } from "@ampm/core";
-import { Icon, Link, ListItem, Row, Stack, StatusChip, Text, Video } from "@ampm/ui";
+import { Icon, ListItem, Row, Stack, Text, Video } from "@ampm/ui";
 
 import { MediaImage } from "@/components/media-image";
 
+import { HotelFacilities } from "./hotel-facilities";
+import { HotelLocation } from "./hotel-location";
 import { HotelRates } from "./hotel-rates";
 import {
-  externalHttpUrl,
   facilitiesLine,
   galleryImages,
-  hotelMapUrl,
   roomMetaLine,
   venueCapacities,
   venueKindLine,
@@ -46,74 +46,8 @@ function HotelOverview({ hotel }: { readonly hotel: HotelDetailView }) {
     <Stack gap={3}>
       {hotel.description ? <Text>{hotel.description}</Text> : null}
       <HotelFacilities hotel={hotel} />
-      {hotel.address ? (
-        <Row gap={2} align="start">
-          <Icon name="map-pin" size="sm" tone="muted" />
-          <Text variant="bodySmall" tone="muted" className="flex-1">
-            {hotel.address}
-          </Text>
-        </Row>
-      ) : null}
-      <HotelLinks hotel={hotel} />
+      <HotelLocation hotel={hotel} />
     </Stack>
-  );
-}
-
-/**
- * The hotel's amenities (B14 / CP-05): the curated hotel facilities, or the amenities drawn from its
- * rooms and venues when none are curated (the API combines the two into one list). Shown as neutral
- * chips, like the facts under the hotel name; omitted when the hotel lists none.
- */
-function HotelFacilities({ hotel }: { readonly hotel: HotelDetailView }) {
-  if (hotel.facilities.length === 0) return null;
-  return (
-    <Stack gap={2}>
-      <Text variant="eyebrow">Facilities</Text>
-      <Row gap={2} wrap>
-        {hotel.facilities.map((name) => (
-          <StatusChip key={name} label={name} tone="neutral" size="sm" />
-        ))}
-      </Row>
-    </Stack>
-  );
-}
-
-/**
- * The hotel's off-site links a client can open (CP-05): its own website and its location on a map. Both
- * leave the app (the shared Link's `external` opens the browser or Maps app), and both stay non-gold —
- * the screen's one gold action is the footer Save — so the Overview keeps a single primary. The map is a
- * link out, not an embed: the client view carries no coordinates and there is no maps provider yet.
- * Rendered only when the hotel has a website or somewhere to map to.
- */
-function HotelLinks({ hotel }: { readonly hotel: HotelDetailView }) {
-  const websiteUrl = externalHttpUrl(hotel.website);
-  const mapUrl = hotelMapUrl(hotel);
-  if (!websiteUrl && !mapUrl) return null;
-  return (
-    <Row gap={4} wrap>
-      {websiteUrl ? (
-        <Link
-          href={websiteUrl}
-          external
-          variant="standalone"
-          tone="body"
-          accessibilityLabel={`Visit website for ${hotel.name}`}
-        >
-          Visit website
-        </Link>
-      ) : null}
-      {mapUrl ? (
-        <Link
-          href={mapUrl}
-          external
-          variant="standalone"
-          tone="body"
-          accessibilityLabel={`Open in maps for ${hotel.name}`}
-        >
-          Open in maps
-        </Link>
-      ) : null}
-    </Row>
   );
 }
 

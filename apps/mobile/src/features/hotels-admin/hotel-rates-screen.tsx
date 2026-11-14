@@ -1,5 +1,4 @@
 import { useState, type ReactNode } from "react";
-import { useRouter } from "expo-router";
 import type { UseQueryResult } from "@tanstack/react-query";
 
 import { useHotelRateCards, useStaffHotel } from "@ampm/api-client";
@@ -10,14 +9,16 @@ import {
   QueryErrorState,
   Row,
   Screen,
-  ScreenHeader,
   Skeleton,
+  SplitPane,
   Stack,
   Text,
 } from "@ampm/ui";
 
 import { useGoToSignIn } from "@/navigation/sign-in";
 
+import { HotelRatesSide } from "./hotel-rates-side";
+import { HotelRecordHeader } from "./hotel-record-header";
 import { RateCardEditSheet } from "./rate-card-edit-sheet";
 import { RateCardPanel } from "./rate-card-panel";
 
@@ -27,6 +28,18 @@ function RatesLoading() {
       <Skeleton className="h-28 w-full" />
       <Skeleton className="h-28 w-full" />
     </Stack>
+  );
+}
+
+/** The list's heading and its gold action: add a rate card. */
+function RatesHeading({ onAdd }: { readonly onAdd: () => void }) {
+  return (
+    <Row justify="between" align="center">
+      <Text variant="heading">Rate cards</Text>
+      <Button variant="primary" size="sm" icon="plus" onPress={onAdd} testID="rate-card-add">
+        Add rate card
+      </Button>
+    </Row>
   );
 }
 
@@ -41,18 +54,7 @@ function HotelRatesList({
   const [creating, setCreating] = useState(false);
   return (
     <Stack gap={6}>
-      <Row justify="between" align="center">
-        <Text variant="heading">Rate cards</Text>
-        <Button
-          variant="primary"
-          size="sm"
-          icon="plus"
-          onPress={() => setCreating(true)}
-          testID="rate-card-add"
-        >
-          Add rate card
-        </Button>
-      </Row>
+      <RatesHeading onAdd={() => setCreating(true)} />
       {cards.length === 0 ? (
         <EmptyState
           icon="receipt"
@@ -110,26 +112,23 @@ export interface HotelRatesScreenProps {
  * The staff hotel pricing workspace (feature 9.2): a hotel's rate cards and their items, with inline add /
  * edit / remove and a verify action that publishes a card. Rate `source` and notes are staff-only; a card
  * reaches client discovery only once it is verified and its items are client-visible. HT / SA only.
+ * From 1024 the cards sit beside T5's 300 column (verification, media rights); below it the column
+ * follows them. The cards stay in the same slot at every width, so an open editor survives a resize.
  *
  *   <HotelRatesScreen hotelId={id} tabBar={<AppTabBar />} />
  */
 export function HotelRatesScreen({ hotelId, tabBar }: HotelRatesScreenProps) {
-  const router = useRouter();
   const hotel = useStaffHotel(hotelId);
   const cards = useHotelRateCards(hotelId);
   return (
     <Screen
       width="wide"
       tabBar={tabBar}
-      header={
-        <ScreenHeader
-          eyebrow={hotel.data?.name ?? "Hotel"}
-          title="Rate cards"
-          onBack={() => router.back()}
-        />
-      }
+      header={<HotelRecordHeader hotelId={hotelId} section="rates" hotel={hotel.data} />}
     >
-      <HotelRatesBody hotelId={hotelId} cards={cards} />
+      <SplitPane sideWidth="sm" side={<HotelRatesSide hotelId={hotelId} />} testID="rates-split">
+        <HotelRatesBody hotelId={hotelId} cards={cards} />
+      </SplitPane>
     </Screen>
   );
 }

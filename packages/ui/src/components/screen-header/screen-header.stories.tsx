@@ -1,6 +1,7 @@
 import { defineStories } from "../../stories/define";
 import { Avatar } from "../avatar";
 import { Button } from "../button";
+import { StatusChip } from "../status-chip";
 import { ScreenHeader } from "./screen-header";
 
 const noop = () => undefined;
@@ -54,6 +55,46 @@ export const stories = defineStories({
       ),
     },
     {
+      name: "Page actions at the right (T2)",
+      render: () => (
+        <ScreenHeader
+          eyebrow="Leads and clients · 24 open"
+          title="Pipeline"
+          actions={
+            <>
+              <Button variant="glass" size="sm">
+                Funnel
+              </Button>
+              <Button variant="primary" size="sm">
+                New lead
+              </Button>
+            </>
+          }
+        />
+      ),
+    },
+    {
+      name: "A record's header panel with a status (T3)",
+      render: () => (
+        <ScreenHeader
+          variant="panel"
+          title="Rohit Malhotra"
+          badge={<StatusChip tone="warning" label="Demo granted" />}
+          subtitle="Delhi · Udaipur or Goa · Dec 2027 · About 250 guests · Source: Instagram"
+          actions={
+            <>
+              <Button variant="glass" size="sm">
+                Log activity
+              </Button>
+              <Button variant="primary" size="sm">
+                Create account and invite
+              </Button>
+            </>
+          }
+        />
+      ),
+    },
+    {
       name: "Display size for wide pages",
       render: () => (
         <ScreenHeader
@@ -62,6 +103,17 @@ export const stories = defineStories({
           title="Where shall we look"
           emphasis="today?"
           subtitle="Udaipur, 12–14 Feb 2027, about 300 guests."
+        />
+      ),
+    },
+    {
+      name: "Hero size for a split sign-in (D1)",
+      render: () => (
+        <ScreenHeader
+          size="hero"
+          title="Welcome"
+          emphasis="back."
+          subtitle="Sign in with the mobile number AMPM has on file. We'll send a six-digit code by SMS."
         />
       ),
     },

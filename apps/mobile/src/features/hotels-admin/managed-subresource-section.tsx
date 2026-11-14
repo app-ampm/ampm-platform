@@ -18,6 +18,10 @@ export interface ManagedSectionProps<T extends SubresourceItem> {
   readonly title: string;
   readonly items: readonly T[];
   readonly summaryOf: (item: T) => string;
+  /** How many lines a row's summary may wrap to (a narrow side column); default 1. */
+  readonly summaryLines?: number | undefined;
+  /** A side column's smaller title (see `SubresourceSection`). */
+  readonly compact?: boolean | undefined;
   /** An optional chip beside the name, e.g. "Primary" for the primary contact. */
   readonly tagOf?: ((item: T) => string | undefined) | undefined;
   readonly addLabel: string;
@@ -85,14 +89,26 @@ function SubresourceDeleteConfirm({
   );
 }
 
+/** A row's name, summary, tag and labels, from the section's per-entity readers. */
+function rowProps<T extends SubresourceItem>(props: ManagedSectionProps<T>, item: T) {
+  return {
+    name: item.name,
+    summary: props.summaryOf(item),
+    summaryLines: props.summaryLines,
+    tag: props.tagOf?.(item),
+    editLabel: `Edit ${item.name}`,
+    deleteLabel: `Delete ${item.name}`,
+    testID: `${props.testIdPrefix}-${item.id}`,
+  };
+}
+
 /**
  * One titled subresource section — rooms, venues or contacts — that owns its own add / edit / delete:
  * the list of rows, an "Add" action, the edit sheet (supplied by `renderEditor`) and the remove confirm.
  * Presentational rows come from `SubresourceRow`; the editor and the delete hook are passed in per entity.
  */
 export function ManagedSection<T extends SubresourceItem>(props: ManagedSectionProps<T>) {
-  const { title, items, summaryOf, tagOf, addLabel, emptyText, internalNote, noun, testIdPrefix } =
-    props;
+  const { title, items, addLabel, emptyText, internalNote, noun, testIdPrefix } = props;
   const m = useManagedSection<T>(props.remove, noun);
   return (
     <>
@@ -103,19 +119,15 @@ export function ManagedSection<T extends SubresourceItem>(props: ManagedSectionP
         isEmpty={items.length === 0}
         emptyText={emptyText}
         internalNote={internalNote}
+        compact={props.compact}
         testID={`${testIdPrefix}-section`}
       >
         {items.map((item) => (
           <SubresourceRow
             key={item.id}
-            name={item.name}
-            summary={summaryOf(item)}
-            tag={tagOf?.(item)}
+            {...rowProps(props, item)}
             onEdit={() => m.setEditing({ item })}
             onDelete={() => m.setDeleting(item)}
-            editLabel={`Edit ${item.name}`}
-            deleteLabel={`Delete ${item.name}`}
-            testID={`${testIdPrefix}-${item.id}`}
           />
         ))}
       </SubresourceSection>

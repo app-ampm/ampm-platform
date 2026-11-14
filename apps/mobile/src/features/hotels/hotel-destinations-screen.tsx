@@ -6,6 +6,7 @@ import type { DestinationBrowseItem } from "@ampm/core";
 import {
   Card,
   EmptyState,
+  Grid,
   Icon,
   ListItem,
   QueryErrorState,
@@ -17,6 +18,8 @@ import {
 
 import { useGoToSignIn } from "@/navigation/sign-in";
 
+import { DestinationTile } from "./destination-tile";
+import { useHotelSearchLayout } from "./hotel-search-layout";
 import { destinationBrowseSubtitle, DISCOVERY_CLOSED, DISCOVERY_SIGN_IN } from "./hotels.format";
 
 export interface HotelDestinationsScreenProps {
@@ -27,13 +30,15 @@ export interface HotelDestinationsScreenProps {
 /**
  * Browse hotels by destination (CP-02, feature 9.4b): the destinations the account can reach, each with its
  * hotel count, opening that destination's hotels. A bounded reference set — a handful of places, not a feed.
+ * No artboard of its own: a list on a phone and a tablet, D3's three-across tiles from 1024, on D5's split
+ * width so it lines up with the search it is reached from.
  */
 export function HotelDestinationsScreen({ tabBar }: HotelDestinationsScreenProps) {
   const router = useRouter();
   return (
     <Screen
       tabBar={tabBar}
-      width="content"
+      width="split"
       header={
         <ScreenHeader eyebrow="Hotel discovery" title="Destinations" onBack={() => router.back()} />
       }
@@ -82,8 +87,17 @@ interface DestinationCardsProps {
   readonly onOpen: (item: DestinationBrowseItem) => void;
 }
 
-/** The destinations as spaced glass rows, each opening that destination's hotels. */
+/** The destinations as spaced glass rows, or tiles from 1024, each opening that destination's hotels. */
 function DestinationCards({ items, onOpen }: DestinationCardsProps) {
+  const isDesktop = useHotelSearchLayout() === "desktop";
+  if (isDesktop)
+    return (
+      <Grid columns={{ md: 2, lg: 3 }} testID="destination-tiles">
+        {items.map((item) => (
+          <DestinationTile key={item.id} item={item} onPress={() => onOpen(item)} />
+        ))}
+      </Grid>
+    );
   return (
     <Card padding="sm" className="md:p-6">
       <Stack gap={2}>
@@ -102,12 +116,24 @@ function DestinationCards({ items, onOpen }: DestinationCardsProps) {
   );
 }
 
+const LOADING_ROWS = ["first", "second", "third"] as const;
+
+/** Three rows, or three tiles from 1024, the size of what arrives. */
 function DestinationsLoading() {
+  const isDesktop = useHotelSearchLayout() === "desktop";
+  if (isDesktop)
+    return (
+      <Grid columns={{ md: 2, lg: 3 }} testID="destinations-loading">
+        {LOADING_ROWS.map((key) => (
+          <Skeleton key={key} className="h-80 w-full rounded-xl" />
+        ))}
+      </Grid>
+    );
   return (
     <Stack gap={2} testID="destinations-loading">
-      <Skeleton className="h-14 w-full" />
-      <Skeleton className="h-14 w-full" />
-      <Skeleton className="h-14 w-full" />
+      {LOADING_ROWS.map((key) => (
+        <Skeleton key={key} className="h-14 w-full" />
+      ))}
     </Stack>
   );
 }

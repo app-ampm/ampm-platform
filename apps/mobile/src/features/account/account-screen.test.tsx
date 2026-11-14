@@ -6,7 +6,7 @@ import { uiCopy } from "@ampm/ui";
 import { getAccessToken, setAccessToken } from "@/lib/session";
 
 import { jsonResponse, renderWithApi } from "../../test/api";
-import { fireEvent, screen } from "../../test/render";
+import { fireEvent, screen, within } from "../../test/render";
 import { AccountScreen } from "./account-screen";
 
 // The screen opens the other pages and signs out through the router. Variables named mock* may be
@@ -16,6 +16,13 @@ const mockReplace = jest.fn();
 
 jest.mock("expo-router", () => ({
   useRouter: () => ({ push: mockPush, replace: mockReplace }),
+}));
+
+// A phone unless a test widens the window to see the desktop arrangement.
+const mockWindow = { width: 390 };
+jest.mock("react-native/Libraries/Utilities/useWindowDimensions", () => ({
+  __esModule: true,
+  default: () => ({ width: mockWindow.width, height: 900, scale: 2, fontScale: 1 }),
 }));
 
 // A signed-in staff principal with a role and a membership — the common `AccountDetails` path.
@@ -93,6 +100,7 @@ const serves =
     Promise.resolve(jsonResponse({ data: me }, 200));
 
 beforeEach(() => {
+  mockWindow.width = 390;
   mockPush.mockReset();
   mockReplace.mockReset();
 });
@@ -188,5 +196,49 @@ describe("AccountScreen", () => {
     await fireEvent.press(screen.getByRole("button", { name: "Sign out" }));
     expect(getAccessToken()).toBeNull();
     expect(mockReplace).toHaveBeenCalledWith("/sign-in");
+  });
+});
+
+type Instance = Parameters<typeof within>[0];
+
+describe("AccountScreen on wider windows", () => {
+  const signOutClass = () =>
+    String(screen.getByRole("button", { name: "Sign out" }).props.className);
+
+  it("sets the person beside their memberships and entitlements from 1024", async () => {
+    mockWindow.width = 1440;
+    await renderScreen(serves(DEMO_CLIENT));
+    expect(await screen.findByText("Priya Prospect")).toBeOnTheScreen();
+    const columns = screen.getByTestId("account-columns");
+    expect(String(columns.props.className)).toContain("flex-row");
+    // The 384 column at the start: the profile, the links and sign-out.
+    const [person, access] = columns.children.filter(
+      (child): child is Instance => typeof child !== "string",
+    );
+    if (!person || !access) throw new Error("expected two columns");
+    expect(String(person.props.className)).toContain("w-96");
+    expect(within(person).getByText("Priya Prospect")).toBeOnTheScreen();
+    expect(within(person).getByRole("link", { name: "Component gallery" })).toBeOnTheScreen();
+    expect(within(person).getByRole("button", { name: "Sign out" })).toBeOnTheScreen();
+    expect(within(access).getByText("Memberships")).toBeOnTheScreen();
+    expect(within(access).getByText("Hotel discovery")).toBeOnTheScreen();
+    // The top navigation or the rail shows the person, and sign-out keeps its own width.
+    expect(screen.queryByRole("image", { name: "Priya Prospect" })).toBeNull();
+    expect(signOutClass()).toContain("self-start");
+  });
+
+  it("keeps the phone's stack on a tablet, without the header avatar", async () => {
+    mockWindow.width = 768;
+    await renderScreen(serves(STAFF));
+    expect(await screen.findByText("Sameer Sales")).toBeOnTheScreen();
+    expect(screen.queryByTestId("account-columns")).toBeNull();
+    expect(screen.queryByRole("image", { name: "Sameer Sales" })).toBeNull();
+    expect(signOutClass()).toContain("self-start");
+  });
+
+  it("stretches sign-out across a phone", async () => {
+    await renderScreen(serves(STAFF));
+    expect(await screen.findByRole("button", { name: "Sign out" })).toBeOnTheScreen();
+    expect(signOutClass()).toContain("self-stretch");
   });
 });

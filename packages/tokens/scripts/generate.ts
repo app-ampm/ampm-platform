@@ -151,6 +151,7 @@ function theme(families: Record<string, readonly string[]>) {
       minHeight: sizes,
       width: sizes,
       minWidth: sizes,
+      maxWidth: sizes,
       letterSpacing,
       backdropBlur,
       backdropSaturate,

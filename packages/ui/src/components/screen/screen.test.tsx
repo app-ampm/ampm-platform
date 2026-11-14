@@ -5,6 +5,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { classes, fireEvent, renderWithProviders, screen, within } from "../../test/render";
 import { TabBar } from "../tab-bar";
 import { keyboardAvoidance, Screen } from "./screen";
+import { ScreenFrameProvider } from "./screen-frame";
 import { screenContentStyles, screenFooterContentStyles } from "./screen.styles";
 
 const IPHONE = {
@@ -120,17 +121,35 @@ describe("Screen", () => {
     expect(className("screen-content")).toContain("pb-28");
     expect(className("screen-content")).not.toContain("pb-10");
     expect(classes(screenContentStyles({ room: "tabBar" }))).toContain("pb-28");
+    // From 768 the chrome draws the navigation instead of the bar: no room kept for it.
+    expect(classes(screenContentStyles({ room: "tabBar" }))).toContain("md:pb-10");
   });
 
-  it("centres a reading or a dashboard column on wide windows", async () => {
+  it("centres a reading column, and gives desktop pages the artboard frame", async () => {
     expect(classes(screenContentStyles({ width: "content" }))).toEqual(
       expect.arrayContaining(["max-w-3xl", "self-center"]),
     );
-    expect(classes(screenContentStyles({ width: "wide" }))).toEqual(
-      expect.arrayContaining(["max-w-6xl", "self-center"]),
+    // Under the portal's navigation (or none): the 1440 frame, 72 at the sides (32 for split).
+    expect(classes(screenContentStyles({ width: "wide", frame: "topNav" }))).toEqual(
+      expect.arrayContaining(["max-w-frame", "self-center", "md:px-8", "lg:px-18", "lg:pt-10"]),
     );
+    expect(classes(screenContentStyles({ width: "split", frame: "topNav" }))).toEqual(
+      expect.arrayContaining(["max-w-frame", "self-center", "md:px-8", "lg:pt-6"]),
+    );
+    expect(classes(screenContentStyles({ width: "split", frame: "topNav" }))).not.toContain(
+      "lg:px-18",
+    );
+    expect(classes(screenContentStyles({ width: "wide" }))).toContain("lg:px-18");
+    // Beside the rail: the page fills the window, 18 from the rail and 30 at the right and the top.
+    const besideRail = classes(screenContentStyles({ width: "wide", frame: "rail" }));
+    expect(besideRail).toEqual(expect.arrayContaining(["md:pl-4.5", "md:pr-7.5", "md:pt-7.5"]));
+    expect(besideRail).not.toContain("max-w-frame");
+    expect(besideRail).not.toContain("self-center");
     expect(screenContentStyles({ width: "full" })).not.toContain("max-w");
     expect(classes(screenFooterContentStyles({ width: "content" }))).toContain("max-w-3xl");
+    expect(classes(screenFooterContentStyles({ width: "wide", frame: "rail" }))).toEqual(
+      expect.arrayContaining(["md:pl-4.5", "md:pr-7.5"]),
+    );
     await renderWithProviders(
       <Screen testID="screen" width="content" contentClassName="gap-6" className="pt-2" />,
     );
@@ -138,6 +157,16 @@ describe("Screen", () => {
     expect(className("screen-content")).toContain("gap-6");
     expect(className("screen-content")).not.toContain("gap-4");
     expect(className("screen")).toContain("pt-2");
+  });
+
+  it("reads its frame from the chrome around it", async () => {
+    await renderWithProviders(
+      <ScreenFrameProvider frame="rail">
+        <Screen testID="screen" width="wide" />
+      </ScreenFrameProvider>,
+    );
+    expect(className("screen-content")).toContain("md:pr-7.5");
+    expect(className("screen-content")).not.toContain("max-w-frame");
   });
 
   it("keeps the footer above the keyboard, inside the avoiding view with the content", async () => {

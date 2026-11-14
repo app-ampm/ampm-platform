@@ -16,7 +16,7 @@ import {
 
 const NO_ERRORS: PaymentErrors = { reference: undefined, paidAt: undefined };
 
-/** The record-payment form's state, validation and submission (Finance: activates the subscription). */
+/** The record-payment form's state, validation and submission (activates the subscription). */
 function useRecordPaymentForm(subscriptionId: string, open: boolean, onClose: () => void) {
   const toast = useToast();
   const record = useRecordPayment();
@@ -91,9 +91,10 @@ export interface RecordPaymentSheetProps {
 }
 
 /**
- * Record a manual bank transfer against a pending subscription (Finance / Super Admin). The amount is NOT
- * entered — the server takes it from the plan — so Finance supplies the reference, the method and, if it
- * differs from now, when it was received. Recording it runs the same activation as the gateway webhook.
+ * Record a manual bank transfer against a pending subscription (`crm.subscriptions.update`). The amount
+ * is NOT entered — the server takes it from the plan — so the recorder supplies the reference, the method
+ * and, if it differs from now, when it was received. Recording it runs the same activation as the gateway
+ * webhook.
  */
 export function RecordPaymentSheet({ subscriptionId, onClose }: RecordPaymentSheetProps) {
   const { draft, patch, errors, pending, submit } = useRecordPaymentForm(

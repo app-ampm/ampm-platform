@@ -22,10 +22,10 @@ import {
 } from "./consultancy-admin.test-utils";
 import { StaffEnquiryDetailScreen } from "./enquiry-detail-screen";
 
-const mockBack = jest.fn();
+const mockDismissTo = jest.fn();
 const mockReplace = jest.fn();
 jest.mock("expo-router", () => ({
-  useRouter: () => ({ back: mockBack, replace: mockReplace, push: jest.fn() }),
+  useRouter: () => ({ dismissTo: mockDismissTo, replace: mockReplace, push: jest.fn() }),
 }));
 
 // The agreements and proposals belong to the commercial view, which has its own tests; this file is
@@ -69,7 +69,7 @@ async function renderDetail(fetchImpl: FetchFn): Promise<void> {
 const writes = (sent: readonly SentRequest[]) => sent.filter((request) => request.method !== "GET");
 
 beforeEach(() => {
-  mockBack.mockClear();
+  mockDismissTo.mockClear();
   mockReplace.mockClear();
 });
 
@@ -78,7 +78,8 @@ describe("StaffEnquiryDetailScreen: header and notes", () => {
     await renderDetail(() => new Promise<Response>(() => {}));
     expect(screen.getByTestId("staff-enquiry-loading")).toBeOnTheScreen();
     await fireEvent.press(screen.getByLabelText("Back to enquiries"));
-    expect(mockBack).toHaveBeenCalled();
+    // To the queue's page, whether or not it is under this one (a desktop replaces it).
+    expect(mockDismissTo).toHaveBeenCalledWith("/enquiries");
   });
 
   it("heads the screen with the stay as data, the title and the status chip", async () => {

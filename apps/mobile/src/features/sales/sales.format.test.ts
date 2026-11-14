@@ -7,6 +7,7 @@ import {
   formatMoment,
   formatStay,
   isOpenLead,
+  leadFacts,
   leadPlan,
   leadSummary,
   statusLabel,
@@ -101,6 +102,23 @@ describe("lead lines", () => {
         }),
       ),
     ).toBeNull();
+  });
+
+  it("lines up a lead's facts for its record header, owner and source always", () => {
+    expect(leadFacts(leadFixture())).toBe(
+      "Udaipur or Goa · 12–14 DEC 2027 · About 250 guests · Source: Instagram · Owner: Unassigned",
+    );
+    expect(
+      leadFacts(
+        leadFixture({
+          destinationText: null,
+          tentativeDateFrom: null,
+          tentativeDateTo: null,
+          guestEstimate: null,
+          ownerName: "Sana Verma",
+        }),
+      ),
+    ).toBe("Source: Instagram · Owner: Sana Verma");
   });
 
   it("sums a lead up as its stage and flags", () => {

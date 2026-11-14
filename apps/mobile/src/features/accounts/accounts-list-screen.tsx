@@ -11,11 +11,13 @@ import {
   ScreenHeader,
   Skeleton,
   Stack,
+  useLayoutAt,
 } from "@ampm/ui";
 
 import { useGoToSignIn } from "@/navigation/sign-in";
 
 import { AccountsList } from "./accounts-list";
+import { AccountsTable } from "./accounts-table";
 
 /** "Clients · 12", with a "+" while more pages wait beyond the loaded ones. */
 function clientsEyebrow(accounts: CursorListResult<AccountView>): string {
@@ -33,13 +35,35 @@ function AccountsLoading() {
   );
 }
 
-function AccountsBody({
-  accounts,
-  onOpen,
-}: {
+interface BodyProps {
   readonly accounts: CursorListResult<AccountView>;
   readonly onOpen: (accountId: string) => void;
-}) {
+}
+
+/** The loaded accounts and the next-page footer. */
+function AccountsLoaded({ accounts, onOpen }: BodyProps) {
+  // A table from 768, phone rows below it. The loaded pages live in the query above the switch, so a
+  // window crossing 768 shows the same accounts in the other form.
+  const isTable = useLayoutAt("md");
+  return (
+    <Stack gap={4}>
+      {isTable ? (
+        <AccountsTable accounts={accounts.items} onOpen={onOpen} />
+      ) : (
+        <AccountsList accounts={accounts.items} onOpen={onOpen} />
+      )}
+      <LoadMore
+        hasMore={accounts.hasMore}
+        loading={accounts.isLoadingMore}
+        failed={accounts.loadMoreError}
+        onLoadMore={accounts.loadMore}
+        testID="accounts-load-more"
+      />
+    </Stack>
+  );
+}
+
+function AccountsBody({ accounts, onOpen }: BodyProps) {
   const goToSignIn = useGoToSignIn();
   if (accounts.isPending) return <AccountsLoading />;
   if (accounts.isError) {
@@ -64,18 +88,7 @@ function AccountsBody({
       />
     );
   }
-  return (
-    <Stack gap={4}>
-      <AccountsList accounts={accounts.items} onOpen={onOpen} />
-      <LoadMore
-        hasMore={accounts.hasMore}
-        loading={accounts.isLoadingMore}
-        failed={accounts.loadMoreError}
-        onLoadMore={accounts.loadMore}
-        testID="accounts-load-more"
-      />
-    </Stack>
-  );
+  return <AccountsLoaded accounts={accounts} onOpen={onOpen} />;
 }
 
 export interface AccountsListScreenProps {

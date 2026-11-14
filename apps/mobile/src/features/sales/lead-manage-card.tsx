@@ -1,11 +1,11 @@
 import { useState } from "react";
 
-import { useAssignLeadOwner, useMe, useMergeLead, useUpdateLead } from "@ampm/api-client";
+import { useAssignLeadOwner, useMe, useMergeLead } from "@ampm/api-client";
 import { isAppError, type LeadView } from "@ampm/core";
 import { Button, Card, ConfirmSheet, Row, Stack, Text, useToast } from "@ampm/ui";
 
 import { LeadCloseSheet } from "./lead-close-sheet";
-import { isOpenLead, nextLeadStatus, statusLabel } from "./sales.format";
+import { isOpenLead, nextLeadStatus } from "./sales.format";
 
 type ShowToast = ReturnType<typeof useToast>["show"];
 
@@ -15,23 +15,11 @@ function errorToast(show: ShowToast, verb: string) {
   };
 }
 
-/** The advance, assign and merge mutations and their toasts for the manage card. */
+/** The assign and merge mutations and their toasts for the manage card. */
 function useLeadManage(lead: LeadView) {
   const toast = useToast();
-  const update = useUpdateLead(lead.id);
   const assign = useAssignLeadOwner(lead.id);
   const merge = useMergeLead(lead.id);
-  const next = nextLeadStatus(lead.status);
-  const advance = (): void => {
-    if (!next || update.isPending) return;
-    update.mutate(
-      { status: next },
-      {
-        onSuccess: () => toast.show({ title: `Moved to ${statusLabel(next)}`, tone: "success" }),
-        onError: errorToast(toast.show, "move the lead"),
-      },
-    );
-  };
   const setOwner = (ownerUserId: string | null): void => {
     if (assign.isPending) return;
     assign.mutate(
@@ -56,15 +44,7 @@ function useLeadManage(lead: LeadView) {
       },
     );
   };
-  return {
-    next,
-    advance,
-    setOwner,
-    confirmMerge,
-    advancing: update.isPending,
-    assigning: assign.isPending,
-    merging: merge.isPending,
-  };
+  return { setOwner, confirmMerge, assigning: assign.isPending, merging: merge.isPending };
 }
 
 /** Claim or release the lead: Unassign when you own it, Assign to me otherwise (needs the signed-in id). */
@@ -106,33 +86,19 @@ function OwnerButton({
 
 interface ActionsProps {
   readonly lead: LeadView;
-  readonly next: LeadView["status"] | null;
-  readonly hasOwner: boolean;
   readonly owned: boolean;
   readonly myUserId: string | undefined;
-  readonly advancing: boolean;
   readonly assigning: boolean;
-  readonly advance: () => void;
   readonly setOwner: (ownerUserId: string | null) => void;
   readonly onClose: () => void;
   readonly onMerge: () => void;
 }
 
-/** The lead's action buttons: advance (owned only), claim/release, merge a duplicate, and close. */
+/** The lead's ownership and exit buttons: claim/release, merge a duplicate, and close. */
 function ManageActions(props: ActionsProps) {
-  const { lead, next, hasOwner, owned, myUserId, advancing, assigning } = props;
+  const { lead, owned, myUserId, assigning } = props;
   return (
     <Row gap={2} wrap>
-      {next && hasOwner ? (
-        <Button
-          variant="highlight"
-          loading={advancing}
-          onPress={props.advance}
-          testID="lead-advance"
-        >
-          {`Advance to ${statusLabel(next)}`}
-        </Button>
-      ) : null}
       <OwnerButton
         owned={owned}
         myUserId={myUserId}
@@ -152,26 +118,27 @@ function ManageActions(props: ActionsProps) {
 }
 
 /**
- * The working actions on an open lead (`crm.leads.update`): advance it one funnel stage, claim or release
- * its ownership, merge a flagged duplicate into the original, and close it with a reason. Advance and
- * assign are reversible so neither confirms; close and merge are terminal, so each confirms first. A
- * terminal (converted or closed) lead is read-only, so the card hides; the server is the real gate.
+ * The working actions on an open lead (`crm.leads.update`): claim or release its ownership, merge a
+ * flagged duplicate into the original, and close it with a reason (advancing a stage is the record
+ * header's, `LeadAdvanceButton`). Assign is reversible so it does not confirm; close and merge are
+ * terminal, so each confirms first. A terminal (converted or closed) lead is read-only, so the card
+ * hides; the server is the real gate. Its sheets' open state lives here, in a card that keeps its place
+ * at every width, so an open sheet survives a resize.
  *
  *   <LeadManageCard lead={lead} />
  */
 export function LeadManageCard({ lead }: { readonly lead: LeadView }) {
   const me = useMe();
-  const { next, advance, setOwner, confirmMerge, advancing, assigning, merging } =
-    useLeadManage(lead);
+  const { setOwner, confirmMerge, assigning, merging } = useLeadManage(lead);
   const [closeOpen, setCloseOpen] = useState(false);
   const [mergeOpen, setMergeOpen] = useState(false);
   if (!isOpenLead(lead.status)) return null;
   const myUserId = me.data?.principal.userId;
   const owned = myUserId !== undefined && lead.ownerUserId === myUserId;
-  const hasOwner = lead.ownerUserId !== null;
+  const needsOwner = nextLeadStatus(lead.status) !== null && lead.ownerUserId === null;
   return (
     <>
-      <Card testID="lead-manage">
+      <Card className="md:p-6" testID="lead-manage">
         <Stack gap={4}>
           <Text variant="subheading">Manage</Text>
           <Stack gap={1}>
@@ -182,18 +149,14 @@ export function LeadManageCard({ lead }: { readonly lead: LeadView }) {
           </Stack>
           <ManageActions
             lead={lead}
-            next={next}
-            hasOwner={hasOwner}
             owned={owned}
             myUserId={myUserId}
-            advancing={advancing}
             assigning={assigning}
-            advance={advance}
             setOwner={setOwner}
             onClose={() => setCloseOpen(true)}
             onMerge={() => setMergeOpen(true)}
           />
-          {next && !hasOwner ? (
+          {needsOwner ? (
             <Text variant="bodySmall" tone="muted" testID="lead-advance-needs-owner">
               Assign an owner to advance this lead.
             </Text>

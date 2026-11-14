@@ -20,6 +20,7 @@ import { useGoToSignIn } from "@/navigation/sign-in";
 import { rolesGrant } from "@/navigation/staff-areas";
 
 import { isEditableConfigKey } from "./configuration.edit";
+import { AdminSectionNav } from "./admin-section-nav";
 import { ConfigurationDetailSheet } from "./configuration-detail-sheet";
 import { ConfigurationEditSheet } from "./configuration-edit-sheet";
 import {
@@ -147,7 +148,13 @@ export function ConfigurationScreen({ tabBar }: ConfigurationScreenProps) {
     <Screen
       width="wide"
       tabBar={tabBar}
-      header={<ScreenHeader eyebrow={configEyebrow(configurations.data)} title="Configuration" />}
+      header={
+        <ScreenHeader
+          eyebrow={configEyebrow(configurations.data)}
+          title="Configuration"
+          actions={<AdminSectionNav current="configuration" />}
+        />
+      }
     >
       <ConfigurationBody configurations={configurations} onOpen={setSelected} />
       <ConfigurationDetailSheet

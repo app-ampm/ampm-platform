@@ -35,13 +35,14 @@ export function LeadBoardCard({ lead, now, onPress }: LeadBoardCardProps) {
     <Card
       tone="flat"
       padding="none"
-      className="p-3"
+      className="px-2.5 py-3"
       onPress={onPress}
       accessibilityLabel={cardLabel(lead, plan)}
       testID={`lead-card-${lead.id}`}
     >
       <Stack gap={1.5}>
-        <Text variant="label" numberOfLines={1}>
+        {/* Columns can be narrow on a laptop: a long name wraps once rather than losing its end. */}
+        <Text variant="label" numberOfLines={2}>
           {lead.name}
         </Text>
         {plan ? (
@@ -54,11 +55,15 @@ export function LeadBoardCard({ lead, now, onPress }: LeadBoardCardProps) {
             <LeadFlagChips lead={lead} />
           </Row>
         ) : null}
-        <Row gap={2} justify="between" className="pt-1">
-          <Text variant="eyebrow" numberOfLines={1} className="flex-1">
+        {/* A narrow column (seven stages share a laptop's width) wraps the owner under the source and
+            age, at the end, rather than cutting the age off. */}
+        <Row gap={2} justify="between" wrap className="pt-1">
+          <Text variant="eyebrow" className="shrink">
             {`${lead.source.name} · ${formatAge(lead.createdAt, now)}`}
           </Text>
-          {lead.ownerName ? <Avatar name={lead.ownerName} size="sm" tone="highlight" /> : null}
+          {lead.ownerName ? (
+            <Avatar name={lead.ownerName} size="sm" tone="highlight" className="ml-auto" />
+          ) : null}
         </Row>
       </Stack>
     </Card>

@@ -7,6 +7,7 @@ import { clientAmount, type ServiceAgreementClientView } from "@ampm/core";
 import { Button, Callout, Card, MoneyText, Row, Stack, StatusChip, Text, useToast } from "@ampm/ui";
 
 import { agreementBadge } from "./consultancy.format";
+import { useInDetailPanel } from "./enquiry-surface";
 import { ProposalCard } from "./proposal-card";
 import { SectionError } from "./section-error";
 import { SectionSkeleton } from "./section-skeleton";
@@ -35,20 +36,47 @@ export function AgreementSection({ enquiryId }: { readonly enquiryId: string }) 
 }
 
 /**
- * The agreement's scope and fee. Accepting it is a confirmation, so its button is peacock (highlight):
- * the screen's one gold action stays the proposal's "Accept proposal".
+ * Accepting a `sent` agreement, or the note that AMPM is activating an accepted one. Accepting is a
+ * confirmation, so its button is peacock (highlight): the screen's one gold action stays the proposal's
+ * "Accept proposal". Full width on a phone; its own width in the desktop panel, as D8's actions are.
  */
-function AgreementCard({ agreement }: { readonly agreement: ServiceAgreementClientView }) {
+function AgreementAction({ agreement }: { readonly agreement: ServiceAgreementClientView }) {
   const toast = useToast();
   const accept = useAcceptServiceAgreement(agreement.id);
-  const badge = agreementBadge[agreement.status];
+  const inPanel = useInDetailPanel();
   const onAccept = (): void =>
     accept.mutate(
       { termsAccepted: true },
       { onError: () => toast.show({ title: "Could not accept the agreement", tone: "danger" }) },
     );
+  if (agreement.status === "sent")
+    return (
+      <Button
+        variant="highlight"
+        fullWidth={!inPanel}
+        loading={accept.isPending}
+        onPress={onAccept}
+      >
+        Accept agreement
+      </Button>
+    );
+  if (agreement.status === "accepted")
+    return (
+      <Callout
+        kind="awaiting-confirmation"
+        title="Accepted — AMPM will activate it shortly."
+        blur={false}
+      />
+    );
+  return null;
+}
+
+/** The agreement's scope and fee, and what the client can do with it. */
+function AgreementCard({ agreement }: { readonly agreement: ServiceAgreementClientView }) {
+  const badge = agreementBadge[agreement.status];
+  const inPanel = useInDetailPanel();
   return (
-    <Card padding="lg">
+    <Card padding="lg" tone={inPanel ? "flat" : "glass"}>
       <Stack gap={3.5}>
         <Row gap={3} justify="between" align="start">
           <Text variant="heading" className="flex-1">
@@ -61,18 +89,7 @@ function AgreementCard({ agreement }: { readonly agreement: ServiceAgreementClie
           amount={clientAmount(agreement.fee.minor, agreement.fee.currency)}
           variant="subheading"
         />
-        {agreement.status === "sent" ? (
-          <Button variant="highlight" fullWidth loading={accept.isPending} onPress={onAccept}>
-            Accept agreement
-          </Button>
-        ) : null}
-        {agreement.status === "accepted" ? (
-          <Callout
-            kind="awaiting-confirmation"
-            title="Accepted — AMPM will activate it shortly."
-            blur={false}
-          />
-        ) : null}
+        <AgreementAction agreement={agreement} />
       </Stack>
     </Card>
   );

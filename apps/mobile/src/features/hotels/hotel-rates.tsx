@@ -13,16 +13,21 @@ import {
 } from "./hotels.format";
 import { groupRateItems, type RateGroup } from "./hotels.format.rates";
 
+export interface HotelRatesProps {
+  readonly rates: HotelRatesView;
+  /** False when the card around the rates shows the freshness chip beside its title (D6's Rates card). */
+  readonly showFreshness?: boolean | undefined;
+}
+
 /**
  * The hotel's indicative pricing (D6, P4 "Rates"): its freshness first (verified with the date, the
  * stale chip, or on request), then one row per client-visible item. Stale amounts still show under
  * their label; on request shows no amounts at all (AC-04).
  */
-export function HotelRates({ rates }: { readonly rates: HotelRatesView }) {
-  const chip = rateFreshnessChip(rates);
+export function HotelRates({ rates, showFreshness = true }: HotelRatesProps) {
   return (
     <Stack gap={3}>
-      <StatusChip label={chip.label} tone={chip.tone} dot={chip.dot} />
+      {showFreshness ? <RatesFreshnessChip rates={rates} /> : null}
       {hasRateAmounts(rates) ? (
         <RateList items={rates.items} />
       ) : (
@@ -30,6 +35,12 @@ export function HotelRates({ rates }: { readonly rates: HotelRatesView }) {
       )}
     </Stack>
   );
+}
+
+/** The rates' freshness as its chip: verified with the date, stale, or on request (guide §8). */
+export function RatesFreshnessChip({ rates }: { readonly rates: HotelRatesView }) {
+  const chip = rateFreshnessChip(rates);
+  return <StatusChip label={chip.label} tone={chip.tone} dot={chip.dot} />;
 }
 
 function RateList({ items }: { readonly items: readonly ClientRateItemView[] }) {

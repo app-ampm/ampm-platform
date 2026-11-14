@@ -10,7 +10,7 @@ export function WeddingLockedCard({ className }: { readonly className?: string |
   return (
     <View
       className={cn(
-        "gap-2 rounded-lg border border-dashed border-primary/32 p-4.5 md:rounded-xl md:p-6",
+        "gap-2 rounded-lg border border-dashed border-primary/32 p-4.5 md:rounded-xl md:p-6 lg:px-7 lg:py-6.5",
         className,
       )}
     >

@@ -4,7 +4,7 @@ import { ME_QUERY_KEY } from "@ampm/api-client";
 import type { EntitlementModule } from "@ampm/core";
 import { uiCopy } from "@ampm/ui";
 
-import { fireEvent, screen, waitFor } from "../../test/render";
+import { fireEvent, screen, waitFor, within } from "../../test/render";
 import { SavedHotelsScreen } from "./saved-hotels-screen";
 import {
   clientMe,
@@ -35,6 +35,12 @@ jest.mock("expo-router", () => ({
   }),
 }));
 
+const mockWindow = { width: 390 };
+jest.mock("react-native/Libraries/Utilities/useWindowDimensions", () => ({
+  __esModule: true,
+  default: () => ({ width: mockWindow.width, height: 900, scale: 2, fontScale: 1 }),
+}));
+
 const ENTRY = savedFixture(hotelFixture(), "018f0000-0000-7000-8000-0000000000a1");
 
 /** The shortlist with one hotel; removing it answers as the API does, or fails when `refuse` is set. */
@@ -59,6 +65,7 @@ function emptyShortlistApi(modules: readonly EntitlementModule[]) {
 }
 
 beforeEach(() => {
+  mockWindow.width = 390;
   mockBack.mockClear();
   mockPush.mockClear();
   mockDismissTo.mockClear();
@@ -218,5 +225,22 @@ describe("SavedHotelsScreen", () => {
     await fireEvent.changeText(await screen.findByLabelText("Your note"), "Great lawn");
     await fireEvent.press(screen.getByRole("button", { name: "Save note" }));
     await waitFor(() => expect(api.calls).toContain(`PATCH /hotels/${HOTEL_ID}/save`));
+  });
+});
+
+describe("SavedHotelsScreen rows on a phone", () => {
+  it("lets a long name wrap and sets the star chip under it, beside the destination", async () => {
+    await renderWithApi(<SavedHotelsScreen />, shortlistApi().fetch);
+    const row = await screen.findByRole("button", { name: ROW_NAME });
+    const name = within(row).getByText("The Lake Pavilion", { includeHiddenElements: true });
+    // The name no longer shares its line with the chip and the two buttons, so it is never cut to one line.
+    expect(name.props.numberOfLines).toBe(2);
+    const destination = within(row).getByText("Udaipur, Rajasthan", {
+      includeHiddenElements: true,
+    });
+    expect(
+      within(destination.parent!.parent!).getByLabelText("5-star", { includeHiddenElements: true }),
+    ).toBeOnTheScreen();
+    expect(screen.queryByTestId("saved-grid")).toBeNull();
   });
 });

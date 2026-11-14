@@ -56,4 +56,22 @@ describe("DataTable", () => {
     );
     expect(screen.queryByRole("button")).toBeNull();
   });
+
+  it("marks the open row with a bar and a tint, and says it is the current one", async () => {
+    await renderWithProviders(
+      <DataTable
+        columns={COLUMNS}
+        rows={ROWS}
+        keyExtractor={(row) => row.id}
+        onRowPress={jest.fn()}
+        rowAccessibilityLabel={(row) => row.name}
+        selectedKey="b"
+      />,
+    );
+    const open = screen.getByRole("button", { name: "Beta" });
+    expect(open).toHaveProp("aria-current", "true");
+    expect(open).toBeSelected();
+    expect(screen.getByRole("button", { name: "Alpha" })).not.toHaveProp("aria-current");
+    expect(screen.getAllByTestId("data-table-selected-mark")).toHaveLength(1);
+  });
 });

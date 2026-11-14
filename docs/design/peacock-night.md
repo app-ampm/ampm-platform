@@ -115,7 +115,7 @@ drop shadows.**
 |---|---|---|---|
 | Hero | `hero` | Gilda Display | 88 / 0.95 (`text-7xl`; 120 on wide desktop by class) |
 | Page title | `display` | Gilda Display | 64 / 1.0 (`text-6xl`) |
-| Screen title | `title` | Gilda Display | 36 (`text-4xl`); 40–44 by class on desktop |
+| Screen title | `title` | Gilda Display | 36 (`text-4xl`); `ScreenHeader` steps it to 44 (`lg:text-5xl`) from 1024 |
 | Section heading | `title` + `md:text-5xl` | Gilda Display | 44 / 1.0 |
 | Card title | `heading` | Gilda Display | 24 / 1.05 (`text-2xl`; `text-3xl` for 28) |
 | Big numbers | `stat` | Gilda Display | 64 / 0.9; countdowns in gold (`tone="brand"`) |
@@ -139,9 +139,11 @@ drop shadows.**
   bars; glass cards `rounded-lg` (22) on a phone and `md:rounded-xl` (24) on a desktop; rows inside panels
   `rounded` (16); page containers and sheets `rounded-2xl` (28); checkboxes `rounded-sm` (7).
 - **Spacing:** the 4px scale plus the half steps the mocks use (`1.5` 6, `2.5` 10, `3.5` 14, `4.5` 18,
-  `5.5` 22, `6.5` 26); `spacingPx` gives them in pixels for layout maths such as an inset plus a gap.
-  Gaps inside cards 8–16, card padding 16–24 on a phone and 22–36 on a desktop, 14–18 between panels,
-  page padding 32–72 on a desktop, **18 on a phone (`px-4.5`)**.
+  `5.5` 22, `6.5` 26, `7.5` 30) and `18` (72, the portal's desktop gutter); `spacingPx` gives them in
+  pixels for layout maths such as an inset plus a gap. Gaps inside cards 8–16, card padding 16–24 on a
+  phone and 22–36 on a desktop, 14–18 between panels, page padding 32–72 on a desktop (`Screen` sets
+  it, §7), **18 on a phone (`px-4.5`)**. Named sizes: `w-rail` 232, `w-list` 432 (a list beside its
+  detail), `max-w-frame` 1440 (the artboard frame).
 - **Motion:** `motion.ts` durations. Glass panels fade and rise 8px over 200ms (ease-out); tabs and
   segments slide their pill; reduced motion jumps to the end state.
 - **Hover (web):** links turn gold; secondary buttons gain a pearl 8% fill; cards raise their stroke
@@ -164,7 +166,7 @@ Every component is a folder with its test and stories; the Gallery shows every v
 | `Link` | Gold, Manrope 700, often with " →"; nav links pearl that turn gold on hover. |
 | `Input` | Pill, midnight 50% fill, pearl 20% stroke, padding 14 × 18. Focus: gold stroke plus halo. Error: gold stroke and a gold helper line. `prefix` ("+91" in pearl 60% with a divider). Multiline inputs use radius 22. |
 | `OtpInput` | Six cells 48 × 56 (the mocks' 46 × 54 on the 4px scale), radius 16. Filled: peacock 25% fill, peacock 70% stroke. Active: gold stroke plus halo. Empty: pearl 20% stroke. |
-| `SegmentedControl` | Pill track (midnight 50%, pearl 16% stroke, 4px padding); the active segment is a peacock pill with midnight text. Also the tab strip (hotel page tabs), scrollable. |
+| `SegmentedControl` | Pill track (midnight 50%, pearl 16% stroke, 4px padding); the active segment is a peacock pill with midnight text. Also the tab strip (hotel page tabs), scrollable. `variant="underline"`: no track, a sliding 2px gold line under the selected tab in pearl 100%, for a record's sections (T3, T5). |
 | `FilterChip` | Selectable pill: pearl 30% outline; selected is peacock with midnight text. |
 | `Toggle` | 48 × 28 track. On: gold track, midnight knob. Off: pearl 12% track, pearl 45% knob. |
 | `Checkbox` | 22, radius 7. Checked: peacock fill with a midnight ✓. Unchecked: pearl 34% stroke. |
@@ -174,6 +176,7 @@ Every component is a folder with its test and stories; the Gallery shows every v
 | `GlassPanel` | The raw material (§3). |
 | `InternalPanel` | Dashed gold, "INTERNAL · NEVER SENT TO CLIENTS". Staff only. |
 | `ListItem` | A row inside a panel: flat tint, radius 16, title, subtitle, leading thumbnail or avatar, trailing chip or chevron. |
+| `DataTable` | The staff workspace's tables (T4, T12): muted eyebrow headers over a pearl 16% rule with no fill, rows 14 above and below from 1024 on pearl 12% dividers, one `grow` column taking the spare width. It scrolls sideways when wider than the screen; below 768, use `ListItem` rows instead. |
 | `Avatar`, `AvatarGroup` | Circle 32–56, initials Manrope 700/800, gold or peacock fill with midnight text; groups overlap 8px with a 2px midnight ring. |
 | `ProgressBar` | 4–8 tall, pearl 12% track, peacock fill, pill; `steps` draws the RSVP wizard's segmented bar. |
 | `Stepper` | Status stepper (enquiries, requests): done peacock ✓, current gold ring, upcoming pearl 26%. |
@@ -186,8 +189,9 @@ Every component is a folder with its test and stories; the Gallery shows every v
 | `Sheet`, `Toast` | Glass on a midnight 70% scrim; sheets radius 28. A `Sheet` slides up from the bottom edge on a phone and is a centred dialog (max 512) on a desktop — a desktop has no edge to reach for. Every create, add or edit is a `Sheet`, so it is a modal on both; `ConfirmSheet` too. |
 | `PhotoPlaceholder` | Striped, tinted stand-in for photography with its label ("PALACE PHOTO · LAKE PICHOLA"). |
 | `GlowBackdrop` | The orbs behind a screen. |
-| `Screen` | The screen scaffold: midnight canvas, orbs, safe areas, the 18px phone gutter, room for a floating tab bar or a sticky footer. `width` bounds the content column on a desktop — `full` (edge to edge), `content` (768, reading and forms) or `wide` (1152, dashboards and tables), both centred. |
-| `ScreenHeader` | Back button, eyebrow, Gilda title, subtitle, trailing action. |
+| `Screen` | The screen scaffold: midnight canvas, orbs, safe areas, the 18px phone gutter, room for a floating tab bar (phones only) or a sticky footer. `width` sets the content column on a tablet and a desktop: `full` (phone layouts), `content` (one centred 768 column: a form, a single reading column), `wide` (a desktop artboard page) or `split` (a list or split page). `wide` and `split` take their gutters from the frame the chrome names (`ScreenFrameProvider`, §7). |
+| `ScreenHeader` | Back button, eyebrow, Gilda title, subtitle, trailing action. Sizes: `title` (36, 44 from 1024), `display` (64, wide desktop pages), `hero` (44 on a phone, 88 from 1024 with an 18px lead paragraph: D1). `actions`: the page's buttons or section strip, at the right of the whole header from 768 and wrapping under it on a phone (T2, T4, T12). `badge`: a status chip read right after the title. `variant="panel"`: a record's header on its own glass panel, facts in the subtitle (T3). |
+| `Columns`, `SplitPane`, `MasterDetail`, `Grid` | The desktop artboards' arrangements, stacked below 1024 (or 768 with `at="md"`): `Columns` in shares of the row (`ratios={[1.5, 1]}`, D4; D2 1 : 1.1, D6 1.6 : 1, T3 1.3 : 1); `SplitPane` a main column beside a fixed side panel (`sideWidth` sm 288 for T5 and T12's 300, lg 384, list 432); `MasterDetail` a list beside the selected item (D8, T6), one at a time on a phone; `Grid` equal cells, 1, 2 from 768 and 3 from 1024 by default. Never hand-roll `lg:flex-row`. Crossing a breakpoint (a tablet rotating, a window resizing) must never lose what the person was doing: these keep their children in the same slots at every width, and a screen whose parts differ between the phone and the desktop composition keeps them in fixed slots too (`null` where a layout has none) and holds editing state above the switch; `useLayoutAt` answers which side of 1024 it is. |
 | `TabBar` | Floating glass pill 14 from the sides and 26 from the bottom; the active tab is a peacock pill with a midnight label; locked tabs at pearl 32%. |
 | `NavRail` | The admin workspace rail: glass, 232 wide, active item a peacock pill; collapses to icons between 768 and 1199. |
 | `Icon` | Lucide through the shared registry, in pearl, gold or peacock (or midnight on a fill). |
@@ -209,12 +213,20 @@ Every component is a folder with its test and stories; the Gallery shows every v
 - The rail shows only the areas the person's role grants (`packages/policy`); a hidden area is still
   refused by the server.
 - Screens use `Screen` and `ScreenHeader`, never a hand-rolled `ScrollView` with padding and insets.
-- Every staff rail area passes `Screen` `width="wide"` — Leads & Clients, Hotel enquiries, Tasks &
-  Operations (field notes), Hotel catalogue, Admin console and Settings (the shared account screen) — so
-  the header and the content share one centred 1152 column at every window and the console reads as one
-  width, never a mix of full-bleed and narrow pages. `wide` only caps the column on a tablet or desktop;
-  a phone is full-width either way, so the mobile layout is unchanged. The client portal's own browsing
-  and reading screens (hotels, consultancy, portal home) stay `content` (768), their mobile-first design.
+- On a tablet and a desktop the navigation floats over the screens (their canvas and glow run under its
+  glass) and names its frame to them; `Screen` takes the artboards' gutters from it (D-123):
+  - **Beside the rail** (every staff area: Leads & Clients, Hotel enquiries, Tasks & Operations, Hotel
+    catalogue, Admin console, Settings): `width="wide"` fills the window beside the rail, 18 from it,
+    30 at the right and the top (T1–T13). One width across the console, never a mix of full-bleed and
+    narrow pages.
+  - **Under the portal's top navigation:** client screens follow the desktop artboards (D, C), not their
+    phone composition. `width="wide"` for hero and reading pages (D2, D4, D7, D9): 72 at the sides and
+    40 under the bar from 1024. `width="split"` for list and split pages (D5, D6's mosaic, D8): 32 at
+    the sides, lined up with the bar, and 24 under it. Both keep the 1440 artboard frame
+    (`max-w-frame`), centred on wider windows, as the bar does. `content` (768) stays for a form or a
+    single reading column only.
+  - Panels sit side by side through `Columns`, `SplitPane`, `MasterDetail` and `Grid` (§6), never a
+    screen's own `lg:flex-row`. A phone is full-width either way: its layout is unchanged.
 
 ## 8. Status chips
 
@@ -265,4 +277,5 @@ their sprint comes.
 4. Top-level panels are glass, nested items are flat; internal amounts only inside `InternalPanel` on
    staff screens.
 5. Loading, empty, error and offline states with the shared components; 44px targets; focus halos.
-6. Phone, tablet and desktop: check the layout at 390, 768 and 1440.
+6. Phone, tablet and desktop: check the layout at 390, 768 and 1440 against the artboard: a desktop
+   screen composes the D, C or T artboard's columns, not the phone layout in a wider box.

@@ -13,6 +13,7 @@ import { useSafeAreaInsets, type EdgeInsets } from "react-native-safe-area-conte
 import { cn } from "../../lib/cn";
 import { GlassPanel } from "../glass-panel";
 import { GlowBackdrop, type GlowVariant } from "../glow-backdrop";
+import { useScreenFrame } from "./screen-frame";
 import {
   screenContentStyles,
   screenFooterContentStyles,
@@ -27,7 +28,11 @@ export interface ScreenProps extends Omit<ViewProps, "children"> {
   readonly scroll?: boolean | undefined;
   /** The orbs behind the screen: corners (default), top for heroes, center, none. */
   readonly glow?: GlowVariant | undefined;
-  /** full (default) · content: a centred 768 column · wide: a centred 1152 column. */
+  /**
+   * full (default): phone layouts · content: a centred 768 column (forms, one reading column) · wide: a
+   * desktop artboard page, 72 at the sides under the portal's navigation, beside the rail 18 and 30 ·
+   * split: a list or split page, 32 at the sides under the portal's navigation (`screenContentStyles`).
+   */
   readonly width?: ScreenWidth | undefined;
   /** Above the content, inside the gutter, scrolling with it: usually a ScreenHeader. */
   readonly header?: ReactNode;
@@ -149,15 +154,15 @@ function ScreenStage({
   header,
   tabBar,
   contentClassName,
-  refreshControl,
   keyboardShouldPersistTaps = "handled",
   testID,
   insets,
   hasFooter,
   adjustKeyboardInsets,
+  ...scrollProps
 }: StageProps) {
-  const hasTabBar = isPresent(tabBar);
-  const room = hasTabBar ? "tabBar" : "none";
+  const frame = useScreenFrame();
+  const room = isPresent(tabBar) ? "tabBar" : "none";
   return (
     <View className="flex-1">
       <ScreenBody
@@ -165,12 +170,12 @@ function ScreenStage({
         insets={insets}
         insetBelow={hasFooter ? 0 : insets.bottom}
         testID={testID}
-        refreshControl={refreshControl}
+        refreshControl={scrollProps.refreshControl}
         keyboardShouldPersistTaps={keyboardShouldPersistTaps}
         automaticallyAdjustKeyboardInsets={adjustKeyboardInsets}
       >
         <View
-          className={cn(screenContentStyles({ width, room, scroll }), contentClassName)}
+          className={cn(screenContentStyles({ width, frame, room, scroll }), contentClassName)}
           testID={part(testID, "content")}
         >
           {header}
@@ -178,7 +183,7 @@ function ScreenStage({
         </View>
       </ScreenBody>
       {/* Last, so it draws over the content: the TabBar floats itself (absolute, safe-area aware). */}
-      {hasTabBar ? tabBar : null}
+      {room === "tabBar" ? tabBar : null}
     </View>
   );
 }
@@ -191,12 +196,13 @@ interface FooterProps {
 }
 
 function ScreenFooter({ children, width, insets, testID }: FooterProps) {
+  const frame = useScreenFrame();
   const { bottom, left, right } = insets;
   return (
     <GlassPanel className={screenFooterStyles} testID={testID}>
       {/* The device's insets: the bar runs to the edges, its content stays clear of them. */}
       <View style={{ paddingBottom: bottom, paddingLeft: left, paddingRight: right }}>
-        <View className={screenFooterContentStyles({ width, insetBelow: bottom > 0 })}>
+        <View className={screenFooterContentStyles({ width, frame, insetBelow: bottom > 0 })}>
           {children}
         </View>
       </View>
@@ -232,8 +238,9 @@ function ScreenKeyboardArea({ footer, ...stage }: KeyboardAreaProps) {
 
 /**
  * The scaffold every app screen stands on, instead of a hand-rolled ScrollView: the midnight canvas
- * with its glow orbs, the top safe area, the 18px phone gutter (32 tablet, 48 desktop), 16 between
- * children, and room at the end for a floating tab bar or a sticky glass footer. The keyboard never
+ * with its glow orbs, the top safe area, the 18px phone gutter (wider on a tablet and a desktop, by
+ * `width` and the frame the app's chrome names), 16 between children, and room at the end for a
+ * floating tab bar or a sticky glass footer. The keyboard never
  * covers the footer or the field being typed in (`keyboardAvoidance`). No navigation: the app passes
  * the header, the bar and the callbacks in.
  *
@@ -242,6 +249,7 @@ function ScreenKeyboardArea({ footer, ...stage }: KeyboardAreaProps) {
  *   </Screen>
  *   <Screen footer={<Row justify="between">…<Button>Check availability</Button></Row>}>…</Screen>
  *   <Screen scroll={false} width="content" glow="center">…</Screen>
+ *   <Screen width="wide" header={<ScreenHeader size="display" title="Side by side" />}>…</Screen>
  */
 export function Screen({
   children,

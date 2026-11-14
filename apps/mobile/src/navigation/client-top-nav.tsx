@@ -84,7 +84,8 @@ function AccountLink({ name, active, onPress }: AccountLinkProps) {
 }
 
 export interface ClientTopNavProps {
-  readonly me: MeResponse;
+  /** Not there yet while `/me` loads: the bar keeps the avatar's place until it answers. */
+  readonly me: MeResponse | undefined;
   readonly pathname: string;
 }
 
@@ -100,29 +101,36 @@ export function ClientTopNav({ me, pathname }: ClientTopNavProps) {
   const active = activeClientArea(pathname)?.key;
   return (
     <View style={{ paddingTop: insets.top, paddingLeft: insets.left, paddingRight: insets.right }}>
-      <GlassPanel
-        role="navigation"
-        accessibilityLabel="Portal navigation"
-        className="mx-8 mt-5 flex-row items-center justify-between gap-4 rounded-full py-2.5 pl-6.5 pr-2.5"
-        testID="client-top-nav"
-      >
-        <Text variant="wordmark">AMPM</Text>
-        <Row gap={1}>
-          {NAV_AREAS.map((area) => (
-            <NavItem
-              key={area.key}
-              area={area}
-              active={area.key === active}
-              onPress={() => (area.href ? open(area.href) : explainLock())}
+      {/* On windows wider than the mocks the bar keeps the 1440 frame, centred like the pages. */}
+      <View className="w-full max-w-frame self-center">
+        <GlassPanel
+          role="navigation"
+          accessibilityLabel="Portal navigation"
+          className="mx-8 mt-5 flex-row items-center justify-between gap-4 rounded-full py-2.5 pl-6.5 pr-2.5"
+          testID="client-top-nav"
+        >
+          <Text variant="wordmark">AMPM</Text>
+          <Row gap={1}>
+            {NAV_AREAS.map((area) => (
+              <NavItem
+                key={area.key}
+                area={area}
+                active={area.key === active}
+                onPress={() => (area.href ? open(area.href) : explainLock())}
+              />
+            ))}
+          </Row>
+          {me ? (
+            <AccountLink
+              name={me.principal.name}
+              active={active === "more"}
+              onPress={() => open("/account")}
             />
-          ))}
-        </Row>
-        <AccountLink
-          name={me.principal.name}
-          active={active === "more"}
-          onPress={() => open("/account")}
-        />
-      </GlassPanel>
+          ) : (
+            <View className="h-touch w-touch" />
+          )}
+        </GlassPanel>
+      </View>
     </View>
   );
 }

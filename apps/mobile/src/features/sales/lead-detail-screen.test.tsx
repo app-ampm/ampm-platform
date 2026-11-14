@@ -1,4 +1,3 @@
-import type { LeadView } from "@ampm/core";
 import { uiCopy } from "@ampm/ui";
 
 import { fireEvent, screen, within } from "../../test/render";
@@ -9,11 +8,11 @@ import {
   STAFF_USER_ID,
   activityFixture,
   failure,
+  leadDetailFetch,
   leadFixture,
   ok,
   renderWithApi,
   routedFetch,
-  staffMeFixture,
   type FetchFn,
 } from "./sales.test-utils";
 
@@ -23,7 +22,7 @@ jest.mock("expo-router", () => ({
   useRouter: () => ({ back: mockBack, replace: mockReplace, push: jest.fn() }),
 }));
 
-// The window's width picks the layout: one column below 1024, T3's two columns from there.
+// The window's width picks the layout; lead-detail-desktop.test.tsx resizes it mid-task.
 const mockWindow = { width: 390 };
 jest.mock("react-native/Libraries/Utilities/useWindowDimensions", () => ({
   __esModule: true,
@@ -64,22 +63,11 @@ function convertResult(inviteQueued: boolean) {
 
 type Routes = Parameters<typeof routedFetch>[0];
 
-function detailFetch(lead: LeadView, routes: Routes = {}): FetchFn {
-  return routedFetch({
-    [LEAD_PATH]: () => ok(lead),
-    [`${LEAD_PATH}/activities`]: () => ok({ items: [] }),
-    "/me": () => ok(staffMeFixture()),
-    ...routes,
-  });
-}
+const detailFetch = leadDetailFetch;
 
 async function renderDetail(fetchImpl: FetchFn): Promise<void> {
   await renderWithApi(<LeadDetailScreen leadId={LEAD_ID} />, fetchImpl);
 }
-
-/** The lead's panels in reading order. */
-const panelOrder = (): unknown[] =>
-  screen.getAllByTestId(/^lead-(facts|invite|demo)$/).map((panel) => panel.props.testID);
 
 /** Presses the one gold action and waits for its toast; then dismisses it, so no timer outlives the test. */
 async function convertAndReadToast(title: string): Promise<void> {
@@ -102,17 +90,30 @@ describe("LeadDetailScreen", () => {
     expect(mockBack).toHaveBeenCalled();
   });
 
-  it("shows the name, its stage and the facts as rows", async () => {
+  it("heads the lead with T3's record panel: name, stage, facts line and actions", async () => {
     await renderDetail(detailFetch(leadFixture()));
-    expect(await screen.findByText("Rohit Malhotra")).toBeOnTheScreen();
-    expect(screen.getByLabelText("New")).toBeOnTheScreen();
-    expect(screen.getByLabelText("Dates: 12–14 DEC 2027")).toBeOnTheScreen();
-    expect(screen.getByLabelText("Destination: Udaipur or Goa")).toBeOnTheScreen();
-    expect(screen.getByLabelText("Guests: About 250")).toBeOnTheScreen();
-    expect(screen.getByLabelText("Source: Instagram")).toBeOnTheScreen();
-    expect(screen.getByLabelText("Owner: Unassigned")).toBeOnTheScreen();
-    expect(screen.getByLabelText("Phone: +919911023344")).toBeOnTheScreen();
-    expect(screen.getByLabelText("Marketing consent: No")).toBeOnTheScreen();
+    const header = within(await screen.findByTestId("lead-header"));
+    expect(await header.findByText("Rohit Malhotra")).toBeOnTheScreen();
+    expect(header.getByLabelText("New")).toBeOnTheScreen();
+    expect(
+      header.getByText(
+        "Udaipur or Goa · 12–14 DEC 2027 · About 250 guests · Source: Instagram · Owner: Unassigned",
+      ),
+    ).toBeOnTheScreen();
+    expect(header.getByRole("button", { name: "Log activity" })).toBeOnTheScreen();
+    // The invitation's send button is the one gold action, so it stays out of the header.
+    expect(header.queryByText("Create account and invite")).toBeNull();
+  });
+
+  it("keeps the contact and requirements on their own card", async () => {
+    await renderDetail(detailFetch(leadFixture()));
+    const contact = within(await screen.findByTestId("lead-contact"));
+    expect(contact.getByLabelText("Email: rohit@example.com")).toBeOnTheScreen();
+    expect(contact.getByLabelText("Phone: +919911023344")).toBeOnTheScreen();
+    expect(contact.getByLabelText("Marketing consent: No")).toBeOnTheScreen();
+    expect(
+      contact.getByLabelText("Requirements: Lakeside venue for three functions."),
+    ).toBeOnTheScreen();
     expect(screen.getByLabelText("Demo requested: Yes")).toBeOnTheScreen();
   });
 
@@ -211,19 +212,6 @@ describe("LeadDetailScreen", () => {
     expect(timeline.getByText("Note")).toBeOnTheScreen();
   });
 
-  it("puts the action right after the facts in one column on a phone", async () => {
-    await renderDetail(detailFetch(leadFixture()));
-    await screen.findByTestId("lead-facts");
-    expect(panelOrder()).toEqual(["lead-facts", "lead-invite", "lead-demo"]);
-  });
-
-  it("lays out T3's columns from 1024: facts on the left, demo then invite on the right", async () => {
-    mockWindow.width = 1280;
-    await renderDetail(detailFetch(leadFixture()));
-    await screen.findByTestId("lead-facts");
-    expect(panelOrder()).toEqual(["lead-facts", "lead-demo", "lead-invite"]);
-  });
-
   it("logs an activity from the detail and sends it to the server", async () => {
     mockWindow.width = 1280;
     const bodies: unknown[] = [];
@@ -244,7 +232,7 @@ describe("LeadDetailScreen", () => {
     expect(bodies).toEqual([{ activityType: "whatsapp" }]);
   });
 
-  it("advances an owned lead one funnel stage", async () => {
+  it("advances an owned lead one funnel stage from the record header", async () => {
     const owned = leadFixture({ ownerUserId: STAFF_USER_ID, ownerName: "Sameer Sales" });
     const bodies: unknown[] = [];
     const routes: Routes = {
@@ -257,7 +245,8 @@ describe("LeadDetailScreen", () => {
       },
     };
     await renderDetail(detailFetch(owned, routes));
-    await fireEvent.press(await screen.findByTestId("lead-advance"));
+    const header = within(await screen.findByTestId("lead-header"));
+    await fireEvent.press(await header.findByTestId("lead-advance"));
     expect(await screen.findByText("Moved to Contacted")).toBeOnTheScreen();
     expect(bodies).toEqual([{ status: "contacted" }]);
   });

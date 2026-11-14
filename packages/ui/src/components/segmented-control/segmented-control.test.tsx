@@ -152,6 +152,30 @@ describe("SegmentedControl", () => {
     expect(classes(screen.getByText("Rooms").props.className)).toContain("text-highlight-ink");
   });
 
+  it("marks an underline tab with a gold line under it, not a peacock pill", async () => {
+    await renderWithProviders(
+      <Harness
+        accessibilityLabel="Hotel record"
+        variant="underline"
+        options={HOTEL_TABS}
+        initial="rooms"
+      />,
+    );
+    expect(classes(screen.getByTestId("tabs").props.className)).not.toContain("border");
+    expect(classes(screen.getByTestId("tabs-rooms-pill").props.className)).not.toContain(
+      "bg-highlight",
+    );
+    expect(classes(screen.getByText("Rooms").props.className)).toContain("text-primary");
+    expect(classes(screen.getByText("Rates").props.className)).toContain("text-body");
+    await measureSegments(HOTEL_TABS);
+    const indicator = await screen.findByTestId("tabs-indicator");
+    expect(indicator).toHaveStyle({ width: 80, transform: [{ translateX: 84 }] });
+    expect(classes(indicator.props.className)).toEqual(
+      expect.arrayContaining(["absolute", "bottom-0", "h-0.5", "bg-brand"]),
+    );
+    expect(classes(indicator.props.className)).not.toContain("inset-y-0");
+  });
+
   it("slides the pill to the next selection over the base duration", async () => {
     const timing = jest.spyOn(Animated, "timing");
     await renderWithProviders(

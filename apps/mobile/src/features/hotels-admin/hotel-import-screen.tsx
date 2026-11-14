@@ -11,8 +11,10 @@ import {
   Row,
   Screen,
   ScreenHeader,
+  SplitPane,
   Stack,
   Text,
+  useLayoutAt,
   useToast,
   type ToastOptions,
 } from "@ampm/ui";
@@ -101,10 +103,40 @@ function ImportColumnsHint() {
 interface ContentInputProps {
   readonly content: string;
   readonly setContent: (value: string) => void;
+  /** Beside the side column on a desktop, the box shows a screenful of rows (a prop, not a new box). */
+  readonly tall: boolean;
+}
+
+/** Choose a `.csv` (the web workspace's file picker), with the chosen file's name beside it. */
+function ChooseCsv({
+  fileName,
+  onPress,
+}: {
+  readonly fileName: string | null;
+  readonly onPress: () => void;
+}) {
+  return (
+    <Row gap={2} align="center" wrap>
+      <Button
+        variant="secondary"
+        size="sm"
+        icon="upload"
+        onPress={onPress}
+        testID="hotel-import-choose"
+      >
+        Choose CSV file
+      </Button>
+      {fileName ? (
+        <Text variant="bodySmall" tone="muted">
+          {fileName}
+        </Text>
+      ) : null}
+    </Row>
+  );
 }
 
 /** Choose a `.csv` on the web, or paste the CSV directly (works on every platform). */
-function ImportContentInput({ content, setContent }: ContentInputProps) {
+function ImportContentInput({ content, setContent, tall }: ContentInputProps) {
   const [fileName, setFileName] = useState<string | null>(null);
   const choose = (): void => {
     void pickCsvFile().then((picked) => {
@@ -116,22 +148,7 @@ function ImportContentInput({ content, setContent }: ContentInputProps) {
   };
   return (
     <Stack gap={2}>
-      <Row gap={2} align="center" wrap>
-        <Button
-          variant="secondary"
-          size="sm"
-          icon="upload"
-          onPress={choose}
-          testID="hotel-import-choose"
-        >
-          Choose CSV file
-        </Button>
-        {fileName ? (
-          <Text variant="bodySmall" tone="muted">
-            {fileName}
-          </Text>
-        ) : null}
-      </Row>
+      <ChooseCsv fileName={fileName} onPress={choose} />
       <Input
         label="CSV content"
         value={content}
@@ -141,6 +158,7 @@ function ImportContentInput({ content, setContent }: ContentInputProps) {
         }}
         placeholder="Paste the CSV here, or choose a file above."
         multiline
+        {...(tall ? { numberOfLines: 14 } : {})}
         testID="hotel-import-content"
       />
     </Stack>
@@ -180,6 +198,35 @@ function ImportResultPanel({ result }: { readonly result: HotelImportResult }) {
   );
 }
 
+interface ImportActionsProps {
+  readonly pending: boolean;
+  readonly run: (dryRun: boolean) => void;
+}
+
+/** Validate first (a dry run that saves nothing), then Import, the screen's gold action. */
+function ImportActions({ pending, run }: ImportActionsProps) {
+  return (
+    <Row gap={2} wrap>
+      <Button
+        variant="secondary"
+        loading={pending}
+        onPress={() => run(true)}
+        testID="hotel-import-validate"
+      >
+        Validate
+      </Button>
+      <Button
+        variant="primary"
+        loading={pending}
+        onPress={() => run(false)}
+        testID="hotel-import-run"
+      >
+        Import
+      </Button>
+    </Row>
+  );
+}
+
 export interface HotelImportScreenProps {
   readonly tabBar?: ReactNode;
 }
@@ -188,42 +235,35 @@ export interface HotelImportScreenProps {
  * Bulk-import the hotel catalogue from a CSV (H1.1, TW-25; Hotel team and Super Admin). Paste the CSV or
  * choose a `.csv` file, **Validate** to check it without saving (reports rejected rows by line and field),
  * then **Import** to upsert the valid rows — invalid rows are reported, never applied, and the catalogue
- * refreshes. The server is the gate.
+ * refreshes. The server is the gate. From 1024 the CSV and its actions sit beside a column with the
+ * template help and the result; the column hint moves between two fixed slots (it holds no state), and
+ * the CSV stays in its slot, so a resize never loses what was pasted.
  *
  *   <HotelImportScreen tabBar={<AppTabBar />} />
  */
 export function HotelImportScreen({ tabBar }: HotelImportScreenProps) {
   const router = useRouter();
   const { content, setContent, result, run, pending } = useHotelImportForm();
+  const isDesktop = useLayoutAt("lg");
+  const side = (
+    <Stack gap={4} testID="hotel-import-side">
+      {isDesktop ? <ImportColumnsHint /> : null}
+      {result ? <ImportResultPanel result={result} /> : null}
+    </Stack>
+  );
   return (
     <Screen
       width="wide"
       tabBar={tabBar}
       header={<ScreenHeader eyebrow="Hotels" title="Import hotels" onBack={() => router.back()} />}
     >
-      <Stack gap={4}>
-        <ImportColumnsHint />
-        <ImportContentInput content={content} setContent={setContent} />
-        <Row gap={2} wrap>
-          <Button
-            variant="secondary"
-            loading={pending}
-            onPress={() => run(true)}
-            testID="hotel-import-validate"
-          >
-            Validate
-          </Button>
-          <Button
-            variant="primary"
-            loading={pending}
-            onPress={() => run(false)}
-            testID="hotel-import-run"
-          >
-            Import
-          </Button>
-        </Row>
-        {result ? <ImportResultPanel result={result} /> : null}
-      </Stack>
+      <SplitPane sideWidth="lg" side={side} testID="hotel-import-split">
+        <Stack gap={4} testID="hotel-import-main">
+          {isDesktop ? null : <ImportColumnsHint />}
+          <ImportContentInput content={content} setContent={setContent} tall={isDesktop} />
+          <ImportActions pending={pending} run={run} />
+        </Stack>
+      </SplitPane>
     </Screen>
   );
 }

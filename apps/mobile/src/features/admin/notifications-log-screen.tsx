@@ -19,6 +19,7 @@ import {
 
 import { useGoToSignIn } from "@/navigation/sign-in";
 
+import { AdminSectionNav } from "./admin-section-nav";
 import { NotificationDetailSheet } from "./notification-detail-sheet";
 import {
   formatMoment,
@@ -147,7 +148,11 @@ export function NotificationsLogScreen({ tabBar }: NotificationsLogScreenProps) 
       width="wide"
       tabBar={tabBar}
       header={
-        <ScreenHeader eyebrow={notificationsEyebrow(notifications.data)} title="Notifications" />
+        <ScreenHeader
+          eyebrow={notificationsEyebrow(notifications.data)}
+          title="Notifications"
+          actions={<AdminSectionNav current="notifications" />}
+        />
       }
     >
       <NotificationsBody notifications={notifications} onOpen={setSelected} />

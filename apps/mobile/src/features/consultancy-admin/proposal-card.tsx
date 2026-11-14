@@ -23,11 +23,12 @@ import {
 import { rateItemLabel } from "./consultancy-admin.form";
 import { staffProposalBadge } from "./consultancy-admin.format";
 import { FigureRow, RecordHeader } from "./section-parts";
+import { useSectionCard } from "./use-section-card";
 
 type ProposalLine = HotelProposalInternalView["lines"][number];
 
 /**
- * One proposal version as staff see it (T6 "Proposal, version 1 · draft"). The glass card holds what the
+ * One proposal version as staff see it (T6 "Proposal, version 1 · draft"). The card holds what the
  * client sees: the client total and the client-visible lines, client amounts in MoneyText. The internal
  * total, the derived margin and the internal-only lines sit inside an InternalPanel, never in the card
  * itself (Peacock Night §3, security.md).
@@ -39,8 +40,9 @@ export function ProposalCard({
   readonly proposal: HotelProposalInternalView;
   readonly enquiryId: string;
 }) {
+  const card = useSectionCard();
   return (
-    <Card className="md:p-7" testID={`proposal-${proposal.id}`}>
+    <Card tone={card.tone} className={card.className} testID={`proposal-${proposal.id}`}>
       <Stack gap={4}>
         <RecordHeader
           title={`Proposal, version ${proposal.versionNumber}`}

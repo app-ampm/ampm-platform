@@ -1,7 +1,7 @@
 import { View } from "react-native";
 
 import type { HotelCardSummary, HotelView } from "@ampm/core";
-import { Card, MoneyText, PhotoPlaceholder, Row, Stack, StatusChip, Text } from "@ampm/ui";
+import { Card, cn, MoneyText, PhotoPlaceholder, Row, Stack, StatusChip, Text } from "@ampm/ui";
 
 import { MediaImage } from "@/components/media-image";
 
@@ -19,6 +19,8 @@ import {
 export interface HotelCardProps {
   readonly hotel: HotelView;
   readonly onPress: () => void;
+  /** Extra classes for the card, such as `grow` to fill a grid cell beside a taller neighbour. */
+  readonly className?: string | undefined;
 }
 
 /** The card's photo: the hotel's cover when it has a client-visible image, else the striped stand-in. */
@@ -77,13 +79,13 @@ function CardSummary({ summary }: { readonly summary: HotelCardSummary }) {
  * hotel. The cover is the hotel's primary client-visible image (a signed link); a hotel with no such image
  * keeps the striped stand-in.
  */
-export function HotelCard({ hotel, onPress }: HotelCardProps) {
+export function HotelCard({ hotel, onPress, className }: HotelCardProps) {
   return (
     <Card
       padding="none"
       onPress={onPress}
       accessibilityLabel={`${hotel.name} in ${destinationLabel(hotel.destination)}. ${cardSummaryAccessibilityLabel(hotel.summary)}`}
-      className="gap-1 p-2 md:flex-row md:gap-4"
+      className={cn("gap-1 p-2 md:flex-row md:gap-4", className)}
     >
       <HotelCardPhoto hotel={hotel} />
       <View className="gap-1.5 px-2 pb-2 pt-2 md:flex-1 md:px-0">

@@ -38,6 +38,7 @@ import { CreateToggle } from "./consultancy-admin.widgets";
 import { MilestoneCreateForm } from "./milestone-create-form";
 import { SectionShell } from "./section-parts";
 import { TransitionRow } from "./transition-row";
+import { useSectionCard } from "./use-section-card";
 import { VisitCreateForm } from "./visit-create-form";
 
 const VISIT_NEXT: Record<SiteVisitStatus, readonly SiteVisitStatus[]> = {
@@ -215,7 +216,7 @@ function MilestoneStep({
 
 /**
  * A progress section in the commercial sections' frame (SectionShell): its Gilda heading, the records
- * on a vertical Stepper in one glass card (or, with none yet, the line that says what creates the
+ * on a vertical Stepper in one section card (or, with none yet, the line that says what creates the
  * first), then the section's "New …" action.
  */
 function ProgressSection({
@@ -231,10 +232,11 @@ function ProgressSection({
   readonly testID: string;
   readonly children: ReactNode;
 }) {
+  const card = useSectionCard();
   return (
     <SectionShell title={title} empty={steps.length === 0 ? empty : null}>
       {steps.length > 0 ? (
-        <Card className="md:p-7">
+        <Card tone={card.tone} className={card.className}>
           <Stepper orientation="vertical" current={-1} steps={steps} testID={testID} />
         </Card>
       ) : null}

@@ -20,7 +20,6 @@
   "60": "API Modules and Build Phases",
   "62": "Core Package Manifest",
   "64": "Technology and Operations Decisions",
-  "65": "Client Portal Approvals and Requests",
   "66": "Shared Base TSConfig",
   "70": "Platform, Subscription and Access Decisions",
   "72": "API TSConfig",
@@ -123,6 +122,5 @@
   "225": "api-client/tsconfig.json",
   "226": "core/tsconfig.json",
   "227": "scripts",
-  "229": "nativewind",
-  "232": "react-native-svg"
+  "229": "nativewind"
 }

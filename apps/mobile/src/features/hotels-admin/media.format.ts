@@ -1,5 +1,6 @@
 import type {
   MediaAssetView,
+  MediaKind,
   MediaRightsStatus,
   MediaScanStatus,
   MediaVisibility,
@@ -96,4 +97,35 @@ export function mediaSummary(media: MediaAssetView): string {
   return `${media.caption ?? "Untitled photo"}, ${scanStatusLabel(media.scanStatus)}, visible to ${visibilityLabel(
     media.visibility,
   ).toLowerCase()}`;
+}
+
+/** The name a photo or video goes by in the manager: its caption, or what it is. */
+export function mediaName(media: MediaAssetView): string {
+  return media.caption ?? (media.kind === "video" ? "Untitled video" : "Untitled photo");
+}
+
+/** One line of a hotel's media-rights summary: how many of a kind, and how many still need consent. */
+export interface MediaRightsLine {
+  readonly kind: MediaKind;
+  readonly label: string;
+  readonly count: number;
+  readonly needConsent: number;
+}
+
+const KIND_PLURAL: Record<MediaKind, string> = { image: "Photos", video: "Videos" };
+
+/** The media-rights summary (T5's side panel): photos and videos, each with its consent still owed. */
+export function mediaRightsSummary(items: readonly MediaAssetView[]): MediaRightsLine[] {
+  return (["image", "video"] as const).flatMap((kind) => {
+    const ofKind = items.filter((item) => item.kind === kind);
+    if (ofKind.length === 0) return [];
+    const needConsent = ofKind.filter((item) => !rightsClearedForClients(item.rightsStatus)).length;
+    return [{ kind, label: KIND_PLURAL[kind], count: ofKind.length, needConsent }];
+  });
+}
+
+/** What a summary line says about its rights: "Cleared", or "2 need consent" (T4, T5). */
+export function consentOwedLabel(needConsent: number): string {
+  if (needConsent === 0) return "Cleared";
+  return `${needConsent} ${needConsent === 1 ? "needs" : "need"} consent`;
 }
