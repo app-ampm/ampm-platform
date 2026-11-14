@@ -82,4 +82,24 @@ describe("Dev sign-in (e2e)", () => {
   it("rejects a malformed email at the edge", async () => {
     await http().post("/auth/dev-login").send({ email: "not-an-email" }).expect(400);
   });
+
+  it("mints a demo session: /me is a demo principal who reaches the demo hotels", async () => {
+    // No body: there is one seeded demo prospect (demo-baseline.ts), resolved by user type.
+    const res = await http().post("/auth/dev-login/demo").expect(200);
+    expect(res.body.data.accessToken).toEqual(expect.any(String));
+    expect(res.body.data.user).toMatchObject({ email: "demo@example.com" });
+
+    const token = res.body.data.accessToken as string;
+    const me = await http().get("/me").set("authorization", `Bearer ${token}`).expect(200);
+    // isDemo is a top-level sibling of `principal` in meResponse (identity.ts), not a principal field.
+    expect(me.body.data.principal).toMatchObject({ type: "demo" });
+    expect(me.body.data.isDemo).toBe(true);
+
+    // The demo principal reaches hotel discovery (demo_hotels) with indicative price ranges, where an
+    // unsubscribed client would be refused — proving the sign-in mints the P-7 demo, not a bare client.
+    const hotels = await http().get("/hotels").set("authorization", `Bearer ${token}`).expect(200);
+    const items = hotels.body.data.items as { summary: Record<string, unknown> }[];
+    expect(items.length).toBeGreaterThan(0);
+    expect(items[0]!.summary).toHaveProperty("priceRange");
+  });
 });

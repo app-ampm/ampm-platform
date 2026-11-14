@@ -2,8 +2,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 
-import { useDevLogin } from "@ampm/api-client";
-import { isAppError } from "@ampm/core";
+import { useDemoSignIn, useDevLogin } from "@ampm/api-client";
+import { isAppError, type DevLoginResponse } from "@ampm/core";
 import {
   Button,
   Card,
@@ -36,32 +36,41 @@ const DEMO_CLIENTS = [
   { email: "prospect@example.com", label: "Prasad Prospect" },
 ] as const;
 
-/** Signs in against the local `/auth/dev-login`, stores the token, and lets the entry gate route by role. */
+/** Signs in against the local dev endpoints, stores the token, and lets the entry gate route by role. */
 function useDevSignIn() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const devLogin = useDevLogin();
+  const demo = useDemoSignIn();
+
+  // Clear (not just invalidate) so signing in as a different principal never shows the previous one's
+  // cached data; the "/" gate then routes by principal type (staff, client or demo).
+  const applySession = (result: DevLoginResponse): void => {
+    setAccessToken(result.accessToken);
+    queryClient.clear();
+    router.replace("/");
+  };
 
   const signIn = (email: string): void => {
     const trimmed = email.trim();
     if (trimmed.length === 0 || devLogin.isPending) return;
-    devLogin.mutate(
-      { email: trimmed },
-      {
-        onSuccess: (result) => {
-          setAccessToken(result.accessToken);
-          // Clear (not just invalidate) so signing in as a different principal never shows the previous
-          // one's cached data; the "/" gate then routes by principal type (staff vs client).
-          queryClient.clear();
-          router.replace("/");
-        },
-      },
-    );
+    devLogin.mutate({ email: trimmed }, { onSuccess: applySession });
   };
 
-  const errorText =
-    devLogin.isError && isAppError(devLogin.error) ? devLogin.error.message : undefined;
-  return { signIn, pending: devLogin.isPending, errorText };
+  const enterDemo = (): void => {
+    if (demo.isPending) return;
+    demo.mutate(undefined, { onSuccess: applySession });
+  };
+
+  const error = devLogin.error ?? demo.error;
+  const errorText = isAppError(error) ? error.message : undefined;
+  return {
+    signIn,
+    enterDemo,
+    pending: devLogin.isPending,
+    demoPending: demo.isPending,
+    errorText,
+  };
 }
 
 type DevSignIn = ReturnType<typeof useDevSignIn>;
@@ -116,9 +125,27 @@ interface ChoicesProps {
   readonly nested: boolean;
 }
 
-/** The email form (the one gold action), the seeded quick sign-ins and the gallery link. */
+/** The demo entry, the client and email sign-ins, and the seeded quick sign-ins. */
 function SignInChoices({ session, nested }: ChoicesProps) {
-  const { signIn, pending, errorText } = session;
+  const { signIn, enterDemo, pending, demoPending, errorText } = session;
+  const demo = (
+    <Stack gap={3}>
+      <Text variant="eyebrow">Demo prospect</Text>
+      <Text variant="body" tone="muted">
+        Explore AMPM as a demo guest — a curated set of hotels with indicative prices.
+      </Text>
+      {/* Secondary, not gold: the client OTP step button is the screen's single gold action. */}
+      <Button
+        fullWidth
+        variant="secondary"
+        loading={demoPending}
+        onPress={enterDemo}
+        testID="demo-sign-in"
+      >
+        Explore the demo
+      </Button>
+    </Stack>
+  );
   const client = (
     <Stack gap={3}>
       <Text variant="eyebrow">Client sign-in</Text>
@@ -128,6 +155,7 @@ function SignInChoices({ session, nested }: ChoicesProps) {
   const form = <EmailSignIn onSubmit={signIn} pending={pending} errorText={errorText} />;
   return (
     <>
+      {nested ? demo : <Card>{demo}</Card>}
       {nested ? client : <Card>{client}</Card>}
       {nested ? form : <Card>{form}</Card>}
       <QuickSignIn
