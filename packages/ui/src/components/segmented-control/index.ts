@@ -7,4 +7,8 @@ export {
   segmentedScrollStyles,
   segmentedTrackStyles,
 } from "./segmented-control.styles";
-export type { SegmentLabelState, SegmentedControlSize } from "./segmented-control.styles";
+export type {
+  SegmentLabelState,
+  SegmentedControlSize,
+  SegmentedControlVariant,
+} from "./segmented-control.styles";

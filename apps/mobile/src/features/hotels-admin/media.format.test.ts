@@ -1,5 +1,8 @@
 import {
+  consentOwedLabel,
   isClientFacing,
+  mediaName,
+  mediaRightsSummary,
   mediaSummary,
   rightsClearedForClients,
   rightsLabel,
@@ -46,5 +49,30 @@ describe("media.format", () => {
       visibility: "client",
     });
     expect(mediaSummary(photo)).toBe("Lobby, Ready, visible to clients");
+  });
+
+  it("names a photo or video by its caption, or by what it is", () => {
+    expect(mediaName(mediaAssetFixture({ caption: "Lobby" }))).toBe("Lobby");
+    expect(mediaName(mediaAssetFixture({ caption: null }))).toBe("Untitled photo");
+    expect(mediaName(mediaAssetFixture({ caption: null, kind: "video" }))).toBe("Untitled video");
+  });
+
+  it("summarises the rights per kind, counting the consent still owed", () => {
+    const items = [
+      mediaAssetFixture({ rightsStatus: "consent_required" }),
+      mediaAssetFixture({ rightsStatus: "licensed" }),
+      mediaAssetFixture({ kind: "video", rightsStatus: "consent_obtained" }),
+    ];
+    expect(mediaRightsSummary(items)).toEqual([
+      { kind: "image", label: "Photos", count: 2, needConsent: 1 },
+      { kind: "video", label: "Videos", count: 1, needConsent: 0 },
+    ]);
+    expect(mediaRightsSummary([])).toEqual([]);
+  });
+
+  it("says what consent is owed", () => {
+    expect(consentOwedLabel(0)).toBe("Cleared");
+    expect(consentOwedLabel(1)).toBe("1 needs consent");
+    expect(consentOwedLabel(3)).toBe("3 need consent");
   });
 });

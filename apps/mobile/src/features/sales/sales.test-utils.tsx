@@ -1,6 +1,6 @@
 import type { LeadActivityView, LeadFunnelView, LeadView, MeResponse } from "@ampm/core";
 
-import { failure, TEST_API_BASE } from "../../test/api";
+import { failure, ok, TEST_API_BASE } from "../../test/api";
 
 export { failure, ok, renderWithApi } from "../../test/api";
 
@@ -118,4 +118,18 @@ export function routedFetch(routes: Readonly<Record<string, Route>>): FetchFn {
     const route = routes[path];
     return Promise.resolve(route ? route(init) : failure("not_found", 404));
   };
+}
+
+/** The paths a lead's detail reads: the lead, its (empty) timeline and `/me`; `routes` add or override. */
+export function leadDetailFetch(
+  lead: LeadView,
+  routes: Readonly<Record<string, Route>> = {},
+): FetchFn {
+  const leadPath = `/crm/leads/${lead.id}`;
+  return routedFetch({
+    [leadPath]: () => ok(lead),
+    [`${leadPath}/activities`]: () => ok({ items: [] }),
+    "/me": () => ok(staffMeFixture()),
+    ...routes,
+  });
 }

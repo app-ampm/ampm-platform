@@ -45,7 +45,7 @@ describe("ConfigurationScreen", () => {
   it("shows skeletons while the configuration loads", async () => {
     await renderScreen(() => new Promise<Response>(() => {}));
     expect(screen.getByTestId("configuration-loading")).toBeOnTheScreen();
-    expect(screen.getByText("Configuration")).toBeOnTheScreen();
+    expect(screen.getByRole("header", { name: "Configuration" })).toBeOnTheScreen();
   });
 
   it("lists each setting with its value, leaves out the notification templates, and counts them", async () => {

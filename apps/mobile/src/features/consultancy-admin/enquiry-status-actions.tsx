@@ -6,6 +6,7 @@ import { Button, Callout, Card, Row, Stack, Text, useToast } from "@ampm/ui";
 
 import { errorMessage } from "./consultancy-admin.form";
 import { staffEnquiryBadge, statusWords } from "./consultancy-admin.format";
+import { useSectionCard } from "./use-section-card";
 
 /**
  * The legal forward targets per status (the policy matrix §7 graph, role aside — the API still enforces
@@ -62,12 +63,14 @@ export function EnquiryStatusActions({
 }) {
   const { move, pending } = useEnquiryMove(enquiryId);
   const [closing, setClosing] = useState(false);
+  const card = useSectionCard();
   const nexts = NEXT[status];
-  if (nexts.length === 0) return <Callout kind="info" title="This enquiry is closed." />;
+  if (nexts.length === 0)
+    return <Callout kind="info" title="This enquiry is closed." blur={card.tone === "glass"} />;
   return (
     <Stack gap={3}>
       <Text variant="heading">Advance</Text>
-      <Card className="md:p-7">
+      <Card tone={card.tone} className={card.className}>
         <Stack gap={4}>
           <Row gap={2} wrap>
             <ForwardButtons nexts={nexts} pending={pending} onMove={move} />

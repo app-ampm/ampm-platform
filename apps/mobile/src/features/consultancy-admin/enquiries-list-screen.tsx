@@ -1,140 +1,114 @@
-import type { ReactNode } from "react";
-import { useRouter } from "expo-router";
+import { useCallback, type ReactNode } from "react";
+import { useFocusEffect, useRouter } from "expo-router";
 
 import { useStaffEnquiries } from "@ampm/api-client";
-import { formatDayRange, type HotelEnquiryStaffView } from "@ampm/core";
-import {
-  Card,
-  EmptyState,
-  ListItem,
-  QueryErrorState,
-  Screen,
-  ScreenHeader,
-  Skeleton,
-  Stack,
-  StatusChip,
-} from "@ampm/ui";
+import { Card, EmptyState, Screen, ScreenHeader, Stack, useLayoutAt } from "@ampm/ui";
 
-import { useGoToSignIn } from "@/navigation/sign-in";
-
-import {
-  ROLE_WITHOUT_GRANT,
-  UNASSIGNED_BADGE,
-  enquiryQueueLine,
-  queueEyebrow,
-  staffEnquiryBadge,
-} from "./consultancy-admin.format";
+import { queueEyebrow } from "./consultancy-admin.format";
+import { EnquiriesSplit } from "./enquiries-split";
+import { EnquiryPaneLoading } from "./enquiry-pane-loading";
+import { EnquiryQueuePanel } from "./enquiry-queue-panel";
+import { EnquiryQueueRow } from "./enquiry-queue-row";
+import { EnquiryQueueStates } from "./enquiry-queue-states";
 
 type EnquiriesQuery = ReturnType<typeof useStaffEnquiries>;
 
 /**
- * The staff hotel-enquiry queue (consultancy-admin, T6): every account's enquiries, newest first, as
- * rows in one glass panel. A top-level screen: the route passes the app's tab bar, and on wide windows
- * the layout draws the rail instead.
+ * The staff hotel-enquiry queue (consultancy-admin, T6): every account's enquiries, newest first. On a
+ * phone and a tablet, rows in one glass panel under the page's title; tap one to open its page. From
+ * 1024 the queue sits beside an open enquiry, and the open enquiry is a route: once the queue has
+ * loaded, this page is replaced by the first enquiry's, whose one tree keeps a draft across 1024. A
+ * top-level screen: the route passes the app's tab bar, and on wide windows the layout draws the rail.
  */
 export function StaffEnquiriesListScreen({ tabBar }: { readonly tabBar?: ReactNode }) {
+  const isSplit = useLayoutAt("lg");
   const enquiries = useStaffEnquiries();
-  const hasRows = enquiries.isSuccess && enquiries.data.items.length > 0;
-  const eyebrow = hasRows ? queueEyebrow(enquiries.data) : undefined;
+  useOpenFirstBesideQueue(isSplit, enquiries.data?.items[0]?.id);
   return (
     <Screen
       width="wide"
       tabBar={tabBar}
-      header={<ScreenHeader eyebrow={eyebrow} title="Enquiries" />}
+      header={isSplit ? null : <QueueHeader enquiries={enquiries} />}
     >
-      <QueueBody enquiries={enquiries} />
+      <EnquiriesSplit
+        isSplit={isSplit}
+        queue={
+          isSplit ? <EnquiryQueuePanel openId={undefined} /> : <QueuePage enquiries={enquiries} />
+        }
+      >
+        {isSplit ? <NothingOpen enquiries={enquiries} /> : null}
+      </EnquiriesSplit>
     </Screen>
   );
 }
 
-function QueueBody({ enquiries }: { readonly enquiries: EnquiriesQuery }) {
+/**
+ * From 1024, opens the first enquiry in the queue at its own address, in place of this page (no
+ * history entry): the address names what is open, a refresh reopens it, and the queue beside it
+ * changes the selection in place. Only while this page is focused, so a queue page left under a
+ * pushed enquiry never redirects the screen above it when the window widens.
+ */
+function useOpenFirstBesideQueue(isSplit: boolean, firstId: string | undefined): void {
   const router = useRouter();
-  const goToSignIn = useGoToSignIn();
-  if (enquiries.isPending) return <QueueLoading />;
-  if (enquiries.isError)
-    return (
-      <QueryErrorState
-        error={enquiries.error}
-        onRetry={() => void enquiries.refetch()}
-        onSignIn={goToSignIn}
-        signIn={{ title: "Sign in to view enquiries" }}
-        forbidden={ROLE_WITHOUT_GRANT}
-      />
-    );
-  if (enquiries.data.items.length === 0)
-    return (
-      <EmptyState
-        icon="inbox"
-        title="No hotel enquiries yet"
-        description="Enquiries arrive here when a client asks AMPM to check a hotel."
-      />
-    );
-  return (
-    <Card padding="sm" className="md:p-5.5">
-      <Stack gap={2}>
-        {enquiries.data.items.map((enquiry) => (
-          <EnquiryRow
-            key={enquiry.id}
-            enquiry={enquiry}
-            onPress={() => router.push(`/enquiries/${enquiry.id}`)}
-          />
-        ))}
-      </Stack>
-    </Card>
+  useFocusEffect(
+    useCallback(() => {
+      if (isSplit && firstId) router.replace(`/enquiries/${firstId}`);
+    }, [isSplit, firstId, router]),
   );
 }
 
 /**
- * One enquiry in the queue: what is being planned, the guests and the age, the stay as data, the
- * status chip and, when nobody holds it yet, the gold "Unassigned" (the team's to pick up). The staff
- * view carries no reference, client or hotel name, so the row leaves them out.
+ * The pane beside the queue while nothing is open: the enquiry's shapes while the queue loads (or the
+ * first enquiry's page is on its way), and a plain word when there is nothing to open.
  */
-function EnquiryRow({
-  enquiry,
-  onPress,
-}: {
-  readonly enquiry: HotelEnquiryStaffView;
-  readonly onPress: () => void;
-}) {
-  const badge = staffEnquiryBadge[enquiry.status];
-  const unassigned = enquiry.assignedUserId === null;
-  const title = enquiry.functionsSummary ?? "Hotel enquiry";
-  const subtitle = enquiryQueueLine(enquiry);
-  const stay = formatDayRange(enquiry.dateFrom, enquiry.dateTo);
-  const spoken = [title, badge.label, unassigned ? UNASSIGNED_BADGE.label : null, subtitle, stay];
+function NothingOpen({ enquiries }: { readonly enquiries: EnquiriesQuery }) {
+  if (enquiries.isError)
+    return (
+      <EmptyState
+        icon="inbox"
+        title="No enquiry open"
+        description="Nothing can open here until the queue loads."
+        testID="enquiry-none-open"
+      />
+    );
+  if (enquiries.isSuccess && enquiries.data.items.length === 0)
+    return (
+      <EmptyState
+        icon="inbox"
+        title="No enquiry open"
+        description="An enquiry opens here once a client asks AMPM to check a hotel."
+        testID="enquiry-none-open"
+      />
+    );
+  return <EnquiryPaneLoading />;
+}
+
+/** The page's title on a phone and a tablet, with the open count over it once the queue has rows. */
+function QueueHeader({ enquiries }: { readonly enquiries: EnquiriesQuery }) {
+  const hasRows = enquiries.isSuccess && enquiries.data.items.length > 0;
   return (
-    <ListItem
-      title={title}
-      subtitle={subtitle}
-      meta={formatDayRange(enquiry.dateFrom, enquiry.dateTo, { style: "data" })}
-      trailing={
-        <Stack gap={1} align="end">
-          <StatusChip label={badge.label} tone={badge.tone} size="sm" className="self-end" />
-          {unassigned ? (
-            <StatusChip
-              label={UNASSIGNED_BADGE.label}
-              tone={UNASSIGNED_BADGE.tone}
-              size="sm"
-              className="self-end"
-            />
-          ) : null}
-        </Stack>
-      }
-      onPress={onPress}
-      accessibilityLabel={spoken.filter(Boolean).join(", ")}
-    />
+    <ScreenHeader eyebrow={hasRows ? queueEyebrow(enquiries.data) : undefined} title="Enquiries" />
   );
 }
 
-/** Rows the height of the loaded ones, in the same panel, so the queue does not jump on arrival. */
-function QueueLoading() {
+/** The queue on its own page: rows in one glass panel; a row opens its enquiry's page. */
+function QueuePage({ enquiries }: { readonly enquiries: EnquiriesQuery }) {
+  const router = useRouter();
   return (
-    <Card padding="sm" className="md:p-5.5">
-      <Stack gap={2} testID="staff-enquiries-loading">
-        <Skeleton className="h-20 w-full" />
-        <Skeleton className="h-20 w-full" />
-        <Skeleton className="h-20 w-full" />
-      </Stack>
-    </Card>
+    <EnquiryQueueStates enquiries={enquiries}>
+      {(page) => (
+        <Card padding="sm" className="md:p-5.5">
+          <Stack gap={2}>
+            {page.items.map((enquiry) => (
+              <EnquiryQueueRow
+                key={enquiry.id}
+                enquiry={enquiry}
+                onPress={() => router.push(`/enquiries/${enquiry.id}`)}
+              />
+            ))}
+          </Stack>
+        </Card>
+      )}
+    </EnquiryQueueStates>
   );
 }

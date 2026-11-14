@@ -1,6 +1,7 @@
 import {
   contactSummary,
   hotelRowSummary,
+  latestVerification,
   hotelStatusLabel,
   hotelStatusTone,
   rateCardStatusLabel,
@@ -12,12 +13,14 @@ import {
   venueTypeLabel,
   verificationFieldGroupLabel,
   verificationSourceLabel,
+  yesNo,
 } from "./hotels-admin.format";
 import {
   hotelContactViewFixture,
   hotelStaffViewFixture,
   roomCategoryViewFixture,
   venueViewFixture,
+  verificationViewFixture,
 } from "./hotels-admin.test-utils";
 
 describe("hotels-admin.format", () => {
@@ -96,5 +99,35 @@ describe("hotels-admin.format", () => {
     expect(rateUnitLabel("per_night")).toBe("per night");
     expect(verificationSourceLabel("site_visit")).toBe("Site visit");
     expect(verificationFieldGroupLabel("rates")).toBe("Rates");
+  });
+
+  it("reads a flag as a word", () => {
+    expect(yesNo(true)).toBe("Yes");
+    expect(yesNo(false)).toBe("No");
+  });
+
+  describe("latestVerification", () => {
+    const at = (n: number, verifiedAt: string | null, fieldGroup: "rates" | "rooms" = "rates") =>
+      verificationViewFixture({
+        id: `018f0000-0000-7000-8000-0000000c120${n}`,
+        verifiedAt,
+        fieldGroup,
+      });
+
+    it("picks the newest dated record of the group, whatever the list's order", () => {
+      const list = [
+        at(1, null),
+        at(2, "2026-10-01T09:00:00Z"),
+        at(3, "2026-11-20T09:00:00Z", "rooms"),
+        at(4, "2026-11-02T06:30:00Z"),
+      ];
+      expect(latestVerification(list, "rates")?.id).toBe("018f0000-0000-7000-8000-0000000c1204");
+    });
+
+    it("has none when the group was never verified on a day", () => {
+      expect(
+        latestVerification([at(1, null), at(2, "2026-10-01T09:00:00Z", "rooms")], "rates"),
+      ).toBe(undefined);
+    });
   });
 });

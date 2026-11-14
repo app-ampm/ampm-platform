@@ -7,13 +7,32 @@ import { variants, type VariantProps } from "../../lib/variants";
 export const screenHeaderStyles = variants("flex flex-col gap-4", {
   variants: {
     size: { title: "", display: "md:gap-6", hero: "md:gap-6" },
+    // T3: a record's header on its own glass panel, 24 by 28 inside on a desktop.
+    variant: { plain: "", panel: "rounded-xl p-5 lg:px-7 lg:py-6" },
   },
-  defaultVariants: { size: "title" },
+  defaultVariants: { size: "title", variant: "plain" },
 });
 
 export type ScreenHeaderStyleProps = VariantProps<typeof screenHeaderStyles>;
 /** title: Gilda 36, 44 from 1024 · display: Gilda 64 for wide desktop pages · hero: 44, 88 from 1024. */
 export type ScreenHeaderSize = NonNullable<ScreenHeaderStyleProps["size"]>;
+/** plain (default): on the canvas · panel: on its own glass panel, a record's header (T3). */
+export type ScreenHeaderVariant = NonNullable<ScreenHeaderStyleProps["variant"]>;
+
+/**
+ * The text block and the actions: stacked on a phone, where the actions wrap under the subtitle; from
+ * 768 the actions sit at the right of the whole block, centred on it (T2, T3, T4, T12).
+ */
+export const screenHeaderBodyStyles = "flex flex-col gap-4 md:flex-row md:items-center md:gap-6";
+/**
+ * The actions wrap rather than run off the edge: under the title on a phone, and onto a second line
+ * at the right from 768 when the title needs its floor (a record's header on a tablet: T3).
+ */
+export const screenHeaderActionsStyles =
+  "flex flex-row flex-wrap items-center gap-2 md:shrink md:justify-end";
+/** The title and a status chip read together: the chip follows the title, wrapping under a long one. */
+export const screenHeaderTitleGroupStyles =
+  "flex flex-1 flex-row flex-wrap items-center gap-x-3 gap-y-1";
 
 /**
  * The title's size per header size, on top of its Text variant. Desktop page titles are larger than a
@@ -27,7 +46,8 @@ export const screenHeaderTitleStyles = variants("", {
   defaultVariants: { size: "title" },
 });
 
-export const screenHeaderTextStyles = variants("flex flex-col gap-1.5", {
+// From 768 the title keeps 224 however many actions sit beside it, so it never collapses to a letter a line.
+export const screenHeaderTextStyles = variants("flex flex-col gap-1.5 md:min-w-56 md:flex-1", {
   variants: {
     // D1: 22 between the hero title and its lead paragraph.
     size: { title: "", display: "", hero: "lg:gap-5.5" },

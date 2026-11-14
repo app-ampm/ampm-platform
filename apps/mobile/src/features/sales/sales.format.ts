@@ -14,6 +14,19 @@ import type { StatusTone } from "@ampm/ui";
  */
 export const PIPELINE_STATUSES: readonly LeadStatus[] = leadStatus.options;
 
+/**
+ * The board's columns (T2): every stage in order with Converted last, then Closed (lost) leads only
+ * when they are asked for, so a board of live work is not padded with the ones that left.
+ */
+export function boardStatuses(showClosed: boolean): readonly LeadStatus[] {
+  return PIPELINE_STATUSES.filter((status) => showClosed || status !== "closed");
+}
+
+/** Whether a lead shows while closed leads are hidden: everything but a closed one. */
+export function isShownLead(lead: LeadView, showClosed: boolean): boolean {
+  return showClosed || lead.status !== "closed";
+}
+
 /** A converted or closed lead has left the pipeline (the status machine's terminal states). */
 const TERMINAL_STATUSES: readonly LeadStatus[] = ["converted", "closed"];
 
@@ -135,6 +148,23 @@ export function formatAge(iso: string, now: number): string {
   if (elapsed < WEEK_MS) return `${Math.floor(elapsed / DAY_MS)}d`;
   if (elapsed < AGE_AS_DATE_AFTER_MS) return `${Math.floor(elapsed / WEEK_MS)}w`;
   return formatDay(iso, { style: "data" });
+}
+
+/**
+ * A lead's facts as its record header's line (T3): "Udaipur or Goa · 12–14 DEC 2027 · About 250 guests ·
+ * Source: Instagram · Owner: Sana Verma". What the lead does not say is left out; source and owner always
+ * show, an owner as "Unassigned" until someone claims the lead.
+ */
+export function leadFacts(lead: LeadView): string {
+  return [
+    lead.destinationText,
+    formatStay(lead.tentativeDateFrom, lead.tentativeDateTo),
+    lead.guestEstimate === null ? null : `About ${lead.guestEstimate} guests`,
+    `Source: ${lead.source.name}`,
+    `Owner: ${lead.ownerName ?? "Unassigned"}`,
+  ]
+    .filter((part): part is string => Boolean(part))
+    .join(" · ");
 }
 
 /** Where and when, as one data line: "Udaipur or Goa · 12–14 FEB 2027 · 250 guests". */

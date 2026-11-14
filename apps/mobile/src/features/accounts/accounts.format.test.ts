@@ -1,5 +1,7 @@
 import {
   accountCreatedLabel,
+  accountDay,
+  accountFactsLine,
   accountRowSummary,
   accountStatusLabel,
   accountStatusTone,
@@ -26,6 +28,17 @@ describe("accounts.format", () => {
 
   it("formats the created label and the screen-reader row summary", () => {
     expect(accountCreatedLabel("2026-11-01T09:00:00Z")).toMatch(/^Added \d+ NOV 2026$/);
+    expect(accountDay("2026-11-01T09:00:00Z")).toMatch(/^\d+ NOV 2026$/);
     expect(accountRowSummary("Taj", "active")).toBe("Taj, active");
+  });
+
+  it("sets the record header's facts line, skipping a couple not yet named", () => {
+    const createdAt = "2026-11-01T09:00:00Z";
+    expect(accountFactsLine({ isDemo: false, coupleNames: "Priya & Arjun", createdAt })).toMatch(
+      /^Client account · Priya & Arjun · Added \d+ NOV 2026$/,
+    );
+    expect(accountFactsLine({ isDemo: true, coupleNames: null, createdAt })).toMatch(
+      /^Demo account · Added \d+ NOV 2026$/,
+    );
   });
 });

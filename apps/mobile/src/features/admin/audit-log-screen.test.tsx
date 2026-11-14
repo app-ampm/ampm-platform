@@ -43,7 +43,7 @@ describe("AuditLogScreen", () => {
   it("shows skeletons while the log loads", async () => {
     await renderLog(() => new Promise<Response>(() => {}));
     expect(screen.getByTestId("audit-loading")).toBeOnTheScreen();
-    expect(screen.getByText("Audit log")).toBeOnTheScreen();
+    expect(screen.getByRole("header", { name: "Audit log" })).toBeOnTheScreen();
   });
 
   it("lists events with action, entity and time, and counts them", async () => {

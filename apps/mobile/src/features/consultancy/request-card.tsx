@@ -3,6 +3,7 @@ import { formatDay, formatDayRange, type HotelEnquiryClientView } from "@ampm/co
 import { Card, cn, Row, StatusChip, Text } from "@ampm/ui";
 
 import { enquiryChip, guestsLabel } from "./consultancy.format";
+import { ViewingMark } from "./viewing-mark";
 
 export interface RequestCardProps {
   readonly enquiry: HotelEnquiryClientView;
@@ -11,6 +12,9 @@ export interface RequestCardProps {
   readonly onOpen: () => void;
 }
 
+const CARD = "gap-1.5 rounded-lg bg-transparent";
+const SELECTED = "border-primary/30 bg-highlight/10";
+
 /** Screen readers hear the open card as the current one (selected natively, aria-current on the web). */
 const current = (selected: boolean) =>
   selected ? { "aria-current": "true" as const, accessibilityState: { selected: true } } : {};
@@ -18,7 +22,8 @@ const current = (selected: boolean) =>
 /**
  * One enquiry in D8's desktop list: the hotel and the day it last moved, the stay and the party, then
  * its status chip. The open one is selected: a peacock tint under a stronger pearl stroke (peacock is
- * what is selected); a closed one reads quieter. A phone keeps `RequestRow`.
+ * what is selected), and the word "Viewing" by its chip, so it never rests on colour alone; a closed
+ * one reads quieter. A phone keeps `RequestRow`.
  */
 export function RequestCard({ enquiry, selected, onOpen }: RequestCardProps) {
   const hotel = useHotel(enquiry.hotelId);
@@ -34,10 +39,7 @@ export function RequestCard({ enquiry, selected, onOpen }: RequestCardProps) {
       onPress={onOpen}
       accessibilityLabel={`${title}, ${chip.label}, ${stay}, ${party}, updated ${updated}`}
       {...current(selected)}
-      className={cn(
-        "gap-1.5 rounded-lg bg-transparent",
-        selected && "border-primary/30 bg-highlight/10",
-      )}
+      className={cn(CARD, selected && SELECTED)}
       testID={`request-card-${enquiry.id}`}
     >
       <Row gap={3} justify="between" align="start">
@@ -54,7 +56,10 @@ export function RequestCard({ enquiry, selected, onOpen }: RequestCardProps) {
         </Text>
       </Row>
       <Text variant="bodySmall" tone="muted">{`${stay} · ${party}`}</Text>
-      <StatusChip label={chip.label} tone={chip.tone} size="sm" className="self-start" />
+      <Row gap={3} justify="between" align="center">
+        <StatusChip label={chip.label} tone={chip.tone} size="sm" />
+        <ViewingMark selected={selected} />
+      </Row>
     </Card>
   );
 }

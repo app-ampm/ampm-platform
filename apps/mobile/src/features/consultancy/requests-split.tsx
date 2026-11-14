@@ -16,12 +16,19 @@ export interface RequestsSplitProps {
   readonly children: ReactNode;
 }
 
-/** The list column: choosing the enquiry already open stays put (no rebuilt screen, no duplicate entry). */
+/**
+ * The list column. Choosing an enquiry changes the open one in place, at its own address: on an
+ * enquiry's page the route's id changes (no new screen, so the list keeps its scroll and Back does not
+ * walk through every enquiry viewed); on the list's own page, before the newest has opened, that page
+ * is replaced. Choosing the enquiry already open does nothing.
+ */
 function RequestsSide({ openId }: { readonly openId: string | undefined }) {
   const router = useRouter();
   const enquiries = useHotelEnquiries();
   const onOpen = (id: string): void => {
-    if (id !== openId) router.push(`/portal/requests/${id}`);
+    if (id === openId) return;
+    if (openId === undefined) router.replace(`/portal/requests/${id}`);
+    else router.setParams({ id });
   };
   return <RequestsPanel enquiries={enquiries} selectedId={openId} onOpen={onOpen} />;
 }

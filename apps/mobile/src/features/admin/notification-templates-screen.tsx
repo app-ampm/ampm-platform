@@ -19,6 +19,7 @@ import {
 import { useGoToSignIn } from "@/navigation/sign-in";
 import { rolesGrant } from "@/navigation/staff-areas";
 
+import { AdminSectionNav } from "./admin-section-nav";
 import { NotificationTemplateDetailSheet } from "./notification-template-detail-sheet";
 import { NotificationTemplateEditSheet } from "./notification-template-edit-sheet";
 import {
@@ -145,7 +146,11 @@ export function NotificationTemplatesScreen({ tabBar }: NotificationTemplatesScr
       width="wide"
       tabBar={tabBar}
       header={
-        <ScreenHeader eyebrow={templatesEyebrow(templates.data)} title="Notification templates" />
+        <ScreenHeader
+          eyebrow={templatesEyebrow(templates.data)}
+          title="Notification templates"
+          actions={<AdminSectionNav current="notification-templates" />}
+        />
       }
     >
       <TemplatesBody templates={templates} onOpen={setSelected} />

@@ -1,6 +1,6 @@
 import { useLeadActivities } from "@ampm/api-client";
 import type { LeadActivityView } from "@ampm/core";
-import { Button, Card, Row, Stack, Stepper, Text, type StepperStep } from "@ampm/ui";
+import { Card, cn, Stack, Stepper, Text, type StepperStep } from "@ampm/ui";
 
 import { activityLabel, formatMoment } from "./sales.format";
 
@@ -41,34 +41,21 @@ function Timeline({ leadId }: { readonly leadId: string }) {
 
 export interface LeadActivityCardProps {
   readonly leadId: string;
-  /** Opens the log-activity sheet; omitted on a terminal (read-only) lead, so the action is hidden. */
-  readonly onAdd?: (() => void) | undefined;
+  /** Layout from the screen: `flex-1` fills T3's main column to the height of the side one. */
+  readonly className?: string | undefined;
 }
 
 /**
- * A lead's activity timeline (T3) with the action to log a new touch (`crm.leads.update`). The timeline
- * is secondary context; the card always shows so a salesperson can log the first activity.
+ * A lead's activity timeline (T3), newest first. Logging a touch is the record header's action, so the
+ * card only reads; it always shows, saying so when nothing is logged yet.
  *
- *   <LeadActivityCard leadId={lead.id} onAdd={openSheet} />
+ *   <LeadActivityCard leadId={lead.id} />
  */
-export function LeadActivityCard({ leadId, onAdd }: LeadActivityCardProps) {
+export function LeadActivityCard({ leadId, className }: LeadActivityCardProps) {
   return (
-    <Card className="md:p-6" testID="lead-activity">
+    <Card className={cn("md:p-6", className)} testID="lead-activity">
       <Stack gap={4}>
-        <Row gap={2} align="center" justify="between">
-          <Text variant="subheading">Activity</Text>
-          {onAdd ? (
-            <Button
-              variant="secondary"
-              size="sm"
-              icon="plus"
-              onPress={onAdd}
-              testID="lead-activity-add"
-            >
-              Log activity
-            </Button>
-          ) : null}
-        </Row>
+        <Text variant="subheading">Activity</Text>
         <Timeline leadId={leadId} />
       </Stack>
     </Card>

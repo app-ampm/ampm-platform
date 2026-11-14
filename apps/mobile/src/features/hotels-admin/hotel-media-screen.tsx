@@ -1,5 +1,4 @@
 import { useState, type ReactNode } from "react";
-import { useRouter } from "expo-router";
 import type { UseQueryResult } from "@tanstack/react-query";
 
 import { useAddHotelMedia, useDeleteMedia, useHotelMedia, useStaffHotel } from "@ampm/api-client";
@@ -15,20 +14,21 @@ import {
   Card,
   ConfirmSheet,
   EmptyState,
+  Grid,
   QueryErrorState,
-  Row,
   Screen,
-  ScreenHeader,
   Skeleton,
   Stack,
+  useLayoutAt,
   useToast,
 } from "@ampm/ui";
 
 import { useGoToSignIn } from "@/navigation/sign-in";
 
-import { HotelProfileEditSheet } from "./hotel-profile-edit-sheet";
+import { HotelRecordHeader } from "./hotel-record-header";
 import { MediaEditSheet } from "./media-edit-sheet";
 import { MediaRow } from "./media-row";
+import { MediaTile } from "./media-tile";
 import { pickMediaFile } from "./pick-media-file";
 
 /** Filenames a blank browser MIME still identifies as a video the server can sniff (ISO-BMFF ftyp). */
@@ -143,49 +143,54 @@ function MediaBody({ media, onEdit, onDelete }: BodyProps) {
       />
     );
   }
+  return <MediaList items={media.data.items} onEdit={onEdit} onDelete={onDelete} />;
+}
+
+/**
+ * The hotel's photos and videos: rows on a phone, a grid of tiles from 768 (three across, four from
+ * 1024). Rows and tiles hold no state of their own (the editor and the confirm live on the screen), so
+ * swapping them when the window crosses 768 loses nothing.
+ */
+function MediaList({
+  items,
+  onEdit,
+  onDelete,
+}: Omit<BodyProps, "media"> & { readonly items: readonly MediaAssetView[] }) {
+  const isWide = useLayoutAt("md");
   return (
     <Card testID="media-list">
-      <Stack gap={4}>
-        {media.data.items.map((item) => (
-          <MediaRow key={item.id} media={item} onEdit={onEdit} onDelete={onDelete} />
-        ))}
-      </Stack>
+      {isWide ? (
+        <Grid columns={{ md: 3, lg: 4 }} gap={4} testID="media-grid">
+          {items.map((item) => (
+            <MediaTile key={item.id} media={item} onEdit={onEdit} onDelete={onDelete} />
+          ))}
+        </Grid>
+      ) : (
+        <Stack gap={4}>
+          {items.map((item) => (
+            <MediaRow key={item.id} media={item} onEdit={onEdit} onDelete={onDelete} />
+          ))}
+        </Stack>
+      )}
     </Card>
   );
 }
 
 type MediaManager = ReturnType<typeof useMediaManager>;
 
-/** The hotel screen's header actions: edit the profile (once it has loaded) and add a photo or video. */
-function HotelScreenActions({
-  canEdit,
-  adding,
-  onEdit,
-  onAddMedia,
-}: {
-  readonly canEdit: boolean;
-  readonly adding: boolean;
-  readonly onEdit: () => void;
-  readonly onAddMedia: () => void;
-}) {
+/** The media manager's gold action: pick a photo or video and add it to the hotel. */
+function AddMediaButton({ manager }: { readonly manager: MediaManager }) {
   return (
-    <Row gap={2}>
-      {canEdit ? (
-        <Button variant="secondary" size="sm" onPress={onEdit} testID="hotel-edit-profile">
-          Edit profile
-        </Button>
-      ) : null}
-      <Button
-        variant="primary"
-        size="sm"
-        icon="plus"
-        loading={adding}
-        onPress={onAddMedia}
-        testID="media-add"
-      >
-        Add media
-      </Button>
-    </Row>
+    <Button
+      variant="primary"
+      size="sm"
+      icon="plus"
+      loading={manager.adding}
+      onPress={() => void manager.addMedia()}
+      testID="media-add"
+    >
+      Add media
+    </Button>
   );
 }
 
@@ -209,42 +214,6 @@ function DeleteMediaConfirm({ manager }: { readonly manager: MediaManager }) {
   );
 }
 
-/** A link from the media manager to the hotel's rooms, venues and contacts workspace. */
-function HotelDetailsLink({ hotelId }: { readonly hotelId: string }) {
-  const router = useRouter();
-  return (
-    <Button
-      variant="secondary"
-      icon="landmark"
-      fullWidth
-      onPress={() =>
-        router.push({ pathname: "/hotels-admin/[hotelId]/details", params: { hotelId } })
-      }
-      testID="hotel-details-link"
-    >
-      Rooms, venues & contacts
-    </Button>
-  );
-}
-
-/** A link from the media manager to the hotel's rate cards workspace. */
-function HotelRatesLink({ hotelId }: { readonly hotelId: string }) {
-  const router = useRouter();
-  return (
-    <Button
-      variant="secondary"
-      icon="receipt"
-      fullWidth
-      onPress={() =>
-        router.push({ pathname: "/hotels-admin/[hotelId]/rates", params: { hotelId } })
-      }
-      testID="hotel-rates-link"
-    >
-      Rate cards
-    </Button>
-  );
-}
-
 export interface HotelMediaScreenProps {
   readonly hotelId: string;
   readonly tabBar?: ReactNode;
@@ -262,36 +231,20 @@ export function HotelMediaScreen({ hotelId, tabBar }: HotelMediaScreenProps) {
   const hotel = useStaffHotel(hotelId);
   const media = useHotelMedia(hotelId);
   const manager = useMediaManager(hotelId);
-  const [editingProfile, setEditingProfile] = useState(false);
   return (
     <Screen
       width="wide"
       tabBar={tabBar}
       header={
-        <ScreenHeader
-          eyebrow={hotel.data?.name ?? "Hotel"}
-          title="Media"
-          trailing={
-            <HotelScreenActions
-              canEdit={hotel.data !== undefined}
-              adding={manager.adding}
-              onEdit={() => setEditingProfile(true)}
-              onAddMedia={() => void manager.addMedia()}
-            />
-          }
+        <HotelRecordHeader
+          hotelId={hotelId}
+          section="media"
+          hotel={hotel.data}
+          actions={<AddMediaButton manager={manager} />}
         />
       }
     >
-      <Stack gap={4}>
-        <HotelDetailsLink hotelId={hotelId} />
-        <HotelRatesLink hotelId={hotelId} />
-        <MediaBody media={media} onEdit={manager.startEdit} onDelete={manager.startDelete} />
-      </Stack>
-      <HotelProfileEditSheet
-        open={editingProfile}
-        hotel={hotel.data ?? null}
-        onClose={() => setEditingProfile(false)}
-      />
+      <MediaBody media={media} onEdit={manager.startEdit} onDelete={manager.startDelete} />
       <MediaEditSheet hotelId={hotelId} media={manager.editing} onClose={manager.closeEdit} />
       <DeleteMediaConfirm manager={manager} />
     </Screen>

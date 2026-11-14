@@ -10,6 +10,7 @@ import { feeStructureLabel } from "./consultancy-admin.form";
 import { staffAgreementBadge } from "./consultancy-admin.format";
 import { RecordHeader } from "./section-parts";
 import { TransitionRow } from "./transition-row";
+import { useSectionCard } from "./use-section-card";
 
 const AGREEMENT_NEXT: Record<ServiceAgreementStatus, readonly ServiceAgreementStatus[]> = {
   draft: ["sent", "cancelled"],
@@ -39,8 +40,9 @@ export function AgreementCard({
       { status },
       { onError: () => toast.show({ title: "Could not move the agreement", tone: "danger" }) },
     );
+  const card = useSectionCard();
   return (
-    <Card className="md:p-7" testID={`agreement-${agreement.id}`}>
+    <Card tone={card.tone} className={card.className} testID={`agreement-${agreement.id}`}>
       <Stack gap={3}>
         <RecordHeader title={agreement.serviceName} badge={staffAgreementBadge[agreement.status]} />
         <Text>{agreement.scopeText}</Text>

@@ -10,17 +10,22 @@ import {
   DataTable,
   EmptyState,
   QueryErrorState,
+  Row,
   Screen,
   ScreenHeader,
   Skeleton,
+  SplitPane,
   Stack,
   StatusChip,
   Text,
+  useLayoutAt,
   useToast,
   type DataTableColumn,
 } from "@ampm/ui";
 
 import { useGoToSignIn } from "@/navigation/sign-in";
+import { AdminSectionNav } from "./admin-section-nav";
+import { RoleDetailPanel } from "./role-detail-panel";
 import { RoleDetailSheet } from "./role-detail-sheet";
 import { RoleEditSheet } from "./role-edit-sheet";
 import { roleSummary, roleTypeLabel, roleTypeTone } from "./roles.format";
@@ -68,13 +73,14 @@ function RolesLoading() {
   );
 }
 
-function RolesBody({
-  roles,
-  onOpen,
-}: {
+interface RolesBodyProps {
   readonly roles: UseQueryResult<RoleView[]>;
   readonly onOpen: (role: RoleView) => void;
-}) {
+  /** The role open in the side column, marked in the table; none while it opens on a sheet. */
+  readonly openId: string | undefined;
+}
+
+function RolesBody({ roles, onOpen, openId }: RolesBodyProps) {
   const goToSignIn = useGoToSignIn();
   if (roles.isPending) return <RolesLoading />;
   if (roles.isError) {
@@ -107,6 +113,7 @@ function RolesBody({
         keyExtractor={(role) => role.id}
         onRowPress={onOpen}
         rowAccessibilityLabel={roleSummary}
+        selectedKey={openId}
       />
     </Card>
   );
@@ -156,66 +163,91 @@ function useRolesEditor() {
   };
 }
 
+/** The confirmation before a custom role is deleted. */
+function RoleDeleteConfirm({ editor }: { readonly editor: ReturnType<typeof useRolesEditor> }) {
+  return (
+    <ConfirmSheet
+      open={editor.deleting !== null}
+      onClose={editor.cancelDelete}
+      title={editor.deleting ? `Delete ${editor.deleting.name}?` : "Delete role?"}
+      description="This removes the role for everyone who holds it, and signs them out."
+      confirmLabel="Delete role"
+      destructive
+      loading={editor.deletePending}
+      onConfirm={editor.confirmDelete}
+      testID="role-delete"
+    />
+  );
+}
+
 export interface RolesScreenProps {
   readonly tabBar?: ReactNode;
 }
 
+/** The page's gold action: create a custom role. */
+function NewRoleButton({ onPress }: { readonly onPress: () => void }) {
+  return (
+    <Button variant="primary" size="sm" icon="plus" onPress={onPress} testID="role-new">
+      New role
+    </Button>
+  );
+}
+
+/** The title with the section strip at its right; New role sits beside the title on a phone only. */
+function RolesHeader({ newRole }: { readonly newRole: ReactNode }) {
+  return (
+    <ScreenHeader
+      eyebrow="Admin console"
+      title="Roles and permissions"
+      trailing={newRole}
+      actions={<AdminSectionNav current="roles" />}
+    />
+  );
+}
+
 /**
- * The roles-and-permissions surface (TW-91): every role in a table (tap for its permissions, grouped
- * by module), plus the custom-role editor (D-036) — a Super Admin creates a role from the capability
- * pick-list, and edits or deletes a custom one from its detail sheet. System roles are read-only. All
- * of it is Super-Admin only, gated server-side.
+ * The roles-and-permissions surface (TW-91, T12): every role in a table (pick one for its
+ * permissions, grouped by module), plus the custom-role editor (D-036) — a Super Admin creates a role
+ * from the capability pick-list, and edits or deletes a custom one from its detail. System roles are
+ * read-only. All of it is Super-Admin only, gated server-side.
+ *
+ * The picked role opens on a sheet below 1024 and in T12's 300 side column from there. The pick is
+ * held here, above that switch, so crossing 1024 keeps it open in whichever form fits. New role sits
+ * beside the title on a phone and above the table from 768, where the strip takes the header's right.
  *
  *   <RolesScreen tabBar={<AppTabBar />} />
  */
 export function RolesScreen({ tabBar }: RolesScreenProps) {
   const roles = useAssignableRoles();
   const editor = useRolesEditor();
+  const isTablet = useLayoutAt("md");
+  const isDesktop = useLayoutAt("lg");
+  const newRole = <NewRoleButton onPress={editor.startCreate} />;
+  const openId = isDesktop ? editor.selected?.id : undefined;
+  const manage = {
+    onClose: editor.closeDetail,
+    onEdit: editor.startEdit,
+    onDelete: editor.startDelete,
+  };
+  const header = <RolesHeader newRole={isTablet ? undefined : newRole} />;
   return (
-    <Screen
-      width="wide"
-      tabBar={tabBar}
-      header={
-        <ScreenHeader
-          eyebrow="Admin console"
-          title="Roles and permissions"
-          trailing={
-            <Button
-              variant="primary"
-              size="sm"
-              icon="plus"
-              onPress={editor.startCreate}
-              testID="role-new"
-            >
-              New role
-            </Button>
-          }
-        />
-      }
-    >
-      <RolesBody roles={roles} onOpen={editor.openDetail} />
-      <RoleDetailSheet
-        role={editor.selected}
-        onClose={editor.closeDetail}
-        onEdit={editor.startEdit}
-        onDelete={editor.startDelete}
-      />
+    <Screen width="wide" tabBar={tabBar} header={header}>
+      <Stack gap={4}>
+        {isTablet ? <Row justify="end">{newRole}</Row> : null}
+        <SplitPane
+          sideWidth="sm"
+          side={isDesktop ? <RoleDetailPanel role={editor.selected} {...manage} /> : null}
+        >
+          <RolesBody roles={roles} onOpen={editor.openDetail} openId={openId} />
+        </SplitPane>
+      </Stack>
+      <RoleDetailSheet role={isDesktop ? null : editor.selected} {...manage} />
       <RoleEditSheet
         open={editor.editing !== null}
         role={editor.editing?.role ?? null}
         onClose={editor.closeEditor}
       />
-      <ConfirmSheet
-        open={editor.deleting !== null}
-        onClose={editor.cancelDelete}
-        title={editor.deleting ? `Delete ${editor.deleting.name}?` : "Delete role?"}
-        description="This removes the role for everyone who holds it, and signs them out."
-        confirmLabel="Delete role"
-        destructive
-        loading={editor.deletePending}
-        onConfirm={editor.confirmDelete}
-        testID="role-delete"
-      />
+      <RoleDeleteConfirm editor={editor} />
     </Screen>
   );
 }

@@ -4,6 +4,8 @@ import { textStyles } from "../text/text.styles";
 
 const TRACK_FRAME = "rounded-full border border-primary/16 bg-surface/50";
 const TRACK_LAYOUT = "flex flex-row gap-1 p-1";
+/** The underline strip has no track: the tabs sit on the canvas, 8 apart (T3, T5). */
+const UNDERLINE_LAYOUT = "flex flex-row gap-2";
 
 /**
  * The pill track: midnight 50% with a pearl 16% stroke and 4 inside, segments 4 apart. It hugs its
@@ -15,15 +17,21 @@ const TRACK_LAYOUT = "flex flex-row gap-1 p-1";
  *     </button>
  *   </div>
  */
-export const segmentedTrackStyles = variants([TRACK_FRAME, TRACK_LAYOUT], {
+export const segmentedTrackStyles = variants("", {
   variants: {
+    variant: { pill: [TRACK_FRAME, TRACK_LAYOUT], underline: UNDERLINE_LAYOUT },
     fullWidth: { true: "self-stretch", false: "self-start" },
   },
-  defaultVariants: { fullWidth: false },
+  defaultVariants: { variant: "pill", fullWidth: false },
 });
 
 /** The scrollable strip (the hotel page tabs): the track spans the width, segments scroll inside. */
-export const segmentedScrollStyles = `${TRACK_FRAME} grow-0 self-stretch overflow-hidden`;
+export const segmentedScrollStyles = variants("grow-0 self-stretch overflow-hidden", {
+  variants: {
+    variant: { pill: TRACK_FRAME, underline: "" },
+  },
+  defaultVariants: { variant: "pill" },
+});
 
 /**
  * The strip's scrolling content. It keeps the track's 4 around the segments, except that a small
@@ -41,10 +49,26 @@ export const segmentedScrollContentStyles = variants("flex flex-row", {
  * In the app, the segments and the sliding pill share a row with no padding of its own, so where a
  * segment is measured is where the pill goes. The row fills the width of a full-width track.
  */
-export const segmentedRowStyles = "relative flex grow flex-row gap-1";
+export const segmentedRowStyles = variants("relative flex grow flex-row", {
+  variants: {
+    variant: { pill: "gap-1", underline: "gap-2" },
+  },
+  defaultVariants: { variant: "pill" },
+});
 
-/** The peacock pill behind the selected segment; it slides when the selection changes. */
-export const segmentIndicatorStyles = "absolute inset-y-0 left-0 rounded-full bg-highlight";
+/**
+ * The selection mark that slides to the next selection: the peacock pill behind the selected segment,
+ * or a 2px gold line under the selected tab of an underline strip (T3 Activity, T5 Rate cards).
+ */
+export const segmentIndicatorStyles = variants("absolute left-0", {
+  variants: {
+    variant: {
+      pill: "inset-y-0 rounded-full bg-highlight",
+      underline: "bottom-0 h-0.5 rounded-full bg-brand",
+    },
+  },
+  defaultVariants: { variant: "pill" },
+});
 
 /**
  * A segment: a pill, peacock when selected; a pearl 8% fill on hover (web) or press when not; the gold
@@ -63,6 +87,7 @@ export const segmentStyles = variants(
   {
     variants: {
       size: { sm: "px-3 py-1.5", md: "px-4 py-2" },
+      variant: { pill: "", underline: "" },
       selected: { true: "", false: "" },
       indicator: { true: "", false: "" },
       disabled: { true: "web:cursor-not-allowed", false: "web:cursor-pointer" },
@@ -70,7 +95,8 @@ export const segmentStyles = variants(
       nested: { true: groupFocusRingStyles, false: focusRingStyles },
     },
     compoundVariants: [
-      { selected: true, indicator: false, className: "bg-highlight" },
+      // An underline tab is marked by its label until the gold line is measured under it.
+      { variant: "pill", selected: true, indicator: false, className: "bg-highlight" },
       {
         selected: false,
         disabled: false,
@@ -86,6 +112,7 @@ export const segmentStyles = variants(
     ],
     defaultVariants: {
       size: "md",
+      variant: "pill",
       selected: false,
       indicator: false,
       disabled: false,
@@ -110,7 +137,10 @@ export const segmentTargetStyles = variants("group flex web:outline-none", {
   defaultVariants: { size: "md", disabled: false, fullWidth: false },
 });
 
-/** The label: midnight on the peacock pill, pearl 80% beside it, pearl 45% when disabled. */
+/**
+ * The label: midnight on the peacock pill, pearl 80% beside it, pearl 45% when disabled. On an underline
+ * strip the selected tab's label is pearl 100% over its gold line.
+ */
 export const segmentLabelStyles = variants(
   textStyles({ variant: "label", tone: "inherit", align: "center" }),
   {
@@ -120,11 +150,15 @@ export const segmentLabelStyles = variants(
         default: "text-body",
         disabled: "text-primary/45",
       },
+      variant: { pill: "", underline: "" },
     },
-    defaultVariants: { state: "default" },
+    compoundVariants: [{ variant: "underline", state: "selected", className: "text-primary" }],
+    defaultVariants: { state: "default", variant: "pill" },
   },
 );
 
 export type SegmentStyleProps = VariantProps<typeof segmentStyles>;
 export type SegmentedControlSize = NonNullable<SegmentStyleProps["size"]>;
+/** pill (default): the peacock pill on a track · underline: tabs over a sliding gold line (T3, T5). */
+export type SegmentedControlVariant = NonNullable<SegmentStyleProps["variant"]>;
 export type SegmentLabelState = NonNullable<VariantProps<typeof segmentLabelStyles>["state"]>;

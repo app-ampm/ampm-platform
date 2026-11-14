@@ -75,10 +75,38 @@ export function subscriptionStatusTone(status: SubscriptionStatus): StatusTone {
 
 /** The account's creation day, set as data ("3 NOV 2026"), for a list row's meta line. */
 export function accountCreatedLabel(createdAt: string): string {
-  return `Added ${formatDay(createdAt, { style: "data" })}`;
+  return `Added ${accountDay(createdAt)}`;
+}
+
+/** A day set as data ("3 NOV 2026"), for a table cell or a detail row. */
+export function accountDay(iso: string): string {
+  return formatDay(iso, { style: "data" });
 }
 
 /** A screen-reader summary of one account row. */
 export function accountRowSummary(name: string, status: ClientAccountStatus): string {
   return `${name}, ${accountStatusLabel(status).toLowerCase()}`;
+}
+
+/** A demo account (sales demos and tests) reads apart from a paying client's. */
+export function accountTypeLabel(isDemo: boolean): string {
+  return isDemo ? "Demo account" : "Client account";
+}
+
+/**
+ * The record header's facts line (T3's meta line): the kind of account, the couple and when it was
+ * added: "Client account · Priya & Arjun · Added 1 NOV 2026".
+ */
+export function accountFactsLine(account: {
+  readonly isDemo: boolean;
+  readonly coupleNames: string | null;
+  readonly createdAt: string;
+}): string {
+  return [
+    accountTypeLabel(account.isDemo),
+    account.coupleNames,
+    accountCreatedLabel(account.createdAt),
+  ]
+    .filter((part): part is string => Boolean(part))
+    .join(" · ");
 }

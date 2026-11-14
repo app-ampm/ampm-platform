@@ -1,4 +1,4 @@
-import { fireEvent, screen, within } from "../../test/render";
+import { fireEvent, screen, waitFor, within } from "../../test/render";
 import { StaffUserDetailScreen } from "./staff-user-detail-screen";
 import {
   STAFF_USER_ID,
@@ -115,5 +115,7 @@ describe("StaffUserDetailScreen — roles", () => {
     expect(screen.getByTestId("role-finance")).toBeOnTheScreen();
     await fireEvent.press(screen.getByTestId("role-finance"));
     expect(await screen.findByText("Finance / Accounts added")).toBeOnTheScreen();
+    // Let the checklist settle once the save is done, so no update lands after the test.
+    await waitFor(() => expect(screen.getByTestId("role-finance")).toBeEnabled());
   });
 });

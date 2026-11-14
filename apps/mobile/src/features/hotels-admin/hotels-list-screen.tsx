@@ -10,53 +10,17 @@ import {
   DataTable,
   EmptyState,
   QueryErrorState,
-  Row,
   Screen,
   ScreenHeader,
   Skeleton,
   Stack,
-  StatusChip,
-  Text,
-  type DataTableColumn,
 } from "@ampm/ui";
 
 import { useGoToSignIn } from "@/navigation/sign-in";
 
 import { HotelProfileEditSheet } from "./hotel-profile-edit-sheet";
-import { hotelRowSummary, hotelStatusLabel, hotelStatusTone } from "./hotels-admin.format";
-
-const COLUMNS: DataTableColumn<HotelStaffView>[] = [
-  {
-    key: "name",
-    header: "Hotel",
-    width: 240,
-    grow: true,
-    render: (hotel) => (
-      <Text variant="body" numberOfLines={1}>
-        {hotel.name}
-      </Text>
-    ),
-  },
-  {
-    key: "status",
-    header: "Status",
-    width: 120,
-    render: (hotel) => (
-      <StatusChip
-        label={hotelStatusLabel(hotel.status)}
-        tone={hotelStatusTone(hotel.status)}
-        size="sm"
-      />
-    ),
-  },
-  {
-    key: "rooms",
-    header: "Rooms",
-    width: 100,
-    align: "end",
-    render: (hotel) => <Text variant="data">{hotel.totalRooms ?? "—"}</Text>,
-  },
-];
+import { hotelRowSummary } from "./hotels-admin.format";
+import { useHotelColumns } from "./hotels-table.columns";
 
 function HotelsLoading() {
   return (
@@ -65,6 +29,28 @@ function HotelsLoading() {
       <Skeleton className="h-10 w-full" />
       <Skeleton className="h-10 w-full" />
     </Stack>
+  );
+}
+
+interface TableProps {
+  readonly hotels: readonly HotelStaffView[];
+  readonly onOpen: (hotel: HotelStaffView) => void;
+}
+
+/** The catalogue as a table in a glass panel: T4's columns from 1024, today's three below it. */
+function HotelsTable({ hotels, onOpen }: TableProps) {
+  const columns = useHotelColumns();
+  return (
+    // T4's table sits 26 in from its panel's sides on a desktop.
+    <Card padding="sm" className="lg:px-6" testID="hotels-table">
+      <DataTable
+        columns={columns}
+        rows={hotels}
+        keyExtractor={(hotel) => hotel.id}
+        onRowPress={onOpen}
+        rowAccessibilityLabel={hotelRowSummary}
+      />
+    </Card>
   );
 }
 
@@ -99,16 +85,26 @@ function HotelsBody({
       />
     );
   }
+  return <HotelsTable hotels={hotels.data.items} onOpen={onOpen} />;
+}
+
+/** The page's actions (T4): Import on glass, then the gold New hotel. */
+function HotelsActions({
+  onImport,
+  onCreate,
+}: {
+  readonly onImport: () => void;
+  readonly onCreate: () => void;
+}) {
   return (
-    <Card padding="sm" testID="hotels-table">
-      <DataTable
-        columns={COLUMNS}
-        rows={hotels.data.items}
-        keyExtractor={(hotel) => hotel.id}
-        onRowPress={onOpen}
-        rowAccessibilityLabel={hotelRowSummary}
-      />
-    </Card>
+    <>
+      <Button variant="glass" size="sm" icon="upload" onPress={onImport} testID="hotel-import-link">
+        Import
+      </Button>
+      <Button variant="primary" size="sm" icon="plus" onPress={onCreate} testID="hotel-new">
+        New hotel
+      </Button>
+    </>
   );
 }
 
@@ -117,9 +113,10 @@ export interface HotelsListScreenProps {
 }
 
 /**
- * The staff hotel catalogue (H1.1): the private hotel database. Add a hotel with "New hotel", bulk-load
- * many from a CSV with "Import", or tap one to manage it (edit its profile, add photos, rate cards). Hotel
- * team and Super Admin only, gated server-side.
+ * The staff hotel catalogue (H1.1, T4): the private hotel database. Add a hotel with "New hotel", bulk-load
+ * many from a CSV with "Import", or tap one to manage it (edit its profile, add photos, rate cards). From
+ * 1024 the table carries T4's verification and visibility columns. Hotel team and Super Admin only, gated
+ * server-side.
  *
  *   <HotelsListScreen tabBar={<AppTabBar />} />
  */
@@ -137,27 +134,11 @@ export function HotelsListScreen({ tabBar }: HotelsListScreenProps) {
         <ScreenHeader
           eyebrow="Hotels"
           title="Hotel catalogue"
-          trailing={
-            <Row gap={2}>
-              <Button
-                variant="secondary"
-                size="sm"
-                icon="upload"
-                onPress={() => router.push("/hotels-admin/import")}
-                testID="hotel-import-link"
-              >
-                Import
-              </Button>
-              <Button
-                variant="primary"
-                size="sm"
-                icon="plus"
-                onPress={() => setCreating(true)}
-                testID="hotel-new"
-              >
-                New hotel
-              </Button>
-            </Row>
+          actions={
+            <HotelsActions
+              onImport={() => router.push("/hotels-admin/import")}
+              onCreate={() => setCreating(true)}
+            />
           }
         />
       }

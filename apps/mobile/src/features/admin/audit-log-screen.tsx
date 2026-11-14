@@ -30,10 +30,12 @@ import {
   type DateRange,
   type SelectOption,
   type ToastOptions,
+  useLayoutAt,
 } from "@ampm/ui";
 
 import { useGoToSignIn } from "@/navigation/sign-in";
 
+import { AdminSectionNav } from "./admin-section-nav";
 import { AuditEventDetailSheet } from "./audit-event-detail-sheet";
 import { auditCsv } from "./audit-log.csv";
 import {
@@ -164,6 +166,77 @@ function AuditBody({ events, onOpen }: BodyProps) {
   );
 }
 
+interface FiltersProps {
+  readonly range: DateRange;
+  readonly onRange: (range: DateRange) => void;
+  readonly action: AuditActionName | undefined;
+  readonly onAction: (action: AuditActionName | undefined) => void;
+  readonly exporting: boolean;
+  readonly onExport: () => void;
+}
+
+/**
+ * The date range and action filters, and Export. A phone shares its width between the two filters
+ * and gives Export its own line; from 768 the filters keep fixed widths and Export closes the same
+ * row at the right. Export is a fixed slot in each place (null in the other); it holds no state.
+ */
+function AuditFilters({ range, onRange, action, onAction, exporting, onExport }: FiltersProps) {
+  const isTablet = useLayoutAt("md");
+  const exportButton = (
+    <Button
+      variant="secondary"
+      size="sm"
+      icon="download"
+      loading={exporting}
+      onPress={onExport}
+      className={isTablet ? "ml-auto self-end" : undefined}
+      testID="audit-export"
+    >
+      Export CSV
+    </Button>
+  );
+  return (
+    <>
+      <Row gap={2} wrap align={isTablet ? "end" : "center"} testID="audit-filters">
+        <DateRangeField
+          label="Date range"
+          value={range}
+          onChange={onRange}
+          testID="audit-range"
+          className="min-w-0 flex-1 md:w-64 md:flex-none"
+        />
+        <Select
+          label="Action"
+          value={action ?? "all"}
+          options={ACTION_OPTIONS}
+          onChange={(next) => onAction(next === "all" ? undefined : next)}
+          testID="audit-action"
+          className="min-w-0 flex-1 md:w-48 md:flex-none"
+        />
+        {isTablet ? exportButton : null}
+      </Row>
+      {isTablet ? null : exportButton}
+    </>
+  );
+}
+
+/** Exports the filtered log to a CSV download and says how it went. */
+function useAuditCsvExport(filters: AuditExportQuery) {
+  const toast = useToast();
+  const auditExport = useAuditExport();
+  const run = (): void => {
+    if (auditExport.isPending) return;
+    auditExport.mutate(filters, {
+      onSuccess: (snapshot) => {
+        const saved = downloadCsv("audit-log.csv", auditCsv(snapshot.rows));
+        toast.show(exportToast(saved, snapshot.rowCount, snapshot.truncated));
+      },
+      onError: () => toast.show({ title: "Could not export the audit log", tone: "danger" }),
+    });
+  };
+  return { pending: auditExport.isPending, run };
+}
+
 export interface AuditLogScreenProps {
   readonly tabBar?: ReactNode;
 }
@@ -176,57 +249,33 @@ export interface AuditLogScreenProps {
  *   <AuditLogScreen tabBar={<AppTabBar />} />
  */
 export function AuditLogScreen({ tabBar }: AuditLogScreenProps) {
-  const toast = useToast();
   const [range, setRange] = useState<DateRange>({});
   const [action, setAction] = useState<AuditActionName | undefined>(undefined);
   const filters = useMemo(() => auditFilters(range, action), [range, action]);
   const events = useAuditEvents(filters);
-  const auditExport = useAuditExport();
+  const csv = useAuditCsvExport(filters);
   const [selected, setSelected] = useState<AuditEventView | null>(null);
-  const runExport = (): void => {
-    if (auditExport.isPending) return;
-    auditExport.mutate(filters, {
-      onSuccess: (snapshot) => {
-        const saved = downloadCsv("audit-log.csv", auditCsv(snapshot.rows));
-        toast.show(exportToast(saved, snapshot.rowCount, snapshot.truncated));
-      },
-      onError: () => toast.show({ title: "Could not export the audit log", tone: "danger" }),
-    });
-  };
   return (
     <Screen
       width="wide"
       tabBar={tabBar}
-      header={<ScreenHeader eyebrow={auditEyebrow(events.data)} title="Audit log" />}
+      header={
+        <ScreenHeader
+          eyebrow={auditEyebrow(events.data)}
+          title="Audit log"
+          actions={<AdminSectionNav current="audit" />}
+        />
+      }
     >
       <Stack gap={3}>
-        <Row gap={2} wrap>
-          <DateRangeField
-            label="Date range"
-            value={range}
-            onChange={setRange}
-            testID="audit-range"
-            className="min-w-0 flex-1"
-          />
-          <Select
-            label="Action"
-            value={action ?? "all"}
-            options={ACTION_OPTIONS}
-            onChange={(next) => setAction(next === "all" ? undefined : next)}
-            testID="audit-action"
-            className="min-w-0 flex-1"
-          />
-        </Row>
-        <Button
-          variant="secondary"
-          size="sm"
-          icon="download"
-          loading={auditExport.isPending}
-          onPress={runExport}
-          testID="audit-export"
-        >
-          Export CSV
-        </Button>
+        <AuditFilters
+          range={range}
+          onRange={setRange}
+          action={action}
+          onAction={setAction}
+          exporting={csv.pending}
+          onExport={csv.run}
+        />
         <AuditBody events={events} onOpen={setSelected} />
       </Stack>
       <AuditEventDetailSheet event={selected} onClose={() => setSelected(null)} />

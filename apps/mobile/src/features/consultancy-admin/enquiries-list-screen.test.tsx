@@ -20,6 +20,9 @@ const mockPush = jest.fn();
 const mockReplace = jest.fn();
 jest.mock("expo-router", () => ({
   useRouter: () => ({ back: jest.fn(), replace: mockReplace, push: mockPush }),
+  // A phone-sized window (jest-expo's): the page never opens an enquiry beside the queue here, so its
+  // focus effect has nothing to do; enquiries-desktop.test covers it from 1024.
+  useFocusEffect: () => undefined,
 }));
 
 const LIST = "GET /consultancy-admin/enquiries";

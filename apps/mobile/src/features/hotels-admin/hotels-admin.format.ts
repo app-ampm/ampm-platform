@@ -10,6 +10,7 @@ import type {
   HotelVerificationSource,
   RoomCategoryView,
   VenueView,
+  VerificationView,
 } from "@ampm/core";
 import type { StatusTone } from "@ampm/ui";
 
@@ -39,6 +40,11 @@ export function hotelStatusTone(status: HotelStatus): StatusTone {
 /** A screen-reader summary of one hotel row. */
 export function hotelRowSummary(hotel: HotelStaffView): string {
   return `${hotel.name}, ${hotelStatusLabel(hotel.status).toLowerCase()}`;
+}
+
+/** A yes / no flag as a table cell reads it (Public, Demo), in words rather than colour. */
+export function yesNo(flag: boolean): string {
+  return flag ? "Yes" : "No";
 }
 
 /** A destination's name with its state (e.g. "Udaipur, Rajasthan"), for the hotel editor's picker. */
@@ -150,4 +156,26 @@ const VERIFICATION_FIELD_GROUP_LABEL: Record<HotelVerificationFieldGroup, string
 };
 export function verificationFieldGroupLabel(group: HotelVerificationFieldGroup): string {
   return VERIFICATION_FIELD_GROUP_LABEL[group];
+}
+
+/** A verification with the day it was made, which `latestVerification` guarantees. */
+export type DatedVerification = VerificationView & { readonly verifiedAt: string };
+
+/**
+ * The newest dated verification of a field group. Picked by date here, because the API orders by date
+ * descending and PostgreSQL puts an undated record first.
+ */
+export function latestVerification(
+  verifications: readonly VerificationView[],
+  group: HotelVerificationFieldGroup,
+): DatedVerification | undefined {
+  let latest: DatedVerification | undefined;
+  for (const verification of verifications) {
+    const { verifiedAt } = verification;
+    if (verification.fieldGroup !== group || verifiedAt === null) continue;
+    if (!latest || Date.parse(verifiedAt) > Date.parse(latest.verifiedAt)) {
+      latest = { ...verification, verifiedAt };
+    }
+  }
+  return latest;
 }

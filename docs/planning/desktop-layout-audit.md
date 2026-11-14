@@ -40,7 +40,7 @@ The 390 renders are unchanged before and after. At 768 and 1440 the staff pages 
   - D7's side-by-side columns in one glass card, with display-size headers.
   - The compare table fills a desktop and scrolls on a phone. Covers are borrowed from the shortlist, because the compare view carries none.
   - Phone: saved hotel names no longer truncate.
-- **`/portal/requests` (D8):** `MasterDetail`, a 384 list beside the open enquiry, with every section in one panel. The list route opens the most recent enquiry without changing the address.
+- **`/portal/requests` (D8):** `MasterDetail`, a 384 list beside the open enquiry, with every section in one panel. On a desktop the list route replaces itself with the most recent enquiry's route, and a selection changes it in place (D-124, phase 3).
 
 **Still open:**
 - **Data or API:**
@@ -57,6 +57,57 @@ The 390 renders are unchanged before and after. At 768 and 1440 the staff pages 
   - The tokens have no 31 or 36 radius.
   - Panels cannot fill the window height.
   - New glow placements wait on decision 3.
+
+**Status, 14 November 2026, later still: the staff screens are built** (phase 3 of §7). Beside the rail, from 1024, each screen composes its T artboard; phones keep their layout apart from the listed changes.
+
+- **Shared layer additions:**
+  - `ScreenHeader` takes `actions` (at the right of the header from 768, wrapping under it on a phone), a `badge` read after the title, and `variant="panel"` (T3's record header).
+  - `SegmentedControl` takes `variant="underline"` (T3, T5).
+  - `DataTable` lost its header fill and gained desktop row padding (T4).
+- **`/leads` (T2):** stage columns share the width; a Board / List switch from 768; Funnel and Clients in the header actions (fixes the §4 phone overflow).
+  - **Interim call on decision 4, to confirm:** the board shows every stage through Converted. Closed leads appear when a "Closed · n" chip is on. Phones list every lead.
+- **`/leads/[id]` (T3):** a panel header (name, stage chip, facts, Log activity and Advance), then `Columns` 1.3 : 1: Activity beside Demo, Invite, Manage and Contact. The phone order now follows the same tree.
+- **`/leads/funnel`:** a T1-style KPI card, with By stage beside By source.
+- **`/leads/accounts` and `[accountId]`:**
+  - A `DataTable` from 768.
+  - A panel header, then `Columns` 1.3 : 1: Contacts and Subscriptions beside Details and Payments.
+- **`/enquiries` (T6):** the 432 queue beside the open enquiry (`SplitPane`). The open enquiry is the route's (D-124): on a desktop the list route replaces itself with the first enquiry's, and a selection changes it in place. The open card says "Viewing". The queue titles cards from its own data, with no per-card requests. The detail leads with the thread switch and activity, then proposals, the status moves, agreements, visits and milestones, in one order at every width.
+- **`/hotels-admin` (T4):**
+  - Import and New hotel are in the header actions, which fixes the §4 clipping.
+  - A `DataTable`: Hotel, Status and Rooms on a tablet; also Last verified, Public and Demo from 1024.
+- **Hotel record (T5):** one header for the media, details and rates routes: the hotel's name, "Hotels · city", and an underline strip with Rooms, venues & contacts / Rate cards / Media.
+  - Rates: verification and media rights in a 288 side column.
+  - Details: contacts in the side column.
+  - Media: tiles three or four across.
+  - Import: the CSV beside the hint and the result.
+- **Settings (T12):** a section strip (Users, Roles, Notifications, Templates, Configuration, Audit log) on every settings page.
+  - `/admin` is a card grid from 768.
+  - Users are a `DataTable`; a user's page has a panel header beside `Columns`.
+  - The selected role opens in a 288 side column from 1024.
+  - The audit filters and Export share one row.
+- **`/field-notes` (M11):** the notes list beside the composer and sync status, from 1024.
+- **State across 1024:** every place a composition changes with the width has a resize test, using the notifying window mock, and each test fails without its fix. Covered: typed drafts in sheets and forms, the open record, the chosen view or tab, the selected role, and filters.
+- **Review fixes:**
+  - A tablet header's actions wrap, so the title keeps 224.
+  - The lead detail keeps its actions above the activity on a phone.
+  - The roles table marks the open role (`DataTable selectedKey`).
+  - Record payment shows only with `crm.subscriptions.update`.
+  - **Open question:** should Finance record manual payments? The matrix refuses it today.
+
+**Still open after phase 3:**
+- **Data or API:**
+  - hotel and client names on the staff enquiry view (the queue fetches them per card today);
+  - an enquiry reference and due time (T6's "ENQ-0418" and SLA line);
+  - the destination name on the staff hotel list;
+  - who verified a rate card;
+  - counts for T4's status chips;
+  - the lead list's Owner and Source chips (the endpoint already filters by both);
+  - a staff create-lead flow (T2's New lead).
+- **Not built:** T3's tabs (Account, Agreements, History have no data); T5's Overview, Menus and single-section tabs; M11's cue sheet, Now card and incidents.
+- **`packages/ui` limits:**
+  - `ScreenHeader`'s actions can't shrink, so a long title beside the settings strip wraps to two lines between 1024 and about 1300.
+  - `DataTable` has no selected-row state.
+  - The back button is a glass circle, not T5's "← HOTELS · CITY" eyebrow link.
 
 ## 1. Root causes: fix once
 

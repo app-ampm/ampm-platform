@@ -15,6 +15,7 @@ import {
 } from "@ampm/ui";
 
 import { amountError, dateError, type ChoiceOption } from "./consultancy-admin.form";
+import { useSectionCard } from "./use-section-card";
 
 /**
  * The pieces every staff create form shares, built from the Peacock Night kit: the glass form card with
@@ -38,13 +39,15 @@ export interface FormCardProps {
 }
 
 /**
- * A create form as a top-level glass card: title, fields, then Cancel and the submit. The submit is the
- * peacock confirm (`highlight`, as "Share version N with client" and the transition rows), never gold:
- * the enquiry screen's one gold action is its next pipeline step, and several forms can be open at once.
+ * A create form as a section card (glass on the page, flat in the desktop pane): title, fields, then
+ * Cancel and the submit. The submit is the peacock confirm (`highlight`, as "Share version N with
+ * client" and the transition rows), never gold: the enquiry screen's one gold action is its next
+ * pipeline step, and several forms can be open at once.
  */
 export function FormCard({ title, description, children, testID, ...actions }: FormCardProps) {
+  const card = useSectionCard();
   return (
-    <Card className="md:p-7" testID={testID}>
+    <Card tone={card.tone} className={card.className} testID={testID}>
       <Stack gap={4}>
         <Stack gap={1}>
           <Text variant="subheading">{title}</Text>

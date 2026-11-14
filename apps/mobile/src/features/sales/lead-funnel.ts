@@ -1,6 +1,6 @@
 import type { LeadFunnelView, LeadStatus } from "@ampm/core";
 
-import { PIPELINE_STATUSES } from "./sales.format";
+import { isOpenLead, PIPELINE_STATUSES } from "./sales.format";
 
 /*
  * Pure logic for the lead funnel report (TW-83): the date-window presets and the bar rows. No React,
@@ -67,4 +67,16 @@ export function sourceBars(view: LeadFunnelView): readonly SourceBar[] {
       count: s.count,
       fraction: s.count / max,
     }));
+}
+
+/**
+ * The KPI card's caption under the leads in range (T1's pattern): how many are still in the pipeline and
+ * how many became clients, "9 open · 2 converted".
+ */
+export function funnelSummary(view: LeadFunnelView): string {
+  const count = (keep: (status: LeadStatus) => boolean): number =>
+    view.byStatus.filter((row) => keep(row.status)).reduce((sum, row) => sum + row.count, 0);
+  const open = count(isOpenLead);
+  const converted = count((status) => status === "converted");
+  return `${open} open · ${converted} converted`;
 }

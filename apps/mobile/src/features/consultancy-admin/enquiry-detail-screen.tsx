@@ -1,108 +1,70 @@
 import { useRouter } from "expo-router";
 
 import { useStaffEnquiry } from "@ampm/api-client";
-import type { HotelEnquiryStaffDetailView } from "@ampm/core";
-import { Card, QueryErrorState, Screen, ScreenHeader, Skeleton, Stack, StatusChip } from "@ampm/ui";
+import { Screen, ScreenHeader, useLayoutAt } from "@ampm/ui";
 
-import { useGoToSignIn } from "@/navigation/sign-in";
-
-import { enquiryFacts } from "../consultancy/consultancy.format";
-import { ROLE_WITHOUT_GRANT, staffEnquiryBadge } from "./consultancy-admin.format";
-import { EnquiryActivity } from "./enquiry-activity";
-import { AgreementSection, ProposalsSection } from "./enquiry-commercial";
-import { EnquiryDetails } from "./enquiry-details";
-import { MilestonesSection, VisitsSection } from "./enquiry-progress";
-import { EnquiryStatusActions } from "./enquiry-status-actions";
-
-type EnquiryQuery = ReturnType<typeof useStaffEnquiry>;
+import { EnquiriesSplit } from "./enquiries-split";
+import {
+  BACK_TO_QUEUE,
+  ENQUIRY_FALLBACK_TITLE,
+  ENQUIRY_TITLE_SIZE,
+  EnquiryHeading,
+} from "./enquiry-heading";
+import { EnquiryPane } from "./enquiry-pane";
+import { EnquiryQueuePanel } from "./enquiry-queue-panel";
 
 /**
- * The staff view of one enquiry (consultancy-admin, T6's detail): the stay as data over the title in
- * Gilda and the status chip, then the internal detail and the pipeline controls. A detail screen: no
- * tab bar, a back button to the queue.
+ * The staff view of one enquiry (consultancy-admin, T6's detail). On a phone and a tablet, a detail
+ * screen: the page's header with a back button to the queue, no tab bar, then the enquiry's sections.
+ * From 1024, T6's queue beside this enquiry, selected in it; the pane carries the header, so the page
+ * has none. The same tree at every width: only the wrappers' props change, and the header and the
+ * queue have slots that stay empty where a width has none, so what is under way in the enquiry
+ * survives a tablet turning or the window crossing 1024. The back button returns to the queue's page
+ * whether that page is under this one (a phone opened it) or not (a desktop replaced it with this).
  */
 export function StaffEnquiryDetailScreen({ enquiryId }: { readonly enquiryId: string }) {
+  const isSplit = useLayoutAt("lg");
   const router = useRouter();
-  const enquiry = useStaffEnquiry(enquiryId);
   return (
     <Screen
       width="wide"
-      header={<DetailHeader enquiry={enquiry.data} onBack={() => router.back()} />}
+      header={
+        isSplit ? null : (
+          <DetailHeader enquiryId={enquiryId} onBack={() => router.dismissTo("/enquiries")} />
+        )
+      }
     >
-      <DetailBody enquiry={enquiry} enquiryId={enquiryId} />
+      <EnquiriesSplit
+        isSplit={isSplit}
+        queue={isSplit ? <EnquiryQueuePanel openId={enquiryId} /> : null}
+      >
+        {/* Keyed: choosing another enquiry beside the queue starts its pane afresh (no draft carried
+            over); crossing 1024 changes no key, so a draft stays. */}
+        <EnquiryPane key={enquiryId} enquiryId={enquiryId} />
+      </EnquiriesSplit>
     </Screen>
   );
 }
 
 /**
- * The header keeps its back button through every state; the reference line and the chip come with the
- * enquiry. The staff view carries no hotel or client name, so the title is the functions summary: free
- * text that can run long, so a phone sets it at 28 (M4's phone titles are smaller still) beside the chip.
+ * The page's header keeps its back button through every state; the facts, the names and the chips
+ * come with the enquiry.
  */
 function DetailHeader({
-  enquiry,
+  enquiryId,
   onBack,
 }: {
-  readonly enquiry: HotelEnquiryStaffDetailView | undefined;
+  readonly enquiryId: string;
   readonly onBack: () => void;
 }) {
-  const badge = enquiry ? staffEnquiryBadge[enquiry.status] : null;
+  const enquiry = useStaffEnquiry(enquiryId);
+  if (enquiry.data) return <EnquiryHeading enquiry={enquiry.data} onBack={onBack} />;
   return (
     <ScreenHeader
       onBack={onBack}
-      backLabel="Back to enquiries"
-      eyebrow={enquiry ? enquiryFacts(enquiry).toUpperCase() : undefined}
-      title={enquiry?.functionsSummary ?? "Hotel enquiry"}
-      titleClassName="text-3xl md:text-4xl"
-      trailing={badge ? <StatusChip label={badge.label} tone={badge.tone} /> : undefined}
+      backLabel={BACK_TO_QUEUE}
+      title={ENQUIRY_FALLBACK_TITLE}
+      titleClassName={ENQUIRY_TITLE_SIZE}
     />
-  );
-}
-
-function DetailBody({
-  enquiry,
-  enquiryId,
-}: {
-  readonly enquiry: EnquiryQuery;
-  readonly enquiryId: string;
-}) {
-  const goToSignIn = useGoToSignIn();
-  if (enquiry.isPending) return <DetailLoading />;
-  if (enquiry.isError)
-    return (
-      <QueryErrorState
-        error={enquiry.error}
-        onRetry={() => void enquiry.refetch()}
-        onSignIn={goToSignIn}
-        signIn={{ title: "Sign in to view this enquiry" }}
-        notFound={{ title: "Enquiry not found" }}
-        forbidden={ROLE_WITHOUT_GRANT}
-      />
-    );
-  return (
-    <Stack gap={4}>
-      <EnquiryDetails enquiry={enquiry.data} />
-      <EnquiryStatusActions enquiryId={enquiryId} status={enquiry.data.status} />
-      <AgreementSection enquiryId={enquiryId} accountId={enquiry.data.accountId} />
-      <ProposalsSection enquiryId={enquiryId} />
-      <VisitsSection enquiryId={enquiryId} />
-      <MilestonesSection enquiryId={enquiryId} />
-      <EnquiryActivity events={enquiry.data.events} />
-    </Stack>
-  );
-}
-
-/** The shapes of the loaded screen (details, then the pipeline panel), so nothing jumps on arrival. */
-function DetailLoading() {
-  return (
-    <Stack gap={4} testID="staff-enquiry-loading">
-      <Card>
-        <Stack gap={3}>
-          <Skeleton shape="text" className="w-40" />
-          <Skeleton className="h-16 w-full" />
-        </Stack>
-      </Card>
-      <Skeleton className="h-36 w-full rounded-lg" />
-    </Stack>
   );
 }

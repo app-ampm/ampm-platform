@@ -166,7 +166,7 @@ Every component is a folder with its test and stories; the Gallery shows every v
 | `Link` | Gold, Manrope 700, often with " →"; nav links pearl that turn gold on hover. |
 | `Input` | Pill, midnight 50% fill, pearl 20% stroke, padding 14 × 18. Focus: gold stroke plus halo. Error: gold stroke and a gold helper line. `prefix` ("+91" in pearl 60% with a divider). Multiline inputs use radius 22. |
 | `OtpInput` | Six cells 48 × 56 (the mocks' 46 × 54 on the 4px scale), radius 16. Filled: peacock 25% fill, peacock 70% stroke. Active: gold stroke plus halo. Empty: pearl 20% stroke. |
-| `SegmentedControl` | Pill track (midnight 50%, pearl 16% stroke, 4px padding); the active segment is a peacock pill with midnight text. Also the tab strip (hotel page tabs), scrollable. |
+| `SegmentedControl` | Pill track (midnight 50%, pearl 16% stroke, 4px padding); the active segment is a peacock pill with midnight text. Also the tab strip (hotel page tabs), scrollable. `variant="underline"`: no track, a sliding 2px gold line under the selected tab in pearl 100%, for a record's sections (T3, T5). |
 | `FilterChip` | Selectable pill: pearl 30% outline; selected is peacock with midnight text. |
 | `Toggle` | 48 × 28 track. On: gold track, midnight knob. Off: pearl 12% track, pearl 45% knob. |
 | `Checkbox` | 22, radius 7. Checked: peacock fill with a midnight ✓. Unchecked: pearl 34% stroke. |
@@ -176,6 +176,7 @@ Every component is a folder with its test and stories; the Gallery shows every v
 | `GlassPanel` | The raw material (§3). |
 | `InternalPanel` | Dashed gold, "INTERNAL · NEVER SENT TO CLIENTS". Staff only. |
 | `ListItem` | A row inside a panel: flat tint, radius 16, title, subtitle, leading thumbnail or avatar, trailing chip or chevron. |
+| `DataTable` | The staff workspace's tables (T4, T12): muted eyebrow headers over a pearl 16% rule with no fill, rows 14 above and below from 1024 on pearl 12% dividers, one `grow` column taking the spare width. It scrolls sideways when wider than the screen; below 768, use `ListItem` rows instead. |
 | `Avatar`, `AvatarGroup` | Circle 32–56, initials Manrope 700/800, gold or peacock fill with midnight text; groups overlap 8px with a 2px midnight ring. |
 | `ProgressBar` | 4–8 tall, pearl 12% track, peacock fill, pill; `steps` draws the RSVP wizard's segmented bar. |
 | `Stepper` | Status stepper (enquiries, requests): done peacock ✓, current gold ring, upcoming pearl 26%. |
@@ -189,7 +190,7 @@ Every component is a folder with its test and stories; the Gallery shows every v
 | `PhotoPlaceholder` | Striped, tinted stand-in for photography with its label ("PALACE PHOTO · LAKE PICHOLA"). |
 | `GlowBackdrop` | The orbs behind a screen. |
 | `Screen` | The screen scaffold: midnight canvas, orbs, safe areas, the 18px phone gutter, room for a floating tab bar (phones only) or a sticky footer. `width` sets the content column on a tablet and a desktop: `full` (phone layouts), `content` (one centred 768 column: a form, a single reading column), `wide` (a desktop artboard page) or `split` (a list or split page). `wide` and `split` take their gutters from the frame the chrome names (`ScreenFrameProvider`, §7). |
-| `ScreenHeader` | Back button, eyebrow, Gilda title, subtitle, trailing action. Sizes: `title` (36, 44 from 1024), `display` (64, wide desktop pages), `hero` (44 on a phone, 88 from 1024 with an 18px lead paragraph: D1). |
+| `ScreenHeader` | Back button, eyebrow, Gilda title, subtitle, trailing action. Sizes: `title` (36, 44 from 1024), `display` (64, wide desktop pages), `hero` (44 on a phone, 88 from 1024 with an 18px lead paragraph: D1). `actions`: the page's buttons or section strip, at the right of the whole header from 768 and wrapping under it on a phone (T2, T4, T12). `badge`: a status chip read right after the title. `variant="panel"`: a record's header on its own glass panel, facts in the subtitle (T3). |
 | `Columns`, `SplitPane`, `MasterDetail`, `Grid` | The desktop artboards' arrangements, stacked below 1024 (or 768 with `at="md"`): `Columns` in shares of the row (`ratios={[1.5, 1]}`, D4; D2 1 : 1.1, D6 1.6 : 1, T3 1.3 : 1); `SplitPane` a main column beside a fixed side panel (`sideWidth` sm 288 for T5 and T12's 300, lg 384, list 432); `MasterDetail` a list beside the selected item (D8, T6), one at a time on a phone; `Grid` equal cells, 1, 2 from 768 and 3 from 1024 by default. Never hand-roll `lg:flex-row`. Crossing a breakpoint (a tablet rotating, a window resizing) must never lose what the person was doing: these keep their children in the same slots at every width, and a screen whose parts differ between the phone and the desktop composition keeps them in fixed slots too (`null` where a layout has none) and holds editing state above the switch; `useLayoutAt` answers which side of 1024 it is. |
 | `TabBar` | Floating glass pill 14 from the sides and 26 from the bottom; the active tab is a peacock pill with a midnight label; locked tabs at pearl 32%. |
 | `NavRail` | The admin workspace rail: glass, 232 wide, active item a peacock pill; collapses to icons between 768 and 1199. |

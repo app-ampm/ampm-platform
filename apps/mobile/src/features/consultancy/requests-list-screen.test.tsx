@@ -4,13 +4,12 @@ import { Text } from "react-native";
 
 import { uiCopy } from "@ampm/ui";
 
-import { fireEvent, screen, within } from "../../test/render";
+import { act, fireEvent, screen, waitFor, within } from "../../test/render";
 import { renderWithApi } from "../../test/api";
 import {
   CLOSED_ENQUIRY,
   CLOSED_ENQUIRY_ID,
   ENQUIRY,
-  ENQUIRY_DETAIL,
   ENQUIRY_ID,
   fail,
   fakeApi,
@@ -18,14 +17,21 @@ import {
   HOTEL_ID,
   ok,
   page,
-  PROPOSAL_ID,
-  SHARED_PROPOSAL,
 } from "./consultancy.fixtures";
 import { RequestsListScreen } from "./requests-list-screen";
 
-const mockRouter = { back: jest.fn(), replace: jest.fn(), push: jest.fn() };
+const mockRouter = { back: jest.fn(), replace: jest.fn(), push: jest.fn(), setParams: jest.fn() };
 
-jest.mock("expo-router", () => ({ useRouter: () => mockRouter }));
+jest.mock("expo-router", () => {
+  const react = jest.requireActual<typeof ReactModule>("react");
+  return {
+    useRouter: () => mockRouter,
+    // The screen under test is the focused one: its focus effect runs as an effect does.
+    useFocusEffect: function useMockFocusEffect(effect: () => void) {
+      react.useEffect(effect, [effect]);
+    },
+  };
+});
 
 /**
  * The window, as a store its readers subscribe to: a resize re-renders exactly the components that read
@@ -57,13 +63,11 @@ beforeEach(() => {
   mockWindow.width = 390;
 });
 
-/** The API behind D8 on a desktop: the list (newest first), and the newest with a shared proposal. */
+/** The API behind D8's list on a desktop: the enquiries, newest first, and their hotel. */
 function desktopApi(): typeof fetch {
   return fakeApi({
     "GET /consultancy/enquiries": ok(page([ENQUIRY, CLOSED_ENQUIRY])),
     [`GET /hotels/${HOTEL_ID}`]: ok(HOTEL),
-    [`GET /consultancy/enquiries/${ENQUIRY_ID}`]: ok(ENQUIRY_DETAIL),
-    [`GET /consultancy/enquiries/${ENQUIRY_ID}/proposals`]: ok(page([SHARED_PROPOSAL])),
   });
 }
 
@@ -145,40 +149,42 @@ describe("RequestsListScreen from 1024 (D8)", () => {
     mockWindow.width = 1440;
   });
 
-  it("puts the list panel beside the most recent enquiry, without changing the address", async () => {
+  it("is replaced by the most recent enquiry's page once the list has loaded", async () => {
     await renderList(desktopApi());
-    const detail = await screen.findByTestId("request-detail-panel");
-    expect(await within(detail).findByText("The Lake Pavilion")).toBeOnTheScreen();
-    expect(await within(detail).findByTestId(`proposal-${PROPOSAL_ID}`)).toBeOnTheScreen();
-    expect(within(screen.getByTestId("requests-panel")).getByText("Enquiries")).toBeOnTheScreen();
+    const panel = await screen.findByTestId("requests-panel");
+    expect(within(panel).getByText("Enquiries")).toBeOnTheScreen();
+    await waitFor(() =>
+      expect(mockRouter.replace).toHaveBeenCalledWith(`/portal/requests/${ENQUIRY_ID}`),
+    );
+    expect(mockRouter.push).not.toHaveBeenCalled();
+    // Until that page arrives, the enquiry's shapes stand beside the list; nothing is selected yet.
+    expect(screen.getByTestId("request-detail-loading")).toBeOnTheScreen();
+    expect(await screen.findByTestId(`request-card-${ENQUIRY_ID}`)).not.toBeSelected();
     // Both panels run to the taller one's foot, as D8's grid row does.
     expect(screen.getByTestId("requests-split").props.className).toContain("items-stretch");
     // The title moved into the panel: no page header, so no back button.
     expect(screen.queryByRole("button", { name: "Back" })).toBeNull();
-    expect(mockRouter.push).not.toHaveBeenCalled();
-    expect(mockRouter.replace).not.toHaveBeenCalled();
   });
 
-  it("marks the open enquiry selected, and opens another at its own address", async () => {
+  it("opens a pressed card's enquiry in place of the list's page", async () => {
     await renderList(desktopApi());
-    const open = await screen.findByTestId(`request-card-${ENQUIRY_ID}`);
-    expect(open).toBeSelected();
-    expect(open.props.className).toContain("bg-highlight/10");
-    const other = screen.getByTestId(`request-card-${CLOSED_ENQUIRY_ID}`);
-    expect(other).not.toBeSelected();
-    await fireEvent.press(other);
-    expect(mockRouter.push).toHaveBeenCalledWith(`/portal/requests/${CLOSED_ENQUIRY_ID}`);
+    await fireEvent.press(await screen.findByTestId(`request-card-${CLOSED_ENQUIRY_ID}`));
+    expect(mockRouter.replace).toHaveBeenCalledWith(`/portal/requests/${CLOSED_ENQUIRY_ID}`);
+    expect(mockRouter.push).not.toHaveBeenCalled();
   });
 
-  it("stays put when the auto-opened enquiry's own card is pressed", async () => {
+  it("opens the most recent enquiry's page when the list's page widens past 1024", async () => {
+    mockWindow.width = 820;
     await renderList(desktopApi());
-    const open = await screen.findByTestId(`request-card-${ENQUIRY_ID}`);
-    expect(open).toBeSelected();
-    await fireEvent.press(open);
-    // No second entry for the same enquiry, and no rebuilt screen.
-    expect(mockRouter.push).not.toHaveBeenCalled();
+    expect(await screen.findByText("The Lake Pavilion")).toBeOnTheScreen();
     expect(mockRouter.replace).not.toHaveBeenCalled();
-    expect(screen.getByTestId("request-detail-panel")).toBeOnTheScreen();
+    await act(() => {
+      mockWindow.width = 1180;
+      mockWindow.listeners.forEach((listener) => listener());
+    });
+    await waitFor(() =>
+      expect(mockRouter.replace).toHaveBeenCalledWith(`/portal/requests/${ENQUIRY_ID}`),
+    );
   });
 
   it("shows the list's loading rows in the panel, and the enquiry's skeleton beside them", async () => {
@@ -188,12 +194,24 @@ describe("RequestsListScreen from 1024 (D8)", () => {
     expect(screen.getByTestId("request-detail-loading")).toBeOnTheScreen();
   });
 
-  it("keeps the empty state and its gold action in the list panel", async () => {
+  it("keeps the empty state and its gold action in the list panel, nothing open beside it", async () => {
     await renderList(fakeApi({ "GET /consultancy/enquiries": ok(page([])) }));
     const panel = await screen.findByTestId("requests-panel");
     expect(await within(panel).findByText("No hotel requests yet")).toBeOnTheScreen();
-    expect(screen.queryByTestId("request-detail-panel")).toBeNull();
+    expect(
+      within(screen.getByTestId("request-none-open")).getByText("No request open"),
+    ).toBeOnTheScreen();
+    expect(screen.queryByTestId("request-detail-loading")).toBeNull();
+    expect(mockRouter.replace).not.toHaveBeenCalled();
     await fireEvent.press(within(panel).getByRole("button", { name: "Browse hotels" }));
     expect(mockRouter.push).toHaveBeenCalledWith("/hotels");
+  });
+
+  it("says nothing can open beside a list that failed to load", async () => {
+    await renderList(fakeApi({ "GET /consultancy/enquiries": fail(500, "internal") }));
+    expect(
+      await screen.findByText("Nothing can open here until your requests load."),
+    ).toBeOnTheScreen();
+    expect(mockRouter.replace).not.toHaveBeenCalled();
   });
 });

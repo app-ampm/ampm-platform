@@ -107,4 +107,48 @@ describe("ScreenHeader", () => {
     expect(lead).toContain("lg:text-xl");
     expect(lead).toContain("lg:max-w-md");
   });
+
+  it("puts the actions beside the text block from 768 and under it on a phone", async () => {
+    await renderWithProviders(
+      <ScreenHeader title="Pipeline" actions={<Text>New lead</Text>} testID="pipeline-header" />,
+    );
+    const actions = screen.getByText("New lead").parent;
+    expect(String(actions?.props.className)).toContain("flex-wrap");
+    // The actions give way (wrapping) before the title drops below its floor on a tablet.
+    expect(String(actions?.props.className)).toContain("md:shrink");
+    expect(String(actions?.props.className)).not.toContain("shrink-0");
+    expect(String(screen.getByRole("header").parent?.parent?.props.className)).toContain(
+      "md:min-w-56",
+    );
+    expect(String(actions?.parent?.props.className)).toContain("md:flex-row");
+  });
+
+  it("reads a badge right after the title, not pushed to the far right", async () => {
+    await renderWithProviders(
+      <ScreenHeader title="Rohit Malhotra" badge={<Text>Demo granted</Text>} />,
+    );
+    const heading = screen.getByRole("header", { name: "Rohit Malhotra" });
+    expect(String(heading.props.className)).not.toContain("flex-1");
+    expect(screen.getByText("Demo granted")).toBeOnTheScreen();
+  });
+
+  it("sets a record's header on its own glass panel", async () => {
+    await renderWithProviders(
+      <ScreenHeader variant="panel" title="Rohit Malhotra" testID="record-header" />,
+    );
+    const panel = screen.getByTestId("record-header");
+    expect(String(panel.props.className)).toContain("lg:px-7");
+    expect(String(panel.props.className)).toContain("rounded-xl");
+  });
+
+  it("keeps a panel's back button in the row beside the title, a plain header's above it", async () => {
+    const { rerender } = await renderWithProviders(
+      <ScreenHeader variant="panel" title="Prasad & Partner" onBack={jest.fn()} />,
+    );
+    const inPanel = screen.getByRole("button", { name: "Back" }).parent;
+    expect(String(inPanel?.props.className)).toContain("md:flex-row");
+    await rerender(<ScreenHeader title="Prasad & Partner" onBack={jest.fn()} />);
+    const inPlain = screen.getByRole("button", { name: "Back" }).parent;
+    expect(String(inPlain?.props.className)).not.toContain("md:flex-row");
+  });
 });

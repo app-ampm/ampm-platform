@@ -41,7 +41,7 @@ describe("NotificationsLogScreen", () => {
   it("shows skeletons while the log loads", async () => {
     await renderLog(() => new Promise<Response>(() => {}));
     expect(screen.getByTestId("notifications-loading")).toBeOnTheScreen();
-    expect(screen.getByText("Notifications")).toBeOnTheScreen();
+    expect(screen.getByRole("header", { name: "Notifications" })).toBeOnTheScreen();
   });
 
   it("lists notifications with channel, template and status, and counts them", async () => {

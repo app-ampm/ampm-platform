@@ -6,6 +6,8 @@ import type {
 } from "@ampm/core";
 
 import { failure, ok, TEST_API_BASE } from "../../test/api";
+import { accountViewFixture } from "../accounts/accounts.test-utils";
+import { hotelStaffDetailViewFixture } from "../hotels-admin/hotels-admin.test-utils";
 
 export { failure, jsonResponse, ok, renderWithApi } from "../../test/api";
 
@@ -22,6 +24,7 @@ export const HOTEL_ID = "018f0000-0000-7000-8000-00000000beef";
 export const VISIT_ID = "018f0000-0000-7000-8000-0000000005a1";
 export const MILESTONE_ID = "018f0000-0000-7000-8000-0000000006b1";
 const ACCOUNT_ID = "018f0000-0000-7000-8000-0000000002ac";
+const SERVICE_TYPE_ID = "018f0000-0000-7000-8000-0000000003c5";
 const CLIENT_USER_ID = "018f0000-0000-7000-8000-0000000000d2";
 const STAFF_USER_ID = "018f0000-0000-7000-8000-00000000cafe";
 const SUBMITTED_AT = "2026-11-03T09:12:00.000Z";
@@ -122,7 +125,7 @@ export function milestoneFixture(
 }
 
 export type FetchFn = typeof fetch;
-type Route = (init: RequestInit | undefined) => Response;
+export type Route = (init: RequestInit | undefined) => Response;
 
 export const page = (items: readonly unknown[], nextCursor: string | null = null): Response =>
   ok({ items, nextCursor });
@@ -149,5 +152,61 @@ export function routedFetch(
     sent.push({ method, path, body });
     const route = routes[`${method} ${path}`];
     return Promise.resolve(route ? route(init) : failure("not_found", 404));
+  };
+}
+
+export const HOTEL_NAME = "The Lake Pavilion";
+export const CLIENT_NAME = "Ananya Sharma";
+const OTHER_HOTEL_ID = "018f0000-0000-7000-8000-00000000b0b0";
+
+/**
+ * The queue T6 sets beside the open enquiry: this file's enquiry at The Lake Pavilion for Ananya Sharma,
+ * then a newer-looking one waiting on a hotel whose record the reader cannot open, so its card falls
+ * back to what is being planned.
+ */
+export function queueFixture(): HotelEnquiryStaffView[] {
+  return [
+    enquiryFixture(),
+    enquiryFixture({
+      id: SECOND_ENQUIRY_ID,
+      hotelId: OTHER_HOTEL_ID,
+      status: "awaiting_hotel",
+      functionsSummary: "Engagement lunch",
+      assignedUserId: STAFF_USER_ID,
+      guestEstimate: 80,
+    }),
+  ];
+}
+
+/**
+ * Every read the queue-and-enquiry workspace makes, answered: the queue, the open enquiry, its hotel and
+ * client account, and its (empty) proposals, agreements, visits and milestones, plus the service
+ * catalogue the agreement form offers.
+ */
+export function workspaceRoutes(
+  detail: HotelEnquiryStaffDetailView = detailFixture(),
+): Record<string, Route> {
+  const account = { ...accountViewFixture({ id: ACCOUNT_ID, name: CLIENT_NAME }), contacts: [] };
+  return {
+    "GET /consultancy-admin/enquiries": () => page(queueFixture()),
+    [`GET /consultancy-admin/enquiries/${ENQUIRY_ID}`]: () => ok(detail),
+    [`GET /hotels-admin/hotels/${HOTEL_ID}`]: () =>
+      ok(hotelStaffDetailViewFixture({ id: HOTEL_ID, name: HOTEL_NAME })),
+    [`GET /crm/accounts/${ACCOUNT_ID}`]: () => ok(account),
+    "GET /consultancy-admin/proposals": () => page([]),
+    "GET /crm/service-agreements": () => page([]),
+    "GET /consultancy-admin/site-visits": () => page([]),
+    "GET /consultancy-admin/booking-milestones": () => page([]),
+    "GET /crm/service-types": () =>
+      ok({
+        items: [
+          {
+            id: SERVICE_TYPE_ID,
+            serviceKey: "negotiation",
+            name: "Rate negotiation",
+            category: "hotel_assistance",
+          },
+        ],
+      }),
   };
 }

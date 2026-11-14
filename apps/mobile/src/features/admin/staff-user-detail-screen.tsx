@@ -5,6 +5,7 @@ import { useStaffUser } from "@ampm/api-client";
 import { formatDay, type StaffUserView } from "@ampm/core";
 import {
   Card,
+  Columns,
   Divider,
   QueryErrorState,
   Row,
@@ -84,36 +85,49 @@ function DetailBody({ user }: { readonly user: UseQueryResult<StaffUserView> }) 
       />
     );
   }
+  // T3's record arrangement: the account facts in the main column, the roles and the actions in the
+  // side one. Columns keeps the same tree at every width, so a role change still in flight (its
+  // checkboxes held) carries on when the window crosses 1024.
   return (
-    <Stack gap={4}>
+    <Columns ratios={[1.3, 1]} align="start" testID="staff-user-columns">
       <StaffUserCard user={user.data} />
-      <StaffUserRoles user={user.data} />
-      <StaffUserActions user={user.data} />
-    </Stack>
+      <Stack gap={4.5}>
+        <StaffUserRoles user={user.data} />
+        <StaffUserActions user={user.data} />
+      </Stack>
+    </Columns>
   );
 }
 
+/** "eva@example.com · Super Admin, Finance / Accounts": the record's facts line under the name. */
+function recordFacts(user: StaffUserView): string {
+  return `${user.email} · ${roleSummary(user.roles)}`;
+}
+
 /**
- * One staff user's record (TW-90 detail): the name in Gilda with the account status, then the account
- * facts on glass — contact, roles, authenticator and activity. Read-only for now; invite, role
- * assignment, disable and authenticator reset are the next slice.
+ * One staff user's record (TW-90 detail, T3's pattern): a record header on its own glass (the name
+ * with the account status after it, the email and roles under it), then the account facts beside the
+ * roles checklist and the management actions from 1024, stacked below it.
  *
  *   <StaffUserDetailScreen userId={id} />
  */
 export function StaffUserDetailScreen({ userId }: { readonly userId: string }) {
   const router = useRouter();
   const user = useStaffUser(userId);
-  const status = user.data?.status;
+  const data = user.data;
   const header = (
     <ScreenHeader
+      variant="panel"
+      testID="staff-user-header"
       onBack={() => router.back()}
       eyebrow="Users and roles"
-      title={user.data?.name ?? "Staff user"}
-      trailing={
-        status ? (
-          <StatusChip label={userStatusLabel(status)} tone={userStatusTone(status)} />
+      title={data?.name ?? "Staff user"}
+      badge={
+        data ? (
+          <StatusChip label={userStatusLabel(data.status)} tone={userStatusTone(data.status)} />
         ) : undefined
       }
+      subtitle={data ? recordFacts(data) : undefined}
     />
   );
   return (

@@ -26,6 +26,8 @@ export interface DataTableProps<Row> {
   readonly keyExtractor: (row: Row) => string;
   readonly onRowPress?: ((row: Row) => void) | undefined;
   readonly rowAccessibilityLabel?: ((row: Row) => string) | undefined;
+  /** The open row's key, when a detail beside the table shows it (T12's role in the side column). */
+  readonly selectedKey?: string | undefined;
   readonly className?: string | undefined;
   readonly testID?: string | undefined;
 }
@@ -45,9 +47,10 @@ function cellLayout(column: { width?: number | undefined; grow?: boolean | undef
     : { className: "", style: { width } };
 }
 
+// T4 and T12: the header is a line of muted eyebrows over a pearl 16% rule, with no fill of its own.
 function HeaderRow<Row>({ columns }: { readonly columns: readonly DataTableColumn<Row>[] }) {
   return (
-    <View className="w-full flex-row border-b border-primary/16 bg-primary/6">
+    <View className="w-full flex-row border-b border-primary/16">
       {columns.map((column) => {
         const layout = cellLayout(column);
         return (
@@ -72,32 +75,65 @@ interface DataRowProps<Row> {
   readonly onPress: (() => void) | undefined;
   readonly label: string | undefined;
   readonly last: boolean;
+  readonly selected: boolean;
 }
 
-function DataRow<Row>({ row, columns, onPress, label, last }: DataRowProps<Row>) {
+/**
+ * The open row is marked by a shape as well as a tint (never colour alone): a peacock bar at its start,
+ * placed absolutely so it takes no column's width. Screen readers hear it as selected natively and as
+ * the current row on the web, where react-native-web drops accessibilityState.
+ */
+const SELECTED_ROW_A11Y = {
+  "aria-current": "true",
+  accessibilityState: { selected: true },
+} as const;
+
+function RowCells<Row>({ row, columns }: Pick<DataRowProps<Row>, "row" | "columns">) {
+  return columns.map((column) => {
+    const layout = cellLayout(column);
+    return (
+      <View
+        key={column.key}
+        style={layout.style}
+        className={cn(
+          // T4's rows breathe on a desktop: 14 above and below each cell from 1024.
+          "justify-center px-3 py-3 lg:py-3.5",
+          layout.className,
+          column.align === "end" && "items-end",
+        )}
+      >
+        {column.render(row)}
+      </View>
+    );
+  });
+}
+
+function DataRow<Row>({ row, columns, onPress, label, last, selected }: DataRowProps<Row>) {
   const cells = (
-    <View className={cn("w-full flex-row", !last && "border-b border-primary/12")}>
-      {columns.map((column) => {
-        const layout = cellLayout(column);
-        return (
-          <View
-            key={column.key}
-            style={layout.style}
-            className={cn(
-              "justify-center px-3 py-3",
-              layout.className,
-              column.align === "end" && "items-end",
-            )}
-          >
-            {column.render(row)}
-          </View>
-        );
-      })}
+    <View
+      className={cn(
+        "w-full flex-row",
+        !last && "border-b border-primary/12",
+        selected && "bg-highlight/10",
+      )}
+    >
+      {selected ? (
+        <View
+          className="absolute inset-y-2 left-0 w-1 rounded-full bg-highlight"
+          testID="data-table-selected-mark"
+        />
+      ) : null}
+      <RowCells row={row} columns={columns} />
     </View>
   );
   if (!onPress) return cells;
   return (
-    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={label}>
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      {...(selected ? SELECTED_ROW_A11Y : {})}
+    >
       {cells}
     </Pressable>
   );
@@ -109,9 +145,10 @@ function DataRow<Row>({ row, columns, onPress, label, last }: DataRowProps<Row>)
  * the table fills the width of its card on a desktop. The whole table scrolls horizontally when it is
  * wider than the screen, so it works on a phone too. Presentational only: data in via `rows`, a tap out
  * via `onRowPress`; loading, empty and error states belong to the caller. Right-align dates, counts and
- * money with `align: "end"`.
+ * money with `align: "end"`. `selectedKey` marks the row whose detail is open beside the table.
  *
  *   <DataTable columns={columns} rows={page.items} keyExtractor={(e) => e.id} onRowPress={open} />
+ *   <DataTable … onRowPress={pick} selectedKey={pickedRole?.id} />
  */
 export function DataTable<Row>({
   columns,
@@ -119,6 +156,7 @@ export function DataTable<Row>({
   keyExtractor,
   onRowPress,
   rowAccessibilityLabel,
+  selectedKey,
   className,
   testID,
 }: DataTableProps<Row>) {
@@ -142,6 +180,7 @@ export function DataTable<Row>({
             onPress={onRowPress ? () => onRowPress(row) : undefined}
             label={rowAccessibilityLabel?.(row)}
             last={index === rows.length - 1}
+            selected={selectedKey !== undefined && keyExtractor(row) === selectedKey}
           />
         ))}
       </View>

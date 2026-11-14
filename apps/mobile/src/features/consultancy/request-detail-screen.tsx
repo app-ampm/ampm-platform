@@ -25,7 +25,9 @@ export function RequestDetailScreen({ enquiryId }: { readonly enquiryId: string 
       header={isSplit ? null : <DetailHeader enquiry={enquiry.data} onBack={() => router.back()} />}
     >
       <RequestsSplit isSplit={isSplit} openId={enquiryId}>
-        <EnquiryDetail enquiryId={enquiryId} />
+        {/* Keyed: choosing another enquiry in the list starts its detail afresh (no note carried
+            over); crossing 1024 changes no key, so what is under way stays. */}
+        <EnquiryDetail key={enquiryId} enquiryId={enquiryId} />
       </RequestsSplit>
     </Screen>
   );

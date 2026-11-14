@@ -1,12 +1,13 @@
+import type * as ReactModule from "react";
 import type { ReactNode } from "react";
 import { Text } from "react-native";
 
 import type { LeadView } from "@ampm/core";
 import { uiCopy } from "@ampm/ui";
 
-import { fireEvent, screen, within } from "../../test/render";
+import { act, fireEvent, screen, within } from "../../test/render";
 import { LeadsListScreen } from "./leads-list-screen";
-import { PIPELINE_STATUSES } from "./sales.format";
+import { boardStatuses } from "./sales.format";
 import {
   LEAD_ID,
   SECOND_LEAD_ID,
@@ -25,12 +26,34 @@ jest.mock("expo-router", () => ({
   useRouter: () => ({ back: jest.fn(), replace: mockReplace, push: mockPush }),
 }));
 
-// The window's width picks the layout: the board from 768 up, the list below. Each test sets it.
-const mockWindow = { width: 390 };
-jest.mock("react-native/Libraries/Utilities/useWindowDimensions", () => ({
-  __esModule: true,
-  default: () => ({ width: mockWindow.width, height: 900, scale: 2, fontScale: 1 }),
-}));
+/**
+ * The window, as a store its readers subscribe to: a resize re-renders exactly the components that read
+ * the width, as React Native's own hook does (a plain mock would let React Compiler skip the re-render).
+ * Its width picks the layout: the list alone below 768, the Board / List switch from there.
+ */
+const mockWindow = { width: 390, listeners: new Set<() => void>() };
+jest.mock("react-native/Libraries/Utilities/useWindowDimensions", () => {
+  const react = jest.requireActual<typeof ReactModule>("react");
+  const subscribe = (listener: () => void) => {
+    mockWindow.listeners.add(listener);
+    return () => mockWindow.listeners.delete(listener);
+  };
+  return {
+    __esModule: true,
+    default: function useMockWindowDimensions() {
+      const width = react.useSyncExternalStore(subscribe, () => mockWindow.width);
+      return { width, height: 900, scale: 2, fontScale: 1 };
+    },
+  };
+});
+
+/** Resizes the window, telling every component that reads it (a tablet turning, a window resized). */
+async function resizeTo(width: number): Promise<void> {
+  await act(() => {
+    mockWindow.width = width;
+    mockWindow.listeners.forEach((listener) => listener());
+  });
+}
 
 const HOUR = 3_600_000;
 
@@ -58,6 +81,16 @@ const leadsFetch = (items: LeadView[], nextCursor: string | null = null): FetchF
   routedFetch({ "/crm/leads": () => ok({ items, nextCursor }) });
 
 const THIRD_LEAD_ID = "018f0000-0000-7000-8000-0000000003c3";
+
+/** The pipeline plus one lead closed as lost. */
+const withClosed = (): LeadView[] => [
+  ...pipeline(),
+  leadFixture({ id: THIRD_LEAD_ID, name: "Priya Nair", status: "closed", requestedDemo: false }),
+];
+
+/** Whether a chip reads as on: react-native-web's aria-pressed and the native selected state agree. */
+const isOn = (testID: string): boolean =>
+  screen.getByTestId(testID).props.accessibilityState?.selected === true;
 
 /** Page 1 (the pipeline, more waiting) then page 2 (one more lead, the end) by cursor; answers /me too. */
 const paginatedLeadsFetch = (): FetchFn => (input) => {
@@ -113,6 +146,14 @@ describe("LeadsListScreen on a phone", () => {
     const converted = within(screen.getByTestId(`lead-row-${SECOND_LEAD_ID}`));
     expect(converted.getByText("Converted")).toBeOnTheScreen();
     expect(converted.getByText("+919800000000")).toBeOnTheScreen();
+  });
+
+  it("keeps every lead in the one list, closed too, with no view switch or chip row", async () => {
+    await renderList(leadsFetch(withClosed()));
+    expect(await screen.findByTestId(`lead-row-${THIRD_LEAD_ID}`)).toBeOnTheScreen();
+    expect(screen.queryByTestId("leads-view")).toBeNull();
+    expect(screen.queryByTestId("leads-filters")).toBeNull();
+    expect(screen.queryByTestId("leads-board")).toBeNull();
   });
 
   it("opens a lead's detail from its row", async () => {
@@ -181,17 +222,73 @@ describe("LeadsListScreen from 768 up", () => {
     mockWindow.width = 1280;
   });
 
-  it("shows a column per stage in pipeline order, each with its count", async () => {
-    await renderList(leadsFetch(pipeline()));
+  it("shows a column per stage in pipeline order, Converted last and Closed held back", async () => {
+    await renderList(leadsFetch(withClosed()));
     expect(await screen.findByTestId("leads-board")).toBeOnTheScreen();
     const columns = screen.getAllByTestId(/^leads-column-/).map((column) => column.props.testID);
-    expect(columns).toEqual(PIPELINE_STATUSES.map((status) => `leads-column-${status}`));
+    expect(columns).toEqual(boardStatuses(false).map((status) => `leads-column-${status}`));
+    expect(columns.at(-1)).toBe("leads-column-converted");
     expect(within(screen.getByTestId("leads-column-new")).getByLabelText("1 lead")).toBeTruthy();
     expect(
       within(screen.getByTestId("leads-column-converted")).getByText("Ananya Sharma"),
     ).toBeOnTheScreen();
-    expect(within(screen.getByTestId("leads-column-closed")).getByText("No leads")).toBeTruthy();
+    expect(screen.queryByText("Priya Nair")).toBeNull();
     expect(screen.queryByTestId("leads-list")).toBeNull();
+  });
+
+  it("shares the board's width between the columns, down to a floor that scrolls", async () => {
+    await renderList(leadsFetch(pipeline()));
+    const column = await screen.findByTestId("leads-column-new");
+    // T2's flex: 1 columns; the floor (144 from 1024) keeps a narrow window scrolling sideways.
+    expect(column.props.className).toEqual(expect.stringContaining("flex-1"));
+    expect(column.props.className).toEqual(expect.stringContaining("min-w-36"));
+    expect(column.props.className).not.toEqual(expect.stringContaining("w-56 "));
+    await resizeTo(900);
+    expect(screen.getByTestId("leads-column-new").props.className).toEqual(
+      expect.stringContaining("min-w-56"),
+    );
+  });
+
+  it("brings the closed leads back as the last column from the Closed chip", async () => {
+    await renderList(leadsFetch(withClosed()));
+    const chip = await screen.findByTestId("leads-closed-filter");
+    expect(within(chip).getByText("Closed · 1")).toBeOnTheScreen();
+    expect(isOn("leads-closed-filter")).toBe(false);
+    await fireEvent.press(chip);
+    expect(isOn("leads-closed-filter")).toBe(true);
+    const columns = screen.getAllByTestId(/^leads-column-/).map((column) => column.props.testID);
+    expect(columns.at(-1)).toBe("leads-column-closed");
+    expect(
+      within(screen.getByTestId("leads-column-closed")).getByText("Priya Nair"),
+    ).toBeOnTheScreen();
+  });
+
+  it("switches to the list, which hides closed leads until the chip is on", async () => {
+    await renderList(leadsFetch(withClosed()));
+    await fireEvent.press(await screen.findByText("List"));
+    expect(screen.getByTestId("leads-list")).toBeOnTheScreen();
+    expect(screen.queryByTestId("leads-board")).toBeNull();
+    expect(screen.getByTestId(`lead-row-${LEAD_ID}`)).toBeOnTheScreen();
+    expect(screen.queryByTestId(`lead-row-${THIRD_LEAD_ID}`)).toBeNull();
+    await fireEvent.press(screen.getByTestId("leads-closed-filter"));
+    expect(screen.getByTestId(`lead-row-${THIRD_LEAD_ID}`)).toBeOnTheScreen();
+  });
+
+  it("keeps the view picked and the Closed chip across 1024, and back from a phone", async () => {
+    mockWindow.width = 1440;
+    await renderList(leadsFetch(withClosed()));
+    await fireEvent.press(await screen.findByText("List"));
+    await fireEvent.press(screen.getByTestId("leads-closed-filter"));
+    await resizeTo(900);
+    expect(screen.getByTestId("leads-list")).toBeOnTheScreen();
+    expect(isOn("leads-closed-filter")).toBe(true);
+    expect(screen.getByTestId(`lead-row-${THIRD_LEAD_ID}`)).toBeOnTheScreen();
+    await resizeTo(390);
+    expect(screen.queryByTestId("leads-view")).toBeNull();
+    await resizeTo(1440);
+    expect(screen.getByTestId("leads-list")).toBeOnTheScreen();
+    expect(screen.queryByTestId("leads-board")).toBeNull();
+    expect(isOn("leads-closed-filter")).toBe(true);
   });
 
   it("puts where, when, source, age and owner on each card", async () => {

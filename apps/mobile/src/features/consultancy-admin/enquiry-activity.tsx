@@ -4,35 +4,34 @@ import { formatDay, type HotelEnquiryStaffDetailView } from "@ampm/core";
 import { Card, InternalPanel, SegmentedControl, Stack, Text } from "@ampm/ui";
 
 import { eventLabel } from "../consultancy/consultancy.format";
+import { countNotes, EnquiryNotes, passesFilter, type ThreadFilter } from "./enquiry-notes";
+import { useFrameCard } from "./use-section-card";
 
 type EnquiryEvent = HotelEnquiryStaffDetailView["events"][number];
 
-type ActivityFilter = "all" | "client" | "internal";
-
-const FILTERS: ReadonlyArray<{ readonly value: ActivityFilter; readonly label: string }> = [
+const FILTERS: ReadonlyArray<{ readonly value: ThreadFilter; readonly label: string }> = [
   { value: "all", label: "All" },
   { value: "client", label: "Client-visible" },
   { value: "internal", label: "Internal" },
 ];
 
-function isActivityFilter(value: string): value is ActivityFilter {
+function isThreadFilter(value: string): value is ThreadFilter {
   return FILTERS.some((filter) => filter.value === value);
 }
 
-function matches(event: EnquiryEvent, filter: ActivityFilter): boolean {
-  if (filter === "all") return true;
-  return event.internalOnly === (filter === "internal");
-}
-
 /**
- * The full event timeline, newest first, including the internal-only events a client never sees, with
- * T6's All · Client-visible · Internal switch. Internal events sit in InternalPanels, so the two kinds
- * stay apart at a glance as well as by the switch.
+ * The enquiry's thread, first under its header as T6 sets it: the All · Client-visible · Internal
+ * switch, then the standing notes and the full event timeline, newest first, including the
+ * internal-only events a client never sees. Internal items sit in InternalPanels, so the two kinds
+ * stay apart at a glance as well as by the switch. On a phone the thread is one glass card; in the
+ * desktop pane its rows sit straight on the panel.
  */
-export function EnquiryActivity({ events }: { readonly events: readonly EnquiryEvent[] }) {
-  const [filter, setFilter] = useState<ActivityFilter>("all");
-  if (events.length === 0) return null;
-  const shown = events.filter((event) => matches(event, filter));
+export function EnquiryActivity({ enquiry }: { readonly enquiry: HotelEnquiryStaffDetailView }) {
+  const [filter, setFilter] = useState<ThreadFilter>("all");
+  const frame = useFrameCard();
+  if (enquiry.events.length === 0 && countNotes(enquiry, "all") === 0) return null;
+  const shown = enquiry.events.filter((event) => passesFilter(event.internalOnly, filter));
+  const isEmpty = shown.length === 0 && countNotes(enquiry, filter) === 0;
   return (
     <Stack gap={3}>
       <Text variant="heading">Activity</Text>
@@ -41,11 +40,12 @@ export function EnquiryActivity({ events }: { readonly events: readonly EnquiryE
         size="sm"
         options={FILTERS}
         value={filter}
-        onChange={(value) => setFilter(isActivityFilter(value) ? value : "all")}
+        onChange={(value) => setFilter(isThreadFilter(value) ? value : "all")}
       />
-      <Card className="md:p-7" testID="enquiry-activity">
+      <Card tone={frame.tone} className={frame.className} testID="enquiry-activity">
         <Stack gap={2}>
-          {shown.length === 0 ? (
+          <EnquiryNotes notes={enquiry} filter={filter} />
+          {isEmpty ? (
             <Text variant="bodySmall" tone="muted">
               {filter === "internal"
                 ? "No internal activity yet."

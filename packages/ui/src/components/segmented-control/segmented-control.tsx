@@ -13,6 +13,7 @@ import {
   segmentedScrollStyles,
   segmentedTrackStyles,
   type SegmentedControlSize,
+  type SegmentedControlVariant,
 } from "./segmented-control.styles";
 
 export interface SegmentedControlOption {
@@ -31,6 +32,8 @@ export interface SegmentedControlProps extends Omit<ViewProps, "children"> {
   readonly onChange: (value: string) => void;
   /** `sm` tightens the padding; both keep a 44px target. */
   readonly size?: SegmentedControlSize | undefined;
+  /** pill (default) · underline: tabs over a sliding gold line, for a record's sections (T3, T5). */
+  readonly variant?: SegmentedControlVariant | undefined;
   /** Scrolls sideways inside a full-width track when the segments do not fit (the hotel page tabs). */
   readonly scrollable?: boolean | undefined;
   /** Spans the width and shares it equally between the segments (W6, P7). */
@@ -90,23 +93,33 @@ function useCentredSelection(value: string) {
   return { scroll, onViewportLayout, onSegmentLayout };
 }
 
-interface TrackProps extends Omit<SegmentedControlProps, "size" | "scrollable" | "fullWidth"> {
+interface TrackProps extends Omit<
+  SegmentedControlProps,
+  "size" | "variant" | "scrollable" | "fullWidth"
+> {
   readonly size: SegmentedControlSize;
+  readonly variant: SegmentedControlVariant;
   readonly fullWidth: boolean;
 }
 
 interface SegmentRowProps extends Pick<
   TrackProps,
-  "options" | "value" | "onChange" | "size" | "fullWidth" | "testID"
+  "options" | "value" | "onChange" | "size" | "variant" | "fullWidth" | "testID"
 > {
   readonly onSegmentLayout?: ((segment: string, event: LayoutChangeEvent) => void) | undefined;
 }
 
-function SegmentIndicator({ indicator, testID }: { indicator: TabIndicator; testID?: string }) {
+interface IndicatorProps {
+  readonly indicator: TabIndicator;
+  readonly variant: SegmentedControlVariant;
+  readonly testID?: string;
+}
+
+function SegmentIndicator({ indicator, variant, testID }: IndicatorProps) {
   return (
     <AnimatedView
       pointerEvents="none"
-      className={segmentIndicatorStyles}
+      className={segmentIndicatorStyles({ variant })}
       // Measured width and an animated offset: both are run-time numbers.
       style={{ width: indicator.width, transform: [{ translateX: indicator.translateX }] }}
       testID={testID}
@@ -118,10 +131,11 @@ function SegmentIndicator({ indicator, testID }: { indicator: TabIndicator; test
 function SegmentRow({ options, value, onSegmentLayout, testID, ...shared }: SegmentRowProps) {
   const indicator = useTabIndicator(value);
   return (
-    <View className={segmentedRowStyles}>
+    <View className={segmentedRowStyles({ variant: shared.variant })}>
       {indicator.ready ? (
         <SegmentIndicator
           indicator={indicator}
+          variant={shared.variant}
           {...(testID ? { testID: `${testID}-indicator` } : {})}
         />
       ) : null}
@@ -148,6 +162,7 @@ function StaticTrack({
   value,
   onChange,
   size,
+  variant,
   fullWidth,
   className,
   testID,
@@ -156,11 +171,11 @@ function StaticTrack({
   return (
     <View
       accessibilityRole="tablist"
-      className={cn(segmentedTrackStyles({ fullWidth }), className)}
+      className={cn(segmentedTrackStyles({ variant, fullWidth }), className)}
       testID={testID}
       {...rest}
     >
-      <SegmentRow {...{ options, value, onChange, size, fullWidth, testID }} />
+      <SegmentRow {...{ options, value, onChange, size, variant, fullWidth, testID }} />
     </View>
   );
 }
@@ -170,6 +185,7 @@ function ScrollTrack({
   value,
   onChange,
   size,
+  variant,
   className,
   testID,
   onLayout,
@@ -182,7 +198,7 @@ function ScrollTrack({
       horizontal
       showsHorizontalScrollIndicator={false}
       accessibilityRole="tablist"
-      className={cn(segmentedScrollStyles, className)}
+      className={cn(segmentedScrollStyles({ variant }), className)}
       contentContainerClassName={segmentedScrollContentStyles({ size })}
       testID={testID}
       onLayout={(event) => {
@@ -192,7 +208,7 @@ function ScrollTrack({
       {...rest}
     >
       <SegmentRow
-        {...{ options, value, onChange, size, testID }}
+        {...{ options, value, onChange, size, variant, testID }}
         fullWidth={false}
         onSegmentLayout={centred.onSegmentLayout}
       />
@@ -208,6 +224,8 @@ function ScrollTrack({
  * the track and keeps the selected tab centred (Overview, Rooms, Venues, Rates, Menus, Location).
  * Screen readers hear a tab list of tabs with their selected state; every segment has a 44px target,
  * takes Space and Enter on the web, and shows the gold border and halo on keyboard focus.
+ * `variant="underline"` drops the track and marks the selected tab with a sliding gold line instead
+ * (a record's sections: T3 Activity / Demo / Account, T5 Rooms / Rate cards / Media).
  *
  *   <SegmentedControl
  *     accessibilityLabel="Approvals"
@@ -219,13 +237,14 @@ function ScrollTrack({
  */
 export function SegmentedControl({
   size = "md",
+  variant = "pill",
   scrollable = false,
   fullWidth = false,
   ...track
 }: SegmentedControlProps) {
   return scrollable ? (
-    <ScrollTrack {...track} size={size} fullWidth={false} />
+    <ScrollTrack {...track} size={size} variant={variant} fullWidth={false} />
   ) : (
-    <StaticTrack {...track} size={size} fullWidth={fullWidth} />
+    <StaticTrack {...track} size={size} variant={variant} fullWidth={fullWidth} />
   );
 }

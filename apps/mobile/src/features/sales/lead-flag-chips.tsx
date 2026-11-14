@@ -15,9 +15,12 @@ export function hasLeadFlags(lead: LeadView): boolean {
 export function LeadFlagChips({ lead }: { readonly lead: LeadView }) {
   return (
     <>
-      {lead.requestedDemo ? <StatusChip label="Demo requested" tone="brand" size="sm" /> : null}
+      {/* max-w-full: in the board's narrowest columns a chip ends in an ellipsis inside its card. */}
+      {lead.requestedDemo ? (
+        <StatusChip label="Demo requested" tone="brand" size="sm" className="max-w-full" />
+      ) : null}
       {lead.duplicateOfLeadId ? (
-        <StatusChip label="Possible duplicate" tone="warning" size="sm" />
+        <StatusChip label="Possible duplicate" tone="warning" size="sm" className="max-w-full" />
       ) : null}
     </>
   );
