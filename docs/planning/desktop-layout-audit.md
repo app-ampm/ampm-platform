@@ -109,6 +109,25 @@ The 390 renders are unchanged before and after. At 768 and 1440 the staff pages 
   - `DataTable` has no selected-row state.
   - The back button is a glass circle, not T5's "← HOTELS · CITY" eyebrow link.
 
+**Status, 15 November 2026: phase 4, the phone and shell fixes.** Phases 1–3 shipped in PR #130 (`d9489bb`).
+
+- **Tables on phones (§4):** `DataTable` stacks each row below 768: the first column leads, then label and value per column.
+  - This fixes the audit log, configuration, notifications, notification templates, roles and the hotel catalogue, which cut off after two columns.
+- **Sheets (§5):** chosen by the window's width, not the platform.
+  - Below 768 (a phone, or a narrow browser window) a sheet slides up from the bottom.
+  - From 768 it is a centred dialog with 24 inside, on the web and on a tablet.
+  - A form inside keeps what was typed when the window crosses 768 (tested).
+- **Client top bar (§5):**
+  - More is a nav item, as in D4, and is the one marked current on the account.
+  - Locked areas carry D4's "LOCKED" tag instead of a lock icon.
+  - Below 1024 the avatar steps aside (More opens the account), so the five areas fit at 768.
+- **Floating tab bar (§4):** not a bug. A real browser blurs the content behind it; the readable text came from headless Chromium's screenshots.
+- **Left as they are:**
+  - The wordmark stays 24: the type scale has no 20.
+  - The rail's radius stays 28: no 26 token.
+  - The Chat chip (B24) and the rail's sections (decision 5) wait on their features and decisions.
+  - P1's pinned Verify button and glow placement wait on decision 3.
+
 ## 1. Root causes: fix once
 
 | # | Sev | Cause | Where | Fix |

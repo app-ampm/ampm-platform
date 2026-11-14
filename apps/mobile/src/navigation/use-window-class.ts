@@ -9,6 +9,8 @@ const EXPANDED_RAIL_FROM = 1200;
 export interface WindowClass {
   /** 768 and wider: the layout draws the rail or the top navigation, and screens get no tab bar. */
   readonly isWide: boolean;
+  /** 1024 and wider: the desktop artboards (D, T); the client bar has room for the avatar. */
+  readonly isDesktop: boolean;
   /** 1200 and wider: the staff rail shows its labels. */
   readonly isRailExpanded: boolean;
 }
@@ -21,5 +23,6 @@ export function useWindowClass(): WindowClass {
   const isClient = useIsClient();
   const { atLeast, width } = useBreakpoint();
   const isWide = isClient && atLeast("md");
-  return { isWide, isRailExpanded: isWide && width >= EXPANDED_RAIL_FROM };
+  const isDesktop = isClient && atLeast("lg");
+  return { isWide, isDesktop, isRailExpanded: isWide && width >= EXPANDED_RAIL_FROM };
 }

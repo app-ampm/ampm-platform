@@ -1,5 +1,5 @@
 import { type ReactNode } from "react";
-import { Modal, Platform, Pressable, ScrollView, View } from "react-native";
+import { Modal, Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { uiCopy } from "../../copy";
@@ -7,6 +7,7 @@ import { useReducedMotion } from "../../hooks/use-reduced-motion";
 import { cn } from "../../lib/cn";
 import { Button } from "../button";
 import { GlassPanel } from "../glass-panel";
+import { useLayoutAt } from "../layout/use-layout-at";
 import { Text } from "../text";
 
 export interface SheetProps {
@@ -16,30 +17,33 @@ export interface SheetProps {
   readonly children: ReactNode;
   /** Actions pinned under the content. */
   readonly footer?: ReactNode | undefined;
-  /** `auto` grows with the content, `half` and `full` are fixed heights. Ignored on the web dialog. */
+  /** `auto` grows with the content, `half` and `full` are fixed heights. Ignored by the dialog. */
   readonly size?: "auto" | "half" | "full" | undefined;
   readonly closeLabel?: string | undefined;
   readonly testID?: string | undefined;
 }
 
-// The web renders a centred dialog, not a bottom sheet (docs/design/peacock-night.md §7): a phone slides
-// a sheet up from the bottom edge, a desktop has no bottom edge to reach for, so an edit or a confirm is
-// a panel in the middle of the scrim. Only the layout differs — same glass, scrim, title and close.
-const IS_WEB = Platform.OS === "web";
+// A sheet below 768 and a centred dialog from there, on every platform (docs/design/peacock-night.md
+// §7): a phone, or a narrow browser window, slides a sheet up from the bottom edge; a tablet or a
+// desktop has no edge to reach for, so an edit or a confirm is a panel in the middle of the scrim. The
+// width decides, not the platform, so a narrow window gets the phone's sheet. Only the layout differs —
+// same glass, scrim, title and close — and the tree is the same, so a form inside keeps what was typed
+// when the window crosses 768.
 
 const SIZE = { auto: "max-h-full", half: "h-1/2", full: "h-full rounded-t-none" } as const;
 
 /**
- * The bottom-sheet panel (native): base glass with only its top edge stroked, radius 28 on the top
+ * The bottom-sheet panel (a phone): base glass with only its top edge stroked, radius 28 on the top
  * corners, the phone's 18 gutter. GlassPanel blurs on iOS and draws the opaque fallback on Android.
  */
 const PANEL = "rounded-none rounded-t-2xl border-0 border-t px-4.5 pt-3";
 
 /**
- * The centred-dialog panel (web): the full glass border and radius a dialog wants, a comfortable form
- * width, and a height capped to the viewport (the container's padding) so long forms scroll inside.
+ * The centred-dialog panel (768 and up): the full glass border and radius a dialog wants, a
+ * comfortable form width with a desktop's 24 inside, and a height capped to the viewport (the
+ * container's padding) so long forms scroll inside.
  */
-const WEB_PANEL = "w-full max-w-lg self-center rounded-2xl px-4.5 pt-3 max-h-full";
+const DIALOG_PANEL = "w-full max-w-lg self-center rounded-2xl px-6 pt-5 max-h-full";
 
 function SheetHeader({
   title,
@@ -106,8 +110,48 @@ function SheetBody({ children, footer }: { children: ReactNode; footer: ReactNod
   );
 }
 
+interface PanelProps extends Pick<
+  SheetProps,
+  "title" | "children" | "footer" | "onClose" | "testID"
+> {
+  readonly isDialog: boolean;
+  readonly size: NonNullable<SheetProps["size"]>;
+  readonly closeLabel: string;
+}
+
+/** The glass panel: a bottom sheet's or a dialog's shape, with the header, the body and the footer. */
+function SheetPanel({
+  isDialog,
+  size,
+  title,
+  closeLabel,
+  onClose,
+  footer,
+  children,
+  testID,
+}: PanelProps) {
+  const insets = useSafeAreaInsets();
+  return (
+    <GlassPanel
+      accessibilityViewIsModal
+      className={isDialog ? DIALOG_PANEL : cn(PANEL, SIZE[size])}
+      // The home indicator's inset is a run-time number; the 16 above it is the class below.
+      style={{ paddingBottom: isDialog ? 0 : insets.bottom }}
+      testID={testID ? `${testID}-panel` : undefined}
+    >
+      <View
+        className={cn("shrink", isDialog ? "pb-6" : "pb-4")}
+        testID={testID ? `${testID}-content` : undefined}
+      >
+        <SheetHeader title={title} closeLabel={closeLabel} onClose={onClose} handle={!isDialog} />
+        <SheetBody footer={footer}>{children}</SheetBody>
+      </View>
+    </GlassPanel>
+  );
+}
+
 /**
- * A modal panel in Peacock Night glass: a bottom sheet on a phone, a centred dialog on a desktop, both
+ * A modal panel in Peacock Night glass: a bottom sheet below 768, a centred dialog from there, both
  * on a midnight 70% scrim. Base-glass panel (radius 28), a Gilda Display title and a glass close button.
  * Focus stays inside (React Native Web traps it, native treats it as a modal view), the scrim and the
  * close button both dismiss (the browser's Escape too), the motion respects reduced motion.
@@ -117,16 +161,14 @@ function SheetBody({ children, footer }: { children: ReactNode; footer: ReactNod
 export function Sheet({
   open,
   onClose,
-  title,
-  children,
-  footer,
   size = "auto",
   closeLabel = uiCopy.close,
   testID,
+  ...content
 }: SheetProps) {
-  const insets = useSafeAreaInsets();
   const reducedMotion = useReducedMotion();
-  const animationType = reducedMotion ? "none" : IS_WEB ? "fade" : "slide";
+  const isDialog = useLayoutAt("md");
+  const animationType = reducedMotion ? "none" : isDialog ? "fade" : "slide";
   return (
     <Modal
       visible={open}
@@ -136,20 +178,9 @@ export function Sheet({
       statusBarTranslucent
       testID={testID}
     >
-      <View className={cn("flex-1", IS_WEB ? "items-center justify-center p-6" : "justify-end")}>
+      <View className={cn("flex-1", isDialog ? "items-center justify-center p-6" : "justify-end")}>
         <SheetScrim onClose={onClose} label={closeLabel} testID={testID} />
-        <GlassPanel
-          accessibilityViewIsModal
-          className={cn(IS_WEB ? WEB_PANEL : PANEL, IS_WEB ? "" : SIZE[size])}
-          // The home indicator's inset is a run-time number; the 16 above it is the class below.
-          style={{ paddingBottom: IS_WEB ? 0 : insets.bottom }}
-          testID={testID ? `${testID}-panel` : undefined}
-        >
-          <View className="shrink pb-4" testID={testID ? `${testID}-content` : undefined}>
-            <SheetHeader title={title} closeLabel={closeLabel} onClose={onClose} handle={!IS_WEB} />
-            <SheetBody footer={footer}>{children}</SheetBody>
-          </View>
-        </GlassPanel>
+        <SheetPanel {...content} {...{ isDialog, size, closeLabel, onClose, testID }} />
       </View>
     </Modal>
   );

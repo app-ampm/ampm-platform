@@ -176,7 +176,7 @@ Every component is a folder with its test and stories; the Gallery shows every v
 | `GlassPanel` | The raw material (§3). |
 | `InternalPanel` | Dashed gold, "INTERNAL · NEVER SENT TO CLIENTS". Staff only. |
 | `ListItem` | A row inside a panel: flat tint, radius 16, title, subtitle, leading thumbnail or avatar, trailing chip or chevron. |
-| `DataTable` | The staff workspace's tables (T4, T12): muted eyebrow headers over a pearl 16% rule with no fill, rows 14 above and below from 1024 on pearl 12% dividers, one `grow` column taking the spare width. It scrolls sideways when wider than the screen; below 768, use `ListItem` rows instead. |
+| `DataTable` | The staff workspace's tables (T4, T12): muted eyebrow headers over a pearl 16% rule with no fill, rows 14 above and below from 1024 on pearl 12% dividers, one `grow` column taking the spare width. It scrolls sideways when wider than its card. Below 768 each row stacks itself (`stackBelow`): the first column leads, then the others as a muted label and a value, so the record's name goes first; `stackBelow={false}` keeps a narrow table on a phone. |
 | `Avatar`, `AvatarGroup` | Circle 32–56, initials Manrope 700/800, gold or peacock fill with midnight text; groups overlap 8px with a 2px midnight ring. |
 | `ProgressBar` | 4–8 tall, pearl 12% track, peacock fill, pill; `steps` draws the RSVP wizard's segmented bar. |
 | `Stepper` | Status stepper (enquiries, requests): done peacock ✓, current gold ring, upcoming pearl 26%. |
@@ -186,7 +186,7 @@ Every component is a folder with its test and stories; the Gallery shows every v
 | `OfflineBanner` | Peacock glass pill: "Offline · 3 updates queued", "They sync when signal returns." |
 | `OfflineState`, `EmptyState`, `ErrorState` | Full-area states on glass; error accents are gold. |
 | `Skeleton` | Pearl 6% with a pearl 10% shimmer. |
-| `Sheet`, `Toast` | Glass on a midnight 70% scrim; sheets radius 28. A `Sheet` slides up from the bottom edge on a phone and is a centred dialog (max 512) on a desktop — a desktop has no edge to reach for. Every create, add or edit is a `Sheet`, so it is a modal on both; `ConfirmSheet` too. |
+| `Sheet`, `Toast` | Glass on a midnight 70% scrim; sheets radius 28. A `Sheet` slides up from the bottom edge below 768 (a phone, or a narrow browser window) and is a centred dialog (max 512, 24 inside) from 768 on every platform — a tablet or a desktop has no edge to reach for. The width decides, not the platform, and a form inside keeps what was typed when the window crosses 768. Every create, add or edit is a `Sheet`, so it is a modal on both; `ConfirmSheet` too. |
 | `PhotoPlaceholder` | Striped, tinted stand-in for photography with its label ("PALACE PHOTO · LAKE PICHOLA"). |
 | `GlowBackdrop` | The orbs behind a screen. |
 | `Screen` | The screen scaffold: midnight canvas, orbs, safe areas, the 18px phone gutter, room for a floating tab bar (phones only) or a sticky footer. `width` sets the content column on a tablet and a desktop: `full` (phone layouts), `content` (one centred 768 column: a form, a single reading column), `wide` (a desktop artboard page) or `split` (a list or split page). `wide` and `split` take their gutters from the frame the chrome names (`ScreenFrameProvider`, §7). |

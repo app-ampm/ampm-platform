@@ -5,7 +5,6 @@ import type { MeResponse } from "@ampm/core";
 import {
   Avatar,
   GlassPanel,
-  Icon,
   Row,
   Text,
   cn,
@@ -17,9 +16,10 @@ import {
 
 import { activeClientArea, CLIENT_AREAS, type ClientArea } from "./client-areas";
 import { useAreaNavigation } from "./use-area-navigation";
+import { useWindowClass } from "./use-window-class";
 
-/** The portal's areas in the bar; More is the person's avatar at the end. */
-const NAV_AREAS = CLIENT_AREAS.filter((area) => area.key !== "more");
+/** D4's five areas, More included, as the phone's tab bar has them; the avatar opens the account too. */
+const NAV_AREAS = CLIENT_AREAS;
 
 const current = (active: boolean) => (active ? { "aria-current": "page" as const } : {});
 
@@ -29,7 +29,16 @@ interface NavItemProps {
   readonly onPress: () => void;
 }
 
-/** One area: a pill, peacock while its screen shows; a locked area is pearl 32% with a lock. */
+/** D4's tag on a locked area: a small outlined "LOCKED", read as part of the area's spoken name. */
+function LockedTag() {
+  return (
+    <View className="rounded-full border border-primary/24 px-1.5 py-0.5">
+      <Text variant="eyebrow">{uiCopy.tabBar.locked}</Text>
+    </View>
+  );
+}
+
+/** One area: a pill, peacock while its screen shows; a locked area is pearl 32% with D4's tag. */
 function NavItem({ area, active, onPress }: NavItemProps) {
   const locked = area.href === null;
   const tone = active ? "onHighlight" : locked ? "inherit" : "body";
@@ -40,30 +49,28 @@ function NavItem({ area, active, onPress }: NavItemProps) {
       accessibilityState={{ selected: active }}
       {...current(active)}
       onPress={onPress}
-      className={cn(navRailItemStyles({ active }), "gap-2 px-4.5")}
+      className={cn(navRailItemStyles({ active }), "gap-2 px-3 lg:px-4.5")}
       testID={`client-top-nav-${area.key}`}
     >
       <Text variant="label" tone={tone} className={cn(locked && !active && tabBarLockedText)}>
         {area.label}
       </Text>
-      {locked ? <Icon name="lock" size="sm" tone="primary" className="opacity-32" /> : null}
+      {locked ? <LockedTag /> : null}
     </Pressable>
   );
 }
 
 interface AccountLinkProps {
   readonly name: string;
-  readonly active: boolean;
   readonly onPress: () => void;
 }
 
-/** The person's avatar, opening their account (More on a phone). */
-function AccountLink({ name, active, onPress }: AccountLinkProps) {
+/** The person's avatar, opening their account; the More pill is the one marked current there. */
+function AccountLink({ name, onPress }: AccountLinkProps) {
   return (
     <Pressable
       accessibilityRole="link"
       accessibilityLabel={`Account, ${name}`}
-      {...current(active)}
       onPress={onPress}
       className={cn(
         "h-touch w-touch items-center justify-center rounded-full border border-transparent",
@@ -91,14 +98,16 @@ export interface ClientTopNavProps {
 
 /**
  * The client portal's navigation on windows 768 and wider (D4, D5): a glass pill bar with the
- * wordmark, Home and Hotels, My Wedding and Approvals locked until AMPM is appointed (a toast says
- * so), and the person's avatar opening their account. It sits above the screens, clear of the
+ * wordmark, Home and Hotels, My Wedding and Approvals tagged locked until AMPM is appointed (a toast
+ * says so), More, and the person's avatar opening their account. It sits above the screens, clear of the
  * status bar and the notch.
  */
 export function ClientTopNav({ me, pathname }: ClientTopNavProps) {
   const insets = useSafeAreaInsets();
   const { open, explainLock } = useAreaNavigation();
   const active = activeClientArea(pathname)?.key;
+  // Below 1024 the five areas fill the bar, and More already opens the account: the avatar steps aside.
+  const hasAvatar = useWindowClass().isDesktop;
   return (
     <View style={{ paddingTop: insets.top, paddingLeft: insets.left, paddingRight: insets.right }}>
       {/* On windows wider than the mocks the bar keeps the 1440 frame, centred like the pages. */}
@@ -120,15 +129,10 @@ export function ClientTopNav({ me, pathname }: ClientTopNavProps) {
               />
             ))}
           </Row>
-          {me ? (
-            <AccountLink
-              name={me.principal.name}
-              active={active === "more"}
-              onPress={() => open("/account")}
-            />
-          ) : (
-            <View className="h-touch w-touch" />
-          )}
+          {hasAvatar && me ? (
+            <AccountLink name={me.principal.name} onPress={() => open("/account")} />
+          ) : null}
+          {hasAvatar && !me ? <View className="h-touch w-touch" /> : null}
         </GlassPanel>
       </View>
     </View>

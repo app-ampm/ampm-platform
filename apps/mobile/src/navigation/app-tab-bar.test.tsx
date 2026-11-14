@@ -28,7 +28,7 @@ jest.mock("expo-router", () => ({
 }));
 
 jest.mock("./use-window-class", () => ({
-  useWindowClass: () => ({ isWide: mockIsWide, isRailExpanded: false }),
+  useWindowClass: () => ({ isWide: mockIsWide, isDesktop: false, isRailExpanded: false }),
 }));
 
 function me(type: PrincipalType, roles: StaffRoleCode[]): MeResponse {
