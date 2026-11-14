@@ -3,6 +3,7 @@ import { clientAmount, type HotelProposalClientView, type HotelProposalDecision 
 import { Button, Card, Divider, MoneyText, Row, Stack, StatusChip, Text, useToast } from "@ampm/ui";
 
 import { proposalBadge, proposalDates } from "./consultancy.format";
+import { useInDetailPanel } from "./enquiry-surface";
 
 interface ProposalProps {
   readonly proposal: HotelProposalClientView;
@@ -56,14 +57,10 @@ function ProposalLines({ proposal, isOpen }: ProposalProps & { readonly isOpen: 
   );
 }
 
-/**
- * The client's decision on a shared proposal (CP-10): accept (the screen's gold action), ask for a
- * revision, or decline. The pressed button shows the busy state; the others ignore presses until the
- * decision is recorded.
- */
-function ProposalDecision({ proposal, enquiryId }: ProposalProps & { readonly enquiryId: string }) {
+/** Records the client's decision; a press while one is in flight is ignored. */
+function useProposalDecision(proposalId: string, enquiryId: string) {
   const toast = useToast();
-  const decide = useDecideHotelProposal(proposal.id, enquiryId);
+  const decide = useDecideHotelProposal(proposalId, enquiryId);
   const pending = decide.isPending ? decide.variables?.decision : undefined;
   const onDecide = (decision: HotelProposalDecision): void => {
     if (decide.isPending) return;
@@ -72,26 +69,63 @@ function ProposalDecision({ proposal, enquiryId }: ProposalProps & { readonly en
       { onError: () => toast.show({ title: "Could not record your decision", tone: "danger" }) },
     );
   };
+  return { pending, onDecide };
+}
+
+type Decision = ReturnType<typeof useProposalDecision>;
+
+/** Asking for a revision (secondary) and declining (the gold outline): never the gold fill. */
+function OtherDecisions({ pending, onDecide }: Decision) {
+  return (
+    <>
+      <Button
+        variant="secondary"
+        loading={pending === "revision_requested"}
+        onPress={() => onDecide("revision_requested")}
+      >
+        Request a revision
+      </Button>
+      <Button
+        variant="destructive"
+        loading={pending === "declined"}
+        onPress={() => onDecide("declined")}
+      >
+        Decline
+      </Button>
+    </>
+  );
+}
+
+/**
+ * The client's decision on a shared proposal (CP-10): accept (the screen's gold action), ask for a
+ * revision, or decline. The pressed button shows the busy state; the others ignore presses until the
+ * decision is recorded. A phone gives the gold action the full width; the desktop panel sets all three
+ * in one row (D8).
+ */
+function ProposalDecision({ proposal, enquiryId }: ProposalProps & { readonly enquiryId: string }) {
+  const decision = useProposalDecision(proposal.id, enquiryId);
+  const inPanel = useInDetailPanel();
+  const accept = (
+    <Button
+      fullWidth={!inPanel}
+      loading={decision.pending === "accepted"}
+      onPress={() => decision.onDecide("accepted")}
+    >
+      Accept proposal
+    </Button>
+  );
+  if (inPanel)
+    return (
+      <Row gap={2.5} wrap>
+        {accept}
+        <OtherDecisions {...decision} />
+      </Row>
+    );
   return (
     <Stack gap={2.5}>
-      <Button fullWidth loading={pending === "accepted"} onPress={() => onDecide("accepted")}>
-        Accept proposal
-      </Button>
+      {accept}
       <Row gap={2.5} wrap>
-        <Button
-          variant="secondary"
-          loading={pending === "revision_requested"}
-          onPress={() => onDecide("revision_requested")}
-        >
-          Request a revision
-        </Button>
-        <Button
-          variant="destructive"
-          loading={pending === "declined"}
-          onPress={() => onDecide("declined")}
-        >
-          Decline
-        </Button>
+        <OtherDecisions {...decision} />
       </Row>
     </Stack>
   );
@@ -99,15 +133,23 @@ function ProposalDecision({ proposal, enquiryId }: ProposalProps & { readonly en
 
 /**
  * One proposal version (D8): gold glass while it waits on the client's decision, base glass once
- * decided or replaced. Client amounts only; the internal total and margin never reach this view.
+ * decided or replaced. Inside the desktop detail panel it does not blur, and a decided one is a flat
+ * tint. Client amounts only; the internal total and margin never reach this view.
  */
 export function ProposalCard({
   proposal,
   enquiryId,
 }: ProposalProps & { readonly enquiryId: string }) {
   const isOpen = proposal.status === "shared";
+  const inPanel = useInDetailPanel();
+  const closedTone = inPanel ? "flat" : "glass";
   return (
-    <Card tone={isOpen ? "gold" : "glass"} padding="lg" testID={`proposal-${proposal.id}`}>
+    <Card
+      tone={isOpen ? "gold" : closedTone}
+      blur={!inPanel}
+      padding="lg"
+      testID={`proposal-${proposal.id}`}
+    >
       <Stack gap={4}>
         <ProposalHeading proposal={proposal} isOpen={isOpen} />
         <ProposalLines proposal={proposal} isOpen={isOpen} />

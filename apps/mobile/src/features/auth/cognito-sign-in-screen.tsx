@@ -2,19 +2,9 @@ import { useState } from "react";
 import { View } from "react-native";
 import QRCode from "react-native-qrcode-svg";
 
-import {
-  Button,
-  Card,
-  Input,
-  OtpInput,
-  Screen,
-  ScreenHeader,
-  Stack,
-  Text,
-  useBreakpoint,
-  useIsClient,
-} from "@ampm/ui";
+import { Button, Input, OtpInput, SignInLayout, Stack, Text, useSignInLayoutMode } from "@ampm/ui";
 
+import { SignInHero } from "./sign-in-hero";
 import { useStaffSignIn, type Phase, type StaffSignIn } from "./use-staff-sign-in";
 
 const TOTP_LENGTH = 6;
@@ -25,15 +15,6 @@ const SUBTITLES: Record<Phase["kind"], string> = {
   newPassword: "Choose a new password to finish setting up your account.",
   enrollTotp: "Scan this with your authenticator app, then enter the code it shows.",
 };
-
-function SignInHeader({ phase }: { readonly phase: Phase["kind"] }) {
-  return (
-    <Stack gap={8}>
-      <Text variant="wordmark">AMPM</Text>
-      <ScreenHeader title="Welcome" emphasis="back." subtitle={SUBTITLES[phase]} />
-    </Stack>
-  );
-}
 
 interface CredentialsFormProps {
   readonly email: string;
@@ -234,32 +215,21 @@ function PhaseForm({ session }: { readonly session: StaffSignIn }) {
 /**
  * Staff sign-in against Amazon Cognito (`EXPO_PUBLIC_IDENTITY_PROVIDER=cognito`): email + password over
  * SRP, then the authenticator-app (TOTP) challenge or, on first sign-in, enrolment. Clients sign in by
- * mobile + OTP through a separate flow. P1 on a phone; from 768 up the D1 card, centred on the canvas.
+ * mobile + OTP through a separate flow. P1 on a phone, one centred card from 768, D1's split from
+ * 1024 with the phase's form alone in the glass card.
  */
 export function CognitoSignInScreen() {
   const session = useStaffSignIn();
-  const isClient = useIsClient();
-  const { atLeast } = useBreakpoint();
-  const header = <SignInHeader phase={session.phase.kind} />;
-
-  // The server knows no window: it renders the phone layout and the client takes over after hydration.
-  if (isClient && atLeast("md")) {
-    return (
-      <Screen glow="top" contentClassName="grow items-center justify-center">
-        <Card padding="lg" className="w-full max-w-md md:p-9">
-          <Stack gap={6}>
-            {header}
-            <PhaseForm session={session} />
-          </Stack>
-        </Card>
-      </Screen>
-    );
-  }
+  const mode = useSignInLayoutMode();
   return (
-    <Screen glow="top" header={header}>
-      <Card>
-        <PhaseForm session={session} />
-      </Card>
-    </Screen>
+    <SignInLayout
+      testID="sign-in"
+      brand={<Text variant="wordmark">AMPM</Text>}
+      hero={<SignInHero subtitle={SUBTITLES[session.phase.kind]} />}
+      // D1's card has a title; P1's staff form never had one, so a phone and the centred card keep none.
+      cardTitle={mode === "split" ? "Staff sign-in" : undefined}
+      card={<PhaseForm session={session} />}
+      footer="No sign-up · AMPM sets up every account"
+    />
   );
 }

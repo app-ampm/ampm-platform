@@ -24,6 +24,40 @@ Severity: **S1** desktop structure wrong · **S2** a section missing, misplaced 
 
 The 390 renders are unchanged before and after. At 768 and 1440 the staff pages and the client `wide` pages take the new gutters.
 
+**Status, 14 November 2026, later: the client screens are built** (phase 2 of §7). From 1024 each screen composes its D artboard; phones keep their layout apart from the listed fixes.
+
+- **`/sign-in` (D1):** a two-column split shared by both sign-in screens (`SignInLayout` in `@ampm/ui`). Left: the 88px hero. Right: a 512 glass card with only the form; the development shortcuts sit under the card.
+- **`/portal`:**
+  - **Unpaid (D2):** `Columns` 1 : 1.1, with the steps and notices beside the payment card.
+  - **Subscribed (D4):** a search card beside the plan card at 1.5 : 1, then My selection, Enquiries and Wedding at 1 : 1 : 0.9. My selection uses P2's compact rows, on the phone too.
+- **`/account`:** a profile column beside memberships and entitlements. Sign-out is full width on phones only.
+- **`/hotels` and destinations (D5):**
+  - One search pill and one chip row, with the count on the right. Results are two per row until the map exists.
+  - Destination tiles are three across.
+  - Phone: a "Filters · n" pill and sheet replace the three cut-off selects.
+- **`/hotels/[id]` (D6):** a `2 : 1 : 1` photo mosaic, then the title, facts and actions on the background, then `Columns` 1.6 : 1. Main: About, a venues table, Rooms. Side, always visible: Rates, Location, Facilities. The sticky price bar is for phones and tablets only.
+- **`/hotels/saved` and `/hotels/compare` (D7):**
+  - D7's side-by-side columns in one glass card, with display-size headers.
+  - The compare table fills a desktop and scrolls on a phone. Covers are borrowed from the shortlist, because the compare view carries none.
+  - Phone: saved hotel names no longer truncate.
+- **`/portal/requests` (D8):** `MasterDetail`, a 384 list beside the open enquiry, with every section in one panel. The list route opens the most recent enquiry without changing the address.
+
+**Still open:**
+- **Data or API:**
+  - wedding details on `/me` (D2's panel, D4's search fields);
+  - a plan expiry (the days-left meter);
+  - destination photos;
+  - a cover on the compare view;
+  - project-role labels and a project name (the account page still shows the raw role key and ID).
+- **Features not built:** the D5 map, live chat (B24), menus, "Weddings here", street view, D1's remember-device and privacy checkbox.
+- **`packages/ui` limits:**
+  - `Input` and `Select` heights differ, so the D5 pill's labels sit about 6px apart.
+  - `SectionError` has no `blur` prop.
+  - `RequestRow` has no `tone` prop.
+  - The tokens have no 31 or 36 radius.
+  - Panels cannot fill the window height.
+  - New glow placements wait on decision 3.
+
 ## 1. Root causes: fix once
 
 | # | Sev | Cause | Where | Fix |

@@ -39,17 +39,19 @@ export function MasterDetail({
 }: MasterDetailProps) {
   const isRow = useLayoutAt(at);
   const hasDetail = detail !== undefined && detail !== null && detail !== false;
-  if (!isRow) {
-    return (
-      <View className={cn(className)} {...rest}>
-        {hasDetail ? detail : list}
-      </View>
-    );
-  }
+  // The list and the detail keep their slots at every width, so crossing the breakpoint (a tablet
+  // rotating, a window resizing) never remounts them and loses what the person was typing.
+  const showList = isRow || !hasDetail;
+  const pane = hasDetail ? detail : isRow ? placeholder : null;
   return (
-    <View className={cn("flex-row items-start", gapClass[gap], className)} {...rest}>
-      <View className={cn("shrink-0", sidePanelWidthClass[listWidth])}>{list}</View>
-      <View className="min-w-0 flex-1">{hasDetail ? detail : placeholder}</View>
+    <View
+      className={cn(isRow ? "flex-row items-start" : "flex-col", gapClass[gap], className)}
+      {...rest}
+    >
+      {showList ? (
+        <View className={cn(isRow && cn("shrink-0", sidePanelWidthClass[listWidth]))}>{list}</View>
+      ) : null}
+      {pane ? <View className={cn(isRow && "min-w-0 flex-1")}>{pane}</View> : null}
     </View>
   );
 }

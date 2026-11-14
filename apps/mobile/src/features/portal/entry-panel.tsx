@@ -2,6 +2,8 @@ import { View } from "react-native";
 
 import { Card, Icon, ListItem, Text, cn, type IconName } from "@ampm/ui";
 
+import { HOME_PANEL } from "./home-panel.styles";
+
 export interface EntryPanelProps {
   /** The panel's heading ("My selection"). */
   readonly heading: string;
@@ -26,7 +28,7 @@ export function EntryPanel({
   className,
 }: EntryPanelProps) {
   return (
-    <Card padding="sm" className={cn("gap-2 md:p-6", className)}>
+    <Card padding="sm" className={cn(HOME_PANEL, "gap-2", className)}>
       <Text variant="subheading">{heading}</Text>
       <ListItem
         tone="plain"

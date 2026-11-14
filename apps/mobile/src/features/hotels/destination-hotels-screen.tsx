@@ -13,7 +13,8 @@ export interface DestinationHotelsScreenProps {
 
 /**
  * One destination's hotels (CP-03, feature 9.4b): the discovery results scoped to it, reusing the shared
- * hotel-results list (its loading, empty, error and offline states, and its cover/freshness cards).
+ * hotel-results list (its loading, empty, error and offline states, and its cover/freshness cards), on
+ * D5's split width with the results two per row from 1024, as the search shows them.
  */
 export function DestinationHotelsScreen({
   destinationId,
@@ -24,7 +25,7 @@ export function DestinationHotelsScreen({
   return (
     <Screen
       glow="top"
-      width="content"
+      width="split"
       header={
         <ScreenHeader
           eyebrow="Destination"

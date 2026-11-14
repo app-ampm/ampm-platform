@@ -27,6 +27,7 @@ import {
   milestoneTypeLabel,
   visitBadge,
 } from "./consultancy.format";
+import { useInDetailPanel } from "./enquiry-surface";
 import { SectionError } from "./section-error";
 import { SectionSkeleton } from "./section-skeleton";
 
@@ -74,6 +75,7 @@ function VisitCard({
 }) {
   const toast = useToast();
   const feedback = useUpdateSiteVisitFeedback(visit.id, enquiryId);
+  const inPanel = useInDetailPanel();
   const [text, setText] = useState(visit.clientFeedback ?? "");
   const onSave = (): void =>
     feedback.mutate(
@@ -84,7 +86,7 @@ function VisitCard({
       },
     );
   return (
-    <Card padding="lg">
+    <Card padding="lg" tone={inPanel ? "flat" : "glass"}>
       <Stack gap={3.5}>
         <VisitHeading visit={visit} />
         <Input
@@ -133,6 +135,7 @@ function milestoneSteps(milestones: readonly BookingMilestoneClientView[]): Step
 /** The booking milestones for this enquiry — read-only for the client (amount shown only where W-14 is on). */
 export function MilestonesSection({ enquiryId }: { readonly enquiryId: string }) {
   const milestones = useBookingMilestones(enquiryId);
+  const inPanel = useInDetailPanel();
   if (milestones.isPending) return <SectionSkeleton title="Booking milestones" />;
   if (milestones.isError)
     return (
@@ -146,7 +149,7 @@ export function MilestonesSection({ enquiryId }: { readonly enquiryId: string })
   return (
     <Stack gap={3}>
       <Text variant="heading">Booking milestones</Text>
-      <Card padding="lg">
+      <Card padding="lg" tone={inPanel ? "flat" : "glass"}>
         <Stepper
           orientation="vertical"
           current={-1}

@@ -13,6 +13,7 @@ import {
 
 import { useGoToSignIn } from "@/navigation/sign-in";
 import { SignOutButton } from "@/navigation/sign-out-button";
+import { useWindowClass } from "@/navigation/use-window-class";
 
 import { AccountDetails } from "./account-details";
 
@@ -36,7 +37,10 @@ const SIGN_IN: QueryErrorSignIn = {
 export function AccountScreen({ tabBar }: AccountScreenProps) {
   const me = useMe();
   const goToSignIn = useGoToSignIn();
-  const avatar = me.data ? <Avatar name={me.data.principal.name} tone="highlight" /> : undefined;
+  // From 768 the top navigation or the rail already shows the person, so the header leaves it out.
+  const { isWide } = useWindowClass();
+  const avatar =
+    me.data && !isWide ? <Avatar name={me.data.principal.name} tone="highlight" /> : undefined;
   return (
     <Screen width="wide" tabBar={tabBar} header={<ScreenHeader title="More" trailing={avatar} />}>
       {me.isPending ? (
@@ -47,7 +51,7 @@ export function AccountScreen({ tabBar }: AccountScreenProps) {
           onRetry={() => void me.refetch()}
           onSignIn={goToSignIn}
           signIn={SIGN_IN}
-          errorFooter={<SignOutButton />}
+          errorFooter={<SignOutButton className="md:self-center" />}
         />
       ) : (
         <AccountDetails me={me.data} />

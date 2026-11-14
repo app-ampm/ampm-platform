@@ -41,7 +41,7 @@ export function PortalScreen({ tabBar }: PortalScreenProps) {
           onRetry={() => void me.refetch()}
           onSignIn={goToSignIn}
           signIn={{ title: "Sign in to view your plan" }}
-          errorFooter={<SignOutButton />}
+          errorFooter={<SignOutButton className="md:self-center" />}
         />
       </Screen>
     );

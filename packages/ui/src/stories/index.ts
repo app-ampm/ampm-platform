@@ -28,6 +28,7 @@ import { stories as progressBar } from "../components/progress-bar/progress-bar.
 import { stories as queryErrorState } from "../components/query-error-state/query-error-state.stories";
 import { stories as screenHeader } from "../components/screen-header/screen-header.stories";
 import { stories as sectionError } from "../components/section-error/section-error.stories";
+import { stories as signInLayout } from "../components/sign-in-layout/sign-in-layout.stories";
 import { stories as screen } from "../components/screen/screen.stories";
 import { stories as segmentedControl } from "../components/segmented-control/segmented-control.stories";
 import { stories as select } from "../components/select/select.stories";
@@ -90,6 +91,7 @@ export const allStories: readonly StoryModule[] = [
   toast,
   screenHeader,
   screen,
+  signInLayout,
   tabBar,
   navRail,
   glowBackdrop,

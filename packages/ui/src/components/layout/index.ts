@@ -14,6 +14,7 @@ export { MasterDetail } from "./master-detail";
 export type { MasterDetailProps } from "./master-detail";
 export { Grid } from "./grid";
 export type { GridColumns, GridProps } from "./grid";
+export { useLayoutAt } from "./use-layout-at";
 export type { LayoutAt } from "./use-layout-at";
 export { dividerStyles } from "./layout.styles";
 export type { Align, DividerOrientation, Gap, Justify, SidePanelWidth } from "./layout.styles";

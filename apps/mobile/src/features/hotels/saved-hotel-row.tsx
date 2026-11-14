@@ -1,163 +1,94 @@
-import { useState } from "react";
+import { Pressable, View } from "react-native";
 
-import { useUnsaveHotel, useUpdateSavedNote } from "@ampm/api-client";
-import { formatDay, type HotelView, type SavedHotelView } from "@ampm/core";
-import {
-  Button,
-  ListItem,
-  PhotoPlaceholder,
-  Row,
-  Stack,
-  StatusChip,
-  Text,
-  useToast,
-} from "@ampm/ui";
-
-import { MediaImage } from "@/components/media-image";
-import { NoteEditorSheet } from "@/components/note-editor-sheet";
+import { formatDay, type SavedHotelView } from "@ampm/core";
+import { cn, Row, Stack, StatusChip, Text } from "@ampm/ui";
+import { listItemStyles } from "@ampm/ui/styles";
 
 import { destinationLabel, starLabel } from "./hotels.format";
-
-/** The longest note the API accepts (savedHotelNoteUpdateRequest); the editor caps input at the same length. */
-const NOTE_MAX = 1000;
+import { SavedHotelActions } from "./saved-hotel-actions";
+import { SavedHotelPhoto } from "./saved-hotel-photo";
+import { savedHotelLabel, useSavedHotelRemoval } from "./use-saved-hotel-controls";
 
 export interface SavedHotelRowProps {
   readonly item: SavedHotelView;
-  readonly onOpen: () => void;
+  /** Opens a hotel's page, by its id. */
+  readonly onOpen: (hotelId: string) => void;
+  /** Opens the screen's note sheet for an entry, by its id (the screen holds it, so it outlives this row). */
+  readonly onEditNote: (entryId: string) => void;
 }
 
 /**
- * One hotel in "My selection" (D7, P2): a row with its photo stand-in, name, destination and the day it
- * was saved, opening the hotel; the remove and note buttons sit BESIDE the row, never inside a pressable
- * one. The client's own note (B15) shows under the row, and the note button opens a sheet to edit it.
+ * One hotel in "My selection" on a phone or tablet (D7, P2): a row with its photo stand-in, name, star,
+ * destination and the day it was saved, opening the hotel; the note and remove buttons sit BESIDE the
+ * row, never inside a pressable one. The client's own note (B15) shows under the row, and the note button
+ * opens a sheet to edit it.
  */
-export function SavedHotelRow({ item, onOpen }: SavedHotelRowProps) {
-  const toast = useToast();
-  const unsave = useUnsaveHotel(item.hotel.id);
-  const [editing, setEditing] = useState(false);
-  const onRemove = (): void => {
-    unsave.mutate(undefined, {
-      onError: () => toast.show({ title: "Could not remove the hotel", tone: "danger" }),
-    });
-  };
+export function SavedHotelRow({ item, onOpen, onEditNote }: SavedHotelRowProps) {
+  const removal = useSavedHotelRemoval(item);
   return (
     <Stack gap={1} className="border-t border-primary/16">
-      <SavedRowBar
-        item={item}
-        onOpen={onOpen}
-        onEdit={() => setEditing(true)}
-        onRemove={onRemove}
-        removing={unsave.isPending}
-      />
+      <Row gap={1} align="center">
+        <SavedRowLink item={item} onOpen={() => onOpen(item.hotel.id)} />
+        <SavedHotelActions
+          item={item}
+          removal={removal}
+          onEditNote={() => onEditNote(item.id)}
+          variant="icons"
+        />
+      </Row>
       {item.note ? (
         <Text variant="caption" tone="muted" className="px-1 pb-1">
           {item.note}
         </Text>
       ) : null}
-      <NoteSheet
-        open={editing}
-        onClose={() => setEditing(false)}
-        hotel={item.hotel}
-        note={item.note}
-      />
     </Stack>
   );
 }
 
-interface SavedRowBarProps {
+interface SavedRowLinkProps {
   readonly item: SavedHotelView;
   readonly onOpen: () => void;
-  readonly onEdit: () => void;
-  readonly onRemove: () => void;
-  readonly removing: boolean;
 }
 
-/** The row itself: the pressable hotel, then the note and remove buttons beside it (never nested inside it). */
-function SavedRowBar({ item, onOpen, onEdit, onRemove, removing }: SavedRowBarProps) {
+/**
+ * The pressable hotel, in the shared row recipe. The name may wrap to a second line and the star chip sits
+ * under it, beside the destination: on a phone the two buttons leave the text little room, and a chip on
+ * the name's line used to cut the name short ("Rose Fort P…").
+ */
+function SavedRowLink({ item, onOpen }: SavedRowLinkProps) {
   const { hotel } = item;
-  const where = destinationLabel(hotel.destination);
-  const savedOn = formatDay(item.savedAt);
   return (
-    <Row gap={1}>
-      <ListItem
-        tone="plain"
-        className="flex-1 border-t-0"
-        title={hotel.name}
-        subtitle={where}
-        meta={`Saved ${formatDay(item.savedAt, { style: "data" })}`}
-        leading={<Thumbnail hotel={hotel} />}
-        trailing={hotel.starCategory ? <StarChip starCategory={hotel.starCategory} /> : undefined}
-        accessibilityLabel={`${hotel.name} in ${where}, saved ${savedOn}`}
-        onPress={onOpen}
-      />
-      <Button
-        variant="ghost"
-        icon="edit"
-        onPress={onEdit}
-        accessibilityLabel={`${item.note ? "Edit" : "Add a"} note for ${hotel.name}`}
-      />
-      <Button
-        variant="ghost"
-        icon="x"
-        loading={removing}
-        onPress={onRemove}
-        accessibilityLabel={`Remove ${hotel.name} from your shortlist`}
-      />
-    </Row>
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={savedHotelLabel(item)}
+      onPress={onOpen}
+      className={cn(listItemStyles({ tone: "plain", pressable: true }), "flex-1 border-t-0")}
+    >
+      {/* Decorative: the row's name says which hotel it is. */}
+      <View
+        aria-hidden
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+        className="shrink-0 self-start"
+      >
+        <SavedHotelPhoto hotel={hotel} className="h-10 w-12 rounded-sm" />
+      </View>
+      <View className="min-w-0 flex-1 gap-1">
+        <Text variant="body" weight="semibold" tone="primary" numberOfLines={2}>
+          {hotel.name}
+        </Text>
+        <Row gap={2} align="center" wrap>
+          {hotel.starCategory ? (
+            <StatusChip label={starLabel(hotel.starCategory)} tone="brand" size="sm" />
+          ) : null}
+          <Text variant="bodySmall" tone="muted">
+            {destinationLabel(hotel.destination)}
+          </Text>
+        </Row>
+        <Text variant="data" tone="muted" numberOfLines={1}>
+          {`Saved ${formatDay(item.savedAt, { style: "data" })}`}
+        </Text>
+      </View>
+    </Pressable>
   );
-}
-
-interface NoteSheetProps {
-  readonly open: boolean;
-  readonly onClose: () => void;
-  readonly hotel: HotelView;
-  readonly note: string | null;
-}
-
-/** The note editor for a saved hotel (B15): the shared sheet wired to this hotel's save-note mutation. */
-function NoteSheet({ open, onClose, hotel, note }: NoteSheetProps) {
-  const toast = useToast();
-  const update = useUpdateSavedNote(hotel.id);
-  const save = (value: string | null): void =>
-    update.mutate(
-      { note: value },
-      {
-        onSuccess: onClose,
-        onError: () => toast.show({ title: "Could not save your note", tone: "danger" }),
-      },
-    );
-  return (
-    <NoteEditorSheet
-      open={open}
-      onClose={onClose}
-      title={`Note · ${hotel.name}`}
-      initialNote={note}
-      onSave={save}
-      saving={update.isPending}
-      maxLength={NOTE_MAX}
-      placeholder="e.g. great lawn, waiting on a quote"
-      testID="saved-note-sheet"
-    />
-  );
-}
-
-function Thumbnail({ hotel }: { readonly hotel: HotelView }) {
-  return hotel.coverUrl ? (
-    <MediaImage
-      uri={hotel.coverUrl}
-      alt={`Photo of ${hotel.name}`}
-      radius="none"
-      className="h-10 w-12 rounded-sm"
-    />
-  ) : (
-    <PhotoPlaceholder
-      label={`Hotel photo · ${hotel.destination.name}`}
-      showLabel={false}
-      className="h-10 w-12 rounded-sm"
-    />
-  );
-}
-
-function StarChip({ starCategory }: { readonly starCategory: string }) {
-  return <StatusChip label={starLabel(starCategory)} tone="brand" size="sm" />;
 }

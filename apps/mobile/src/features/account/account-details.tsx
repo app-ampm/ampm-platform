@@ -2,7 +2,7 @@ import { useRouter, type Href } from "expo-router";
 
 import type { MeResponse, PrincipalType } from "@ampm/core";
 import { STAFF_ROLES } from "@ampm/policy";
-import { Card, ListItem, Row, Stack, StatusChip, Text } from "@ampm/ui";
+import { Card, ListItem, Row, SplitPane, Stack, StatusChip, Text, useLayoutAt } from "@ampm/ui";
 
 import { SignOutButton } from "@/navigation/sign-out-button";
 import { hasStaffArea } from "@/navigation/staff-areas";
@@ -154,15 +154,33 @@ const GALLERY: AppLink = { title: "Component gallery", href: "/gallery" };
 
 /**
  * The More screen's content (P10, M10): the profile, memberships and entitlements, the field notes
- * (staff whose roles open the Tasks area) and the component gallery, and sign-out.
+ * (staff whose roles open the Tasks area) and the component gallery, and sign-out. A phone stacks them
+ * in that order. From 1024, where nothing on the page needs its full width, the person (profile,
+ * links, sign-out) is a 384 column with their memberships and entitlements beside it.
  */
 export function AccountDetails({ me }: { readonly me: MeResponse }) {
-  return (
-    <>
+  const isDesktop = useLayoutAt("lg");
+  const links = <AppLinks links={hasStaffArea(me, "tasks") ? [FIELD_NOTES, GALLERY] : [GALLERY]} />;
+  if (!isDesktop) {
+    return (
+      <>
+        <ProfileCard me={me} />
+        <AccessCard me={me} />
+        {links}
+        <SignOutButton />
+      </>
+    );
+  }
+  const person = (
+    <Stack gap={4}>
       <ProfileCard me={me} />
-      <AccessCard me={me} />
-      <AppLinks links={hasStaffArea(me, "tasks") ? [FIELD_NOTES, GALLERY] : [GALLERY]} />
+      {links}
       <SignOutButton />
-    </>
+    </Stack>
+  );
+  return (
+    <SplitPane side={person} sideWidth="lg" sidePosition="start" testID="account-columns">
+      <AccessCard me={me} />
+    </SplitPane>
   );
 }

@@ -1,7 +1,7 @@
 import { useRouter } from "expo-router";
 
 import { useMe, useSaveHotel, useSavedHotelIds, useUnsaveHotel } from "@ampm/api-client";
-import type { EntitlementModule, HotelView } from "@ampm/core";
+import { HOTEL_COMPARE_MIN, type EntitlementModule, type HotelView } from "@ampm/core";
 import { Button, useToast } from "@ampm/ui";
 
 /** What the account may do from the hotel page. The interface only hides; the server still decides. */
@@ -54,16 +54,25 @@ const savedLabel = (isSaved: boolean, hotelName?: string): string =>
       ? "Saved to shortlist"
       : "Save hotel";
 
+export interface SaveButtonProps {
+  readonly hotel: HotelView;
+  /**
+   * True (default) when the save is the page's one gold action; false beside a gold "Check
+   * availability" (D6's title actions), where an unsaved hotel shows the pearl outline instead.
+   */
+  readonly primary?: boolean | undefined;
+}
+
 /**
- * The shortlist toggle as the footer's gold action, for an account that may save but not ask for
- * availability. Saved, it turns peacock, the colour of what is selected (D6 "Saved"); pressing it again
- * removes the hotel.
+ * The shortlist toggle as a labelled pill: the footer's gold action for an account that may save but
+ * not ask for availability, or D6's "Saved" beside the title. Saved, it turns peacock, the colour of
+ * what is selected (D6 "Saved"); pressing it again removes the hotel.
  */
-export function SaveButton({ hotel }: { readonly hotel: HotelView }) {
+export function SaveButton({ hotel, primary = true }: SaveButtonProps) {
   const { isSaved, toggle, pending } = useShortlistToggle(hotel);
   return (
     <Button
-      variant={isSaved ? "highlight" : "primary"}
+      variant={isSaved ? "highlight" : primary ? "primary" : "secondary"}
       icon="heart"
       loading={pending}
       onPress={toggle}
@@ -110,6 +119,27 @@ export function CheckAvailabilityButton({ hotel }: { readonly hotel: HotelView }
       className="self-center"
     >
       Check availability
+    </Button>
+  );
+}
+
+/**
+ * D6's "Compare" beside the title: the side-by-side compare is picked from the shortlist (CP-06, the
+ * compare endpoint only takes saved hotels), so it opens the shortlist, and shows only once this hotel
+ * is on it with at least one other to compare it with.
+ */
+export function CompareButton({ hotel }: { readonly hotel: HotelView }) {
+  const router = useRouter();
+  const savedIds = useSavedHotelIds();
+  if (!savedIds.ids.has(hotel.id) || savedIds.ids.size < HOTEL_COMPARE_MIN) return null;
+  return (
+    <Button
+      variant="secondary"
+      accessibilityLabel="Compare on your shortlist"
+      onPress={() => router.push("/hotels/saved")}
+      className="self-center"
+    >
+      Compare
     </Button>
   );
 }

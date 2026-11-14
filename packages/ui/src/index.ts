@@ -83,6 +83,7 @@ export * from "./components/toast";
 // Screen scaffold and navigation.
 export * from "./components/screen";
 export * from "./components/screen-header";
+export * from "./components/sign-in-layout";
 export * from "./components/tab-bar";
 export * from "./components/nav-rail";
 

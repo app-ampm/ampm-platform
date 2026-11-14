@@ -1,12 +1,27 @@
-import type { HotelCompareItem } from "@ampm/core";
+import type { HotelCompareItem, SavedHotelView } from "@ampm/core";
 
-import { screen, waitFor } from "../../test/render";
+import { fireEvent, screen, waitFor } from "../../test/render";
 import { CompareScreen } from "./compare-screen";
-import { fakeApi, hotelFixture, JAIPUR, ok, renderWithApi } from "./hotels.test-utils";
+import {
+  COVER_URL,
+  fakeApi,
+  hotelFixture,
+  JAIPUR,
+  ok,
+  pageOf,
+  renderWithApi,
+  savedFixture,
+} from "./hotels.test-utils";
 
 const mockBack = jest.fn();
 jest.mock("expo-router", () => ({
   useRouter: () => ({ back: mockBack, push: jest.fn(), replace: jest.fn() }),
+}));
+
+const mockWindow = { width: 390 };
+jest.mock("react-native/Libraries/Utilities/useWindowDimensions", () => ({
+  __esModule: true,
+  default: () => ({ width: mockWindow.width, height: 900, scale: 2, fontScale: 1 }),
 }));
 
 const PAVILION: HotelCompareItem = {
@@ -38,13 +53,24 @@ const HAVELI: HotelCompareItem = {
   rates: { status: "on_request", asOf: null, items: [] },
 };
 
-function compareApi(items: readonly HotelCompareItem[]) {
-  return fakeApi((method, url) =>
-    method === "GET" && url.pathname === "/hotels/compare" ? ok({ items }) : undefined,
-  );
+/** The compare answer, and the shortlist the headings borrow their covers from (empty by default). */
+function compareApi(
+  items: readonly HotelCompareItem[],
+  saved: { readonly items: readonly SavedHotelView[]; readonly nextCursor: string | null } = pageOf(
+    [],
+  ),
+) {
+  return fakeApi((method, url) => {
+    if (method !== "GET") return undefined;
+    if (url.pathname === "/hotels/compare") return ok({ items });
+    return url.pathname === "/hotels/saved" ? ok(saved) : undefined;
+  });
 }
 
-beforeEach(() => mockBack.mockClear());
+beforeEach(() => {
+  mockBack.mockClear();
+  mockWindow.width = 390;
+});
 
 describe("CompareScreen", () => {
   it("lays the saved hotels out side by side, each cell naming its hotel and field", async () => {
@@ -56,18 +82,113 @@ describe("CompareScreen", () => {
     expect(
       screen.getByLabelText("The Lake Pavilion, Destination: Udaipur, Rajasthan"),
     ).toBeOnTheScreen();
+    expect(screen.getByLabelText("The Lake Pavilion, Capacity: Seats 500–900")).toBeOnTheScreen();
     expect(screen.getByLabelText("Amber Haveli, Rooms: 52 rooms")).toBeOnTheScreen();
-    // The values still render visually (collapsed under their cell's a11y node).
-    expect(screen.getByText("per room / night", { includeHiddenElements: true })).toBeOnTheScreen();
-    expect(screen.getByText("On request", { includeHiddenElements: true })).toBeOnTheScreen();
+    expect(
+      screen.getByLabelText("The Lake Pavilion, Room rate: ₹18,000–₹24,000 per night"),
+    ).toBeOnTheScreen();
+    expect(screen.getByLabelText("Amber Haveli, Room rate: On request")).toBeOnTheScreen();
+    // The chip is D7's short form; the cell speaks the detail's full sentence (AC-04).
+    expect(
+      screen.getByLabelText("The Lake Pavilion, Rates: Verified on 2 Nov 2026 by AMPM"),
+    ).toBeOnTheScreen();
+    expect(screen.getByLabelText("Amber Haveli, Rates: Rates on request")).toBeOnTheScreen();
+    expect(
+      screen.getByText("Verified 2 Nov 2026", { includeHiddenElements: true }),
+    ).toBeOnTheScreen();
     await waitFor(() =>
       expect(api.calls.some((call) => call.startsWith("GET /hotels/compare"))).toBe(true),
     );
   });
 
+  it("titles the page as D7 does, counting the hotels compared", async () => {
+    await renderWithApi(
+      <CompareScreen ids={[PAVILION.id, HAVELI.id]} />,
+      compareApi([PAVILION, HAVELI]).fetch,
+    );
+    expect(screen.getByRole("header", { name: "Side by side" })).toBeOnTheScreen();
+    expect(await screen.findByText("My selection · 2 hotels")).toBeOnTheScreen();
+  });
+
+  it("adds a row per rate type a hotel prices, and leaves out the ones none does", async () => {
+    const veg: HotelCompareItem = {
+      ...HAVELI,
+      rates: {
+        status: "stale",
+        asOf: "2026-06-14T06:30:00.000Z",
+        items: [
+          {
+            itemType: "per_plate_veg",
+            amount: { minor: 140000, currency: "INR" },
+            amountMax: null,
+            unit: "per_plate",
+            inclusions: null,
+          },
+        ],
+      },
+    };
+    await renderWithApi(
+      <CompareScreen ids={[PAVILION.id, veg.id]} />,
+      compareApi([PAVILION, veg]).fetch,
+    );
+    expect(
+      await screen.findByLabelText("Amber Haveli, Per plate, veg: ₹1,400 per plate"),
+    ).toBeOnTheScreen();
+    expect(screen.getByLabelText("The Lake Pavilion, Per plate, veg: —")).toBeOnTheScreen();
+    expect(screen.getByLabelText("Amber Haveli, Room rate: —")).toBeOnTheScreen();
+    expect(screen.queryByText("Wedding package")).toBeNull();
+  });
+
+  it("holds the table in a glass card whose columns share the width a desktop gives it", async () => {
+    mockWindow.width = 1440;
+    await renderWithApi(
+      <CompareScreen ids={[PAVILION.id, HAVELI.id]} />,
+      compareApi([PAVILION, HAVELI]).fetch,
+    );
+    const head = await screen.findByLabelText("The Lake Pavilion, 5-star");
+    expect(screen.getByTestId("compare-card")).toBeOnTheScreen();
+    // Columns grow with the row (no fixed width) and keep a floor for a phone.
+    expect(String(head.props.className)).toEqual(expect.stringContaining("flex-1"));
+    expect(String(head.props.className)).toEqual(expect.stringContaining("min-w-40"));
+    await fireEvent(screen.getByLabelText("Hotel comparison"), "layout", {
+      nativeEvent: { layout: { width: 1232, height: 600, x: 0, y: 0 } },
+    });
+    expect(screen.getByTestId("compare-table").props.style).toMatchObject({ width: 1232 });
+  });
+
+  it("keeps the table at its floor on a phone, so it scrolls sideways rather than squeeze", async () => {
+    await renderWithApi(
+      <CompareScreen ids={[PAVILION.id, HAVELI.id]} />,
+      compareApi([PAVILION, HAVELI]).fetch,
+    );
+    await screen.findByLabelText("The Lake Pavilion, 5-star");
+    await fireEvent(screen.getByLabelText("Hotel comparison"), "layout", {
+      nativeEvent: { layout: { width: 322, height: 600, x: 0, y: 0 } },
+    });
+    // 96 for the labels, then 160 and a 20 gap per hotel.
+    expect(screen.getByTestId("compare-table").props.style).toMatchObject({ width: 456 });
+  });
+
+  it("heads a column with the hotel's cover from the shortlist", async () => {
+    const saved = pageOf([
+      savedFixture(hotelFixture({ coverUrl: COVER_URL }), "018f0000-0000-7000-8000-0000000000a1"),
+    ]);
+    await renderWithApi(
+      <CompareScreen ids={[PAVILION.id, HAVELI.id]} />,
+      compareApi([PAVILION, HAVELI], saved).fetch,
+    );
+    expect(
+      await screen.findByLabelText("Photo of The Lake Pavilion", { includeHiddenElements: true }),
+    ).toBeOnTheScreen();
+    expect(
+      screen.queryByLabelText("Photo of Amber Haveli", { includeHiddenElements: true }),
+    ).toBeNull();
+  });
+
   it("prompts for a 2–4 selection when too few are chosen", async () => {
     await renderWithApi(<CompareScreen ids={[PAVILION.id]} />, compareApi([]).fetch);
     expect(await screen.findByText("Pick 2 to 4 hotels")).toBeOnTheScreen();
+    expect(screen.getByText("My selection")).toBeOnTheScreen();
   });
 
   it("prompts for a 2–4 selection for more than four ids, never loading forever", async () => {

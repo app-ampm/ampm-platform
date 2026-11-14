@@ -3,18 +3,14 @@ import { uiCopy } from "@ampm/ui";
 import { fireEvent, screen, waitFor } from "../../test/render";
 import { renderWithApi } from "../../test/api";
 import {
+  DECISION_ROUTE as DECISION,
   ENQUIRY_DETAIL,
   ENQUIRY_ID,
+  enquiryDetailApi as enquiryApi,
   fail,
   fakeApi,
-  HOTEL,
-  HOTEL_ID,
   ok,
-  page,
-  PROPOSAL_ID,
-  SHARED_PROPOSAL,
   type FakeCall,
-  type FakeResponse,
 } from "./consultancy.fixtures";
 import { RequestDetailScreen } from "./request-detail-screen";
 
@@ -22,24 +18,12 @@ const mockRouter = { back: jest.fn(), replace: jest.fn(), push: jest.fn() };
 
 jest.mock("expo-router", () => ({ useRouter: () => mockRouter }));
 
-const DECISION = `POST /consultancy/proposals/${PROPOSAL_ID}/decision`;
-
-/** The API around one enquiry: its hotel, a shared proposal, and no agreement, visits or milestones. */
-function enquiryApi(overrides: Record<string, FakeResponse> = {}, calls: FakeCall[] = []) {
-  return fakeApi(
-    {
-      [`GET /consultancy/enquiries/${ENQUIRY_ID}`]: ok(ENQUIRY_DETAIL),
-      [`GET /hotels/${HOTEL_ID}`]: ok(HOTEL),
-      "GET /crm/portal/service-agreements": ok(page([])),
-      [`GET /consultancy/enquiries/${ENQUIRY_ID}/proposals`]: ok(page([SHARED_PROPOSAL])),
-      [`GET /consultancy/enquiries/${ENQUIRY_ID}/visits`]: ok(page([])),
-      [`GET /consultancy/enquiries/${ENQUIRY_ID}/milestones`]: ok(page([])),
-      [DECISION]: ok({ ...SHARED_PROPOSAL, status: "accepted" }),
-      ...overrides,
-    },
-    calls,
-  );
-}
+// A phone's window: the enquiry on its own page (the desktop arrangement is request-detail-desktop.test).
+const mockWindow = { width: 390 };
+jest.mock("react-native/Libraries/Utilities/useWindowDimensions", () => ({
+  __esModule: true,
+  default: () => ({ width: mockWindow.width, height: 900, scale: 2, fontScale: 1 }),
+}));
 
 async function renderDetail(fetchImpl: typeof fetch): Promise<void> {
   await renderWithApi(<RequestDetailScreen enquiryId={ENQUIRY_ID} />, fetchImpl);

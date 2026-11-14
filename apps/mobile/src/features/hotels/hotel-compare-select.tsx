@@ -72,6 +72,11 @@ export interface HotelCompareCheckboxProps {
   readonly destinationText: string;
   readonly selected: readonly string[];
   readonly onToggle: (hotelId: string) => void;
+  /**
+   * Shown instead of the name and destination where they are already on screen (a desktop shortlist
+   * column): "Compare". The spoken name still ends with the hotel's, so each pick stays unambiguous.
+   */
+  readonly label?: string | undefined;
 }
 
 /** A hotel as a compare pick: checked when selected, disabled once the maximum is chosen. */
@@ -81,12 +86,14 @@ export function HotelCompareCheckbox({
   destinationText,
   selected,
   onToggle,
+  label,
 }: HotelCompareCheckboxProps) {
   const checked = selected.includes(hotelId);
   return (
     <Checkbox
-      label={name}
-      description={destinationText}
+      label={label ?? name}
+      accessibilityLabel={label ? `${label} ${name}` : undefined}
+      description={label ? undefined : destinationText}
       checked={checked}
       onCheckedChange={() => onToggle(hotelId)}
       disabled={!checked && selected.length >= HOTEL_COMPARE_MAX}

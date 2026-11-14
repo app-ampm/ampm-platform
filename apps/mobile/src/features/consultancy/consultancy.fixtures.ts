@@ -171,3 +171,29 @@ export function fakeApi(
     return Promise.resolve(new Response(JSON.stringify(answer.body), { status: answer.status }));
   };
 }
+
+/** The route a client's proposal decision goes to. */
+export const DECISION_ROUTE = `POST /consultancy/proposals/${PROPOSAL_ID}/decision`;
+
+/**
+ * The API around one enquiry for the detail screen's tests: its hotel, a shared proposal (which accepts
+ * a decision), and no agreement, visits or milestones; `overrides` adds or replaces routes.
+ */
+export function enquiryDetailApi(
+  overrides: Readonly<Record<string, FakeResponse>> = {},
+  calls: FakeCall[] = [],
+): typeof fetch {
+  return fakeApi(
+    {
+      [`GET /consultancy/enquiries/${ENQUIRY_ID}`]: ok(ENQUIRY_DETAIL),
+      [`GET /hotels/${HOTEL_ID}`]: ok(HOTEL),
+      "GET /crm/portal/service-agreements": ok(page([])),
+      [`GET /consultancy/enquiries/${ENQUIRY_ID}/proposals`]: ok(page([SHARED_PROPOSAL])),
+      [`GET /consultancy/enquiries/${ENQUIRY_ID}/visits`]: ok(page([])),
+      [`GET /consultancy/enquiries/${ENQUIRY_ID}/milestones`]: ok(page([])),
+      [DECISION_ROUTE]: ok({ ...SHARED_PROPOSAL, status: "accepted" }),
+      ...overrides,
+    },
+    calls,
+  );
+}
