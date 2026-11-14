@@ -13,7 +13,7 @@ export interface PlanCardProps {
 
 /** One plan on base glass (D2's payment card): its summary, then pay and complete the payment. */
 export function PlanCard({ plan, payVariant }: PlanCardProps) {
-  const purchase = usePlanPurchase(plan.id);
+  const purchase = usePlanPurchase(plan.id, plan.name);
   const price = clientAmount(plan.price.minor, plan.price.currency);
   return (
     <Card padding="lg" className="gap-5 md:p-9" testID={`plan-${plan.planKey}`}>
@@ -23,6 +23,7 @@ export function PlanCard({ plan, payVariant }: PlanCardProps) {
         price={formatMoney(price).text}
         payVariant={payVariant}
         subscribing={purchase.subscribing}
+        demo={purchase.demo}
         onSubscribe={purchase.subscribe}
         onComplete={purchase.completePayment}
       />

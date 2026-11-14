@@ -78,6 +78,7 @@ export { useDevLogin } from "./hooks/use-dev-login";
 export { PLANS_QUERY_KEY, usePlans } from "./hooks/use-plans";
 export { usePortalSubscribe } from "./hooks/use-portal-subscribe";
 export { useCompletePayment } from "./hooks/use-complete-payment";
+export { useVerifyPayment } from "./hooks/use-verify-payment";
 export { HOTELS_QUERY_KEY, useHotels } from "./hooks/use-hotels";
 export { hotelQueryKey, useHotel } from "./hooks/use-hotel";
 export { SAVED_HOTELS_QUERY_KEY, useSavedHotels } from "./hooks/use-saved-hotels";

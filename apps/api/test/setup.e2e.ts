@@ -9,6 +9,9 @@ delete process.env["REDIS_URL"];
 process.env["IDENTITY_PROVIDER"] = "local";
 process.env["IDENTITY_LOCAL_SECRET"] ??= "e2e-local-secret-that-is-long-enough-for-hs256";
 process.env["LOG_LEVEL"] = "error";
+// The subscription/payment e2e exercises the in-process stub gateway (a genuine HMAC, no network); a
+// developer's .env that sets PAYMENT_PROVIDER=razorpay must not swap in the real adapter under test.
+process.env["PAYMENT_PROVIDER"] = "stub";
 const testUrl = process.env["DATABASE_URL_TEST"];
 if (!testUrl)
   throw new Error("DATABASE_URL_TEST is required for the e2e tests (a disposable PostgreSQL)");

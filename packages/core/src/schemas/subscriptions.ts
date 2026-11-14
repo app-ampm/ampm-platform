@@ -119,3 +119,27 @@ export const devCompletePaymentResponse = z.object({
   status: subscriptionStatus,
 });
 export type DevCompletePaymentResponse = z.infer<typeof devCompletePaymentResponse>;
+
+/**
+ * The client's hosted-checkout result (CP-11 portal): after Razorpay Standard Checkout succeeds in the
+ * browser, the client posts back the payment id, order id and checkout signature for the signed-in
+ * caller's OWN pending subscription. The server re-derives HMAC-SHA256(`<orderId>|<paymentId>`) with the
+ * gateway KEY SECRET (never sent to the browser) and, on a match, runs the same idempotent activation the
+ * signed webhook runs — so a webhook that already activated this order makes the call a no-op. A mismatch
+ * or a bad signature is a 400 that activates nothing. `POST /crm/portal/verify-payment`.
+ */
+export const portalVerifyPaymentRequest = z
+  .object({
+    subscriptionId: uuid,
+    razorpayPaymentId: z.string().trim().min(1).max(255),
+    razorpayOrderId: z.string().trim().min(1).max(255),
+    razorpaySignature: z.string().trim().min(1).max(512),
+  })
+  .strict();
+export type PortalVerifyPaymentRequest = z.infer<typeof portalVerifyPaymentRequest>;
+
+export const portalVerifyPaymentResponse = z.object({
+  subscriptionId: uuid,
+  status: subscriptionStatus,
+});
+export type PortalVerifyPaymentResponse = z.infer<typeof portalVerifyPaymentResponse>;
