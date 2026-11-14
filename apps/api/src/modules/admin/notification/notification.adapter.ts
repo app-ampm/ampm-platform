@@ -28,7 +28,19 @@ export interface NotificationAdapters {
 
 export const NOTIFICATION_ADAPTERS = Symbol("NOTIFICATION_ADAPTERS");
 
-type AdapterLogger = Pick<Logger, "info">;
+export type AdapterLogger = Pick<Logger, "info">;
+
+/**
+ * A provider error can echo the recipient address or the gateway/SMTP response; keep only its non-PII
+ * code, so nothing personal reaches the logs or the job driver's error log (security.md). Shared by the
+ * notification channel adapters (reuse-first, code.md).
+ */
+export function providerErrorCode(error: unknown): string {
+  if (error && typeof error === "object" && "code" in error && typeof error.code === "string") {
+    return error.code;
+  }
+  return "unknown";
+}
 
 /**
  * Development and tests, and the placeholder for every external channel until the live providers
