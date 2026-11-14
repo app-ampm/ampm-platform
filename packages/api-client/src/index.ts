@@ -76,7 +76,7 @@ export {
   type CursorPage,
 } from "./hooks/use-cursor-list";
 export { useDevLogin } from "./hooks/use-dev-login";
-export { useRequestDevOtp, useVerifyDevOtp } from "./hooks/use-dev-otp";
+export { useCreateDemoClient, useRequestDevOtp, useVerifyDevOtp } from "./hooks/use-dev-otp";
 export { useActivate } from "./hooks/use-activate";
 export { PLANS_QUERY_KEY, usePlans } from "./hooks/use-plans";
 export { usePortalSubscribe } from "./hooks/use-portal-subscribe";

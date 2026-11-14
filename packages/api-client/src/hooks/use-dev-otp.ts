@@ -1,7 +1,10 @@
 import { useMutation } from "@tanstack/react-query";
 import {
+  devCreateClientResponse,
   devLoginResponse,
   devOtpSendResponse,
+  type DevCreateClientRequest,
+  type DevCreateClientResponse,
   type DevLoginResponse,
   type DevOtpSendRequest,
   type DevOtpSendResponse,
@@ -39,6 +42,24 @@ export function useVerifyDevOtp() {
         method: "POST",
         body,
         schema: devLoginResponse,
+      }),
+  });
+}
+
+/**
+ * Dev-only: create a brand-new active client from a name and mobile
+ * (`POST /auth/dev-login/create-client`), so a demo can add a client before signing them in by OTP.
+ * Dev-gated like the OTP endpoints — no production path. The new account is an ordinary prospect, so its
+ * own subscription purchase opens every hotel.
+ */
+export function useCreateDemoClient() {
+  const api = useApiClient();
+  return useMutation<DevCreateClientResponse, Error, DevCreateClientRequest>({
+    mutationFn: (body) =>
+      api.request("/auth/dev-login/create-client", {
+        method: "POST",
+        body,
+        schema: devCreateClientResponse,
       }),
   });
 }

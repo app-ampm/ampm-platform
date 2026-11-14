@@ -25,6 +25,12 @@ const mockVerify = {
   isError: false,
   error: null,
 };
+const mockCreate = {
+  mutate: jest.fn((_body: unknown, opts?: { onSuccess?: () => void }) => opts?.onSuccess?.()),
+  isPending: false,
+  isError: false,
+  error: null,
+};
 
 jest.mock("expo-router", () => ({
   useRouter: () => ({ replace: mockReplace, push: jest.fn(), back: jest.fn() }),
@@ -33,6 +39,7 @@ jest.mock("@tanstack/react-query", () => ({ useQueryClient: () => ({ clear: mock
 jest.mock("@ampm/api-client", () => ({
   useRequestDevOtp: () => mockRequest,
   useVerifyDevOtp: () => mockVerify,
+  useCreateDemoClient: () => mockCreate,
 }));
 jest.mock("@/lib/session", () => ({
   setAccessToken: (token: string | null) => mockSetAccessToken(token),
@@ -69,5 +76,22 @@ describe("MobileOtpSignIn", () => {
     expect(mockReplace).toHaveBeenCalledWith("/");
     // The query cache is cleared so a new principal never sees the previous one's cached data.
     expect(mockClear).toHaveBeenCalled();
+  });
+
+  it("creates a new client from a name + mobile, then sends and shows its first code", async () => {
+    await renderWithProviders(<MobileOtpSignIn />);
+
+    await fireEvent.changeText(screen.getByPlaceholderText("98765 43210"), "9876500010");
+    await fireEvent.changeText(screen.getByPlaceholderText("e.g. Aditi Sharma"), "Aditi Sharma");
+    await fireEvent.press(screen.getByText("Create client & send code"));
+
+    // The client is created from the typed name + mobile (trimmed)...
+    expect(mockCreate.mutate).toHaveBeenCalledWith(
+      { name: "Aditi Sharma", phone: "9876500010" },
+      expect.anything(),
+    );
+    // ...and its first OTP is then requested and shown on screen.
+    expect(mockRequest.mutate).toHaveBeenCalledWith({ phone: "9876500010" }, expect.anything());
+    expect(screen.getByText("123456")).toBeTruthy();
   });
 });
