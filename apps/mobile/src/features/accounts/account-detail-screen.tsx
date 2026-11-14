@@ -101,8 +101,8 @@ export interface AccountDetailScreenProps {
  * One client account (the "Clients" record): a header panel with its name, status and facts, then its
  * contacts and subscriptions beside its details, payment ledger and internal notes. A manual payment is
  * recorded against a pending subscription from the header (or the row, when several wait). Staff with
- * CRM access read it; only a role granting `crm.subscriptions.update` sees Record payment, and the
- * server enforces the same key.
+ * CRM access read it; only a role that may change a subscription's status sees Record payment (Super
+ * Admin, Sales and Finance: `RECORD_SUBSCRIPTION_PAYMENT`, D-125), and the server decides the same way.
  *
  *   <AccountDetailScreen accountId={id} tabBar={<AppTabBar />} />
  */

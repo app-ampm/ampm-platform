@@ -78,6 +78,7 @@ export type { Decision, DenialReason, Reach, RoleGrant } from "./evaluate";
 export { clientReach, decideReach } from "./reach";
 export type { ReachPrincipal } from "./reach";
 export { canTransition } from "./transitions";
+export { RECORD_SUBSCRIPTION_PAYMENT, canRecordSubscriptionPayment } from "./subscription-payments";
 export type { TransitionContext } from "./transitions";
 export { STATUS_MACHINES } from "./statuses";
 export type { ActorPrincipal, StatusMachine } from "./statuses";

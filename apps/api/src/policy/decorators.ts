@@ -1,4 +1,5 @@
 import { createParamDecorator, type ExecutionContext, SetMetadata } from "@nestjs/common";
+import type { FieldGroup } from "@ampm/policy";
 
 import { type Access, requestContext } from "../common/request-context.js";
 import type { AuditAction } from "../generated/prisma/client.js";
@@ -15,6 +16,11 @@ export interface PermissionRequirement {
   readonly key: string;
   /** The route parameter that names the project the action targets (for `:assigned` grants). */
   readonly projectParam?: string | undefined;
+  /**
+   * The only fields the action changes, when a grant is limited to some (Finance's "RU status" on
+   * subscriptions): the guard decides with them as facts, so a field-limited grant can pass.
+   */
+  readonly fields?: readonly FieldGroup[] | undefined;
 }
 
 /**

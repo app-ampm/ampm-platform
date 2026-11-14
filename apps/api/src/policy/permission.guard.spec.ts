@@ -1,7 +1,7 @@
 import { Reflector } from "@nestjs/core";
 import { ExecutionContextHost } from "@nestjs/core/helpers/execution-context-host.js";
 import { isAppError, type Membership } from "@ampm/core";
-import type { StaffRole } from "@ampm/policy";
+import { RECORD_SUBSCRIPTION_PAYMENT, type StaffRole } from "@ampm/policy";
 import { describe, expect, it, vi } from "vitest";
 
 import type { AppLogger } from "../common/logger.service.js";
@@ -50,6 +50,12 @@ class Routes {
   // §10 line 543.
   @RequirePermission("budget.lines.read_internal_cost:assigned", { projectParam: "projectId" })
   readInternalCostAsDocumented(): void {}
+
+  // D-125: recording a manual payment changes a subscription's status alone.
+  @RequirePermission(RECORD_SUBSCRIPTION_PAYMENT.key, {
+    fields: RECORD_SUBSCRIPTION_PAYMENT.fields,
+  })
+  recordSubscriptionPayment(): void {}
 
   open(): void {}
 }
@@ -210,5 +216,15 @@ describe("PermissionGuard (architecture §6 step 4)", () => {
     expect(run(staff(["CD"]), "readInternalCostAsDocumented").status).toBe(403);
     expect(run(staff(["CD"]), "readInternalCostAsDocumented", OTHER).status).toBe(404);
     expect(run(staff(["FA"], []), "readInternalCostAsDocumented", OTHER).allowed).toBe(true);
+  });
+
+  it("D-125, §5.2: a route that names the fields it changes lets a field-limited grant through", () => {
+    // SA and SM update subscriptions outright; FA only their status, which is all recording changes.
+    for (const role of ["SA", "SM", "FA"] as const) {
+      expect(run(staff([role]), "recordSubscriptionPayment").allowed, role).toBe(true);
+    }
+    // HT reads subscriptions but may not change one: a 403. PM sees none: the 404 of absence.
+    expect(run(staff(["HT"]), "recordSubscriptionPayment").status).toBe(403);
+    expect(run(staff(["PM"]), "recordSubscriptionPayment").status).toBe(404);
   });
 });

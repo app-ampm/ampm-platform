@@ -65,7 +65,7 @@ The 390 renders are unchanged before and after. At 768 and 1440 the staff pages 
   - `SegmentedControl` takes `variant="underline"` (T3, T5).
   - `DataTable` lost its header fill and gained desktop row padding (T4).
 - **`/leads` (T2):** stage columns share the width; a Board / List switch from 768; Funnel and Clients in the header actions (fixes the §4 phone overflow).
-  - **Interim call on decision 4, to confirm:** the board shows every stage through Converted. Closed leads appear when a "Closed · n" chip is on. Phones list every lead.
+  - **Decision 4, settled with the user on 15 November (D-126):** the board shows every stage through Converted. Closed leads appear when a "Closed · n" chip is on. Phones list every lead.
 - **`/leads/[id]` (T3):** a panel header (name, stage chip, facts, Log activity and Advance), then `Columns` 1.3 : 1: Activity beside Demo, Invite, Manage and Contact. The phone order now follows the same tree.
 - **`/leads/funnel`:** a T1-style KPI card, with By stage beside By source.
 - **`/leads/accounts` and `[accountId]`:**
@@ -92,7 +92,7 @@ The 390 renders are unchanged before and after. At 768 and 1440 the staff pages 
   - The lead detail keeps its actions above the activity on a phone.
   - The roles table marks the open role (`DataTable selectedKey`).
   - Record payment shows only with `crm.subscriptions.update`.
-  - **Open question:** should Finance record manual payments? The matrix refuses it today.
+  - **Settled on 15 November (D-125):** Finance records manual payments too. Recording changes only a subscription's status, which Finance's "RU status" grant covers. The route now names that field (`RECORD_SUBSCRIPTION_PAYMENT` in `@ampm/policy`), so the guard lets the status-only grant through.
 
 **Still open after phase 3:**
 - **Data or API:**
@@ -203,7 +203,7 @@ The tablet layouts are fine. Phone bugs:
 1. **Amend guide §7:** client desktop pages follow the D and C artboards, not 768. This needs a D-record.
 2. **D5 map panel:** the map isn't built. Until it is, either show results two per row at full width, or reserve the right column with a placeholder.
 3. **Glow tones:** the DS Glass sheet (peacock 55%, gold 30%) and the screen artboards (gold about 50% near the top, peacock about 29%) disagree. Pick one before changing tokens.
-4. **Lead pipeline:** where Converted and Closed go (a filter or the List view).
+4. **Lead pipeline:** where Converted and Closed go (a filter or the List view). **Decided 15 November (D-126):** Converted is the board's last column; Closed sits behind a "Closed · n" chip.
 5. **Staff rail sections:** whether to match the mock's grouping now.
 
 ## 7. Suggested order (one developer, one branch, phased commits)

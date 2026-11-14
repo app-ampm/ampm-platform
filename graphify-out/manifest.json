@@ -456,9 +456,9 @@
     "semantic_hash": "cf443d2d95190b798cdccddfe8410036"
   },
   "packages/policy/src/index.ts": {
-    "mtime": 1794662960.806509,
-    "seen": 1794666131.733931,
-    "ast_hash": "1b5f59333bd6ff9479ae1b4268471e48",
+    "mtime": 1794687045.380139,
+    "seen": 1794687342.641046,
+    "ast_hash": "41610781e4213a7f998c831f1558a20d",
     "semantic_hash": ""
   },
   "packages/policy/tsconfig.json": {
@@ -846,9 +846,9 @@
     "semantic_hash": "061fc7fe0b8bf2ee4188e921d59a7191"
   },
   "packages/ui/jest.config.mjs": {
-    "mtime": 1794662960.828183,
-    "seen": 1794666131.7339551,
-    "ast_hash": "5bb57dfee6e00c3f14fd2ed3585bfe45",
+    "mtime": 1794686175.7957718,
+    "seen": 1794687342.641696,
+    "ast_hash": "95a2c5508dda792c1867fa0191f6397c",
     "semantic_hash": ""
   },
   "packages/ui/jest.setup.cjs": {
@@ -1548,9 +1548,9 @@
     "semantic_hash": ""
   },
   "apps/api/src/policy/decorators.ts": {
-    "mtime": 1794662960.853513,
-    "seen": 1794666131.733461,
-    "ast_hash": "a521336cf6bab86ae6472731c558eec6",
+    "mtime": 1794687057.9772992,
+    "seen": 1794687342.625109,
+    "ast_hash": "76db01dd5af0eb9c2759f33c093a1b42",
     "semantic_hash": ""
   },
   "apps/api/src/policy/entitlement.cache.ts": {
@@ -1560,9 +1560,9 @@
     "semantic_hash": "5cbc7bae295e1d8a87024b9a4205809a"
   },
   "apps/api/src/policy/permission.guard.ts": {
-    "mtime": 1794662960.8557472,
-    "seen": 1794666131.733464,
-    "ast_hash": "6ab2cd3bf1eb0f99dd56cf3771493763",
+    "mtime": 1794687045.3808393,
+    "seen": 1794687342.625164,
+    "ast_hash": "15cddc7626f1e4057602ddc236d1724f",
     "semantic_hash": ""
   },
   "apps/api/src/policy/policy.module.ts": {
@@ -1992,9 +1992,9 @@
     "semantic_hash": ""
   },
   "apps/api/src/policy/permission.guard.spec.ts": {
-    "mtime": 1794662960.8552198,
-    "seen": 1794666131.733464,
-    "ast_hash": "eb4ee13cd0b6e29fb08fe2ea319fe907",
+    "mtime": 1794687058.3151896,
+    "seen": 1794687342.625163,
+    "ast_hash": "a3284e8544653a41b0e015bf79183fc5",
     "semantic_hash": ""
   },
   "apps/mobile/src/features/field-notes/create-store.web.ts": {
@@ -3636,9 +3636,9 @@
     "semantic_hash": ""
   },
   "apps/api/src/modules/crm/subscriptions/subscriptions.controller.ts": {
-    "mtime": 1794662960.81971,
-    "seen": 1794666131.733425,
-    "ast_hash": "087412589d8b1e54877efa43f85e15d5",
+    "mtime": 1794687083.4062924,
+    "seen": 1794687342.623997,
+    "ast_hash": "2945ec2fbd9f65a2479248887e7d14a7",
     "semantic_hash": ""
   },
   "apps/api/src/modules/crm/subscriptions/subscriptions.module.ts": {
@@ -3654,8 +3654,8 @@
     "semantic_hash": ""
   },
   "apps/api/src/modules/crm/subscriptions/subscriptions.service.ts": {
-    "mtime": 1794663146.0957541,
-    "seen": 1794666131.733427,
+    "mtime": 1794687045.3803165,
+    "seen": 1794687342.624038,
     "ast_hash": "5f03e4b77ebe7b8c5f63f2d9b17370c8",
     "semantic_hash": ""
   },
@@ -3678,8 +3678,8 @@
     "semantic_hash": ""
   },
   "apps/api/test/subscriptions.e2e-spec.ts": {
-    "mtime": 1794662960.8807046,
-    "seen": 1794666131.7335,
+    "mtime": 1794686981.8103418,
+    "seen": 1794687342.6261618,
     "ast_hash": "ee24a33f96ae57fd87f5a1e60c7fb67c",
     "semantic_hash": ""
   },
@@ -4290,9 +4290,9 @@
     "semantic_hash": ""
   },
   "apps/mobile/jest.config.mjs": {
-    "mtime": 1794662960.8930807,
-    "seen": 1794666131.733506,
-    "ast_hash": "e9cf5b1238b6552a19661645d3eccc49",
+    "mtime": 1794686195.783604,
+    "seen": 1794687342.6262841,
+    "ast_hash": "bee7f4bca8deafa515e191c4630211aa",
     "semantic_hash": ""
   },
   "apps/mobile/jest.setup.cjs": {
@@ -7494,15 +7494,15 @@
     "semantic_hash": ""
   },
   "apps/mobile/src/features/accounts/account-detail-screen.test.tsx": {
-    "mtime": 1794680076.8028326,
-    "seen": 1794681316.630357,
-    "ast_hash": "2193f6662d7791e98ef9ff558a8a78f2",
+    "mtime": 1794687105.3053167,
+    "seen": 1794687342.627182,
+    "ast_hash": "0efcb2ed53753534291038069844eb9e",
     "semantic_hash": ""
   },
   "apps/mobile/src/features/accounts/account-detail-screen.tsx": {
-    "mtime": 1794680104.5690842,
-    "seen": 1794681316.630358,
-    "ast_hash": "0e6d4bec21f8b899eb1de46a589198eb",
+    "mtime": 1794687128.295416,
+    "seen": 1794687342.6271832,
+    "ast_hash": "826a06c014102e3dfd75c24aade1d6d3",
     "semantic_hash": ""
   },
   "apps/mobile/src/features/accounts/account-payments.tsx": {
@@ -7578,9 +7578,9 @@
     "semantic_hash": ""
   },
   "apps/mobile/src/features/accounts/record-payment-sheet.tsx": {
-    "mtime": 1794680037.821508,
-    "seen": 1794681316.630513,
-    "ast_hash": "1623f92269ebd4df8d6785a4b47aa78b",
+    "mtime": 1794687128.295522,
+    "seen": 1794687342.6274781,
+    "ast_hash": "4d82f83632d87ba23c25c2c328fd4c75",
     "semantic_hash": ""
   },
   "apps/mobile/src/features/admin/admin-console-screen.test.tsx": {
@@ -9030,9 +9030,9 @@
     "semantic_hash": ""
   },
   "docs/planning/desktop-layout-audit.md": {
-    "mtime": 1794685539.056938,
-    "seen": 1794685694.753682,
-    "ast_hash": "a83d21fc75ff624fc585d899b4c0b92b",
+    "mtime": 1794687145.7457888,
+    "seen": 1794687342.647447,
+    "ast_hash": "b6fe091d311f220a6deedf1fa5f9092c",
     "semantic_hash": ""
   },
   "apps/mobile/src/features/auth/cognito-sign-in-screen.test.tsx": {
@@ -9414,9 +9414,9 @@
     "semantic_hash": ""
   },
   "apps/mobile/src/features/accounts/use-can-record-payment.ts": {
-    "mtime": 1794680011.2688668,
-    "seen": 1794681316.630514,
-    "ast_hash": "0655251a2854007df3c43ce721eae969",
+    "mtime": 1794687092.7031975,
+    "seen": 1794687342.6274781,
+    "ast_hash": "e0792acb6cee9cd6cecb78873304c792",
     "semantic_hash": ""
   },
   "apps/mobile/src/features/accounts/use-pending-subscription.ts": {
@@ -9735,6 +9735,36 @@
     "mtime": 1794684974.56526,
     "seen": 1794685694.75145,
     "ast_hash": "3d8291376e453d53be4f3f224ed0b9d4",
+    "semantic_hash": ""
+  },
+  "apps/api/test/subscription-payment-roles.e2e-spec.ts": {
+    "mtime": 1794686981.8138113,
+    "seen": 1794687342.6261618,
+    "ast_hash": "4f3baa783a24942e85fcf287832c1486",
+    "semantic_hash": ""
+  },
+  "apps/mobile/jest.after-env.cjs": {
+    "mtime": 1794686175.7786055,
+    "seen": 1794687342.626283,
+    "ast_hash": "b26986c749fdd5708cce8b88f13190f8",
+    "semantic_hash": ""
+  },
+  "packages/policy/src/subscription-payments.test.ts": {
+    "mtime": 1794686907.6855078,
+    "seen": 1794687342.6412458,
+    "ast_hash": "7a792772f6d2e85194d1f6e93394558b",
+    "semantic_hash": ""
+  },
+  "packages/policy/src/subscription-payments.ts": {
+    "mtime": 1794687045.3673322,
+    "seen": 1794687342.6412458,
+    "ast_hash": "425ffacca73862c91a512c93baf6dca9",
+    "semantic_hash": ""
+  },
+  "packages/ui/jest.after-env.cjs": {
+    "mtime": 1794686175.7824352,
+    "seen": 1794687342.641696,
+    "ast_hash": "fb5a65ce3be4bdc61fa2d8ce73e22614",
     "semantic_hash": ""
   }
 }

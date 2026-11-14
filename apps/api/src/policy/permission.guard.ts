@@ -40,7 +40,10 @@ export class PermissionGuard implements CanActivate {
     if (!principal) throw errors.unauthenticated();
     const projectId = projectOf(context.switchToHttp().getRequest<Request>(), requirement);
     const caller = toPolicyPrincipal(principal);
-    const decision = decideBeforeRead(caller, requirement.key, { projectId });
+    const decision = decideBeforeRead(caller, requirement.key, {
+      projectId,
+      fields: requirement.fields,
+    });
     const store = requestContext.get();
     if (decision.allowed && decision.scope && store) {
       store.access = { key: requirement.key, scope: decision.scope };

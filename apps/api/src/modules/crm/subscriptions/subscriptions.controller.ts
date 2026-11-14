@@ -11,6 +11,7 @@ import {
   type SubscriptionPage,
   type SubscriptionView,
 } from "@ampm/core";
+import { RECORD_SUBSCRIPTION_PAYMENT } from "@ampm/policy";
 import { z } from "zod";
 
 import { ZodBody, ZodParams, ZodQuery } from "../../../common/zod.js";
@@ -51,7 +52,10 @@ export class SubscriptionsController {
   }
 
   @Post("subscriptions/:subscriptionId/record-payment")
-  @RequirePermission("crm.subscriptions.update")
+  // Recording changes the subscription's status alone, which Finance may update too (D-125).
+  @RequirePermission(RECORD_SUBSCRIPTION_PAYMENT.key, {
+    fields: RECORD_SUBSCRIPTION_PAYMENT.fields,
+  })
   @SelfAudited()
   @HttpCode(200)
   recordPayment(
