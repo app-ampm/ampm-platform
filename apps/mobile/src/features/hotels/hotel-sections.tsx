@@ -1,13 +1,15 @@
 import { View } from "react-native";
 
+import { useMediaUrl } from "@ampm/api-client";
 import type {
   HotelDetailView,
   HotelRoomClientView,
   HotelVenueClientView,
   MediaGalleryItem,
+  MediaVideoItem,
   WeddingReferenceClientItem,
 } from "@ampm/core";
-import { Icon, Link, ListItem, Row, Stack, StatusChip, Text } from "@ampm/ui";
+import { Icon, Link, ListItem, Row, Stack, StatusChip, Text, Video } from "@ampm/ui";
 
 import { MediaImage } from "@/components/media-image";
 
@@ -34,6 +36,7 @@ export function HotelSectionBody({ hotel, section }: HotelSectionBodyProps) {
   if (section === "venues") return <HotelVenues venues={hotel.venues} />;
   if (section === "rooms") return <HotelRooms rooms={hotel.rooms} />;
   if (section === "gallery") return <HotelGallery images={galleryImages(hotel)} />;
+  if (section === "video") return <HotelVideos videos={hotel.videos} />;
   if (section === "weddings") return <HotelWeddings references={hotel.references} />;
   return <HotelRates rates={hotel.rates} />;
 }
@@ -227,6 +230,44 @@ function HotelGallery({ images }: { readonly images: readonly MediaGalleryItem[]
           ))}
         </Row>
       ))}
+    </Stack>
+  );
+}
+
+/** The client-visible videos (feature 9.3c): each plays inline with the platform's own controls. */
+function HotelVideos({ videos }: { readonly videos: readonly MediaVideoItem[] }) {
+  return (
+    <Stack gap={3}>
+      {videos.map((video) => (
+        <HotelVideo key={video.id} video={video} />
+      ))}
+    </Stack>
+  );
+}
+
+/**
+ * One video: its signed URL resolved against the API base (the MediaImage rule), then the shared player, with
+ * the caption shown as visible text beneath it. The visible caption is what conveys it on the web export —
+ * there expo-video's `<video>` drops the accessibility label — so sighted and screen-reader clients both read
+ * it; the player keeps the label as its own name on native (and a generic one when there is no caption).
+ */
+function HotelVideo({ video }: { readonly video: MediaVideoItem }) {
+  const resolveMediaUrl = useMediaUrl();
+  const source = resolveMediaUrl(video.url);
+  if (!source) return null;
+  return (
+    <Stack gap={1}>
+      <Video
+        source={source}
+        label={video.caption ?? "Hotel video"}
+        className="aspect-video w-full"
+        radius="lg"
+      />
+      {video.caption ? (
+        <Text variant="bodySmall" tone="muted">
+          {video.caption}
+        </Text>
+      ) : null}
     </Stack>
   );
 }

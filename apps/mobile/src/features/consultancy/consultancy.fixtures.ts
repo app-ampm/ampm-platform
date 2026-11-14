@@ -52,6 +52,7 @@ export const HOTEL: HotelDetailView = {
   venues: [],
   rooms: [],
   gallery: [],
+  videos: [],
   references: [],
 };
 

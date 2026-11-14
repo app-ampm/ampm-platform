@@ -64,6 +64,7 @@ export * from "./components/avatar";
 export * from "./components/money-text";
 export * from "./components/photo-placeholder";
 export * from "./components/image";
+export * from "./components/video";
 
 // Feedback: notices, loading, full-area states, overlays.
 export * from "./components/callout";

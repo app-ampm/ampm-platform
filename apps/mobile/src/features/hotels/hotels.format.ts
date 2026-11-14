@@ -344,7 +344,8 @@ export function externalHttpUrl(value: string | null): string | null {
   return url && /^https?:\/\//i.test(url) ? url : null;
 }
 
-export type HotelSection = "overview" | "venues" | "rooms" | "rates" | "gallery" | "weddings";
+export type HotelSection =
+  "overview" | "venues" | "rooms" | "rates" | "gallery" | "video" | "weddings";
 
 export interface HotelSectionOption {
   readonly value: HotelSection;
@@ -381,6 +382,8 @@ export function hotelSections(hotel: HotelDetailView): HotelSectionOption[] {
   sections.push({ value: "rates", label: "Rates" });
   const images = galleryImages(hotel).length;
   if (images > 0) sections.push({ value: "gallery", label: "Gallery", badge: images });
+  if (hotel.videos.length > 0)
+    sections.push({ value: "video", label: "Video", badge: hotel.videos.length });
   const weddings = hotel.references.length;
   if (weddings > 0) sections.push({ value: "weddings", label: "Weddings", badge: weddings });
   return sections;

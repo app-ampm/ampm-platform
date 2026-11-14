@@ -3,7 +3,7 @@ import { z } from "zod";
 import { cursorQuery, isoDateTime, money, page, uuid } from "./common.js";
 import { weddingReferenceClientItem } from "./hotel-references.js";
 import { hotelRateItemType, hotelRateItemUnit } from "./hotel-rates.js";
-import { mediaGalleryItem } from "./media.js";
+import { mediaGalleryItem, mediaVideoItem } from "./media.js";
 
 /*
  * Contracts for hotel discovery (Module C "Hotel intelligence"; docs/data-model.md §5, feature set C).
@@ -207,6 +207,7 @@ export const hotelDetailView = hotelView
     venues: z.array(hotelVenueClientView),
     rooms: z.array(hotelRoomClientView),
     gallery: z.array(mediaGalleryItem),
+    videos: z.array(mediaVideoItem),
     references: z.array(weddingReferenceClientItem),
   })
   .strict();

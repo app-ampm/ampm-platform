@@ -212,6 +212,19 @@ describe("hotelSections", () => {
       "rates",
     ]);
   });
+
+  it("adds a video tab for the hotel's videos (B17), counting them", () => {
+    const videos = [
+      { id: "018f0000-0000-7000-8000-0000000000e1", caption: "A tour", url: "/media/blob?key=v1" },
+      { id: "018f0000-0000-7000-8000-0000000000e2", caption: null, url: "/media/blob?key=v2" },
+    ];
+    expect(hotelSections(detailFixture({ videos }))).toContainEqual({
+      value: "video",
+      label: "Video",
+      badge: 2,
+    });
+    expect(hotelSections(detailFixture()).map((s) => s.value)).not.toContain("video");
+  });
 });
 
 describe("venues, rooms and their labels", () => {

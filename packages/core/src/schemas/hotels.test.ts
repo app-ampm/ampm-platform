@@ -121,6 +121,7 @@ describe("hotelDetailView (GET /hotels/:id — the card plus rates, venues, room
     venues: [],
     rooms: [],
     gallery: [],
+    videos: [],
     references: [],
   };
 

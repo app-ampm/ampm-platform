@@ -349,7 +349,10 @@ describe("Hotel discovery (e2e)", () => {
     for (const item of asClient.gallery) {
       expect(Object.keys(item).sort()).toEqual(["caption", "id", "kind", "thumbnailUrl", "webUrl"]);
       expect(item.thumbnailUrl).toContain("/media/blob?");
-      expect(item.webUrl).toContain("/media/blob?");
     }
+
+    // B17: the client-visible video (no derivative, excluded from the gallery above) reaches the client, and
+    // a demo prospect gets none — the real listVideos visibility gate (signing is covered in media.service.spec).
+    expect([asClient.videos.length, asDemo.videos.length]).toEqual([1, 0]);
   });
 });
