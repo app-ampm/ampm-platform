@@ -43,4 +43,32 @@ export class DevLoginService {
     });
     return { accessToken, user: { id: user.id, name: user.name, email: user.email } };
   }
+
+  /**
+   * Dev-only demo sign-in (P-7): mints a local session for the seeded demo prospect so the demo
+   * experience — a curated set of hotels with indicative prices — can be entered without the real
+   * mobile/OTP transport (still Cognito-pending). There is no identifier to supply: there is one demo
+   * prospect, resolved by `user_type = "demo"` rather than widening the email/mobile sign-in to demo
+   * accounts. Same fail-closed gate as `signIn`, so there is no production path, and it mints for the
+   * demo account's STORED identity_subject (the session key, D-033), which a future Cognito link
+   * replaces without touching this path.
+   */
+  async signInDemo(): Promise<DevLoginResponse> {
+    const secret = this.env.IDENTITY_LOCAL_SECRET;
+    // Denial equals absence (security.md): outside a local, non-production config this does not exist.
+    if (this.env.IDENTITY_PROVIDER !== "local" || this.env.NODE_ENV === "production" || !secret) {
+      throw errors.notFound();
+    }
+    const user = await this.prisma.user.findFirst({
+      where: { userType: "demo", status: "active", deletedAt: null },
+      select: { id: true, name: true, email: true, identitySubject: true },
+    });
+    if (!user?.identitySubject || !user.email) {
+      throw errors.unauthenticated("No demo account is available");
+    }
+    const accessToken = await new LocalIdentityAdapter(secret).mint(user.identitySubject, {
+      email: user.email,
+    });
+    return { accessToken, user: { id: user.id, name: user.name, email: user.email } };
+  }
 }

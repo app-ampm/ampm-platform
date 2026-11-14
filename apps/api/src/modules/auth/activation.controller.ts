@@ -69,6 +69,17 @@ export class ActivationController {
     return this.devLogin.signIn(body.email);
   }
 
+  @Post("dev-login/demo")
+  @Public()
+  @RateLimit({ name: "auth.dev_demo", limit: 10, windowMs: 60_000 })
+  @HttpCode(200)
+  @AuditExempt(
+    "dev-only demo sign-in; mints a token for the seeded demo prospect and writes nothing; the API refuses it unless IDENTITY_PROVIDER=local and NODE_ENV is not production",
+  )
+  demoLogin(): Promise<DevLoginResponse> {
+    return this.devLogin.signInDemo();
+  }
+
   @Post("dev-login/request-otp")
   @Public()
   @RateLimit({ name: "auth.dev_otp_request", limit: 10, windowMs: 60_000 })
