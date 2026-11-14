@@ -10,7 +10,9 @@ import {
   type MediaDownloadUrl,
   type MediaKind,
   type MediaRemovedResponse,
+  type MediaRightsStatus,
   type MediaVariant,
+  type MediaVisibility,
 } from "@ampm/core";
 
 import { useApiClient } from "../provider";
@@ -41,30 +43,53 @@ export interface AddHotelMediaInput {
   readonly sizeBytes: number;
   /** image or video: the registered kind. The server verifies it against the bytes' content (AC-20.2). */
   readonly kind: MediaKind;
+  /** Detail set at creation (the add sheet collects these); an omitted field takes the server's default. */
+  readonly caption?: string | null;
+  readonly visibility?: MediaVisibility;
+  readonly rightsStatus?: MediaRightsStatus;
 }
 
 /**
  * Add a photo or video to a hotel: register the asset (`POST /media`), then upload its raw bytes
  * (`POST /media/:id/upload`, octet-stream). The server sniffs the bytes fail-closed; an image also gets its
  * web/thumbnail derivatives while a video keeps only its original (feature 9.3c) — either way the result
- * carries the final `scanStatus`. The asset starts `internal` / `consent_required`; make it client-visible
- * with {@link useUpdateMedia} (the GP-20 gate needs rights cleared). Refreshes the hotel's media list.
+ * carries the final `scanStatus`. Caption, visibility and rights may be set at creation, or left to the
+ * server defaults (`internal` / `consent_required`) and changed later with {@link useUpdateMedia}; the GP-20
+ * gate (client visibility needs cleared rights) is server-enforced either way. Refreshes the media list.
  */
 export function useAddHotelMedia(hotelId: string) {
   const api = useApiClient();
   const queryClient = useQueryClient();
   return useMutation<MediaAssetView, Error, AddHotelMediaInput>({
-    mutationFn: async ({ file, mimeType, sizeBytes, kind }) => {
+    mutationFn: async ({ file, mimeType, sizeBytes, kind, caption, visibility, rightsStatus }) => {
       const asset = await api.request("/media", {
         method: "POST",
-        body: { ownerType: "hotel", ownerId: hotelId, kind, mimeType, sizeBytes },
+        body: {
+          ownerType: "hotel",
+          ownerId: hotelId,
+          kind,
+          mimeType,
+          sizeBytes,
+          ...(caption !== undefined ? { caption } : {}),
+          ...(visibility !== undefined ? { visibility } : {}),
+          ...(rightsStatus !== undefined ? { rightsStatus } : {}),
+        },
         schema: mediaAssetView,
       });
-      return api.upload(`/media/${asset.id}/upload`, {
-        body: file,
-        contentType: "application/octet-stream",
-        schema: mediaAssetView,
-      });
+      try {
+        return await api.upload(`/media/${asset.id}/upload`, {
+          body: file,
+          contentType: "application/octet-stream",
+          schema: mediaAssetView,
+        });
+      } catch (error) {
+        // The register succeeded but the bytes never landed: soft-delete the pending placeholder so a
+        // retry does not pile up orphaned "Scanning" rows in the staff list (best effort).
+        await api
+          .request(`/media/${asset.id}`, { method: "DELETE", schema: mediaRemovedResponse })
+          .catch(() => undefined);
+        throw error;
+      }
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: hotelMediaQueryKey(hotelId) });

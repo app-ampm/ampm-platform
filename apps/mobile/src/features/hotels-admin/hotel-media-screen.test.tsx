@@ -1,6 +1,6 @@
 import type { MediaAssetView } from "@ampm/core";
 
-import { fireEvent, screen } from "../../test/render";
+import { fireEvent, screen, waitFor } from "../../test/render";
 import { HotelMediaScreen } from "./hotel-media-screen";
 import { pickMediaFile } from "./pick-media-file";
 import {
@@ -39,6 +39,7 @@ interface Captured {
 function mediaFetch(
   captured: Captured,
   items: MediaAssetView[] = [mediaAssetFixture({ id: CLEAN_ID })],
+  failUpload = false,
 ): FetchFn {
   return routedFetch({
     [`/hotels-admin/hotels/${HOTEL_ID}`]: () => ok(hotelStaffDetailViewFixture()),
@@ -51,8 +52,13 @@ function mediaFetch(
       return ok({ items, nextCursor: null });
     },
     [`/media/${NEW_ID}/upload`]: () => {
+      if (failUpload) return failure("validation_failed", 400);
       captured.uploaded = true;
       return ok(mediaAssetFixture({ id: NEW_ID, scanStatus: "clean", caption: null }));
+    },
+    [`/media/${NEW_ID}`]: (init) => {
+      if (init?.method === "DELETE") captured.deletedId = NEW_ID;
+      return ok({ id: NEW_ID });
     },
     [`/media/${CLEAN_ID}`]: (init) => {
       if (init?.method === "DELETE") {
@@ -69,11 +75,23 @@ function mediaFetch(
   });
 }
 
-async function renderManager(captured: Captured, items?: MediaAssetView[]): Promise<void> {
+async function renderManager(
+  captured: Captured,
+  items?: MediaAssetView[],
+  failUpload = false,
+): Promise<void> {
   await renderWithApi(
     <HotelMediaScreen hotelId={HOTEL_ID} />,
-    items ? mediaFetch(captured, items) : mediaFetch(captured),
+    mediaFetch(captured, items, failUpload),
   );
+}
+
+/** Drive the add-media modal: open it, pick the mocked file (wait for it to land), then save. */
+async function addViaSheet(): Promise<void> {
+  await fireEvent.press(await screen.findByTestId("media-add"));
+  await fireEvent.press(await screen.findByTestId("media-add-choose"));
+  await screen.findByText("Change"); // the picker shows "Change" once a file is chosen
+  await fireEvent.press(screen.getByTestId("media-add-submit"));
 }
 
 beforeEach(() => {
@@ -96,7 +114,46 @@ describe("HotelMediaScreen", () => {
     expect(screen.getByTestId("hotel-profile-submit")).toBeOnTheScreen();
   });
 
-  it("adds a photo: picks a file, registers it and uploads the bytes", async () => {
+  it("adds a photo through the modal: pick, keep the defaults, save", async () => {
+    const captured: Captured = {};
+    jest.mocked(pickMediaFile).mockResolvedValue({
+      file: new Blob(["x"], { type: "image/jpeg" }),
+      mimeType: "image/jpeg",
+      sizeBytes: 3,
+      name: "x.jpg",
+    });
+    await renderManager(captured);
+    await addViaSheet();
+    expect(await screen.findByText("Photo added")).toBeOnTheScreen();
+    expect(captured.registered).toEqual({
+      ownerType: "hotel",
+      ownerId: HOTEL_ID,
+      kind: "image",
+      mimeType: "image/jpeg",
+      sizeBytes: 3,
+      caption: null,
+      visibility: "internal",
+      rightsStatus: "consent_required",
+    });
+    expect(captured.uploaded).toBe(true);
+  });
+
+  it("adds a video through the modal (kind from the file)", async () => {
+    const captured: Captured = {};
+    jest.mocked(pickMediaFile).mockResolvedValue({
+      file: new Blob(["x"], { type: "video/mp4" }),
+      mimeType: "video/mp4",
+      sizeBytes: 3,
+      name: "clip.mp4",
+    });
+    await renderManager(captured);
+    await addViaSheet();
+    expect(await screen.findByText("Video added")).toBeOnTheScreen();
+    expect((captured.registered as { kind?: string }).kind).toBe("video");
+    expect(captured.uploaded).toBe(true);
+  });
+
+  it("sets visibility and rights in the modal before saving", async () => {
     const captured: Captured = {};
     jest.mocked(pickMediaFile).mockResolvedValue({
       file: new Blob(["x"], { type: "image/jpeg" }),
@@ -106,36 +163,13 @@ describe("HotelMediaScreen", () => {
     });
     await renderManager(captured);
     await fireEvent.press(await screen.findByTestId("media-add"));
+    await fireEvent.press(await screen.findByTestId("media-add-choose"));
+    await screen.findByText("Change");
+    await fireEvent.press(screen.getByTestId("media-visibility-client"));
+    await fireEvent.press(screen.getByTestId("media-rights-owned"));
+    await fireEvent.press(screen.getByTestId("media-add-submit"));
     expect(await screen.findByText("Photo added")).toBeOnTheScreen();
-    expect(captured.registered).toEqual({
-      ownerType: "hotel",
-      ownerId: HOTEL_ID,
-      kind: "image",
-      mimeType: "image/jpeg",
-      sizeBytes: 3,
-    });
-    expect(captured.uploaded).toBe(true);
-  });
-
-  it("adds a video: registers it as a video (kind from the file) and uploads the bytes", async () => {
-    const captured: Captured = {};
-    jest.mocked(pickMediaFile).mockResolvedValue({
-      file: new Blob(["x"], { type: "video/mp4" }),
-      mimeType: "video/mp4",
-      sizeBytes: 3,
-      name: "clip.mp4",
-    });
-    await renderManager(captured);
-    await fireEvent.press(await screen.findByTestId("media-add"));
-    expect(await screen.findByText("Video added")).toBeOnTheScreen();
-    expect(captured.registered).toEqual({
-      ownerType: "hotel",
-      ownerId: HOTEL_ID,
-      kind: "video",
-      mimeType: "video/mp4",
-      sizeBytes: 3,
-    });
-    expect(captured.uploaded).toBe(true);
+    expect(captured.registered).toMatchObject({ visibility: "client", rightsStatus: "owned" });
   });
 
   it("shows a video asset with a video name, a11y label and no broken thumbnail", async () => {
@@ -146,7 +180,7 @@ describe("HotelMediaScreen", () => {
     expect(screen.getByLabelText("Video")).toBeOnTheScreen();
   });
 
-  it("refuses a file over the size limit before uploading", async () => {
+  it("refuses a file over the size limit when choosing it", async () => {
     const captured: Captured = {};
     jest.mocked(pickMediaFile).mockResolvedValue({
       file: new Blob(["x"], { type: "video/mp4" }),
@@ -156,7 +190,9 @@ describe("HotelMediaScreen", () => {
     });
     await renderManager(captured);
     await fireEvent.press(await screen.findByTestId("media-add"));
+    await fireEvent.press(await screen.findByTestId("media-add-choose"));
     expect(await screen.findByText(/over the 25 MB limit/)).toBeOnTheScreen();
+    expect(screen.getByText("No file chosen")).toBeOnTheScreen();
     expect(captured.registered).toBeUndefined();
   });
 
@@ -169,7 +205,7 @@ describe("HotelMediaScreen", () => {
       name: "walkthrough.mp4",
     });
     await renderManager(captured);
-    await fireEvent.press(await screen.findByTestId("media-add"));
+    await addViaSheet();
     expect(await screen.findByText("Video added")).toBeOnTheScreen();
     expect((captured.registered as { kind?: string }).kind).toBe("video");
   });
@@ -179,8 +215,27 @@ describe("HotelMediaScreen", () => {
     jest.mocked(pickMediaFile).mockResolvedValue(null);
     await renderManager(captured);
     await fireEvent.press(await screen.findByTestId("media-add"));
+    await fireEvent.press(await screen.findByTestId("media-add-choose"));
     expect(await screen.findByText("Add media from the web workspace")).toBeOnTheScreen();
     expect(captured.registered).toBeUndefined();
+  });
+
+  it("cleans up the pending asset when the upload leg fails", async () => {
+    const captured: Captured = {};
+    jest.mocked(pickMediaFile).mockResolvedValue({
+      file: new Blob(["x"], { type: "image/jpeg" }),
+      mimeType: "image/jpeg",
+      sizeBytes: 3,
+      name: "x.jpg",
+    });
+    await renderManager(captured, undefined, true);
+    await fireEvent.press(await screen.findByTestId("media-add"));
+    await fireEvent.press(await screen.findByTestId("media-add-choose"));
+    await screen.findByText("Change");
+    await fireEvent.press(screen.getByTestId("media-add-submit"));
+    await waitFor(() => expect(captured.deletedId).toBe(NEW_ID));
+    expect(captured.registered).toBeDefined();
+    expect(captured.uploaded).toBeUndefined();
   });
 
   it("edits a photo's caption, visibility and rights", async () => {
