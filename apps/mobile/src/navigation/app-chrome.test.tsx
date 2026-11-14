@@ -101,8 +101,8 @@ describe("AppChrome for staff", () => {
     expect(screen.queryByRole("button", { name: "Tasks & Operations" })).toBeNull();
     await fireEvent.press(screen.getByRole("button", { name: "Hotel enquiries" }));
     expect(mockDismissTo).toHaveBeenCalledWith("/enquiries");
-    // The rail keeps the left edge clear, so the screens keep only the top.
-    expect(screen.getByText("insets 24 0")).toBeOnTheScreen();
+    // The rail floats over the screens' left edge: they keep clear of it (44 + 16 + 232) and the top.
+    expect(screen.getByText("insets 24 292")).toBeOnTheScreen();
   });
 
   it("names the person and their roles, and signs out", async () => {
@@ -119,6 +119,17 @@ describe("AppChrome for staff", () => {
     expect(screen.getByText("A")).toBeOnTheScreen();
     expect(screen.queryByText("Sameer Sales")).toBeNull();
     expect(screen.getByRole("button", { name: "Hotel enquiries" })).toBeSelected();
+    // Folded, the rail is 80 wide.
+    expect(screen.getByText("insets 24 140")).toBeOnTheScreen();
+  });
+
+  it("draws the rail's frame from the first paint, before /me answers", async () => {
+    mockPathname = "/leads";
+    await renderWithApi(chrome(), pendingFetch);
+    expect(screen.getByTestId("staff-rail")).toBeOnTheScreen();
+    expect(screen.queryByRole("button", { name: "Leads & Clients" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Sign out" })).toBeNull();
+    expect(screen.getByText("insets 24 292")).toBeOnTheScreen();
   });
 });
 
@@ -130,8 +141,24 @@ describe("AppChrome for a client", () => {
     await fireEvent.press(screen.getByRole("link", { name: "Home" }));
     await fireEvent.press(screen.getByRole("link", { name: "Account, Rhea Client" }));
     expect(mockDismissTo.mock.calls).toEqual([["/portal"], ["/account"]]);
-    // The bar keeps the top edge clear, so the screens keep only the sides.
-    expect(screen.getByText("insets 0 44")).toBeOnTheScreen();
+    // The bar floats over the screens' top edge: they keep clear of it (24 + 20 + 20 + 44) and the sides.
+    expect(screen.getByText("insets 108 44")).toBeOnTheScreen();
+  });
+
+  it("draws the bar from the first paint, keeping the avatar's place until /me answers", async () => {
+    mockPathname = "/hotels";
+    await renderWithApi(chrome(), pendingFetch);
+    expect(screen.getByTestId("client-top-nav")).toBeOnTheScreen();
+    expect(screen.getByRole("link", { name: "Hotels" })).toBeSelected();
+    expect(screen.queryByRole("link", { name: /^Account/ })).toBeNull();
+    expect(screen.getByText("insets 108 44")).toBeOnTheScreen();
+  });
+
+  it("waits for /me on the account, a route of both audiences", async () => {
+    mockPathname = "/account";
+    await renderWithApi(chrome(), pendingFetch);
+    expect(screen.queryByTestId("client-top-nav")).toBeNull();
+    expect(screen.queryByTestId("staff-rail")).toBeNull();
   });
 
   it("explains a locked area with a toast instead of navigating", async () => {

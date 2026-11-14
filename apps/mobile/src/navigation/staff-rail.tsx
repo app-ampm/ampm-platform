@@ -10,7 +10,8 @@ import { activeStaffArea, staffAreasFor } from "./staff-areas";
 import { useAreaNavigation } from "./use-area-navigation";
 
 export interface StaffRailProps {
-  readonly me: MeResponse;
+  /** Not there yet while `/me` loads: the rail's frame is drawn, its areas and person once it answers. */
+  readonly me: MeResponse | undefined;
   readonly pathname: string;
   /** Icons only: windows from 768 to 1199. */
   readonly collapsed: boolean;
@@ -65,13 +66,14 @@ function RailPerson({ me, collapsed }: PersonProps) {
 export function StaffRail({ me, pathname, collapsed }: StaffRailProps) {
   const insets = useSafeAreaInsets();
   const { open } = useAreaNavigation();
-  const areas = staffAreasFor(me);
+  const areas = me ? staffAreasFor(me) : [];
   const select = (key: string) => {
     const area = areas.find((candidate) => candidate.key === key);
     if (area) open(area.href);
   };
   return (
     <View
+      className="flex-1"
       style={{ paddingTop: insets.top, paddingBottom: insets.bottom, paddingLeft: insets.left }}
     >
       <NavRail
@@ -84,7 +86,7 @@ export function StaffRail({ me, pathname, collapsed }: StaffRailProps) {
             {collapsed ? "A" : "AMPM"}
           </Text>
         }
-        footer={<RailPerson me={me} collapsed={collapsed} />}
+        footer={me ? <RailPerson me={me} collapsed={collapsed} /> : null}
         className="flex-1"
         testID="staff-rail"
       />

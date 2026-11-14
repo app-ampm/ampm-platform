@@ -1,4 +1,4 @@
-import { chromeAudience, isAudienceRoute } from "./chrome-audience";
+import { chromeAudience, isAudienceRoute, routeAudience } from "./chrome-audience";
 
 describe("chromeAudience", () => {
   it("draws the staff rail on the workspace's areas and their detail screens", () => {
@@ -46,6 +46,21 @@ describe("isAudienceRoute", () => {
   it("fails for sign-in, the gallery, the entry redirect and a look-alike path", () => {
     for (const path of ["/sign-in", "/gallery", "/", "/leadership"]) {
       expect(isAudienceRoute(path)).toBe(false);
+    }
+  });
+});
+
+describe("routeAudience", () => {
+  it("names the audience whose routes alone hold the path", () => {
+    expect(routeAudience("/leads/018f0000-0000-7000-8000-0000000000a1")).toBe("staff");
+    expect(routeAudience("/hotels-admin/import")).toBe("staff");
+    expect(routeAudience("/portal/requests/new")).toBe("client");
+    expect(routeAudience("/hotels/saved")).toBe("client");
+  });
+
+  it("names none where both audiences meet, or on a route of neither", () => {
+    for (const path of ["/account", "/sign-in", "/gallery", "/", "/leadership"]) {
+      expect(routeAudience(path)).toBeNull();
     }
   });
 });

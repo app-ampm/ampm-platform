@@ -28,14 +28,14 @@ export function PortalScreen({ tabBar }: PortalScreenProps) {
   const goToSignIn = useGoToSignIn();
   if (me.isPending) {
     return (
-      <Screen width="content" tabBar={tabBar}>
+      <Screen width="wide" tabBar={tabBar}>
         <PortalLoading />
       </Screen>
     );
   }
   if (me.isError) {
     return (
-      <Screen width="content" tabBar={tabBar} header={<ScreenHeader title="Your plan" />}>
+      <Screen width="wide" tabBar={tabBar} header={<ScreenHeader title="Your plan" />}>
         <QueryErrorState
           error={me.error}
           onRetry={() => void me.refetch()}

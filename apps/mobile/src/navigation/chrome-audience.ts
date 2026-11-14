@@ -30,3 +30,15 @@ export function isAudienceRoute(pathname: string): boolean {
     routes.some((route) => isOnRoute(pathname, route)),
   );
 }
+
+/**
+ * The audience whose routes alone hold this path, so the chrome can draw its frame (an empty rail, a
+ * bar without the person) before `/me` answers and nothing shifts when it does: staff on the
+ * workspace's routes, client on the portal's, null where both meet (`/account`) or neither does.
+ */
+export function routeAudience(pathname: string): Audience | null {
+  const audiences = (Object.keys(AUDIENCE_ROUTES) as Audience[]).filter((audience) =>
+    AUDIENCE_ROUTES[audience].some((route) => isOnRoute(pathname, route)),
+  );
+  return audiences.length === 1 ? (audiences[0] ?? null) : null;
+}

@@ -123,6 +123,5 @@
   "225": "api-client/tsconfig.json",
   "226": "core/tsconfig.json",
   "227": "scripts",
-  "229": "nativewind",
-  "232": "react-native-svg"
+  "229": "nativewind"
 }

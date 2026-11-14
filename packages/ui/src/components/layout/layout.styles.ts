@@ -33,6 +33,19 @@ export const spacerClass: Record<Exclude<Gap, 0>, { vertical: string; horizontal
   8: { vertical: "h-8", horizontal: "w-8" },
 };
 
+/**
+ * Fixed side panels and list columns (`SplitPane`, `MasterDetail`): sm 288 (T5 and T12's 300) · md 320
+ * · lg 384 (D8's 380, T3's side) · list 432 (T6's 430 queue).
+ */
+export type SidePanelWidth = "sm" | "md" | "lg" | "list";
+
+export const sidePanelWidthClass: Record<SidePanelWidth, string> = {
+  sm: "w-72",
+  md: "w-80",
+  lg: "w-96",
+  list: "w-list",
+};
+
 export type Align = "start" | "center" | "end" | "stretch";
 export type Justify = "start" | "center" | "end" | "between";
 

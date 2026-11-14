@@ -2,9 +2,13 @@ import { View } from "react-native";
 
 import { defineStories } from "../../stories/define";
 import { Text } from "../text";
+import { Columns } from "./columns";
 import { Divider } from "./divider";
+import { Grid } from "./grid";
+import { MasterDetail } from "./master-detail";
 import { Row } from "./row";
 import { Spacer } from "./spacer";
+import { SplitPane } from "./split-pane";
 import { Stack } from "./stack";
 
 const Block = ({ label }: { label: string }) => (
@@ -81,6 +85,52 @@ export const stories = defineStories({
             <Text variant="data">300 GUESTS</Text>
           </Row>
         </Stack>
+      ),
+    },
+    {
+      name: "Columns 1.5 : 1, stacked below 1024 (D4)",
+      render: () => (
+        <Columns ratios={[1.5, 1]}>
+          <Block label="Where shall we look today?" />
+          <Block label="Hotel discovery · 18 days left" />
+        </Columns>
+      ),
+    },
+    {
+      name: "Columns 1 : 1 : 0.9 (D4's second row)",
+      render: () => (
+        <Columns ratios={[1, 1, 0.9]}>
+          <Block label="My selection" />
+          <Block label="Enquiries" />
+          <Block label="My wedding" />
+        </Columns>
+      ),
+    },
+    {
+      name: "SplitPane: main beside a 288 side panel (T5)",
+      render: () => (
+        <SplitPane side={<Block label="Verification" />}>
+          <Block label="Rate card" />
+        </SplitPane>
+      ),
+    },
+    {
+      name: "MasterDetail: a 432 list beside the selected item (T6)",
+      render: () => (
+        <MasterDetail
+          list={<Block label="Enquiry queue" />}
+          detail={<Block label="Bagh Mahal" />}
+        />
+      ),
+    },
+    {
+      name: "Grid: 1, 2 from 768, 3 from 1024",
+      render: () => (
+        <Grid>
+          {["Goa", "Jaipur", "Udaipur", "Kerala"].map((label) => (
+            <Block key={label} label={label} />
+          ))}
+        </Grid>
       ),
     },
   ],

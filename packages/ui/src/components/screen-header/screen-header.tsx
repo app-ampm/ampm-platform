@@ -10,6 +10,7 @@ import {
   screenHeaderSubtitleStyles,
   screenHeaderTextStyles,
   screenHeaderTitleRowStyles,
+  screenHeaderTitleStyles,
   type ScreenHeaderSize,
 } from "./screen-header.styles";
 
@@ -26,7 +27,7 @@ export interface ScreenHeaderProps extends Omit<ViewProps, "children"> {
   readonly backLabel?: string | undefined;
   /** At the right of the title: an Avatar, a count Badge, a small action. */
   readonly trailing?: ReactNode;
-  /** title (default): Gilda 36 · display: Gilda 64 for wide desktop pages. */
+  /** title (default): Gilda 36, 44 from 1024 · display: Gilda 64 for wide desktop pages · hero: 44, 88 from 1024 (D1). */
   readonly size?: ScreenHeaderSize | undefined;
   /** Responsive sizes for the title and its gold word: `md:text-5xl`. */
   readonly titleClassName?: string | undefined;
@@ -42,14 +43,15 @@ interface TitleProps {
 }
 
 function Title({ title, emphasis, size, className }: TitleProps) {
+  const sizeClass = cn(screenHeaderTitleStyles({ size }), className);
   return (
-    <Text variant={size} className={cn("flex-1", className)}>
+    <Text variant={size} className={cn("flex-1", sizeClass)}>
       {title}
       {emphasis ? (
         <>
           {" "}
           {/* Part of the heading's text, not a second heading. */}
-          <Text variant={size} tone="brand" accessibilityRole="none" className={cn(className)}>
+          <Text variant={size} tone="brand" accessibilityRole="none" className={sizeClass}>
             {emphasis}
           </Text>
         </>
@@ -66,6 +68,7 @@ function Title({ title, emphasis, size, className }: TitleProps) {
  *   <ScreenHeader title="Welcome" emphasis="back." subtitle="We sent a code to the number AMPM has for you." />
  *   <ScreenHeader eyebrow="Hello, Ananya" title="Find your venue" trailing={<Avatar name="Ananya Sharma" tone="highlight" />} />
  *   <ScreenHeader title="Raj Niwas Palace" eyebrow="Udaipur · Lake Pichola" onBack={router.back} />
+ *   <ScreenHeader size="hero" title="Welcome" emphasis="back." subtitle="Sign in with the mobile number AMPM has on file." />
  */
 export function ScreenHeader({
   title,
@@ -85,13 +88,13 @@ export function ScreenHeader({
       {onBack ? (
         <Button variant="glass" icon="arrow-left" accessibilityLabel={backLabel} onPress={onBack} />
       ) : null}
-      <View className={screenHeaderTextStyles}>
+      <View className={screenHeaderTextStyles({ size })}>
         {eyebrow ? <Text variant="eyebrow">{eyebrow}</Text> : null}
         <View className={screenHeaderTitleRowStyles}>
           <Title title={title} emphasis={emphasis} size={size} className={titleClassName} />
           {trailing ? <View className="shrink-0">{trailing}</View> : null}
         </View>
-        {subtitle ? <Text className={screenHeaderSubtitleStyles}>{subtitle}</Text> : null}
+        {subtitle ? <Text className={screenHeaderSubtitleStyles({ size })}>{subtitle}</Text> : null}
       </View>
     </View>
   );

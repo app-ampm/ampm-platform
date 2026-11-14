@@ -65,5 +65,16 @@ export const stories = defineStories({
         />
       ),
     },
+    {
+      name: "Hero size for a split sign-in (D1)",
+      render: () => (
+        <ScreenHeader
+          size="hero"
+          title="Welcome"
+          emphasis="back."
+          subtitle="Sign in with the mobile number AMPM has on file. We'll send a six-digit code by SMS."
+        />
+      ),
+    },
   ],
 });
