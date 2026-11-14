@@ -15,7 +15,7 @@ import {
 } from "@ampm/policy";
 
 import { Prisma, PrismaClient, type ServiceCategory } from "../src/generated/prisma/client.js";
-import { upsertDemoUser } from "../src/modules/demo/demo-baseline.js";
+import { upsertDemoAccount, upsertDemoUser } from "../src/modules/demo/demo-baseline.js";
 import { seedConsultancyDemo } from "./seed-consultancy.js";
 import { seedHotels } from "./seed-hotels.js";
 import { seedHotelSubresources } from "./seed-hotel-subresources.js";
@@ -345,6 +345,9 @@ async function main(): Promise<void> {
   await seedConfigurations();
   await seedLeadSources();
   await seedLeads(prisma);
+  // The demo prospect's account, self contact and originating lead — after the demo user, the lead
+  // source and Sales staff exist, so saved hotels persist and assistance routes to the lead (P-7).
+  await upsertDemoAccount(prisma);
   await seedPlans();
   await seedServiceTypes();
   await seedHotels(prisma);
