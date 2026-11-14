@@ -49,8 +49,9 @@ function fakePrincipal(
  * Hotel discovery end to end (Module C, CP-11). A client with no subscription is locked out (404 —
  * denial equals absence); a staff principal is refused the same way; an active subscriber browses the
  * catalogue, opens a hotel (no internal fields on the wire), saves/removes it on their own shortlist, and
- * never sees another account's shortlist. Demo isolation (demo_visible) is proven at the service level,
- * since the dev-login does not mint a demo token.
+ * never sees another account's shortlist. Demo isolation (demo_visible) is proven at the service level
+ * here; the demo sign-in that mints a demo token and its demo_hotels reach end to end are covered in
+ * auth-dev-login.e2e-spec.ts.
  */
 describe("Hotel discovery (e2e)", () => {
   let app: NestExpressApplication;

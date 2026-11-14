@@ -41,6 +41,7 @@ jest.mock("@ampm/api-client", () => ({
   useDevLogin: () => mockDevLogin,
   useRequestDevOtp: () => mockRequestOtp,
   useVerifyDevOtp: () => mockVerifyOtp,
+  useDemoSignIn: () => mockDemo,
   // The OTP form's dev "new client" step (#126); these tests never reach it.
   useCreateDemoClient: () => mockVerifyOtp,
 }));
@@ -49,6 +50,18 @@ jest.mock("@/lib/session", () => ({
 }));
 
 // The window's width picks the arrangement: P1 below 768, one card to 1023, D1's split from 1024.
+/** The demo prospect's sign-in (#129): it answers with the demo principal's session at once. */
+const mockDemo = {
+  mutate: jest.fn((_body: unknown, opts?: { onSuccess?: (result: unknown) => void }) =>
+    opts?.onSuccess?.({
+      accessToken: "demo-tok",
+      user: { id: "demo-1", name: "Dev Demo", email: "demo@example.com" },
+    }),
+  ),
+  isPending: false,
+  isError: false,
+  error: null,
+};
 const mockWindow = { width: 1440, listeners: new Set<() => void>() };
 jest.mock("react-native/Libraries/Utilities/useWindowDimensions", () => {
   const react = jest.requireActual<typeof ReactModule>("react");
@@ -120,6 +133,21 @@ describe("SignInScreen", () => {
     expect(mockSetAccessToken).toHaveBeenCalledWith("tok-staff");
     expect(mockClear).toHaveBeenCalled();
     expect(mockReplace).toHaveBeenCalledWith("/");
+  });
+
+  it("offers the demo entry under the card and signs the demo prospect in on tap", async () => {
+    mockWindow.width = 1440;
+    await renderWithProviders(<SignInScreen />);
+    const block = within(screen.getByTestId("dev-sign-in-shortcuts"));
+    expect(within(screen.getByTestId("sign-in-card")).queryByText("Explore the demo")).toBeNull();
+
+    await fireEvent.press(block.getByRole("button", { name: "Explore the demo" }));
+
+    expect(mockDemo.mutate).toHaveBeenCalled();
+    expect(mockSetAccessToken).toHaveBeenCalledWith("demo-tok");
+    expect(mockReplace).toHaveBeenCalledWith("/");
+    // The cache is cleared so the demo never sees a previous principal's cached data.
+    expect(mockClear).toHaveBeenCalled();
   });
 
   it("keeps the phone layout: the header first, the client form in a card of its own", async () => {

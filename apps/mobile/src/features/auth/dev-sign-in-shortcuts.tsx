@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 import { Button, Card, Input, Link, Row, Stack, Text, useSignInLayoutMode } from "@ampm/ui";
 
 /** Seeded accounts offered for one-tap sign-in in the demo (apps/api/prisma/seed.ts). */
@@ -18,6 +20,9 @@ export interface DevSignInShortcutsProps {
   /** Exchanges a seeded email for a local token (`/auth/dev-login`). */
   readonly signIn: (email: string) => void;
   readonly pending: boolean;
+  /** Enters the seeded demo prospect (P-7: demo hotels, indicative prices) via `/auth/dev-login/demo`. */
+  readonly enterDemo: () => void;
+  readonly demoPending: boolean;
   readonly errorText: string | undefined;
   /**
    * The typed work email, held by the screen: this block is arranged differently at each width, so
@@ -25,6 +30,27 @@ export interface DevSignInShortcutsProps {
    */
   readonly email: string;
   readonly setEmail: (value: string) => void;
+}
+
+/** The demo prospect's way in: secondary, since the client form's code button is the one gold action. */
+function DemoEntry({ enterDemo, demoPending }: DevSignInShortcutsProps) {
+  return (
+    <Stack gap={3}>
+      <Text variant="eyebrow">Demo prospect</Text>
+      <Text variant="body" tone="muted">
+        Explore AMPM as a demo guest — a curated set of hotels with indicative prices.
+      </Text>
+      <Button
+        fullWidth
+        variant="secondary"
+        loading={demoPending}
+        onPress={enterDemo}
+        testID="demo-sign-in"
+      >
+        Explore the demo
+      </Button>
+    </Stack>
+  );
 }
 
 function EmailSignIn({ signIn, pending, errorText, email, setEmail }: DevSignInShortcutsProps) {
@@ -107,8 +133,8 @@ function GalleryLink() {
 }
 
 /**
- * The development-only ways in after the client form: the work-email form, the seeded quick sign-ins
- * and the gallery link. A phone gives each a glass card (P1); the centred card holds them as flat
+ * The development-only ways in after the client form: the demo prospect, the work-email form, the
+ * seeded quick sign-ins and the gallery link. A phone gives each a glass card (P1); the centred card holds them as flat
  * tints. Under D1's card they share one flat block, quieter than the form and short enough to sit
  * beside the headline on a 900-high window.
  */
@@ -126,6 +152,7 @@ export function DevSignInShortcuts(session: DevSignInShortcutsProps) {
       <>
         <Card tone="flat" padding="sm" testID="dev-sign-in-shortcuts">
           <Stack gap={4}>
+            <DemoEntry {...session} />
             <EmailSignIn {...session} />
             <QuickGroup {...staff} />
             <QuickGroup {...clients} />
@@ -136,15 +163,11 @@ export function DevSignInShortcuts(session: DevSignInShortcutsProps) {
     );
   }
   const nested = mode === "card";
+  const inCard = (node: ReactNode) => (nested ? node : <Card>{node}</Card>);
   return (
     <>
-      {nested ? (
-        <EmailSignIn {...session} />
-      ) : (
-        <Card>
-          <EmailSignIn {...session} />
-        </Card>
-      )}
+      {inCard(<DemoEntry {...session} />)}
+      {inCard(<EmailSignIn {...session} />)}
       <QuickSignIn {...staff} nested={nested} />
       <QuickSignIn {...clients} nested={nested} />
       <GalleryLink />
