@@ -98,11 +98,12 @@ export class HotelsService {
     // sees demo/public, a real client sees client/demo/public. Read through Module N, never its table.
     // References are same-module (Module C): only the consented, client-visible ones (GP-20). Both reads
     // run in parallel since the hotel is already confirmed in reach (the p95-under-400ms detail, AC-16).
-    const [gallery, references] = await Promise.all([
+    const [gallery, videos, references] = await Promise.all([
       this.media.clientGallery("hotel", hotelId, audienceFor(principal)),
+      this.media.clientVideos("hotel", hotelId, audienceFor(principal)),
       this.references.clientReferences(hotelId),
     ]);
-    return toHotelDetailView(hotel, gallery, references);
+    return toHotelDetailView(hotel, gallery, videos, references);
   }
 
   /**

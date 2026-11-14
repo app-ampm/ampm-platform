@@ -12,6 +12,7 @@ import { stories as glass } from "../components/glass-panel/glass-panel.stories"
 import { stories as glowBackdrop } from "../components/glow-backdrop/glow-backdrop.stories";
 import { stories as icon } from "../components/icon/icon.stories";
 import { stories as image } from "../components/image/image.stories";
+import { stories as video } from "../components/video/video.stories";
 import { stories as input } from "../components/input/input.stories";
 import { stories as internalPanel } from "../components/internal-panel/internal-panel.stories";
 import { stories as layout } from "../components/layout/layout.stories";
@@ -79,6 +80,7 @@ export const allStories: readonly StoryModule[] = [
   moneyText,
   photoPlaceholder,
   image,
+  video,
   skeleton,
   states,
   queryErrorState,

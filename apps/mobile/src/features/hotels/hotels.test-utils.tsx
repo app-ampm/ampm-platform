@@ -121,6 +121,7 @@ export function detailFixture(overrides: Partial<HotelDetailView> = {}): HotelDe
     venues: [],
     rooms: [],
     gallery: [],
+    videos: [],
     references: [],
     ...overrides,
   };

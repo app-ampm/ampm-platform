@@ -12,6 +12,7 @@ import type {
   HotelVenueClientView,
   HotelView,
   MediaGalleryItem,
+  MediaVideoItem,
   SavedHotelView,
   WeddingReferenceClientItem,
 } from "@ampm/core";
@@ -168,6 +169,7 @@ function toRoomClientView(room: DetailRoom): HotelRoomClientView {
 export function toHotelDetailView(
   row: HotelDetailRow,
   gallery: MediaGalleryItem[],
+  videos: MediaVideoItem[],
   references: WeddingReferenceClientItem[],
 ): HotelDetailView {
   const venues = row.venues.map(toVenueClientView);
@@ -179,6 +181,7 @@ export function toHotelDetailView(
     venues,
     rooms,
     gallery,
+    videos,
     references,
   };
 }

@@ -157,3 +157,17 @@ export const mediaGalleryItem = z
   })
   .strict();
 export type MediaGalleryItem = z.infer<typeof mediaGalleryItem>;
+
+/**
+ * One client-visible video as a gallery shows it (feature 9.3c). A video has no web/thumbnail derivative
+ * (AC-24.1 renders images only), so there is no poster — just the caption and a short-lived signed link to
+ * the original the player streams. The object key never crosses the boundary (security.md), only the link.
+ */
+export const mediaVideoItem = z
+  .object({
+    id: uuid,
+    caption: z.string().nullable(),
+    url: z.string(), // signed link to the original (a video has no derivative)
+  })
+  .strict();
+export type MediaVideoItem = z.infer<typeof mediaVideoItem>;
