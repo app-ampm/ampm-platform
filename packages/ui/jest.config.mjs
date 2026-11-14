@@ -21,6 +21,8 @@ export default {
       testMatch: ["<rootDir>/src/**/*.test.{ts,tsx}"],
       testPathIgnorePatterns: ["/node_modules/", "\\.web\\.test\\.tsx?$"],
       setupFiles: ["<rootDir>/jest.setup.cjs"],
+      // Testing Library's async wait limit (findBy*, waitFor): set after the framework, see the file.
+      setupFilesAfterEnv: ["<rootDir>/jest.after-env.cjs"],
       moduleNameMapper: { "^lucide-react-native$": lucide },
     },
     {

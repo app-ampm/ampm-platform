@@ -35,6 +35,8 @@ export default {
   rootDir: ".",
   testMatch: ["<rootDir>/src/**/*.test.{ts,tsx}"],
   setupFiles: ["<rootDir>/jest.setup.cjs"],
+  // Testing Library's async wait limit (findBy*, waitFor): set after the framework, see the file.
+  setupFilesAfterEnv: ["<rootDir>/jest.after-env.cjs"],
   moduleNameMapper: {
     // The app's `@/` path alias (tsconfig paths), so a screen under test resolves its own imports.
     "^@/assets/(.*)$": "<rootDir>/assets/$1",
