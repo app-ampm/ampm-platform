@@ -1,29 +1,10 @@
 import { useEffect, useState } from "react";
 
 import { useUpdateMedia } from "@ampm/api-client";
-import {
-  isAppError,
-  type MediaAssetView,
-  type MediaRightsStatus,
-  type MediaVisibility,
-} from "@ampm/core";
-import { Button, Input, Sheet, Stack, Text, useToast } from "@ampm/ui";
+import { isAppError, type MediaAssetView } from "@ampm/core";
+import { Button, Sheet, useToast } from "@ampm/ui";
 
-import { MediaOptionPicker } from "./media-option-picker";
-import {
-  isClientFacing,
-  RIGHTS_OPTIONS,
-  rightsClearedForClients,
-  rightsLabel,
-  VISIBILITY_OPTIONS,
-  visibilityLabel,
-} from "./media.format";
-
-interface MediaDraft {
-  readonly caption: string;
-  readonly visibility: MediaVisibility;
-  readonly rights: MediaRightsStatus;
-}
+import { MediaDetailsFields, type MediaDraft } from "./media-details-fields";
 
 function draftFrom(media: MediaAssetView | null): MediaDraft {
   return {
@@ -87,7 +68,6 @@ export interface MediaEditSheetProps {
  */
 export function MediaEditSheet({ hotelId, media, onClose }: MediaEditSheetProps) {
   const { draft, set, pending, submit } = useMediaEditForm(hotelId, media, onClose);
-  const needsRights = isClientFacing(draft.visibility) && !rightsClearedForClients(draft.rights);
   return (
     <Sheet
       open={media !== null}
@@ -102,39 +82,7 @@ export function MediaEditSheet({ hotelId, media, onClose }: MediaEditSheetProps)
       }
     >
       {/* Render the fields only while open, so the option labels don't sit in the tree behind the row. */}
-      {media ? (
-        <Stack gap={4}>
-          <Input
-            label="Caption"
-            value={draft.caption}
-            onChangeText={(value) => set({ caption: value })}
-            placeholder="e.g. Lakeside pavilion at dusk"
-            helpText="Shown to clients in the gallery"
-            testID="media-caption"
-          />
-          <MediaOptionPicker
-            label="Who can see it"
-            value={draft.visibility}
-            options={VISIBILITY_OPTIONS}
-            optionLabel={visibilityLabel}
-            onChange={(visibility) => set({ visibility })}
-            testID="media-visibility"
-          />
-          <MediaOptionPicker
-            label="Rights"
-            value={draft.rights}
-            options={RIGHTS_OPTIONS}
-            optionLabel={rightsLabel}
-            onChange={(rights) => set({ rights })}
-            testID="media-rights"
-          />
-          {needsRights ? (
-            <Text variant="bodySmall" tone="muted" testID="media-rights-hint">
-              Set rights to Owned, Licensed or Consent on file before showing clients.
-            </Text>
-          ) : null}
-        </Stack>
-      ) : null}
+      {media ? <MediaDetailsFields draft={draft} onChange={set} /> : null}
     </Sheet>
   );
 }
