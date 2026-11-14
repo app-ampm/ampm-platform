@@ -8,7 +8,7 @@ import type { MeResponse, PrincipalType, StaffRoleCode } from "@ampm/core";
 import { setAccessToken } from "@/lib/session";
 
 import { createTestQueryClient, ok, pendingFetch, renderWithApi, TEST_API_BASE } from "../test/api";
-import { act, fireEvent, screen } from "../test/render";
+import { act, fireEvent, screen, within } from "../test/render";
 import { AppChrome } from "./app-chrome";
 
 // The chrome reads the path and moves between areas through the router; the window class says
@@ -16,7 +16,7 @@ import { AppChrome } from "./app-chrome";
 const mockDismissTo = jest.fn();
 const mockReplace = jest.fn();
 let mockPathname = "/";
-let mockWindow = { isWide: true, isRailExpanded: true };
+let mockWindow = { isWide: true, isDesktop: true, isRailExpanded: true };
 
 jest.mock("expo-router", () => ({
   usePathname: () => mockPathname,
@@ -87,7 +87,7 @@ async function renderChrome(path: string, seed: MeResponse) {
 beforeEach(() => {
   mockDismissTo.mockReset();
   mockReplace.mockReset();
-  mockWindow = { isWide: true, isRailExpanded: true };
+  mockWindow = { isWide: true, isDesktop: true, isRailExpanded: true };
   setAccessToken("signed-in-token");
 });
 
@@ -114,7 +114,7 @@ describe("AppChrome for staff", () => {
   });
 
   it("folds the rail to icons below 1200", async () => {
-    mockWindow = { isWide: true, isRailExpanded: false };
+    mockWindow = { isWide: true, isDesktop: true, isRailExpanded: false };
     await renderChrome("/enquiries", SALES);
     expect(screen.getByText("A")).toBeOnTheScreen();
     expect(screen.queryByText("Sameer Sales")).toBeNull();
@@ -159,6 +159,23 @@ describe("AppChrome for a client", () => {
     await renderWithApi(chrome(), pendingFetch);
     expect(screen.queryByTestId("client-top-nav")).toBeNull();
     expect(screen.queryByTestId("staff-rail")).toBeNull();
+  });
+
+  it("shows D4's five areas, More marked current on the account, locked ones tagged", async () => {
+    await renderChrome("/account", CLIENT);
+    const bar = within(screen.getByTestId("client-top-nav"));
+    expect(bar.getByRole("link", { name: "More" })).toBeSelected();
+    expect(bar.getByRole("link", { name: "More" })).toHaveProp("aria-current", "page");
+    // The avatar opens the account too, but only one item says it is the current page.
+    expect(bar.getByRole("link", { name: "Account, Rhea Client" })).not.toHaveProp("aria-current");
+    expect(within(bar.getByTestId("client-top-nav-wedding")).getByText("Locked")).toBeOnTheScreen();
+  });
+
+  it("leaves the avatar out below 1024, where More opens the account and the five areas fill the bar", async () => {
+    mockWindow = { isWide: true, isDesktop: false, isRailExpanded: false };
+    await renderChrome("/portal", CLIENT);
+    expect(screen.getByRole("link", { name: "More" })).toBeOnTheScreen();
+    expect(screen.queryByRole("link", { name: /^Account/ })).toBeNull();
   });
 
   it("explains a locked area with a toast instead of navigating", async () => {
@@ -236,7 +253,7 @@ describe("AppChrome and the session", () => {
     ["on a phone, where it draws nothing", "/leads", false],
   ])("asks nothing for /me %s, even on a regained focus", async (_case, path, isWide) => {
     mockPathname = path;
-    mockWindow = { isWide, isRailExpanded: isWide };
+    mockWindow = { isWide, isDesktop: isWide, isRailExpanded: isWide };
     const asked: string[] = [];
     await renderWithApi(chrome(), recordingApi(asked));
     await regainFocus();
@@ -252,7 +269,7 @@ describe("AppChrome draws nothing around the stack", () => {
     ["on the entry redirect", "/", CLIENT, true],
     ["on the other audience's routes", "/portal", SALES, true],
   ] as const)("%s", async (_case, path, seed, isWide) => {
-    mockWindow = { isWide, isRailExpanded: isWide };
+    mockWindow = { isWide, isDesktop: isWide, isRailExpanded: isWide };
     await renderChrome(path, seed);
     expect(screen.queryByTestId("staff-rail")).toBeNull();
     expect(screen.queryByTestId("client-top-nav")).toBeNull();

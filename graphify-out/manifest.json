@@ -396,9 +396,9 @@
     "semantic_hash": "562555e66a64d3c212ed7956753475b6"
   },
   "packages/api-client/src/index.ts": {
-    "mtime": 1794683804.1100647,
-    "seen": 1794684087.1043122,
-    "ast_hash": "d8d60d1d2e2a9736b74f4c3424db344b",
+    "mtime": 1794684168.8585563,
+    "seen": 1794685694.745114,
+    "ast_hash": "252a446a3dcf73ee200aa068a3dc29ff",
     "semantic_hash": ""
   },
   "packages/api-client/tsconfig.json": {
@@ -1170,9 +1170,9 @@
     "semantic_hash": ""
   },
   "packages/ui/src/components/sheet/sheet.tsx": {
-    "mtime": 1794662960.831375,
-    "seen": 1794666131.734067,
-    "ast_hash": "0f883cc18c6df00177013fd6a4c13f75",
+    "mtime": 1794684975.8608341,
+    "seen": 1794685694.751486,
+    "ast_hash": "ddedf16659ab413a31746cf0ba5758eb",
     "semantic_hash": ""
   },
   "packages/ui/src/components/skeleton/index.ts": {
@@ -2940,9 +2940,9 @@
     "semantic_hash": ""
   },
   "apps/api/src/modules/auth/activation.controller.ts": {
-    "mtime": 1794683804.107368,
-    "seen": 1794684087.087876,
-    "ast_hash": "bf962b3075026a732c546b7901b80c96",
+    "mtime": 1794684168.856988,
+    "seen": 1794685694.728405,
+    "ast_hash": "426fe5db751a2c04bfb474eb32a6fd5a",
     "semantic_hash": ""
   },
   "apps/api/src/modules/auth/auth.module.ts": {
@@ -3474,9 +3474,9 @@
     "semantic_hash": ""
   },
   "docs/tools/scan_secrets_allowlist.txt": {
-    "mtime": 1794663146.1122146,
-    "seen": 1794666131.734153,
-    "ast_hash": "99887fac9d75e039a0b9d65c7160bfac",
+    "mtime": 1794684168.8582282,
+    "seen": 1794685694.753997,
+    "ast_hash": "64bdbea38ee7ef54990ca9aabe2562e2",
     "semantic_hash": ""
   },
   "infra/runbooks/README.md": {
@@ -3744,9 +3744,9 @@
     "semantic_hash": ""
   },
   "apps/api/src/identity/dev-login.service.ts": {
-    "mtime": 1794662960.8280623,
-    "seen": 1794666131.733322,
-    "ast_hash": "175071d00484600a0dc9111e00cf20c9",
+    "mtime": 1794684168.856841,
+    "seen": 1794685694.726402,
+    "ast_hash": "96b2b71255d206779ef834c0d58b3015",
     "semantic_hash": ""
   },
   "apps/api/src/modules/crm/subscriptions/portal.controller.ts": {
@@ -3792,15 +3792,15 @@
     "semantic_hash": ""
   },
   "apps/api/test/auth-dev-login.e2e-spec.ts": {
-    "mtime": 1794662960.8644645,
-    "seen": 1794666131.733477,
-    "ast_hash": "a593deb281db236100b05b7645b4306e",
+    "mtime": 1794684168.8572314,
+    "seen": 1794685694.731871,
+    "ast_hash": "de9c0ea4f6f24360883fa3b0b74740ef",
     "semantic_hash": ""
   },
   "apps/api/test/hotels.e2e-spec.ts": {
-    "mtime": 1794663146.098827,
-    "seen": 1794666131.733488,
-    "ast_hash": "cc1846f3f5a2471f2572ecd9b219a99b",
+    "mtime": 1794684168.8576458,
+    "seen": 1794685694.732172,
+    "ast_hash": "3b5623e54652cf93a00dbfbd57860ee5",
     "semantic_hash": ""
   },
   "apps/api/test/portal.e2e-spec.ts": {
@@ -3858,9 +3858,9 @@
     "semantic_hash": ""
   },
   "apps/mobile/src/features/auth/sign-in-screen.tsx": {
-    "mtime": 1794671731.3065805,
-    "seen": 1794672438.166687,
-    "ast_hash": "14ccb9bdb752f1a19b2d0df023d129cc",
+    "mtime": 1794684206.4918675,
+    "seen": 1794685694.735179,
+    "ast_hash": "c0d9f718ffdcfd6d17c1f8ffca27ce29",
     "semantic_hash": ""
   },
   "apps/mobile/src/features/hotels/hotel-card.tsx": {
@@ -3918,9 +3918,9 @@
     "semantic_hash": ""
   },
   "packages/api-client/src/hooks/use-dev-login.ts": {
-    "mtime": 1794662960.8955295,
-    "seen": 1794666131.733831,
-    "ast_hash": "c318ba48716f9467604bf3fb42864780",
+    "mtime": 1794684168.858442,
+    "seen": 1794685694.7442932,
+    "ast_hash": "f72978d3eeab9cd63a74504facf7458e",
     "semantic_hash": ""
   },
   "packages/api-client/src/hooks/use-hotel.ts": {
@@ -5916,9 +5916,9 @@
     "semantic_hash": ""
   },
   "docs/design/peacock-night.md": {
-    "mtime": 1794677300.1658638,
-    "seen": 1794681316.6480582,
-    "ast_hash": "d622373dcd0f05b0adb5bc47f45ad053",
+    "mtime": 1794685539.0565257,
+    "seen": 1794685694.753503,
+    "ast_hash": "2ed4ec33f534cedc9c88120e06c1ac4c",
     "semantic_hash": ""
   },
   "reference_docs/design/peacock-night/README.md": {
@@ -6432,9 +6432,9 @@
     "semantic_hash": ""
   },
   "apps/mobile/src/navigation/app-chrome.test.tsx": {
-    "mtime": 1794665454.0154414,
-    "seen": 1794666131.7337,
-    "ast_hash": "3b9711e737223c31407d9788f3ecf561",
+    "mtime": 1794685151.4834697,
+    "seen": 1794685694.740525,
+    "ast_hash": "0515df603c467f8be2b8429c0816ffd9",
     "semantic_hash": ""
   },
   "apps/mobile/src/navigation/app-chrome.tsx": {
@@ -6444,9 +6444,9 @@
     "semantic_hash": ""
   },
   "apps/mobile/src/navigation/app-tab-bar.test.tsx": {
-    "mtime": 1794662960.8308384,
-    "seen": 1794666131.733702,
-    "ast_hash": "2b41a5458182734506d72a51617feee9",
+    "mtime": 1794685151.4836626,
+    "seen": 1794685694.740578,
+    "ast_hash": "be0848a63783fe4254216c087a389884",
     "semantic_hash": ""
   },
   "apps/mobile/src/navigation/app-tab-bar.tsx": {
@@ -6474,9 +6474,9 @@
     "semantic_hash": ""
   },
   "apps/mobile/src/navigation/client-top-nav.tsx": {
-    "mtime": 1794665442.0318785,
-    "seen": 1794666131.733705,
-    "ast_hash": "666d385a43dbcff34f617568f271feaa",
+    "mtime": 1794685151.4833486,
+    "seen": 1794685694.740646,
+    "ast_hash": "86770315d45962a99af3f9f6e294d4ca",
     "semantic_hash": ""
   },
   "apps/mobile/src/navigation/routes.ts": {
@@ -6516,9 +6516,9 @@
     "semantic_hash": ""
   },
   "apps/mobile/src/navigation/use-window-class.ts": {
-    "mtime": 1794662960.8440099,
-    "seen": 1794666131.733712,
-    "ast_hash": "10af68cade894723d981314e1f2e4e24",
+    "mtime": 1794685151.4831197,
+    "seen": 1794685694.740832,
+    "ast_hash": "d1c22aa230a5f69a7b9288fccfd798f2",
     "semantic_hash": ""
   },
   "apps/mobile/src/test/api.tsx": {
@@ -8394,15 +8394,15 @@
     "semantic_hash": ""
   },
   "packages/ui/src/components/data-table/data-table.test.tsx": {
-    "mtime": 1794679999.4511921,
-    "seen": 1794681316.643462,
-    "ast_hash": "fc5eda370e51777a78c8698b187f1351",
+    "mtime": 1794684867.713273,
+    "seen": 1794685694.7487621,
+    "ast_hash": "6c3807bab937964f8c6685fb2c26fd81",
     "semantic_hash": ""
   },
   "packages/ui/src/components/data-table/data-table.tsx": {
-    "mtime": 1794680012.7382615,
-    "seen": 1794681316.643462,
-    "ast_hash": "c821e4739baaef5a104c5878332c2c85",
+    "mtime": 1794685468.1585968,
+    "seen": 1794685694.7487621,
+    "ast_hash": "512e707dd8a53e0e77c4e64216aface1",
     "semantic_hash": ""
   },
   "packages/ui/src/components/data-table/index.ts": {
@@ -9030,9 +9030,9 @@
     "semantic_hash": ""
   },
   "docs/planning/desktop-layout-audit.md": {
-    "mtime": 1794681304.7319605,
-    "seen": 1794681316.648233,
-    "ast_hash": "3c7400b9bc875cec17ce079e160f0250",
+    "mtime": 1794685539.056938,
+    "seen": 1794685694.753682,
+    "ast_hash": "a83d21fc75ff624fc585d899b4c0b92b",
     "semantic_hash": ""
   },
   "apps/mobile/src/features/auth/cognito-sign-in-screen.test.tsx": {
@@ -9042,9 +9042,9 @@
     "semantic_hash": ""
   },
   "apps/mobile/src/features/auth/dev-sign-in-shortcuts.tsx": {
-    "mtime": 1794671835.786469,
-    "seen": 1794672438.1666481,
-    "ast_hash": "4fd32250df7a5a1e6d5275c55362124e",
+    "mtime": 1794684206.4920094,
+    "seen": 1794685694.735123,
+    "ast_hash": "35d011f08f56f161b76926c779982ff5",
     "semantic_hash": ""
   },
   "apps/mobile/src/features/auth/sign-in-hero.tsx": {
@@ -9054,9 +9054,9 @@
     "semantic_hash": ""
   },
   "apps/mobile/src/features/auth/sign-in-screen.test.tsx": {
-    "mtime": 1794683884.5504405,
-    "seen": 1794684087.094684,
-    "ast_hash": "2fd9634ac5a32090b2f1bd7eeeb42916",
+    "mtime": 1794684221.3968918,
+    "seen": 1794685694.735179,
+    "ast_hash": "c4697aa1b130dd6456f50ebea1c7873c",
     "semantic_hash": ""
   },
   "apps/mobile/src/features/consultancy/enquiry-about.tsx": {
@@ -9711,6 +9711,30 @@
     "mtime": 1794683804.1095307,
     "seen": 1794684087.0968478,
     "ast_hash": "84d18fbb245700b3fc23abc2a62bb821",
+    "semantic_hash": ""
+  },
+  "apps/api/src/identity/dev-login.service.spec.ts": {
+    "mtime": 1794684168.856425,
+    "seen": 1794685694.726401,
+    "ast_hash": "d78ad3ebf9c7d642136bd870ab7b6f70",
+    "semantic_hash": ""
+  },
+  "packages/ui/src/components/data-table/data-table-row-frame.tsx": {
+    "mtime": 1794684828.1039627,
+    "seen": 1794685694.7487411,
+    "ast_hash": "7641b7e218abc5089b7c9729f436b808",
+    "semantic_hash": ""
+  },
+  "packages/ui/src/components/data-table/data-table-stacked.tsx": {
+    "mtime": 1794685480.1388922,
+    "seen": 1794685694.7487419,
+    "ast_hash": "f036349cf898a0edf24a56e5a29cd2bc",
+    "semantic_hash": ""
+  },
+  "packages/ui/src/components/sheet/sheet-width.test.tsx": {
+    "mtime": 1794684974.56526,
+    "seen": 1794685694.75145,
+    "ast_hash": "3d8291376e453d53be4f3f224ed0b9d4",
     "semantic_hash": ""
   }
 }

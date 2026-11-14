@@ -1,8 +1,11 @@
 import type { ReactNode } from "react";
-import { Pressable, ScrollView, View } from "react-native";
+import { ScrollView, View } from "react-native";
 
 import { cn } from "../../lib/cn";
+import { useLayoutAt, type LayoutAt } from "../layout/use-layout-at";
 import { Text } from "../text";
+import { DataTableRowFrame } from "./data-table-row-frame";
+import { DataTableStacked } from "./data-table-stacked";
 
 export interface DataTableColumn<Row> {
   readonly key: string;
@@ -28,6 +31,12 @@ export interface DataTableProps<Row> {
   readonly rowAccessibilityLabel?: ((row: Row) => string) | undefined;
   /** The open row's key, when a detail beside the table shows it (T12's role in the side column). */
   readonly selectedKey?: string | undefined;
+  /**
+   * Below this width each row is a stacked block (its name, then label and value per column) rather
+   * than a line of cells that runs off a phone's edge. Default `md` (768); `false` keeps the table on
+   * every width, for a table of two or three narrow columns that fits a phone.
+   */
+  readonly stackBelow?: LayoutAt | false | undefined;
   readonly className?: string | undefined;
   readonly testID?: string | undefined;
 }
@@ -78,16 +87,6 @@ interface DataRowProps<Row> {
   readonly selected: boolean;
 }
 
-/**
- * The open row is marked by a shape as well as a tint (never colour alone): a peacock bar at its start,
- * placed absolutely so it takes no column's width. Screen readers hear it as selected natively and as
- * the current row on the web, where react-native-web drops accessibilityState.
- */
-const SELECTED_ROW_A11Y = {
-  "aria-current": "true",
-  accessibilityState: { selected: true },
-} as const;
-
 function RowCells<Row>({ row, columns }: Pick<DataRowProps<Row>, "row" | "columns">) {
   return columns.map((column) => {
     const layout = cellLayout(column);
@@ -108,68 +107,27 @@ function RowCells<Row>({ row, columns }: Pick<DataRowProps<Row>, "row" | "column
   });
 }
 
-function DataRow<Row>({ row, columns, onPress, label, last, selected }: DataRowProps<Row>) {
-  const cells = (
-    <View
-      className={cn(
-        "w-full flex-row",
-        !last && "border-b border-primary/12",
-        selected && "bg-highlight/10",
-      )}
-    >
-      {selected ? (
-        <View
-          className="absolute inset-y-2 left-0 w-1 rounded-full bg-highlight"
-          testID="data-table-selected-mark"
-        />
-      ) : null}
-      <RowCells row={row} columns={columns} />
-    </View>
-  );
-  if (!onPress) return cells;
+function DataRow<Row>({ row, columns, ...frame }: DataRowProps<Row>) {
   return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      {...(selected ? SELECTED_ROW_A11Y : {})}
-    >
-      {cells}
-    </Pressable>
+    <DataTableRowFrame className="w-full flex-row" {...frame}>
+      <RowCells row={row} columns={columns} />
+    </DataTableRowFrame>
   );
 }
 
-/**
- * A columnar table for the admin workspace's data-dense screens (first used by the audit log, TW-96).
- * Every column declares a fixed width so the header and cells line up; mark the primary column `grow` so
- * the table fills the width of its card on a desktop. The whole table scrolls horizontally when it is
- * wider than the screen, so it works on a phone too. Presentational only: data in via `rows`, a tap out
- * via `onRowPress`; loading, empty and error states belong to the caller. Right-align dates, counts and
- * money with `align: "end"`. `selectedKey` marks the row whose detail is open beside the table.
- *
- *   <DataTable columns={columns} rows={page.items} keyExtractor={(e) => e.id} onRowPress={open} />
- *   <DataTable … onRowPress={pick} selectedKey={pickedRole?.id} />
- */
-export function DataTable<Row>({
-  columns,
-  rows,
-  keyExtractor,
-  onRowPress,
-  rowAccessibilityLabel,
-  selectedKey,
-  className,
-  testID,
-}: DataTableProps<Row>) {
+/** The columns side by side under their header, scrolling sideways when wider than the card. */
+function ColumnTable<Row>(props: Omit<DataTableProps<Row>, "stackBelow">) {
+  const { columns, rows, keyExtractor, onRowPress, rowAccessibilityLabel, selectedKey } = props;
   return (
     <ScrollView
       horizontal
       showsHorizontalScrollIndicator={false}
-      className={cn(className)}
+      className={cn(props.className)}
       contentContainerClassName="min-w-full"
-      testID={testID}
+      testID={props.testID}
     >
       {/* min-w-full, so the table fills the card when the columns are narrower than it, and grows past
-          it (scrolling) when they are wider, as on a phone. */}
+          it (scrolling) when they are wider. */}
       <View className="min-w-full">
         <HeaderRow columns={columns} />
         {rows.map((row, index) => (
@@ -186,4 +144,29 @@ export function DataTable<Row>({
       </View>
     </ScrollView>
   );
+}
+
+/**
+ * A columnar table for the admin workspace's data-dense screens (first used by the audit log, TW-96).
+ * Every column declares a fixed width so the header and cells line up; mark the primary column `grow` so
+ * the table fills the width of its card on a desktop. On a phone (below `stackBelow`, 768 by default)
+ * each row stacks instead of running off the edge: the first column leads, then the others as label
+ * and value, so put the record's name first. Presentational only: data in via `rows`, a tap out via `onRowPress`; loading, empty and
+ * error states belong to the caller. Right-align dates, counts and money with `align: "end"`.
+ * `selectedKey` marks the row whose detail is open beside the table.
+ *
+ *   <DataTable columns={columns} rows={page.items} keyExtractor={(e) => e.id} onRowPress={open} />
+ *   <DataTable … onRowPress={pick} selectedKey={pickedRole?.id} />
+ *   <DataTable … stackBelow={false} />   // two narrow columns that fit a phone
+ */
+export function DataTable<Row>({ stackBelow = "md", ...table }: DataTableProps<Row>) {
+  const isWide = useLayoutAt(stackBelow === false ? "md" : stackBelow);
+  if (stackBelow !== false && !isWide) {
+    return (
+      <View className={cn(table.className)} testID={table.testID}>
+        <DataTableStacked {...table} />
+      </View>
+    );
+  }
+  return <ColumnTable {...table} />;
 }
