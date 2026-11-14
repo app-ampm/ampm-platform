@@ -17,11 +17,20 @@ export const ID = {
   // A second, fresh enquiry left at "submitted" so a staff member (Hotel team) can drive the whole
   // pipeline from the start in the demo; on a different hotel (the (account, hotel) open-unique index).
   pipelineEnquiry: "0192f3a0-7d3e-7b1a-9c2f-0000000000f2",
+  // Two more enquiries at mid-pipeline stages and three saved hotels, so the client tracker, the staff
+  // queue and Rhea's shortlist/compare all read fuller in the demo (idempotent by these fixed ids).
+  enquiryAwaiting: "0192f3a0-7d3e-7b1a-9c2f-0000000000f3",
+  enquiryNegotiating: "0192f3a0-7d3e-7b1a-9c2f-0000000000f4",
+  savedCandolim: "0192f3a0-7d3e-7b1a-9c2f-0000000000f5",
+  savedAravalli: "0192f3a0-7d3e-7b1a-9c2f-0000000000f6",
+  savedRose: "0192f3a0-7d3e-7b1a-9c2f-0000000000f7",
 } as const;
 
 export const HOTEL_SLUG = "lake-pavilion-udaipur";
 /** The fresh pipeline-demo enquiry's hotel; Rhea already has an open enquiry on HOTEL_SLUG. */
 export const HOTEL_SLUG_2 = "rose-fort-jaipur";
+export const HOTEL_SLUG_3 = "candolim-sands-goa";
+export const HOTEL_SLUG_4 = "aravalli-retreat-udaipur";
 
 /** The enquiry timeline, including one internal_only event the client serialiser must drop. */
 export const EVENTS = [

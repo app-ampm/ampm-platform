@@ -45,14 +45,50 @@ export function getAccessToken(): string | null | Promise<string | null> {
   return isCognito ? getCognitoAccessToken() : localToken;
 }
 
+/** Where the dev-login token is persisted on the web so a refresh keeps the session (local provider only). */
+const DEV_TOKEN_KEY = "ampm.devToken";
+
+/** The persisted dev token, or null — web localStorage only, guarded for SSR / native / private mode. */
+function readPersistedToken(): string | null {
+  try {
+    return globalThis.localStorage?.getItem(DEV_TOKEN_KEY) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function persistToken(token: string | null): void {
+  try {
+    const store = globalThis.localStorage;
+    if (!store) return;
+    if (token === null) store.removeItem(DEV_TOKEN_KEY);
+    else store.setItem(DEV_TOKEN_KEY, token);
+  } catch {
+    // Private mode or no storage: the session just won't survive a refresh.
+  }
+}
+
 /**
  * Store the local dev-login token, or clear it (`null`) on sign-out or when the API refuses it. Only the
- * `local` provider keeps a token here; under `cognito` the session is Amplify's, so this is a no-op.
+ * `local` provider keeps a token here; under `cognito` the session is Amplify's, so this is a no-op. The
+ * token is also persisted on the web so a page refresh keeps the session (restoreLocalSession reads it).
  */
 export function setAccessToken(token: string | null): void {
   if (isCognito) return;
   localToken = token;
+  persistToken(token);
   emit();
+}
+
+/**
+ * Restore a persisted dev-login token on the web (local provider) so a refresh keeps the presenter signed
+ * in. Run once from the app root in a client effect (never at module load), so the read is client-only and
+ * happens after the first render; the restore then re-renders readers through setAccessToken.
+ */
+export function restoreLocalSession(): void {
+  if (isCognito || localToken !== null) return;
+  const token = readPersistedToken();
+  if (token) setAccessToken(token);
 }
 
 /** Mark the Cognito session signed in or out (from the sign-in screen and sign-out), re-rendering readers. */

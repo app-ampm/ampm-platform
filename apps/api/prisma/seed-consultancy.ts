@@ -18,6 +18,7 @@ import {
   LINES,
   MILESTONES,
 } from "./seed-consultancy-data.js";
+import { seedDemoShortlistAndStages } from "./seed-consultancy-extra.js";
 
 /**
  * Anchored at seed time (not a fixed date): the journey so far — submitted through proposal shared —
@@ -337,4 +338,5 @@ export async function seedConsultancyDemo(
   await upsertProposalLines(prisma, clientUserId);
   await upsertMilestones(prisma, clientUserId);
   await upsertFreshEnquiry(prisma, clientUserId);
+  await seedDemoShortlistAndStages(prisma, clientUserId);
 }
