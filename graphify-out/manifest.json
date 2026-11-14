@@ -396,9 +396,9 @@
     "semantic_hash": "562555e66a64d3c212ed7956753475b6"
   },
   "packages/api-client/src/index.ts": {
-    "mtime": 1794663146.1348207,
-    "seen": 1794666131.733858,
-    "ast_hash": "a11f323ae4abb1072c1c2b79e1d12929",
+    "mtime": 1794683804.1100647,
+    "seen": 1794684087.1043122,
+    "ast_hash": "d8d60d1d2e2a9736b74f4c3424db344b",
     "semantic_hash": ""
   },
   "packages/api-client/tsconfig.json": {
@@ -2940,9 +2940,9 @@
     "semantic_hash": ""
   },
   "apps/api/src/modules/auth/activation.controller.ts": {
-    "mtime": 1794663146.0935054,
-    "seen": 1794666131.733367,
-    "ast_hash": "ccf1f4434dd935bf935d946a5e87d992",
+    "mtime": 1794683804.107368,
+    "seen": 1794684087.087876,
+    "ast_hash": "bf962b3075026a732c546b7901b80c96",
     "semantic_hash": ""
   },
   "apps/api/src/modules/auth/auth.module.ts": {
@@ -2958,9 +2958,9 @@
     "semantic_hash": ""
   },
   "packages/core/src/schemas/auth.ts": {
-    "mtime": 1794663146.135327,
-    "seen": 1794666131.73388,
-    "ast_hash": "9b5189d75827a3e98a24b65744de0bc1",
+    "mtime": 1794683804.1101491,
+    "seen": 1794684087.1049511,
+    "ast_hash": "71e1a5477b90ab3021cce4d31da4607e",
     "semantic_hash": ""
   },
   ".github/workflows/monday-sync.yml": {
@@ -6084,27 +6084,27 @@
     "semantic_hash": ""
   },
   "apps/mobile/src/features/consultancy/new-request-form.tsx": {
-    "mtime": 1794662960.85857,
-    "seen": 1794666131.733601,
-    "ast_hash": "5de9513ee586858a3b7132a27cbb607b",
+    "mtime": 1794683804.1081831,
+    "seen": 1794684087.095731,
+    "ast_hash": "08a56a3a2287a854847f66ee924b151b",
     "semantic_hash": ""
   },
   "apps/mobile/src/features/consultancy/new-request-screen.test.tsx": {
-    "mtime": 1794662960.8586833,
-    "seen": 1794666131.733602,
-    "ast_hash": "3771dfbf093c45a1c9e418d0ad9d9dfa",
+    "mtime": 1794683804.1083539,
+    "seen": 1794684087.095732,
+    "ast_hash": "9d8a78ebef48bd31a853bea1b1d590c3",
     "semantic_hash": ""
   },
   "apps/mobile/src/features/consultancy/new-request.form.test.ts": {
-    "mtime": 1794662960.8603811,
-    "seen": 1794666131.733603,
-    "ast_hash": "ddf091f18e58c14f77d692f413e68210",
+    "mtime": 1794683804.108592,
+    "seen": 1794684087.0957499,
+    "ast_hash": "6da49c98ff7740c057f76566b625769a",
     "semantic_hash": ""
   },
   "apps/mobile/src/features/consultancy/new-request.form.ts": {
-    "mtime": 1794662960.860879,
-    "seen": 1794666131.7336042,
-    "ast_hash": "2c851f4daed057f2f3f9f3220f54c6d6",
+    "mtime": 1794683804.1087437,
+    "seen": 1794684087.0957508,
+    "ast_hash": "de8d00f47962686d2f2acfc01049d1b3",
     "semantic_hash": ""
   },
   "apps/mobile/src/features/consultancy/proposal-card.tsx": {
@@ -6138,9 +6138,9 @@
     "semantic_hash": ""
   },
   "apps/mobile/src/features/consultancy/use-new-request.ts": {
-    "mtime": 1794662960.8667076,
-    "seen": 1794666131.73361,
-    "ast_hash": "e7cb1cb0c5bf5cc20f4fd6a896f9598f",
+    "mtime": 1794683804.1089664,
+    "seen": 1794684087.0960371,
+    "ast_hash": "b748a17e033cb5194c4f20e01c4acf2f",
     "semantic_hash": ""
   },
   "apps/mobile/src/features/hotels/destination-filter.tsx": {
@@ -7962,15 +7962,15 @@
     "semantic_hash": ""
   },
   "apps/mobile/src/features/hotels-admin/hotel-media-screen.test.tsx": {
-    "mtime": 1794663146.1025705,
-    "seen": 1794666131.733622,
-    "ast_hash": "e15e54a9565387b0b25a561d49b08c86",
+    "mtime": 1794683804.1092067,
+    "seen": 1794684087.096472,
+    "ast_hash": "97b290bf0fc788c6226fffc9eeba1cc3",
     "semantic_hash": ""
   },
   "apps/mobile/src/features/hotels-admin/hotel-media-screen.tsx": {
-    "mtime": 1794678479.5177915,
-    "seen": 1794681316.632662,
-    "ast_hash": "dd38f72fc97c751180e80f7444670e8b",
+    "mtime": 1794683828.2762227,
+    "seen": 1794684087.096472,
+    "ast_hash": "c5d4c547200a1dc0f6f157b8842d8622",
     "semantic_hash": ""
   },
   "apps/mobile/src/features/hotels-admin/hotel-profile-edit-sheet.test.tsx": {
@@ -8046,9 +8046,9 @@
     "semantic_hash": ""
   },
   "apps/mobile/src/features/hotels-admin/media-edit-sheet.tsx": {
-    "mtime": 1794663146.103445,
-    "seen": 1794666131.733631,
-    "ast_hash": "76ee09d32186b7382f1689f6527aeca1",
+    "mtime": 1794683804.109605,
+    "seen": 1794684087.096849,
+    "ast_hash": "086bfa302c5603da58cf15e12291fca6",
     "semantic_hash": ""
   },
   "apps/mobile/src/features/hotels-admin/media-option-picker.tsx": {
@@ -8274,9 +8274,9 @@
     "semantic_hash": ""
   },
   "packages/api-client/src/hooks/use-hotel-media.ts": {
-    "mtime": 1794663146.133668,
-    "seen": 1794666131.733833,
-    "ast_hash": "71c71cacb528b7f022a87d781e3a66d7",
+    "mtime": 1794683804.109918,
+    "seen": 1794684087.103591,
+    "ast_hash": "56696959cdf5f5ed957188f3603d0296",
     "semantic_hash": ""
   },
   "packages/api-client/src/hooks/use-hotel-rates.ts": {
@@ -8610,15 +8610,15 @@
     "semantic_hash": ""
   },
   "apps/api/src/identity/dev-otp.service.spec.ts": {
-    "mtime": 1794663146.09113,
-    "seen": 1794666131.733322,
-    "ast_hash": "36924f404b7c8565526e908ee726297f",
+    "mtime": 1794683804.1070812,
+    "seen": 1794684087.086549,
+    "ast_hash": "7af7a04f4f50a438fc38306d47053826",
     "semantic_hash": ""
   },
   "apps/api/src/identity/dev-otp.service.ts": {
-    "mtime": 1794663146.0912008,
-    "seen": 1794666131.733323,
-    "ast_hash": "a5cb7b2a7a934229b8d4a8fc04394d45",
+    "mtime": 1794683804.1071799,
+    "seen": 1794684087.08655,
+    "ast_hash": "f98ee784df494b57855bd02c7ab49894",
     "semantic_hash": ""
   },
   "apps/api/src/identity/local-provisioner.adapter.ts": {
@@ -8706,15 +8706,15 @@
     "semantic_hash": ""
   },
   "apps/mobile/src/features/auth/mobile-otp-sign-in.test.tsx": {
-    "mtime": 1794663146.1008449,
-    "seen": 1794666131.7335749,
-    "ast_hash": "406b3a6a76467e70556d29509185654f",
+    "mtime": 1794683804.1075473,
+    "seen": 1794684087.0946639,
+    "ast_hash": "a17731b34cfbe910e207c2a89451f44d",
     "semantic_hash": ""
   },
   "apps/mobile/src/features/auth/mobile-otp-sign-in.tsx": {
-    "mtime": 1794663146.1009076,
-    "seen": 1794666131.7335758,
-    "ast_hash": "3ee72df17533195cb11d834f8553b77b",
+    "mtime": 1794683804.1076324,
+    "seen": 1794684087.094665,
+    "ast_hash": "c8056ee0c6971eb6571fcd1aae237559",
     "semantic_hash": ""
   },
   "apps/mobile/src/features/auth/use-staff-sign-in.ts": {
@@ -8916,9 +8916,9 @@
     "semantic_hash": ""
   },
   "packages/api-client/src/hooks/use-dev-otp.ts": {
-    "mtime": 1794663146.1330848,
-    "seen": 1794666131.733831,
-    "ast_hash": "ee4ba4400f9f7aa395fb52d12e946377",
+    "mtime": 1794683804.109839,
+    "seen": 1794684087.103557,
+    "ast_hash": "8339ef052b8426f6e62dfd4b8b6b87b1",
     "semantic_hash": ""
   },
   "packages/api-client/src/hooks/use-media-url.ts": {
@@ -9054,9 +9054,9 @@
     "semantic_hash": ""
   },
   "apps/mobile/src/features/auth/sign-in-screen.test.tsx": {
-    "mtime": 1794671844.7373445,
-    "seen": 1794672438.166686,
-    "ast_hash": "3188521fbae1ebf6f503f2e310626fc8",
+    "mtime": 1794683884.5504405,
+    "seen": 1794684087.094684,
+    "ast_hash": "2fd9634ac5a32090b2f1bd7eeeb42916",
     "semantic_hash": ""
   },
   "apps/mobile/src/features/consultancy/enquiry-about.tsx": {
@@ -9699,6 +9699,18 @@
     "mtime": 1794677602.1965973,
     "seen": 1794681316.6351502,
     "ast_hash": "49961cbb98badb2bfab647a0b1f8bcbc",
+    "semantic_hash": ""
+  },
+  "apps/mobile/src/features/hotels-admin/add-media-sheet.tsx": {
+    "mtime": 1794683804.1090233,
+    "seen": 1794684087.0962508,
+    "ast_hash": "18138f11fce29cb81728de95e53d165e",
+    "semantic_hash": ""
+  },
+  "apps/mobile/src/features/hotels-admin/media-details-fields.tsx": {
+    "mtime": 1794683804.1095307,
+    "seen": 1794684087.0968478,
+    "ast_hash": "84d18fbb245700b3fc23abc2a62bb821",
     "semantic_hash": ""
   }
 }

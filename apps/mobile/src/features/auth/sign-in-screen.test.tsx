@@ -41,6 +41,8 @@ jest.mock("@ampm/api-client", () => ({
   useDevLogin: () => mockDevLogin,
   useRequestDevOtp: () => mockRequestOtp,
   useVerifyDevOtp: () => mockVerifyOtp,
+  // The OTP form's dev "new client" step (#126); these tests never reach it.
+  useCreateDemoClient: () => mockVerifyOtp,
 }));
 jest.mock("@/lib/session", () => ({
   setAccessToken: (token: string | null) => mockSetAccessToken(token),

@@ -1,14 +1,8 @@
 import { useState, type ReactNode } from "react";
 import type { UseQueryResult } from "@tanstack/react-query";
 
-import { useAddHotelMedia, useDeleteMedia, useHotelMedia, useStaffHotel } from "@ampm/api-client";
-import {
-  isAppError,
-  MAX_MEDIA_UPLOAD_BYTES,
-  type MediaAssetPage,
-  type MediaAssetView,
-  type MediaKind,
-} from "@ampm/core";
+import { useDeleteMedia, useHotelMedia, useStaffHotel } from "@ampm/api-client";
+import { type MediaAssetPage, type MediaAssetView } from "@ampm/core";
 import {
   Button,
   Card,
@@ -25,56 +19,15 @@ import {
 
 import { useGoToSignIn } from "@/navigation/sign-in";
 
+import { AddMediaSheet } from "./add-media-sheet";
 import { HotelRecordHeader } from "./hotel-record-header";
 import { MediaEditSheet } from "./media-edit-sheet";
 import { MediaRow } from "./media-row";
 import { MediaTile } from "./media-tile";
-import { pickMediaFile } from "./pick-media-file";
 
-/** Filenames a blank browser MIME still identifies as a video the server can sniff (ISO-BMFF ftyp). */
-const VIDEO_FILE = /\.(mp4|m4v|mov)$/i;
-
-/** Pick a photo or video, register it with the kind its content declares, and upload the bytes. */
-function useMediaAdder(hotelId: string) {
-  const toast = useToast();
-  const add = useAddHotelMedia(hotelId);
-  const addMedia = async (): Promise<void> => {
-    if (add.isPending) return;
-    const picked = await pickMediaFile("image/*,video/*");
-    if (!picked) {
-      toast.show({ title: "Add media from the web workspace", tone: "info" });
-      return;
-    }
-    // Declare the kind from the MIME type or the extension, so a video whose browser type is blank is not
-    // sent as an image (which the content sniff would then reject). The server's sniff is the final word.
-    const isVideo = picked.mimeType.startsWith("video/") || VIDEO_FILE.test(picked.name);
-    const noun = isVideo ? "video" : "photo";
-    if (picked.sizeBytes > MAX_MEDIA_UPLOAD_BYTES) {
-      const limitMb = MAX_MEDIA_UPLOAD_BYTES / (1024 * 1024);
-      toast.show({ title: `This ${noun} is over the ${limitMb} MB limit`, tone: "danger" });
-      return;
-    }
-    const kind: MediaKind = isVideo ? "video" : "image";
-    add.mutate(
-      { file: picked.file, mimeType: picked.mimeType, sizeBytes: picked.sizeBytes, kind },
-      {
-        onSuccess: () =>
-          toast.show({ title: isVideo ? "Video added" : "Photo added", tone: "success" }),
-        onError: (error) =>
-          toast.show({
-            title: isAppError(error) ? error.message : `Could not add the ${noun}`,
-            tone: "danger",
-          }),
-      },
-    );
-  };
-  return { addMedia, adding: add.isPending };
-}
-
-/** The add / edit / delete orchestration for the media manager, kept out of the view. */
+/** The edit / delete orchestration for the media manager, kept out of the view. */
 function useMediaManager(hotelId: string) {
   const toast = useToast();
-  const adder = useMediaAdder(hotelId);
   const remove = useDeleteMedia(hotelId);
   const [editing, setEditing] = useState<MediaAssetView | null>(null);
   const [deleting, setDeleting] = useState<MediaAssetView | null>(null);
@@ -91,7 +44,6 @@ function useMediaManager(hotelId: string) {
     });
   };
   return {
-    ...adder,
     editing,
     startEdit: (media: MediaAssetView): void => setEditing(media),
     closeEdit: (): void => setEditing(null),
@@ -178,17 +130,13 @@ function MediaList({
 
 type MediaManager = ReturnType<typeof useMediaManager>;
 
-/** The media manager's gold action: pick a photo or video and add it to the hotel. */
-function AddMediaButton({ manager }: { readonly manager: MediaManager }) {
+/**
+ * The media manager's gold action: open the add-media modal, where staff choose the file and fill in its
+ * caption, visibility and rights before anything is saved (#127).
+ */
+function AddMediaButton({ onPress }: { readonly onPress: () => void }) {
   return (
-    <Button
-      variant="primary"
-      size="sm"
-      icon="plus"
-      loading={manager.adding}
-      onPress={() => void manager.addMedia()}
-      testID="media-add"
-    >
+    <Button variant="primary" size="sm" icon="plus" onPress={onPress} testID="media-add">
       Add media
     </Button>
   );
@@ -220,6 +168,23 @@ export interface HotelMediaScreenProps {
 }
 
 /**
+ * The add-media sheet with a per-open session key, so each open mounts a fresh sheet — a slow upload still in
+ * flight from a previous open can never reset or close the reopened one. Returns the opener + the element.
+ */
+function useAddSheet(hotelId: string) {
+  const [open, setOpen] = useState(false);
+  const [session, setSession] = useState(0);
+  const openSheet = (): void => {
+    setSession((value) => value + 1);
+    setOpen(true);
+  };
+  const sheet = (
+    <AddMediaSheet key={session} hotelId={hotelId} open={open} onClose={() => setOpen(false)} />
+  );
+  return { openSheet, sheet };
+}
+
+/**
  * The hotel media manager (H1.1): add photos and videos (register → upload → fail-closed scan), caption
  * them and set who sees them and their rights. A scan-clean, client-visible, rights-cleared photo shows in
  * the client's hotel gallery and a video in its Video tab automatically. Hotel team and Super Admin only,
@@ -231,6 +196,7 @@ export function HotelMediaScreen({ hotelId, tabBar }: HotelMediaScreenProps) {
   const hotel = useStaffHotel(hotelId);
   const media = useHotelMedia(hotelId);
   const manager = useMediaManager(hotelId);
+  const addSheet = useAddSheet(hotelId);
   return (
     <Screen
       width="wide"
@@ -240,11 +206,13 @@ export function HotelMediaScreen({ hotelId, tabBar }: HotelMediaScreenProps) {
           hotelId={hotelId}
           section="media"
           hotel={hotel.data}
-          actions={<AddMediaButton manager={manager} />}
+          actions={<AddMediaButton onPress={addSheet.openSheet} />}
         />
       }
     >
       <MediaBody media={media} onEdit={manager.startEdit} onDelete={manager.startDelete} />
+      {/* At screen level, outside the rows-or-tiles switch, so an open modal survives a resize. */}
+      {addSheet.sheet}
       <MediaEditSheet hotelId={hotelId} media={manager.editing} onClose={manager.closeEdit} />
       <DeleteMediaConfirm manager={manager} />
     </Screen>

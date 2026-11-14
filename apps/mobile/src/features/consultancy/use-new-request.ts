@@ -6,17 +6,17 @@ import { isAppError, type HotelAssistanceRequestResponse } from "@ampm/core";
 import { useToast } from "@ampm/ui";
 
 import {
-  dateErrors,
   EMPTY_REQUEST_DRAFT,
+  formErrors,
   toCreateRequest,
-  type DateErrors,
+  type FormErrors,
   type NewRequestDraft,
 } from "./new-request.form";
 
 export interface NewRequestForm {
   readonly draft: NewRequestDraft;
   readonly update: <K extends keyof NewRequestDraft>(key: K, value: NewRequestDraft[K]) => void;
-  readonly errors: DateErrors;
+  readonly errors: FormErrors;
   /** False until the dates and the party size make a valid request. */
   readonly canSubmit: boolean;
   readonly isSubmitting: boolean;
@@ -60,7 +60,7 @@ export function useNewRequest(hotelId: string): NewRequestForm {
   return {
     draft,
     update: (key, value) => setDraft((current) => ({ ...current, [key]: value })),
-    errors: dateErrors(draft.dateFrom, draft.dateTo),
+    errors: formErrors(draft),
     canSubmit: payload !== null,
     isSubmitting: request.isPending,
     isOffline,

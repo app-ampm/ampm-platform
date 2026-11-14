@@ -77,3 +77,24 @@ export const devOtpVerifyRequest = z.object({
   code: z.string().regex(/^\d{6}$/),
 });
 export type DevOtpVerifyRequest = z.infer<typeof devOtpVerifyRequest>;
+
+/*
+ * Dev-only: create a brand-new active hotel-discovery client (a prospect account) so a demo can show an
+ * operator adding a client before the mobile+OTP sign-in. Same dev gate as the OTP endpoints, so there
+ * is no production path. Not self-registration (A-13): the demo driver, acting as AMPM, creates it; the
+ * new account is an ordinary prospect (never is_demo), so its own purchase is what opens every hotel.
+ */
+
+/** Create a demo client from a name and mobile; the mobile is normalised to E.164 (+91 default). */
+export const devCreateClientRequest = z.object({
+  name: z.string().trim().min(1).max(120),
+  phone: indianPhone,
+});
+export type DevCreateClientRequest = z.infer<typeof devCreateClientRequest>;
+
+/** The new client's id and the E.164 mobile it can now request a demo OTP for. */
+export const devCreateClientResponse = z.object({
+  userId: uuid,
+  phone: z.string().min(1),
+});
+export type DevCreateClientResponse = z.infer<typeof devCreateClientResponse>;

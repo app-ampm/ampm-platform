@@ -1,4 +1,10 @@
-import { dateErrors, EMPTY_REQUEST_DRAFT, isIsoDate, toCreateRequest } from "./new-request.form";
+import {
+  dateErrors,
+  EMPTY_REQUEST_DRAFT,
+  isIsoDate,
+  roomsError,
+  toCreateRequest,
+} from "./new-request.form";
 
 const HOTEL_ID = "018f0000-0000-7000-8000-00000000beef";
 
@@ -35,6 +41,18 @@ describe("dateErrors", () => {
   });
 });
 
+describe("roomsError", () => {
+  it("stays quiet for a blank or whole-number count and flags anything else", () => {
+    expect(roomsError("")).toBeUndefined();
+    expect(roomsError("   ")).toBeUndefined();
+    expect(roomsError("40")).toBeUndefined();
+    expect(roomsError("0")).toBeUndefined();
+    expect(roomsError("-2")).toBe("Enter rooms as a whole number, or leave it blank.");
+    expect(roomsError("3.5")).toBe("Enter rooms as a whole number, or leave it blank.");
+    expect(roomsError("a few")).toBe("Enter rooms as a whole number, or leave it blank.");
+  });
+});
+
 describe("toCreateRequest", () => {
   const filled = {
     ...EMPTY_REQUEST_DRAFT,
@@ -61,11 +79,40 @@ describe("toCreateRequest", () => {
     expect(toCreateRequest(HOTEL_ID, filled)?.datesFlexible).toBe(false);
   });
 
+  it("carries the optional rooms, contact preference and notes, trimmed", () => {
+    expect(
+      toCreateRequest(HOTEL_ID, {
+        ...filled,
+        rooms: " 40 ",
+        contactPreference: "  WhatsApp after 6pm  ",
+        notes: "  Sea-facing rooms please  ",
+      }),
+    ).toMatchObject({
+      roomsRequired: 40,
+      contactPreference: "WhatsApp after 6pm",
+      notesClient: "Sea-facing rooms please",
+    });
+  });
+
+  it("keeps a zero room count but sends blank optional fields as null", () => {
+    expect(toCreateRequest(HOTEL_ID, { ...filled, rooms: "0" })?.roomsRequired).toBe(0);
+    const bare = toCreateRequest(HOTEL_ID, filled);
+    expect(bare?.roomsRequired).toBeNull();
+    expect(bare?.contactPreference).toBeNull();
+    expect(bare?.notesClient).toBeNull();
+  });
+
   it("holds the request back until the dates are valid and in order and someone is coming", () => {
     expect(toCreateRequest(HOTEL_ID, EMPTY_REQUEST_DRAFT)).toBeNull();
     expect(toCreateRequest(HOTEL_ID, { ...filled, guests: "0" })).toBeNull();
     expect(toCreateRequest(HOTEL_ID, { ...filled, guests: "many" })).toBeNull();
     expect(toCreateRequest(HOTEL_ID, { ...filled, dateTo: "2027-02-13" })).toBeNull();
     expect(toCreateRequest(HOTEL_ID, { ...filled, dateFrom: "2027-02-30" })).toBeNull();
+  });
+
+  it("holds the request back when a rooms count was typed but is not a whole number", () => {
+    expect(toCreateRequest(HOTEL_ID, { ...filled, rooms: "-2" })).toBeNull();
+    expect(toCreateRequest(HOTEL_ID, { ...filled, rooms: "3.5" })).toBeNull();
+    expect(toCreateRequest(HOTEL_ID, { ...filled, rooms: "a few" })).toBeNull();
   });
 });

@@ -112,3 +112,80 @@ describe("DevOtpService (dev-only demo OTP)", () => {
     ).rejects.toMatchObject({ code: "not_found" });
   });
 });
+
+function createHarness(overrides: Partial<Env> = {}, taken: unknown = null) {
+  const findFirst = vi.fn(async () => taken);
+  const userCreate = vi.fn(async () => ({ id: "new-client-1" }));
+  const accountCreate = vi.fn(async () => ({ id: "new-account-1" }));
+  const contactCreate = vi.fn(async () => ({ id: "new-contact-1" }));
+  const prisma = {
+    user: { findFirst, create: userCreate },
+    clientAccount: { create: accountCreate },
+    accountContact: { create: contactCreate },
+  } as unknown as PrismaService;
+  const env = {
+    IDENTITY_PROVIDER: "local",
+    NODE_ENV: "development",
+    IDENTITY_LOCAL_SECRET: SECRET,
+    ...overrides,
+  } as unknown as Env;
+  return { service: new DevOtpService(env, prisma), userCreate, accountCreate, contactCreate };
+}
+
+describe("DevOtpService.createClient (dev-only demo client)", () => {
+  it("creates an ACTIVE prospect client, its account AND the contact that links them", async () => {
+    const { service, userCreate, accountCreate, contactCreate } = createHarness();
+    const result = await service.createClient("  Aditi Sharma  ", PHONE);
+    expect(result).toEqual({ userId: "new-client-1", phone: PHONE });
+    // An active client user with the trimmed name and the given mobile, so the later OTP lookup finds it.
+    expect(userCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          userType: "client",
+          status: "active",
+          name: "Aditi Sharma",
+          phone: PHONE,
+        }),
+      }),
+    );
+    // A prospect account (never is_demo), so the client's OWN purchase is what opens every hotel.
+    expect(accountCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          status: "prospect",
+          primaryContactUserId: "new-client-1",
+        }),
+      }),
+    );
+    // The `self` contact row (account_contacts.user_id) is the link entitlements AND the subscription
+    // purchase read — without it the client sees no hotels and the ₹50k purchase 404s.
+    expect(contactCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          accountId: "new-account-1",
+          userId: "new-client-1",
+          relation: "self",
+          isDecisionMaker: true,
+        }),
+      }),
+    );
+  });
+
+  it("refuses a mobile already in use, creating nothing", async () => {
+    const { service, userCreate, contactCreate } = createHarness({}, { id: "existing" });
+    await expect(service.createClient("Aditi", PHONE)).rejects.toMatchObject({ code: "conflict" });
+    expect(userCreate).not.toHaveBeenCalled();
+    expect(contactCreate).not.toHaveBeenCalled();
+  });
+
+  it("is refused outside a local, non-production config (creates nothing)", async () => {
+    const cognito = createHarness({ IDENTITY_PROVIDER: "cognito" });
+    await expect(cognito.service.createClient("A", PHONE)).rejects.toMatchObject({
+      code: "not_found",
+    });
+    expect(cognito.userCreate).not.toHaveBeenCalled();
+    await expect(
+      createHarness({ NODE_ENV: "production" }).service.createClient("A", PHONE),
+    ).rejects.toMatchObject({ code: "not_found" });
+  });
+});
