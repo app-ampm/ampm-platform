@@ -68,6 +68,13 @@ export const mediaAssetView = z
 export type MediaAssetView = z.infer<typeof mediaAssetView>;
 
 /**
+ * The flat upload ceiling the API buffers, scans and stores (AC-20.2, media-content.ts). The staff client
+ * pre-checks a pick against it so an oversize file (a long video especially) is refused instantly, with a
+ * human-readable limit, instead of after a doomed upload. A larger ceiling is a signed-URL slice.
+ */
+export const MAX_MEDIA_UPLOAD_BYTES = 25 * 1024 * 1024;
+
+/**
  * Register a media asset against an owner (create-by-reference). The server generates the object key; the
  * client never supplies one. The bytes are uploaded afterwards (slice 3b), so the row starts `pending`.
  */

@@ -56,7 +56,7 @@ export class MediaUploadService {
       );
     }
     if (bytes.length > MAX_UPLOAD_BYTES) {
-      throw errors.validation([], `File exceeds the ${MAX_UPLOAD_BYTES} byte limit`);
+      throw errors.validation([], `File exceeds the ${MAX_UPLOAD_BYTES / (1024 * 1024)} MB limit`);
     }
     // Validate the incoming bytes FULLY before any stored state changes: scan (AC-20.3) and, for an image,
     // decode into derivatives (AC-24.1) — both from memory. An infected or undecodable upload is decided
