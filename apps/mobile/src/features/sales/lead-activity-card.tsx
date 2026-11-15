@@ -1,6 +1,6 @@
 import { useLeadActivities } from "@ampm/api-client";
 import type { LeadActivityView } from "@ampm/core";
-import { Card, cn, Stack, Stepper, Text, type StepperStep } from "@ampm/ui";
+import { Card, cn, Skeleton, Stack, Stepper, Text, type StepperStep } from "@ampm/ui";
 
 import { activityLabel, formatMoment } from "./sales.format";
 
@@ -16,10 +16,22 @@ function activityStep(activity: LeadActivityView): StepperStep {
   };
 }
 
-/** The timeline itself, newest first; secondary context, so nothing shows while it loads or if it fails. */
+/** Three lines in the timeline's place while it loads, so the card does not jump when it arrives. */
+function TimelineSkeleton() {
+  return (
+    <Stack gap={3} testID="lead-activity-loading" accessible accessibilityLabel="Loading activity">
+      <Skeleton shape="text" className="w-40" />
+      <Skeleton shape="text" className="w-56" />
+      <Skeleton shape="text" className="w-32" />
+    </Stack>
+  );
+}
+
+/** The timeline itself, newest first; secondary context, so nothing shows if it fails. */
 function Timeline({ leadId }: { readonly leadId: string }) {
   const activities = useLeadActivities(leadId);
-  if (activities.isPending || activities.isError) return null;
+  if (activities.isPending) return <TimelineSkeleton />;
+  if (activities.isError) return null;
   if (activities.data.items.length === 0) {
     return (
       <Text variant="bodySmall" tone="muted">
