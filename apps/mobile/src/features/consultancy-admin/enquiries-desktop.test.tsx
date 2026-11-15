@@ -197,14 +197,22 @@ describe("An enquiry's page from 1024 (T6)", () => {
     expect(names).toHaveLength(1);
   });
 
-  it("filters the queue by stage beside the open enquiry, which stays open", async () => {
-    const sent: SentRequest[] = [];
-    await renderDetail(sent);
+  it("puts a chosen stage in the address beside the open enquiry, which stays open", async () => {
+    await renderDetail();
     const queue = screen.getByTestId("enquiry-queue-panel");
     await fireEvent.press(within(queue).getByRole("button", { name: /^With hotel/ }));
-    expect(within(queue).getByRole("button", { name: /^With hotel/ })).toBeSelected();
+    expect(mockRouter.setParams).toHaveBeenCalledWith({ stage: "with_hotel" });
+    expect(mockRouter.setParams).not.toHaveBeenCalledWith(
+      expect.objectContaining({ id: expect.anything() }),
+    );
     expect(screen.getByTestId("enquiry-pane")).toBeOnTheScreen();
-    expect(mockRouter.setParams).not.toHaveBeenCalled();
+  });
+
+  it("opens the first enquiry of the stage in the address, carrying the stage along", async () => {
+    await renderWithApi(<StaffEnquiriesListScreen stage="new" />, routedFetch(workspaceRoutes()));
+    await waitFor(() =>
+      expect(mockRouter.replace).toHaveBeenCalledWith(`/enquiries/${ENQUIRY_ID}?stage=new`),
+    );
   });
 
   it("heads the pane with the client and stay as data, the hotel, and the chips", async () => {

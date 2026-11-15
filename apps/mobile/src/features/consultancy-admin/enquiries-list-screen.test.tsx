@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Text } from "react-native";
 
+import type { HotelEnquiryStage } from "@ampm/core";
 import { uiCopy } from "@ampm/ui";
 
 import { fireEvent, screen, within } from "../../test/render";
@@ -19,8 +20,14 @@ import { StaffEnquiriesListScreen } from "./enquiries-list-screen";
 
 const mockPush = jest.fn();
 const mockReplace = jest.fn();
+const mockSetParams = jest.fn();
 jest.mock("expo-router", () => ({
-  useRouter: () => ({ back: jest.fn(), replace: mockReplace, push: mockPush }),
+  useRouter: () => ({
+    back: jest.fn(),
+    replace: mockReplace,
+    push: mockPush,
+    setParams: mockSetParams,
+  }),
   // A phone-sized window (jest-expo's): the page never opens an enquiry beside the queue here, so its
   // focus effect has nothing to do; enquiries-desktop.test covers it from 1024.
   useFocusEffect: () => undefined,
@@ -61,13 +68,18 @@ function queue() {
   ];
 }
 
-async function renderList(fetchImpl: FetchFn, tabBar?: ReactNode): Promise<void> {
-  await renderWithApi(<StaffEnquiriesListScreen tabBar={tabBar} />, fetchImpl);
+async function renderList(
+  fetchImpl: FetchFn,
+  tabBar?: ReactNode,
+  stage: HotelEnquiryStage | null = null,
+): Promise<void> {
+  await renderWithApi(<StaffEnquiriesListScreen tabBar={tabBar} stage={stage} />, fetchImpl);
 }
 
 beforeEach(() => {
   mockPush.mockClear();
   mockReplace.mockClear();
+  mockSetParams.mockClear();
 });
 
 describe("StaffEnquiriesListScreen", () => {
@@ -115,7 +127,7 @@ describe("StaffEnquiriesListScreen", () => {
     expect(mockPush).toHaveBeenCalledWith(`/enquiries/${ENQUIRY_ID}`);
   });
 
-  it("filters the queue by pipeline stage, each chip counting its stage", async () => {
+  it("shows the stage the address names, each chip counting its stage", async () => {
     const asked: string[] = [];
     const fetchImpl: FetchFn = (input) => {
       const url = String(input);
@@ -137,15 +149,20 @@ describe("StaffEnquiriesListScreen", () => {
       if (url.includes("stage=closed")) return Promise.resolve(page([]));
       return Promise.resolve(page(queue()));
     };
-    await renderList(fetchImpl);
-    expect(await screen.findByRole("button", { name: /^Closed/ })).toBeOnTheScreen();
-    expect(await screen.findByText("Ananya Sharma")).toBeOnTheScreen();
-    await fireEvent.press(screen.getByRole("button", { name: /^Closed/ }));
+    await renderList(fetchImpl, undefined, "closed");
     expect(await screen.findByText("Nothing at this stage")).toBeOnTheScreen();
     expect(asked.some((url) => url.includes("/consultancy-admin/enquiries?stage=closed"))).toBe(
       true,
     );
-    expect(screen.getByRole("button", { name: /^Closed/ })).toBeSelected();
+    expect(await screen.findByRole("button", { name: /^Closed/ })).toBeSelected();
+  });
+
+  it("writes a chosen stage into the address, and clears it with All", async () => {
+    await renderList(routedFetch({ [LIST]: () => page(queue()) }));
+    await fireEvent.press(await screen.findByRole("button", { name: /^With hotel/ }));
+    expect(mockSetParams).toHaveBeenLastCalledWith({ stage: "with_hotel" });
+    await fireEvent.press(screen.getByRole("button", { name: /^All/ }));
+    expect(mockSetParams).toHaveBeenLastCalledWith({ stage: undefined });
   });
 
   it("marks the open count as partial while older enquiries are on later pages", async () => {
