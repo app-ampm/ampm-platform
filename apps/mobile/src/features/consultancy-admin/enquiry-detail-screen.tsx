@@ -1,7 +1,7 @@
 import { useRouter } from "expo-router";
 
 import { useStaffEnquiry } from "@ampm/api-client";
-import type { HotelEnquiryStage } from "@ampm/core";
+import type { HotelEnquiryAssigneeFilter, HotelEnquiryStage } from "@ampm/core";
 import { Screen, ScreenHeader, useLayoutAt } from "@ampm/ui";
 
 import { EnquiriesSplit } from "./enquiries-split";
@@ -13,7 +13,7 @@ import {
 } from "./enquiry-heading";
 import { EnquiryPane } from "./enquiry-pane";
 import { EnquiryQueuePanel } from "./enquiry-queue-panel";
-import { queueHref } from "./queue-stage";
+import { queueHref } from "./queue-filter";
 
 /**
  * The staff view of one enquiry (consultancy-admin, T6's detail). On a phone and a tablet, a detail
@@ -27,10 +27,13 @@ import { queueHref } from "./queue-stage";
 export function StaffEnquiryDetailScreen({
   enquiryId,
   stage = null,
+  assignee = null,
 }: {
   readonly enquiryId: string;
   /** The queue's stage filter, carried in the address beside the open enquiry. */
   readonly stage?: HotelEnquiryStage | null;
+  /** The queue's owner filter, carried the same way. */
+  readonly assignee?: HotelEnquiryAssigneeFilter | null;
 }) {
   const isSplit = useLayoutAt("lg");
   const router = useRouter();
@@ -39,13 +42,20 @@ export function StaffEnquiryDetailScreen({
       width="wide"
       header={
         isSplit ? null : (
-          <DetailHeader enquiryId={enquiryId} onBack={() => router.dismissTo(queueHref(stage))} />
+          <DetailHeader
+            enquiryId={enquiryId}
+            onBack={() => router.dismissTo(queueHref(stage, assignee))}
+          />
         )
       }
     >
       <EnquiriesSplit
         isSplit={isSplit}
-        queue={isSplit ? <EnquiryQueuePanel openId={enquiryId} stage={stage} /> : null}
+        queue={
+          isSplit ? (
+            <EnquiryQueuePanel openId={enquiryId} stage={stage} assignee={assignee} />
+          ) : null
+        }
       >
         {/* Keyed: choosing another enquiry beside the queue starts its pane afresh (no draft carried
             over); crossing 1024 changes no key, so a draft stays. */}

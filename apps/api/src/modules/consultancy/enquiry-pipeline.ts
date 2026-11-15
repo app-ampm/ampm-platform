@@ -1,4 +1,5 @@
 import {
+  HOTEL_ENQUIRY_OPEN_STATUSES,
   HOTEL_ENQUIRY_STAGE_STATUSES,
   type HotelEnquiryPipelineView,
   type HotelEnquiryStage,
@@ -12,26 +13,21 @@ import type { Prisma } from "../../generated/prisma/client.js";
 import type { Principal } from "../../policy/principal.types.js";
 import { EnquiryInsightsRepository } from "./enquiry-insights.repository.js";
 
-/** The stages the team still works on (an outcome — confirmed or closed — is no longer "open"). */
-const OPEN_STAGES: readonly HotelEnquiryStage[] = [
-  "new",
-  "with_hotel",
-  "proposal",
-  "client_decision",
-];
-
 /**
- * The pipeline view: each stage's count, summed from the per-status counts in scope, and the open
- * enquiries nobody holds. Pure folding over the insights repository's two counts.
+ * The pipeline view: each stage's count, summed from the per-status counts in scope, the open enquiries
+ * nobody holds, and the open ones the reader holds (none for a reader with no user id). Pure folding over
+ * the insights repository's counts.
  */
 export async function pipelineView(
   insights: EnquiryInsightsRepository,
   scopeWhere: Prisma.HotelEnquiryWhereInput,
+  readerId: string | null,
 ): Promise<HotelEnquiryPipelineView> {
-  const openStatuses = OPEN_STAGES.flatMap((stage) => HOTEL_ENQUIRY_STAGE_STATUSES[stage]);
-  const [byStatus, unassignedOpen] = await Promise.all([
+  const open = HOTEL_ENQUIRY_OPEN_STATUSES;
+  const [byStatus, unassignedOpen, mineOpen] = await Promise.all([
     insights.countByStatus(scopeWhere),
-    insights.countUnassigned(scopeWhere, openStatuses),
+    insights.countOpenHeldBy(scopeWhere, null, open),
+    readerId === null ? Promise.resolve(0) : insights.countOpenHeldBy(scopeWhere, readerId, open),
   ]);
   const count = (stage: HotelEnquiryStage): number =>
     HOTEL_ENQUIRY_STAGE_STATUSES[stage].reduce(
@@ -46,7 +42,7 @@ export async function pipelineView(
     confirmed: count("confirmed"),
     closed: count("closed"),
   };
-  return { stages, unassignedOpen };
+  return { stages, unassignedOpen, mineOpen };
 }
 
 /**
@@ -58,6 +54,7 @@ export class EnquiryPipelineService {
   constructor(private readonly insights: EnquiryInsightsRepository) {}
 
   async pipeline(principal: Principal, access: Access): Promise<HotelEnquiryPipelineView> {
-    return pipelineView(this.insights, recordScope(principal, access.scope).where);
+    const readerId = principal.type === "system" ? null : principal.userId;
+    return pipelineView(this.insights, recordScope(principal, access.scope).where, readerId);
   }
 }

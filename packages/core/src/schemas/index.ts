@@ -206,38 +206,8 @@ export type {
   LeadUpdateRequest,
   LeadView,
 } from "./leads";
-export {
-  accountClientView,
-  accountContactCreateRequest,
-  accountContactRemovedResponse,
-  accountContactResult,
-  accountContactUpdateRequest,
-  accountContactView,
-  accountDetailView,
-  accountListQuery,
-  accountPage,
-  accountUpdateRequest,
-  accountView,
-  clientAccountStatus,
-  leadConvertRequest,
-  leadConvertResponse,
-} from "./accounts";
-export type {
-  AccountClientView,
-  AccountContactCreateRequest,
-  AccountContactRemovedResponse,
-  AccountContactResult,
-  AccountContactUpdateRequest,
-  AccountContactView,
-  AccountDetailView,
-  AccountListQuery,
-  AccountPage,
-  AccountUpdateRequest,
-  AccountView,
-  ClientAccountStatus,
-  LeadConvertRequest,
-  LeadConvertResponse,
-} from "./accounts";
+// Every name in accounts.ts (CRM accounts, contacts, conversion), as the newer modules below export.
+export * from "./accounts";
 export {
   billingType,
   planModuleAccess,

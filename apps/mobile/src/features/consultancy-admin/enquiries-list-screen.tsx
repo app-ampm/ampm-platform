@@ -2,19 +2,26 @@ import { useCallback, type ReactNode } from "react";
 import { useFocusEffect, useRouter } from "expo-router";
 
 import { useStaffEnquiries } from "@ampm/api-client";
-import type { HotelEnquiryStage } from "@ampm/core";
+import type { HotelEnquiryAssigneeFilter, HotelEnquiryStage } from "@ampm/core";
 import { Card, EmptyState, Screen, ScreenHeader, Stack, useLayoutAt } from "@ampm/ui";
 
 import { queueEyebrow } from "./consultancy-admin.format";
 import { EnquiriesSplit } from "./enquiries-split";
+import { EnquiryAssigneeFilter } from "./enquiry-assignee-filter";
 import { EnquiryPaneLoading } from "./enquiry-pane-loading";
 import { EnquiryQueuePanel } from "./enquiry-queue-panel";
 import { EnquiryQueueRow } from "./enquiry-queue-row";
 import { EnquiryQueueStates } from "./enquiry-queue-states";
 import { EnquiryStageFilter } from "./enquiry-stage-filter";
-import { enquiryHref, useSetQueueStage } from "./queue-stage";
+import { enquiryHref, useSetQueueAssignee, useSetQueueStage } from "./queue-filter";
 
 type EnquiriesQuery = ReturnType<typeof useStaffEnquiries>;
+
+/** The queue's filters, from the address: the pipeline stage and who holds the enquiry. */
+interface QueueFilter {
+  readonly stage: HotelEnquiryStage | null;
+  readonly assignee: HotelEnquiryAssigneeFilter | null;
+}
 
 /**
  * The staff hotel-enquiry queue (consultancy-admin, T6): every account's enquiries, newest first. On a
@@ -26,14 +33,21 @@ type EnquiriesQuery = ReturnType<typeof useStaffEnquiries>;
 export function StaffEnquiriesListScreen({
   tabBar,
   stage = null,
+  assignee = null,
 }: {
   readonly tabBar?: ReactNode;
   /** The `stage` search param: the queue shows only that pipeline stage. */
   readonly stage?: HotelEnquiryStage | null;
+  /** The `assignee` search param: only the reader's open enquiries, or the open ones nobody holds. */
+  readonly assignee?: HotelEnquiryAssigneeFilter | null;
 }) {
   const isSplit = useLayoutAt("lg");
-  const enquiries = useStaffEnquiries({ stage: stage ?? undefined });
-  useOpenFirstBesideQueue(isSplit, enquiries.data?.items[0]?.id, stage);
+  const filter: QueueFilter = { stage, assignee };
+  const enquiries = useStaffEnquiries({
+    stage: stage ?? undefined,
+    assignee: assignee ?? undefined,
+  });
+  useOpenFirstBesideQueue(isSplit, enquiries.data?.items[0]?.id, filter);
   return (
     <Screen
       width="wide"
@@ -44,9 +58,9 @@ export function StaffEnquiriesListScreen({
         isSplit={isSplit}
         queue={
           isSplit ? (
-            <EnquiryQueuePanel openId={undefined} stage={stage} />
+            <EnquiryQueuePanel openId={undefined} stage={stage} assignee={assignee} />
           ) : (
-            <QueuePage enquiries={enquiries} stage={stage} />
+            <QueuePage enquiries={enquiries} filter={filter} />
           )
         }
       >
@@ -65,13 +79,13 @@ export function StaffEnquiriesListScreen({
 function useOpenFirstBesideQueue(
   isSplit: boolean,
   firstId: string | undefined,
-  stage: HotelEnquiryStage | null,
+  { stage, assignee }: QueueFilter,
 ): void {
   const router = useRouter();
   useFocusEffect(
     useCallback(() => {
-      if (isSplit && firstId) router.replace(enquiryHref(firstId, stage));
-    }, [isSplit, firstId, stage, router]),
+      if (isSplit && firstId) router.replace(enquiryHref(firstId, stage, assignee));
+    }, [isSplit, firstId, stage, assignee, router]),
   );
 }
 
@@ -110,22 +124,27 @@ function QueueHeader({ enquiries }: { readonly enquiries: EnquiriesQuery }) {
 }
 
 /**
- * The queue on its own page: the pipeline's stage filter (the address's `stage` param), then rows in
- * one glass panel; a row opens its enquiry's page, and Back returns to the filtered queue.
+ * The queue on its own page: the owner filter and the pipeline's stage filter (the address's
+ * `assignee` and `stage` params), then rows in one glass panel; a row opens its enquiry's page, and
+ * Back returns to the filtered queue.
  */
 function QueuePage({
   enquiries,
-  stage,
+  filter,
 }: {
   readonly enquiries: EnquiriesQuery;
-  readonly stage: HotelEnquiryStage | null;
+  readonly filter: QueueFilter;
 }) {
   const router = useRouter();
   const setStage = useSetQueueStage();
+  const setAssignee = useSetQueueAssignee();
   return (
     <Stack gap={4}>
-      <EnquiryStageFilter value={stage} onChange={setStage} />
-      <EnquiryQueueStates enquiries={enquiries} filtered={stage !== null}>
+      <Stack gap={2}>
+        <EnquiryAssigneeFilter value={filter.assignee} onChange={setAssignee} />
+        <EnquiryStageFilter value={filter.stage} onChange={setStage} />
+      </Stack>
+      <EnquiryQueueStates enquiries={enquiries} stage={filter.stage} assignee={filter.assignee}>
         {(page) => (
           <Card padding="sm" className="md:p-5.5">
             <Stack gap={2}>

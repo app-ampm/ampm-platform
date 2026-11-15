@@ -4,6 +4,11 @@ import { enquiryFixture } from "./consultancy-admin.test-utils";
 import {
   ASSIGNED_BADGE,
   UNASSIGNED_BADGE,
+  holderBadge,
+  holderName,
+  holderSpoken,
+  ownerCaption,
+  shortPersonName,
   enquiryQueueLine,
   queueEyebrow,
   staffEnquiryBadge,
@@ -35,6 +40,42 @@ describe("the holder badges", () => {
   it("marks an enquiry nobody holds as the team's to pick up (gold solid), a held one in hand", () => {
     expect(UNASSIGNED_BADGE).toEqual({ label: "Unassigned", tone: "danger" });
     expect(ASSIGNED_BADGE).toEqual({ label: "Assigned", tone: "info" });
+  });
+});
+
+describe("who holds an enquiry", () => {
+  const HEMA = "018f0000-0000-7000-8000-00000000cafe";
+  const held = enquiryFixture({ assignedUserId: HEMA, assignedUserName: "Hema Hotels" });
+
+  it("names the holder in full for the page and a screen reader, and short on a queue chip", () => {
+    expect(holderName(held)).toBe("Hema Hotels");
+    expect(holderSpoken(held)).toBe("Held by Hema Hotels");
+    expect(holderBadge(held)).toEqual({ label: "Hema H.", tone: "info" });
+  });
+
+  it("keeps the gold Unassigned while nobody holds it", () => {
+    const nobody = enquiryFixture();
+    expect(holderName(nobody)).toBeNull();
+    expect(holderSpoken(nobody)).toBe("Unassigned");
+    expect(holderBadge(nobody)).toBe(UNASSIGNED_BADGE);
+  });
+
+  it("says Assigned when the holder's record is gone, never Unassigned", () => {
+    const gone = enquiryFixture({ assignedUserId: HEMA, assignedUserName: null });
+    expect(holderBadge(gone)).toBe(ASSIGNED_BADGE);
+    expect(holderSpoken(gone)).toBe("Assigned");
+  });
+
+  it("shortens to the first name and the last name's initial", () => {
+    expect(shortPersonName("Sana Verma")).toBe("Sana V.");
+    expect(shortPersonName("Asha  Rani Admin")).toBe("Asha A.");
+    expect(shortPersonName("Hema")).toBe("Hema");
+  });
+
+  it("tells the reader whether the enquiry is theirs, someone's or nobody's", () => {
+    expect(ownerCaption(false, false)).toMatch(/nobody/i);
+    expect(ownerCaption(true, true)).toMatch(/^You hold/);
+    expect(ownerCaption(true, false)).toMatch(/^Holds/);
   });
 });
 

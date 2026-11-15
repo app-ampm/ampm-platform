@@ -5,6 +5,7 @@ import {
   hotelEnquiryStaffUpdateRequest,
   hotelEnquiryStatusUpdateRequest,
   uuid,
+  type HotelEnquiryAssignee,
   type HotelEnquiryClientDetailView,
   type HotelEnquiryEventCreateRequest,
   type HotelEnquiryEventView,
@@ -28,6 +29,7 @@ import {
 } from "../../policy/decorators.js";
 import type { Principal } from "../../policy/principal.types.js";
 import { EnquiriesService } from "./enquiries.service.js";
+import { EnquiryAssignmentService } from "./enquiry-assignment.js";
 import { EnquiryPipelineService } from "./enquiry-pipeline.js";
 
 const enquiryParam = z.object({ enquiryId: uuid });
@@ -42,6 +44,7 @@ export class EnquiriesController {
   constructor(
     private readonly enquiries: EnquiriesService,
     private readonly pipelineCounts: EnquiryPipelineService,
+    private readonly assignment: EnquiryAssignmentService,
   ) {}
 
   @Get("enquiries")
@@ -62,6 +65,16 @@ export class EnquiriesController {
     @CurrentAccess() access: Access,
   ): Promise<HotelEnquiryPipelineView> {
     return this.pipelineCounts.pipeline(principal, access);
+  }
+
+  /**
+   * Who an enquiry can be handed to: the owner picker's options. Keyed on the update grant, since only
+   * someone who may reassign an enquiry needs the list. Declared before `enquiries/:enquiryId`.
+   */
+  @Get("enquiries/assignees")
+  @RequirePermission("consultancy.enquiries.update")
+  assignees(): Promise<HotelEnquiryAssignee[]> {
+    return this.assignment.assignees();
   }
 
   @Get("enquiries/:enquiryId")

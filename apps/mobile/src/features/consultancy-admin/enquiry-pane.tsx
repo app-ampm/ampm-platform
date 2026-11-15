@@ -12,6 +12,7 @@ import { EnquiryActivity } from "./enquiry-activity";
 import { EnquiryClientCard } from "./enquiry-client-card";
 import { AgreementSection, ProposalsSection } from "./enquiry-commercial";
 import { EnquiryHeading } from "./enquiry-heading";
+import { EnquiryOwnerCard } from "./enquiry-owner-card";
 import { initialTab, type EnquiryTab } from "./enquiry-next-step";
 import { EnquiryPaneLoading } from "./enquiry-pane-loading";
 import { EnquiryPipelineStrip } from "./enquiry-pipeline-strip";
@@ -33,8 +34,8 @@ function isTab(value: string): value is EnquiryTab {
 
 /**
  * One enquiry and its pipeline. Under the header, where it stands (the pipeline stepper and the next
- * step), then four tabs instead of one long scroll: Overview (who sent it, what they asked for, and
- * the status moves), Proposals (the versions, edited and shared here), Activity (the thread) and
+ * step), then four tabs instead of one long scroll: Overview (who sent it, who on the team holds it,
+ * what they asked for, and the status moves), Proposals (the versions, edited and shared here), Activity (the thread) and
  * Booking (agreements, site visits, milestones). It opens on the tab its next step is in. On a phone
  * and a tablet the parts stack as glass cards under the page's header; on a desktop they fold into one
  * glass pane that carries the header itself. The header's slot is empty below 1024 and only the
@@ -97,6 +98,7 @@ function EnquiryTabBody({
       return (
         <Stack gap={4}>
           <EnquiryClientCard enquiry={enquiry} />
+          <EnquiryOwnerCard enquiry={enquiry} />
           <EnquiryRequestCard enquiry={enquiry} />
           <EnquiryStatusActions enquiryId={enquiry.id} status={enquiry.status} />
         </Stack>

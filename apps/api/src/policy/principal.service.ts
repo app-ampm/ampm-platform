@@ -1,6 +1,7 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { errors } from "@ampm/core";
 import {
+  can,
   resolveClientEntitlements,
   resolveCustomGrants,
   roleFromKey,
@@ -14,10 +15,43 @@ import { ENV, type Env } from "../env.js";
 import type { SubscriptionStatus } from "../generated/prisma/client.js";
 import type { VerifiedIdentity } from "../identity/identity.types.js";
 import { EntitlementCache } from "./entitlement.cache.js";
-import { PrincipalRepository, type PrincipalRecord } from "./principal.repository.js";
+import {
+  PrincipalRepository,
+  type PrincipalRecord,
+  type PrincipalRole,
+} from "./principal.repository.js";
 import type { Principal } from "./principal.types.js";
 
 type ResolvedGrants = ReadonlyMap<string, readonly RoleGrant[]>;
+
+/** What a staff user's roles authorise: the system roles by code, and their custom roles' grants. */
+interface StaffAuthority {
+  readonly roles: StaffRole[];
+  readonly resolvedGrants: ResolvedGrants | undefined;
+}
+
+/** A staff member as a picker shows them. */
+export interface StaffMember {
+  readonly id: string;
+  readonly name: string;
+}
+
+/** Splits held roles into the nine system codes and the ids of the custom roles. */
+function splitRoles(held: readonly PrincipalRole[]): {
+  roles: StaffRole[];
+  customRoleIds: string[];
+} {
+  const roles: StaffRole[] = [];
+  const customRoleIds: string[] = [];
+  for (const role of held) {
+    const code = roleFromKey(role.roleKey);
+    // One of the nine only when it is both a known code AND flagged system; a non-system role that
+    // reused a reserved key resolves fail-closed through its own grants, never the matrix role's.
+    if (code !== undefined && role.isSystem) roles.push(code);
+    else customRoleIds.push(role.roleId);
+  }
+  return { roles, customRoleIds };
+}
 
 /**
  * Steps 2 and 3 of the pipeline: a verified identity becomes a principal from the API's own
@@ -53,16 +87,7 @@ export class PrincipalService {
       memberships: record.memberships,
     };
     if (record.userType === "staff") {
-      const roles: StaffRole[] = [];
-      const customRoleIds: string[] = [];
-      for (const role of record.roles) {
-        const code = roleFromKey(role.roleKey);
-        // One of the nine only when it is both a known code AND flagged system; a non-system role that
-        // reused a reserved key resolves fail-closed through its own grants, never the matrix role's.
-        if (code !== undefined && role.isSystem) roles.push(code);
-        else customRoleIds.push(role.roleId);
-      }
-      const resolvedGrants = await this.customGrantsFor(record.id, customRoleIds);
+      const { roles, resolvedGrants } = await this.staffAuthority(record.id, record.roles);
       return { type: "staff", roles, resolvedGrants, ...base };
     }
     const entitlements = await this.entitlementsFor(record);
@@ -71,6 +96,37 @@ export class PrincipalService {
 
   invalidateEntitlements(userId: string): void {
     this.entitlements.invalidate(userId);
+  }
+
+  /**
+   * The active staff whose roles grant `key` on every record — the people a record of that kind can be
+   * handed to (an enquiry's owner, say). Decided by the same engine and the same role resolution as a
+   * signed-in request, custom roles included when DYNAMIC_ROLES is on; a grant scoped to the holder's own
+   * weddings or records does not count, since it would not reach an arbitrary record. Only those among
+   * `userIds` when given, so one candidate can be checked. By name.
+   *
+   * @example
+   * const owners = await this.principals.staffHolding("consultancy.enquiries.update");
+   */
+  async staffHolding(key: string, userIds?: readonly string[]): Promise<StaffMember[]> {
+    const staff = await this.repository.activeStaff(userIds);
+    const holding: StaffMember[] = [];
+    for (const member of staff) {
+      const { roles, resolvedGrants } = await this.staffAuthority(member.id, member.roles);
+      // No projects and no target: only an all-records grant reaches here.
+      if (can({ type: "staff", userId: member.id, roles, resolvedGrants, projectIds: [] }, key)) {
+        holding.push({ id: member.id, name: member.name });
+      }
+    }
+    return holding;
+  }
+
+  private async staffAuthority(
+    userId: string,
+    held: readonly PrincipalRole[],
+  ): Promise<StaffAuthority> {
+    const { roles, customRoleIds } = splitRoles(held);
+    return { roles, resolvedGrants: await this.customGrantsFor(userId, customRoleIds) };
   }
 
   /**

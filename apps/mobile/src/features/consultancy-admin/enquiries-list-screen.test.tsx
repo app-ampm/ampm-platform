@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { Text } from "react-native";
 
-import type { HotelEnquiryStage } from "@ampm/core";
+import type { HotelEnquiryAssigneeFilter, HotelEnquiryStage } from "@ampm/core";
 import { uiCopy } from "@ampm/ui";
 
 import { fireEvent, screen, within } from "../../test/render";
@@ -49,6 +49,7 @@ function queue() {
       accountName: "Kapoor family",
       hotelName: "Rose Fort Palace",
       assignedUserId: "018f0000-0000-7000-8000-00000000cafe",
+      assignedUserName: "Meera Iyer",
       dateFrom: "2027-02-28",
       dateTo: "2027-03-02",
       guestEstimate: 1,
@@ -72,8 +73,12 @@ async function renderList(
   fetchImpl: FetchFn,
   tabBar?: ReactNode,
   stage: HotelEnquiryStage | null = null,
+  assignee: HotelEnquiryAssigneeFilter | null = null,
 ): Promise<void> {
-  await renderWithApi(<StaffEnquiriesListScreen tabBar={tabBar} stage={stage} />, fetchImpl);
+  await renderWithApi(
+    <StaffEnquiriesListScreen tabBar={tabBar} stage={stage} assignee={assignee} />,
+    fetchImpl,
+  );
 }
 
 beforeEach(() => {
@@ -116,9 +121,10 @@ describe("StaffEnquiriesListScreen", () => {
     expect(within(row).getByText("Submitted")).toBeOnTheScreen();
     expect(within(row).getByText("Unassigned")).toBeOnTheScreen();
     const held = screen.getByLabelText(
-      /^Kapoor family, Awaiting hotel, Proposal v2 · shared, Rose Fort Palace · 1 guest/,
+      /^Kapoor family, Awaiting hotel, Proposal v2 · shared, Held by Meera Iyer, Rose Fort Palace · 1 guest/,
     );
     expect(within(held).queryByText("Unassigned")).toBeNull();
+    expect(within(held).getByText("Meera I.")).toBeOnTheScreen();
   });
 
   it("opens the enquiry's detail when a row is pressed", async () => {
@@ -144,6 +150,7 @@ describe("StaffEnquiriesListScreen", () => {
               closed: 3,
             },
             unassignedOpen: 1,
+            mineOpen: 0,
           }),
         );
       if (url.includes("stage=closed")) return Promise.resolve(page([]));
@@ -163,6 +170,45 @@ describe("StaffEnquiriesListScreen", () => {
     expect(mockSetParams).toHaveBeenLastCalledWith({ stage: "with_hotel" });
     await fireEvent.press(screen.getByRole("button", { name: /^All/ }));
     expect(mockSetParams).toHaveBeenLastCalledWith({ stage: undefined });
+  });
+
+  it("counts the reader's open enquiries and the unassigned ones on the owner chips", async () => {
+    const pipeline = {
+      stages: { new: 1, with_hotel: 1, proposal: 0, client_decision: 0, confirmed: 0, closed: 0 },
+      unassignedOpen: 4,
+      mineOpen: 2,
+    };
+    await renderList(
+      routedFetch({
+        [LIST]: () => page(queue()),
+        "GET /consultancy-admin/enquiries/pipeline": () => ok(pipeline),
+      }),
+    );
+    const owner = await screen.findByTestId("enquiry-assignee-filter");
+    expect(await within(owner).findByRole("button", { name: /^Mine.*2/ })).toBeOnTheScreen();
+    expect(within(owner).getByRole("button", { name: /^Unassigned.*4/ })).toBeOnTheScreen();
+    expect(within(owner).getByRole("button", { name: /^Everyone/ })).toBeSelected();
+  });
+
+  it("writes the owner filter into the address, and clears it with Everyone", async () => {
+    await renderList(routedFetch({ [LIST]: () => page(queue()) }));
+    await fireEvent.press(await screen.findByTestId("enquiry-assignee-unassigned"));
+    expect(mockSetParams).toHaveBeenLastCalledWith({ assignee: "unassigned" });
+    await fireEvent.press(screen.getByTestId("enquiry-assignee-all"));
+    expect(mockSetParams).toHaveBeenLastCalledWith({ assignee: undefined });
+  });
+
+  it("asks for the reader's open enquiries and says so when there are none", async () => {
+    const asked: string[] = [];
+    const fetchImpl: FetchFn = (input) => {
+      asked.push(String(input));
+      return Promise.resolve(page([]));
+    };
+    await renderList(fetchImpl, undefined, "proposal", "me");
+    expect(await screen.findByText("Nothing of yours open")).toBeOnTheScreen();
+    expect(screen.getByText(/No open enquiry at this stage is assigned to you/)).toBeOnTheScreen();
+    expect(asked.some((url) => url.includes("enquiries?stage=proposal&assignee=me"))).toBe(true);
+    expect(screen.getByTestId("enquiry-assignee-me")).toBeSelected();
   });
 
   it("marks the open count as partial while older enquiries are on later pages", async () => {

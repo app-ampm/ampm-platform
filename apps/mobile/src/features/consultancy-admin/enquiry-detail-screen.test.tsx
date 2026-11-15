@@ -96,6 +96,15 @@ describe("StaffEnquiryDetailScreen: header and notes", () => {
     expect(mockDismissTo).toHaveBeenCalledWith("/enquiries?stage=proposal");
   });
 
+  it("keeps the owner filter on the way back too", async () => {
+    await renderWithApi(
+      <StaffEnquiryDetailScreen enquiryId={ENQUIRY_ID} assignee="me" />,
+      () => new Promise<Response>(() => {}),
+    );
+    await fireEvent.press(screen.getByLabelText("Back to enquiries"));
+    expect(mockDismissTo).toHaveBeenCalledWith("/enquiries?assignee=me");
+  });
+
   it("heads the screen with the client and the stay as data, the hotel and the status chip", async () => {
     const detail = detailFixture({ roomsRequired: 60, datesFlexible: true });
     await renderDetail(enquiryFetch(detail));
@@ -108,7 +117,7 @@ describe("StaffEnquiryDetailScreen: header and notes", () => {
       ),
     ).toBeOnTheScreen();
     expect(screen.getByLabelText("Submitted")).toBeOnTheScreen();
-    expect(screen.getByText("Unassigned")).toBeOnTheScreen();
+    expect(within(heading).getByText("Unassigned")).toBeOnTheScreen();
   });
 
   it("keeps the client's note and the internal note apart, the internal one in its panel", async () => {
