@@ -11,6 +11,7 @@ import { NotificationService } from "../admin/notification/notification.service.
 import { ServiceAgreementsService } from "../crm/service-agreements/service-agreements.service.js";
 import { EnquiryEventsRepository, type EnquiryEventRow } from "./enquiry-events.repository.js";
 import { EnquiryInsightsRepository, NO_EXTRAS } from "./enquiry-insights.repository.js";
+import { EnquiryTransitionWriter } from "./enquiry-transition-writer.js";
 import { EnquiriesRepository, type EnquiryRow } from "./enquiries.repository.js";
 import { EnquiriesService } from "./enquiries.service.js";
 import { BookingMilestonesRepository } from "./booking-milestones.repository.js";
@@ -73,6 +74,7 @@ function staff(roles: StaffRole[], userId = "staff-1"): Principal {
 }
 
 const access: Access = { key: "consultancy.enquiries.read", scope: "all" };
+type SharedDeps = [EnquiriesRepository, EnquiryEventsRepository, PrismaService, AuditService];
 
 function build(row: EnquiryRow = makeRow(), events: EnquiryEventRow[] = []) {
   const repo = {
@@ -100,18 +102,18 @@ function build(row: EnquiryRow = makeRow(), events: EnquiryEventRow[] = []) {
     hasDoneMilestone: vi.fn(async () => false),
     hasSignedContract: vi.fn(async () => false),
   };
-  // The names and the newest proposal are covered end to end (consultancy-pipeline.e2e-spec).
   const insights = {
     extrasFor: vi.fn(async () => new Map()),
     extrasOf: vi.fn(async () => NO_EXTRAS),
   };
   const logger = { warn: vi.fn() };
+  // One set of mocks backs the service and the real writer, so the assertions see every write.
+  const shared = [repo, eventsRepo, prisma, audit] as unknown as SharedDeps;
+  const notifier = notifications as unknown as NotificationService;
+  const writer = new EnquiryTransitionWriter(...shared, notifier);
   const service = new EnquiriesService(
-    repo as unknown as EnquiriesRepository,
-    eventsRepo as unknown as EnquiryEventsRepository,
-    prisma as unknown as PrismaService,
-    audit as unknown as AuditService,
-    notifications as unknown as NotificationService,
+    ...shared,
+    writer,
     config as unknown as ConfigService,
     agreements as unknown as ServiceAgreementsService,
     milestones as unknown as BookingMilestonesRepository,

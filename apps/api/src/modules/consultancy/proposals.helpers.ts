@@ -1,14 +1,10 @@
 import { errors, type HotelProposalLineInput, type HotelProposalUpdateRequest } from "@ampm/core";
-import { canTransition } from "@ampm/policy";
 
 import type { AppLogger } from "../../common/logger.service.js";
 import type { Access } from "../../common/request-context.js";
 import { Prisma } from "../../generated/prisma/client.js";
 import type { DomainEvent, EventBus } from "../../jobs/event-bus.js";
-import { type Principal, toPolicyPrincipal } from "../../policy/principal.types.js";
-import type { EnquiryRow } from "./enquiries.repository.js";
-import type { EnquiriesService } from "./enquiries.service.js";
-import { isEnquiryTransitionDefined } from "./enquiry-status.js";
+import type { Principal } from "../../policy/principal.types.js";
 import { moneyToDecimalString } from "./proposals.money.js";
 import type { ProposalEvent } from "./proposals.events.js";
 import type {
@@ -122,32 +118,5 @@ export async function emitProposalEvent(
     .emit(event, payload)
     .catch(() =>
       logger.warn("consultancy.proposal.event_failed", { proposalId: row.id, event: event.name }),
-    );
-}
-
-/** Best-effort: sharing a proposal advances its enquiry `proposal_received → client_decision`. Pre-checked
- *  so it never 409s/403s the share; a no-op unless the enquiry is at proposal_received and this actor is a
- *  mover (SA may share but is not a `→client_decision` mover, so an SA share leaves the enquiry as is). */
-export async function advanceEnquiryOnShare(
-  enquiries: EnquiriesService,
-  logger: AppLogger,
-  principal: Principal,
-  access: Access,
-  enquiry: EnquiryRow,
-): Promise<void> {
-  const to = "client_decision" as const;
-  if (enquiry.status === to || !isEnquiryTransitionDefined(enquiry.status, to)) return;
-  const context = {
-    projectId: enquiry.projectId ?? undefined,
-    accountId: enquiry.accountId,
-    assigneeId: enquiry.assignedUserId ?? undefined,
-    requesterId: enquiry.requestedByUserId,
-  };
-  if (!canTransition(toPolicyPrincipal(principal), "hotel_enquiry", enquiry.status, to, context))
-    return;
-  await enquiries
-    .transition(principal, access, enquiry.id, { status: to, outcome: null, summary: null })
-    .catch(() =>
-      logger.warn("consultancy.proposal.enquiry_advance_failed", { enquiryId: enquiry.id }),
     );
 }

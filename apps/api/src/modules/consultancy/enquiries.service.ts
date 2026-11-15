@@ -9,7 +9,6 @@ import {
   type HotelEnquiryStaffPage,
   type HotelEnquiryStaffUpdateRequest,
   type HotelEnquiryStaffView,
-  type HotelEnquiryStatus,
   type HotelEnquiryStatusUpdateRequest,
 } from "@ampm/core";
 import { can, canTransition, type TransitionContext } from "@ampm/policy";
@@ -21,16 +20,12 @@ import { recordScope } from "../../db/scoping.js";
 import { AuditService } from "../../policy/audit.service.js";
 import { type Principal, toPolicyPrincipal } from "../../policy/principal.types.js";
 import { ConfigService } from "../admin/config/config.service.js";
-import { NotificationService } from "../admin/notification/notification.service.js";
 import { ServiceAgreementsService } from "../crm/service-agreements/service-agreements.service.js";
-import {
-  EnquiriesRepository,
-  type EnquiryRow,
-  type EnquiryStatusPatch,
-} from "./enquiries.repository.js";
+import { EnquiriesRepository, type EnquiryRow } from "./enquiries.repository.js";
 import { BookingMilestonesRepository } from "./booking-milestones.repository.js";
 import { EnquiryEventsRepository, type EnquiryEventRow } from "./enquiry-events.repository.js";
 import { EnquiryInsightsRepository, NO_EXTRAS } from "./enquiry-insights.repository.js";
+import { EnquiryTransitionWriter } from "./enquiry-transition-writer.js";
 import {
   buildStaffPatch,
   buildStatusPatch,
@@ -66,7 +61,7 @@ export class EnquiriesService {
     private readonly events: EnquiryEventsRepository,
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
-    private readonly notifications: NotificationService,
+    private readonly writer: EnquiryTransitionWriter,
     private readonly config: ConfigService,
     private readonly agreements: ServiceAgreementsService,
     private readonly milestones: BookingMilestonesRepository,
@@ -143,11 +138,13 @@ export class EnquiriesService {
     await guardChargeableStage(this.config, this.agreements, current.id, to);
     await guardConfirmedReady(this.milestones, current.id, to);
     const patch = buildStatusPatch(request, to);
-    await this.persistTransition(current, patch, to, request.summary, staffId(principal));
+    await this.writer.write(current, patch, to, request.summary, staffId(principal));
     if (isClientVisibleStatus(to)) {
-      await this.notifyClient(current.accountId, current.id).catch(() =>
-        this.logger.warn("consultancy.enquiry.notify_failed", { enquiryId: current.id }),
-      );
+      await this.writer
+        .notifyClient(current.accountId, current.id)
+        .catch(() =>
+          this.logger.warn("consultancy.enquiry.notify_failed", { enquiryId: current.id }),
+        );
     }
     return this.staffView(await this.requireInScope(id, principal, access), principal);
   }
@@ -159,42 +156,6 @@ export class EnquiriesService {
       assigneeId: current.assignedUserId ?? undefined,
       requesterId: current.requestedByUserId,
     };
-  }
-
-  private async persistTransition(
-    current: EnquiryRow,
-    patch: EnquiryStatusPatch,
-    to: HotelEnquiryStatus,
-    summary: string | null,
-    actorId: string,
-  ): Promise<void> {
-    await this.prisma.$transaction(async (tx) => {
-      await this.enquiries.updateStatus(current.id, patch, actorId, tx);
-      await this.events.create(
-        {
-          enquiryId: current.id,
-          eventType: "status_change",
-          occurredAt: new Date(),
-          userId: actorId,
-          summary,
-          internalOnly: !isClientVisibleStatus(to),
-          documentId: null,
-        },
-        actorId,
-        tx,
-      );
-      await this.audit.record(
-        {
-          action: "update",
-          entityType: "hotel_enquiry",
-          entityId: current.id,
-          before: { status: current.status, outcome: current.outcome },
-          after: { status: to, outcome: patch.outcome ?? current.outcome },
-          maskImages: false,
-        },
-        tx,
-      );
-    });
   }
 
   async addEvent(
@@ -299,23 +260,6 @@ export class EnquiriesService {
 
   private canReadInternalNotes(principal: Principal): boolean {
     return can(toPolicyPrincipal(principal), INTERNAL_NOTES_KEY);
-  }
-
-  private async notifyClient(accountId: string, enquiryId: string): Promise<void> {
-    const userIds = await this.enquiries.accountClientUserIds(accountId);
-    await Promise.all(
-      userIds.map((recipientId) =>
-        this.notifications.queue({
-          recipientType: "user",
-          recipientId,
-          channel: "in_app",
-          eventType: "enquiry.status_changed",
-          templateKey: "enquiry.status_changed",
-          entityType: "hotel_enquiry",
-          entityId: enquiryId,
-        }),
-      ),
-    );
   }
 
   /** A staff read of one enquiry within the guard's scope (security.md: scope every query); 404 if out. */

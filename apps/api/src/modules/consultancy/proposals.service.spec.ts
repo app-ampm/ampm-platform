@@ -9,7 +9,7 @@ import { EventBus } from "../../jobs/event-bus.js";
 import { AuditService } from "../../policy/audit.service.js";
 import type { Principal } from "../../policy/principal.types.js";
 import { EnquiriesRepository, type EnquiryRow } from "./enquiries.repository.js";
-import { EnquiriesService } from "./enquiries.service.js";
+import { EnquiryShareAdvance } from "./enquiry-share-advance.js";
 import {
   type ProposalRow,
   ProposalsRepository,
@@ -112,7 +112,7 @@ function build(proposal: ProposalRow = makeProposal(), enquiry: EnquiryRow = mak
     updateStatus: vi.fn(async () => 1),
   };
   const enquiriesRepo = { findByIdInScope: vi.fn(async (): Promise<EnquiryRow | null> => enquiry) };
-  const enquiries = { transition: vi.fn(async () => ({})) };
+  const shareAdvance = { advance: vi.fn(async () => undefined) };
   const prisma = { $transaction: <T>(fn: (tx: unknown) => Promise<T>): Promise<T> => fn({}) };
   const audit = { record: vi.fn(async () => undefined) };
   const bus = { emit: vi.fn(async () => undefined) };
@@ -120,13 +120,13 @@ function build(proposal: ProposalRow = makeProposal(), enquiry: EnquiryRow = mak
   const service = new ProposalsService(
     proposals as unknown as ProposalsRepository,
     enquiriesRepo as unknown as EnquiriesRepository,
-    enquiries as unknown as EnquiriesService,
+    shareAdvance as unknown as EnquiryShareAdvance,
     prisma as unknown as PrismaService,
     audit as unknown as AuditService,
     bus as unknown as EventBus,
     logger as unknown as AppLogger,
   );
-  return { service, proposals, enquiries, bus };
+  return { service, proposals, shareAdvance, bus };
 }
 
 describe("ProposalsService.get — internal total gated on read_internal_amount", () => {
@@ -195,8 +195,8 @@ describe("ProposalsService.update — draft-only (AC-09)", () => {
 });
 
 describe("ProposalsService.share", () => {
-  it("shares a draft, advances the enquiry (HT at proposal_received) and emits the event", async () => {
-    const { service, proposals, enquiries, bus } = build(makeProposal({ status: "draft" }));
+  it("shares a draft, moves the enquiry on to the client's decision and emits the event", async () => {
+    const { service, proposals, shareAdvance, bus } = build(makeProposal({ status: "draft" }));
     await service.share(staff(["HT", "SA"]), access, "prop-1");
     expect(proposals.updateStatus).toHaveBeenCalledWith(
       "prop-1",
@@ -205,11 +205,10 @@ describe("ProposalsService.share", () => {
       "sa-1",
       expect.anything(),
     );
-    expect(enquiries.transition).toHaveBeenCalledWith(
-      expect.anything(),
-      access,
-      "enq-1",
-      expect.objectContaining({ status: "client_decision" }),
+    expect(shareAdvance.advance).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "enq-1" }),
+      "sa-1",
+      1,
     );
     expect(bus.emit).toHaveBeenCalled();
   });

@@ -20,6 +20,7 @@ describe("Hotel enquiry pipeline (e2e)", () => {
   let mint: (subject: string) => Promise<string>;
   let enquiryId: string;
   let hotelId: string;
+  let clientUserId: string;
 
   const http = () => request(app.getHttpServer());
   const sa = async () => `Bearer ${await mint("local:admin")}`;
@@ -36,6 +37,8 @@ describe("Hotel enquiry pipeline (e2e)", () => {
     });
     const enquiryIds = enquiries.map((enquiry) => enquiry.id);
     await prisma.hotelProposal.deleteMany({ where: { enquiryId: { in: enquiryIds } } });
+    await prisma.hotelEnquiryEvent.deleteMany({ where: { enquiryId: { in: enquiryIds } } });
+    await prisma.notification.deleteMany({ where: { entityId: { in: enquiryIds } } });
     await prisma.hotelEnquiry.deleteMany({ where: { id: { in: enquiryIds } } });
     await prisma.clientAccount.deleteMany({ where: { id: { in: accountIds } } });
     await prisma.user.deleteMany({ where: { email: { startsWith: PREFIX } } });
@@ -71,6 +74,7 @@ describe("Hotel enquiry pipeline (e2e)", () => {
       data: { userType: "client", name: `${TAG} client`, email: `${PREFIX}@example.com` },
       select: { id: true },
     });
+    clientUserId = user.id;
     enquiryId = (
       await prisma.hotelEnquiry.create({
         data: {
@@ -156,6 +160,56 @@ describe("Hotel enquiry pipeline (e2e)", () => {
     );
     expect(stages.proposal).toBeGreaterThanOrEqual(1);
     expect(unassignedOpen).toBeGreaterThanOrEqual(1);
+  });
+
+  it("moves a brand-new enquiry to the client's decision when a Super Admin shares its proposal", async () => {
+    const account = await prisma.clientAccount.create({
+      data: { name: `${TAG} Mehta family`, status: "prospect" },
+      select: { id: true },
+    });
+    const fresh = await prisma.hotelEnquiry.create({
+      data: {
+        accountId: account.id,
+        hotelId,
+        requestedByUserId: clientUserId,
+        status: "submitted",
+        dateFrom: new Date("2027-04-04"),
+        dateTo: new Date("2027-04-06"),
+        guestEstimate: 160,
+        submittedAt: new Date(),
+      },
+      select: { id: true },
+    });
+    const draft = await prisma.hotelProposal.create({
+      data: {
+        enquiryId: fresh.id,
+        hotelId,
+        versionNumber: 1,
+        status: "draft",
+        clientTotalAmount: "300000",
+        internalTotalAmount: "240000",
+      },
+      select: { id: true },
+    });
+    await http()
+      .post(`/consultancy-admin/proposals/${draft.id}/share`)
+      .set("authorization", await sa())
+      .expect(200);
+    const detail = await http()
+      .get(`/consultancy-admin/enquiries/${fresh.id}`)
+      .set("authorization", await sa())
+      .expect(200);
+    expect(detail.body.data.status).toBe("client_decision");
+    expect(detail.body.data.latestProposal).toMatchObject({ versionNumber: 1, status: "shared" });
+    const steps = detail.body.data.events
+      .filter((event: { eventType: string }) => event.eventType === "status_change")
+      .map((event: { summary: string }) => event.summary);
+    expect(steps).toEqual(
+      expect.arrayContaining([
+        "Proposal version 1 prepared",
+        "Proposal version 1 shared with the client",
+      ]),
+    );
   });
 
   it("refuses the counts to a caller who is not signed in", async () => {
