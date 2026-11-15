@@ -10,6 +10,8 @@ import { EnquiriesRepository } from "./enquiries.repository.js";
 import { EnquiriesService } from "./enquiries.service.js";
 import { EnquiryEventsRepository } from "./enquiry-events.repository.js";
 import { EnquiryInsightsRepository } from "./enquiry-insights.repository.js";
+import { EnquiryShareAdvance } from "./enquiry-share-advance.js";
+import { EnquiryTransitionWriter } from "./enquiry-transition-writer.js";
 import { EnquiryPipelineService } from "./enquiry-pipeline.js";
 import { SiteVisitsClientController } from "./site-visits-client.controller.js";
 import { SiteVisitsClientService } from "./site-visits-client.service.js";
@@ -58,6 +60,8 @@ import { MilestoneOverdueService } from "./milestones.overdue.service.js";
     EnquiriesRepository,
     EnquiryEventsRepository,
     EnquiryInsightsRepository,
+    EnquiryTransitionWriter,
+    EnquiryShareAdvance,
     EnquiryPipelineService,
     SiteVisitsService,
     SiteVisitsClientService,

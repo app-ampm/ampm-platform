@@ -19,11 +19,10 @@ import { EventBus } from "../../jobs/event-bus.js";
 import { AuditService } from "../../policy/audit.service.js";
 import { type Principal, toPolicyPrincipal } from "../../policy/principal.types.js";
 import { EnquiriesRepository, type EnquiryRow } from "./enquiries.repository.js";
-import { EnquiriesService } from "./enquiries.service.js";
+import { EnquiryShareAdvance } from "./enquiry-share-advance.js";
 import { staffId } from "./enquiries.helpers.js";
 import { moneyToDecimalString } from "./proposals.money.js";
 import {
-  advanceEnquiryOnShare,
   assertProposalChanged,
   buildLineWrites,
   buildTermsPatch,
@@ -48,7 +47,7 @@ const INTERNAL_AMOUNT_KEY = "consultancy.proposals.read_internal_amount";
 /**
  * The Hotel-team proposal workspace (feature 10.4, AC-05.2/AC-09), keyed on `consultancy.proposals.*`.
  * Create and edit are draft-only (a shared version is immutable — a change is a revision that supersedes
- * it); sharing best-effort advances the enquiry to `client_decision` and emits `proposal.shared`. The
+ * it); sharing moves the enquiry on to `client_decision` (D-131) and emits `proposal.shared`. The
  * internal total + margin are serialised only for a reader holding `read_internal_amount`. The status
  * machine is hand-rolled; every move is a compare-and-swap and audits. `decide` is the shared primitive
  * the client decision (accept/decline/revision) reuses.
@@ -58,7 +57,7 @@ export class ProposalsService {
   constructor(
     private readonly proposals: ProposalsRepository,
     private readonly enquiriesRepo: EnquiriesRepository,
-    private readonly enquiries: EnquiriesService,
+    private readonly shareAdvance: EnquiryShareAdvance,
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly bus: EventBus,
@@ -167,7 +166,7 @@ export class ProposalsService {
       await this.auditProposal(tx, "update", id, { status: "draft" }, { status: "shared" });
     });
     const row = await this.requireInScope(id, principal, access);
-    await advanceEnquiryOnShare(this.enquiries, this.logger, principal, access, enquiry);
+    await this.shareAdvance.advance(enquiry, actorId, row.versionNumber);
     await emitProposalEvent(this.bus, this.logger, proposalShared, row, enquiry.accountId);
     return toProposalInternalView(row, this.canReadInternalAmount(principal));
   }
