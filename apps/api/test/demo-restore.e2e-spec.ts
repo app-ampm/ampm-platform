@@ -2,7 +2,7 @@ import type { NestExpressApplication } from "@nestjs/platform-express";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { PrismaService } from "../src/db/prisma.service.js";
-import { DEMO_USER, upsertDemoUser } from "../src/modules/demo/demo-baseline.js";
+import { DEMO_USER, upsertDemoAccount, upsertDemoUser } from "../src/modules/demo/demo-baseline.js";
 import { DemoRestoreService } from "../src/modules/demo/demo-restore.service.js";
 import { startApi } from "./start-api.js";
 
@@ -42,6 +42,10 @@ describe("Demo restore (e2e)", () => {
     await prisma.notificationPreference.deleteMany({ where });
     await prisma.user.deleteMany({ where: { id: { in: testUsers.map((user) => user.id) } } });
     await upsertDemoUser(prisma);
+    // Re-link the demo account to the demo user: the rollback test deletes DEMO_USER, which SET NULLs
+    // the account's primary_contact and the self contact's user_id (both ON DELETE SET NULL), so later
+    // e2e files would otherwise inherit a demo account whose contact no longer resolves the demo user.
+    await upsertDemoAccount(prisma);
   });
 
   afterAll(async () => {
@@ -139,6 +143,8 @@ describe("Demo restore (e2e)", () => {
   it("rolls back the whole reset when the baseline write fails (atomic)", async () => {
     // Free the demo account's unique email and squat it, so the baseline upsert's create path fails.
     await prisma.session.deleteMany({ where: { userId: DEMO_USER.id } });
+    // A `demo` lead activity (user_id is ON DELETE RESTRICT) would block this hard delete; clear any.
+    await prisma.leadActivity.deleteMany({ where: { userId: DEMO_USER.id } });
     await prisma.user.delete({ where: { id: DEMO_USER.id } });
     await prisma.user.create({
       data: {
