@@ -28,7 +28,9 @@ import { toAgreementStaffView } from "./service-agreements.view.js";
 import {
   agreementAffectsEntitlement,
   isAgreementTransitionAllowed,
+  isStaffStatusMove,
   isTerminalAgreement,
+  STAFF_ACCEPT_REFUSAL,
 } from "./service-agreement-status.js";
 
 /**
@@ -195,7 +197,8 @@ export class ServiceAgreementsService {
     request: ServiceAgreementTransitionRequest,
   ): Promise<ServiceAgreementStaffView> {
     const current = await this.requireInScope(id, principal, access);
-    // A staff mark-accepted-offline records acceptance without a known accepting user (null).
+    // Accepting is the client's move; a signature made outside the app comes with its signed copy.
+    if (!isStaffStatusMove(request.status)) throw errors.conflict(STAFF_ACCEPT_REFUSAL);
     await this.applyTransition(current, request.status, staffId(principal), null);
     return toAgreementStaffView(await this.requireInScope(id, principal, access));
   }

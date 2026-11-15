@@ -243,6 +243,14 @@ describe("ServiceAgreementsService.transition (hand-rolled machine)", () => {
     ).rejects.toMatchObject({ code: "conflict" });
   });
 
+  it("never lets staff accept: only the client does, or a signed copy records it (D-135)", async () => {
+    const { service, repo } = build(makeRow({ status: "sent" }));
+    await expect(
+      service.transition(staff(), access, "agr-1", { status: "accepted" }),
+    ).rejects.toMatchObject({ code: "conflict", message: expect.stringMatching(/signed copy/) });
+    expect(repo.updateStatus).not.toHaveBeenCalled();
+  });
+
   it("refuses any move on a terminal agreement", async () => {
     const { service } = build(makeRow({ status: "completed" }));
     await expect(

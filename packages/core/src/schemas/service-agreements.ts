@@ -106,8 +106,9 @@ export const serviceAgreementUpdateRequest = z
   .refine((v) => feeInRange(v.fee), { message: "fee is out of range", path: ["fee"] });
 export type ServiceAgreementUpdateRequest = z.infer<typeof serviceAgreementUpdateRequest>;
 
-/** A staff-driven status move (issue, mark-accepted-offline, activate, complete, cancel). The client
- * accept path is a separate endpoint (entitlement-gated), not this transition. */
+/** A staff-driven status move (send, activate, complete, cancel). Accepting is not one: the client
+ * accepts in the portal, and an agreement signed outside the app is recorded by attaching its signed copy
+ * (`POST /crm/service-agreements/:id/signed-copy`), so the service refuses `accepted` here (D-135). */
 export const serviceAgreementTransitionRequest = z
   .object({ status: serviceAgreementStatus })
   .strict();

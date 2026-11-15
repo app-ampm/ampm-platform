@@ -65,6 +65,8 @@ export interface AgreementStatusPatch {
   readonly status: Prisma.ServiceAgreementUpdateInput["status"];
   readonly acceptedAt?: Date | null;
   readonly acceptedByUserId?: string | null;
+  /** The signed copy, when staff record an agreement signed outside the app. */
+  readonly documentId?: string | null;
 }
 
 /**
