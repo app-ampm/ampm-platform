@@ -60,3 +60,23 @@ export type SubscriptionReportRow = z.infer<typeof subscriptionReportRow>;
 
 export const subscriptionReportPage = page(subscriptionReportRow);
 export type SubscriptionReportPage = z.infer<typeof subscriptionReportPage>;
+
+/**
+ * Export the report (permission-matrix §5.16: SA and FA may export it; Sales may only run it). The
+ * whole filtered set in one response, capped, `truncated` when the cap was hit; the app renders it to
+ * CSV. The server audits every export with its filters and row count (D-128).
+ *
+ * @example
+ * subscriptionReportExportQuery.parse({ status: "pending_payment" });
+ */
+export const subscriptionReportExportQuery = z.object({ status: subscriptionStatus.optional() });
+export type SubscriptionReportExportQuery = z.infer<typeof subscriptionReportExportQuery>;
+
+export const subscriptionReportExport = z.object({
+  generatedAt: isoDateTime,
+  rowCount: z.number().int().nonnegative(),
+  truncated: z.boolean(),
+  filters: subscriptionReportExportQuery,
+  rows: z.array(subscriptionReportRow),
+});
+export type SubscriptionReportExport = z.infer<typeof subscriptionReportExport>;

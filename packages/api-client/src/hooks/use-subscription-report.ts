@@ -1,5 +1,9 @@
+import { useMutation } from "@tanstack/react-query";
 import {
+  subscriptionReportExport,
   subscriptionReportPage,
+  type SubscriptionReportExport,
+  type SubscriptionReportExportQuery,
   type SubscriptionReportRow,
   type SubscriptionStatus,
 } from "@ampm/core";
@@ -43,4 +47,24 @@ export function useSubscriptionReport(
     (cursor, signal) => api.get(reportPath(filter, cursor), subscriptionReportPage, signal),
     { enabled: options.enabled ?? true },
   );
+}
+
+/**
+ * Export the report (`GET /crm/reports/subscriptions/export`, `.export`: Super Admin and Finance). Run
+ * on demand (a button): the whole filtered set, capped (`truncated` when the cap was hit), which the
+ * caller renders to CSV and downloads. The server audits the export itself (D-128).
+ *
+ * @example
+ * const exportReport = useSubscriptionReportExport();
+ * exportReport.mutate({ status: "pending_payment" }, { onSuccess: (snapshot) => save(snapshot.rows) });
+ */
+export function useSubscriptionReportExport() {
+  const api = useApiClient();
+  return useMutation<SubscriptionReportExport, Error, SubscriptionReportExportQuery>({
+    mutationFn: ({ status }) =>
+      api.get(
+        `/crm/reports/subscriptions/export${status ? `?status=${status}` : ""}`,
+        subscriptionReportExport,
+      ),
+  });
 }

@@ -59,24 +59,31 @@ export class SubscriptionReportRepository {
     limit: number,
     cursor?: string,
   ): Promise<{ rows: SubscriptionReportDbRow[]; nextCursor: string | null }> {
-    // Finance works the awaiting-payment queue oldest first; every other view reads newest first.
-    const direction = status === "pending_payment" ? "asc" : "desc";
     const subs = await this.prisma.subscription.findMany({
-      where: {
-        deletedAt: null,
-        ...(status ? { status } : {}),
-        account: { isDemo: false, deletedAt: null },
-      },
-      orderBy: [{ createdAt: direction }, { id: direction }],
+      ...reportQuery(status),
       take: limit + 1,
       ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
-      select: REPORT_FIELDS,
     });
     const hasMore = subs.length > limit;
-    const page = hasMore ? subs.slice(0, limit) : subs;
-    const payments = await this.lastPayments(page.map((sub) => sub.id));
-    const rows = page.map((sub) => toRow(sub, payments.get(sub.id) ?? null));
+    const rows = await this.withLastPayments(hasMore ? subs.slice(0, limit) : subs);
     return { rows, nextCursor: hasMore ? rows[rows.length - 1]!.id : null };
+  }
+
+  /** The whole filtered report for an export, up to `max` rows; `truncated` when more were left out. */
+  async export(
+    status: SubscriptionStatus | undefined,
+    max: number,
+  ): Promise<{ rows: SubscriptionReportDbRow[]; truncated: boolean }> {
+    const subs = await this.prisma.subscription.findMany({ ...reportQuery(status), take: max + 1 });
+    const truncated = subs.length > max;
+    return { rows: await this.withLastPayments(subs.slice(0, max)), truncated };
+  }
+
+  private async withLastPayments(
+    subs: readonly SelectedSubscription[],
+  ): Promise<SubscriptionReportDbRow[]> {
+    const payments = await this.lastPayments(subs.map((sub) => sub.id));
+    return subs.map((sub) => toRow(sub, payments.get(sub.id) ?? null));
   }
 
   /** The newest client-visible inbound payment per subscription, in one query for the whole page. */
@@ -101,6 +108,24 @@ export class SubscriptionReportRepository {
     }
     return latest;
   }
+}
+
+/**
+ * The report's scoping and order, shared by the page and the export: deleted subscriptions and
+ * accounts and demo accounts left out; Finance's awaiting queue oldest first, everything else newest
+ * first.
+ */
+function reportQuery(status: SubscriptionStatus | undefined) {
+  const direction: Prisma.SortOrder = status === "pending_payment" ? "asc" : "desc";
+  return {
+    where: {
+      deletedAt: null,
+      ...(status ? { status } : {}),
+      account: { isDemo: false, deletedAt: null },
+    },
+    orderBy: [{ createdAt: direction }, { id: direction }],
+    select: REPORT_FIELDS,
+  } satisfies Prisma.SubscriptionFindManyArgs;
 }
 
 function toRow(

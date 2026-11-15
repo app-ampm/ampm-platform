@@ -22,6 +22,7 @@ export { PAYMENTS_QUERY_KEY, usePayments, type PaymentsQuery } from "./hooks/use
 export {
   SUBSCRIPTION_REPORT_QUERY_KEY,
   useSubscriptionReport,
+  useSubscriptionReportExport,
   type SubscriptionReportFilter,
 } from "./hooks/use-subscription-report";
 export { leadQueryKey, useLead } from "./hooks/use-lead";

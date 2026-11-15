@@ -197,4 +197,54 @@ describe("Subscription status report (e2e)", () => {
       .set("authorization", await bearer("local:fa"))
       .expect(400);
   });
+
+  describe("the export (§5.16: SA and FA; audited, D-128)", () => {
+    const exportAs = async (subject: string, status?: string) =>
+      http()
+        .get(`/crm/reports/subscriptions/export${status ? `?status=${status}` : ""}`)
+        .set("authorization", await bearer(subject));
+
+    it("gives Finance the whole queue as strict rows and audits it with filters and count", async () => {
+      const since = new Date();
+      const res = await exportAs("local:fa", "pending_payment");
+      expect(res.status).toBe(200);
+      const body = res.body.data as { rows: ReportRow[]; rowCount: number; truncated: boolean };
+      expect(body.rowCount).toBe(body.rows.length);
+      expect(body.truncated).toBe(false);
+      expect(res.body.data.filters).toEqual({ status: "pending_payment" });
+      expect(Object.keys(find(body.rows, ids.awaiting)!).sort()).toEqual(ROW_FIELDS);
+      expect(find(body.rows, ids.paid)).toBeUndefined();
+      expect(find(body.rows, ids.demo)).toBeUndefined();
+      const event = await prisma.auditEvent.findFirst({
+        where: { entityType: "subscription_report", action: "export", occurredAt: { gte: since } },
+      });
+      expect(event?.afterJson).toEqual({
+        filters: { status: "pending_payment" },
+        rowCount: body.rowCount,
+        truncated: false,
+      });
+    });
+
+    it("lets the Super Admin export the whole report", async () => {
+      const res = await exportAs("local:admin");
+      expect(res.status).toBe(200);
+      expect(find(res.body.data.rows as ReportRow[], ids.paid)).toBeDefined();
+    });
+
+    it("refuses Sales, who may run the report but not export it, and writes no export", async () => {
+      const since = new Date();
+      const res = await exportAs("local:sm");
+      expect(res.status).toBe(403);
+      expect(res.body.error.code).toBe("forbidden");
+      expect(
+        await prisma.auditEvent.count({
+          where: { entityType: "subscription_report", occurredAt: { gte: since } },
+        }),
+      ).toBe(0);
+    });
+
+    it("refuses the hotel team as absence", async () => {
+      expect((await exportAs("local:ht")).status).toBe(404);
+    });
+  });
 });

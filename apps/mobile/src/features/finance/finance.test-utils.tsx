@@ -97,6 +97,18 @@ function reportFor(server: FakeServer, status: string | null): SubscriptionRepor
   return [...server.queue, activeRow()];
 }
 
+/** The export of a status's report, as the server answers it: the rows, their count, no truncation. */
+function exportFor(server: FakeServer, status: string | null): Response {
+  const rows = reportFor(server, status);
+  return ok({
+    generatedAt: "2026-11-15T10:00:00.000Z",
+    rowCount: rows.length,
+    truncated: false,
+    filters: status ? { status } : {},
+    rows,
+  });
+}
+
 /** A recorded payment: the subscription leaves the queue and its transfer heads the ledger. */
 function recordPayment(server: FakeServer, subscriptionId: string): Response {
   const index = server.queue.findIndex((row) => row.subscriptionId === subscriptionId);
@@ -124,6 +136,7 @@ export function fakeFinanceApi({ roles, awaiting, payments }: FakeOptions): Fake
       return ok({ items: reportFor(server, query.get("status")), nextCursor: null });
     }
     if (path === "/crm/payments") return ok({ items: server.ledger, nextCursor: null });
+    if (path === "/crm/reports/subscriptions/export") return exportFor(server, query.get("status"));
     const subscriptionId = RECORD_PATH.exec(path)?.[1];
     if (!subscriptionId || init?.method !== "POST") return failure("not_found", 404);
     recorded.push({ subscriptionId, body: JSON.parse(String(init.body)) });

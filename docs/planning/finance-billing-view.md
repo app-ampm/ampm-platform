@@ -69,12 +69,12 @@ As built; where it departs from the first draft of this plan, the reason is give
 - **Reuse:** `RecordPaymentSheet`, `useCanRecordPayment` and the payment formatters stay in `features/accounts` and are imported from there, as the portal imports consultancy's `RequestRow`; no shared billing module was needed.
 - **Tests:** area visibility and home per role; Finance's queue with the oldest picked and its payments; recording against a picked row, named in the sheet, after which the queue and the panel refresh (this fails without the new cache refreshes in `useRecordPayment`); Sales sees the report without the ledger and can record; the Active tab; the empty queue; the hotel team refused without a request; the phone's stacked rows, and the pick kept across 1024; the formatters.
 
-### Slice 3. Export (S–M)
+### Slice 3. Export (S–M), built 15 November 2026
 
-- `GET /crm/reports/subscriptions/export` under `.export` (SA, FA).
-- It goes through the same guard and serialiser.
-- It is audited with its filters and row count (`.claude/rules/security.md`).
-- The Export action appears in the header for those roles only; Sales does not see it.
+- **API:** `GET /crm/reports/subscriptions/export` under `reports.subscription_status_payment_history.export` (SA, FA). It returns the whole filtered report in one response (the same scoping, order and strict rows as the page), capped at 5,000 rows with `truncated` when the cap is hit, following the audit-log export. Every export writes an `export` audit event (entity `subscription_report`) with its filters, row count and truncation. Sales, who may run but not export the report, gets 403; the hotel team 404.
+- **App:** an outlined **Export** in the header beside Record payment, for SA and FA only. It exports the open tab's status and saves `subscriptions-awaiting-payment.csv`, `subscriptions-active.csv` or `subscriptions.csv` on the web workspace; a phone build says to export from the web.
+- **CSV:** account, plan, status, the amount in rupees as a plain number, created, started and ending times (ISO), the last payment's method, status and paid time, and both ids. The escaping moved into a shared `features/admin/csv.ts`, now used by the audit-log export too, and it keeps any cell that would start a formula (`=`, `+`, `-`, `@`) as text, since exports carry names people typed.
+- **Tests:** the export contract; e2e for Finance (strict rows, demo and paid left out, the audit event's filters and count, which fails without the audit call), the Super Admin, Sales refused with nothing audited, and the hotel team; the CSV (paise exact, formula kept as text); the screen's export per tab, the web-only toast, and Sales offered none. Checked in the browser against local data, with the download intercepted rather than saved.
 
 ### Slice 4. Ship (S)
 

@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { subscriptionReportQuery, subscriptionReportRow } from "./subscription-report.js";
+import {
+  subscriptionReportExport,
+  subscriptionReportQuery,
+  subscriptionReportRow,
+} from "./subscription-report.js";
 
 const ID = "018f0000-0000-7000-8000-000000000000";
 
@@ -50,5 +54,28 @@ describe("subscriptionReportQuery", () => {
   it("rejects an unknown status and a cursor that is not a UUID", () => {
     expect(subscriptionReportQuery.safeParse({ status: "unpaid" }).success).toBe(false);
     expect(subscriptionReportQuery.safeParse({ cursor: "abc" }).success).toBe(false);
+  });
+});
+
+describe("subscriptionReportExport", () => {
+  it("carries the filters, the count and the strict rows", () => {
+    const parsed = subscriptionReportExport.safeParse({
+      generatedAt: "2026-11-15T10:00:00.000Z",
+      rowCount: 1,
+      truncated: false,
+      filters: { status: "pending_payment" },
+      rows: [row],
+    });
+    expect(parsed.success).toBe(true);
+    const leaky = { ...row, billingAddress: "12 MG Road" };
+    expect(
+      subscriptionReportExport.safeParse({
+        generatedAt: "2026-11-15T10:00:00.000Z",
+        rowCount: 1,
+        truncated: false,
+        filters: {},
+        rows: [leaky],
+      }).success,
+    ).toBe(false);
   });
 });
