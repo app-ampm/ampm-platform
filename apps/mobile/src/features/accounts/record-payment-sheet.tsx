@@ -88,6 +88,45 @@ export interface RecordPaymentSheetProps {
   /** The pending subscription to record a payment for, or null when the sheet is closed. */
   readonly subscriptionId: string | null;
   readonly onClose: () => void;
+  /**
+   * Whose payment it is ("Nisha & Arjun · Hotel Discovery · ₹50,000"), where the screen around the sheet
+   * does not already say: Finance & Reports opens it from a list of many accounts' subscriptions.
+   */
+  readonly subject?: string | undefined;
+}
+
+/** The form's fields: the bank reference, the method and, optionally, the day it was received. */
+function PaymentFields({
+  draft,
+  patch,
+  errors,
+}: {
+  readonly draft: PaymentDraft;
+  readonly patch: (next: Partial<PaymentDraft>) => void;
+  readonly errors: PaymentErrors;
+}) {
+  return (
+    <>
+      <Input
+        label="Reference"
+        required
+        value={draft.reference}
+        onChangeText={(reference) => patch({ reference })}
+        placeholder="Bank reference / UTR"
+        errorText={errors.reference}
+        testID="payment-reference"
+      />
+      <MethodPicker value={draft.method} onChange={(method) => patch({ method })} />
+      <Input
+        label="Received on"
+        value={draft.paidAt}
+        onChangeText={(paidAt) => patch({ paidAt })}
+        helpText="YYYY-MM-DD (optional; defaults to now)"
+        errorText={errors.paidAt}
+        testID="payment-paid-at"
+      />
+    </>
+  );
 }
 
 /**
@@ -96,7 +135,7 @@ export interface RecordPaymentSheetProps {
  * and, if it differs from now, when it was received. Recording it runs the same activation as the gateway
  * webhook.
  */
-export function RecordPaymentSheet({ subscriptionId, onClose }: RecordPaymentSheetProps) {
+export function RecordPaymentSheet({ subscriptionId, onClose, subject }: RecordPaymentSheetProps) {
   const { draft, patch, errors, pending, submit } = useRecordPaymentForm(
     subscriptionId ?? "",
     subscriptionId !== null,
@@ -115,28 +154,16 @@ export function RecordPaymentSheet({ subscriptionId, onClose }: RecordPaymentShe
       }
     >
       <Stack gap={4}>
+        {subject ? (
+          <Text variant="body" weight="semibold" testID="record-payment-subject">
+            {subject}
+          </Text>
+        ) : null}
         <Text variant="body" tone="body">
           The amount is taken from the plan, so it always matches the price. Enter how the transfer
           was received.
         </Text>
-        <Input
-          label="Reference"
-          required
-          value={draft.reference}
-          onChangeText={(reference) => patch({ reference })}
-          placeholder="Bank reference / UTR"
-          errorText={errors.reference}
-          testID="payment-reference"
-        />
-        <MethodPicker value={draft.method} onChange={(method) => patch({ method })} />
-        <Input
-          label="Received on"
-          value={draft.paidAt}
-          onChangeText={(paidAt) => patch({ paidAt })}
-          helpText="YYYY-MM-DD (optional; defaults to now)"
-          errorText={errors.paidAt}
-          testID="payment-paid-at"
-        />
+        <PaymentFields draft={draft} patch={patch} errors={errors} />
       </Stack>
     </Sheet>
   );

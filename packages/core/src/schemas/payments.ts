@@ -53,10 +53,15 @@ export const paymentClientView = z
   .strict();
 export type PaymentClientView = z.infer<typeof paymentClientView>;
 
-/** A payment as Finance sees it (RESTRICTED-FINANCE, FA/SA). Never serialised to a client. */
+/**
+ * A payment as Finance sees it (RESTRICTED-FINANCE, FA/SA). Never serialised to a client. It names the
+ * account because Finance may not read client accounts (its grant covers billing fields only, D-127),
+ * so the ledger is the one place Finance learns whose payment a row is.
+ */
 export const paymentFinanceView = z.object({
   id: uuid,
   accountId: uuid,
+  accountName: z.string(),
   direction: paymentDirection,
   purpose: paymentPurpose,
   amount: money,

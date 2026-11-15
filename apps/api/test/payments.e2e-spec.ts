@@ -95,6 +95,8 @@ describe("Finance payment ledger (e2e)", () => {
     );
     expect(payment).toMatchObject({
       accountId,
+      // Finance may not read the account, so the ledger names it (D-127).
+      accountName: `${TAG} Ledger`,
       direction: "inbound",
       purpose: "subscription",
       method: "bank_transfer",

@@ -14,6 +14,8 @@ import {
 export interface PaymentRow {
   readonly id: string;
   readonly accountId: string;
+  /** Named here because Finance may not read client accounts (D-127). */
+  readonly accountName: string;
   readonly direction: PaymentDirection;
   readonly purpose: PaymentPurpose;
   readonly amount: Prisma.Decimal;
@@ -69,12 +71,13 @@ const PAYMENT_FIELDS = {
   paidAt: true,
   recordedBy: true,
   createdAt: true,
+  account: { select: { name: true } },
 } as const;
 
 type SelectedPayment = Prisma.PaymentGetPayload<{ select: typeof PAYMENT_FIELDS }>;
 
-function toRow(payment: SelectedPayment): PaymentRow {
-  return { ...payment };
+function toRow({ account, ...payment }: SelectedPayment): PaymentRow {
+  return { ...payment, accountName: account.name };
 }
 
 @Injectable()

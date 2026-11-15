@@ -13,6 +13,7 @@ export function toPaymentFinanceView(row: PaymentRow): PaymentFinanceView {
   return {
     id: row.id,
     accountId: row.accountId,
+    accountName: row.accountName,
     direction: row.direction,
     purpose: row.purpose,
     amount: toClientMoney(row.amount),

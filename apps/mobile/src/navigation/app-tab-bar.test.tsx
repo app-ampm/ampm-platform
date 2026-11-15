@@ -114,8 +114,9 @@ describe("AppTabBar for staff", () => {
   it("shows Sales its areas with the area of the path selected", async () => {
     await renderBar("/leads/018f0000-0000-7000-8000-0000000000a1", me("staff", ["SM"]));
     const labels = screen.getAllByRole("tab").map((tab) => tab.props.accessibilityLabel);
-    // No Tasks: its field notes need the incidents key, which Sales does not hold.
-    expect(labels).toEqual(["Leads", "Enquiries", "More"]);
+    // No Tasks: its field notes need the incidents key, which Sales does not hold. Finance & Reports,
+    // whose subscription report Sales may run (§5.16), sits before More.
+    expect(labels).toEqual(["Leads", "Enquiries", "Finance", "More"]);
     expect(screen.getByRole("tab", { name: "Leads" })).toBeSelected();
     await fireEvent.press(screen.getByRole("tab", { name: "Enquiries" }));
     expect(mockDismissTo).toHaveBeenCalledWith("/enquiries");

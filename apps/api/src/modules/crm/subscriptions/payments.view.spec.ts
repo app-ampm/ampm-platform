@@ -8,6 +8,7 @@ function row(overrides: Partial<PaymentRow> = {}): PaymentRow {
   return {
     id: "0192f3a0-7d3e-7b1a-9c2f-000000000001",
     accountId: "0192f3a0-7d3e-7b1a-9c2f-000000000002",
+    accountName: "The Sharmas",
     direction: "inbound",
     purpose: "subscription",
     amount: new Prisma.Decimal("25000.00"),
@@ -36,6 +37,8 @@ describe("toPaymentFinanceView", () => {
     expect(view.direction).toBe("inbound");
     expect(view.providerRef).toBe("UTR-1");
     expect(view.recordedBy).toBe("0192f3a0-7d3e-7b1a-9c2f-000000000004");
+    // Finance cannot read accounts, so the ledger row names whose payment it is (D-127).
+    expect(view.accountName).toBe("The Sharmas");
   });
 
   it("passes nullable finance fields through unchanged", () => {
