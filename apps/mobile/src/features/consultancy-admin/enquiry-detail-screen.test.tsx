@@ -87,6 +87,15 @@ describe("StaffEnquiryDetailScreen: header and notes", () => {
     expect(mockDismissTo).toHaveBeenCalledWith("/enquiries");
   });
 
+  it("goes back to the queue still filtered to the stage it came from", async () => {
+    await renderWithApi(
+      <StaffEnquiryDetailScreen enquiryId={ENQUIRY_ID} stage="proposal" />,
+      () => new Promise<Response>(() => {}),
+    );
+    await fireEvent.press(screen.getByLabelText("Back to enquiries"));
+    expect(mockDismissTo).toHaveBeenCalledWith("/enquiries?stage=proposal");
+  });
+
   it("heads the screen with the client and the stay as data, the hotel and the status chip", async () => {
     const detail = detailFixture({ roomsRequired: 60, datesFlexible: true });
     await renderDetail(enquiryFetch(detail));

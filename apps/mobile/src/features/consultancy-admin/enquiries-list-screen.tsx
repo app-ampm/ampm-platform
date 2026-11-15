@@ -1,4 +1,4 @@
-import { useCallback, useState, type ReactNode } from "react";
+import { useCallback, type ReactNode } from "react";
 import { useFocusEffect, useRouter } from "expo-router";
 
 import { useStaffEnquiries } from "@ampm/api-client";
@@ -12,6 +12,7 @@ import { EnquiryQueuePanel } from "./enquiry-queue-panel";
 import { EnquiryQueueRow } from "./enquiry-queue-row";
 import { EnquiryQueueStates } from "./enquiry-queue-states";
 import { EnquiryStageFilter } from "./enquiry-stage-filter";
+import { enquiryHref, useSetQueueStage } from "./queue-stage";
 
 type EnquiriesQuery = ReturnType<typeof useStaffEnquiries>;
 
@@ -22,10 +23,17 @@ type EnquiriesQuery = ReturnType<typeof useStaffEnquiries>;
  * loaded, this page is replaced by the first enquiry's, whose one tree keeps a draft across 1024. A
  * top-level screen: the route passes the app's tab bar, and on wide windows the layout draws the rail.
  */
-export function StaffEnquiriesListScreen({ tabBar }: { readonly tabBar?: ReactNode }) {
+export function StaffEnquiriesListScreen({
+  tabBar,
+  stage = null,
+}: {
+  readonly tabBar?: ReactNode;
+  /** The `stage` search param: the queue shows only that pipeline stage. */
+  readonly stage?: HotelEnquiryStage | null;
+}) {
   const isSplit = useLayoutAt("lg");
-  const enquiries = useStaffEnquiries();
-  useOpenFirstBesideQueue(isSplit, enquiries.data?.items[0]?.id);
+  const enquiries = useStaffEnquiries({ stage: stage ?? undefined });
+  useOpenFirstBesideQueue(isSplit, enquiries.data?.items[0]?.id, stage);
   return (
     <Screen
       width="wide"
@@ -35,7 +43,11 @@ export function StaffEnquiriesListScreen({ tabBar }: { readonly tabBar?: ReactNo
       <EnquiriesSplit
         isSplit={isSplit}
         queue={
-          isSplit ? <EnquiryQueuePanel openId={undefined} /> : <QueuePage enquiries={enquiries} />
+          isSplit ? (
+            <EnquiryQueuePanel openId={undefined} stage={stage} />
+          ) : (
+            <QueuePage enquiries={enquiries} stage={stage} />
+          )
         }
       >
         {isSplit ? <NothingOpen enquiries={enquiries} /> : null}
@@ -50,12 +62,16 @@ export function StaffEnquiriesListScreen({ tabBar }: { readonly tabBar?: ReactNo
  * changes the selection in place. Only while this page is focused, so a queue page left under a
  * pushed enquiry never redirects the screen above it when the window widens.
  */
-function useOpenFirstBesideQueue(isSplit: boolean, firstId: string | undefined): void {
+function useOpenFirstBesideQueue(
+  isSplit: boolean,
+  firstId: string | undefined,
+  stage: HotelEnquiryStage | null,
+): void {
   const router = useRouter();
   useFocusEffect(
     useCallback(() => {
-      if (isSplit && firstId) router.replace(`/enquiries/${firstId}`);
-    }, [isSplit, firstId, router]),
+      if (isSplit && firstId) router.replace(enquiryHref(firstId, stage));
+    }, [isSplit, firstId, stage, router]),
   );
 }
 
@@ -94,18 +110,22 @@ function QueueHeader({ enquiries }: { readonly enquiries: EnquiriesQuery }) {
 }
 
 /**
- * The queue on its own page: the pipeline's stage filter, then rows in one glass panel; a row opens
- * its enquiry's page. Unfiltered, it is the same query as the page's header count reads.
+ * The queue on its own page: the pipeline's stage filter (the address's `stage` param), then rows in
+ * one glass panel; a row opens its enquiry's page, and Back returns to the filtered queue.
  */
-function QueuePage({ enquiries }: { readonly enquiries: EnquiriesQuery }) {
+function QueuePage({
+  enquiries,
+  stage,
+}: {
+  readonly enquiries: EnquiriesQuery;
+  readonly stage: HotelEnquiryStage | null;
+}) {
   const router = useRouter();
-  const [stage, setStage] = useState<HotelEnquiryStage | null>(null);
-  const filtered = useStaffEnquiries({ stage: stage ?? undefined });
-  const shown = stage === null ? enquiries : filtered;
+  const setStage = useSetQueueStage();
   return (
     <Stack gap={4}>
       <EnquiryStageFilter value={stage} onChange={setStage} />
-      <EnquiryQueueStates enquiries={shown} filtered={stage !== null}>
+      <EnquiryQueueStates enquiries={enquiries} filtered={stage !== null}>
         {(page) => (
           <Card padding="sm" className="md:p-5.5">
             <Stack gap={2}>

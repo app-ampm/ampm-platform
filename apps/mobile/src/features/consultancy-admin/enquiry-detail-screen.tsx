@@ -1,6 +1,7 @@
 import { useRouter } from "expo-router";
 
 import { useStaffEnquiry } from "@ampm/api-client";
+import type { HotelEnquiryStage } from "@ampm/core";
 import { Screen, ScreenHeader, useLayoutAt } from "@ampm/ui";
 
 import { EnquiriesSplit } from "./enquiries-split";
@@ -12,6 +13,7 @@ import {
 } from "./enquiry-heading";
 import { EnquiryPane } from "./enquiry-pane";
 import { EnquiryQueuePanel } from "./enquiry-queue-panel";
+import { queueHref } from "./queue-stage";
 
 /**
  * The staff view of one enquiry (consultancy-admin, T6's detail). On a phone and a tablet, a detail
@@ -22,7 +24,14 @@ import { EnquiryQueuePanel } from "./enquiry-queue-panel";
  * survives a tablet turning or the window crossing 1024. The back button returns to the queue's page
  * whether that page is under this one (a phone opened it) or not (a desktop replaced it with this).
  */
-export function StaffEnquiryDetailScreen({ enquiryId }: { readonly enquiryId: string }) {
+export function StaffEnquiryDetailScreen({
+  enquiryId,
+  stage = null,
+}: {
+  readonly enquiryId: string;
+  /** The queue's stage filter, carried in the address beside the open enquiry. */
+  readonly stage?: HotelEnquiryStage | null;
+}) {
   const isSplit = useLayoutAt("lg");
   const router = useRouter();
   return (
@@ -30,13 +39,13 @@ export function StaffEnquiryDetailScreen({ enquiryId }: { readonly enquiryId: st
       width="wide"
       header={
         isSplit ? null : (
-          <DetailHeader enquiryId={enquiryId} onBack={() => router.dismissTo("/enquiries")} />
+          <DetailHeader enquiryId={enquiryId} onBack={() => router.dismissTo(queueHref(stage))} />
         )
       }
     >
       <EnquiriesSplit
         isSplit={isSplit}
-        queue={isSplit ? <EnquiryQueuePanel openId={enquiryId} /> : null}
+        queue={isSplit ? <EnquiryQueuePanel openId={enquiryId} stage={stage} /> : null}
       >
         {/* Keyed: choosing another enquiry beside the queue starts its pane afresh (no draft carried
             over); crossing 1024 changes no key, so a draft stays. */}
