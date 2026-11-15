@@ -145,8 +145,9 @@ export function isLiveProposal(status: HotelProposalStatus): boolean {
 
 export const staffAgreementBadge: Record<ServiceAgreementStatus, Badge> = {
   draft: { label: "Draft", tone: "neutral" },
-  sent: { label: "Sent", tone: "warning" },
-  accepted: { label: "Accepted", tone: "success" },
+  // Read from the team's side: a sent agreement waits on the client; an accepted one needs the team now.
+  sent: { label: "Sent · awaiting client", tone: "warning" },
+  accepted: { label: "Accepted · activate it", tone: "danger" },
   active: { label: "Active", tone: "success" },
   completed: { label: "Completed", tone: "neutral" },
   cancelled: { label: "Cancelled", tone: "neutral" },

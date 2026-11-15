@@ -9,6 +9,7 @@ import { useGoToSignIn } from "@/navigation/sign-in";
 import { BARE_CARD, useInDetailPanel } from "../consultancy/enquiry-surface";
 import { ROLE_WITHOUT_GRANT } from "./consultancy-admin.format";
 import { EnquiryActivity } from "./enquiry-activity";
+import { EnquiryAgreementNotice } from "./enquiry-agreement-notice";
 import { EnquiryClientCard } from "./enquiry-client-card";
 import { AgreementSection, ProposalsSection } from "./enquiry-commercial";
 import { EnquiryHeading } from "./enquiry-heading";
@@ -72,6 +73,11 @@ function EnquiryWorkspace({ enquiry }: { readonly enquiry: HotelEnquiryStaffDeta
     >
       {inPanel ? <EnquiryHeading enquiry={enquiry} /> : null}
       <EnquiryPipelineStrip enquiry={enquiry} tab={tab} onOpenTab={setTab} blur={!inPanel} />
+      <EnquiryAgreementNotice
+        enquiryId={enquiry.id}
+        onOpenBooking={tab === "booking" ? undefined : () => setTab("booking")}
+        blur={!inPanel}
+      />
       <SegmentedControl
         variant="underline"
         accessibilityLabel="Enquiry sections"

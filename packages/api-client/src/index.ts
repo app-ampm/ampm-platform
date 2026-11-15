@@ -228,8 +228,11 @@ export {
   useTransitionBookingMilestone,
 } from "./hooks/use-staff-booking-milestones";
 export {
+  AGREEMENT_WAITING_REFRESH_MS,
   STAFF_SERVICE_AGREEMENTS_QUERY_KEY,
+  useAgreementSignedCopyLink,
   useCreateServiceAgreement,
+  useMarkAgreementSignedOffline,
   useStaffServiceAgreements,
   useTransitionServiceAgreement,
   type StaffServiceAgreementsQuery,

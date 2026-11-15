@@ -48,3 +48,16 @@ export function agreementAffectsEntitlement(
 ): boolean {
   return to === "active" || from === "active";
 }
+
+/**
+ * Only the client accepts an agreement, in the portal with the terms ticked (feature 10.2). Staff record
+ * one signed outside the app through the signed-copy route, which needs the signed document as its
+ * evidence, never by moving the status to `accepted` themselves.
+ */
+export const STAFF_ACCEPT_REFUSAL =
+  "The client accepts an agreement in their portal. To record one signed outside the app, attach the signed copy instead";
+
+/** Whether staff may make this move through the status route (every defined move but accepting). */
+export function isStaffStatusMove(to: ServiceAgreementStatus): boolean {
+  return to !== "accepted";
+}

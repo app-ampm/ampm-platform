@@ -4,11 +4,12 @@ import type { NextFunction, Request, Response } from "express";
 
 import { AppLogger } from "./logger.service.js";
 
-// The only routes that accept a binary (application/octet-stream) body: the media upload (feature 9.3b)
-// and a booking milestone's signed contract (D-132).
+// The only routes that accept a binary (application/octet-stream) body: the media upload (feature 9.3b),
+// a booking milestone's signed contract (D-132) and a service agreement's signed copy (D-135).
 const UPLOAD_PATHS: readonly RegExp[] = [
   /^\/media\/[^/]+\/upload\/?$/,
   /^\/consultancy-admin\/booking-milestones\/[^/]+\/contract\/?$/,
+  /^\/crm\/service-agreements\/[^/]+\/signed-copy\/?$/,
 ];
 
 /**
