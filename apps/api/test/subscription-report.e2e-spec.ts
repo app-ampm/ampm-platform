@@ -204,8 +204,13 @@ describe("Subscription status report (e2e)", () => {
         .get(`/crm/reports/subscriptions/export${status ? `?status=${status}` : ""}`)
         .set("authorization", await bearer(subject));
 
+    /** The report audit events the request wrote, found by its request id rather than by the clock. */
+    const eventsOf = (res: { headers: Record<string, string> }) =>
+      prisma.auditEvent.findMany({
+        where: { entityType: "subscription_report", requestId: res.headers["x-request-id"] },
+      });
+
     it("gives Finance the whole queue as strict rows and audits it with filters and count", async () => {
-      const since = new Date();
       const res = await exportAs("local:fa", "pending_payment");
       expect(res.status).toBe(200);
       const body = res.body.data as { rows: ReportRow[]; rowCount: number; truncated: boolean };
@@ -215,10 +220,10 @@ describe("Subscription status report (e2e)", () => {
       expect(Object.keys(find(body.rows, ids.awaiting)!).sort()).toEqual(ROW_FIELDS);
       expect(find(body.rows, ids.paid)).toBeUndefined();
       expect(find(body.rows, ids.demo)).toBeUndefined();
-      const event = await prisma.auditEvent.findFirst({
-        where: { entityType: "subscription_report", action: "export", occurredAt: { gte: since } },
-      });
-      expect(event?.afterJson).toEqual({
+      const events = await eventsOf(res);
+      expect(events).toHaveLength(1);
+      expect(events[0]?.action).toBe("export");
+      expect(events[0]?.afterJson).toEqual({
         filters: { status: "pending_payment" },
         rowCount: body.rowCount,
         truncated: false,
@@ -232,15 +237,11 @@ describe("Subscription status report (e2e)", () => {
     });
 
     it("refuses Sales, who may run the report but not export it, and writes no export", async () => {
-      const since = new Date();
       const res = await exportAs("local:sm");
       expect(res.status).toBe(403);
       expect(res.body.error.code).toBe("forbidden");
-      expect(
-        await prisma.auditEvent.count({
-          where: { entityType: "subscription_report", occurredAt: { gte: since } },
-        }),
-      ).toBe(0);
+      expect(res.headers["x-request-id"]).toEqual(expect.any(String));
+      expect(await eventsOf(res)).toEqual([]);
     });
 
     it("refuses the hotel team as absence", async () => {

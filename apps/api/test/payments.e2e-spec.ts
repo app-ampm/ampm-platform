@@ -134,6 +134,53 @@ describe("Finance payment ledger (e2e)", () => {
     expect(next.body.data.items).toHaveLength(1);
   });
 
+  describe("demo accounts", () => {
+    let demoPaymentId: string;
+
+    beforeAll(async () => {
+      const demo = await prisma.clientAccount.create({
+        data: { name: `${TAG} Demo`, status: "prospect", isDemo: true },
+        select: { id: true },
+      });
+      demoPaymentId = await makePayment("demo-1", "inbound", { accountId: demo.id });
+    });
+
+    /** Every payment id on every page of the whole inbound ledger, as Finance reads it. */
+    async function wholeLedgerIds(): Promise<string[]> {
+      const ids: string[] = [];
+      let cursor: string | null = null;
+      do {
+        const res = await http()
+          .get(`/crm/payments?direction=inbound&limit=100${cursor ? `&cursor=${cursor}` : ""}`)
+          .set("authorization", await bearer("local:fa"))
+          .expect(200);
+        ids.push(...res.body.data.items.map((p: { id: string }) => p.id));
+        cursor = res.body.data.nextCursor as string | null;
+      } while (cursor);
+      return ids;
+    }
+
+    it("leaves a demo account's payments out of the whole ledger, as the report does (D-127)", async () => {
+      const ids = await wholeLedgerIds();
+      expect(ids).not.toContain(demoPaymentId);
+      // The real account's receipts are still there: only demo accounts are left out.
+      const real = await prisma.payment.findFirstOrThrow({ where: { providerRef: `${REF}-in-1` } });
+      expect(ids).toContain(real.id);
+    });
+
+    it("still lists a demo account's payments when that account is asked for by id", async () => {
+      const demo = await prisma.payment.findUniqueOrThrow({
+        where: { id: demoPaymentId },
+        select: { accountId: true },
+      });
+      const res = await http()
+        .get(`/crm/payments?accountId=${demo.accountId}`)
+        .set("authorization", await bearer("local:fa"))
+        .expect(200);
+      expect(res.body.data.items.map((p: { id: string }) => p.id)).toEqual([demoPaymentId]);
+    });
+  });
+
   it("audits each ledger read as a restricted_read with the filter and row count (§9)", async () => {
     await prisma.auditEvent.deleteMany({
       where: { entityType: "payment_ledger", entityId: accountId },

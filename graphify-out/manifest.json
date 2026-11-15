@@ -396,9 +396,9 @@
     "semantic_hash": "562555e66a64d3c212ed7956753475b6"
   },
   "packages/api-client/src/index.ts": {
-    "mtime": 1794714045.9610426,
-    "seen": 1794714356.998359,
-    "ast_hash": "e31040f3580fdf7633edeffc1a4fb1f9",
+    "mtime": 1794719476.3544567,
+    "seen": 1794731312.767688,
+    "ast_hash": "a049cc659b685911289e4909503ecc9e",
     "semantic_hash": ""
   },
   "packages/api-client/tsconfig.json": {
@@ -3594,9 +3594,9 @@
     "semantic_hash": ""
   },
   "apps/api/src/modules/crm/subscriptions/payments.repository.ts": {
-    "mtime": 1794714019.367224,
-    "seen": 1794714356.983007,
-    "ast_hash": "dc35dc9669c994bde9a2b90192e706c8",
+    "mtime": 1794730949.1570299,
+    "seen": 1794731312.752599,
+    "ast_hash": "d649c63fe9ef49c521a54b3a0f472508",
     "semantic_hash": ""
   },
   "apps/api/src/modules/crm/subscriptions/plans.controller.ts": {
@@ -6444,9 +6444,9 @@
     "semantic_hash": ""
   },
   "apps/mobile/src/navigation/app-tab-bar.test.tsx": {
-    "mtime": 1794685151.4836626,
-    "seen": 1794685694.740578,
-    "ast_hash": "be0848a63783fe4254216c087a389884",
+    "mtime": 1794716030.7014265,
+    "seen": 1794731312.7632372,
+    "ast_hash": "b3c1b234482dca9c880bd1f1a929e60c",
     "semantic_hash": ""
   },
   "apps/mobile/src/navigation/app-tab-bar.tsx": {
@@ -6492,15 +6492,15 @@
     "semantic_hash": ""
   },
   "apps/mobile/src/navigation/staff-areas.test.ts": {
-    "mtime": 1794662960.8423057,
-    "seen": 1794666131.73371,
-    "ast_hash": "4ffe3cb9ef04925d95c5fc948e1178e0",
+    "mtime": 1794715430.2504792,
+    "seen": 1794731312.763443,
+    "ast_hash": "50596762468bc72a7c2e8b7a96cfd9a6",
     "semantic_hash": ""
   },
   "apps/mobile/src/navigation/staff-areas.ts": {
-    "mtime": 1794662960.8427706,
-    "seen": 1794666131.733711,
-    "ast_hash": "84d89a7b8a94d8593068be56eccae6cb",
+    "mtime": 1794716072.5668986,
+    "seen": 1794731312.763444,
+    "ast_hash": "1b0932cddfd6274ae070ca76185da864",
     "semantic_hash": ""
   },
   "apps/mobile/src/navigation/staff-rail.tsx": {
@@ -7374,9 +7374,9 @@
     "semantic_hash": ""
   },
   "apps/api/src/modules/crm/subscriptions/payments.service.ts": {
-    "mtime": 1794662960.812044,
-    "seen": 1794666131.733419,
-    "ast_hash": "95347dec8809c78f8f60e25bb58a7721",
+    "mtime": 1794730968.3921201,
+    "seen": 1794731312.752599,
+    "ast_hash": "c5d3ad1ae6e38a4b402975cd9d602230",
     "semantic_hash": ""
   },
   "apps/api/src/modules/crm/subscriptions/payments.view.spec.ts": {
@@ -7392,9 +7392,9 @@
     "semantic_hash": ""
   },
   "apps/api/test/payments.e2e-spec.ts": {
-    "mtime": 1794714024.8335643,
-    "seen": 1794714356.985227,
-    "ast_hash": "003040b4c252f96330f95f330046754c",
+    "mtime": 1794730936.661942,
+    "seen": 1794731312.754875,
+    "ast_hash": "292280716f11378f3142cb556128f985",
     "semantic_hash": ""
   },
   "apps/mobile/src/app/admin/audit.tsx": {
@@ -7578,9 +7578,9 @@
     "semantic_hash": ""
   },
   "apps/mobile/src/features/accounts/record-payment-sheet.tsx": {
-    "mtime": 1794687128.295522,
-    "seen": 1794687342.6274781,
-    "ast_hash": "4d82f83632d87ba23c25c2c328fd4c75",
+    "mtime": 1794715850.3713138,
+    "seen": 1794731312.756446,
+    "ast_hash": "f2eb32c70a02fd92f02716e45b001035",
     "semantic_hash": ""
   },
   "apps/mobile/src/features/admin/admin-console-screen.test.tsx": {
@@ -7638,9 +7638,9 @@
     "semantic_hash": ""
   },
   "apps/mobile/src/features/admin/audit-log.csv.ts": {
-    "mtime": 1794662960.817473,
-    "seen": 1794666131.733549,
-    "ast_hash": "ee76ecb989c8a23725e7b2f1334ad6f7",
+    "mtime": 1794719460.739015,
+    "seen": 1794731312.7567208,
+    "ast_hash": "5e6d83d549d1984b4aa39f55a2cb6fd7",
     "semantic_hash": ""
   },
   "apps/mobile/src/features/admin/audit-log.format.test.ts": {
@@ -8310,9 +8310,9 @@
     "semantic_hash": ""
   },
   "packages/api-client/src/hooks/use-payments.ts": {
-    "mtime": 1794662960.8974662,
-    "seen": 1794666131.733842,
-    "ast_hash": "3b10f5911e582965d647fa6379afa4a9",
+    "mtime": 1794730968.3923254,
+    "seen": 1794731312.767243,
+    "ast_hash": "b8e3fd00f60ee4328084c82031e5c424",
     "semantic_hash": ""
   },
   "packages/api-client/src/hooks/use-staff-hotels.ts": {
@@ -8340,8 +8340,8 @@
     "semantic_hash": ""
   },
   "packages/api-client/src/hooks/use-subscriptions.ts": {
-    "mtime": 1794714061.351044,
-    "seen": 1794714356.998255,
+    "mtime": 1794716002.8793528,
+    "seen": 1794731312.767589,
     "ast_hash": "99a52f9316600efe6862fc0e568f8bff",
     "semantic_hash": ""
   },
@@ -9768,21 +9768,21 @@
     "semantic_hash": ""
   },
   "apps/api/src/modules/crm/subscriptions/subscription-report.controller.ts": {
-    "mtime": 1794714007.315612,
-    "seen": 1794714356.9831839,
-    "ast_hash": "ffb8adbb928a2521db58c5f2da1438d3",
+    "mtime": 1794719383.6509259,
+    "seen": 1794731312.75279,
+    "ast_hash": "e2060cc0069c4110cf0b6660537fcf2c",
     "semantic_hash": ""
   },
   "apps/api/src/modules/crm/subscriptions/subscription-report.repository.ts": {
-    "mtime": 1794714181.643125,
-    "seen": 1794714356.9831848,
-    "ast_hash": "727bf1c272887701fbb3dd28a9f082c7",
+    "mtime": 1794719383.6379523,
+    "seen": 1794731312.752791,
+    "ast_hash": "3cf2e2330d8191f5bcd8b4d5d6ca22a8",
     "semantic_hash": ""
   },
   "apps/api/src/modules/crm/subscriptions/subscription-report.service.ts": {
-    "mtime": 1794714002.7522955,
-    "seen": 1794714356.983186,
-    "ast_hash": "57d615be460b98c9a40f73aa43212e26",
+    "mtime": 1794731155.6295292,
+    "seen": 1794731312.7527921,
+    "ast_hash": "11f5b4c0b60cdfd6ab0c7371e9758b2b",
     "semantic_hash": ""
   },
   "apps/api/src/modules/crm/subscriptions/subscription-report.view.spec.ts": {
@@ -9810,33 +9810,129 @@
     "semantic_hash": ""
   },
   "apps/api/test/subscription-report.e2e-spec.ts": {
-    "mtime": 1794714157.6150239,
-    "seen": 1794714356.985436,
-    "ast_hash": "a86a5bbf8a23474aee11a0630837922f",
+    "mtime": 1794731144.140393,
+    "seen": 1794731312.7550771,
+    "ast_hash": "c4d5cbb02ba85844ce23865fac0adba0",
     "semantic_hash": ""
   },
   "packages/api-client/src/hooks/use-subscription-report.ts": {
-    "mtime": 1794714042.860472,
-    "seen": 1794714356.998254,
-    "ast_hash": "ef8c58ae3018f5b7efc776739e78da35",
+    "mtime": 1794719476.3540223,
+    "seen": 1794731312.7675881,
+    "ast_hash": "4eaac93b851185b57bb417c748112e96",
     "semantic_hash": ""
   },
   "packages/core/src/schemas/subscription-report.test.ts": {
-    "mtime": 1794713966.4904325,
-    "seen": 1794714356.999601,
-    "ast_hash": "5d55b76bf948e8fbcb3e257be46737f0",
+    "mtime": 1794719358.0145462,
+    "seen": 1794731312.768969,
+    "ast_hash": "503994eae85eb72d6855d1325fe7d173",
     "semantic_hash": ""
   },
   "packages/core/src/schemas/subscription-report.ts": {
-    "mtime": 1794713949.465772,
-    "seen": 1794714356.9996018,
-    "ast_hash": "13a3b1116bb11d036cf51fbb9c2295fc",
+    "mtime": 1794719358.010795,
+    "seen": 1794731312.76897,
+    "ast_hash": "b782c1ec2c9e418c67d7fded1aa1102e",
     "semantic_hash": ""
   },
   "docs/planning/finance-billing-view.md": {
-    "mtime": 1794714191.7087069,
-    "seen": 1794714357.007127,
-    "ast_hash": "fcfb10de0d217de05aa8f8db5a555d50",
+    "mtime": 1794730968.392417,
+    "seen": 1794731312.776413,
+    "ast_hash": "a597963e133b46753f4fd18d0ecb520a",
+    "semantic_hash": ""
+  },
+  "apps/mobile/src/app/finance.tsx": {
+    "mtime": 1794715564.4804757,
+    "seen": 1794731312.7555351,
+    "ast_hash": "2d83e0345026e7dcf4f3ab041030ad9c",
+    "semantic_hash": ""
+  },
+  "apps/mobile/src/features/admin/csv.test.ts": {
+    "mtime": 1794719544.7005072,
+    "seen": 1794731312.756968,
+    "ast_hash": "f117e4648ba4568897f274d8320d3370",
+    "semantic_hash": ""
+  },
+  "apps/mobile/src/features/admin/csv.ts": {
+    "mtime": 1794719460.7249963,
+    "seen": 1794731312.756969,
+    "ast_hash": "391aacbd56c098268945852c2c2ed9c7",
+    "semantic_hash": ""
+  },
+  "apps/mobile/src/features/finance/finance-actions.tsx": {
+    "mtime": 1794719544.6376786,
+    "seen": 1794731312.759531,
+    "ast_hash": "ddb813422fc6facb83b7436e9dd5cd8e",
+    "semantic_hash": ""
+  },
+  "apps/mobile/src/features/finance/finance-columns.tsx": {
+    "mtime": 1794715762.3220243,
+    "seen": 1794731312.759532,
+    "ast_hash": "48933f7e186ff7141feec3d046101e0a",
+    "semantic_hash": ""
+  },
+  "apps/mobile/src/features/finance/finance-export.test.tsx": {
+    "mtime": 1794719567.0944946,
+    "seen": 1794731312.7595332,
+    "ast_hash": "e6a5c71f78158a14e2f797efa6c6670e",
+    "semantic_hash": ""
+  },
+  "apps/mobile/src/features/finance/finance-payments.tsx": {
+    "mtime": 1794715766.505885,
+    "seen": 1794731312.7595341,
+    "ast_hash": "17c4f4ee4a6322c7a5b7e956de0e6b9e",
+    "semantic_hash": ""
+  },
+  "apps/mobile/src/features/finance/finance-screen.test.tsx": {
+    "mtime": 1794716072.4612865,
+    "seen": 1794731312.7595341,
+    "ast_hash": "efc13a1416431493a2668a9e3f4c1edf",
+    "semantic_hash": ""
+  },
+  "apps/mobile/src/features/finance/finance-screen.tsx": {
+    "mtime": 1794719544.3981435,
+    "seen": 1794731312.759535,
+    "ast_hash": "63c0ad6f76655ae16def707f3cccba3e",
+    "semantic_hash": ""
+  },
+  "apps/mobile/src/features/finance/finance-subscriptions.tsx": {
+    "mtime": 1794715602.178139,
+    "seen": 1794731312.759536,
+    "ast_hash": "89b6d65dff27bd1bca79a138c4649616",
+    "semantic_hash": ""
+  },
+  "apps/mobile/src/features/finance/finance.csv.test.ts": {
+    "mtime": 1794719494.493466,
+    "seen": 1794731312.759536,
+    "ast_hash": "7bfd194c52d2eff0d0c084834c952289",
+    "semantic_hash": ""
+  },
+  "apps/mobile/src/features/finance/finance.csv.ts": {
+    "mtime": 1794719494.4904952,
+    "seen": 1794731312.759537,
+    "ast_hash": "d16749e46fe5c296587ec696c35e3e21",
+    "semantic_hash": ""
+  },
+  "apps/mobile/src/features/finance/finance.format.test.ts": {
+    "mtime": 1794716044.6277099,
+    "seen": 1794731312.759537,
+    "ast_hash": "e862be543fab99cb5f5c9ab2800a9838",
+    "semantic_hash": ""
+  },
+  "apps/mobile/src/features/finance/finance.format.ts": {
+    "mtime": 1794715827.8354886,
+    "seen": 1794731312.759538,
+    "ast_hash": "fda1804ec255848221b2bb31eba04f64",
+    "semantic_hash": ""
+  },
+  "apps/mobile/src/features/finance/finance.test-utils.tsx": {
+    "mtime": 1794719567.0914054,
+    "seen": 1794731312.759539,
+    "ast_hash": "812f4d3b709da27203b28cff74aff4d7",
+    "semantic_hash": ""
+  },
+  "apps/mobile/src/features/finance/use-report-export.ts": {
+    "mtime": 1794719544.6922917,
+    "seen": 1794731312.759539,
+    "ast_hash": "49edce9b4e2e0c3754984edb1dcc75cb",
     "semantic_hash": ""
   }
 }
