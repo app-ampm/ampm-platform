@@ -250,7 +250,7 @@ their sprint comes.
 | Mock | Code | Route / file | State |
 |---|---|---|---|
 | W1–W8 website | PUB-01…09 | `apps/web/src/app/*` | Built in Peacock Night |
-| D1 / P1 sign-in | AUTH-06 | `/sign-in` (development sign-in until Cognito) | Reskinned |
+| D1 / P1 sign-in | AUTH-06 | `/sign-in` (development sign-in until Cognito) | Reskinned; the demo adds a Sign in / Sign up switch (pill `SegmentedControl`) and shows the code on screen, which the mocks (production: invited clients, SMS) do not have |
 | D2 activation and payment | CP-11 | `/portal` | Reskinned |
 | D4 / P2 subscriber home | CP-01 | `/portal` | Reskinned |
 | D5 / P3 search | CP-02 | `/hotels` | Reskinned |

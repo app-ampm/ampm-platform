@@ -9,8 +9,9 @@ import { SignInLayout, Text } from "@ampm/ui";
 import { setAccessToken } from "@/lib/session";
 
 import { DevSignInShortcuts } from "./dev-sign-in-shortcuts";
-import { MobileOtpSignIn } from "./mobile-otp-sign-in";
+import { ClientAccessCard } from "./mobile-otp-sign-in";
 import { SignInHero } from "./sign-in-hero";
+import { useClientAccess } from "./use-client-access";
 
 /** Signs in against the local dev endpoints, stores the token, and lets the entry gate route by role. */
 function useDevSignIn() {
@@ -18,8 +19,10 @@ function useDevSignIn() {
   const queryClient = useQueryClient();
   const devLogin = useDevLogin();
   const demo = useDemoSignIn();
-  // The typed work email lives here, above the layout, so it survives a change of arrangement.
+  // The typed work email (and whether its form is open) live here, above the layout, so they survive a
+  // change of arrangement.
   const [email, setEmail] = useState("");
+  const [emailOpen, setEmailOpen] = useState(false);
 
   // Clear (not just invalidate) so signing in as a different principal never shows the previous one's
   // cached data; the "/" gate then routes by principal type (staff, client or demo).
@@ -40,33 +43,44 @@ function useDevSignIn() {
     demo.mutate(undefined, { onSuccess: applySession });
   };
 
-  const error = devLogin.error ?? demo.error;
-  const errorText = isAppError(error) ? error.message : undefined;
-  const pending = devLogin.isPending;
-  return { signIn, enterDemo, pending, demoPending: demo.isPending, errorText, email, setEmail };
+  return {
+    signIn,
+    pendingEmail: devLogin.isPending ? devLogin.variables.email : undefined,
+    errorText: isAppError(devLogin.error) ? devLogin.error.message : undefined,
+    enterDemo,
+    demoPending: demo.isPending,
+    demoErrorText: isAppError(demo.error) ? demo.error.message : undefined,
+    email,
+    setEmail,
+    emailOpen,
+    setEmailOpen,
+  };
 }
 
 /**
- * Development sign-in for the demo. A seeded staff or client email is exchanged for a local access token
- * via `/auth/dev-login`, and "Explore the demo" enters the seeded demo prospect (P-7) via
- * `/auth/dev-login/demo`; both are refused outside a local, non-production config. Staff land in their first
- * workspace area, clients in the portal. The production sign-in is Cognito, which ships with the
- * hosting. P1 on a phone, one centred card from 768, D1's split from 1024: the client mobile + code
- * form alone in the glass card, the development shortcuts under it.
+ * Development sign-in for the demo. The glass card is the client's: a Sign in / Sign up switch, the
+ * mobile (and, to sign up, a name first), then the one-time code shown on screen. Under it, "Explore
+ * the demo" enters the seeded demo prospect (P-7) via `/auth/dev-login/demo`, and one tap on a seeded
+ * staff or client account exchanges its email for a local token via `/auth/dev-login`. All of it is
+ * refused outside a local, non-production config; the production sign-in is Cognito, with no sign-up.
+ * P1 on a phone, one centred card from 768, D1's split from 1024.
  */
 export function SignInScreen() {
   const session = useDevSignIn();
+  const access = useClientAccess();
   return (
     <SignInLayout
       testID="sign-in"
       brand={<Text variant="wordmark">AMPM</Text>}
       hero={
-        <SignInHero subtitle="Development sign-in — client mobile + one-time code, or a seeded account." />
+        <SignInHero
+          tab={access.mode}
+          subtitle="Sign in or sign up with your mobile and a one-time code."
+        />
       }
-      cardTitle="Client sign-in"
-      card={<MobileOtpSignIn />}
+      card={<ClientAccessCard access={access} />}
       aside={<DevSignInShortcuts {...session} />}
-      footer="No sign-up · AMPM invites every client"
+      footer="Demo build · codes appear on screen, no SMS"
     />
   );
 }
