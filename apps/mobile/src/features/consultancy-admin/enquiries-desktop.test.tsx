@@ -62,11 +62,12 @@ const EVENTS = [
 ];
 const LIST = "GET /consultancy-admin/enquiries";
 
-/** Waits until the enquiry, its sections and its names have all arrived, so nothing lands later. */
+/** Waits until the enquiry, its client account and the stage counts have arrived, so nothing lands later. */
 async function settled(): Promise<void> {
-  await screen.findByText("Booking milestones");
   await screen.findAllByText(HOTEL_NAME);
-  await screen.findAllByText(new RegExp(CLIENT_NAME, "i"));
+  await screen.findByText("Open client account");
+  // The stage counts arrive with the queue's panel, which a phone's enquiry page does not have.
+  if (screen.queryByTestId("enquiry-queue-panel")) await screen.findByText("Proposal v2 · shared");
 }
 
 async function renderList(routes = workspaceRoutes(), sent: SentRequest[] = []): Promise<void> {
@@ -140,13 +141,13 @@ describe("The queue's page from 1024 (T6)", () => {
     mockWindow.width = 390;
     const sent: SentRequest[] = [];
     await renderList(workspaceRoutes(), sent);
-    expect(await screen.findByText("Sangeet, wedding and reception")).toBeOnTheScreen();
+    expect(await screen.findByText(CLIENT_NAME)).toBeOnTheScreen();
     expect(screen.queryByTestId("enquiry-queue-panel")).toBeNull();
     expect(mockRouter.replace).not.toHaveBeenCalled();
     expect(sent.map((request) => request.path)).not.toContain(
       `/consultancy-admin/enquiries/${ENQUIRY_ID}`,
     );
-    await fireEvent.press(screen.getByText("Sangeet, wedding and reception"));
+    await fireEvent.press(screen.getByText(CLIENT_NAME));
     expect(mockRouter.push).toHaveBeenCalledWith(`/enquiries/${ENQUIRY_ID}`);
   });
 });
@@ -173,26 +174,37 @@ describe("An enquiry's page from 1024 (T6)", () => {
     expect(within(other).queryByText("Viewing")).toBeNull();
   });
 
-  it("titles each card from the queue's own page, asking for no names per card", async () => {
+  it("leads each card with the client, from the queue's own page, asking for no names per card", async () => {
     const sent: SentRequest[] = [];
     await renderDetail(sent);
     const card = screen.getByTestId(`enquiry-card-${ENQUIRY_ID}`);
-    expect(within(card).getByText("Sangeet, wedding and reception")).toBeOnTheScreen();
+    expect(within(card).getByText(CLIENT_NAME)).toBeOnTheScreen();
+    expect(within(card).getByText(`${HOTEL_NAME} · 12–14 Feb 2027`)).toBeOnTheScreen();
     expect(within(card).getByText("300 guests · submitted 3 Nov 2026")).toBeOnTheScreen();
-    expect(within(card).getByText("12–14 FEB 2027")).toBeOnTheScreen();
     expect(within(card).getByText("Submitted")).toBeOnTheScreen();
     expect(within(card).getByText("Unassigned")).toBeOnTheScreen();
-    expect(within(card).queryByText(HOTEL_NAME)).toBeNull();
     const other = screen.getByTestId(`enquiry-card-${SECOND_ENQUIRY_ID}`);
-    expect(other).toHaveAccessibleName(/^Engagement lunch, Awaiting hotel, 80 guests/);
-    // One hotel and one account read, for the open enquiry's header; none for the other card.
+    expect(within(other).getByText("Proposal v2 · shared")).toBeOnTheScreen();
+    expect(other).toHaveAccessibleName(
+      /^Kapoor family, Awaiting hotel, Rose Fort Palace · 12–14 Feb 2027, 80 guests/,
+    );
+    // The names come with the queue: no hotel read at all, and one account read, for the open
+    // enquiry's contacts; none for the other card.
     const names = sent.filter((request) =>
       /^\/(hotels-admin\/hotels|crm\/accounts)\//.test(request.path),
     );
-    expect(names.map((request) => request.path)).toEqual(
-      expect.arrayContaining([`/hotels-admin/hotels/${HOTEL_ID}`]),
-    );
-    expect(names).toHaveLength(2);
+    expect(names.map((request) => request.path)).not.toContain(`/hotels-admin/hotels/${HOTEL_ID}`);
+    expect(names).toHaveLength(1);
+  });
+
+  it("filters the queue by stage beside the open enquiry, which stays open", async () => {
+    const sent: SentRequest[] = [];
+    await renderDetail(sent);
+    const queue = screen.getByTestId("enquiry-queue-panel");
+    await fireEvent.press(within(queue).getByRole("button", { name: /^With hotel/ }));
+    expect(within(queue).getByRole("button", { name: /^With hotel/ })).toBeSelected();
+    expect(screen.getByTestId("enquiry-pane")).toBeOnTheScreen();
+    expect(mockRouter.setParams).not.toHaveBeenCalled();
   });
 
   it("heads the pane with the client and stay as data, the hotel, and the chips", async () => {
@@ -207,34 +219,38 @@ describe("An enquiry's page from 1024 (T6)", () => {
     expect(within(heading).getByText("Unassigned")).toBeOnTheScreen();
   });
 
-  it("sets the pane's sections in T6's order: the thread, the proposals, then the pipeline", async () => {
+  it("frames the pane as header, pipeline and tabs, each tab holding its own sections", async () => {
     await renderDetail();
-    expect(headings(screen.getByTestId("enquiry-pane"))).toEqual([
+    const pane = screen.getByTestId("enquiry-pane");
+    expect(within(pane).getByTestId("enquiry-pipeline")).toBeOnTheScreen();
+    // The overview: the client card's name, then the status moves.
+    expect(headings(pane)).toEqual([HOTEL_NAME, CLIENT_NAME, "Move the enquiry"]);
+    await fireEvent.press(within(pane).getByRole("tab", { name: "Booking" }));
+    // Past the sections' loading shapes (which carry the same titles) to the loaded sections.
+    expect(
+      await within(pane).findByText("No milestone yet. Add them once the hotel holds the dates."),
+    ).toBeOnTheScreen();
+    expect(headings(pane)).toEqual([
       HOTEL_NAME,
-      "Activity",
-      "Proposals",
-      "Advance",
       "Service agreements",
       "Site visits",
       "Booking milestones",
     ]);
+    await fireEvent.press(within(pane).getByRole("tab", { name: "Activity" }));
+    expect(headings(pane)).toEqual([HOTEL_NAME, "Activity"]);
     // The thread's rows sit straight on the pane's glass: its frame draws nothing.
     expect(screen.getByTestId("enquiry-activity").props.className).toContain("border-0");
   });
 
-  it("keeps the same order on a phone, under the page's header, whose back goes to the queue", async () => {
+  it("keeps the same parts on a phone, under the page's header, whose back goes to the queue", async () => {
     mockWindow.width = 390;
     await renderDetail();
     expect(screen.queryByTestId("enquiry-queue-panel")).toBeNull();
     expect(screen.queryByTestId("enquiry-pane")).toBeNull();
-    expect(headings(screen.getByTestId("enquiries-split"))).toEqual([
-      "Activity",
-      "Proposals",
-      "Advance",
-      "Service agreements",
-      "Site visits",
-      "Booking milestones",
-    ]);
+    const split = screen.getByTestId("enquiries-split");
+    expect(within(split).getByTestId("enquiry-pipeline")).toBeOnTheScreen();
+    expect(headings(split)).toEqual([CLIENT_NAME, "Move the enquiry"]);
+    await fireEvent.press(within(split).getByRole("tab", { name: "Activity" }));
     // Each section stands on the page as its own glass card.
     expect(screen.getByTestId("enquiry-activity").props.className).toContain("border-primary/16");
     await fireEvent.press(screen.getByLabelText("Back to enquiries"));

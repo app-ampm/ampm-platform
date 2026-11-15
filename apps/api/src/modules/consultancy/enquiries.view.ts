@@ -8,6 +8,7 @@ import type {
 } from "@ampm/core";
 
 import type { EnquiryEventRow } from "./enquiry-events.repository.js";
+import type { EnquiryStaffExtras } from "./enquiry-insights.repository.js";
 import type { EnquiryRow } from "./enquiries.repository.js";
 
 /**
@@ -50,17 +51,22 @@ export function toEnquiryClientView(row: EnquiryRow): HotelEnquiryClientView {
 /**
  * `withInternalNotes` is the principal's `consultancy.enquiry_notes.read` grant (SA/SM/HT/PM). When it
  * is false (FA), `notes_internal` is left off the object entirely — absence, not a nulled field.
+ * `extras` are the names and the newest proposal the insights repository looked up for the row.
  */
 export function toEnquiryStaffView(
   row: EnquiryRow,
   withInternalNotes: boolean,
+  extras: EnquiryStaffExtras,
 ): HotelEnquiryStaffView {
   const base: HotelEnquiryStaffView = {
     ...toEnquiryClientView(row),
     accountId: row.accountId,
+    accountName: extras.accountName,
+    hotelName: extras.hotelName,
     requestedByUserId: row.requestedByUserId,
     assignedUserId: row.assignedUserId,
     serviceAgreementId: row.serviceAgreementId,
+    latestProposal: extras.latestProposal,
   };
   return withInternalNotes ? { ...base, notesInternal: row.notesInternal } : base;
 }
@@ -102,11 +108,12 @@ export function toEnquiryStaffDetailView(
   row: EnquiryRow,
   events: readonly EnquiryEventRow[],
   withInternalNotes: boolean,
+  extras: EnquiryStaffExtras,
 ): HotelEnquiryStaffDetailView {
   // A staff reader without the internal-notes grant (FA) also never sees internal-only events.
   const visible = withInternalNotes ? events : events.filter((event) => !event.internalOnly);
   return {
-    ...toEnquiryStaffView(row, withInternalNotes),
+    ...toEnquiryStaffView(row, withInternalNotes, extras),
     events: visible.map(toEnquiryEventView),
   };
 }

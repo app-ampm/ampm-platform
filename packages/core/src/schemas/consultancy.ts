@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { cursorQuery, isoDateTime, page, uuid } from "./common.js";
+import { hotelProposalStatus } from "./hotel-proposals.js";
 
 /**
  * Module D — Hotel consultancy contracts (docs/data-model.md §6, permission-matrix §5.4/§7).
@@ -27,6 +28,41 @@ export const hotelEnquiryStatus = z.enum([
   "closed",
 ]);
 export type HotelEnquiryStatus = z.infer<typeof hotelEnquiryStatus>;
+
+/**
+ * The staff pipeline's stages: the ten statuses folded into the six steps the hotel team works through
+ * (the queue's filter and the enquiry's stepper). `new` is the team's to pick up; `with_hotel` covers
+ * contacting, hearing back, negotiating and visiting; `proposal` is the client proposal being prepared;
+ * `client_decision` waits on the client. A grouping for reading the pipeline, never a status of its own.
+ */
+export const hotelEnquiryStage = z.enum([
+  "new",
+  "with_hotel",
+  "proposal",
+  "client_decision",
+  "confirmed",
+  "closed",
+]);
+export type HotelEnquiryStage = z.infer<typeof hotelEnquiryStage>;
+
+export const HOTEL_ENQUIRY_STAGE_STATUSES: Readonly<
+  Record<HotelEnquiryStage, readonly HotelEnquiryStatus[]>
+> = {
+  new: ["draft", "submitted"],
+  with_hotel: ["awaiting_hotel", "response_received", "negotiating", "visit_scheduled"],
+  proposal: ["proposal_received"],
+  client_decision: ["client_decision"],
+  confirmed: ["confirmed"],
+  closed: ["closed"],
+};
+
+/** The stage a status belongs to. */
+export function hotelEnquiryStageOf(status: HotelEnquiryStatus): HotelEnquiryStage {
+  const found = hotelEnquiryStage.options.find((stage) =>
+    HOTEL_ENQUIRY_STAGE_STATUSES[stage].includes(status),
+  );
+  return found ?? "new";
+}
 
 export const hotelEnquiryOutcome = z.enum(["booked", "declined", "no_availability", "withdrawn"]);
 export type HotelEnquiryOutcome = z.infer<typeof hotelEnquiryOutcome>;
@@ -123,6 +159,8 @@ export type HotelEnquiryEventCreateRequest = z.infer<typeof hotelEnquiryEventCre
 
 export const hotelEnquiryListQuery = cursorQuery.extend({
   status: hotelEnquiryStatus.optional(),
+  /** Every status of one pipeline stage (the staff queue's filter); ignored when `status` is given. */
+  stage: hotelEnquiryStage.optional(),
   hotelId: uuid.optional(),
 });
 export type HotelEnquiryListQuery = z.infer<typeof hotelEnquiryListQuery>;
@@ -184,12 +222,26 @@ export const hotelEnquiryClientDetailView = z
   .strict();
 export type HotelEnquiryClientDetailView = z.infer<typeof hotelEnquiryClientDetailView>;
 
+/**
+ * The newest proposal version on an enquiry, as the staff queue tracks it: which version and where it
+ * stands. CLIENT-class fields only (the version chain is client-visible, AC-09); no amount.
+ */
+export const hotelEnquiryProposalSummary = z
+  .object({ id: uuid, versionNumber: z.number().int(), status: hotelProposalStatus })
+  .strict();
+export type HotelEnquiryProposalSummary = z.infer<typeof hotelEnquiryProposalSummary>;
+
 const enquiryStaffFields = {
   ...enquiryClientFields,
   accountId: uuid,
+  // Who sent it and for which hotel, so the queue names them without a request per row. CLIENT-class
+  // (the account's name) and PUBLIC (the hotel's); null only if the record is gone.
+  accountName: z.string().nullable(),
+  hotelName: z.string().nullable(),
   requestedByUserId: uuid,
   assignedUserId: uuid.nullable(),
   serviceAgreementId: uuid.nullable(),
+  latestProposal: hotelEnquiryProposalSummary.nullable(),
   // RESTRICTED-NOTES: present only for a staff audience that holds `consultancy.enquiry_notes.read`
   // (SA/SM/HT/PM). It is ABSENT — not null — for a staff reader without it (FA), per security.md.
   notesInternal: z.string().nullable().optional(),
@@ -208,6 +260,18 @@ export type HotelEnquiryClientPage = z.infer<typeof hotelEnquiryClientPage>;
 
 export const hotelEnquiryStaffPage = page(hotelEnquiryStaffView);
 export type HotelEnquiryStaffPage = z.infer<typeof hotelEnquiryStaffPage>;
+
+/**
+ * The staff pipeline at a glance (`GET /consultancy-admin/enquiries/pipeline`): how many enquiries in the
+ * reader's scope sit at each stage, and how many open ones nobody holds yet. Counts only, no records.
+ */
+export const hotelEnquiryPipelineView = z
+  .object({
+    stages: z.record(hotelEnquiryStage, z.number().int().min(0)),
+    unassignedOpen: z.number().int().min(0),
+  })
+  .strict();
+export type HotelEnquiryPipelineView = z.infer<typeof hotelEnquiryPipelineView>;
 
 /**
  * The response to CP-07: a subscriber opens an enquiry; a demo prospect is routed to Sales (P-7) and

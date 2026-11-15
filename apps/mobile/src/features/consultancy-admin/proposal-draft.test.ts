@@ -1,9 +1,17 @@
 import {
+  CLIENT_LINE,
+  INTERNAL_LINE,
+  proposalFixture,
+  proposalWithoutGrant,
+} from "./commercial.fixtures";
+import {
   clientLinesTotalMinor,
+  draftFromProposal,
   EMPTY_TOTALS,
   emptyLine,
   lineToInput,
   proposalRequest,
+  proposalUpdateRequest,
   quantityError,
   type LineDraft,
 } from "./proposal-draft";
@@ -110,5 +118,52 @@ describe("clientLinesTotalMinor", () => {
   it("is null without a client-visible line", () => {
     expect(clientLinesTotalMinor([])).toBeNull();
     expect(clientLinesTotalMinor([line({ clientVisible: false })])).toBeNull();
+  });
+});
+
+describe("draftFromProposal", () => {
+  it("opens a saved draft as the form's text, lines in order with their visibility", () => {
+    const { totals, lines } = draftFromProposal(
+      proposalFixture({ lines: [CLIENT_LINE, INTERNAL_LINE] }),
+    );
+    expect(totals).toEqual({
+      clientTotal: "1850000",
+      internalTotal: "1700000",
+      validUntil: "2027-01-31",
+    });
+    expect(lines.map((draft) => [draft.key, draft.description, draft.clientVisible])).toEqual([
+      [0, "Deluxe rooms, 3 nights", true],
+      [1, "Hotel commission", false],
+    ]);
+    expect(lines[0]).toMatchObject({ quantity: "60", unitAmount: "12000", totalAmount: "720000" });
+  });
+
+  it("leaves the internal total blank for a reader the API did not send it to", () => {
+    expect(draftFromProposal(proposalWithoutGrant()).totals.internalTotal).toBe("");
+  });
+});
+
+describe("proposalUpdateRequest", () => {
+  const totals = { clientTotal: "18,50,000", internalTotal: "17,00,000", validUntil: "" };
+
+  it("sends the whole draft back, a blank date clearing it", () => {
+    expect(proposalUpdateRequest(totals, [line()], true)).toEqual({
+      validUntil: null,
+      clientTotal: { minor: 185_000_000, currency: "INR" },
+      internalTotal: { minor: 170_000_000, currency: "INR" },
+      lines: [lineToInput(line())],
+    });
+  });
+
+  it("leaves the internal total out without the grant, needing none typed", () => {
+    const request = proposalUpdateRequest({ ...totals, internalTotal: "" }, [], false);
+    expect(request).not.toBeNull();
+    expect(request).not.toHaveProperty("internalTotal");
+  });
+
+  it("is null while a field will not parse", () => {
+    expect(proposalUpdateRequest({ ...totals, clientTotal: "" }, [], true)).toBeNull();
+    expect(proposalUpdateRequest({ ...totals, internalTotal: "" }, [], true)).toBeNull();
+    expect(proposalUpdateRequest(totals, [emptyLine(0)], true)).toBeNull();
   });
 });

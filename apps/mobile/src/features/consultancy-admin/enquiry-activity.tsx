@@ -29,7 +29,7 @@ function isThreadFilter(value: string): value is ThreadFilter {
 export function EnquiryActivity({ enquiry }: { readonly enquiry: HotelEnquiryStaffDetailView }) {
   const [filter, setFilter] = useState<ThreadFilter>("all");
   const frame = useFrameCard();
-  if (enquiry.events.length === 0 && countNotes(enquiry, "all") === 0) return null;
+  if (enquiry.events.length === 0 && countNotes(enquiry, "all") === 0) return <NoActivity />;
   const shown = enquiry.events.filter((event) => passesFilter(event.internalOnly, filter));
   const isEmpty = shown.length === 0 && countNotes(enquiry, filter) === 0;
   return (
@@ -56,6 +56,17 @@ export function EnquiryActivity({ enquiry }: { readonly enquiry: HotelEnquirySta
           )}
         </Stack>
       </Card>
+    </Stack>
+  );
+}
+
+function NoActivity() {
+  return (
+    <Stack gap={3}>
+      <Text variant="heading">Activity</Text>
+      <Text variant="bodySmall" tone="muted">
+        Nothing logged yet. Hotel replies, notes and status changes appear here.
+      </Text>
     </Stack>
   );
 }

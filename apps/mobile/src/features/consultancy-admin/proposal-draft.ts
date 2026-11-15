@@ -1,14 +1,18 @@
-import type {
-  HotelProposalCreateRequest,
-  HotelProposalLineInput,
-  HotelRateItemType,
+import {
+  rupeesFromMinor,
+  type HotelProposalCreateRequest,
+  type HotelProposalInternalView,
+  type HotelProposalLineInput,
+  type HotelProposalUpdateRequest,
+  type HotelRateItemType,
 } from "@ampm/core";
 
 import { isIsoDate, moneyFromRupees, rupeesToMinor } from "./consultancy-admin.form";
 
 /**
- * The proposal form's state as text, and its parsing to the create request (pure, so it is tested
- * without rendering). Both totals are typed (A-4); the margin is derived server-side, never here.
+ * The proposal form's state as text, its parsing to the create and edit requests, and the draft a saved
+ * version opens the edit form with (pure, so it is tested without rendering). Both totals are typed
+ * (A-4); the margin is derived server-side, never here.
  */
 
 /** The proposal's own fields as typed. */
@@ -74,15 +78,10 @@ export function lineToInput(draft: LineDraft): HotelProposalLineInput | null {
   };
 }
 
-/**
- * The create request when every field parses, else null (the submit stays disabled): both totals, an
- * optional real calendar date, and each line complete with its visibility chosen.
- */
-export function proposalRequest(
-  enquiryId: string,
-  totals: TotalsDraft,
-  lines: readonly LineDraft[],
-): HotelProposalCreateRequest | null {
+type ProposalTerms = Omit<HotelProposalCreateRequest, "enquiryId">;
+
+/** Both totals, an optional real calendar date and every line complete, or null while any is not. */
+function parseTerms(totals: TotalsDraft, lines: readonly LineDraft[]): ProposalTerms | null {
   const clientTotal = moneyFromRupees(totals.clientTotal);
   const internalTotal = moneyFromRupees(totals.internalTotal);
   const validUntil = totals.validUntil.trim();
@@ -92,11 +91,67 @@ export function proposalRequest(
   const complete = parsed.filter((line): line is HotelProposalLineInput => line !== null);
   if (complete.length !== parsed.length) return null;
   return {
-    enquiryId,
     validUntil: validUntil === "" ? null : validUntil,
     clientTotal,
     internalTotal,
     lines: complete,
+  };
+}
+
+/**
+ * The create request when every field parses, else null (the submit stays disabled): both totals, an
+ * optional real calendar date, and each line complete with its visibility chosen.
+ */
+export function proposalRequest(
+  enquiryId: string,
+  totals: TotalsDraft,
+  lines: readonly LineDraft[],
+): HotelProposalCreateRequest | null {
+  const terms = parseTerms(totals, lines);
+  return terms === null ? null : { enquiryId, ...terms };
+}
+
+/**
+ * The edit request for a draft when every field parses, else null. It sends the whole draft (both
+ * totals, the date — null clears it — and the full line set, which replaces the saved one). A reader
+ * without the internal-amount grant never saw the internal total, so `withInternalTotal` false leaves
+ * it out of both the form and the request: the saved figure stays as it is.
+ */
+export function proposalUpdateRequest(
+  totals: TotalsDraft,
+  lines: readonly LineDraft[],
+  withInternalTotal: boolean,
+): HotelProposalUpdateRequest | null {
+  // Without the grant the internal total is not the form's to check, so a placeholder stands in for
+  // the parse and is then dropped from the request.
+  const internal = withInternalTotal ? totals.internalTotal : "0";
+  const terms = parseTerms({ ...totals, internalTotal: internal }, lines);
+  if (terms === null) return null;
+  if (withInternalTotal) return terms;
+  const { internalTotal: _dropped, ...rest } = terms;
+  return rest;
+}
+
+/** A saved draft as the form's text: the totals and every line, each line keyed by its position. */
+export function draftFromProposal(proposal: HotelProposalInternalView): {
+  readonly totals: TotalsDraft;
+  readonly lines: readonly LineDraft[];
+} {
+  return {
+    totals: {
+      clientTotal: rupeesFromMinor(proposal.clientTotal.minor),
+      internalTotal: proposal.internalTotal ? rupeesFromMinor(proposal.internalTotal.minor) : "",
+      validUntil: proposal.validUntil ?? "",
+    },
+    lines: proposal.lines.map((line, key) => ({
+      key,
+      itemType: line.itemType,
+      description: line.description,
+      quantity: String(line.quantity),
+      unitAmount: rupeesFromMinor(line.unitAmount.minor),
+      totalAmount: rupeesFromMinor(line.totalAmount.minor),
+      clientVisible: line.clientVisible,
+    })),
   };
 }
 

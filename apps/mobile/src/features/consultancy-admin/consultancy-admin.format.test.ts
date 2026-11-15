@@ -9,6 +9,10 @@ import {
   staffEnquiryBadge,
   statusWords,
   visitStepState,
+  enquiryClientTitle,
+  isLiveProposal,
+  proposalStanding,
+  proposalTag,
 } from "./consultancy-admin.format";
 
 describe("staffEnquiryBadge", () => {
@@ -75,5 +79,42 @@ describe("statusWords", () => {
   it("turns a status or outcome into sentence-case words", () => {
     expect(statusWords("no_availability")).toBe("No availability");
     expect(statusWords("done")).toBe("Done");
+  });
+});
+
+describe("the proposal tracking words", () => {
+  it("says where a version stands, with the day it moved", () => {
+    expect(proposalStanding({ status: "draft", sharedAt: null, decidedAt: null })).toBe(
+      "Draft · the client has not seen it yet",
+    );
+    expect(
+      proposalStanding({ status: "shared", sharedAt: "2026-11-15T09:00:00.000Z", decidedAt: null }),
+    ).toBe("Shared 15 Nov 2026 · waiting for the client's decision");
+  });
+
+  it("tags the queue with the newest version, or nothing before the first", () => {
+    expect(proposalTag(null)).toBeNull();
+    expect(
+      proposalTag({
+        id: "018f0000-0000-7000-8000-0000000008d1",
+        versionNumber: 3,
+        status: "revision_requested",
+      }),
+    ).toEqual({ label: "Proposal v3 · changes asked", tone: "danger" });
+  });
+
+  it("counts a version as standing until it is superseded or declined", () => {
+    expect(isLiveProposal("draft")).toBe(true);
+    expect(isLiveProposal("accepted")).toBe(true);
+    expect(isLiveProposal("superseded")).toBe(false);
+    expect(isLiveProposal("declined")).toBe(false);
+  });
+
+  it("names a queue row by its client, else by what is planned", () => {
+    expect(enquiryClientTitle({ accountName: "Kapoor family", functionsSummary: "Mehndi" })).toBe(
+      "Kapoor family",
+    );
+    expect(enquiryClientTitle({ accountName: null, functionsSummary: "Mehndi" })).toBe("Mehndi");
+    expect(enquiryClientTitle({ accountName: null, functionsSummary: null })).toBe("Hotel enquiry");
   });
 });

@@ -4,6 +4,7 @@ import { fireEvent, screen, within } from "../../test/render";
 import {
   ACCOUNT_ID,
   agreementFixture,
+  CLIENT_LINE,
   ENQUIRY_ID,
   failure,
   ok,
@@ -69,7 +70,7 @@ describe("ProposalsSection", () => {
       await screen.findByRole("button", { name: "Share version 1 with client" }),
     );
     // Sharing refreshes the proposals: the card now waits on the client and offers a new version.
-    expect(await screen.findByRole("button", { name: "Revise (new version)" })).toBeOnTheScreen();
+    expect(await screen.findByRole("button", { name: "Revise as version 2" })).toBeOnTheScreen();
     expect(sent).toContainEqual({
       method: "POST",
       path: `/consultancy-admin/proposals/${PROPOSAL_ID}/share`,
@@ -77,20 +78,137 @@ describe("ProposalsSection", () => {
     });
   });
 
-  it("offers a new version, not a share, once the proposal is with the client", async () => {
+  it("offers a new version, not a share or an edit, once the proposal is with the client", async () => {
     await renderProposals(() => ok(pageOf([proposalFixture({ status: "shared" })])));
     expect(await screen.findByText("Shared (awaiting client)")).toBeOnTheScreen();
-    expect(screen.getByRole("button", { name: "Revise (new version)" })).toBeOnTheScreen();
+    expect(screen.getByRole("button", { name: "Revise as version 2" })).toBeOnTheScreen();
     expect(screen.queryByRole("button", { name: "Share version 1 with client" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Edit draft" })).toBeNull();
+    // A proposal stands, so a second one cannot be started beside it (the API would refuse it).
+    expect(screen.queryByRole("button", { name: "New proposal" })).toBeNull();
+  });
+
+  it("edits a draft in place: the saved terms prefilled, the whole draft sent back", async () => {
+    let saved = false;
+    const sent = await renderProposals(
+      () =>
+        ok(
+          pageOf([
+            proposalFixture(saved ? { clientTotal: { minor: 190_000_000, currency: "INR" } } : {}),
+          ]),
+        ),
+      {
+        [`PATCH /consultancy-admin/proposals/${PROPOSAL_ID}`]: () => {
+          saved = true;
+          return ok(proposalFixture());
+        },
+      },
+    );
+    await fireEvent.press(await screen.findByRole("button", { name: "Edit draft" }));
+    const form = screen.getByTestId(`proposal-edit-form-${PROPOSAL_ID}`);
+    expect(within(form).getByText("Edit version 1")).toBeOnTheScreen();
+    expect(within(form).getByTestId("proposal-client-total")).toHaveDisplayValue("1850000");
+    expect(within(form).getByTestId("proposal-internal-total")).toHaveDisplayValue("1700000");
+    expect(within(form).getByTestId("proposal-valid-until")).toHaveDisplayValue("2027-01-31");
+    expect(within(form).getByTestId("proposal-line-1-description")).toHaveDisplayValue(
+      "Deluxe rooms, 3 nights",
+    );
+
+    await fireEvent.changeText(within(form).getByTestId("proposal-client-total"), "1900000");
+    await fireEvent.press(within(form).getByRole("button", { name: "Save changes" }));
+
+    // The form closes on the refreshed card, which carries the new figure.
+    expect(await screen.findByText("₹19,00,000")).toBeOnTheScreen();
+    expect(screen.queryByTestId(`proposal-edit-form-${PROPOSAL_ID}`)).toBeNull();
+    const patch = sent.find((request) => request.method === "PATCH");
+    expect(patch?.body).toEqual({
+      validUntil: "2027-01-31",
+      clientTotal: { minor: 190_000_000, currency: "INR" },
+      internalTotal: { minor: 170_000_000, currency: "INR" },
+      lines: [
+        {
+          itemType: "room_rate",
+          description: "Deluxe rooms, 3 nights",
+          quantity: 60,
+          unitAmount: { minor: 1_200_000, currency: "INR" },
+          totalAmount: { minor: 72_000_000, currency: "INR" },
+          clientVisible: true,
+        },
+        {
+          itemType: "service_charge",
+          description: "Hotel commission",
+          quantity: 1,
+          unitAmount: { minor: 9_000_000, currency: "INR" },
+          totalAmount: { minor: 9_000_000, currency: "INR" },
+          clientVisible: false,
+        },
+      ],
+    });
+  });
+
+  it("leaves the internal total alone when the reader cannot see it", async () => {
+    const sent = await renderProposals(() => ok(pageOf([proposalWithoutGrant()])), {
+      [`PATCH /consultancy-admin/proposals/${PROPOSAL_ID}`]: () => ok(proposalWithoutGrant()),
+    });
+    await fireEvent.press(await screen.findByRole("button", { name: "Edit draft" }));
+    expect(screen.queryByTestId("proposal-internal-total")).toBeNull();
+    await fireEvent.press(screen.getByRole("button", { name: "Save changes" }));
+    const patch = sent.find((request) => request.method === "PATCH");
+    expect(patch?.body).not.toHaveProperty("internalTotal");
+  });
+
+  it("opens the version a revision drafts straight in the edit form", async () => {
+    const V2_ID = "018f0000-0000-7000-8000-0000000000f9";
+    let revised = false;
+    const versionTwo = proposalFixture({
+      id: V2_ID,
+      versionNumber: 2,
+      supersedesProposalId: PROPOSAL_ID,
+      lines: [{ ...CLIENT_LINE, proposalId: V2_ID }],
+    });
+    await renderProposals(
+      () =>
+        ok(
+          pageOf(
+            revised
+              ? [proposalFixture({ status: "superseded" }), versionTwo]
+              : [proposalFixture({ status: "revision_requested" })],
+          ),
+        ),
+      {
+        [`POST /consultancy-admin/proposals/${PROPOSAL_ID}/revise`]: () => {
+          revised = true;
+          return ok(versionTwo);
+        },
+      },
+    );
+    expect(
+      await screen.findByText("The client asked for changes · revise it as a new version"),
+    ).toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole("button", { name: "Revise as version 2" }));
+    expect(await screen.findByTestId(`proposal-edit-form-${V2_ID}`)).toBeOnTheScreen();
+    expect(screen.getByText("Edit version 2")).toBeOnTheScreen();
+    // Version 1 is history now: folded under the current one until asked for.
+    expect(screen.queryByTestId(`proposal-${PROPOSAL_ID}`)).toBeNull();
+    await fireEvent.press(screen.getByRole("button", { name: "Show 1 earlier version" }));
+    expect(screen.getByTestId(`proposal-${PROPOSAL_ID}`)).toBeOnTheScreen();
+    expect(screen.getByText("Replaced by a later version")).toBeOnTheScreen();
   });
 
   it("says what creates the first proposal and opens the form", async () => {
     await renderProposals(() => ok(pageOf([])));
     expect(
-      await screen.findByText("No proposal yet. Draft one once the hotel has quoted."),
+      await screen.findByText(
+        "No proposal yet. Once the hotel has quoted, draft the client's offer.",
+      ),
     ).toBeOnTheScreen();
-    await fireEvent.press(screen.getByRole("button", { name: "New proposal" }));
+    await fireEvent.press(screen.getByRole("button", { name: "Draft a proposal" }));
     expect(screen.getByTestId("proposal-create-form")).toBeOnTheScreen();
+  });
+
+  it("offers a fresh proposal once the client has declined the last one", async () => {
+    await renderProposals(() => ok(pageOf([proposalFixture({ status: "declined" })])));
+    expect(await screen.findByRole("button", { name: "New proposal" })).toBeOnTheScreen();
   });
 
   it("shows a card-sized placeholder while the proposals load", async () => {

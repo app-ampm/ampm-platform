@@ -4,6 +4,7 @@ import {
   type HotelEnquiryStaffPage,
   type HotelEnquiryStaffView,
   type HotelEnquiryStatus,
+  type HotelProposalInternalView,
   type HotelProposalStatus,
   type ServiceAgreementStatus,
   type SiteVisitStatus,
@@ -56,6 +57,53 @@ export const staffProposalBadge: Record<HotelProposalStatus, Badge> = {
   superseded: { label: "Superseded", tone: "neutral" },
 };
 
+type Standing = Pick<HotelProposalInternalView, "status" | "sharedAt" | "decidedAt">;
+
+/** A version's standing in words, under its title: "Shared 15 Nov 2026 · waiting for the client". */
+export function proposalStanding(proposal: Standing): string {
+  const on = (iso: string | null): string => (iso ? ` ${formatDay(iso)}` : "");
+  switch (proposal.status) {
+    case "draft":
+      return "Draft · the client has not seen it yet";
+    case "shared":
+      return `Shared${on(proposal.sharedAt)} · waiting for the client's decision`;
+    case "revision_requested":
+      return "The client asked for changes · revise it as a new version";
+    case "accepted":
+      return `Accepted by the client${on(proposal.decidedAt)}`;
+    case "declined":
+      return `Declined by the client${on(proposal.decidedAt)}`;
+    case "superseded":
+      return "Replaced by a later version";
+  }
+}
+
+const PROPOSAL_TAG: Record<HotelProposalStatus, string> = {
+  draft: "draft",
+  shared: "shared",
+  revision_requested: "changes asked",
+  accepted: "accepted",
+  declined: "declined",
+  superseded: "superseded",
+};
+
+/**
+ * The queue's proposal tag, so the team tracks proposals without opening each enquiry: "Proposal v3 ·
+ * draft", toned as the version's own badge; null before the first version.
+ */
+export function proposalTag(latest: HotelEnquiryStaffView["latestProposal"]): Badge | null {
+  if (latest === null) return null;
+  return {
+    label: `Proposal v${latest.versionNumber} · ${PROPOSAL_TAG[latest.status]}`,
+    tone: staffProposalBadge[latest.status].tone,
+  };
+}
+
+/** A version that still stands: the API refuses a second proposal while one exists (revise it instead). */
+export function isLiveProposal(status: HotelProposalStatus): boolean {
+  return status !== "superseded" && status !== "declined";
+}
+
 export const staffAgreementBadge: Record<ServiceAgreementStatus, Badge> = {
   draft: { label: "Draft", tone: "neutral" },
   sent: { label: "Sent", tone: "warning" },
@@ -103,6 +151,13 @@ const OPEN_STATUSES: readonly string[] = STATUS_MACHINES["hotel_enquiry"]?.sets[
 export function queueEyebrow(page: HotelEnquiryStaffPage): string {
   const open = page.items.filter((enquiry) => OPEN_STATUSES.includes(enquiry.status)).length;
   return `${open}${page.nextCursor === null ? "" : "+"} open`;
+}
+
+/** Who the enquiry is for, as the queue names it: the client account, else what is being planned. */
+export function enquiryClientTitle(
+  enquiry: Pick<HotelEnquiryStaffView, "accountName" | "functionsSummary">,
+): string {
+  return enquiry.accountName ?? enquiry.functionsSummary ?? "Hotel enquiry";
 }
 
 type QueueFields = Pick<HotelEnquiryStaffView, "guestEstimate" | "submittedAt" | "createdAt">;

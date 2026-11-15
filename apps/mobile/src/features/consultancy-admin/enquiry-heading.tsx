@@ -3,7 +3,6 @@ import { ScreenHeader, Stack, StatusChip } from "@ampm/ui";
 
 import { enquiryFacts } from "../consultancy/consultancy.format";
 import { staffEnquiryBadge, UNASSIGNED_BADGE } from "./consultancy-admin.format";
-import { useEnquiryNames } from "./use-enquiry-names";
 
 /** The page's title while the enquiry, or the hotel's name, is on its way. */
 export const ENQUIRY_FALLBACK_TITLE = "Hotel enquiry";
@@ -26,7 +25,7 @@ export function EnquiryHeading({
   readonly enquiry: HotelEnquiryStaffDetailView;
   readonly onBack?: (() => void) | undefined;
 }) {
-  const { hotelName, clientName } = useEnquiryNames(enquiry);
+  const { hotelName, accountName: clientName } = enquiry;
   const facts = [clientName, enquiryFacts(enquiry)].filter(Boolean).join(" · ");
   const planned = enquiry.functionsSummary ?? undefined;
   return (
@@ -34,7 +33,7 @@ export function EnquiryHeading({
       onBack={onBack}
       backLabel={BACK_TO_QUEUE}
       eyebrow={facts.toUpperCase()}
-      // Until the hotel's name arrives (or if it cannot), what is being planned names the enquiry.
+      // Without the hotel's name (its record gone), what is being planned names the enquiry.
       title={hotelName ?? planned ?? ENQUIRY_FALLBACK_TITLE}
       subtitle={hotelName ? planned : undefined}
       titleClassName={ENQUIRY_TITLE_SIZE}

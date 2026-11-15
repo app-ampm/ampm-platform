@@ -66,6 +66,11 @@ async function renderDetail(fetchImpl: FetchFn): Promise<void> {
   await renderWithApi(<StaffEnquiryDetailScreen enquiryId={ENQUIRY_ID} />, fetchImpl);
 }
 
+/** Opens one of the enquiry's tabs once the enquiry has loaded. */
+async function openTab(name: "Overview" | "Proposals" | "Activity" | "Booking"): Promise<void> {
+  await fireEvent.press(await screen.findByRole("tab", { name }));
+}
+
 const writes = (sent: readonly SentRequest[]) => sent.filter((request) => request.method !== "GET");
 
 beforeEach(() => {
@@ -82,12 +87,16 @@ describe("StaffEnquiryDetailScreen: header and notes", () => {
     expect(mockDismissTo).toHaveBeenCalledWith("/enquiries");
   });
 
-  it("heads the screen with the stay as data, the title and the status chip", async () => {
+  it("heads the screen with the client and the stay as data, the hotel and the status chip", async () => {
     const detail = detailFixture({ roomsRequired: 60, datesFlexible: true });
     await renderDetail(enquiryFetch(detail));
-    expect(await screen.findByText("Sangeet, wedding and reception")).toBeOnTheScreen();
+    const heading = await screen.findByTestId("enquiry-heading");
+    expect(within(heading).getByText("The Lake Pavilion")).toBeOnTheScreen();
+    expect(within(heading).getByText("Sangeet, wedding and reception")).toBeOnTheScreen();
     expect(
-      screen.getByText("12–14 FEB 2027 · 300 GUESTS · 60 ROOMS · FLEXIBLE DATES"),
+      within(heading).getByText(
+        "ANANYA SHARMA · 12–14 FEB 2027 · 300 GUESTS · 60 ROOMS · FLEXIBLE DATES",
+      ),
     ).toBeOnTheScreen();
     expect(screen.getByLabelText("Submitted")).toBeOnTheScreen();
     expect(screen.getByText("Unassigned")).toBeOnTheScreen();
@@ -99,6 +108,7 @@ describe("StaffEnquiryDetailScreen: header and notes", () => {
       notesInternal: "GM away until Monday; 15% off rack rate for 60 rooms.",
     });
     await renderDetail(enquiryFetch(detail));
+    await openTab("Activity");
     const internal = await screen.findByTestId("enquiry-internal-note");
     expect(within(internal).getByText(uiCopy.internalPanel.label)).toBeOnTheScreen();
     expect(
@@ -111,8 +121,9 @@ describe("StaffEnquiryDetailScreen: header and notes", () => {
 
   it("draws no internal panel for a reader the internal note is not sent to", async () => {
     const { notesInternal: _absent, ...withoutNotes } = detailFixture();
-    await renderDetail(enquiryFetch(withoutNotes));
-    expect(await screen.findByText("Sangeet, wedding and reception")).toBeOnTheScreen();
+    await renderDetail(enquiryFetch({ ...withoutNotes, notesClient: "Lake lawn?" }));
+    await openTab("Activity");
+    expect(await screen.findByTestId("enquiry-client-note")).toBeOnTheScreen();
     expect(screen.queryByTestId("enquiry-internal-note")).toBeNull();
   });
 });
@@ -121,7 +132,7 @@ describe("StaffEnquiryDetailScreen: pipeline controls", () => {
   it("moves the enquiry on to the next step", async () => {
     const sent: SentRequest[] = [];
     await renderDetail(enquiryFetch(detailFixture(), sent));
-    expect(await screen.findByText("Advance")).toBeOnTheScreen();
+    expect(await screen.findByText("Move the enquiry")).toBeOnTheScreen();
     expect(screen.getByText("Proposal received")).toBeOnTheScreen();
     await fireEvent.press(screen.getByText("Awaiting hotel"));
     await waitFor(() =>
@@ -162,7 +173,8 @@ describe("StaffEnquiryDetailScreen: pipeline controls", () => {
   it("offers no moves on a closed enquiry", async () => {
     await renderDetail(enquiryFetch(detailFixture({ status: "closed", outcome: "booked" })));
     expect(await screen.findByText("This enquiry is closed.")).toBeOnTheScreen();
-    expect(screen.queryByText("Advance")).toBeNull();
+    expect(screen.getByText("Closed · Booked")).toBeOnTheScreen();
+    expect(screen.queryByText("Move the enquiry")).toBeNull();
   });
 });
 
@@ -170,6 +182,7 @@ describe("StaffEnquiryDetailScreen: visits and milestones", () => {
   it("puts the site visit on the stepper, its internal notes in the internal panel", async () => {
     const sent: SentRequest[] = [];
     await renderDetail(enquiryFetch(detailFixture(), sent));
+    await openTab("Booking");
     expect(await screen.findByLabelText("20 Nov 2026, current step")).toBeOnTheScreen();
     const visits = screen.getByTestId("site-visits");
     expect(within(visits).getByText("Proposed")).toBeOnTheScreen();
@@ -190,6 +203,7 @@ describe("StaffEnquiryDetailScreen: visits and milestones", () => {
   it("puts the milestones on the stepper and marks one done", async () => {
     const sent: SentRequest[] = [];
     await renderDetail(enquiryFetch(detailFixture(), sent));
+    await openTab("Booking");
     expect(
       await screen.findByLabelText("Advance payment, current step, Due 31 Jan 2027"),
     ).toBeOnTheScreen();
@@ -214,6 +228,7 @@ describe("StaffEnquiryDetailScreen: visits and milestones", () => {
         [MILESTONES]: () => page([]),
       }),
     );
+    await openTab("Booking");
     expect(
       await screen.findByText(
         "No site visit yet. Schedule one when the client wants to see the hotel.",
@@ -240,6 +255,7 @@ describe("StaffEnquiryDetailScreen: activity", () => {
 
   it("shows every event, the internal ones in internal panels, and filters them", async () => {
     await renderDetail(enquiryFetch(detailFixture({ events })));
+    await openTab("Activity");
     expect(await screen.findByText("Internal · Negotiation update")).toBeOnTheScreen();
     expect(screen.getByText("The lawn is free on the 13th.")).toBeOnTheScreen();
 
@@ -252,8 +268,19 @@ describe("StaffEnquiryDetailScreen: activity", () => {
     expect(screen.queryByText("Sales manager offers 15% off for 60 rooms.")).toBeNull();
   });
 
+  it("says when nothing has been logged yet", async () => {
+    await renderDetail(enquiryFetch(detailFixture()));
+    await openTab("Activity");
+    expect(
+      await screen.findByText(
+        "Nothing logged yet. Hotel replies, notes and status changes appear here.",
+      ),
+    ).toBeOnTheScreen();
+  });
+
   it("says when a filter has nothing to show", async () => {
     await renderDetail(enquiryFetch(detailFixture({ events: [events[1] ?? eventFixture()] })));
+    await openTab("Activity");
     await fireEvent.press(await screen.findByText("Internal"));
     expect(screen.getByText("No internal activity yet.")).toBeOnTheScreen();
   });

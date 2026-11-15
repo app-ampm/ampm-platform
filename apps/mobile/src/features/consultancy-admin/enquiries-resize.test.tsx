@@ -3,6 +3,7 @@ import type * as ReactModule from "react";
 
 import { act, fireEvent, screen, waitFor, within } from "../../test/render";
 import {
+  CLIENT_NAME,
   ENQUIRY_ID,
   HOTEL_NAME,
   SECOND_ENQUIRY_ID,
@@ -90,8 +91,13 @@ async function renderDetail(width: number): Promise<void> {
   mockWindow.width = width;
   const routes = workspaceRoutes(detailFixture({ events: EVENTS }));
   await renderWithApi(<StaffEnquiryDetailScreen enquiryId={ENQUIRY_ID} />, routedFetch(routes));
-  await screen.findByText("Booking milestones");
   await screen.findAllByText(HOTEL_NAME);
+  await screen.findByText("Open client account");
+}
+
+/** Opens one of the enquiry's tabs. */
+async function openTab(name: "Overview" | "Proposals" | "Activity" | "Booking"): Promise<void> {
+  await fireEvent.press(await screen.findByRole("tab", { name }));
 }
 
 beforeEach(() => jest.clearAllMocks());
@@ -99,7 +105,8 @@ beforeEach(() => jest.clearAllMocks());
 describe("The open enquiry across 1024", () => {
   it("keeps a proposal being drafted, both ways", async () => {
     await renderDetail(1440);
-    await fireEvent.press(await screen.findByRole("button", { name: "New proposal" }));
+    await openTab("Proposals");
+    await fireEvent.press(await screen.findByRole("button", { name: "Draft a proposal" }));
     await fireEvent.changeText(screen.getByTestId("proposal-client-total"), "18,50,000");
     await resizeTo(390);
     await expectPhone();
@@ -111,6 +118,7 @@ describe("The open enquiry across 1024", () => {
 
   it("keeps an agreement being drafted, both ways", async () => {
     await renderDetail(1440);
+    await openTab("Booking");
     await fireEvent.press(await screen.findByRole("button", { name: "New agreement" }));
     await fireEvent.press(await screen.findByRole("button", { name: "Rate negotiation" }));
     await fireEvent.changeText(screen.getByTestId("agreement-scope"), "Negotiate room rates");
@@ -126,6 +134,7 @@ describe("The open enquiry across 1024", () => {
 
   it("keeps a site visit being planned, from a phone to a desktop and back", async () => {
     await renderDetail(390);
+    await openTab("Booking");
     await fireEvent.press(await screen.findByRole("button", { name: "New site visit" }));
     await fireEvent.changeText(screen.getByTestId("visit-attendees"), "Couple and planner");
     await resizeTo(1440);
@@ -138,6 +147,7 @@ describe("The open enquiry across 1024", () => {
 
   it("keeps a milestone being added, from a phone to a desktop and back", async () => {
     await renderDetail(390);
+    await openTab("Booking");
     await fireEvent.press(await screen.findByRole("button", { name: "New milestone" }));
     await fireEvent.press(screen.getByRole("button", { name: "Advance payment" }));
     await fireEvent.changeText(screen.getByTestId("milestone-amount"), "2,50,000");
@@ -150,12 +160,14 @@ describe("The open enquiry across 1024", () => {
     expect(screen.getByTestId("milestone-amount")).toHaveDisplayValue("2,50,000");
   });
 
-  it("keeps the thread's switch where it was set, both ways", async () => {
+  it("keeps the open tab and the thread's switch where they were set, both ways", async () => {
     await renderDetail(1440);
+    await openTab("Activity");
     await fireEvent.press(screen.getByRole("tab", { name: "Internal" }));
     expect(screen.queryByText("The lawn is free on the 13th.")).toBeNull();
     await resizeTo(390);
     await expectPhone();
+    expect(screen.getByRole("tab", { name: "Activity" })).toBeSelected();
     expect(screen.getByRole("tab", { name: "Internal" })).toBeSelected();
     expect(screen.getByText("15% off for 60 rooms.")).toBeOnTheScreen();
     expect(screen.queryByText("The lawn is free on the 13th.")).toBeNull();
@@ -169,7 +181,8 @@ describe("The open enquiry across 1024", () => {
 describe("The open enquiry as a route", () => {
   it("keeps a proposal draft while an iPad turns: 1440 → 820 → 1440", async () => {
     await renderDetail(1440);
-    await fireEvent.press(await screen.findByRole("button", { name: "New proposal" }));
+    await openTab("Proposals");
+    await fireEvent.press(await screen.findByRole("button", { name: "Draft a proposal" }));
     await fireEvent.changeText(screen.getByTestId("proposal-client-total"), "18,50,000");
     await resizeTo(820);
     await expectPhone();
@@ -182,7 +195,7 @@ describe("The open enquiry as a route", () => {
   it("opens the first enquiry's page when the queue's page widens past 1024", async () => {
     mockWindow.width = 820;
     await renderWithApi(<StaffEnquiriesListScreen />, routedFetch(workspaceRoutes()));
-    expect(await screen.findByText("Sangeet, wedding and reception")).toBeOnTheScreen();
+    expect(await screen.findByText(CLIENT_NAME)).toBeOnTheScreen();
     expect(mockRouter.replace).not.toHaveBeenCalled();
     await resizeTo(1180);
     await waitFor(() =>
@@ -205,18 +218,26 @@ describe("The open enquiry as a route", () => {
     // Open the second first, so its record is cached when the selection comes back to it: the
     // pane then has its data at once, and only its key keeps the first one's draft from following.
     await renderWithApi(<SelectionHarness startId={SECOND_ENQUIRY_ID} />, routedFetch(routes));
+    const firstPane = await screen.findByTestId("enquiry-pane");
     expect(
-      await within(await screen.findByTestId("enquiry-pane")).findByText("Engagement lunch"),
+      await within(await within(firstPane).findByTestId("enquiry-heading")).findByText(
+        "Engagement lunch",
+      ),
     ).toBeOnTheScreen();
     await fireEvent.press(screen.getByTestId(`enquiry-card-${ENQUIRY_ID}`));
     expect(mockRouter.setParams).toHaveBeenCalledWith({ id: ENQUIRY_ID });
-    await fireEvent.press(await screen.findByRole("button", { name: "New proposal" }));
+    await openTab("Proposals");
+    await fireEvent.press(await screen.findByRole("button", { name: "Draft a proposal" }));
     await fireEvent.changeText(screen.getByTestId("proposal-client-total"), "18,50,000");
     await fireEvent.press(screen.getByTestId(`enquiry-card-${SECOND_ENQUIRY_ID}`));
     expect(mockRouter.setParams).toHaveBeenLastCalledWith({ id: SECOND_ENQUIRY_ID });
     expect(mockRouter.push).not.toHaveBeenCalled();
     const pane = await screen.findByTestId("enquiry-pane");
-    expect(await within(pane).findByText("Engagement lunch")).toBeOnTheScreen();
+    expect(
+      await within(await within(pane).findByTestId("enquiry-heading")).findByText(
+        "Engagement lunch",
+      ),
+    ).toBeOnTheScreen();
     expect(screen.getByTestId(`enquiry-card-${SECOND_ENQUIRY_ID}`)).toBeSelected();
     // The first enquiry's unsaved draft does not follow into the second.
     expect(screen.queryByTestId("proposal-client-total")).toBeNull();

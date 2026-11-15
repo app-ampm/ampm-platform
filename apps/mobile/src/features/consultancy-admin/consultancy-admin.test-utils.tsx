@@ -23,11 +23,14 @@ export const SECOND_ENQUIRY_ID = "018f0000-0000-7000-8000-0000000004e2";
 export const HOTEL_ID = "018f0000-0000-7000-8000-00000000beef";
 export const VISIT_ID = "018f0000-0000-7000-8000-0000000005a1";
 export const MILESTONE_ID = "018f0000-0000-7000-8000-0000000006b1";
+const PROPOSAL_ID = "018f0000-0000-7000-8000-0000000008d1";
 const ACCOUNT_ID = "018f0000-0000-7000-8000-0000000002ac";
 const SERVICE_TYPE_ID = "018f0000-0000-7000-8000-0000000003c5";
 const CLIENT_USER_ID = "018f0000-0000-7000-8000-0000000000d2";
 const STAFF_USER_ID = "018f0000-0000-7000-8000-00000000cafe";
 const SUBMITTED_AT = "2026-11-03T09:12:00.000Z";
+export const HOTEL_NAME = "The Lake Pavilion";
+export const CLIENT_NAME = "Ananya Sharma";
 
 /** A submitted enquiry for 12–14 Feb 2027, 300 guests, nobody on the team holding it yet. */
 export function enquiryFixture(
@@ -52,9 +55,12 @@ export function enquiryFixture(
     createdAt: SUBMITTED_AT,
     updatedAt: SUBMITTED_AT,
     accountId: ACCOUNT_ID,
+    accountName: CLIENT_NAME,
+    hotelName: HOTEL_NAME,
     requestedByUserId: CLIENT_USER_ID,
     assignedUserId: null,
     serviceAgreementId: null,
+    latestProposal: null,
     notesInternal: null,
     ...overrides,
   };
@@ -155,14 +161,11 @@ export function routedFetch(
   };
 }
 
-export const HOTEL_NAME = "The Lake Pavilion";
-export const CLIENT_NAME = "Ananya Sharma";
 const OTHER_HOTEL_ID = "018f0000-0000-7000-8000-00000000b0b0";
 
 /**
  * The queue T6 sets beside the open enquiry: this file's enquiry at The Lake Pavilion for Ananya Sharma,
- * then a newer-looking one waiting on a hotel whose record the reader cannot open, so its card falls
- * back to what is being planned.
+ * then one for another client waiting on another hotel, held by the team, its proposal with the client.
  */
 export function queueFixture(): HotelEnquiryStaffView[] {
   return [
@@ -172,16 +175,19 @@ export function queueFixture(): HotelEnquiryStaffView[] {
       hotelId: OTHER_HOTEL_ID,
       status: "awaiting_hotel",
       functionsSummary: "Engagement lunch",
+      accountName: "Kapoor family",
+      hotelName: "Rose Fort Palace",
       assignedUserId: STAFF_USER_ID,
       guestEstimate: 80,
+      latestProposal: { id: PROPOSAL_ID, versionNumber: 2, status: "shared" },
     }),
   ];
 }
 
 /**
- * Every read the queue-and-enquiry workspace makes, answered: the queue, the open enquiry, its hotel and
- * client account, and its (empty) proposals, agreements, visits and milestones, plus the service
- * catalogue the agreement form offers.
+ * Every read the queue-and-enquiry workspace makes, answered: the queue and its stage counts, the open
+ * enquiry, its hotel and client account, and its (empty) proposals, agreements, visits and milestones,
+ * plus the service catalogue the agreement form offers.
  */
 export function workspaceRoutes(
   detail: HotelEnquiryStaffDetailView = detailFixture(),
@@ -189,6 +195,11 @@ export function workspaceRoutes(
   const account = { ...accountViewFixture({ id: ACCOUNT_ID, name: CLIENT_NAME }), contacts: [] };
   return {
     "GET /consultancy-admin/enquiries": () => page(queueFixture()),
+    "GET /consultancy-admin/enquiries/pipeline": () =>
+      ok({
+        stages: { new: 1, with_hotel: 1, proposal: 0, client_decision: 0, confirmed: 0, closed: 0 },
+        unassignedOpen: 1,
+      }),
     [`GET /consultancy-admin/enquiries/${ENQUIRY_ID}`]: () => ok(detail),
     [`GET /hotels-admin/hotels/${HOTEL_ID}`]: () =>
       ok(hotelStaffDetailViewFixture({ id: HOTEL_ID, name: HOTEL_NAME })),

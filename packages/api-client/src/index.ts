@@ -184,6 +184,7 @@ export {
   staffEnquiryQueryKey,
   useStaffEnquiries,
   useStaffEnquiry,
+  useStaffEnquiryPipeline,
   useTransitionEnquiry,
   type StaffEnquiriesQuery,
 } from "./hooks/use-staff-enquiries";
@@ -194,6 +195,7 @@ export {
   useReviseProposal,
   useShareProposal,
   useStaffProposals,
+  useUpdateProposal,
 } from "./hooks/use-staff-proposals";
 export {
   STAFF_SITE_VISITS_QUERY_KEY,

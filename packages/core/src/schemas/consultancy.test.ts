@@ -6,6 +6,11 @@ import {
   hotelEnquiryEventClientView,
   hotelEnquiryWithdrawableStatuses,
   isHotelEnquiryWithdrawable,
+  HOTEL_ENQUIRY_STAGE_STATUSES,
+  hotelEnquiryPipelineView,
+  hotelEnquiryStage,
+  hotelEnquiryStageOf,
+  hotelEnquiryStatus,
 } from "./consultancy.js";
 
 const validClientView = {
@@ -108,5 +113,31 @@ describe("isHotelEnquiryWithdrawable (CP-09)", () => {
     expect(isHotelEnquiryWithdrawable("draft")).toBe(false);
     expect(isHotelEnquiryWithdrawable("confirmed")).toBe(false);
     expect(isHotelEnquiryWithdrawable("closed")).toBe(false);
+  });
+});
+
+describe("the staff pipeline's stages", () => {
+  it("puts every status in exactly one stage", () => {
+    const placed = hotelEnquiryStage.options.flatMap(
+      (stage) => HOTEL_ENQUIRY_STAGE_STATUSES[stage],
+    );
+    expect([...placed].sort()).toEqual([...hotelEnquiryStatus.options].sort());
+    expect(new Set(placed).size).toBe(placed.length);
+  });
+
+  it("reads a status's stage", () => {
+    expect(hotelEnquiryStageOf("submitted")).toBe("new");
+    expect(hotelEnquiryStageOf("negotiating")).toBe("with_hotel");
+    expect(hotelEnquiryStageOf("proposal_received")).toBe("proposal");
+    expect(hotelEnquiryStageOf("closed")).toBe("closed");
+  });
+
+  it("needs a count for every stage in the pipeline view", () => {
+    const stages = { new: 1, with_hotel: 0, proposal: 0, client_decision: 2, confirmed: 0 };
+    expect(hotelEnquiryPipelineView.safeParse({ stages, unassignedOpen: 1 }).success).toBe(false);
+    expect(
+      hotelEnquiryPipelineView.safeParse({ stages: { ...stages, closed: 4 }, unassignedOpen: 1 })
+        .success,
+    ).toBe(true);
   });
 });

@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
 
-import { useReviseProposal, useShareProposal } from "@ampm/api-client";
 import {
   clientAmount,
   formatAmount,
@@ -8,50 +7,68 @@ import {
   internalAmount,
   type HotelProposalInternalView,
 } from "@ampm/core";
-import {
-  Button,
-  Card,
-  formatMoney,
-  InternalPanel,
-  MoneyText,
-  Row,
-  Stack,
-  Text,
-  useToast,
-} from "@ampm/ui";
+import { Card, formatMoney, InternalPanel, MoneyText, Row, Stack, Text } from "@ampm/ui";
 
 import { rateItemLabel } from "./consultancy-admin.form";
-import { staffProposalBadge } from "./consultancy-admin.format";
+import { proposalStanding, staffProposalBadge } from "./consultancy-admin.format";
+import { ProposalActions } from "./proposal-actions";
+import { ProposalEditForm } from "./proposal-edit-form";
 import { FigureRow, RecordHeader } from "./section-parts";
 import { useSectionCard } from "./use-section-card";
 
 type ProposalLine = HotelProposalInternalView["lines"][number];
 
+export interface ProposalCardProps {
+  readonly proposal: HotelProposalInternalView;
+  readonly enquiryId: string;
+  /** The draft is open in the edit form in place of the card. */
+  readonly editing?: boolean | undefined;
+  readonly onEdit?: (() => void) | undefined;
+  readonly onEditDone?: (() => void) | undefined;
+  readonly onRevised?: ((proposalId: string) => void) | undefined;
+}
+
+const noop = (): void => undefined;
+
 /**
- * One proposal version as staff see it (T6 "Proposal, version 1 · draft"). The card holds what the
- * client sees: the client total and the client-visible lines, client amounts in MoneyText. The internal
- * total, the derived margin and the internal-only lines sit inside an InternalPanel, never in the card
- * itself (Peacock Night §3, security.md).
+ * One proposal version as staff see it (T6 "Proposal, version 1 · draft"): where it stands in a line
+ * under its title, then what the client sees — the client total and the client-visible lines, client
+ * amounts in MoneyText. The internal total, the derived margin and the internal-only lines sit inside
+ * an InternalPanel, never in the card itself (Peacock Night §3, security.md). A draft being edited is
+ * drawn as its edit form instead.
  */
 export function ProposalCard({
   proposal,
   enquiryId,
-}: {
-  readonly proposal: HotelProposalInternalView;
-  readonly enquiryId: string;
-}) {
+  editing = false,
+  onEdit = noop,
+  onEditDone = noop,
+  onRevised = noop,
+}: ProposalCardProps) {
   const card = useSectionCard();
+  if (editing && proposal.status === "draft")
+    return <ProposalEditForm proposal={proposal} enquiryId={enquiryId} onDone={onEditDone} />;
   return (
     <Card tone={card.tone} className={card.className} testID={`proposal-${proposal.id}`}>
       <Stack gap={4}>
-        <RecordHeader
-          title={`Proposal, version ${proposal.versionNumber}`}
-          badge={staffProposalBadge[proposal.status]}
-        />
+        <Stack gap={1}>
+          <RecordHeader
+            title={`Proposal, version ${proposal.versionNumber}`}
+            badge={staffProposalBadge[proposal.status]}
+          />
+          <Text variant="bodySmall" tone="muted">
+            {proposalStanding(proposal)}
+          </Text>
+        </Stack>
         <ProposalClientTotal proposal={proposal} />
         <ClientLines lines={proposal.lines.filter((line) => line.clientVisible)} />
         <ProposalInternal proposal={proposal} />
-        <ProposalActions proposal={proposal} enquiryId={enquiryId} />
+        <ProposalActions
+          proposal={proposal}
+          enquiryId={enquiryId}
+          onEdit={onEdit}
+          onRevised={onRevised}
+        />
       </Stack>
     </Card>
   );
@@ -170,48 +187,4 @@ function InternalLines({ lines }: { readonly lines: readonly ProposalLine[] }) {
       ))}
     </Stack>
   );
-}
-
-/**
- * Share a draft with the client, or supersede a shared version with a fresh draft to re-price. Sharing
- * is a confirm action on a version, so it is a peacock `highlight` (as "Approve version 3"): the
- * screen's one gold button is the enquiry's next pipeline step.
- */
-function ProposalActions({
-  proposal,
-  enquiryId,
-}: {
-  readonly proposal: HotelProposalInternalView;
-  readonly enquiryId: string;
-}) {
-  const toast = useToast();
-  const share = useShareProposal(proposal.id, enquiryId);
-  const revise = useReviseProposal(proposal.id, enquiryId);
-  const onError = (): void => {
-    toast.show({ title: "Could not update the proposal", tone: "danger" });
-  };
-  if (proposal.status === "draft") {
-    return (
-      <Button
-        variant="highlight"
-        fullWidth
-        loading={share.isPending}
-        onPress={() => share.mutate(undefined, { onError })}
-      >
-        {`Share version ${proposal.versionNumber} with client`}
-      </Button>
-    );
-  }
-  if (proposal.status === "shared" || proposal.status === "revision_requested") {
-    return (
-      <Button
-        variant="secondary"
-        loading={revise.isPending}
-        onPress={() => revise.mutate(undefined, { onError })}
-      >
-        Revise (new version)
-      </Button>
-    );
-  }
-  return null;
 }
