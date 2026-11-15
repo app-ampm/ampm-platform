@@ -396,9 +396,9 @@
     "semantic_hash": "562555e66a64d3c212ed7956753475b6"
   },
   "packages/api-client/src/index.ts": {
-    "mtime": 1794684168.8585563,
-    "seen": 1794685694.745114,
-    "ast_hash": "252a446a3dcf73ee200aa068a3dc29ff",
+    "mtime": 1794714045.9610426,
+    "seen": 1794714356.998359,
+    "ast_hash": "e31040f3580fdf7633edeffc1a4fb1f9",
     "semantic_hash": ""
   },
   "packages/api-client/tsconfig.json": {
@@ -1386,9 +1386,9 @@
     "semantic_hash": ""
   },
   "apps/api/prisma/seed.ts": {
-    "mtime": 1794663146.0907602,
-    "seen": 1794666131.733299,
-    "ast_hash": "1fd181d896788216d1491e22fcaf957c",
+    "mtime": 1794707262.1830077,
+    "seen": 1794714356.9793,
+    "ast_hash": "ec91ea9a9c9b19ebc37418f4bc09ff86",
     "semantic_hash": ""
   },
   "apps/api/scripts/dev-token.ts": {
@@ -1746,9 +1746,9 @@
     "semantic_hash": ""
   },
   "packages/core/src/schemas/index.ts": {
-    "mtime": 1794663146.136721,
-    "seen": 1794666131.7338932,
-    "ast_hash": "e13b19220898fa3263d6d693cd07e9a2",
+    "mtime": 1794713951.3826485,
+    "seen": 1794714356.999379,
+    "ast_hash": "163164f1a641c8ba2ef185c08d30cc22",
     "semantic_hash": ""
   },
   "packages/core/tsup.config.ts": {
@@ -3144,9 +3144,9 @@
     "semantic_hash": ""
   },
   "apps/api/src/modules/demo/demo-baseline.ts": {
-    "mtime": 1794662960.822371,
-    "seen": 1794666131.733429,
-    "ast_hash": "1b445bf46f17bb300820f5847f6c1833",
+    "mtime": 1794707262.1833978,
+    "seen": 1794714356.9833071,
+    "ast_hash": "c44cc97c8218264ec2257600e06eba98",
     "semantic_hash": ""
   },
   "apps/api/src/modules/demo/demo-restore.service.spec.ts": {
@@ -3168,9 +3168,9 @@
     "semantic_hash": ""
   },
   "apps/api/test/demo-restore.e2e-spec.ts": {
-    "mtime": 1794662960.8669245,
-    "seen": 1794666131.73348,
-    "ast_hash": "f824aa4b5f9d193a418e6be8a9acef2d",
+    "mtime": 1794707262.1839752,
+    "seen": 1794714356.984891,
+    "ast_hash": "124637fa31dc08bb23b2d6a41277e551",
     "semantic_hash": ""
   },
   "infra/compose/local/compose.yml": {
@@ -3594,9 +3594,9 @@
     "semantic_hash": ""
   },
   "apps/api/src/modules/crm/subscriptions/payments.repository.ts": {
-    "mtime": 1794662960.811745,
-    "seen": 1794666131.733418,
-    "ast_hash": "b4aeb4c20b8a9d94d6ef6b33c85156c1",
+    "mtime": 1794714019.367224,
+    "seen": 1794714356.983007,
+    "ast_hash": "dc35dc9669c994bde9a2b90192e706c8",
     "semantic_hash": ""
   },
   "apps/api/src/modules/crm/subscriptions/plans.controller.ts": {
@@ -3642,9 +3642,9 @@
     "semantic_hash": ""
   },
   "apps/api/src/modules/crm/subscriptions/subscriptions.module.ts": {
-    "mtime": 1794662960.8199852,
-    "seen": 1794666131.7334259,
-    "ast_hash": "10210d45c83b8ccaae9a7b90ee658361",
+    "mtime": 1794714010.9635756,
+    "seen": 1794714356.983208,
+    "ast_hash": "7089c6b35cb463914323e03cd89b7834",
     "semantic_hash": ""
   },
   "apps/api/src/modules/crm/subscriptions/subscriptions.repository.ts": {
@@ -3708,9 +3708,9 @@
     "semantic_hash": ""
   },
   "packages/core/src/schemas/payments.ts": {
-    "mtime": 1794662960.9054902,
-    "seen": 1794666131.733896,
-    "ast_hash": "cc7cb4cc3ec16ba88a06891787d684e5",
+    "mtime": 1794713956.4067264,
+    "seen": 1794714356.9994628,
+    "ast_hash": "60c57f1c563ab1ed7fd9f9fff3cf0311",
     "semantic_hash": ""
   },
   "packages/core/src/schemas/plans.test.ts": {
@@ -7380,21 +7380,21 @@
     "semantic_hash": ""
   },
   "apps/api/src/modules/crm/subscriptions/payments.view.spec.ts": {
-    "mtime": 1794662960.8128161,
-    "seen": 1794666131.733419,
-    "ast_hash": "29b4e2f1925fee3566b0a4226d3b395e",
+    "mtime": 1794714019.3675761,
+    "seen": 1794714356.983027,
+    "ast_hash": "d141558d7f18162a0162996991cc26c2",
     "semantic_hash": ""
   },
   "apps/api/src/modules/crm/subscriptions/payments.view.ts": {
-    "mtime": 1794662960.8133006,
-    "seen": 1794666131.7334201,
-    "ast_hash": "41b35da8e131e020a65ea6d97394b97a",
+    "mtime": 1794714019.3674784,
+    "seen": 1794714356.983028,
+    "ast_hash": "85c000f32b7a1ce59c26ebaa752687b5",
     "semantic_hash": ""
   },
   "apps/api/test/payments.e2e-spec.ts": {
-    "mtime": 1794662960.8782136,
-    "seen": 1794666131.733493,
-    "ast_hash": "80b0f9b7209c1061bc2c8638fbf2d5c1",
+    "mtime": 1794714024.8335643,
+    "seen": 1794714356.985227,
+    "ast_hash": "003040b4c252f96330f95f330046754c",
     "semantic_hash": ""
   },
   "apps/mobile/src/app/admin/audit.tsx": {
@@ -7560,9 +7560,9 @@
     "semantic_hash": ""
   },
   "apps/mobile/src/features/accounts/accounts.test-utils.tsx": {
-    "mtime": 1794662960.8109295,
-    "seen": 1794666131.733541,
-    "ast_hash": "f76420289aa12f706e1b5729927b1bb6",
+    "mtime": 1794714032.9075515,
+    "seen": 1794714356.986791,
+    "ast_hash": "1562c1b9263cbc9146f02db8b5fc25ac",
     "semantic_hash": ""
   },
   "apps/mobile/src/features/accounts/payments.format.test.ts": {
@@ -8340,9 +8340,9 @@
     "semantic_hash": ""
   },
   "packages/api-client/src/hooks/use-subscriptions.ts": {
-    "mtime": 1794662960.8989427,
-    "seen": 1794666131.733854,
-    "ast_hash": "3875bf050ef10c391e44ef353077fbf9",
+    "mtime": 1794714061.351044,
+    "seen": 1794714356.998255,
+    "ast_hash": "99a52f9316600efe6862fc0e568f8bff",
     "semantic_hash": ""
   },
   "packages/core/src/forms.test.ts": {
@@ -9765,6 +9765,78 @@
     "mtime": 1794686175.7824352,
     "seen": 1794687342.641696,
     "ast_hash": "fb5a65ce3be4bdc61fa2d8ce73e22614",
+    "semantic_hash": ""
+  },
+  "apps/api/src/modules/crm/subscriptions/subscription-report.controller.ts": {
+    "mtime": 1794714007.315612,
+    "seen": 1794714356.9831839,
+    "ast_hash": "ffb8adbb928a2521db58c5f2da1438d3",
+    "semantic_hash": ""
+  },
+  "apps/api/src/modules/crm/subscriptions/subscription-report.repository.ts": {
+    "mtime": 1794714181.643125,
+    "seen": 1794714356.9831848,
+    "ast_hash": "727bf1c272887701fbb3dd28a9f082c7",
+    "semantic_hash": ""
+  },
+  "apps/api/src/modules/crm/subscriptions/subscription-report.service.ts": {
+    "mtime": 1794714002.7522955,
+    "seen": 1794714356.983186,
+    "ast_hash": "57d615be460b98c9a40f73aa43212e26",
+    "semantic_hash": ""
+  },
+  "apps/api/src/modules/crm/subscriptions/subscription-report.view.spec.ts": {
+    "mtime": 1794714113.5853817,
+    "seen": 1794714356.983186,
+    "ast_hash": "bf245d025d3f9143746d899a034275a8",
+    "semantic_hash": ""
+  },
+  "apps/api/src/modules/crm/subscriptions/subscription-report.view.ts": {
+    "mtime": 1794713994.8789237,
+    "seen": 1794714356.983187,
+    "ast_hash": "14c4c4e888a0f68f59e038647d1d8155",
+    "semantic_hash": ""
+  },
+  "apps/api/src/modules/demo/demo-baseline.spec.ts": {
+    "mtime": 1794707262.1830838,
+    "seen": 1794714356.983306,
+    "ast_hash": "c895c00da26e007b173cd8f14b203579",
+    "semantic_hash": ""
+  },
+  "apps/api/test/demo-account.e2e-spec.ts": {
+    "mtime": 1794707262.1834702,
+    "seen": 1794714356.9848902,
+    "ast_hash": "d57d0cbd2799a9d1dbfc1f0454356a24",
+    "semantic_hash": ""
+  },
+  "apps/api/test/subscription-report.e2e-spec.ts": {
+    "mtime": 1794714157.6150239,
+    "seen": 1794714356.985436,
+    "ast_hash": "a86a5bbf8a23474aee11a0630837922f",
+    "semantic_hash": ""
+  },
+  "packages/api-client/src/hooks/use-subscription-report.ts": {
+    "mtime": 1794714042.860472,
+    "seen": 1794714356.998254,
+    "ast_hash": "ef8c58ae3018f5b7efc776739e78da35",
+    "semantic_hash": ""
+  },
+  "packages/core/src/schemas/subscription-report.test.ts": {
+    "mtime": 1794713966.4904325,
+    "seen": 1794714356.999601,
+    "ast_hash": "5d55b76bf948e8fbcb3e257be46737f0",
+    "semantic_hash": ""
+  },
+  "packages/core/src/schemas/subscription-report.ts": {
+    "mtime": 1794713949.465772,
+    "seen": 1794714356.9996018,
+    "ast_hash": "13a3b1116bb11d036cf51fbb9c2295fc",
+    "semantic_hash": ""
+  },
+  "docs/planning/finance-billing-view.md": {
+    "mtime": 1794714191.7087069,
+    "seen": 1794714357.007127,
+    "ast_hash": "fcfb10de0d217de05aa8f8db5a555d50",
     "semantic_hash": ""
   }
 }

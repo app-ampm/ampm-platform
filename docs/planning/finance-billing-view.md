@@ -42,7 +42,7 @@ One stream of work. Each slice ends with `pnpm check` green.
   - `paymentFinanceView` gains `accountName`.
 - **API:**
   - `GET /crm/reports/subscriptions` with `@RequirePermission("reports.subscription_status_payment_history.read")`, following the lead-funnel report's pattern.
-  - The service audits each read, as the ledger does.
+  - A run is not audited: every field is client-class, so it is no restricted read, and the audit log has no plain-read action. The export (slice 3) is audited.
   - The repository leaves out demo accounts and deleted rows, and pages by cursor.
   - With `status=pending_payment`, the oldest subscription comes first.
 - **Client:** `useSubscriptionReport(query)` in `packages/api-client`.

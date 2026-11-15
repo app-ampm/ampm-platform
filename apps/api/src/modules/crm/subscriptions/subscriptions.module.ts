@@ -23,6 +23,9 @@ import { PortalController } from "./portal.controller.js";
 import { PortalService } from "./portal.service.js";
 import { SubscriptionActivationService } from "./subscription-activation.service.js";
 import { SubscriptionExpiryService } from "./subscription-expiry.service.js";
+import { SubscriptionReportController } from "./subscription-report.controller.js";
+import { SubscriptionReportRepository } from "./subscription-report.repository.js";
+import { SubscriptionReportService } from "./subscription-report.service.js";
 import { SubscriptionsController } from "./subscriptions.controller.js";
 import { SubscriptionsRepository } from "./subscriptions.repository.js";
 import { SubscriptionsService } from "./subscriptions.service.js";
@@ -44,6 +47,7 @@ import { WebhookEventsRepository } from "./webhook-events.repository.js";
     PaymentWebhookController,
     PaymentsController,
     PortalController,
+    SubscriptionReportController,
   ],
   providers: [
     PlansService,
@@ -55,6 +59,8 @@ import { WebhookEventsRepository } from "./webhook-events.repository.js";
     SubscriptionExpiryService,
     PaymentsRepository,
     PaymentsService,
+    SubscriptionReportRepository,
+    SubscriptionReportService,
     WebhookEventsRepository,
     PaymentWebhookService,
     {

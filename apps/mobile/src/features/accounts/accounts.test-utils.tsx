@@ -55,6 +55,7 @@ export function paymentFinanceViewFixture(
   return {
     id: PAYMENT_ID,
     accountId: ACCOUNT_ID,
+    accountName: "The Sharma wedding",
     direction: "inbound",
     purpose: "subscription",
     amount: { minor: 2_500_000, currency: "INR" },

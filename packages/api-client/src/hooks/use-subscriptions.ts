@@ -9,6 +9,8 @@ import {
 
 import { useApiClient } from "../provider";
 import { ACCOUNTS_QUERY_KEY } from "./use-accounts";
+import { PAYMENTS_QUERY_KEY } from "./use-payments";
+import { SUBSCRIPTION_REPORT_QUERY_KEY } from "./use-subscription-report";
 
 /*
  * Subscriptions (Module B CRM, feature 8.3). Staff read (`crm.subscriptions.read`) is CLIENT-class (status,
@@ -32,8 +34,8 @@ export function useAccountSubscriptions(accountId: string) {
 
 /**
  * Record a manual bank transfer against a pending subscription (`POST …/record-payment`, Finance /
- * Super Admin). Activation flips the account to active, so it refreshes every subscriptions and accounts
- * query (the account detail and the Clients list alike).
+ * Sales / Super Admin, D-125). Activation flips the account to active, so it refreshes every subscriptions
+ * and accounts query (the account detail and the Clients list alike), the ledger and the report.
  */
 export function useRecordPayment() {
   const api = useApiClient();
@@ -54,6 +56,10 @@ export function useRecordPayment() {
       // Activation flips the account prospect -> active, so refresh both its detail AND the list: the
       // ACCOUNTS_QUERY_KEY prefix matches [...,accountId] (detail) and [...,{ query }] (list).
       void queryClient.invalidateQueries({ queryKey: ACCOUNTS_QUERY_KEY });
+      // The payment it wrote and the status it changed show in the ledger and the subscription report
+      // (Finance's way in, D-127), neither of which sits under the subscriptions key.
+      void queryClient.invalidateQueries({ queryKey: PAYMENTS_QUERY_KEY });
+      void queryClient.invalidateQueries({ queryKey: SUBSCRIPTION_REPORT_QUERY_KEY });
     },
   });
 }

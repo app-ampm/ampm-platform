@@ -280,6 +280,7 @@ export type {
 // the manual-payment request. A wildcard re-export keeps the barrel within the 300-line max-lines cap;
 // every payments name is `payment`-prefixed, so it cannot collide with another module's exports.
 export * from "./payments";
+export * from "./subscription-report"; // §5.16 report, every name `subscriptionReport`-prefixed (D-127)
 // Module C hotels: client discovery (hotels.ts) and the staff workspace (hotels-admin.ts, feature 9.1).
 // Wildcard re-exports keep the barrel within the 300-line max-lines cap; each file exports only its
 // public contracts (module-private helpers are plain `const`, not re-exported), and their names do not
