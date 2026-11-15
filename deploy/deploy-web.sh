@@ -20,11 +20,21 @@ set -euo pipefail
 API_URL="${EXPO_PUBLIC_API_URL:-https://app.ampmverse.com/_api}"
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+
+# The app imports @ampm/core and @ampm/policy through their package exports, which point at the compiled
+# dist/, not src/. Export without rebuilding them and the bundle carries whatever dist the checkout last
+# built: after moving to a newer main that shipped a stale core and blanked every enquiry page on the box
+# (15 Nov 2026). Build every workspace package the app depends on first; turbo skips the unchanged ones.
+echo "Building the workspace packages apps/mobile depends on ..."
+(cd "$ROOT" && pnpm turbo run build --filter='mobile^...')
+
 cd "$ROOT/apps/mobile"
 
+# EXPO_NO_DOTENV keeps a developer's apps/mobile/.env (often a localhost API) out of the box's bundle;
+# --clear drops Metro's transform cache so nothing from an earlier checkout is reused.
 echo "Exporting apps/mobile web build (API=$API_URL) ..."
-EXPO_PUBLIC_API_URL="$API_URL" EXPO_PUBLIC_DEMO="${EXPO_PUBLIC_DEMO:-true}" \
-  pnpm exec expo export --platform web --output-dir dist
+EXPO_NO_DOTENV=1 EXPO_PUBLIC_API_URL="$API_URL" EXPO_PUBLIC_DEMO="${EXPO_PUBLIC_DEMO:-true}" \
+  pnpm exec expo export --platform web --output-dir dist --clear
 
 echo "Syncing dist/ -> $WEB_SSH:$WEB_HTTPDOCS ..."
 # --delete prunes stale assets, but NEVER the box's hand-placed control files, which live outside the
