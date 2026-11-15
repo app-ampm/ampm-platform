@@ -30,7 +30,6 @@ describe("MilestoneCreateForm", () => {
         dueAt: null,
         amount: null,
         contractId: null,
-        documentId: null,
       },
     });
   });

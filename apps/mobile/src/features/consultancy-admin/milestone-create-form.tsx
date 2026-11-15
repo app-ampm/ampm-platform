@@ -36,7 +36,6 @@ function milestoneRequest(
     dueAt: due.length > 0 ? isoDateTimeFromDate(due) : null,
     amount,
     contractId: null,
-    documentId: null,
   };
 }
 
@@ -62,8 +61,8 @@ function useMilestoneForm(enquiryId: string, onDone: () => void) {
 
 /**
  * Staff adds a booking milestone to the enquiry (SA/HT). The type is fixed at creation; the due date and
- * amount are optional. A `contract_signed` milestone with a document is what the confirmed-guard reads
- * (AC-05.6), but attaching a document needs the Module N upload service, so it is left for later here.
+ * amount are optional. A `contract_signed` milestone's signed contract is attached on the milestone once
+ * it exists (MilestoneContract, D-132) — the confirmed-guard reads it (AC-05.6).
  */
 export function MilestoneCreateForm({
   enquiryId,

@@ -33,8 +33,10 @@ import {
 } from "../consultancy/consultancy.format";
 import { SectionError } from "../consultancy/section-error";
 import { SectionSkeleton } from "../consultancy/section-skeleton";
+import { errorMessage } from "./consultancy-admin.form";
 import { staffMilestoneBadge, staffVisitBadge, visitStepState } from "./consultancy-admin.format";
 import { CreateToggle } from "./consultancy-admin.widgets";
+import { MilestoneContract, milestoneNexts } from "./milestone-contract";
 import { MilestoneCreateForm } from "./milestone-create-form";
 import { SectionShell } from "./section-parts";
 import { TransitionRow } from "./transition-row";
@@ -145,7 +147,8 @@ function VisitInternalNotes({ visit }: { readonly visit: SiteVisitStaffView }) {
 
 /**
  * The booking milestones on a vertical Stepper in the order they were added. Staff see every amount
- * and move a pending or overdue milestone to done (or cancelled).
+ * and move a pending or overdue milestone to done (or cancelled); a `contract_signed` milestone takes
+ * its signed contract first (D-132).
  */
 export function MilestonesSection({ enquiryId }: { readonly enquiryId: string }) {
   const milestones = useStaffBookingMilestones(enquiryId);
@@ -181,6 +184,20 @@ export function MilestonesSection({ enquiryId }: { readonly enquiryId: string })
   );
 }
 
+/** The milestone's status, whether its signed contract is attached, and (staff always see it) its amount. */
+function MilestoneFacts({ milestone }: { readonly milestone: BookingMilestoneStaffView }) {
+  const badge = staffMilestoneBadge[milestone.status];
+  return (
+    <Row gap={2} wrap align="center">
+      <StatusChip label={badge.label} tone={badge.tone} size="sm" />
+      {milestone.documentId ? <StatusChip label="Contract attached" tone="info" size="sm" /> : null}
+      {milestone.amount ? (
+        <MoneyText amount={clientAmount(milestone.amount.minor, milestone.amount.currency)} />
+      ) : null}
+    </Row>
+  );
+}
+
 function MilestoneStep({
   milestone,
   enquiryId,
@@ -190,23 +207,23 @@ function MilestoneStep({
 }) {
   const toast = useToast();
   const transition = useTransitionBookingMilestone(milestone.id, enquiryId);
-  const badge = staffMilestoneBadge[milestone.status];
   const move = (status: BookingMilestoneStatus): void =>
     transition.mutate(
       { status },
-      { onError: () => toast.show({ title: "Could not move the milestone", tone: "danger" }) },
+      {
+        onError: (error) =>
+          toast.show({
+            title: errorMessage(error, "Could not move the milestone"),
+            tone: "danger",
+          }),
+      },
     );
   return (
     <Stack gap={2}>
-      <Row gap={2} wrap align="center">
-        <StatusChip label={badge.label} tone={badge.tone} size="sm" />
-        {milestone.documentId ? <StatusChip label="Document" tone="info" size="sm" /> : null}
-        {milestone.amount ? (
-          <MoneyText amount={clientAmount(milestone.amount.minor, milestone.amount.currency)} />
-        ) : null}
-      </Row>
+      <MilestoneFacts milestone={milestone} />
+      <MilestoneContract milestone={milestone} enquiryId={enquiryId} />
       <TransitionRow
-        nexts={MILESTONE_NEXT[milestone.status]}
+        nexts={milestoneNexts(milestone, MILESTONE_NEXT[milestone.status])}
         pending={transition.isPending}
         onMove={move}
       />

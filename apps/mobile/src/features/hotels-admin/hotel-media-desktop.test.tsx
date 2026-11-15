@@ -1,6 +1,7 @@
 import type * as ReactModule from "react";
 
 import type { MediaAssetView } from "@ampm/core";
+import type * as UiModule from "@ampm/ui";
 
 import { act, fireEvent, screen, within } from "../../test/render";
 import { HotelMediaScreen } from "./hotel-media-screen";
@@ -16,7 +17,10 @@ import {
 
 const mockRouter = { push: jest.fn(), back: jest.fn(), replace: jest.fn(), dismissTo: jest.fn() };
 jest.mock("expo-router", () => ({ useRouter: () => mockRouter }));
-jest.mock("./pick-media-file", () => ({ pickMediaFile: jest.fn() }));
+jest.mock("@ampm/ui", () => ({
+  ...jest.requireActual<typeof UiModule>("@ampm/ui"),
+  pickFile: jest.fn(),
+}));
 
 /**
  * The window, as a store its readers subscribe to: a resize re-renders exactly the components that read

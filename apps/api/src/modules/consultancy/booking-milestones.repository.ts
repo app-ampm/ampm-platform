@@ -44,7 +44,6 @@ export interface BookingMilestoneEditPatch {
   readonly amount?: string | null;
   readonly currency?: string | null;
   readonly contractId?: string | null;
-  readonly documentId?: string | null;
 }
 
 export interface MilestoneStatusPatch {
@@ -129,6 +128,23 @@ export class BookingMilestonesRepository {
     return result.count;
   }
 
+  /** Point a milestone at its uploaded signed contract (D-132). Compare-and-swap on the status AND the
+   *  current document, so two concurrent uploads cannot both win (the loser's transaction rolls back and
+   *  its bytes are removed) and an upload cannot land on a milestone a transition just made terminal. */
+  async attachDocument(
+    id: string,
+    expected: { readonly status: BookingMilestoneStatus; readonly documentId: string | null },
+    documentId: string,
+    actorId: string,
+    client: Prisma.TransactionClient | PrismaService = this.prisma,
+  ): Promise<number> {
+    const result = await client.bookingMilestone.updateMany({
+      where: { id, status: expected.status, documentId: expected.documentId, deletedAt: null },
+      data: { documentId, updatedBy: actorId },
+    });
+    return result.count;
+  }
+
   /** Compare-and-swap on the status: the milestone moves only if it still holds `expectedStatus`. */
   async updateStatus(
     id: string,
@@ -186,8 +202,9 @@ export class BookingMilestonesRepository {
     return row !== null;
   }
 
-  /** AC-05.6 guard (interim signed-contract signal): a done `contract_signed` milestone carrying an
-   *  uploaded document — kept intra-module until Module G/N land. */
+  /** AC-05.6 guard (interim signed-contract signal until Module G contracts land): a done
+   *  `contract_signed` milestone carrying an uploaded document. The id is set only by the contract upload
+   *  route (D-132), so a non-null `document_id` names a stored, scanned file. */
   async hasSignedContract(enquiryId: string): Promise<boolean> {
     const row = await this.prisma.bookingMilestone.findFirst({
       where: {

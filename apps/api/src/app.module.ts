@@ -15,6 +15,7 @@ import { CrmModule } from "./modules/crm/crm.module.js";
 import { ServiceAgreementsModule } from "./modules/crm/service-agreements/service-agreements.module.js";
 import { SubscriptionsModule } from "./modules/crm/subscriptions/subscriptions.module.js";
 import { DemoModule } from "./modules/demo/demo.module.js";
+import { DocumentsModule } from "./modules/documents/documents.module.js";
 import { HotelsModule } from "./modules/hotels/hotels.module.js";
 import { MediaModule } from "./modules/media/media.module.js";
 import { PermissionSetsModule } from "./modules/admin/permission-sets/permission-sets.module.js";
@@ -49,6 +50,7 @@ import { PolicyModule } from "./policy/policy.module.js";
     ServiceAgreementsModule,
     HotelsModule,
     MediaModule,
+    DocumentsModule,
     ConsultancyModule,
     DemoModule,
     SpikeModule,

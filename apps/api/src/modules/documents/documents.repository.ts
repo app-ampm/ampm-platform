@@ -1,0 +1,144 @@
+import { Injectable } from "@nestjs/common";
+
+import { PrismaService } from "../../db/prisma.service.js";
+import { Prisma, type DocumentType } from "../../generated/prisma/client.js";
+
+/*
+ * Prisma access for Module N documents (D-132): queries and scoping, no business rules. The SECRET
+ * columns — `storage_key` and the link's `token_hash` — are selected only by the two narrow projections
+ * the service needs to serve bytes or check a token, never by DOCUMENT_SELECT, so they cannot reach a
+ * response. Documents are polymorphic (owner_type + owner_id, no FK): reads are scoped by the owner the
+ * caller already authorised, so a document is never reached by its id alone (access follows the record).
+ */
+const DOCUMENT_SELECT = {
+  id: true,
+  ownerType: true,
+  ownerId: true,
+  title: true,
+  documentType: true,
+  mimeType: true,
+  sizeBytes: true,
+  versionNumber: true,
+  previousVersionId: true,
+  visibility: true,
+  uploadedBy: true,
+  createdAt: true,
+} as const satisfies Prisma.DocumentSelect;
+
+export type DocumentRow = Prisma.DocumentGetPayload<{ select: typeof DOCUMENT_SELECT }>;
+
+/** The owning record a document belongs to; the caller has already checked access to it. */
+export interface DocumentOwner {
+  readonly ownerType: string;
+  readonly ownerId: string;
+}
+
+export interface DocumentWriteData {
+  readonly owner: DocumentOwner;
+  readonly accountId: string | null;
+  readonly projectId: string | null;
+  readonly title: string;
+  readonly documentType: DocumentType;
+  readonly storageKey: string;
+  readonly mimeType: string;
+  readonly sizeBytes: number;
+  readonly checksum: string;
+  readonly versionNumber: number;
+  readonly previousVersionId: string | null;
+}
+
+export interface LinkWriteData {
+  readonly documentId: string;
+  readonly tokenHash: string;
+  readonly expiresAt: Date;
+  readonly maxDownloads: number;
+}
+
+/** What serving a link needs: the stored object and how to name it. Never leaves the service. */
+export interface DocumentBlobRow {
+  readonly storageKey: string;
+  readonly mimeType: string;
+  readonly documentType: DocumentType;
+  readonly versionNumber: number;
+}
+
+@Injectable()
+export class DocumentsRepository {
+  constructor(private readonly prisma: PrismaService) {}
+
+  async create(
+    data: DocumentWriteData,
+    uploadedBy: string,
+    client: Prisma.TransactionClient | PrismaService = this.prisma,
+  ): Promise<DocumentRow> {
+    const { owner, ...fields } = data;
+    return client.document.create({
+      data: {
+        ...fields,
+        ownerType: owner.ownerType,
+        ownerId: owner.ownerId,
+        visibility: "internal",
+        uploadedBy,
+        createdBy: uploadedBy,
+      },
+      select: DOCUMENT_SELECT,
+    });
+  }
+
+  /** A live document of this owner, or null — the owner check that makes access follow the record. */
+  async findOwned(id: string, owner: DocumentOwner): Promise<DocumentRow | null> {
+    return this.prisma.document.findFirst({
+      where: { id, ownerType: owner.ownerType, ownerId: owner.ownerId, deletedAt: null },
+      select: DOCUMENT_SELECT,
+    });
+  }
+
+  async createLink(
+    data: LinkWriteData,
+    createdBy: string,
+    client: Prisma.TransactionClient | PrismaService = this.prisma,
+  ): Promise<{ id: string }> {
+    return client.documentAccessLink.create({
+      data: { ...data, createdBy },
+      select: { id: true },
+    });
+  }
+
+  /** A live link's document and token hash (SECRET — compared in the service, never returned). */
+  async findLink(id: string): Promise<{ documentId: string; tokenHash: string } | null> {
+    return this.prisma.documentAccessLink.findFirst({
+      where: { id, deletedAt: null, revokedAt: null },
+      select: { documentId: true, tokenHash: true },
+    });
+  }
+
+  /**
+   * Count one download against the link — a compare-and-swap that succeeds only while the link is
+   * unexpired, unrevoked and under its download cap, so concurrent fetches can never exceed the cap.
+   */
+  async consumeLink(id: string, now: Date): Promise<boolean> {
+    const result = await this.prisma.documentAccessLink.updateMany({
+      where: {
+        id,
+        deletedAt: null,
+        revokedAt: null,
+        expiresAt: { gt: now },
+        downloadCount: { lt: this.prisma.documentAccessLink.fields.maxDownloads },
+      },
+      data: { downloadCount: { increment: 1 } },
+    });
+    return result.count === 1;
+  }
+
+  async blobOf(id: string): Promise<DocumentBlobRow | null> {
+    return this.prisma.document.findFirst({
+      where: { id, deletedAt: null },
+      select: { storageKey: true, mimeType: true, documentType: true, versionNumber: true },
+    });
+  }
+
+  /** Runs `work` in one transaction so a document, the record it attaches to and their audits commit together. */
+  transaction<T>(work: (tx: Prisma.TransactionClient) => Promise<T>): Promise<T> {
+    return this.prisma.$transaction(work);
+  }
+}

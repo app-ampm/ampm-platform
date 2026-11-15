@@ -1,6 +1,6 @@
 import { Module } from "@nestjs/common";
 
-import { AV_SCANNER, StubAvScanner } from "./av-scanner.js";
+import { AV_SCANNER, StubAvScanner } from "../../storage/av-scanner.js";
 import { IMAGE_PROCESSOR, SharpImageProcessor } from "./image.processor.js";
 import { MediaController } from "./media.controller.js";
 import { MediaRepository } from "./media.repository.js";

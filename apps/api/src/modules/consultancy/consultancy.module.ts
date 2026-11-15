@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 
 import { NotificationModule } from "../admin/notification/notification.module.js";
 import { ServiceAgreementsModule } from "../crm/service-agreements/service-agreements.module.js";
+import { DocumentsModule } from "../documents/documents.module.js";
 import { HotelsModule } from "../hotels/hotels.module.js";
 import { EnquiriesClientController } from "./enquiries-client.controller.js";
 import { EnquiriesClientService } from "./enquiries-client.service.js";
@@ -28,6 +29,7 @@ import { BookingMilestonesClientService } from "./booking-milestones-client.serv
 import { BookingMilestonesController } from "./booking-milestones.controller.js";
 import { BookingMilestonesRepository } from "./booking-milestones.repository.js";
 import { BookingMilestonesService } from "./booking-milestones.service.js";
+import { MilestoneContractService } from "./milestone-contract.service.js";
 import { MilestoneOverdueService } from "./milestones.overdue.service.js";
 
 /**
@@ -37,13 +39,14 @@ import { MilestoneOverdueService } from "./milestones.overdue.service.js";
  * client/internal money split with `read_internal_amount`, the version/decision machine, sharing advances
  * the enquiry to `client_decision`, and handler-less `consultancy.proposal.*` events); 10.5 adds booking
  * milestones (`consultancy.booking_milestones.*`), the AC-05.6 confirmed-guard on the enquiry transition
- * and an hourly overdue sweep. It reads Module C
+ * and an hourly overdue sweep; D-132 attaches the signed contract to a `contract_signed` milestone
+ * through Module N's DocumentsService (a downward D→N dependency). It reads Module C
  * through HotelsService, reaches Module B through ServiceAgreementsService (the AC-05.7 gate) and domain
  * events; account resolution reads the CRM `account_contacts` table directly (the recorded D-063 shortcut).
  * PrismaService, the EventBus, ConfigService and the policy/audit kernel are @Global.
  */
 @Module({
-  imports: [HotelsModule, NotificationModule, ServiceAgreementsModule],
+  imports: [HotelsModule, NotificationModule, ServiceAgreementsModule, DocumentsModule],
   controllers: [
     EnquiriesController,
     EnquiriesClientController,
@@ -72,6 +75,7 @@ import { MilestoneOverdueService } from "./milestones.overdue.service.js";
     BookingMilestonesService,
     BookingMilestonesClientService,
     BookingMilestonesRepository,
+    MilestoneContractService,
     MilestoneOverdueService,
   ],
 })

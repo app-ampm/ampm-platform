@@ -3,7 +3,7 @@ import { errors } from "@ampm/core";
 
 import { AuditService } from "../../policy/audit.service.js";
 import { STORAGE_ADAPTER, type StorageAdapter } from "../../storage/storage.types.js";
-import { AV_SCANNER, type AvScanner } from "./av-scanner.js";
+import { AV_SCANNER, type AvScanner } from "../../storage/av-scanner.js";
 import { IMAGE_PROCESSOR, type ImageProcessor } from "./image.processor.js";
 import {
   detectMedia,

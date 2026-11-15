@@ -1,6 +1,7 @@
 import {
   errors,
   type BookingMilestoneCreateRequest,
+  type BookingMilestoneStatus,
   type BookingMilestoneType,
   type BookingMilestoneUpdateRequest,
 } from "@ampm/core";
@@ -30,7 +31,8 @@ export function isPaymentMilestone(type: BookingMilestoneType): boolean {
 }
 
 /** Create request → write row: the single money object drives both the amount and currency columns; the
- *  project is inherited from the enquiry (never the request), to be back-filled by Module E (GP-27). */
+ *  project is inherited from the enquiry (never the request), to be back-filled by Module E (GP-27). A
+ *  new milestone carries no document: the signed contract is attached by upload (D-132). */
 export function buildMilestoneWrite(
   request: BookingMilestoneCreateRequest,
   enquiry: EnquiryRow,
@@ -43,7 +45,7 @@ export function buildMilestoneWrite(
     amount: request.amount ? moneyToDecimalString(request.amount) : null,
     currency: request.amount ? request.amount.currency : null,
     contractId: request.contractId,
-    documentId: request.documentId,
+    documentId: null,
   };
 }
 
@@ -57,7 +59,6 @@ export function buildMilestoneEditPatch(
     amount?: string | null;
     currency?: string | null;
     contractId?: string | null;
-    documentId?: string | null;
   } = {};
   if (request.dueAt !== undefined) patch.dueAt = request.dueAt ? new Date(request.dueAt) : null;
   if (request.amount !== undefined) {
@@ -65,7 +66,6 @@ export function buildMilestoneEditPatch(
     patch.currency = request.amount ? request.amount.currency : null;
   }
   if (request.contractId !== undefined) patch.contractId = request.contractId;
-  if (request.documentId !== undefined) patch.documentId = request.documentId;
   return patch;
 }
 
@@ -84,15 +84,24 @@ export function editMilestoneAuditImage(
       dueAt: isoOf(current.dueAt),
       amount: amountOf(current.amount),
       contractId: current.contractId,
-      documentId: current.documentId,
     },
     after: {
       dueAt: patch.dueAt === undefined ? isoOf(current.dueAt) : isoOf(patch.dueAt),
       amount: patch.amount === undefined ? amountOf(current.amount) : patch.amount,
       contractId: patch.contractId === undefined ? current.contractId : patch.contractId,
-      documentId: patch.documentId === undefined ? current.documentId : patch.documentId,
     },
   };
+}
+
+/** A `contract_signed` milestone is done only with its signed contract attached (D-132): a done milestone
+ *  is read-only, so marking it done first would leave the enquiry no way to reach `confirmed`. */
+export function assertContractAttached(
+  milestone: BookingMilestoneRow,
+  to: BookingMilestoneStatus,
+): void {
+  if (to === "done" && milestone.milestoneType === "contract_signed" && !milestone.documentId) {
+    throw errors.conflict("Attach the signed contract before marking this milestone done");
+  }
 }
 
 /** Throws a conflict when a compare-and-swap write changed no rows (the milestone moved underneath us). */

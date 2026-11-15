@@ -4,11 +4,15 @@ import type { NextFunction, Request, Response } from "express";
 
 import { AppLogger } from "./logger.service.js";
 
-// The only route that accepts a binary (application/octet-stream) body: the media upload (feature 9.3b).
-const UPLOAD_PATH = /^\/media\/[^/]+\/upload\/?$/;
+// The only routes that accept a binary (application/octet-stream) body: the media upload (feature 9.3b)
+// and a booking milestone's signed contract (D-132).
+const UPLOAD_PATHS: readonly RegExp[] = [
+  /^\/media\/[^/]+\/upload\/?$/,
+  /^\/consultancy-admin\/booking-milestones\/[^/]+\/contract\/?$/,
+];
 
 /**
- * Refuse a binary body on any route but the media upload, BEFORE the raw parser buffers it — so a large
+ * Refuse a binary body on any route but the upload routes, BEFORE the raw parser buffers it — so a large
  * octet-stream body cannot amplify memory use pre-auth on a record endpoint (security). Registered right
  * after the JSON parser and before the raw one, so only the upload route ever buffers a large body.
  */
@@ -16,7 +20,7 @@ export function refuseBinaryOutsideUpload(req: Request, res: Response, next: Nex
   const isOctetStream = (req.headers["content-type"] ?? "")
     .toLowerCase()
     .startsWith("application/octet-stream");
-  const isUpload = req.method === "POST" && UPLOAD_PATH.test(req.path);
+  const isUpload = req.method === "POST" && UPLOAD_PATHS.some((path) => path.test(req.path));
   if (isOctetStream && !isUpload) {
     const error = new AppError(
       "unsupported_media_type",

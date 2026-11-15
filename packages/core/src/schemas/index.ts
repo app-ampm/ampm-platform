@@ -307,3 +307,6 @@ export * from "./hotel-proposals";
 // from the client view unless the W-14 config flag is on; a done `confirmed` milestone + a signed
 // contract are the enquiry→confirmed guard (AC-05.6).
 export * from "./booking-milestones";
+// Module N documents (documents.ts), D-132. The first slice: a signed contract on a booking milestone,
+// reached only through a minted 15-minute access link (security.md); the storage key never leaves the API.
+export * from "./documents";

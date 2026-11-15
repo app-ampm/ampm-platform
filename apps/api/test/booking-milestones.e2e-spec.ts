@@ -1,3 +1,7 @@
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import { STAFF_ROLES } from "@ampm/policy";
 import request from "supertest";
@@ -10,10 +14,12 @@ import { startApi } from "./start-api.js";
 const TAG = "E2E-Milestone";
 const PREFIX = "e2e-milestone";
 const W14_KEY = "consultancy.milestone_amounts_visible";
+// The smallest bytes that sniff as a PDF — the signed contract the confirmed-guard needs (D-132).
+const PDF = Buffer.from("%PDF-1.4\n% E2E signed contract\n%%EOF\n");
 
 /**
  * Module D feature 10.5 end to end: the AC-05.6 confirmed-guard (409 naming each missing item, then
- * success), the W-14 client amount gate (absent by default, present once enabled; staff always see it),
+ * success once a signed contract is uploaded to a `contract_signed` milestone, D-132), the W-14 client amount gate (absent by default, present once enabled; staff always see it),
  * authz (SM reads, cannot create; FA updates the amount; `overdue` is not a manual move), and account
  * isolation. The overdue sweep is covered in booking-milestones-sweep.e2e-spec.ts.
  */
@@ -25,6 +31,7 @@ describe("Booking milestones (e2e)", () => {
   let hotelId: string;
   let htSubject: string;
   let faSubject: string;
+  let storageDir: string;
 
   const http = () => request(app.getHttpServer());
   const auth = (token: string) => `Bearer ${token}`;
@@ -43,6 +50,13 @@ describe("Booking milestones (e2e)", () => {
       select: { id: true },
     });
     const enquiryIds = enquiries.map((e) => e.id);
+    const milestones = await prisma.bookingMilestone.findMany({
+      where: { enquiryId: { in: enquiryIds } },
+      select: { id: true },
+    });
+    const documentWhere = { ownerId: { in: milestones.map((m) => m.id) } };
+    await prisma.documentAccessLink.deleteMany({ where: { document: documentWhere } });
+    await prisma.document.deleteMany({ where: documentWhere });
     await prisma.bookingMilestone.deleteMany({ where: { enquiryId: { in: enquiryIds } } });
     await prisma.hotelEnquiryEvent.deleteMany({ where: { enquiryId: { in: enquiryIds } } });
     await prisma.hotelEnquiry.deleteMany({ where: { id: { in: enquiryIds } } });
@@ -132,6 +146,9 @@ describe("Booking milestones (e2e)", () => {
   }
 
   beforeAll(async () => {
+    // Uploaded contracts go to a throwaway temp dir, never under the repo — set before the app reads env.
+    storageDir = await mkdtemp(join(tmpdir(), "ampm-milestone-"));
+    process.env["STORAGE_LOCAL_DIR"] = storageDir;
     ({ app, mint } = await startApi());
     prisma = app.get(PrismaService);
     await removeFixtures();
@@ -164,6 +181,7 @@ describe("Booking milestones (e2e)", () => {
   afterAll(async () => {
     await removeFixtures();
     await app.close();
+    await rm(storageDir, { recursive: true, force: true });
   });
 
   it("confirmed needs a done 'confirmed' milestone AND a signed contract — 409 naming each (AC-05.6)", async () => {
@@ -199,18 +217,22 @@ describe("Booking milestones (e2e)", () => {
       .expect(409);
     expect(noContract.body.error.message).toMatch(/contract/i);
 
-    // A done `contract_signed` milestone carrying an uploaded document → confirm succeeds.
+    // Upload the signed contract to a `contract_signed` milestone, mark it done → confirm succeeds.
     const contract = await http()
       .post("/consultancy-admin/booking-milestones")
       .set("authorization", await ht())
-      .send({
-        enquiryId,
-        milestoneType: "contract_signed",
-        documentId: "00000000-0000-7000-8000-0000000000dd",
-      })
+      .send({ enquiryId, milestoneType: "contract_signed" })
       .expect(201);
+    const contractId = contract.body.data.id as string;
+    const attached = await http()
+      .post(`/consultancy-admin/booking-milestones/${contractId}/contract`)
+      .set("authorization", await ht())
+      .set("content-type", "application/octet-stream")
+      .send(PDF)
+      .expect(200);
+    expect(attached.body.data.documentId).toEqual(expect.any(String));
     await http()
-      .patch(`/consultancy-admin/booking-milestones/${contract.body.data.id}/status`)
+      .patch(`/consultancy-admin/booking-milestones/${contractId}/status`)
       .set("authorization", await ht())
       .send({ status: "done" })
       .expect(200);
