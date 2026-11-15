@@ -27,7 +27,7 @@ Finance's grants on `crm.subscriptions` ("RU status") and on `crm.accounts` ("RU
 - **A. The §5.16 report (recommended).** Finance may run it outright, so the matrix needs no new reading. One report row carries what Finance needs to recognise a payment: the account's name, the plan, the amount and the status.
 - **B. A field-aware read of `/crm/subscriptions`.** It would need a Finance response model, and a ruling on what "RU status" lets Finance *read*. That is a matrix interpretation for AMPM, and one that would also be applied to "RU billing".
 
-The ledger (`GET /crm/payments`, FA and SA) already exists, and the account page's payments panel uses it. Its rows carry only `accountId`, and Finance cannot read accounts, so the Finance ledger view gains the account's name. This is an additive contract change.
+The ledger (`GET /crm/payments`, FA and SA) already exists, and the account page's payments panel uses it. Its rows carry only `accountId`, and Finance cannot read accounts, so the Finance ledger view gains the account's name. This is an additive contract change. After release, the whole ledger (no account asked for) also leaves demo accounts out, so Recent payments matches the report; an account asked for by id still lists its own payments.
 
 ## Slices
 

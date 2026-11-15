@@ -129,7 +129,10 @@ export class PaymentsRepository {
     cursor?: string,
   ): Promise<{ rows: PaymentRow[]; nextCursor: string | null }> {
     const where: Prisma.PaymentWhereInput = { deletedAt: null };
+    // The whole ledger leaves demo accounts out, as the subscription report does (D-127); one account
+    // asked for by id lists its own payments, demo or not.
     if (filters.accountId) where.accountId = filters.accountId;
+    else where.account = { isDemo: false };
     if (filters.direction) where.direction = filters.direction;
     const payments = await this.prisma.payment.findMany({
       where,

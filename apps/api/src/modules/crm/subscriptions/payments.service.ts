@@ -12,7 +12,7 @@ const WHOLE_LEDGER = "00000000-0000-0000-0000-000000000000";
  * The finance payment ledger read (`crm.payments.read` — FA/SA; the RESTRICTED-FINANCE counterpart to
  * the record-payment write on subscriptions). Returns the finance view of inbound and outbound payments,
  * cursor-paginated newest-first; `accountId` narrows to one client, `direction` to receipts or
- * settlements. Every read is audited as a `restricted_read` (security.md: a RESTRICTED-FINANCE read — in
+ * settlements. Without `accountId` the ledger leaves demo accounts out, as the subscription report does. Every read is audited as a `restricted_read` (security.md: a RESTRICTED-FINANCE read — in
  * particular a Super Admin's break-glass read outside Finance — is recorded) with the filter and the
  * row count, so a scan of the ledger always leaves a trail.
  */

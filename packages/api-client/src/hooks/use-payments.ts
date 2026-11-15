@@ -5,8 +5,9 @@ import { useCursorList } from "./use-cursor-list";
 
 /*
  * The finance payment ledger (Module B CRM; `crm.payments.read` — FA/SA). The RESTRICTED-FINANCE view
- * of inbound and outbound payments, read-only, filtered by account and direction. Pass `enabled: false`
- * when the signed-in role lacks the key, so a denied principal never drives a forever-refused retry.
+ * of inbound and outbound payments, read-only, filtered by account and direction; without an account the
+ * ledger leaves demo accounts out. Pass `enabled: false` when the signed-in role lacks the key, so a
+ * denied principal never drives a forever-refused retry.
  */
 
 export const PAYMENTS_QUERY_KEY = ["crm", "payments"] as const;
