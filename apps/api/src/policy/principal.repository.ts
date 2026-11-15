@@ -29,9 +29,21 @@ export interface PrincipalRecord {
   }[];
 }
 
+/** An active staff user and the roles they hold, for deciding what they may do without a sign-in. */
+export interface StaffRoleRecord {
+  readonly id: string;
+  readonly name: string;
+  readonly roles: readonly PrincipalRole[];
+}
+
 export abstract class PrincipalRepository {
   abstract findByIdentitySubject(subject: string): Promise<PrincipalRecord | null>;
   abstract touchLastLogin(userId: string, at: Date): Promise<void>;
+  /**
+   * The active staff users with their roles, by name; only those among `userIds` when it is given. A
+   * disabled, invited, locked or deleted user is left out, as is a client or demo user.
+   */
+  abstract activeStaff(userIds?: readonly string[]): Promise<StaffRoleRecord[]>;
   /** The capability keys a custom role grants, directly and through its permission sets (D-036). */
   abstract capabilityKeysForRoles(roleIds: readonly string[]): Promise<string[]>;
   /** The statuses of the subscriptions on the account a client user belongs to (feature 8.3 gating). */
@@ -78,6 +90,36 @@ export class PrismaPrincipalRepository extends PrincipalRepository {
         canApprove: m.canApprove,
       })),
     };
+  }
+
+  async activeStaff(userIds?: readonly string[]): Promise<StaffRoleRecord[]> {
+    const users = await this.prisma.user.findMany({
+      where: {
+        userType: "staff",
+        status: "active",
+        deletedAt: null,
+        ...(userIds ? { id: { in: [...userIds] } } : {}),
+      },
+      orderBy: [{ name: "asc" }, { id: "asc" }],
+      select: {
+        id: true,
+        name: true,
+        // A soft-deleted role grants nothing (architecture §8), as in findByIdentitySubject.
+        roles: {
+          where: { role: { deletedAt: null } },
+          select: { role: { select: { id: true, roleKey: true, isSystem: true } } },
+        },
+      },
+    });
+    return users.map((user) => ({
+      id: user.id,
+      name: user.name,
+      roles: user.roles.map(({ role }) => ({
+        roleKey: role.roleKey,
+        roleId: role.id,
+        isSystem: role.isSystem,
+      })),
+    }));
   }
 
   async touchLastLogin(userId: string, at: Date): Promise<void> {

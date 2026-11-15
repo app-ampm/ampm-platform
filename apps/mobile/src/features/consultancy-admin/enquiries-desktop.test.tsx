@@ -231,8 +231,8 @@ describe("An enquiry's page from 1024 (T6)", () => {
     await renderDetail();
     const pane = screen.getByTestId("enquiry-pane");
     expect(within(pane).getByTestId("enquiry-pipeline")).toBeOnTheScreen();
-    // The overview: the client card's name, then the status moves.
-    expect(headings(pane)).toEqual([HOTEL_NAME, CLIENT_NAME, "Move the enquiry"]);
+    // The overview: the client card's name, who holds it (nobody yet), then the status moves.
+    expect(headings(pane)).toEqual([HOTEL_NAME, CLIENT_NAME, "Unassigned", "Move the enquiry"]);
     await fireEvent.press(within(pane).getByRole("tab", { name: "Booking" }));
     // Past the sections' loading shapes (which carry the same titles) to the loaded sections.
     expect(
@@ -257,7 +257,7 @@ describe("An enquiry's page from 1024 (T6)", () => {
     expect(screen.queryByTestId("enquiry-pane")).toBeNull();
     const split = screen.getByTestId("enquiries-split");
     expect(within(split).getByTestId("enquiry-pipeline")).toBeOnTheScreen();
-    expect(headings(split)).toEqual([CLIENT_NAME, "Move the enquiry"]);
+    expect(headings(split)).toEqual([CLIENT_NAME, "Unassigned", "Move the enquiry"]);
     await fireEvent.press(within(split).getByRole("tab", { name: "Activity" }));
     // Each section stands on the page as its own glass card.
     expect(screen.getByTestId("enquiry-activity").props.className).toContain("border-primary/16");

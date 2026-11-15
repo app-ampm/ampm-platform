@@ -65,6 +65,7 @@ export function toEnquiryStaffView(
     hotelName: extras.hotelName,
     requestedByUserId: row.requestedByUserId,
     assignedUserId: row.assignedUserId,
+    assignedUserName: extras.assignedUserName,
     serviceAgreementId: row.serviceAgreementId,
     latestProposal: extras.latestProposal,
   };

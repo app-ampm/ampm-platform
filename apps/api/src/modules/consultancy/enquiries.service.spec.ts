@@ -106,7 +106,6 @@ function build(row: EnquiryRow = makeRow(), events: EnquiryEventRow[] = []) {
     extrasFor: vi.fn(async () => new Map()),
     extrasOf: vi.fn(async () => NO_EXTRAS),
   };
-  const logger = { warn: vi.fn() };
   // One set of mocks backs the service and the real writer, so the assertions see every write.
   const shared = [repo, eventsRepo, prisma, audit] as unknown as SharedDeps;
   const notifier = notifications as unknown as NotificationService;
@@ -118,7 +117,9 @@ function build(row: EnquiryRow = makeRow(), events: EnquiryEventRow[] = []) {
     agreements as unknown as ServiceAgreementsService,
     milestones as unknown as BookingMilestonesRepository,
     insights as unknown as EnquiryInsightsRepository,
-    logger as unknown as AppLogger,
+    { warn: vi.fn() } as unknown as AppLogger,
+    // Who may hold an enquiry has its own spec (enquiry-assignment.spec.ts).
+    { assertAssignable: vi.fn(async () => undefined) } as unknown as EnquiriesService["assignment"],
   );
   return { service, repo, eventsRepo, audit, notifications, config, agreements, milestones };
 }

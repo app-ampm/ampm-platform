@@ -188,6 +188,7 @@ export {
 // read as the internal view and driven by status transitions. Staff-only — gated server-side by role.
 export {
   STAFF_ENQUIRIES_QUERY_KEY,
+  staffEnquiriesPath,
   staffEnquiryQueryKey,
   useStaffEnquiries,
   useStaffEnquiry,
@@ -195,6 +196,12 @@ export {
   useTransitionEnquiry,
   type StaffEnquiriesQuery,
 } from "./hooks/use-staff-enquiries";
+// Who holds an enquiry: the owner picker's team list and the internal-fields edit that assigns it.
+export {
+  ENQUIRY_ASSIGNEES_QUERY_KEY,
+  useEnquiryAssignees,
+  useUpdateStaffEnquiry,
+} from "./hooks/use-enquiry-assignment";
 export {
   STAFF_PROPOSALS_QUERY_KEY,
   staffProposalsQueryKey,

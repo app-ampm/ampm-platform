@@ -56,6 +56,21 @@ export const HOTEL_ENQUIRY_STAGE_STATUSES: Readonly<
   closed: ["closed"],
 };
 
+/**
+ * The stages the team still works on: an outcome (confirmed or closed) is no longer open. The pipeline's
+ * "nobody holds it" count and the queue's Mine / Unassigned filters read only these.
+ */
+export const HOTEL_ENQUIRY_OPEN_STAGES: readonly HotelEnquiryStage[] = [
+  "new",
+  "with_hotel",
+  "proposal",
+  "client_decision",
+];
+
+/** Every status of an open stage (HOTEL_ENQUIRY_OPEN_STAGES), flattened. */
+export const HOTEL_ENQUIRY_OPEN_STATUSES: readonly HotelEnquiryStatus[] =
+  HOTEL_ENQUIRY_OPEN_STAGES.flatMap((stage) => HOTEL_ENQUIRY_STAGE_STATUSES[stage]);
+
 /** The stage a status belongs to. */
 export function hotelEnquiryStageOf(status: HotelEnquiryStatus): HotelEnquiryStage {
   const found = hotelEnquiryStage.options.find((stage) =>
@@ -157,6 +172,13 @@ export const hotelEnquiryEventCreateRequest = z
   .strict();
 export type HotelEnquiryEventCreateRequest = z.infer<typeof hotelEnquiryEventCreateRequest>;
 
+/**
+ * The staff queue's holder filter: `me` is the open enquiries the reader holds, `unassigned` the open ones
+ * nobody holds (the pipeline's `unassignedOpen`). Both are open work only, so each list matches its count.
+ */
+export const hotelEnquiryAssigneeFilter = z.enum(["me", "unassigned"]);
+export type HotelEnquiryAssigneeFilter = z.infer<typeof hotelEnquiryAssigneeFilter>;
+
 export const hotelEnquiryListQuery = cursorQuery.extend({
   status: hotelEnquiryStatus.optional(),
   /** Every status of one pipeline stage (the staff queue's filter); ignored when `status` is given. */
@@ -165,6 +187,8 @@ export const hotelEnquiryListQuery = cursorQuery.extend({
   /** One client's enquiries (the account hub, TW-13 Hotels). Staff only: the client list is always
    *  scoped to the caller's own account, so this is ignored there. */
   accountId: uuid.optional(),
+  /** Staff only: who holds it (the client's own list ignores it). */
+  assignee: hotelEnquiryAssigneeFilter.optional(),
 });
 export type HotelEnquiryListQuery = z.infer<typeof hotelEnquiryListQuery>;
 
@@ -243,6 +267,9 @@ const enquiryStaffFields = {
   hotelName: z.string().nullable(),
   requestedByUserId: uuid,
   assignedUserId: uuid.nullable(),
+  // The holder's name, so the queue says who has it without a directory read per row. INTERNAL (a staff
+  // member's name, staff audience only); null while nobody holds it or the user record is gone.
+  assignedUserName: z.string().nullable(),
   serviceAgreementId: uuid.nullable(),
   latestProposal: hotelEnquiryProposalSummary.nullable(),
   // RESTRICTED-NOTES: present only for a staff audience that holds `consultancy.enquiry_notes.read`
@@ -272,9 +299,22 @@ export const hotelEnquiryPipelineView = z
   .object({
     stages: z.record(hotelEnquiryStage, z.number().int().min(0)),
     unassignedOpen: z.number().int().min(0),
+    /** The open enquiries the reader holds (the queue's "Mine" filter). */
+    mineOpen: z.number().int().min(0),
   })
   .strict();
 export type HotelEnquiryPipelineView = z.infer<typeof hotelEnquiryPipelineView>;
+
+/**
+ * Someone an enquiry can be handed to (`GET /consultancy-admin/enquiries/assignees`): an active staff
+ * member whose roles let them work every enquiry. The id and the name only — the picker needs no more of
+ * the staff directory.
+ */
+export const hotelEnquiryAssignee = z.object({ id: uuid, name: z.string() }).strict();
+export type HotelEnquiryAssignee = z.infer<typeof hotelEnquiryAssignee>;
+
+export const hotelEnquiryAssigneeList = z.array(hotelEnquiryAssignee);
+export type HotelEnquiryAssigneeList = z.infer<typeof hotelEnquiryAssigneeList>;
 
 /**
  * The response to CP-07: a subscriber opens an enquiry; a demo prospect is routed to Sales (P-7) and

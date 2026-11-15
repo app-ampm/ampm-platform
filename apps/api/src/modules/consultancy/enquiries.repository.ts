@@ -165,14 +165,21 @@ export class EnquiriesRepository {
     return this.page({ accountId, ...this.filters(query) }, query);
   }
 
-  /** The staff queue, optionally one client's enquiries (the account hub). The account filter is applied
-   *  here and never in `filters`, so the client path — always its own account — cannot be widened by it. */
+  /**
+   * The staff queue: the guard's scope, the query's filters and the service's holder filter, all met;
+   * optionally one client's enquiries (the account hub). The account filter is applied here and never in
+   * `filters`, so the client path — always its own account — cannot be widened by it.
+   */
   async listStaff(
     scopeWhere: Prisma.HotelEnquiryWhereInput,
     query: HotelEnquiryListQuery,
+    holderWhere: Prisma.HotelEnquiryWhereInput = {},
   ): Promise<{ rows: EnquiryRow[]; nextCursor: string | null }> {
     const byAccount = query.accountId ? { accountId: query.accountId } : {};
-    return this.page({ ...scopeWhere, ...byAccount, ...this.filters(query) }, query);
+    return this.page(
+      { ...scopeWhere, ...byAccount, AND: [this.filters(query), holderWhere] },
+      query,
+    );
   }
 
   async updateStatus(

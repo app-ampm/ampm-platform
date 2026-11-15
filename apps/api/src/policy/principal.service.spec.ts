@@ -4,12 +4,25 @@ import { describe, expect, it } from "vitest";
 import type { AppLogger } from "../common/logger.service.js";
 import type { Env } from "../env.js";
 import type { SubscriptionStatus } from "../generated/prisma/client.js";
-import { PrincipalRepository, type PrincipalRecord } from "./principal.repository.js";
+import {
+  PrincipalRepository,
+  type PrincipalRecord,
+  type StaffRoleRecord,
+} from "./principal.repository.js";
 import { PrincipalService } from "./principal.service.js";
 import { toPolicyPrincipal } from "./principal.types.js";
 
 class FakeRepository extends PrincipalRepository {
   touched: string[] = [];
+  activeStaff(userIds?: readonly string[]): Promise<StaffRoleRecord[]> {
+    const staff = this.records.filter(
+      (r) =>
+        r.userType === "staff" &&
+        r.status === "active" &&
+        (userIds === undefined || userIds.includes(r.id)),
+    );
+    return Promise.resolve(staff.map((r) => ({ id: r.id, name: r.name, roles: r.roles })));
+  }
   constructor(
     private readonly records: PrincipalRecord[],
     private readonly caps: Readonly<Record<string, readonly string[]>> = {},
@@ -155,5 +168,52 @@ describe("PrincipalService", () => {
     if (principal.type !== "staff") throw new Error("expected staff");
     expect(principal.roles).toEqual([]);
     expect(decide(toPolicyPrincipal(principal), "admin.roles.update").allowed).toBe(false);
+  });
+});
+
+describe("PrincipalService.staffHolding", () => {
+  const ENQUIRY_UPDATE = "consultancy.enquiries.update";
+  const person = (n: number, name: string, roleKey: string, isSystem = true, extra = {}) =>
+    record({
+      id: `0192f3a0-7d3e-7b1a-9c2f-00000000010${n}`,
+      name,
+      email: `p${n}@example.com`,
+      roles: [{ roleKey, roleId: `r-${roleKey}`, isSystem }],
+      ...extra,
+    });
+  const asha = person(1, "Asha Admin", "super_admin");
+  const hema = person(2, "Hema Hotels", "hotel_team");
+  const priya = person(3, "Priya Manager", "project_manager");
+  const farah = person(4, "Farah Finance", "finance");
+  const dev = person(5, "Dev Disabled", "hotel_team", true, { status: "disabled" as const });
+  const rhea = person(6, "Rhea Client", "hotel_team", true, { userType: "client" as const });
+  const cara = person(7, "Cara Custom", "custom_enquiries", false);
+  const everyone = [asha, hema, priya, farah, dev, rhea, cara];
+  const customCaps = { "r-custom_enquiries": ["consultancy.enquiries.update:all"] };
+
+  it("lists the active staff whose roles reach every record, not a wedding-scoped grant", async () => {
+    const found = await service(new FakeRepository(everyone, customCaps)).staffHolding(
+      ENQUIRY_UPDATE,
+    );
+    expect(found).toEqual([
+      { id: asha.id, name: "Asha Admin" },
+      { id: hema.id, name: "Hema Hotels" },
+    ]);
+  });
+
+  it("counts a custom role's all-records grant once DYNAMIC_ROLES is on", async () => {
+    const found = await service(new FakeRepository(everyone, customCaps), true).staffHolding(
+      ENQUIRY_UPDATE,
+    );
+    expect(found.map((m) => m.name)).toEqual(["Asha Admin", "Hema Hotels", "Cara Custom"]);
+  });
+
+  it("checks one candidate when given their id", async () => {
+    const svc = service(new FakeRepository(everyone, customCaps));
+    expect(await svc.staffHolding(ENQUIRY_UPDATE, [hema.id])).toEqual([
+      { id: hema.id, name: "Hema Hotels" },
+    ]);
+    expect(await svc.staffHolding(ENQUIRY_UPDATE, [farah.id])).toEqual([]);
+    expect(await svc.staffHolding(ENQUIRY_UPDATE, [dev.id])).toEqual([]);
   });
 });

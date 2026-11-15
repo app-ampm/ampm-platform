@@ -5,6 +5,7 @@ import { fireEvent, screen, waitFor, within } from "../../test/render";
 import {
   ENQUIRY_ID,
   MILESTONE_ID,
+  STAFF_USER_ID,
   VISIT_ID,
   detailFixture,
   enquiryFixture,
@@ -108,7 +109,16 @@ describe("StaffEnquiryDetailScreen: header and notes", () => {
       ),
     ).toBeOnTheScreen();
     expect(screen.getByLabelText("Submitted")).toBeOnTheScreen();
-    expect(screen.getByText("Unassigned")).toBeOnTheScreen();
+    expect(within(heading).getByText("Unassigned")).toBeOnTheScreen();
+  });
+
+  it("names the holder under the status once someone on the team holds it", async () => {
+    const detail = detailFixture({ assignedUserId: STAFF_USER_ID, assignedUserName: "Meera Iyer" });
+    await renderDetail(enquiryFetch(detail));
+    const holder = await screen.findByTestId("enquiry-heading-holder");
+    expect(holder).toHaveProp("accessibilityLabel", "Held by Meera Iyer");
+    expect(within(holder).getByText("Meera I.")).toBeOnTheScreen();
+    expect(within(screen.getByTestId("enquiry-heading")).queryByText("Unassigned")).toBeNull();
   });
 
   it("keeps the client's note and the internal note apart, the internal one in its panel", async () => {

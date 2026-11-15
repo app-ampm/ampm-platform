@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 
+import { PolicyModule } from "../../policy/policy.module.js";
 import { NotificationModule } from "../admin/notification/notification.module.js";
 import { ServiceAgreementsModule } from "../crm/service-agreements/service-agreements.module.js";
 import { DocumentsModule } from "../documents/documents.module.js";
@@ -9,6 +10,7 @@ import { EnquiriesClientService } from "./enquiries-client.service.js";
 import { EnquiriesController } from "./enquiries.controller.js";
 import { EnquiriesRepository } from "./enquiries.repository.js";
 import { EnquiriesService } from "./enquiries.service.js";
+import { EnquiryAssignmentService } from "./enquiry-assignment.js";
 import { EnquiryEventsRepository } from "./enquiry-events.repository.js";
 import { EnquiryInsightsRepository } from "./enquiry-insights.repository.js";
 import { EnquiryShareAdvance } from "./enquiry-share-advance.js";
@@ -43,10 +45,17 @@ import { MilestoneOverdueService } from "./milestones.overdue.service.js";
  * through Module N's DocumentsService (a downward D→N dependency). It reads Module C
  * through HotelsService, reaches Module B through ServiceAgreementsService (the AC-05.7 gate) and domain
  * events; account resolution reads the CRM `account_contacts` table directly (the recorded D-063 shortcut).
+ * Who may hold an enquiry comes from the policy kernel (PolicyModule's PrincipalService.staffHolding).
  * PrismaService, the EventBus, ConfigService and the policy/audit kernel are @Global.
  */
 @Module({
-  imports: [HotelsModule, NotificationModule, ServiceAgreementsModule, DocumentsModule],
+  imports: [
+    HotelsModule,
+    NotificationModule,
+    ServiceAgreementsModule,
+    DocumentsModule,
+    PolicyModule,
+  ],
   controllers: [
     EnquiriesController,
     EnquiriesClientController,
@@ -61,6 +70,7 @@ import { MilestoneOverdueService } from "./milestones.overdue.service.js";
     EnquiriesService,
     EnquiriesClientService,
     EnquiriesRepository,
+    EnquiryAssignmentService,
     EnquiryEventsRepository,
     EnquiryInsightsRepository,
     EnquiryTransitionWriter,

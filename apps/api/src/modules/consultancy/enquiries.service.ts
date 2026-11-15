@@ -21,6 +21,7 @@ import { AuditService } from "../../policy/audit.service.js";
 import { type Principal, toPolicyPrincipal } from "../../policy/principal.types.js";
 import { ConfigService } from "../admin/config/config.service.js";
 import { ServiceAgreementsService } from "../crm/service-agreements/service-agreements.service.js";
+import { assigneeWhere, EnquiryAssignmentService } from "./enquiry-assignment.js";
 import { EnquiriesRepository, type EnquiryRow } from "./enquiries.repository.js";
 import { BookingMilestonesRepository } from "./booking-milestones.repository.js";
 import { EnquiryEventsRepository, type EnquiryEventRow } from "./enquiry-events.repository.js";
@@ -67,6 +68,7 @@ export class EnquiriesService {
     private readonly milestones: BookingMilestonesRepository,
     private readonly insights: EnquiryInsightsRepository,
     private readonly logger: AppLogger,
+    private readonly assignment: EnquiryAssignmentService,
   ) {}
 
   async list(
@@ -76,7 +78,11 @@ export class EnquiriesService {
   ): Promise<HotelEnquiryStaffPage> {
     const scope = recordScope(principal, access.scope);
     const withNotes = this.canReadInternalNotes(principal);
-    const { rows, nextCursor } = await this.enquiries.listStaff(scope.where, query);
+    const { rows, nextCursor } = await this.enquiries.listStaff(
+      scope.where,
+      query,
+      assigneeWhere(query.assignee, principal),
+    );
     const extras = await this.insights.extrasFor(rows);
     return {
       items: rows.map((row) => toEnquiryStaffView(row, withNotes, extras.get(row.id) ?? NO_EXTRAS)),
@@ -227,6 +233,7 @@ export class EnquiriesService {
     request: HotelEnquiryStaffUpdateRequest,
   ): Promise<HotelEnquiryStaffView> {
     const current = await this.requireInScope(id, principal, access);
+    await this.assignment.assertAssignable(request.assignedUserId, current.assignedUserId);
     const actorId = staffId(principal);
     await this.prisma.$transaction(async (tx) => {
       await this.enquiries.updateStaffFields(id, buildStaffPatch(request), actorId, tx);

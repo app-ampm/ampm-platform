@@ -2,6 +2,7 @@ import type {
   BookingMilestoneStaffView,
   HotelEnquiryStaffDetailView,
   HotelEnquiryStaffView,
+  MeResponse,
   SiteVisitStaffView,
 } from "@ampm/core";
 
@@ -27,7 +28,11 @@ const PROPOSAL_ID = "018f0000-0000-7000-8000-0000000008d1";
 const ACCOUNT_ID = "018f0000-0000-7000-8000-0000000002ac";
 const SERVICE_TYPE_ID = "018f0000-0000-7000-8000-0000000003c5";
 const CLIENT_USER_ID = "018f0000-0000-7000-8000-0000000000d2";
-const STAFF_USER_ID = "018f0000-0000-7000-8000-00000000cafe";
+export const STAFF_USER_ID = "018f0000-0000-7000-8000-00000000cafe";
+export const STAFF_USER_NAME = "Meera Iyer";
+/** The signed-in hotel-team member the owner tests act as. */
+export const ME_ID = "018f0000-0000-7000-8000-00000000f00d";
+export const ME_NAME = "Hema Hotels";
 const SUBMITTED_AT = "2026-11-03T09:12:00.000Z";
 export const HOTEL_NAME = "The Lake Pavilion";
 export const CLIENT_NAME = "Ananya Sharma";
@@ -59,6 +64,7 @@ export function enquiryFixture(
     hotelName: HOTEL_NAME,
     requestedByUserId: CLIENT_USER_ID,
     assignedUserId: null,
+    assignedUserName: null,
     serviceAgreementId: null,
     latestProposal: null,
     notesInternal: null,
@@ -161,6 +167,31 @@ export function routedFetch(
   };
 }
 
+/** The signed-in hotel-team member (`/me`), who may hold enquiries. */
+export function hotelTeamMeFixture(): MeResponse {
+  return {
+    principal: {
+      type: "staff",
+      userId: ME_ID,
+      name: ME_NAME,
+      email: "hotel@example.com",
+      phone: null,
+      status: "active",
+      lastLoginAt: null,
+    },
+    roles: ["HT"],
+    memberships: [],
+    entitlements: {
+      modules: [],
+      readOnlyModules: [],
+      hotelReach: [],
+      financeReach: [],
+      requestTypes: { wedding: [], account: [] },
+    },
+    isDemo: false,
+  };
+}
+
 const OTHER_HOTEL_ID = "018f0000-0000-7000-8000-00000000b0b0";
 
 /**
@@ -178,6 +209,7 @@ export function queueFixture(): HotelEnquiryStaffView[] {
       accountName: "Kapoor family",
       hotelName: "Rose Fort Palace",
       assignedUserId: STAFF_USER_ID,
+      assignedUserName: STAFF_USER_NAME,
       guestEstimate: 80,
       latestProposal: { id: PROPOSAL_ID, versionNumber: 2, status: "shared" },
     }),
@@ -199,7 +231,14 @@ export function workspaceRoutes(
       ok({
         stages: { new: 1, with_hotel: 1, proposal: 0, client_decision: 0, confirmed: 0, closed: 0 },
         unassignedOpen: 1,
+        mineOpen: 0,
       }),
+    "GET /consultancy-admin/enquiries/assignees": () =>
+      ok([
+        { id: ME_ID, name: ME_NAME },
+        { id: STAFF_USER_ID, name: STAFF_USER_NAME },
+      ]),
+    "GET /me": () => ok(hotelTeamMeFixture()),
     [`GET /consultancy-admin/enquiries/${ENQUIRY_ID}`]: () => ok(detail),
     [`GET /hotels-admin/hotels/${HOTEL_ID}`]: () =>
       ok(hotelStaffDetailViewFixture({ id: HOTEL_ID, name: HOTEL_NAME })),

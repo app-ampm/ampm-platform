@@ -49,6 +49,7 @@ function queue() {
       accountName: "Kapoor family",
       hotelName: "Rose Fort Palace",
       assignedUserId: "018f0000-0000-7000-8000-00000000cafe",
+      assignedUserName: "Meera Iyer",
       dateFrom: "2027-02-28",
       dateTo: "2027-03-02",
       guestEstimate: 1,
@@ -116,9 +117,10 @@ describe("StaffEnquiriesListScreen", () => {
     expect(within(row).getByText("Submitted")).toBeOnTheScreen();
     expect(within(row).getByText("Unassigned")).toBeOnTheScreen();
     const held = screen.getByLabelText(
-      /^Kapoor family, Awaiting hotel, Proposal v2 · shared, Rose Fort Palace · 1 guest/,
+      /^Kapoor family, Awaiting hotel, Proposal v2 · shared, Held by Meera Iyer, Rose Fort Palace · 1 guest/,
     );
     expect(within(held).queryByText("Unassigned")).toBeNull();
+    expect(within(held).getByText("Meera I.")).toBeOnTheScreen();
   });
 
   it("opens the enquiry's detail when a row is pressed", async () => {

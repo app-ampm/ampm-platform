@@ -42,6 +42,45 @@ export const staffEnquiryBadge: Record<HotelEnquiryStatus, Badge> = {
 export const UNASSIGNED_BADGE: Badge = { label: "Unassigned", tone: "danger" };
 export const ASSIGNED_BADGE: Badge = { label: "Assigned", tone: "info" };
 
+type Holder = Pick<HotelEnquiryStaffView, "assignedUserId" | "assignedUserName">;
+
+/** The holder's name, or null while nobody holds the enquiry (or their record is gone). */
+export function holderName(enquiry: Holder): string | null {
+  return enquiry.assignedUserId === null ? null : enquiry.assignedUserName;
+}
+
+/** A first name and the last name's initial, as the admin artboards write owners: "Hema H.". */
+export function shortPersonName(name: string): string {
+  const [first = "", ...rest] = name.trim().split(/\s+/);
+  const last = rest.at(-1);
+  return last ? `${first} ${last.charAt(0).toUpperCase()}.` : first;
+}
+
+/**
+ * Who holds an enquiry as a chip in the queue: the gold "Unassigned" while it is the team's to pick
+ * up, else the holder's short name in peacock ("Hema H."; "Assigned" when their name is unknown).
+ */
+export function holderBadge(enquiry: Holder): Badge {
+  if (enquiry.assignedUserId === null) return UNASSIGNED_BADGE;
+  const name = holderName(enquiry);
+  return name ? { label: shortPersonName(name), tone: ASSIGNED_BADGE.tone } : ASSIGNED_BADGE;
+}
+
+/** The holder for a screen reader, in full: "Unassigned", "Held by Hema Hotels". */
+export function holderSpoken(enquiry: Holder): string {
+  if (enquiry.assignedUserId === null) return UNASSIGNED_BADGE.label;
+  const name = holderName(enquiry);
+  return name ? `Held by ${name}` : ASSIGNED_BADGE.label;
+}
+
+/** The line under the owner's name on the enquiry's overview. */
+export function ownerCaption(held: boolean, isMine: boolean): string {
+  if (!held) return "Nobody on the hotel team has picked this enquiry up yet.";
+  return isMine
+    ? "You hold this enquiry: its next steps are yours."
+    : "Holds this enquiry for the hotel team.";
+}
+
 /**
  * What the queue and the enquiry page say to a staff role without the consultancy grant (the API's
  * 403): not theirs, rather than a fault to retry.

@@ -2,7 +2,7 @@ import type { HotelEnquiryStaffDetailView } from "@ampm/core";
 import { ScreenHeader, Stack, StatusChip } from "@ampm/ui";
 
 import { enquiryFacts } from "../consultancy/consultancy.format";
-import { staffEnquiryBadge, UNASSIGNED_BADGE } from "./consultancy-admin.format";
+import { holderBadge, holderSpoken, staffEnquiryBadge } from "./consultancy-admin.format";
 
 /** The page's title while the enquiry, or the hotel's name, is on its way. */
 export const ENQUIRY_FALLBACK_TITLE = "Hotel enquiry";
@@ -14,8 +14,8 @@ export const BACK_TO_QUEUE = "Back to enquiries";
 
 /**
  * T6's enquiry header: the client and the stay as one data line over the hotel's name, what is being
- * planned under it, and at the right the status chip with, while nobody holds the enquiry, the
- * "Unassigned" chip. The page's header on a phone (with its back button), the pane's own on a desktop.
+ * planned under it, and at the right the status chip over who holds the enquiry ("Hema H.", or the
+ * gold "Unassigned"). The page's header on a phone (with its back button), the pane's own on a desktop.
  * The staff view carries no reference or due time, so T6's "ENQ-0418" and "26h over" are left out.
  */
 export function EnquiryHeading({
@@ -43,15 +43,20 @@ export function EnquiryHeading({
   );
 }
 
-/** The status, and the gold "Unassigned" under it while the enquiry is the team's to pick up. */
+/** The status, and under it who holds the enquiry: their short name, or the gold "Unassigned". */
 function HeadingChips({ enquiry }: { readonly enquiry: HotelEnquiryStaffDetailView }) {
   const badge = staffEnquiryBadge[enquiry.status];
+  const holder = holderBadge(enquiry);
   return (
     <Stack gap={1} align="end">
       <StatusChip label={badge.label} tone={badge.tone} />
-      {enquiry.assignedUserId === null ? (
-        <StatusChip label={UNASSIGNED_BADGE.label} tone={UNASSIGNED_BADGE.tone} size="sm" />
-      ) : null}
+      <StatusChip
+        label={holder.label}
+        tone={holder.tone}
+        size="sm"
+        accessibilityLabel={holderSpoken(enquiry)}
+        testID="enquiry-heading-holder"
+      />
     </Stack>
   );
 }

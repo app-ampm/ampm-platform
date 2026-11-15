@@ -4,6 +4,7 @@ import {
   hotelEnquiryStaffDetailView,
   hotelEnquiryStaffPage,
   hotelEnquiryStaffView,
+  type HotelEnquiryAssigneeFilter,
   type HotelEnquiryPipelineView,
   type HotelEnquiryStage,
   type HotelEnquiryStaffDetailView,
@@ -25,10 +26,31 @@ export interface StaffEnquiriesQuery {
   readonly status?: string;
   /** One pipeline stage's statuses (the queue's filter). */
   readonly stage?: HotelEnquiryStage | undefined;
+  /** Who holds it: the reader's open enquiries, or the open ones nobody holds. */
+  readonly assignee?: HotelEnquiryAssigneeFilter | undefined;
   readonly hotelId?: string;
   /** One client's enquiries (the account hub). */
   readonly accountId?: string;
   readonly cursor?: string;
+}
+
+/**
+ * The staff queue's address for a query: `/consultancy-admin/enquiries?stage=new&assignee=me`, with only
+ * the filters given, in a fixed order.
+ *
+ * @example
+ * staffEnquiriesPath({ assignee: "unassigned" }); // "/consultancy-admin/enquiries?assignee=unassigned"
+ */
+export function staffEnquiriesPath(query: StaffEnquiriesQuery): string {
+  const params = new URLSearchParams();
+  if (query.status) params.set("status", query.status);
+  if (query.stage) params.set("stage", query.stage);
+  if (query.assignee) params.set("assignee", query.assignee);
+  if (query.hotelId) params.set("hotelId", query.hotelId);
+  if (query.accountId) params.set("accountId", query.accountId);
+  if (query.cursor) params.set("cursor", query.cursor);
+  const suffix = params.toString();
+  return `/consultancy-admin/enquiries${suffix ? `?${suffix}` : ""}`;
 }
 
 /**
@@ -40,22 +62,10 @@ export function useStaffEnquiries(
   options: { readonly enabled?: boolean } = {},
 ) {
   const api = useApiClient();
-  const params = new URLSearchParams();
-  if (query.status) params.set("status", query.status);
-  if (query.stage) params.set("stage", query.stage);
-  if (query.hotelId) params.set("hotelId", query.hotelId);
-  if (query.accountId) params.set("accountId", query.accountId);
-  if (query.cursor) params.set("cursor", query.cursor);
-  const suffix = params.toString();
   return useQuery<HotelEnquiryStaffPage>({
     queryKey: [...STAFF_ENQUIRIES_QUERY_KEY, query],
     enabled: options.enabled ?? true,
-    queryFn: ({ signal }) =>
-      api.get(
-        `/consultancy-admin/enquiries${suffix ? `?${suffix}` : ""}`,
-        hotelEnquiryStaffPage,
-        signal,
-      ),
+    queryFn: ({ signal }) => api.get(staffEnquiriesPath(query), hotelEnquiryStaffPage, signal),
   });
 }
 
