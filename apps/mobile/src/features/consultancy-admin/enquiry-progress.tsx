@@ -207,6 +207,7 @@ function MilestoneStep({
 }) {
   const toast = useToast();
   const transition = useTransitionBookingMilestone(milestone.id, enquiryId);
+  const nexts = milestoneNexts(milestone, MILESTONE_NEXT[milestone.status]);
   const move = (status: BookingMilestoneStatus): void =>
     transition.mutate(
       { status },
@@ -223,7 +224,8 @@ function MilestoneStep({
       <MilestoneFacts milestone={milestone} />
       <MilestoneContract milestone={milestone} enquiryId={enquiryId} />
       <TransitionRow
-        nexts={milestoneNexts(milestone, MILESTONE_NEXT[milestone.status])}
+        nexts={nexts}
+        hasForward={nexts.includes("done")}
         pending={transition.isPending}
         onMove={move}
       />

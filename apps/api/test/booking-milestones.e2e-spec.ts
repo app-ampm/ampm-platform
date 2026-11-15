@@ -19,9 +19,10 @@ const PDF = Buffer.from("%PDF-1.4\n% E2E signed contract\n%%EOF\n");
 
 /**
  * Module D feature 10.5 end to end: the AC-05.6 confirmed-guard (409 naming each missing item, then
- * success once a signed contract is uploaded to a `contract_signed` milestone, D-132), the W-14 client amount gate (absent by default, present once enabled; staff always see it),
- * authz (SM reads, cannot create; FA updates the amount; `overdue` is not a manual move), and account
- * isolation. The overdue sweep is covered in booking-milestones-sweep.e2e-spec.ts.
+ * success once a signed contract is uploaded to a `contract_signed` milestone, D-132), the W-14 client
+ * amount gate (absent by default, present once enabled; staff always see it), authz (SM reads, cannot
+ * create; FA updates the amount; `overdue` is not a manual move), and account isolation. The overdue
+ * sweep is covered in booking-milestones-sweep.e2e-spec.ts.
  */
 describe("Booking milestones (e2e)", () => {
   let app: NestExpressApplication;
