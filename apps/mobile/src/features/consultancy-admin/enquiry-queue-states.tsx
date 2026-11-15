@@ -1,7 +1,11 @@
 import type { ReactNode } from "react";
 
 import type { useStaffEnquiries } from "@ampm/api-client";
-import type { HotelEnquiryStaffPage } from "@ampm/core";
+import type {
+  HotelEnquiryAssigneeFilter,
+  HotelEnquiryStaffPage,
+  HotelEnquiryStage,
+} from "@ampm/core";
 import { Card, EmptyState, QueryErrorState, Skeleton, Stack } from "@ampm/ui";
 
 import { useGoToSignIn } from "@/navigation/sign-in";
@@ -15,10 +19,38 @@ export interface EnquiryQueueStatesProps {
    * On a phone they stand on the page as their own glass.
    */
   readonly inPanel?: boolean | undefined;
-  /** A stage filter is on: an empty page means none at that stage, not none at all. */
-  readonly filtered?: boolean | undefined;
+  /** The filters on: an empty page then means none that match, not none at all. */
+  readonly stage?: HotelEnquiryStage | null | undefined;
+  readonly assignee?: HotelEnquiryAssigneeFilter | null | undefined;
   /** The queue, once it has enquiries. */
   readonly children: (page: HotelEnquiryStaffPage) => ReactNode;
+}
+
+/**
+ * What an empty, filtered queue says: which filter found nothing, and how to see more. Null with no
+ * filter on (the queue is simply empty).
+ */
+export function filteredEmptyCopy(
+  stage: HotelEnquiryStage | null,
+  assignee: HotelEnquiryAssigneeFilter | null,
+): { readonly title: string; readonly description: string } | null {
+  const atStage = stage === null ? "" : " at this stage";
+  if (assignee === "me")
+    return {
+      title: "Nothing of yours open",
+      description: `No open enquiry${atStage} is assigned to you. Choose Everyone to see the whole queue.`,
+    };
+  if (assignee === "unassigned")
+    return {
+      title: "Nothing waiting for an owner",
+      description: `Every open enquiry${atStage} has someone on the hotel team on it.`,
+    };
+  if (stage !== null)
+    return {
+      title: "Nothing at this stage",
+      description: "No enquiry is at this stage right now. Choose All to see every one.",
+    };
+  return null;
 }
 
 /**
@@ -28,7 +60,8 @@ export interface EnquiryQueueStatesProps {
 export function EnquiryQueueStates({
   enquiries,
   inPanel = false,
-  filtered = false,
+  stage = null,
+  assignee = null,
   children,
 }: EnquiryQueueStatesProps) {
   const goToSignIn = useGoToSignIn();
@@ -44,15 +77,9 @@ export function EnquiryQueueStates({
         blur={!inPanel}
       />
     );
+  const filtered = filteredEmptyCopy(stage, assignee);
   if (enquiries.data.items.length === 0 && filtered)
-    return (
-      <EmptyState
-        icon="filter"
-        title="Nothing at this stage"
-        description="No enquiry is at this stage right now. Choose All to see every one."
-        blur={!inPanel}
-      />
-    );
+    return <EmptyState icon="filter" {...filtered} blur={!inPanel} />;
   if (enquiries.data.items.length === 0)
     return (
       <EmptyState

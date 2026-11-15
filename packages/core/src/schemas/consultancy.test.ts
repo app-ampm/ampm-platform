@@ -6,7 +6,12 @@ import {
   hotelEnquiryEventClientView,
   hotelEnquiryWithdrawableStatuses,
   isHotelEnquiryWithdrawable,
+  HOTEL_ENQUIRY_OPEN_STAGES,
+  HOTEL_ENQUIRY_OPEN_STATUSES,
   HOTEL_ENQUIRY_STAGE_STATUSES,
+  hotelEnquiryAssignee,
+  hotelEnquiryAssigneeList,
+  hotelEnquiryListQuery,
   hotelEnquiryPipelineView,
   hotelEnquiryStage,
   hotelEnquiryStageOf,
@@ -134,10 +139,33 @@ describe("the staff pipeline's stages", () => {
 
   it("needs a count for every stage in the pipeline view", () => {
     const stages = { new: 1, with_hotel: 0, proposal: 0, client_decision: 2, confirmed: 0 };
-    expect(hotelEnquiryPipelineView.safeParse({ stages, unassignedOpen: 1 }).success).toBe(false);
+    const counts = { unassignedOpen: 1, mineOpen: 0 };
+    expect(hotelEnquiryPipelineView.safeParse({ stages, ...counts }).success).toBe(false);
     expect(
-      hotelEnquiryPipelineView.safeParse({ stages: { ...stages, closed: 4 }, unassignedOpen: 1 })
-        .success,
+      hotelEnquiryPipelineView.safeParse({ stages: { ...stages, closed: 4 }, ...counts }).success,
     ).toBe(true);
+  });
+
+  it("counts open work only: an outcome is never open", () => {
+    expect(HOTEL_ENQUIRY_OPEN_STAGES).toEqual(["new", "with_hotel", "proposal", "client_decision"]);
+    expect(HOTEL_ENQUIRY_OPEN_STATUSES).not.toContain("confirmed");
+    expect(HOTEL_ENQUIRY_OPEN_STATUSES).not.toContain("closed");
+    expect(HOTEL_ENQUIRY_OPEN_STATUSES).toContain("negotiating");
+  });
+});
+
+describe("who holds an enquiry", () => {
+  it("filters the staff queue by the reader's or nobody's, and nothing else", () => {
+    expect(hotelEnquiryListQuery.parse({ assignee: "me" }).assignee).toBe("me");
+    expect(hotelEnquiryListQuery.parse({ assignee: "unassigned" }).assignee).toBe("unassigned");
+    expect(hotelEnquiryListQuery.safeParse({ assignee: "someone" }).success).toBe(false);
+  });
+
+  it("lists an assignee as an id and a name only", () => {
+    const hema = { id: "018f0000-0000-7000-8000-00000000cafe", name: "Hema Hotels" };
+    expect(hotelEnquiryAssigneeList.parse([hema])).toEqual([hema]);
+    expect(hotelEnquiryAssignee.safeParse({ ...hema, email: "hotel@example.com" }).success).toBe(
+      false,
+    );
   });
 });

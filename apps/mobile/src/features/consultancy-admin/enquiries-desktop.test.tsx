@@ -215,6 +215,18 @@ describe("An enquiry's page from 1024 (T6)", () => {
     );
   });
 
+  it("carries the owner filter onto the first enquiry it opens", async () => {
+    await renderWithApi(
+      <StaffEnquiriesListScreen stage="new" assignee="unassigned" />,
+      routedFetch(workspaceRoutes()),
+    );
+    await waitFor(() =>
+      expect(mockRouter.replace).toHaveBeenCalledWith(
+        `/enquiries/${ENQUIRY_ID}?stage=new&assignee=unassigned`,
+      ),
+    );
+  });
+
   it("heads the pane with the client and stay as data, the hotel, and the chips", async () => {
     await renderDetail();
     const heading = within(screen.getByTestId("enquiry-pane")).getByTestId("enquiry-heading");
