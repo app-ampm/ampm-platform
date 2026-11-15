@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { accountClientView, accountListQuery, leadConvertRequest } from "./accounts.js";
+import {
+  accountClientView,
+  accountContactCreateRequest,
+  accountContactUpdateRequest,
+  accountListQuery,
+  accountUpdateRequest,
+  leadConvertRequest,
+} from "./accounts.js";
 
 const ID = "018f0000-0000-7000-8000-000000000000";
 
@@ -60,5 +67,58 @@ describe("accountListQuery", () => {
     expect(accountListQuery.safeParse({ cursor: "not-a-uuid" }).success).toBe(false);
     expect(accountListQuery.safeParse({ cursor: ID }).success).toBe(true);
     expect(accountListQuery.safeParse({}).success).toBe(true);
+  });
+});
+
+describe("accountUpdateRequest", () => {
+  it("refuses an empty body", () => {
+    expect(accountUpdateRequest.safeParse({}).success).toBe(false);
+  });
+
+  it("clears an optional text field with null or an emptied box, and leaves absent fields out", () => {
+    const parsed = accountUpdateRequest.safeParse({ coupleNames: "  ", internalNotes: null });
+    expect(parsed.success).toBe(true);
+    if (!parsed.success) return;
+    expect(parsed.data.coupleNames).toBeNull();
+    expect(parsed.data.internalNotes).toBeNull();
+    // An absent field is not a change: it must not reach the patch as a key.
+    expect("preferredLocations" in parsed.data).toBe(false);
+    expect("name" in parsed.data).toBe(false);
+  });
+
+  it("keeps the account name required when given (an account always has a name)", () => {
+    expect(accountUpdateRequest.safeParse({ name: "   " }).success).toBe(false);
+    expect(accountUpdateRequest.safeParse({ name: null }).success).toBe(false);
+  });
+});
+
+describe("accountContactCreateRequest", () => {
+  it("defaults the decision-maker and invite flags off and normalises the phone", () => {
+    const parsed = accountContactCreateRequest.safeParse({
+      name: "Anil Sharma",
+      relation: "father of the bride",
+      phone: "09876500001",
+    });
+    expect(parsed.success).toBe(true);
+    if (!parsed.success) return;
+    expect(parsed.data.isDecisionMaker).toBe(false);
+    expect(parsed.data.invite).toBe(false);
+    expect(parsed.data.phone).toBe("+919876500001");
+  });
+
+  it("needs an email to send a portal invite to (AUTH-02)", () => {
+    const body = { name: "Anil Sharma", relation: "father", invite: true };
+    expect(accountContactCreateRequest.safeParse(body).success).toBe(false);
+    expect(
+      accountContactCreateRequest.safeParse({ ...body, email: "Anil@Example.com" }).success,
+    ).toBe(true);
+  });
+});
+
+describe("accountContactUpdateRequest", () => {
+  it("refuses an empty body and lets a nullable field be cleared", () => {
+    expect(accountContactUpdateRequest.safeParse({}).success).toBe(false);
+    const parsed = accountContactUpdateRequest.safeParse({ phone: null });
+    expect(parsed.success).toBe(true);
   });
 });

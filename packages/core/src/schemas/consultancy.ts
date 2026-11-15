@@ -162,6 +162,9 @@ export const hotelEnquiryListQuery = cursorQuery.extend({
   /** Every status of one pipeline stage (the staff queue's filter); ignored when `status` is given. */
   stage: hotelEnquiryStage.optional(),
   hotelId: uuid.optional(),
+  /** One client's enquiries (the account hub, TW-13 Hotels). Staff only: the client list is always
+   *  scoped to the caller's own account, so this is ignored there. */
+  accountId: uuid.optional(),
 });
 export type HotelEnquiryListQuery = z.infer<typeof hotelEnquiryListQuery>;
 

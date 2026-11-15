@@ -21,8 +21,14 @@ export interface StaffServiceAgreementsQuery {
   readonly cursor?: string;
 }
 
-/** The staff service agreements (`GET /crm/service-agreements`), filterable by enquiry / account / status. */
-export function useStaffServiceAgreements(query: StaffServiceAgreementsQuery = {}) {
+/**
+ * The staff service agreements (`GET /crm/service-agreements`), filterable by enquiry / account /
+ * status. Pass `enabled: false` when the signed-in role lacks the grant, so no refused request is sent.
+ */
+export function useStaffServiceAgreements(
+  query: StaffServiceAgreementsQuery = {},
+  options: { readonly enabled?: boolean } = {},
+) {
   const api = useApiClient();
   const params = new URLSearchParams();
   if (query.status) params.set("status", query.status);
@@ -32,6 +38,7 @@ export function useStaffServiceAgreements(query: StaffServiceAgreementsQuery = {
   const suffix = params.toString();
   return useQuery<ServiceAgreementStaffPage>({
     queryKey: [...STAFF_SERVICE_AGREEMENTS_QUERY_KEY, query],
+    enabled: options.enabled ?? true,
     queryFn: ({ signal }) =>
       api.get(
         `/crm/service-agreements${suffix ? `?${suffix}` : ""}`,

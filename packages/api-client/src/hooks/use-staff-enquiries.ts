@@ -26,20 +26,30 @@ export interface StaffEnquiriesQuery {
   /** One pipeline stage's statuses (the queue's filter). */
   readonly stage?: HotelEnquiryStage | undefined;
   readonly hotelId?: string;
+  /** One client's enquiries (the account hub). */
+  readonly accountId?: string;
   readonly cursor?: string;
 }
 
-/** The staff hotel-enquiry pipeline (`GET /consultancy-admin/enquiries`); internal (staff) fields. */
-export function useStaffEnquiries(query: StaffEnquiriesQuery = {}) {
+/**
+ * The staff hotel-enquiry pipeline (`GET /consultancy-admin/enquiries`); internal (staff) fields.
+ * Pass `enabled: false` when the signed-in role lacks the grant, so no refused request is sent.
+ */
+export function useStaffEnquiries(
+  query: StaffEnquiriesQuery = {},
+  options: { readonly enabled?: boolean } = {},
+) {
   const api = useApiClient();
   const params = new URLSearchParams();
   if (query.status) params.set("status", query.status);
   if (query.stage) params.set("stage", query.stage);
   if (query.hotelId) params.set("hotelId", query.hotelId);
+  if (query.accountId) params.set("accountId", query.accountId);
   if (query.cursor) params.set("cursor", query.cursor);
   const suffix = params.toString();
   return useQuery<HotelEnquiryStaffPage>({
     queryKey: [...STAFF_ENQUIRIES_QUERY_KEY, query],
+    enabled: options.enabled ?? true,
     queryFn: ({ signal }) =>
       api.get(
         `/consultancy-admin/enquiries${suffix ? `?${suffix}` : ""}`,
