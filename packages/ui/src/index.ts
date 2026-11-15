@@ -13,6 +13,8 @@ export { isHiddenFromVoiceOver } from "./lib/accessibility-hidden";
 export type { VoiceOverHiding } from "./lib/accessibility-hidden";
 export type { VariantProps } from "./lib/variants";
 export { AnimatedView } from "./lib/animated-view";
+export { pickFile } from "./lib/pick-file";
+export type { PickedFile } from "./lib/pick-file";
 
 export { ThemeProvider, useTheme } from "./theme/theme-provider";
 export type { ThemeProviderProps } from "./theme/theme-provider";

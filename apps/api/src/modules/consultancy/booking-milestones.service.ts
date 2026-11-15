@@ -18,6 +18,7 @@ import { AuditService } from "../../policy/audit.service.js";
 import type { Principal } from "../../policy/principal.types.js";
 import { milestonePaid } from "./booking-milestones.events.js";
 import {
+  assertContractAttached,
   assertMilestoneChanged,
   buildMilestoneEditPatch,
   buildMilestoneWrite,
@@ -126,6 +127,7 @@ export class BookingMilestonesService {
     if (!isMilestoneTransitionAllowed(current.status, request.status)) {
       throw errors.conflict(`A milestone cannot move from ${current.status} to ${request.status}`);
     }
+    assertContractAttached(current, request.status);
     const actorId = staffId(principal);
     const patch =
       request.status === "done"

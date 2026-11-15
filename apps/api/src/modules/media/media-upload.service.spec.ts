@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { AuditService } from "../../policy/audit.service.js";
 import type { StorageAdapter } from "../../storage/storage.types.js";
-import type { AvScanner } from "./av-scanner.js";
+import type { AvScanner } from "../../storage/av-scanner.js";
 import type { ImageProcessor } from "./image.processor.js";
 import { MediaUploadService } from "./media-upload.service.js";
 import type { MediaAssetRow, MediaRepository } from "./media.repository.js";

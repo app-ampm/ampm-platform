@@ -14,7 +14,7 @@ export const JSON_BODY_LIMIT = "100kb";
 /**
  * The raw-body ceiling for media uploads (application/octet-stream), feature 9.3b. Set just above the
  * service's per-file limit (25 MiB) so an oversized upload is answered by the service with the named limit
- * (AC-20.2), not the parser. Only the upload route reaches this parser (refuseBinaryOutsideUpload gates it);
+ * (AC-20.2), not the parser. Only the upload routes reach this parser (refuseBinaryOutsideUpload gates it);
  * in production media uploads to object storage through signed URLs, so these bytes bypass the API.
  */
 export const MEDIA_UPLOAD_LIMIT = "26mb";

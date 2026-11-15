@@ -1,8 +1,9 @@
 import type { MediaAssetView } from "@ampm/core";
+import { pickFile } from "@ampm/ui";
+import type * as UiModule from "@ampm/ui";
 
 import { fireEvent, screen, waitFor } from "../../test/render";
 import { HotelMediaScreen } from "./hotel-media-screen";
-import { pickMediaFile } from "./pick-media-file";
 import {
   destinationViewFixture,
   failure,
@@ -24,7 +25,10 @@ jest.mock("react-native/Libraries/Utilities/useWindowDimensions", () => ({
   default: () => ({ width: 1280, height: 900, scale: 2, fontScale: 1 }),
 }));
 
-jest.mock("./pick-media-file", () => ({ pickMediaFile: jest.fn() }));
+jest.mock("@ampm/ui", () => ({
+  ...jest.requireActual<typeof UiModule>("@ampm/ui"),
+  pickFile: jest.fn(),
+}));
 
 const CLEAN_ID = "018f0000-0000-7000-8000-0000000c0a01";
 const NEW_ID = "018f0000-0000-7000-8000-0000000c0a02";
@@ -95,7 +99,7 @@ async function addViaSheet(): Promise<void> {
 }
 
 beforeEach(() => {
-  jest.mocked(pickMediaFile).mockReset();
+  jest.mocked(pickFile).mockReset();
 });
 
 describe("HotelMediaScreen", () => {
@@ -116,7 +120,7 @@ describe("HotelMediaScreen", () => {
 
   it("adds a photo through the modal: pick, keep the defaults, save", async () => {
     const captured: Captured = {};
-    jest.mocked(pickMediaFile).mockResolvedValue({
+    jest.mocked(pickFile).mockResolvedValue({
       file: new Blob(["x"], { type: "image/jpeg" }),
       mimeType: "image/jpeg",
       sizeBytes: 3,
@@ -140,7 +144,7 @@ describe("HotelMediaScreen", () => {
 
   it("adds a video through the modal (kind from the file)", async () => {
     const captured: Captured = {};
-    jest.mocked(pickMediaFile).mockResolvedValue({
+    jest.mocked(pickFile).mockResolvedValue({
       file: new Blob(["x"], { type: "video/mp4" }),
       mimeType: "video/mp4",
       sizeBytes: 3,
@@ -155,7 +159,7 @@ describe("HotelMediaScreen", () => {
 
   it("sets visibility and rights in the modal before saving", async () => {
     const captured: Captured = {};
-    jest.mocked(pickMediaFile).mockResolvedValue({
+    jest.mocked(pickFile).mockResolvedValue({
       file: new Blob(["x"], { type: "image/jpeg" }),
       mimeType: "image/jpeg",
       sizeBytes: 3,
@@ -182,7 +186,7 @@ describe("HotelMediaScreen", () => {
 
   it("refuses a file over the size limit when choosing it", async () => {
     const captured: Captured = {};
-    jest.mocked(pickMediaFile).mockResolvedValue({
+    jest.mocked(pickFile).mockResolvedValue({
       file: new Blob(["x"], { type: "video/mp4" }),
       mimeType: "video/mp4",
       sizeBytes: 26 * 1024 * 1024,
@@ -198,7 +202,7 @@ describe("HotelMediaScreen", () => {
 
   it("treats a blank-type file with a video extension as a video", async () => {
     const captured: Captured = {};
-    jest.mocked(pickMediaFile).mockResolvedValue({
+    jest.mocked(pickFile).mockResolvedValue({
       file: new Blob(["x"], { type: "" }),
       mimeType: "application/octet-stream",
       sizeBytes: 3,
@@ -212,7 +216,7 @@ describe("HotelMediaScreen", () => {
 
   it("tells the user to use the web workspace when nothing can be picked", async () => {
     const captured: Captured = {};
-    jest.mocked(pickMediaFile).mockResolvedValue(null);
+    jest.mocked(pickFile).mockResolvedValue(null);
     await renderManager(captured);
     await fireEvent.press(await screen.findByTestId("media-add"));
     await fireEvent.press(await screen.findByTestId("media-add-choose"));
@@ -222,7 +226,7 @@ describe("HotelMediaScreen", () => {
 
   it("cleans up the pending asset when the upload leg fails", async () => {
     const captured: Captured = {};
-    jest.mocked(pickMediaFile).mockResolvedValue({
+    jest.mocked(pickFile).mockResolvedValue({
       file: new Blob(["x"], { type: "image/jpeg" }),
       mimeType: "image/jpeg",
       sizeBytes: 3,

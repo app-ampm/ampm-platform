@@ -120,8 +120,9 @@ export const LINES = [
 
 /**
  * The booking milestones: the hold is done, the rest pending; advance_paid carries a (W-14-hidden) amount.
- * contract_signed carries a document, so a staff user (admin) can mark it + confirmed done and drive the
- * enquiry client_decision -> confirmed (AC-05.6 needs a done contract_signed-with-document + done confirmed).
+ * contract_signed starts with NO document: a staff user attaches the signed contract on the Booking tab
+ * (D-132 — the id is set only by an upload, so a seeded id would name no stored file), then marks it +
+ * confirmed done and drives the enquiry client_decision -> confirmed (AC-05.6). A re-seed resets it.
  */
 export const MILESTONES = [
   {
@@ -149,7 +150,7 @@ export const MILESTONES = [
     due: 7,
     completed: null,
     amount: null,
-    documentId: "0192f3a0-7d3e-7b1a-9c2f-0000000000f1",
+    documentId: null,
   },
   {
     id: "0192f3a0-7d3e-7b1a-9c2f-0000000000de",

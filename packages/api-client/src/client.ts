@@ -35,8 +35,9 @@ export interface ApiClient {
    */
   upload<T>(path: string, options: UploadOptions<T>): Promise<T>;
   /**
-   * Resolve a signed media URL to an absolute one against the API base. The API signs media downloads as a
-   * root-relative `/media/blob?…` (feature 9.3); where the API is reached under a prefix — the test box serves
+   * Resolve a signed media URL — or a minted document link (`/documents/links/…`, D-132) — to an absolute
+   * one against the API base. The API signs media downloads as a root-relative `/media/blob?…` (feature
+   * 9.3); where the API is reached under a prefix — the test box serves
    * it at `/_api` — an `<Image>` must load it from the API base, not the app's own origin, or the browser
    * fetches the SPA shell instead of the picture. A relative URL (starts with `/`) is prefixed with the base;
    * an absolute URL (an S3/CDN link, feature 6.4) and an empty value pass through unchanged.

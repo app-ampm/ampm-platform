@@ -2,10 +2,9 @@ import { useState } from "react";
 
 import { useAddHotelMedia, type AddHotelMediaInput } from "@ampm/api-client";
 import { isAppError, MAX_MEDIA_UPLOAD_BYTES, type MediaKind } from "@ampm/core";
-import { Button, Row, Sheet, Stack, Text, useToast } from "@ampm/ui";
+import { Button, pickFile, Row, Sheet, Stack, Text, useToast, type PickedFile } from "@ampm/ui";
 
 import { MediaDetailsFields, type MediaDraft } from "./media-details-fields";
-import { pickMediaFile, type PickedFile } from "./pick-media-file";
 
 /** Filenames a blank browser MIME still identifies as a video the server can sniff (ISO-BMFF ftyp). */
 const VIDEO_FILE = /\.(mp4|m4v|mov)$/i;
@@ -35,7 +34,7 @@ function inputFrom(picked: PickedFile, kind: MediaKind, draft: MediaDraft): AddH
 
 /** Pick a file, enforce the shared size cap, and surface a toast when nothing usable was chosen. */
 async function chooseFile(toast: ReturnType<typeof useToast>): Promise<PickedFile | null> {
-  const file = await pickMediaFile("image/*,video/*");
+  const file = await pickFile("image/*,video/*");
   if (!file) {
     toast.show({ title: "Add media from the web workspace", tone: "info" });
     return null;

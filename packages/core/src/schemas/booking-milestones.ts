@@ -42,9 +42,10 @@ const milestoneAmount = money.refine(
 // --- Requests ---------------------------------------------------------------------------------------
 
 /** Staff creates a milestone on an enquiry (§5.4: SA/HT create, PM(a)). Starts `pending`; the enquiry's
- * project is inherited server-side. The amount is entered, never defaulted (data.md). `documentId` is the
- * uploaded signed-contract document for a `contract_signed` milestone — the interim contract signal the
- * confirmed-guard reads (AC-05.6), a plain reference until the Module N documents service lands. */
+ * project is inherited server-side. The amount is entered, never defaulted (data.md). There is no
+ * `documentId` here: the signed contract a `contract_signed` milestone carries (the interim contract
+ * signal the confirmed-guard reads, AC-05.6) is uploaded through the milestone's contract route, so the
+ * reference is always a stored, scanned document and never a client-supplied id (D-132). */
 export const bookingMilestoneCreateRequest = z
   .object({
     enquiryId: uuid,
@@ -52,19 +53,18 @@ export const bookingMilestoneCreateRequest = z
     dueAt: isoDateTime.nullable().default(null),
     amount: milestoneAmount.nullable().default(null),
     contractId: uuid.nullable().default(null),
-    documentId: uuid.nullable().default(null),
   })
   .strict();
 export type BookingMilestoneCreateRequest = z.infer<typeof bookingMilestoneCreateRequest>;
 
-/** Staff edits a milestone's due date, amount (FA manages amounts) or its contract/document references.
- * The milestone type is fixed at creation; the status moves through the transition route. */
+/** Staff edits a milestone's due date, amount (FA manages amounts) or its contract reference. The
+ * milestone type is fixed at creation; the status moves through the transition route; the signed-contract
+ * document is set only by the contract upload route (D-132). */
 export const bookingMilestoneUpdateRequest = z
   .object({
     dueAt: isoDateTime.nullable().optional(),
     amount: milestoneAmount.nullable().optional(),
     contractId: uuid.nullable().optional(),
-    documentId: uuid.nullable().optional(),
   })
   .strict();
 export type BookingMilestoneUpdateRequest = z.infer<typeof bookingMilestoneUpdateRequest>;
@@ -108,7 +108,8 @@ export const bookingMilestoneClientView = z
 export type BookingMilestoneClientView = z.infer<typeof bookingMilestoneClientView>;
 
 /** The staff view (§5.4 read: SA/SM/HT/PM/FA): always carries the amount (nullable) plus the internal
- * references and the creator. */
+ * references and the creator. `documentId` is the attached signed contract (a `contract_signed`
+ * milestone only); its bytes are reached through a minted 15-minute link, never this id alone. */
 export const bookingMilestoneStaffView = z
   .object({
     ...milestoneScalars,

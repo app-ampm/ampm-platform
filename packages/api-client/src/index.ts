@@ -208,6 +208,8 @@ export {
   STAFF_MILESTONES_QUERY_KEY,
   staffMilestonesQueryKey,
   useCreateBookingMilestone,
+  useAttachMilestoneContract,
+  useMilestoneContractLink,
   useStaffBookingMilestones,
   useTransitionBookingMilestone,
 } from "./hooks/use-staff-booking-milestones";

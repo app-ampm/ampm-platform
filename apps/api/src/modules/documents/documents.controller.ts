@@ -1,0 +1,37 @@
+import { Controller, Get, Res } from "@nestjs/common";
+import { uuid } from "@ampm/core";
+import type { Response } from "express";
+import { z } from "zod";
+
+import { ZodParams } from "../../common/zod.js";
+import { Public } from "../../policy/decorators.js";
+import { DocumentsService } from "./documents.service.js";
+
+// The link id names the row; the token (43 base64url characters for 32 random bytes) is its secret.
+const linkParams = z.object({
+  linkId: uuid,
+  token: z.string().regex(/^[A-Za-z0-9_-]{43}$/),
+});
+type LinkParams = z.infer<typeof linkParams>;
+
+/**
+ * The byte stream a minted document link points at (Module N, D-132). Public because the link itself is
+ * the capability: the owning module checked the principal's access to the record before minting it, and
+ * this route checks the token, expiry, revocation and download cap. Anything wrong is a 404 (denial
+ * equals absence). Never cached; served inline under its detected type (PDF, JPEG or PNG only, nosniff
+ * set globally) with a PII-free file name.
+ */
+@Controller("documents")
+export class DocumentsController {
+  constructor(private readonly documents: DocumentsService) {}
+
+  @Get("links/:linkId/:token")
+  @Public()
+  async open(@ZodParams(linkParams) params: LinkParams, @Res() res: Response): Promise<void> {
+    const blob = await this.documents.open(params.linkId, params.token);
+    res.setHeader("Content-Type", blob.mimeType);
+    res.setHeader("Content-Disposition", `inline; filename="${blob.fileName}"`);
+    res.setHeader("Cache-Control", "private, no-store");
+    res.send(blob.bytes);
+  }
+}

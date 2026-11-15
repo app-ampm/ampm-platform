@@ -1,8 +1,10 @@
 /**
- * The antivirus scan seam (feature 9.3, AC-20.3). An uploaded object is never downloadable until a scan
- * passes — fail-closed: anything not provably clean is `rejected`. This sprint ships a stub that detects
- * the industry-standard EICAR test string; a real scanner is a later config swap (the appendix), and
- * production media is already gated by the storage prod guard until then, so the stub never runs live.
+ * The antivirus scan seam (feature 9.3, AC-20.3), shared by every upload path — gallery media and
+ * documents (D-132) — so it lives beside the storage port rather than in one module. An uploaded object is
+ * never downloadable until a scan passes — fail-closed: anything not provably clean is `rejected`. This
+ * sprint ships a stub that detects the industry-standard EICAR test string; a real scanner is a later
+ * config swap (the appendix), and production storage is already gated by the storage prod guard until
+ * then, so the stub never runs live.
  */
 export interface AvScanner {
   /** Returns `clean` only when the bytes are provably safe; any threat or uncertainty is `rejected`. */

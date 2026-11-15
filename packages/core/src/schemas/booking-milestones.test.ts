@@ -66,7 +66,6 @@ describe("bookingMilestoneCreateRequest", () => {
       expect(r.data.amount).toBeNull();
       expect(r.data.dueAt).toBeNull();
       expect(r.data.contractId).toBeNull();
-      expect(r.data.documentId).toBeNull();
     }
   });
 
@@ -90,6 +89,21 @@ describe("bookingMilestoneCreateRequest", () => {
       bookingMilestoneCreateRequest.safeParse({ ...base, amount: money(100_000_000_000_000) })
         .success,
     ).toBe(false);
+  });
+});
+
+describe("documentId is never a request field (D-132)", () => {
+  const id = "00000000-0000-7000-8000-0000000000dd";
+
+  it("rejects a documentId on create and on update: the contract arrives only by upload", () => {
+    const create = {
+      enquiryId: "00000000-0000-7000-8000-000000000002",
+      milestoneType: "contract_signed",
+    };
+    expect(bookingMilestoneCreateRequest.safeParse({ ...create, documentId: id }).success).toBe(
+      false,
+    );
+    expect(bookingMilestoneUpdateRequest.safeParse({ documentId: id }).success).toBe(false);
   });
 });
 
