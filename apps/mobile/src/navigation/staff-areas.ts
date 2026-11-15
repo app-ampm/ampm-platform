@@ -4,11 +4,12 @@ import type { IconName } from "@ampm/ui";
 
 import { isOnRoute } from "./routes";
 
-export type StaffAreaKey = "leads" | "enquiries" | "tasks" | "hotels" | "admin" | "settings";
+export type StaffAreaKey =
+  "leads" | "enquiries" | "tasks" | "hotels" | "finance" | "admin" | "settings";
 
 /** The routes of the staff workspace's areas: each is the area's top-level screen. */
 export type StaffAreaPath =
-  "/leads" | "/enquiries" | "/field-notes" | "/hotels-admin" | "/admin" | "/account";
+  "/leads" | "/enquiries" | "/field-notes" | "/hotels-admin" | "/finance" | "/admin" | "/account";
 
 export interface StaffArea {
   readonly key: StaffAreaKey;
@@ -63,6 +64,16 @@ export const STAFF_AREAS: readonly StaffArea[] = [
     // rights too). Hotel-profile reads reach every role for look-ups, so the area is gated on a
     // media-management key only those roles hold, as the admin console is on a staff-management key.
     permission: "hotels.hotel_media_rights_status.update",
+  },
+  {
+    key: "finance",
+    label: "Finance & Reports",
+    tabLabel: "Finance",
+    icon: "receipt",
+    href: "/finance",
+    // The area's screen is the subscription status report (permission-matrix §5.16: SA, SM, FA), the
+    // read Finance has, where its field-conditioned CRM grants refuse every list (D-127, D-128).
+    permission: "reports.subscription_status_payment_history.read",
   },
   {
     key: "admin",
@@ -129,9 +140,26 @@ export function hasStaffArea(
 }
 
 /**
- * Where a staff member lands after sign-in: their first area, or Settings (the account screen, every
- * staff member's) for one whose roles grant none of the others.
+ * The order in which a staff member's areas are tried for their home: the rail's, except that Finance
+ * & Reports comes before the hotel enquiries Finance may also read, so Finance lands on its own work
+ * (D-128). No other role holds both without also holding Leads & Clients, which comes first.
+ */
+const HOME_ORDER: readonly StaffAreaKey[] = [
+  "leads",
+  "finance",
+  "enquiries",
+  "tasks",
+  "hotels",
+  "admin",
+  "settings",
+];
+
+/**
+ * Where a staff member lands after sign-in: the first of their areas in `HOME_ORDER`, or Settings (the
+ * account screen, every staff member's) for one whose roles grant none of the others.
  */
 export function staffHomeHref(me: Pick<MeResponse, "principal" | "roles">): StaffAreaPath {
-  return staffAreasFor(me)[0]?.href ?? "/account";
+  const areas = staffAreasFor(me);
+  const home = HOME_ORDER.map((key) => areas.find((area) => area.key === key)).find(Boolean);
+  return home?.href ?? "/account";
 }

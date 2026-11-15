@@ -54,25 +54,20 @@ One stream of work. Each slice ends with `pnpm check` green.
     - a demo account's subscription is absent;
     - ledger rows carry the name.
 
-### Slice 2. App: the Finance & Reports area (M)
+### Slice 2. App: the Finance & Reports area (M), built 15 November 2026
 
-- **Nav:** a `finance` staff area, "Finance & Reports" at `/finance`, gated on the report key. It goes after Tasks and before Settings (the W-2 order), and Finance's home moves there from `/enquiries`.
+As built; where it departs from the first draft of this plan, the reason is given.
+
+- **Nav:** a `finance` staff area, "Finance & Reports" (phone tab "Finance") at `/finance`, gated on the report key and placed after the Hotel catalogue, before the Admin console (the W-2 order). A staff member's home is now the first of their areas in a home order that puts Finance & Reports before the hotel enquiries Finance may also read, so Finance lands on `/finance`; every other role keeps its home.
 - **Screen, composed in T11's frame:**
-  - **Header:** `ScreenHeader variant="panel"` with the eyebrow "Finance & Reports" and the title "Subscriptions and payments". Its gold **Record payment** acts on the selected subscription awaiting payment, and appears only when `canRecordSubscriptionPayment` is true. Export is slice 4.
-  - **Left (`1fr`):**
-    - A subscriptions `DataTable` with columns Account, Plan, Status chip, Starts, Ends and Amount.
-    - Above it, an underline `SegmentedControl`: Awaiting payment · Active · All.
-    - On desktop the first awaiting row is pre-selected (`selectedKey`).
-  - **Right (`320px`):** "Recent payments" from the ledger, showing account, amount, method, date and status chip, with the bank-transfer footnote. It is shown only to roles with `crm.payments.read` (FA and SA). Following W-5, it is left out, not greyed out.
-  - **Phones:** the table stacks (`stackBelow`), the payments panel follows below it, and tapping an awaiting row opens the sheet.
-  - **States:** loading, empty ("Nothing awaiting payment"), error and offline, all from the shared components.
-- **Reuse:** `RecordPaymentSheet` (it already takes a `subscriptionId`) and the ledger row from `account-payments.tsx`. Both features will use them, so they move to a shared billing module in the app, not stay inside `features/accounts`.
-- **Tests:**
-  - Area visibility per role.
-  - Finance records from the area.
-  - Sales sees no Record button and no ledger.
-  - Phone and desktop renders.
-  - The selection survives a resize.
+  - **Header:** T11's header is plain, not a panel: the eyebrow "Finance & Reports", the title "Subscriptions and payments", and at the right a gold **Record payment** acting on the subscription picked in the queue. It shows on the Awaiting payment tab to whoever `canRecordSubscriptionPayment` allows, which is Super Admin, Sales and Finance (D-125). The first draft said Sales would get no Record button; that was wrong, since Sales records payments on the account page already, and the button follows the same rule as the server. Export is slice 3.
+  - **Left (`1fr`):** the report as a `DataTable` in a glass card under underline tabs, Awaiting payment · Active · All. Each tab has its own columns: the queue shows Account (with the plan under it), Last payment, Waiting since and Amount; Active shows Started and Ends; All shows the status. On the queue the oldest row is picked by default and a row press picks another (`selectedKey`); the other tabs have nothing to record against, so their rows do not press.
+  - **Right (`320px`, from 1024):** "Recent payments" from the ledger: each line names the account beside a pill (the day it was paid, or "Initiated"), with the amount and method beneath, then the bank-transfer footnote. Gateway attempts that never completed are listed too, so it is "Recent" rather than "Received". The amounts are finance figures, so they sit in an `InternalPanel` as on the account page (T11's milestones panel holds client amounts and has none). Shown only to roles with `crm.payments.read` (Finance, Super Admin), left out for Sales (W-5).
+  - **The record sheet** now names whose payment it records ("Nisha & Arjun · Hotel Discovery · ₹50,000"), since the area lists many accounts' subscriptions.
+  - **768:** the rail collapses, the table fits the card without scrolling sideways, and the payments panel stacks below it. **Phones:** the rows stack, led by the account; Record payment wraps under the title and acts on the picked row (one action, the same at every width).
+  - **States:** loading, empty per tab ("Nothing awaiting payment"), error and the refused role, from the shared components.
+- **Reuse:** `RecordPaymentSheet`, `useCanRecordPayment` and the payment formatters stay in `features/accounts` and are imported from there, as the portal imports consultancy's `RequestRow`; no shared billing module was needed.
+- **Tests:** area visibility and home per role; Finance's queue with the oldest picked and its payments; recording against a picked row, named in the sheet, after which the queue and the panel refresh (this fails without the new cache refreshes in `useRecordPayment`); Sales sees the report without the ledger and can record; the Active tab; the empty queue; the hotel team refused without a request; the phone's stacked rows, and the pick kept across 1024; the formatters.
 
 ### Slice 3. Export (S–M)
 
@@ -89,7 +84,7 @@ One stream of work. Each slice ends with `pnpm check` green.
 
 ## Decisions (settled 15 November 2026)
 
-1. **Sales sees the area.** It follows the matrix (Sales may run this report) and W-2. Sales gets the subscriptions table only, with no ledger, no Record button and no Export. Recorded in D-127.
+1. **Sales sees the area.** It follows the matrix (Sales may run this report) and W-2. Sales gets the subscriptions table without the ledger or Export; Record payment shows for Sales as it does on the account page (D-125; the first draft wrongly said it would not). Recorded in D-127.
 2. **Export is in the first cut**, as slice 3, before shipping. Recorded in D-128.
 
 D-127 also records route A: Finance reads subscriptions through the §5.16 report. D-128 records that Phase 1 composes T11's frame with subscriptions and the ledger.

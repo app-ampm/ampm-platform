@@ -58,8 +58,27 @@ describe("staffAreasFor", () => {
   });
 
   it("adds up the areas of every role held, in the rail's order", () => {
-    expect(areaKeys(signedIn("staff", ["CD", "FA"]))).toEqual(["enquiries", "tasks", "settings"]);
+    expect(areaKeys(signedIn("staff", ["CD", "FA"]))).toEqual([
+      "enquiries",
+      "tasks",
+      "finance",
+      "settings",
+    ]);
   });
+
+  it.each(["SA", "SM", "FA"] as const)(
+    "gives %s Finance & Reports, whose subscription report they may run (§5.16)",
+    (role) => {
+      expect(areaKeys(signedIn("staff", [role]))).toContain("finance");
+    },
+  );
+
+  it.each(["HT", "PM", "CD", "VC", "RG", "HL"] as const)(
+    "keeps Finance & Reports from %s, who may not run the report",
+    (role) => {
+      expect(areaKeys(signedIn("staff", [role]))).not.toContain("finance");
+    },
+  );
 
   it("shows a client none", () => {
     expect(staffAreasFor(signedIn("client", []))).toEqual([]);
@@ -84,6 +103,7 @@ describe("activeStaffArea", () => {
     expect(activeStaffArea("/leads/018f0000-0000-7000-8000-0000000000a1")?.key).toBe("leads");
     expect(activeStaffArea("/enquiries/abc")?.key).toBe("enquiries");
     expect(activeStaffArea("/field-notes")?.key).toBe("tasks");
+    expect(activeStaffArea("/finance")?.key).toBe("finance");
     expect(activeStaffArea("/account")?.key).toBe("settings");
   });
 
@@ -97,8 +117,13 @@ describe("activeStaffArea", () => {
 describe("staffHomeHref", () => {
   it("lands a staff member on their first area", () => {
     expect(staffHomeHref(signedIn("staff", ["SM"]))).toBe("/leads");
-    expect(staffHomeHref(signedIn("staff", ["FA"]))).toBe("/enquiries");
+    expect(staffHomeHref(signedIn("staff", ["HT"]))).toBe("/leads");
     expect(staffHomeHref(signedIn("staff", ["CD"]))).toBe("/field-notes");
+  });
+
+  it("lands Finance on Finance & Reports, ahead of the enquiries it may also read (D-128)", () => {
+    expect(staffHomeHref(signedIn("staff", ["FA"]))).toBe("/finance");
+    expect(staffHomeHref(signedIn("staff", ["SA"]))).toBe("/leads");
   });
 
   it("lands a staff member whose roles grant no other area on the account screen", () => {
