@@ -5,6 +5,7 @@ import {
   type HotelProposalCreateRequest,
   type HotelProposalInternalPage,
   type HotelProposalInternalView,
+  type HotelProposalUpdateRequest,
 } from "@ampm/core";
 
 import { useApiClient } from "../provider";
@@ -49,6 +50,28 @@ export function useCreateProposal(enquiryId: string) {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: staffProposalsQueryKey(enquiryId) });
       void queryClient.invalidateQueries({ queryKey: staffEnquiryQueryKey(enquiryId) });
+      void queryClient.invalidateQueries({ queryKey: STAFF_ENQUIRIES_QUERY_KEY });
+    },
+  });
+}
+
+/**
+ * Edit a DRAFT proposal's terms (`PATCH /consultancy-admin/proposals/:id`): the totals, the valid-until
+ * date and, when `lines` is sent, the whole line set. A shared version is immutable (the API 409s); a
+ * change to it is a revision. Refreshes the enquiry's proposals and the queue's proposal tag.
+ */
+export function useUpdateProposal(proposalId: string, enquiryId: string) {
+  const api = useApiClient();
+  const queryClient = useQueryClient();
+  return useMutation<HotelProposalInternalView, Error, HotelProposalUpdateRequest>({
+    mutationFn: (body) =>
+      api.request(`/consultancy-admin/proposals/${proposalId}`, {
+        method: "PATCH",
+        body,
+        schema: hotelProposalInternalView,
+      }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: staffProposalsQueryKey(enquiryId) });
       void queryClient.invalidateQueries({ queryKey: STAFF_ENQUIRIES_QUERY_KEY });
     },
   });

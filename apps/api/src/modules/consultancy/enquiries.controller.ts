@@ -9,6 +9,7 @@ import {
   type HotelEnquiryEventCreateRequest,
   type HotelEnquiryEventView,
   type HotelEnquiryListQuery,
+  type HotelEnquiryPipelineView,
   type HotelEnquiryStaffDetailView,
   type HotelEnquiryStaffPage,
   type HotelEnquiryStaffUpdateRequest,
@@ -27,6 +28,7 @@ import {
 } from "../../policy/decorators.js";
 import type { Principal } from "../../policy/principal.types.js";
 import { EnquiriesService } from "./enquiries.service.js";
+import { EnquiryPipelineService } from "./enquiry-pipeline.js";
 
 const enquiryParam = z.object({ enquiryId: uuid });
 
@@ -37,7 +39,10 @@ const enquiryParam = z.object({ enquiryId: uuid });
  */
 @Controller("consultancy-admin")
 export class EnquiriesController {
-  constructor(private readonly enquiries: EnquiriesService) {}
+  constructor(
+    private readonly enquiries: EnquiriesService,
+    private readonly pipelineCounts: EnquiryPipelineService,
+  ) {}
 
   @Get("enquiries")
   @RequirePermission("consultancy.enquiries.read")
@@ -47,6 +52,16 @@ export class EnquiriesController {
     @CurrentAccess() access: Access,
   ): Promise<HotelEnquiryStaffPage> {
     return this.enquiries.list(principal, access, query);
+  }
+
+  /** Declared before `enquiries/:enquiryId`, so "pipeline" is never read as an id. */
+  @Get("enquiries/pipeline")
+  @RequirePermission("consultancy.enquiries.read")
+  pipeline(
+    @CurrentPrincipal() principal: Principal,
+    @CurrentAccess() access: Access,
+  ): Promise<HotelEnquiryPipelineView> {
+    return this.pipelineCounts.pipeline(principal, access);
   }
 
   @Get("enquiries/:enquiryId")

@@ -30,6 +30,7 @@ import {
 } from "./enquiries.repository.js";
 import { BookingMilestonesRepository } from "./booking-milestones.repository.js";
 import { EnquiryEventsRepository, type EnquiryEventRow } from "./enquiry-events.repository.js";
+import { EnquiryInsightsRepository, NO_EXTRAS } from "./enquiry-insights.repository.js";
 import {
   buildStaffPatch,
   buildStatusPatch,
@@ -69,6 +70,7 @@ export class EnquiriesService {
     private readonly config: ConfigService,
     private readonly agreements: ServiceAgreementsService,
     private readonly milestones: BookingMilestonesRepository,
+    private readonly insights: EnquiryInsightsRepository,
     private readonly logger: AppLogger,
   ) {}
 
@@ -80,7 +82,11 @@ export class EnquiriesService {
     const scope = recordScope(principal, access.scope);
     const withNotes = this.canReadInternalNotes(principal);
     const { rows, nextCursor } = await this.enquiries.listStaff(scope.where, query);
-    return { items: rows.map((row) => toEnquiryStaffView(row, withNotes)), nextCursor };
+    const extras = await this.insights.extrasFor(rows);
+    return {
+      items: rows.map((row) => toEnquiryStaffView(row, withNotes, extras.get(row.id) ?? NO_EXTRAS)),
+      nextCursor,
+    };
   }
 
   async get(
@@ -91,8 +97,11 @@ export class EnquiriesService {
     const scope = recordScope(principal, access.scope);
     const row = await this.enquiries.findByIdInScope(id, scope.where);
     if (!row) throw errors.notFound();
-    const events = await this.events.listByEnquiry(row.id);
-    return toEnquiryStaffDetailView(row, events, this.canReadInternalNotes(principal));
+    const [events, extras] = await Promise.all([
+      this.events.listByEnquiry(row.id),
+      this.insights.extrasOf(row),
+    ]);
+    return toEnquiryStaffDetailView(row, events, this.canReadInternalNotes(principal), extras);
   }
 
   /**
@@ -140,10 +149,7 @@ export class EnquiriesService {
         this.logger.warn("consultancy.enquiry.notify_failed", { enquiryId: current.id }),
       );
     }
-    return toEnquiryStaffView(
-      await this.requireInScope(id, principal, access),
-      this.canReadInternalNotes(principal),
-    );
+    return this.staffView(await this.requireInScope(id, principal, access), principal);
   }
 
   private transitionContext(current: EnquiryRow): TransitionContext {
@@ -282,10 +288,13 @@ export class EnquiriesService {
         tx,
       );
     });
-    return toEnquiryStaffView(
-      await this.requireInScope(id, principal, access),
-      this.canReadInternalNotes(principal),
-    );
+    return this.staffView(await this.requireInScope(id, principal, access), principal);
+  }
+
+  /** One row in the staff view, with its names and newest proposal looked up. */
+  private async staffView(row: EnquiryRow, principal: Principal): Promise<HotelEnquiryStaffView> {
+    const extras = await this.insights.extrasOf(row);
+    return toEnquiryStaffView(row, this.canReadInternalNotes(principal), extras);
   }
 
   private canReadInternalNotes(principal: Principal): boolean {

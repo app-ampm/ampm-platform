@@ -241,7 +241,8 @@ describe("Hotel consultancy enquiries (e2e)", () => {
       .get(`/consultancy/enquiries/${enquiryId}`)
       .set("authorization", auth(token))
       .expect(200);
-    expect(clientView.body.data).not.toHaveProperty("notesInternal");
+    for (const field of ["notesInternal", "accountName", "latestProposal"])
+      expect(clientView.body.data).not.toHaveProperty(field);
     const types = clientView.body.data.events.map((e: { eventType: string }) => e.eventType);
     expect(types).toContain("submitted");
     expect(types).not.toContain("negotiation_note");

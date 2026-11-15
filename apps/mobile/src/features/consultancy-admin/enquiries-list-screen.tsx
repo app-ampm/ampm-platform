@@ -1,7 +1,8 @@
-import { useCallback, type ReactNode } from "react";
+import { useCallback, useState, type ReactNode } from "react";
 import { useFocusEffect, useRouter } from "expo-router";
 
 import { useStaffEnquiries } from "@ampm/api-client";
+import type { HotelEnquiryStage } from "@ampm/core";
 import { Card, EmptyState, Screen, ScreenHeader, Stack, useLayoutAt } from "@ampm/ui";
 
 import { queueEyebrow } from "./consultancy-admin.format";
@@ -10,6 +11,7 @@ import { EnquiryPaneLoading } from "./enquiry-pane-loading";
 import { EnquiryQueuePanel } from "./enquiry-queue-panel";
 import { EnquiryQueueRow } from "./enquiry-queue-row";
 import { EnquiryQueueStates } from "./enquiry-queue-states";
+import { EnquiryStageFilter } from "./enquiry-stage-filter";
 
 type EnquiriesQuery = ReturnType<typeof useStaffEnquiries>;
 
@@ -91,24 +93,33 @@ function QueueHeader({ enquiries }: { readonly enquiries: EnquiriesQuery }) {
   );
 }
 
-/** The queue on its own page: rows in one glass panel; a row opens its enquiry's page. */
+/**
+ * The queue on its own page: the pipeline's stage filter, then rows in one glass panel; a row opens
+ * its enquiry's page. Unfiltered, it is the same query as the page's header count reads.
+ */
 function QueuePage({ enquiries }: { readonly enquiries: EnquiriesQuery }) {
   const router = useRouter();
+  const [stage, setStage] = useState<HotelEnquiryStage | null>(null);
+  const filtered = useStaffEnquiries({ stage: stage ?? undefined });
+  const shown = stage === null ? enquiries : filtered;
   return (
-    <EnquiryQueueStates enquiries={enquiries}>
-      {(page) => (
-        <Card padding="sm" className="md:p-5.5">
-          <Stack gap={2}>
-            {page.items.map((enquiry) => (
-              <EnquiryQueueRow
-                key={enquiry.id}
-                enquiry={enquiry}
-                onPress={() => router.push(`/enquiries/${enquiry.id}`)}
-              />
-            ))}
-          </Stack>
-        </Card>
-      )}
-    </EnquiryQueueStates>
+    <Stack gap={4}>
+      <EnquiryStageFilter value={stage} onChange={setStage} />
+      <EnquiryQueueStates enquiries={shown} filtered={stage !== null}>
+        {(page) => (
+          <Card padding="sm" className="md:p-5.5">
+            <Stack gap={2}>
+              {page.items.map((enquiry) => (
+                <EnquiryQueueRow
+                  key={enquiry.id}
+                  enquiry={enquiry}
+                  onPress={() => router.push(`/enquiries/${enquiry.id}`)}
+                />
+              ))}
+            </Stack>
+          </Card>
+        )}
+      </EnquiryQueueStates>
+    </Stack>
   );
 }

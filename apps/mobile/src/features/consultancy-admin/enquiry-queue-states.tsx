@@ -15,6 +15,8 @@ export interface EnquiryQueueStatesProps {
    * On a phone they stand on the page as their own glass.
    */
   readonly inPanel?: boolean | undefined;
+  /** A stage filter is on: an empty page means none at that stage, not none at all. */
+  readonly filtered?: boolean | undefined;
   /** The queue, once it has enquiries. */
   readonly children: (page: HotelEnquiryStaffPage) => ReactNode;
 }
@@ -26,6 +28,7 @@ export interface EnquiryQueueStatesProps {
 export function EnquiryQueueStates({
   enquiries,
   inPanel = false,
+  filtered = false,
   children,
 }: EnquiryQueueStatesProps) {
   const goToSignIn = useGoToSignIn();
@@ -38,6 +41,15 @@ export function EnquiryQueueStates({
         onSignIn={goToSignIn}
         signIn={{ title: "Sign in to view enquiries" }}
         forbidden={ROLE_WITHOUT_GRANT}
+        blur={!inPanel}
+      />
+    );
+  if (enquiries.data.items.length === 0 && filtered)
+    return (
+      <EmptyState
+        icon="filter"
+        title="Nothing at this stage"
+        description="No enquiry is at this stage right now. Choose All to see every one."
         blur={!inPanel}
       />
     );

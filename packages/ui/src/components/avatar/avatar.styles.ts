@@ -42,11 +42,15 @@ export function avatarGroupTone(index: number): AvatarTone {
   return index % 2 === 0 ? "brand" : "highlight";
 }
 
-/** The first letters of the first two words, uppercase: "Ananya Sharma" → "AS", "Eva" → "E". */
+/**
+ * The first letters of the first two words, uppercase: "Ananya Sharma" → "AS", "Eva" → "E". Words that
+ * do not start with a letter or digit ("&", "-") are skipped: "Rhea & Partner" → "RP", not "R&".
+ */
 export function initialsOf(name: string): string {
   return name
     .trim()
     .split(/\s+/)
+    .filter((word) => /^[\p{L}\p{N}]/u.test(word))
     .slice(0, 2)
     .map((word) => Array.from(word)[0] ?? "")
     .join("")

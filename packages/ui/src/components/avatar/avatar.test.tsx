@@ -22,6 +22,11 @@ describe("Avatar", () => {
     expect(initialsOf("अनन्या शर्मा")).toBe("अश");
   });
 
+  it("skips words that are only punctuation", () => {
+    expect(initialsOf("Rhea & Partner")).toBe("RP");
+    expect(initialsOf("Kapoor - Mehta")).toBe("KM");
+  });
+
   it("is a gold or peacock circle with midnight initials", async () => {
     await renderWithProviders(<Avatar name="Kabir Mehta" tone="highlight" testID="avatar" />);
     expect(screen.getByTestId("avatar").props.className).toContain("bg-highlight");

@@ -1,16 +1,20 @@
+import { useState } from "react";
 import { useRouter } from "expo-router";
 
 import { useStaffEnquiries } from "@ampm/api-client";
+import type { HotelEnquiryStage } from "@ampm/core";
 import { Card, Row, Stack, Text } from "@ampm/ui";
 
 import { queueEyebrow } from "./consultancy-admin.format";
 import { EnquiryQueueCard } from "./enquiry-queue-card";
 import { EnquiryQueueStates } from "./enquiry-queue-states";
+import { EnquiryStageFilter } from "./enquiry-stage-filter";
 
 /**
  * T6's queue column on a desktop: one glass panel (22 inside, radius 26) headed "Enquiries" in Gilda 28
- * with the open count at its right, then the enquiries as flat cards, the open one selected. It fills
- * its column's height, so it runs as long as the enquiry beside it, as T6 does.
+ * with the open count at its right, the pipeline's stage filter, then the enquiries as flat cards, the
+ * open one selected. It fills its column's height, so it runs as long as the enquiry beside it, as T6
+ * does. The filter is the panel's own state, so it holds while enquiries open beside it.
  *
  * Choosing an enquiry changes the open one in place, at its own address: on an enquiry's page the
  * route's id changes (no new screen, so the queue keeps its scroll and Back does not walk through
@@ -19,7 +23,8 @@ import { EnquiryQueueStates } from "./enquiry-queue-states";
  */
 export function EnquiryQueuePanel({ openId }: { readonly openId: string | undefined }) {
   const router = useRouter();
-  const enquiries = useStaffEnquiries();
+  const [stage, setStage] = useState<HotelEnquiryStage | null>(null);
+  const enquiries = useStaffEnquiries({ stage: stage ?? undefined });
   const onOpen = (id: string): void => {
     if (id === openId) return;
     if (openId === undefined) router.replace(`/enquiries/${id}`);
@@ -35,7 +40,8 @@ export function EnquiryQueuePanel({ openId }: { readonly openId: string | undefi
           <Text variant="eyebrow">{queueEyebrow(enquiries.data)}</Text>
         ) : null}
       </Row>
-      <EnquiryQueueStates enquiries={enquiries} inPanel>
+      <EnquiryStageFilter value={stage} onChange={setStage} />
+      <EnquiryQueueStates enquiries={enquiries} inPanel filtered={stage !== null}>
         {(page) => (
           <Stack gap={2}>
             {page.items.map((enquiry) => (

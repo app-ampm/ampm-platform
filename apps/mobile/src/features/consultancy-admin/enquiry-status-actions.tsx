@@ -69,7 +69,7 @@ export function EnquiryStatusActions({
     return <Callout kind="info" title="This enquiry is closed." blur={card.tone === "glass"} />;
   return (
     <Stack gap={3}>
-      <Text variant="heading">Advance</Text>
+      <Text variant="heading">Move the enquiry</Text>
       <Card tone={card.tone} className={card.className}>
         <Stack gap={4}>
           <Row gap={2} wrap>

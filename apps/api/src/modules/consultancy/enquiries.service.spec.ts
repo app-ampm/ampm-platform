@@ -10,6 +10,7 @@ import { ConfigService } from "../admin/config/config.service.js";
 import { NotificationService } from "../admin/notification/notification.service.js";
 import { ServiceAgreementsService } from "../crm/service-agreements/service-agreements.service.js";
 import { EnquiryEventsRepository, type EnquiryEventRow } from "./enquiry-events.repository.js";
+import { EnquiryInsightsRepository, NO_EXTRAS } from "./enquiry-insights.repository.js";
 import { EnquiriesRepository, type EnquiryRow } from "./enquiries.repository.js";
 import { EnquiriesService } from "./enquiries.service.js";
 import { BookingMilestonesRepository } from "./booking-milestones.repository.js";
@@ -99,6 +100,11 @@ function build(row: EnquiryRow = makeRow(), events: EnquiryEventRow[] = []) {
     hasDoneMilestone: vi.fn(async () => false),
     hasSignedContract: vi.fn(async () => false),
   };
+  // The names and the newest proposal are covered end to end (consultancy-pipeline.e2e-spec).
+  const insights = {
+    extrasFor: vi.fn(async () => new Map()),
+    extrasOf: vi.fn(async () => NO_EXTRAS),
+  };
   const logger = { warn: vi.fn() };
   const service = new EnquiriesService(
     repo as unknown as EnquiriesRepository,
@@ -109,6 +115,7 @@ function build(row: EnquiryRow = makeRow(), events: EnquiryEventRow[] = []) {
     config as unknown as ConfigService,
     agreements as unknown as ServiceAgreementsService,
     milestones as unknown as BookingMilestonesRepository,
+    insights as unknown as EnquiryInsightsRepository,
     logger as unknown as AppLogger,
   );
   return { service, repo, eventsRepo, audit, notifications, config, agreements, milestones };

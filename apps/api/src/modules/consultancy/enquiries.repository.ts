@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import type { HotelEnquiryListQuery } from "@ampm/core";
+import { HOTEL_ENQUIRY_STAGE_STATUSES, type HotelEnquiryListQuery } from "@ampm/core";
 
 import { PrismaService } from "../../db/prisma.service.js";
 import {
@@ -220,6 +220,7 @@ export class EnquiriesRepository {
   private filters(query: HotelEnquiryListQuery): Prisma.HotelEnquiryWhereInput {
     const where: Prisma.HotelEnquiryWhereInput = {};
     if (query.status) where.status = query.status;
+    else if (query.stage) where.status = { in: [...HOTEL_ENQUIRY_STAGE_STATUSES[query.stage]] };
     if (query.hotelId) where.hotelId = query.hotelId;
     return where;
   }

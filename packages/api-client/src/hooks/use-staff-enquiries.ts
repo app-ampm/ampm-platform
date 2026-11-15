@@ -1,8 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  hotelEnquiryPipelineView,
   hotelEnquiryStaffDetailView,
   hotelEnquiryStaffPage,
   hotelEnquiryStaffView,
+  type HotelEnquiryPipelineView,
+  type HotelEnquiryStage,
   type HotelEnquiryStaffDetailView,
   type HotelEnquiryStaffPage,
   type HotelEnquiryStaffView,
@@ -20,6 +23,8 @@ export function staffEnquiryQueryKey(enquiryId: string) {
 
 export interface StaffEnquiriesQuery {
   readonly status?: string;
+  /** One pipeline stage's statuses (the queue's filter). */
+  readonly stage?: HotelEnquiryStage | undefined;
   readonly hotelId?: string;
   readonly cursor?: string;
 }
@@ -29,6 +34,7 @@ export function useStaffEnquiries(query: StaffEnquiriesQuery = {}) {
   const api = useApiClient();
   const params = new URLSearchParams();
   if (query.status) params.set("status", query.status);
+  if (query.stage) params.set("stage", query.stage);
   if (query.hotelId) params.set("hotelId", query.hotelId);
   if (query.cursor) params.set("cursor", query.cursor);
   const suffix = params.toString();
@@ -40,6 +46,20 @@ export function useStaffEnquiries(query: StaffEnquiriesQuery = {}) {
         hotelEnquiryStaffPage,
         signal,
       ),
+  });
+}
+
+/**
+ * The pipeline's stage counts and the open enquiries nobody holds (`GET …/enquiries/pipeline`). Under
+ * STAFF_ENQUIRIES_QUERY_KEY, so every transition and proposal change that refreshes the queue refreshes
+ * these counts too.
+ */
+export function useStaffEnquiryPipeline() {
+  const api = useApiClient();
+  return useQuery<HotelEnquiryPipelineView>({
+    queryKey: [...STAFF_ENQUIRIES_QUERY_KEY, "pipeline"],
+    queryFn: ({ signal }) =>
+      api.get("/consultancy-admin/enquiries/pipeline", hotelEnquiryPipelineView, signal),
   });
 }
 
