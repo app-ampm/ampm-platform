@@ -140,7 +140,7 @@ describe("AccountDetailScreen", () => {
     expect(within(header).queryByRole("button", { name: "Record payment" })).toBeNull();
   });
 
-  describe("Record payment follows crm.subscriptions.update, the key the route requires", () => {
+  describe("Record payment follows the route's decision (RECORD_SUBSCRIPTION_PAYMENT, D-125)", () => {
     const second = subscriptionViewFixture({ id: SECOND_SUBSCRIPTION_ID });
 
     /** Renders the record and lets every query, `/me` with them, answer before a check for absence. */
@@ -157,7 +157,7 @@ describe("AccountDetailScreen", () => {
       ["one waits", [subscriptionViewFixture()]],
       ["several wait", [subscriptionViewFixture(), second]],
     ])("hides it from a reader without the key when %s", async (_, subscriptions) => {
-      // The hotel team (HT) reads subscriptions but may not update them.
+      // The hotel team (HT) reads subscriptions but may not change their status.
       await renderSettled(subscriptions, ["HT"]);
       expect(screen.queryByRole("button", { name: "Record payment" })).toBeNull();
       expect(screen.queryByTestId(`record-payment-${SUBSCRIPTION_ID}`)).toBeNull();
@@ -169,6 +169,11 @@ describe("AccountDetailScreen", () => {
     ])("offers it to a reader with the key when %s", async (_, subscriptions, count) => {
       await renderSettled(subscriptions, ["SM"]);
       expect(screen.getAllByRole("button", { name: "Record payment" })).toHaveLength(count);
+    });
+
+    it("offers it to Finance, whose status-only grant covers what recording changes", async () => {
+      await renderSettled([subscriptionViewFixture()], ["FA"]);
+      expect(screen.getAllByRole("button", { name: "Record payment" })).toHaveLength(1);
     });
   });
 

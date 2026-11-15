@@ -91,7 +91,7 @@ export interface RecordPaymentSheetProps {
 }
 
 /**
- * Record a manual bank transfer against a pending subscription (`crm.subscriptions.update`). The amount
+ * Record a manual bank transfer against a pending subscription (`RECORD_SUBSCRIPTION_PAYMENT`). The amount
  * is NOT entered — the server takes it from the plan — so the recorder supplies the reference, the method
  * and, if it differs from now, when it was received. Recording it runs the same activation as the gateway
  * webhook.
