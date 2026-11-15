@@ -57,8 +57,27 @@ export interface AccountContactWriteData {
   readonly phone: string | null;
   readonly email: string | null;
   readonly isDecisionMaker: boolean;
-  readonly userId: string;
+  /** The contact's portal login; null for a contact who has none (yet). */
+  readonly userId: string | null;
   readonly createdBy: string;
+}
+
+/** The contact fields the hub may change, plus the login an invite attaches; a key left out stays. */
+export interface AccountContactPatch {
+  readonly name?: string;
+  readonly relation?: string;
+  readonly email?: string | null;
+  readonly phone?: string | null;
+  readonly isDecisionMaker?: boolean;
+  readonly userId?: string;
+}
+
+/** The account fields the hub may change (TW-13); a key left out is left as it is. */
+export interface AccountPatch {
+  readonly name?: string;
+  readonly coupleNames?: string | null;
+  readonly preferredLocations?: string | null;
+  readonly internalNotes?: string | null;
 }
 
 export interface AccountListFilters {
@@ -141,6 +160,54 @@ export class AccountsRepository {
   ): Promise<string> {
     const contact = await client.accountContact.create({ data, select: { id: true } });
     return contact.id;
+  }
+
+  /** The live account alone (no contacts), for a write's guards and its audit's before image. */
+  async findAccount(id: string): Promise<AccountRow | null> {
+    const account = await this.prisma.clientAccount.findFirst({
+      where: { id, deletedAt: null },
+      select: ACCOUNT_FIELDS,
+    });
+    return account ? toAccountRow(account) : null;
+  }
+
+  async updateAccount(
+    id: string,
+    patch: AccountPatch,
+    actorId: string,
+    client: Prisma.TransactionClient,
+  ): Promise<void> {
+    await client.clientAccount.update({ where: { id }, data: { ...patch, updatedBy: actorId } });
+  }
+
+  /** A live contact of a live account; null when either is missing or the contact is another account's. */
+  async findContact(accountId: string, contactId: string): Promise<AccountContactRow | null> {
+    const contact = await this.prisma.accountContact.findFirst({
+      where: { id: contactId, accountId, deletedAt: null, account: { deletedAt: null } },
+      select: CONTACT_FIELDS,
+    });
+    return contact ? toContactRow(contact) : null;
+  }
+
+  async updateContact(
+    id: string,
+    patch: AccountContactPatch,
+    actorId: string,
+    client: Prisma.TransactionClient,
+  ): Promise<void> {
+    await client.accountContact.update({ where: { id }, data: { ...patch, updatedBy: actorId } });
+  }
+
+  /** Soft delete (nothing is deleted outright, security.md "Personal data"). */
+  async removeContact(
+    id: string,
+    actorId: string,
+    client: Prisma.TransactionClient,
+  ): Promise<void> {
+    await client.accountContact.update({
+      where: { id },
+      data: { deletedAt: new Date(), updatedBy: actorId },
+    });
   }
 
   async findById(id: string): Promise<AccountDetailRow | null> {

@@ -165,11 +165,14 @@ export class EnquiriesRepository {
     return this.page({ accountId, ...this.filters(query) }, query);
   }
 
+  /** The staff queue, optionally one client's enquiries (the account hub). The account filter is applied
+   *  here and never in `filters`, so the client path — always its own account — cannot be widened by it. */
   async listStaff(
     scopeWhere: Prisma.HotelEnquiryWhereInput,
     query: HotelEnquiryListQuery,
   ): Promise<{ rows: EnquiryRow[]; nextCursor: string | null }> {
-    return this.page({ ...scopeWhere, ...this.filters(query) }, query);
+    const byAccount = query.accountId ? { accountId: query.accountId } : {};
+    return this.page({ ...scopeWhere, ...byAccount, ...this.filters(query) }, query);
   }
 
   async updateStatus(

@@ -4,6 +4,9 @@ import { AppLogger } from "../../common/logger.service.js";
 import { ENV, type Env } from "../../env.js";
 import { IdentityModule } from "../../identity/identity.module.js";
 import { NotificationModule } from "../admin/notification/notification.module.js";
+import { AccountContactsController } from "./accounts/account-contacts.controller.js";
+import { AccountContactsService } from "./accounts/account-contacts.service.js";
+import { AccountInviteService } from "./accounts/account-invite.service.js";
 import { AccountsController } from "./accounts/accounts.controller.js";
 import { AccountsRepository } from "./accounts/accounts.repository.js";
 import { AccountsService } from "./accounts/accounts.service.js";
@@ -31,7 +34,7 @@ import { LeadsService } from "./leads/leads.service.js";
  */
 @Module({
   imports: [NotificationModule, IdentityModule],
-  controllers: [LeadsController, AccountsController],
+  controllers: [LeadsController, AccountsController, AccountContactsController],
   providers: [
     LeadsService,
     LeadEnquiryService,
@@ -40,6 +43,8 @@ import { LeadsService } from "./leads/leads.service.js";
     LeadActivitiesRepository,
     HotelAssistanceDemoHandler,
     AccountsService,
+    AccountContactsService,
+    AccountInviteService,
     AccountsRepository,
     {
       provide: BOT_CHECK_ADAPTER,

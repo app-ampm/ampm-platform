@@ -1,11 +1,13 @@
-import { Controller, Get, HttpCode, Post } from "@nestjs/common";
+import { Controller, Get, HttpCode, Patch, Post } from "@nestjs/common";
 import {
   accountListQuery,
+  accountUpdateRequest,
   leadConvertRequest,
   uuid,
   type AccountDetailView,
   type AccountListQuery,
   type AccountPage,
+  type AccountUpdateRequest,
   type LeadConvertRequest,
   type LeadConvertResponse,
 } from "@ampm/core";
@@ -16,7 +18,7 @@ import { CurrentPrincipal, RequirePermission, SelfAudited } from "../../../polic
 import type { Principal } from "../../../policy/principal.types.js";
 import { AccountsService } from "./accounts.service.js";
 
-function staffId(principal: Principal): string {
+export function staffId(principal: Principal): string {
   if (principal.type !== "staff") throw new Error("a staff principal is required");
   return principal.userId;
 }
@@ -24,8 +26,8 @@ function staffId(principal: Principal): string {
 /**
  * Client accounts (Module B CRM, feature 8.2). Convert creates an account from a lead and is a
  * system-set lead transition, so it is guarded by `crm.accounts.create` (SA/SM) and writes its own
- * precise audit (`@SelfAudited`). The reads are the Sales workspace account surface (TW-11); account
- * update/delete land with the account-management increment.
+ * precise audit (`@SelfAudited`). The reads and the details edit are the client hub (TW-13): edit is
+ * `crm.accounts.update` (SA/SM); the contacts are AccountContactsController.
  */
 @Controller("crm")
 export class AccountsController {
@@ -55,5 +57,16 @@ export class AccountsController {
     @ZodParams(z.object({ accountId: uuid })) params: { accountId: string },
   ): Promise<AccountDetailView> {
     return this.accounts.get(params.accountId);
+  }
+
+  @Patch("accounts/:accountId")
+  @RequirePermission("crm.accounts.update")
+  @SelfAudited()
+  update(
+    @ZodParams(z.object({ accountId: uuid })) params: { accountId: string },
+    @ZodBody(accountUpdateRequest) body: AccountUpdateRequest,
+    @CurrentPrincipal() principal: Principal,
+  ): Promise<AccountDetailView> {
+    return this.accounts.update(params.accountId, body, staffId(principal));
   }
 }

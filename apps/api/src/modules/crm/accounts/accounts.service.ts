@@ -1,28 +1,22 @@
-import { Inject, Injectable } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
 import {
   errors,
   type AccountDetailView,
   type AccountListQuery,
   type AccountPage,
+  type AccountUpdateRequest,
   type LeadConvertRequest,
   type LeadConvertResponse,
   type LeadStatus,
 } from "@ampm/core";
 
-import { AppLogger } from "../../../common/logger.service.js";
 import { PrismaService } from "../../../db/prisma.service.js";
-import { ENV, type Env } from "../../../env.js";
 import { Prisma } from "../../../generated/prisma/client.js";
-import { AuthTokenService } from "../../../identity/auth-token.service.js";
-import { ClientUserService } from "../../../identity/client-user.service.js";
-import {
-  IDENTITY_PROVISIONER,
-  type IdentityProvisioner,
-} from "../../../identity/identity.types.js";
 import { AuditService } from "../../../policy/audit.service.js";
-import { NotificationService } from "../../admin/notification/notification.service.js";
 import { LeadsRepository } from "../leads/leads.repository.js";
 import { DEFAULT_CONTACT_RELATION } from "./account-constants.js";
+import { AccountInviteService, type Invitee, type MintedInvite } from "./account-invite.service.js";
+import { accountPatchOf, beforeImage } from "./account-patches.js";
 import {
   AccountsRepository,
   type AccountContactWriteData,
@@ -51,7 +45,8 @@ interface ConvertPlan {
  * `client_accounts` row with its primary contact and a portal invite, leaving the lead read-only. The
  * `users` row + invite are minted through the kernel identity services (never by writing `users` here —
  * api.md), and the whole conversion is one transaction so an account never exists without its invite.
- * Account update/delete and Finance billing are later increments.
+ * The hub (TW-13) edits the account's details here and its contacts in AccountContactsService; status
+ * changes (suspend refuses sign-in) and Finance billing are later increments.
  */
 @Injectable()
 export class AccountsService {
@@ -60,12 +55,7 @@ export class AccountsService {
     private readonly leads: LeadsRepository,
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
-    private readonly authTokens: AuthTokenService,
-    private readonly clientUsers: ClientUserService,
-    private readonly notifications: NotificationService,
-    private readonly logger: AppLogger,
-    @Inject(IDENTITY_PROVISIONER) private readonly provisioner: IdentityProvisioner,
-    @Inject(ENV) private readonly env: Env,
+    private readonly invites: AccountInviteService,
   ) {}
 
   async convert(
@@ -80,23 +70,8 @@ export class AccountsService {
 
     const plan = buildConvertPlan(leadId, lead, request, actorId);
     const created = await this.runConvert(plan);
-    // Provision the Cognito sign-in account (cognito-setup §6) before the invite is queued. Best-effort
-    // after the conversion commits and outside its transaction (an AWS call must not hold a DB tx open),
-    // and a no-op under IDENTITY_PROVIDER=local; a failure is logged, not fatal — the account and its
-    // invite already exist and the client-login reinvite path re-provisions idempotently.
-    await this.provisioner
-      .provisionUser({ kind: "client", email: plan.contact.email, phone: plan.contact.phone })
-      .catch((error: unknown) =>
-        this.logger.warn("account.convert.provision_failed", {
-          userId: created.userId,
-          error: String(error),
-        }),
-      );
-    const inviteQueued = await this.queueInvite(
-      created.userId,
-      plan.contact.name,
-      created.inviteToken,
-    );
+    // Provision the sign-in account and deliver the invite after commit, best-effort (AccountInviteService).
+    const inviteQueued = await this.invites.send(inviteeOf(plan), created);
 
     const detail = await this.accounts.findById(created.accountId);
     if (!detail) throw errors.notFound("No such account");
@@ -110,9 +85,7 @@ export class AccountsService {
     };
   }
 
-  private async runConvert(
-    plan: ConvertPlan,
-  ): Promise<{ accountId: string; userId: string; inviteToken: string }> {
+  private async runConvert(plan: ConvertPlan): Promise<MintedInvite & { accountId: string }> {
     try {
       return await this.prisma.$transaction((tx) => this.convertInTransaction(plan, tx));
     } catch (error) {
@@ -129,20 +102,11 @@ export class AccountsService {
   private async convertInTransaction(
     plan: ConvertPlan,
     tx: Prisma.TransactionClient,
-  ): Promise<{ accountId: string; userId: string; inviteToken: string }> {
-    const { userId } = await this.clientUsers.provisionInvitedClient(
-      {
-        name: plan.contact.name,
-        email: plan.contact.email,
-        phone: plan.contact.phone,
-        createdBy: plan.actorId,
-      },
-      tx,
-    );
+  ): Promise<MintedInvite & { accountId: string }> {
+    const { userId, inviteToken } = await this.invites.mint(inviteeOf(plan), tx);
     const accountId = await this.accounts.createAccount(toAccountData(plan, userId), tx);
     await this.accounts.createContact(toContactData(plan, accountId, userId), tx);
     await this.leads.markConverted(plan.leadId, accountId, plan.actorId, tx);
-    const inviteToken = await this.authTokens.issueInvite(userId, tx);
     await this.recordConversionAudit(tx, plan, accountId, userId);
     return { accountId, userId, inviteToken };
   }
@@ -174,27 +138,32 @@ export class AccountsService {
     );
   }
 
-  /** Deliver the portal invite after commit; best-effort, so a transient failure does not fail the
-   *  conversion (the invite token is saved and can be re-sent). `false` means it was not delivered. */
-  private async queueInvite(userId: string, name: string, inviteToken: string): Promise<boolean> {
-    try {
-      const result = await this.notifications.queue({
-        recipientType: "user",
-        recipientId: userId,
-        channel: "email",
-        eventType: "client.invited",
-        templateKey: "client.invite",
-        entityType: "user",
-        entityId: userId,
-        variables: {
-          name,
-          activationUrl: `${this.env.WEB_APP_URL}/activate?token=${encodeURIComponent(inviteToken)}`,
+  /**
+   * Edit the account's details from the hub (TW-13): name, couple names, preferred locations and the
+   * internal notes. One transaction with its audit, which holds exactly the changed fields.
+   */
+  async update(
+    accountId: string,
+    request: AccountUpdateRequest,
+    actorId: string,
+  ): Promise<AccountDetailView> {
+    const current = await this.accounts.findAccount(accountId);
+    if (!current) throw errors.notFound("No such account");
+    const patch = accountPatchOf(request);
+    await this.prisma.$transaction(async (tx) => {
+      await this.accounts.updateAccount(accountId, patch, actorId, tx);
+      await this.audit.record(
+        {
+          action: "update",
+          entityType: "client_account",
+          entityId: accountId,
+          before: beforeImage(current, patch),
+          after: patch,
         },
-      });
-      return result.suppressed === false;
-    } catch {
-      return false;
-    }
+        tx,
+      );
+    });
+    return this.get(accountId);
   }
 
   async get(accountId: string): Promise<AccountDetailView> {
@@ -211,6 +180,11 @@ export class AccountsService {
     );
     return { items: rows.map(toAccountView), nextCursor };
   }
+}
+
+function inviteeOf(plan: ConvertPlan): Invitee {
+  const { name, email, phone } = plan.contact;
+  return { name, email, phone, actorId: plan.actorId };
 }
 
 function toAccountData(plan: ConvertPlan, userId: string): AccountWriteData {

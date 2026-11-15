@@ -208,10 +208,15 @@ export type {
 } from "./leads";
 export {
   accountClientView,
+  accountContactCreateRequest,
+  accountContactRemovedResponse,
+  accountContactResult,
+  accountContactUpdateRequest,
   accountContactView,
   accountDetailView,
   accountListQuery,
   accountPage,
+  accountUpdateRequest,
   accountView,
   clientAccountStatus,
   leadConvertRequest,
@@ -219,10 +224,15 @@ export {
 } from "./accounts";
 export type {
   AccountClientView,
+  AccountContactCreateRequest,
+  AccountContactRemovedResponse,
+  AccountContactResult,
+  AccountContactUpdateRequest,
   AccountContactView,
   AccountDetailView,
   AccountListQuery,
   AccountPage,
+  AccountUpdateRequest,
   AccountView,
   ClientAccountStatus,
   LeadConvertRequest,
