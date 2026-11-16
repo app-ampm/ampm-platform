@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 import { createApiClient } from "./client";
@@ -29,6 +29,29 @@ describe("createApiClient", () => {
     });
     await expect(api.get("/me", schema)).resolves.toEqual({ ok: true });
     expect((capture.init?.headers as Record<string, string>)["authorization"]).toBe("Bearer t0k3n");
+  });
+
+  it("sends no bearer on an anonymous request, even while a (stale) token is held", async () => {
+    const capture: { init?: RequestInit | undefined } = {};
+    const getAccessToken = vi.fn(() => "stale-t0k3n");
+    const api = createApiClient({
+      baseUrl: "http://api.test",
+      getAccessToken,
+      fetch: fakeFetch(200, { data: { ok: true } }, capture),
+    });
+    await expect(
+      api.request("/auth/dev-login", {
+        method: "POST",
+        body: { email: "admin@example.com" },
+        schema,
+        anonymous: true,
+      }),
+    ).resolves.toEqual({ ok: true });
+    const headers = capture.init?.headers as Record<string, string>;
+    expect(headers["authorization"]).toBeUndefined();
+    expect(headers["content-type"]).toBe("application/json");
+    // Not even asked for: under Cognito the getter may refresh a session the sign-in is replacing.
+    expect(getAccessToken).not.toHaveBeenCalled();
   });
 
   it("turns a failure envelope into a typed error", async () => {

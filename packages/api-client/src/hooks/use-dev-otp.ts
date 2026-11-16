@@ -26,6 +26,7 @@ export function useRequestDevOtp() {
         method: "POST",
         body,
         schema: devOtpSendResponse,
+        anonymous: true,
       }),
   });
 }
@@ -42,6 +43,7 @@ export function useVerifyDevOtp() {
         method: "POST",
         body,
         schema: devLoginResponse,
+        anonymous: true,
       }),
   });
 }
@@ -60,6 +62,7 @@ export function useCreateDemoClient() {
         method: "POST",
         body,
         schema: devCreateClientResponse,
+        anonymous: true,
       }),
   });
 }
