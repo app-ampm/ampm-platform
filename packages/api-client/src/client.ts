@@ -14,6 +14,15 @@ export interface RequestOptions<T> {
   /** The response schema from @ampm/core; the data is parsed through it, never trusted raw. */
   readonly schema: ZodType<T>;
   readonly signal?: AbortSignal | undefined;
+  /**
+   * Send no Bearer token: for the sign-in calls, which act as nobody yet. A held token is stale by then,
+   * and on the test box `/_api/auth/dev-login*` sits behind the site's Basic-Auth, where an explicit
+   * Bearer header replaces the browser's password: Apache logs each try as a failed login and fail2ban
+   * bans the IP after five.
+   *
+   *   api.request("/auth/dev-login", { method: "POST", body, schema: devLoginResponse, anonymous: true })
+   */
+  readonly anonymous?: boolean | undefined;
 }
 
 export interface UploadOptions<T> {
@@ -54,9 +63,13 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
   const doFetch = options.fetch ?? fetch;
   const base = options.baseUrl.replace(/\/+$/, "");
 
-  async function authHeaders(extra: Record<string, string>): Promise<Record<string, string>> {
-    const token = options.getAccessToken ? await options.getAccessToken() : null;
+  async function authHeaders(
+    extra: Record<string, string>,
+    anonymous = false,
+  ): Promise<Record<string, string>> {
     const headers: Record<string, string> = { accept: "application/json", ...extra };
+    if (anonymous) return headers;
+    const token = options.getAccessToken ? await options.getAccessToken() : null;
     if (token) headers["authorization"] = `Bearer ${token}`;
     return headers;
   }
@@ -85,10 +98,11 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
 
   async function request<T>(
     path: string,
-    { method = "GET", body, schema, signal }: RequestOptions<T>,
+    { method = "GET", body, schema, signal, anonymous = false }: RequestOptions<T>,
   ): Promise<T> {
     const headers = await authHeaders(
       body === undefined ? {} : { "content-type": "application/json" },
+      anonymous,
     );
     return run(
       path,

@@ -12,7 +12,12 @@ export function useDevLogin() {
   const api = useApiClient();
   return useMutation<DevLoginResponse, Error, DevLoginRequest>({
     mutationFn: (body) =>
-      api.request("/auth/dev-login", { method: "POST", body, schema: devLoginResponse }),
+      api.request("/auth/dev-login", {
+        method: "POST",
+        body,
+        schema: devLoginResponse,
+        anonymous: true,
+      }),
   });
 }
 
@@ -26,6 +31,10 @@ export function useDemoSignIn() {
   const api = useApiClient();
   return useMutation<DevLoginResponse, Error, void>({
     mutationFn: () =>
-      api.request("/auth/dev-login/demo", { method: "POST", schema: devLoginResponse }),
+      api.request("/auth/dev-login/demo", {
+        method: "POST",
+        schema: devLoginResponse,
+        anonymous: true,
+      }),
   });
 }
