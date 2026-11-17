@@ -1,4 +1,9 @@
-import type { LeadActivityCreateRequest, LeadActivityType } from "@ampm/core";
+import {
+  leadUpdateRequest,
+  type LeadActivityCreateRequest,
+  type LeadActivityType,
+  type LeadUpdateRequest,
+} from "@ampm/core";
 
 /*
  * Pure form logic for the Sales workspace's lead actions (TW-11/TW-12): the add-activity draft and the
@@ -71,4 +76,20 @@ export function buildActivityBody(draft: ActivityDraft, now: number): LeadActivi
     ...(summary ? { summary } : {}),
     ...(nextFollowUpAt ? { nextFollowUpAt } : {}),
   };
+}
+
+export const LEAD_EMAIL_ERROR = "Enter a valid email address";
+
+export type LeadEmailBuild =
+  | { readonly ok: true; readonly body: LeadUpdateRequest }
+  | { readonly ok: false; readonly error: string };
+
+/**
+ * The lead edit that adds an email so the portal invite has somewhere to go (a phone-only enquiry),
+ * checked by the API's own `leadUpdateRequest`, which also trims and lowercases it; a blank entry fails
+ * the same check, so it never reaches the API as an empty email.
+ */
+export function buildLeadEmail(input: string): LeadEmailBuild {
+  const parsed = leadUpdateRequest.safeParse({ email: input });
+  return parsed.success ? { ok: true, body: parsed.data } : { ok: false, error: LEAD_EMAIL_ERROR };
 }
