@@ -54,8 +54,11 @@ export class ClientUserService {
   }
 
   /** A client login's status (`invited` until it activates), or null for no such live login. */
-  async statusOf(userId: string): Promise<UserStatus | null> {
-    const user = await this.prisma.user.findFirst({
+  async statusOf(
+    userId: string,
+    client: Prisma.TransactionClient = this.prisma,
+  ): Promise<UserStatus | null> {
+    const user = await client.user.findFirst({
       where: { id: userId, userType: "client", deletedAt: null },
       select: { status: true },
     });

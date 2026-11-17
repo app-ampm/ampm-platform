@@ -29,7 +29,7 @@ describe("A contact's invite link on a test build (e2e)", () => {
     });
     const leadIds = leads.map((lead) => lead.id);
     const accounts = await prisma.clientAccount.findMany({
-      where: { leadId: { in: leadIds } },
+      where: { OR: [{ leadId: { in: leadIds } }, { name: { startsWith: TAG } }] },
       select: { id: true },
     });
     const accountIds = accounts.map((account) => account.id);
@@ -92,6 +92,43 @@ describe("A contact's invite link on a test build (e2e)", () => {
       .post(linkUrl(added.body.data.contact.id as string))
       .set("authorization", await as("local:sm"))
       .expect(409);
+  });
+
+  it("treats a missing account or another account's contact as missing (404)", async () => {
+    await http()
+      .post(
+        `/crm/accounts/018f0000-0000-7000-8000-00000000dead/contacts/${primaryContactId}/invite-link`,
+      )
+      .set("authorization", await as("local:sm"))
+      .expect(404);
+    const other = await prisma.clientAccount.create({
+      data: { name: `${TAG} Other`, status: "prospect" },
+      select: { id: true },
+    });
+    await http()
+      .post(`/crm/accounts/${other.id}/contacts/${primaryContactId}/invite-link`)
+      .set("authorization", await as("local:sm"))
+      .expect(404);
+  });
+
+  it("gives no link on a demo or a suspended account (409)", async () => {
+    const demo = await prisma.clientAccount.findFirstOrThrow({
+      where: { isDemo: true, deletedAt: null },
+      select: { id: true, contacts: { select: { id: true }, take: 1 } },
+    });
+    const suspended = await prisma.clientAccount.create({
+      data: { name: `${TAG} Suspended`, status: "suspended" },
+      select: { id: true },
+    });
+    for (const [account, contact] of [
+      [demo.id, demo.contacts[0]?.id ?? primaryContactId],
+      [suspended.id, primaryContactId],
+    ]) {
+      await http()
+        .post(`/crm/accounts/${account}/contacts/${contact}/invite-link`)
+        .set("authorization", await as("local:sm"))
+        .expect(409);
+    }
   });
 
   it("hands Sales a link the client activates with, retiring the earlier one, and audits it", async () => {

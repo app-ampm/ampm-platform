@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { assertDevBuild, type DevGateEnv } from "./dev-gate.js";
 
 // The gate checks only that a local secret is set, not its strength (env.ts does that).
-const SECRET = "local-secret";
+const SECRET = "change-me-local-secret";
 
 function env(overrides: Partial<DevGateEnv> = {}): DevGateEnv {
   return {

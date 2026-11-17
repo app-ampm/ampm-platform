@@ -69,6 +69,26 @@ function AccessButtons({
   );
 }
 
+/** A contact with a portal login stays; a test build also offers their invite link to hand over. */
+function HasLogin({
+  accountId,
+  contactId,
+  canGetLink,
+}: {
+  readonly accountId: string;
+  readonly contactId: string;
+  readonly canGetLink: boolean;
+}) {
+  return (
+    <Stack gap={4}>
+      <Text variant="bodySmall" tone="muted" testID="contact-has-login">
+        Has portal access. A contact who signs in cannot be removed here.
+      </Text>
+      {canGetLink ? <DevInviteLink accountId={accountId} contactId={contactId} /> : null}
+    </Stack>
+  );
+}
+
 export interface ContactAccessProps {
   readonly accountId: string;
   readonly contact: AccountContactView;
@@ -94,14 +114,11 @@ export function ContactAccess({
   const invite = useInvite(accountId, contact.id, onDone);
   if (contact.userId !== null) {
     return (
-      <Stack gap={4}>
-        <Text variant="bodySmall" tone="muted" testID="contact-has-login">
-          Has portal access. A contact who signs in cannot be removed here.
-        </Text>
-        {SERVES_INVITE_LINKS && permissions.canAddContact ? (
-          <DevInviteLink accountId={accountId} contactId={contact.id} />
-        ) : null}
-      </Stack>
+      <HasLogin
+        accountId={accountId}
+        contactId={contact.id}
+        canGetLink={SERVES_INVITE_LINKS && permissions.canAddContact}
+      />
     );
   }
   const canInvite = permissions.canAddContact && contact.email !== null;

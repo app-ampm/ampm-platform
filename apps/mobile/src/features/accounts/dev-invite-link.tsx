@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 import { useAccountContactInviteLink } from "@ampm/api-client";
 import { isAppError } from "@ampm/core";
 import { Button, Row, Stack, Text, useToast } from "@ampm/ui";
@@ -30,6 +32,25 @@ function CopyButton({ url }: { readonly url: string }) {
   );
 }
 
+/** The contact's latest link, kept while a new one loads or after a refusal (which retires nothing). */
+function useDevInviteLink(accountId: string, contactId: string) {
+  const toast = useToast();
+  const link = useAccountContactInviteLink(accountId, contactId);
+  const [url, setUrl] = useState<string | null>(null);
+  const getLink = (): void => {
+    if (link.isPending) return;
+    link.mutate(undefined, {
+      onSuccess: (result) => setUrl(result.activationUrl),
+      onError: (error) =>
+        toast.show({
+          title: isAppError(error) ? error.message : "Could not get the invite link",
+          tone: "danger",
+        }),
+    });
+  };
+  return { url, getLink, pending: link.isPending };
+}
+
 export interface DevInviteLinkProps {
   readonly accountId: string;
   readonly contactId: string;
@@ -43,27 +64,15 @@ export interface DevInviteLinkProps {
  *   {SERVES_INVITE_LINKS ? <DevInviteLink accountId={accountId} contactId={contact.id} /> : null}
  */
 export function DevInviteLink({ accountId, contactId }: DevInviteLinkProps) {
-  const toast = useToast();
-  const link = useAccountContactInviteLink(accountId, contactId);
-  const url = link.data?.activationUrl;
-  const getLink = (): void => {
-    if (link.isPending) return;
-    link.mutate(undefined, {
-      onError: (error) =>
-        toast.show({
-          title: isAppError(error) ? error.message : "Could not get the invite link",
-          tone: "danger",
-        }),
-    });
-  };
+  const { url, getLink, pending } = useDevInviteLink(accountId, contactId);
   return (
     <Stack gap={2} testID="contact-invite-link">
       <Text variant="label" tone="muted">
         Test build: invite link
       </Text>
       <Text variant="bodySmall" tone="muted">
-        This build sends no email. Hand the client this link and open it in a private window: here
-        it would sign you out. Each new link retires the last.
+        This build sends no email. Until they activate, get their link here and hand it over. Open
+        it in a private window: here it would sign you out. Each new link retires the last.
       </Text>
       {url ? (
         <Text variant="bodySmall" selectable testID="contact-invite-link-url">
@@ -75,7 +84,7 @@ export function DevInviteLink({ accountId, contactId }: DevInviteLinkProps) {
           variant="secondary"
           size="sm"
           icon="key"
-          loading={link.isPending}
+          loading={pending}
           onPress={getLink}
           testID="contact-get-invite-link"
         >

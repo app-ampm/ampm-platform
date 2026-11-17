@@ -90,9 +90,12 @@ export class AccountInviteService {
    */
   async reissueLink(userId: string, tx: Prisma.TransactionClient): Promise<string> {
     this.assertLinksServed();
-    const status = await this.clientUsers.statusOf(userId);
-    if (status !== "invited") {
+    const status = await this.clientUsers.statusOf(userId, tx);
+    if (status === "active") {
       throw errors.conflict("This contact has already activated their portal login");
+    }
+    if (status !== "invited") {
+      throw errors.conflict("This contact's portal login is disabled, so it cannot be activated");
     }
     return this.activationUrl(await this.authTokens.issueInvite(userId, tx));
   }
