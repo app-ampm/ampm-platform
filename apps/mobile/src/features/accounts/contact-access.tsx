@@ -2,6 +2,7 @@ import { useInviteAccountContact } from "@ampm/api-client";
 import { isAppError, type AccountContactView } from "@ampm/core";
 import { Button, Row, Stack, Text, useToast } from "@ampm/ui";
 
+import { DevInviteLink, SERVES_INVITE_LINKS } from "./dev-invite-link";
 import type { AccountPermissions } from "./use-account-permissions";
 
 /** Invite an existing contact to the portal; the sheet closes once the login exists. */
@@ -68,6 +69,26 @@ function AccessButtons({
   );
 }
 
+/** A contact with a portal login stays; a test build also offers their invite link to hand over. */
+function HasLogin({
+  accountId,
+  contactId,
+  canGetLink,
+}: {
+  readonly accountId: string;
+  readonly contactId: string;
+  readonly canGetLink: boolean;
+}) {
+  return (
+    <Stack gap={4}>
+      <Text variant="bodySmall" tone="muted" testID="contact-has-login">
+        Has portal access. A contact who signs in cannot be removed here.
+      </Text>
+      {canGetLink ? <DevInviteLink accountId={accountId} contactId={contactId} /> : null}
+    </Stack>
+  );
+}
+
 export interface ContactAccessProps {
   readonly accountId: string;
   readonly contact: AccountContactView;
@@ -78,9 +99,10 @@ export interface ContactAccessProps {
 }
 
 /**
- * A contact's portal access in the edit sheet. With a login: says so (they sign in, so they stay).
- * Without: Send portal invite (the saved email; a contact with none is asked for one first) and Remove
- * contact, each for a role that may.
+ * A contact's portal access in the edit sheet. With a login: says so (they sign in, so they stay), and
+ * on a test build, which sends no email, offers the invite link to hand over. Without: Send portal
+ * invite (the saved email; a contact with none is asked for one first) and Remove contact, each for a
+ * role that may.
  */
 export function ContactAccess({
   accountId,
@@ -92,9 +114,11 @@ export function ContactAccess({
   const invite = useInvite(accountId, contact.id, onDone);
   if (contact.userId !== null) {
     return (
-      <Text variant="bodySmall" tone="muted" testID="contact-has-login">
-        Has portal access. A contact who signs in cannot be removed here.
-      </Text>
+      <HasLogin
+        accountId={accountId}
+        contactId={contact.id}
+        canGetLink={SERVES_INVITE_LINKS && permissions.canAddContact}
+      />
     );
   }
   const canInvite = permissions.canAddContact && contact.email !== null;

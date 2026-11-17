@@ -14,6 +14,7 @@ export { useSubmitEnquiry } from "./hooks/use-submit-enquiry";
 export { LEADS_QUERY_KEY, useLeads } from "./hooks/use-leads";
 export { ACCOUNTS_QUERY_KEY, accountQueryKey, useAccount, useAccounts } from "./hooks/use-accounts";
 export {
+  useAccountContactInviteLink,
   useAddAccountContact,
   useInviteAccountContact,
   useRemoveAccountContact,

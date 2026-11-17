@@ -1,10 +1,12 @@
 import { Inject, Injectable } from "@nestjs/common";
+import { errors } from "@ampm/core";
 
 import { AppLogger } from "../../../common/logger.service.js";
 import { ENV, type Env } from "../../../env.js";
 import type { Prisma } from "../../../generated/prisma/client.js";
 import { AuthTokenService } from "../../../identity/auth-token.service.js";
 import { ClientUserService } from "../../../identity/client-user.service.js";
+import { assertDevBuild } from "../../../identity/dev-gate.js";
 import {
   IDENTITY_PROVISIONER,
   type IdentityProvisioner,
@@ -73,6 +75,35 @@ export class AccountInviteService {
     return this.deliver(minted.userId, invitee.name, minted.inviteToken);
   }
 
+  /**
+   * Invite links are served on test builds only (the dev sign-in gate): a 404 elsewhere. A caller runs
+   * this before any lookup, so a production request learns nothing about the records it names.
+   */
+  assertLinksServed(): void {
+    assertDevBuild(this.env);
+  }
+
+  /**
+   * A fresh activation link for a login that is still `invited`, for staff to hand over on a test build,
+   * which has no real email provider to deliver it. Issuing retires the login's earlier links, in the
+   * caller's transaction (which audits it).
+   */
+  async reissueLink(userId: string, tx: Prisma.TransactionClient): Promise<string> {
+    this.assertLinksServed();
+    const status = await this.clientUsers.statusOf(userId, tx);
+    if (status === "active") {
+      throw errors.conflict("This contact has already activated their portal login");
+    }
+    if (status !== "invited") {
+      throw errors.conflict("This contact's portal login is disabled, so it cannot be activated");
+    }
+    return this.activationUrl(await this.authTokens.issueInvite(userId, tx));
+  }
+
+  private activationUrl(inviteToken: string): string {
+    return `${this.env.WEB_APP_URL}/activate?token=${encodeURIComponent(inviteToken)}`;
+  }
+
   private async deliver(userId: string, name: string, inviteToken: string): Promise<boolean> {
     try {
       const result = await this.notifications.queue({
@@ -85,7 +116,7 @@ export class AccountInviteService {
         entityId: userId,
         variables: {
           name,
-          activationUrl: `${this.env.WEB_APP_URL}/activate?token=${encodeURIComponent(inviteToken)}`,
+          activationUrl: this.activationUrl(inviteToken),
         },
       });
       return result.suppressed === false;

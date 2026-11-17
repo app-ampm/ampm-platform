@@ -4,6 +4,7 @@ import {
   accountContactUpdateRequest,
   uuid,
   type AccountContactCreateRequest,
+  type AccountContactInviteLink,
   type AccountContactRemovedResponse,
   type AccountContactResult,
   type AccountContactUpdateRequest,
@@ -24,8 +25,9 @@ type ContactParams = z.infer<typeof contactParams>;
 /**
  * An account's contacts on the client hub (TW-13 Overview; the `crm.accounts.*` keys cover "client
  * accounts and contacts"). Add and invite mint a portal login, so they take `create` like Convert;
- * edit takes `update` and remove takes `delete` (SA/SM each). Every write self-audits in its service
- * transaction.
+ * edit takes `update` and remove takes `delete` (SA/SM each). A test build also hands staff an invited
+ * contact's activation link (`invite-link`, `create` like the invite it stands in for). Every write
+ * self-audits in its service transaction.
  */
 @Controller("crm")
 export class AccountContactsController {
@@ -73,5 +75,15 @@ export class AccountContactsController {
     @CurrentPrincipal() principal: Principal,
   ): Promise<AccountContactResult> {
     return this.contacts.invite(params.accountId, params.contactId, staffId(principal));
+  }
+
+  // Not under `/auth/dev-login*`: the test box keeps those paths behind its Basic-Auth, and a staff
+  // Bearer there fails it (#147). Served on test builds only, a 404 elsewhere (the service's gate).
+  @Post("accounts/:accountId/contacts/:contactId/invite-link")
+  @RequirePermission("crm.accounts.create")
+  @SelfAudited()
+  @HttpCode(200)
+  inviteLink(@ZodParams(contactParams) params: ContactParams): Promise<AccountContactInviteLink> {
+    return this.contacts.inviteLink(params.accountId, params.contactId);
   }
 }

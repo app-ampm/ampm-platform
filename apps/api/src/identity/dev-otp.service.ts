@@ -10,6 +10,7 @@ import {
 
 import { PrismaService } from "../db/prisma.service.js";
 import { ENV, type Env } from "../env.js";
+import { assertDevBuild } from "./dev-gate.js";
 import { LocalIdentityAdapter } from "./local.adapter.js";
 
 /** How long a demo code stays valid, and how many wrong tries burn it. */
@@ -147,10 +148,7 @@ export class DevOtpService {
   }
 
   private assertDevOnly(): void {
-    const local = this.env.IDENTITY_PROVIDER === "local";
-    if (!local || this.env.NODE_ENV === "production" || !this.env.IDENTITY_LOCAL_SECRET) {
-      throw errors.notFound();
-    }
+    assertDevBuild(this.env);
   }
 
   private async requireClient(phone: string): Promise<DemoClient> {

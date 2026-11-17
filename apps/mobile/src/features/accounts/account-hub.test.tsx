@@ -12,6 +12,7 @@ import type * as RouterStub from "../portal/portal.test-router";
 import { AccountDetailScreen } from "./account-detail-screen";
 import {
   ACCOUNT_ID,
+  CONTACT_ID,
   accountContactViewFixture,
   accountDetailViewFixture,
   ok,
@@ -38,6 +39,7 @@ jest.mock("react-native/Libraries/Utilities/useWindowDimensions", () => ({
 const LEAD_ID = "018f0000-0000-7000-8000-0000000d0010";
 const GUEST_CONTACT_ID = "018f0000-0000-7000-8000-0000000d0011";
 const LOGIN_USER_ID = "018f0000-0000-7000-8000-0000000d0012";
+const INVITE_LINK = "http://localhost:8082/activate?token=test-invite-token";
 
 type Roles = ReturnType<typeof staffMeFixture>["roles"];
 
@@ -82,6 +84,9 @@ function hubFetch(sent: Sent[], roles: Roles = ["SM"]): FetchFn {
     [contactPath]: record(contactPath, () => ok({ id: GUEST_CONTACT_ID })),
     [`${contactPath}/invite`]: record("invite", () =>
       ok({ contact: { ...contact, userId: LOGIN_USER_ID }, inviteQueued: true }),
+    ),
+    [`/crm/accounts/${ACCOUNT_ID}/contacts/${CONTACT_ID}/invite-link`]: record("invite-link", () =>
+      ok({ activationUrl: INVITE_LINK }),
     ),
     "/crm/subscriptions": () => ok({ items: [], nextCursor: null }),
     "/crm/plans": () => ok({ items: [planPublicViewFixture()] }),
@@ -157,6 +162,24 @@ describe("the client hub (TW-13)", () => {
     expect(await screen.findByTestId("contact-email")).toBeDisabled();
     expect(screen.getByTestId("contact-has-login")).toBeOnTheScreen();
     expect(screen.queryByTestId("contact-remove")).toBeNull();
+  });
+
+  it("hands Sales a test build's invite link for a contact with a login", async () => {
+    const sent: Sent[] = [];
+    await renderHub(sent);
+    await fireEvent.press(await screen.findByLabelText("Edit Priya Sharma"));
+    expect(screen.queryByTestId("contact-invite-link-url")).toBeNull();
+    await fireEvent.press(await screen.findByTestId("contact-get-invite-link"));
+    expect(await screen.findByText(INVITE_LINK)).toBeOnTheScreen();
+    expect(sent).toEqual([{ method: "POST", path: "invite-link", body: undefined }]);
+    expect(screen.getByText("Get a new link")).toBeOnTheScreen();
+  });
+
+  it("offers no invite link to a contact without a login", async () => {
+    await renderHub();
+    await fireEvent.press(await screen.findByLabelText("Edit Anil Sharma"));
+    expect(await screen.findByTestId("contact-send-invite")).toBeOnTheScreen();
+    expect(screen.queryByTestId("contact-invite-link")).toBeNull();
   });
 
   it("invites an existing contact to the portal", async () => {
