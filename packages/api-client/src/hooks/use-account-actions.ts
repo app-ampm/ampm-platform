@@ -1,10 +1,12 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
+  accountContactInviteLink,
   accountContactRemovedResponse,
   accountContactResult,
   accountContactView,
   accountDetailView,
   type AccountContactCreateRequest,
+  type AccountContactInviteLink,
   type AccountContactRemovedResponse,
   type AccountContactResult,
   type AccountContactUpdateRequest,
@@ -107,5 +109,25 @@ export function useInviteAccountContact(accountId: string, contactId: string) {
         schema: accountContactResult,
       }),
     onSuccess: refresh,
+  });
+}
+
+/**
+ * Test builds only: a fresh activation link for a contact whose login is still invited
+ * (`POST …/contacts/:contactId/invite-link`), for staff to hand over where no email is delivered. The
+ * API is a 404 outside a local, non-production build; each call retires the contact's earlier links.
+ *
+ * @example
+ * const link = useAccountContactInviteLink(accountId, contactId);
+ * link.mutate(undefined, { onSuccess: ({ activationUrl }) => show(activationUrl) });
+ */
+export function useAccountContactInviteLink(accountId: string, contactId: string) {
+  const api = useApiClient();
+  return useMutation<AccountContactInviteLink, Error, void>({
+    mutationFn: () =>
+      api.request(`/crm/accounts/${accountId}/contacts/${contactId}/invite-link`, {
+        method: "POST",
+        schema: accountContactInviteLink,
+      }),
   });
 }

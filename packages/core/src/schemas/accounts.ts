@@ -201,6 +201,18 @@ export const accountContactResult = z.object({
 });
 export type AccountContactResult = z.infer<typeof accountContactResult>;
 
+/**
+ * A fresh activation link for a contact whose portal login is still `invited`, handed to staff instead
+ * of emailed. Test builds only: the API serves it under the local identity provider outside production
+ * (the dev sign-in gate) and is a 404 everywhere else, because a build without a real email provider
+ * cannot deliver the invite. Getting a link retires the invite's earlier links (one live invite per
+ * login), so only the newest works.
+ */
+export const accountContactInviteLink = z.object({
+  activationUrl: z.string().url(),
+});
+export type AccountContactInviteLink = z.infer<typeof accountContactInviteLink>;
+
 /** The result of removing a contact: its id (the contact is soft-deleted, never erased). */
 export const accountContactRemovedResponse = z.object({ id: uuid });
 export type AccountContactRemovedResponse = z.infer<typeof accountContactRemovedResponse>;

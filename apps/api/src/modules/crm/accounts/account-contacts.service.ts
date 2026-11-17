@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common";
 import {
   errors,
   type AccountContactCreateRequest,
+  type AccountContactInviteLink,
   type AccountContactRemovedResponse,
   type AccountContactResult,
   type AccountContactUpdateRequest,
@@ -158,6 +159,31 @@ export class AccountContactsService {
     });
     const inviteQueued = await this.invites.send(invitee, minted);
     return { contact: await this.view(accountId, contactId), inviteQueued };
+  }
+
+  /**
+   * Test builds only (a 404 elsewhere): a fresh activation link for a contact whose login is still
+   * `invited`, so staff can hand it over where no email is delivered. Retires the earlier links; audited.
+   */
+  async inviteLink(accountId: string, contactId: string): Promise<AccountContactInviteLink> {
+    this.invites.assertLinksServed();
+    assertInvitable(await this.requireAccount(accountId));
+    const { userId } = await this.requireContact(accountId, contactId);
+    if (!userId) throw errors.conflict("Send the portal invite first: this contact has no login");
+    const activationUrl = await this.prisma.$transaction(async (tx) => {
+      const url = await this.invites.reissueLink(userId, tx);
+      await this.audit.record(
+        {
+          action: "update",
+          entityType: "account_contact",
+          entityId: contactId,
+          after: { inviteLinkIssued: true },
+        },
+        tx,
+      );
+      return url;
+    });
+    return { activationUrl };
   }
 
   private async requireAccount(accountId: string): Promise<AccountRow> {

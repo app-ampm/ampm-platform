@@ -4,6 +4,7 @@ import { ACTIVATION_ERRORS, errors, type DevLoginResponse } from "@ampm/core";
 import { PrismaService } from "../db/prisma.service.js";
 import { ENV, type Env } from "../env.js";
 import { AuthTokenService } from "./auth-token.service.js";
+import { assertDevBuild } from "./dev-gate.js";
 import { LocalIdentityAdapter } from "./local.adapter.js";
 
 /**
@@ -30,11 +31,7 @@ export class DevLoginService {
    * (security.md), so there these endpoints do not exist.
    */
   private localSecret(): string {
-    const secret = this.env.IDENTITY_LOCAL_SECRET;
-    if (this.env.IDENTITY_PROVIDER !== "local" || this.env.NODE_ENV === "production" || !secret) {
-      throw errors.notFound();
-    }
-    return secret;
+    return assertDevBuild(this.env);
   }
 
   async signIn(email: string): Promise<DevLoginResponse> {

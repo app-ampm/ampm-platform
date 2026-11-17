@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import { errors } from "@ampm/core";
+import { errors, type UserStatus } from "@ampm/core";
 
 import { PrismaService } from "../db/prisma.service.js";
 import { Prisma } from "../generated/prisma/client.js";
@@ -51,5 +51,14 @@ export class ClientUserService {
       }
       throw error;
     }
+  }
+
+  /** A client login's status (`invited` until it activates), or null for no such live login. */
+  async statusOf(userId: string): Promise<UserStatus | null> {
+    const user = await this.prisma.user.findFirst({
+      where: { id: userId, userType: "client", deletedAt: null },
+      select: { status: true },
+    });
+    return user?.status ?? null;
   }
 }
