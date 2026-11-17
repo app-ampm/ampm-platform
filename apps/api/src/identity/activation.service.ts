@@ -1,5 +1,5 @@
 import { Inject, Injectable } from "@nestjs/common";
-import { errors, type ActivateResponse } from "@ampm/core";
+import { ACTIVATION_ERRORS, errors, type ActivateResponse } from "@ampm/core";
 
 import { PrismaService } from "../db/prisma.service.js";
 import { Prisma } from "../generated/prisma/client.js";
@@ -25,13 +25,13 @@ export class ActivationService {
   async activate(inviteToken: string, accessToken: string): Promise<ActivateResponse> {
     const verified = await this.identity.verifyAccessToken(accessToken); // throws unauthenticated
     const invite = await this.tokens.findValidInvite(inviteToken);
-    if (!invite) throw errors.unauthenticated("Invalid or expired invitation");
+    if (!invite) throw errors.unauthenticated(ACTIVATION_ERRORS.invalidInvite);
     const user = await this.prisma.user.findFirst({
       where: { id: invite.userId, deletedAt: null },
       select: { id: true, email: true, status: true },
     });
-    if (!user) throw errors.unauthenticated("Invalid or expired invitation");
-    if (user.status !== "invited") throw errors.conflict("This account is already activated");
+    if (!user) throw errors.unauthenticated(ACTIVATION_ERRORS.invalidInvite);
+    if (user.status !== "invited") throw errors.conflict(ACTIVATION_ERRORS.alreadyActive);
     // The provider's verified email MUST be present and match the invitation — otherwise mere
     // possession of a leaked invite token would let any provider account be linked to this user.
     // Fail closed when the provider gives no email (the identity provider must put a verified email
@@ -60,7 +60,7 @@ export class ActivationService {
     try {
       await this.prisma.$transaction(async (tx) => {
         if (!(await this.tokens.markUsedIfLive(inviteId, tx))) {
-          throw errors.conflict("This invitation has already been used");
+          throw errors.conflict(ACTIVATION_ERRORS.inviteUsed);
         }
         await tx.user.update({
           where: { id: userId },

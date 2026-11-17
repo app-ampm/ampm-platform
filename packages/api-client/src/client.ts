@@ -23,6 +23,14 @@ export interface RequestOptions<T> {
    *   api.request("/auth/dev-login", { method: "POST", body, schema: devLoginResponse, anonymous: true })
    */
   readonly anonymous?: boolean | undefined;
+  /**
+   * Send this Bearer instead of the session's: activation presents a provider access token that is not
+   * yet the app's session, since the invitee has no linked account until activation succeeds. Ignored on
+   * an `anonymous` request.
+   *
+   *   api.request("/auth/activate", { method: "POST", body, schema: activateResponse, accessToken })
+   */
+  readonly accessToken?: string | undefined;
 }
 
 export interface UploadOptions<T> {
@@ -66,10 +74,11 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
   async function authHeaders(
     extra: Record<string, string>,
     anonymous = false,
+    accessToken?: string,
   ): Promise<Record<string, string>> {
     const headers: Record<string, string> = { accept: "application/json", ...extra };
     if (anonymous) return headers;
-    const token = options.getAccessToken ? await options.getAccessToken() : null;
+    const token = accessToken ?? (options.getAccessToken ? await options.getAccessToken() : null);
     if (token) headers["authorization"] = `Bearer ${token}`;
     return headers;
   }
@@ -98,11 +107,12 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
 
   async function request<T>(
     path: string,
-    { method = "GET", body, schema, signal, anonymous = false }: RequestOptions<T>,
+    { method = "GET", body, schema, signal, anonymous = false, accessToken }: RequestOptions<T>,
   ): Promise<T> {
     const headers = await authHeaders(
       body === undefined ? {} : { "content-type": "application/json" },
       anonymous,
+      accessToken,
     );
     return run(
       path,

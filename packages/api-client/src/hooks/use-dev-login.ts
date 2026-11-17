@@ -1,5 +1,10 @@
 import { useMutation } from "@tanstack/react-query";
-import { devLoginResponse, type DevLoginRequest, type DevLoginResponse } from "@ampm/core";
+import {
+  devLoginResponse,
+  type ActivateRequest,
+  type DevLoginRequest,
+  type DevLoginResponse,
+} from "@ampm/core";
 
 import { useApiClient } from "../provider";
 
@@ -33,6 +38,29 @@ export function useDemoSignIn() {
     mutationFn: () =>
       api.request("/auth/dev-login/demo", {
         method: "POST",
+        schema: devLoginResponse,
+        anonymous: true,
+      }),
+  });
+}
+
+/**
+ * Dev-only stand-in for the provider sign-in that comes before activation (`POST
+ * /auth/dev-login/invite`). Exchanges the invite token from an invitation link for a minted local access
+ * token for the invited account, which the activation screen then presents to `useActivate`; under
+ * Cognito the invitee signs in to the pool instead. It activates nothing itself. Dev-gated like the other
+ * sign-ins, so there is no production path, and anonymous like them: the test box keeps
+ * `/_api/auth/dev-login*` behind its Basic-Auth, where a Bearer would replace the browser's password.
+ *
+ *   const { accessToken } = await devInvite.mutateAsync({ token: inviteToken });
+ */
+export function useDevInviteSignIn() {
+  const api = useApiClient();
+  return useMutation<DevLoginResponse, Error, ActivateRequest>({
+    mutationFn: (body) =>
+      api.request("/auth/dev-login/invite", {
+        method: "POST",
+        body,
         schema: devLoginResponse,
         anonymous: true,
       }),

@@ -88,9 +88,10 @@ export {
   type CursorListResult,
   type CursorPage,
 } from "./hooks/use-cursor-list";
-export { useDemoSignIn, useDevLogin } from "./hooks/use-dev-login";
+export { useDemoSignIn, useDevInviteSignIn, useDevLogin } from "./hooks/use-dev-login";
 export { useCreateDemoClient, useRequestDevOtp, useVerifyDevOtp } from "./hooks/use-dev-otp";
 export { useActivate } from "./hooks/use-activate";
+export type { ActivateVariables } from "./hooks/use-activate";
 export { PLANS_QUERY_KEY, usePlans } from "./hooks/use-plans";
 export { usePortalSubscribe } from "./hooks/use-portal-subscribe";
 export { useCompletePayment } from "./hooks/use-complete-payment";

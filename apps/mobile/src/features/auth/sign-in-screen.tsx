@@ -74,7 +74,7 @@ export function SignInScreen() {
       brand={<Text variant="wordmark">AMPM</Text>}
       hero={
         <SignInHero
-          tab={access.mode}
+          headline={access.mode}
           subtitle="Sign in or sign up with your mobile and a one-time code."
         />
       }

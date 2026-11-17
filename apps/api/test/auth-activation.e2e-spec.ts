@@ -175,4 +175,42 @@ describe("Activation (e2e)", () => {
       .send({ token: eveToken })
       .expect(401);
   });
+
+  // The activation screen's path under the local provider: the invite link stands in for the provider
+  // sign-in, then the real activation links the subject, and the person signs in as usual afterwards.
+  it("activates from the invite link alone under the local provider, then dev sign-in works", async () => {
+    const user = await invited("ira");
+    const token = await authTokens.issueInvite(user.id);
+
+    const exchanged = await http().post("/auth/dev-login/invite").send({ token }).expect(200);
+    const access: string = exchanged.body.data.accessToken;
+    expect(exchanged.body.data.user).toMatchObject({ id: user.id, email: user.email });
+    // Exchanging checks the invitation but never claims it: activation still has it to claim.
+    expect(await authTokens.findValidInvite(token)).not.toBeNull();
+
+    await http()
+      .post("/auth/activate")
+      .set("authorization", `Bearer ${access}`)
+      .send({ token })
+      .expect(200);
+    const after = await prisma.user.findUniqueOrThrow({ where: { id: user.id } });
+    expect(after).toMatchObject({ status: "active", identitySubject: `local:${user.id}` });
+
+    // The same token is now a session for the activated account, and the email dev sign-in finds it.
+    const me = await http().get("/me").set("authorization", `Bearer ${access}`).expect(200);
+    expect(me.body.data.principal.email).toBe(user.email);
+    await http().post("/auth/dev-login").send({ email: user.email }).expect(200);
+
+    // The redeemed link no longer exchanges, so a second visit is told it has expired or been used.
+    const again = await http().post("/auth/dev-login/invite").send({ token }).expect(401);
+    expect(again.body.error.message).toBe("Invalid or expired invitation");
+  });
+
+  it("tells an invite link for an account that is no longer invited apart (409)", async () => {
+    const user = await invited("joy");
+    const token = await authTokens.issueInvite(user.id);
+    await prisma.user.update({ where: { id: user.id }, data: { status: "disabled" } });
+    const res = await http().post("/auth/dev-login/invite").send({ token }).expect(409);
+    expect(res.body.error.message).toBe("This account is already activated");
+  });
 });

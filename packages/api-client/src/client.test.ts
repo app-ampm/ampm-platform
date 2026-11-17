@@ -54,6 +54,25 @@ describe("createApiClient", () => {
     expect(getAccessToken).not.toHaveBeenCalled();
   });
 
+  it("sends a given access token instead of the session's (activation)", async () => {
+    const capture: { init?: RequestInit | undefined } = {};
+    const getAccessToken = vi.fn(() => "session-t0k3n");
+    const api = createApiClient({
+      baseUrl: "http://api.test",
+      getAccessToken,
+      fetch: fakeFetch(200, { data: { ok: true } }, capture),
+    });
+    await api.request("/auth/activate", {
+      method: "POST",
+      body: { token: "invite" },
+      schema,
+      accessToken: "given",
+    });
+    const headers = capture.init?.headers as Record<string, string>;
+    expect(headers["authorization"]).toBe("Bearer given");
+    expect(getAccessToken).not.toHaveBeenCalled();
+  });
+
   it("turns a failure envelope into a typed error", async () => {
     const api = createApiClient({
       baseUrl: "http://api.test",

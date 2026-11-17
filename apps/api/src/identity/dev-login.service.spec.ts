@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { PrismaService } from "../db/prisma.service.js";
 import type { Env } from "../env.js";
+import type { AuthTokenService } from "./auth-token.service.js";
 import { DevLoginService } from "./dev-login.service.js";
 import { LocalIdentityAdapter } from "./local.adapter.js";
 
@@ -15,16 +16,18 @@ const DEMO = {
   identitySubject: "local:demo",
 };
 
-function harness(overrides: Partial<Env> = {}, user: unknown = DEMO) {
+function harness(overrides: Partial<Env> = {}, user: unknown = DEMO, invite: unknown = null) {
   const findFirst = vi.fn(async () => user);
   const prisma = { user: { findFirst } } as unknown as PrismaService;
+  const findValidInvite = vi.fn(async () => invite);
+  const tokens = { findValidInvite } as unknown as AuthTokenService;
   const env = {
     IDENTITY_PROVIDER: "local",
     NODE_ENV: "development",
     IDENTITY_LOCAL_SECRET: SECRET,
     ...overrides,
   } as unknown as Env;
-  return { service: new DevLoginService(env, prisma), findFirst };
+  return { service: new DevLoginService(env, prisma, tokens), findFirst, findValidInvite };
 }
 
 describe("DevLoginService.signInDemo (dev-only demo sign-in)", () => {
@@ -60,5 +63,69 @@ describe("DevLoginService.signInDemo (dev-only demo sign-in)", () => {
     await expect(
       harness({ IDENTITY_LOCAL_SECRET: undefined }).service.signInDemo(),
     ).rejects.toMatchObject({ code: "not_found" });
+  });
+});
+
+/** An invited account with a live invitation, as a staff invite or a client invite leaves it. */
+const INVITED = {
+  id: "user-7",
+  name: "Ira Invited",
+  email: "ira@example.com",
+  status: "invited",
+};
+const LIVE_INVITE = { id: "invite-1", userId: "user-7" };
+
+describe("DevLoginService.signInForInvite (the local stand-in for the provider sign-in)", () => {
+  it("mints a token for the invited account: a subject of its own and the invited email", async () => {
+    const { service, findValidInvite, findFirst } = harness({}, INVITED, LIVE_INVITE);
+    const result = await service.signInForInvite("raw-invite");
+    expect(findValidInvite).toHaveBeenCalledWith("raw-invite");
+    expect(findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: "user-7", deletedAt: null } }),
+    );
+    expect(result.user).toEqual({ id: "user-7", name: "Ira Invited", email: "ira@example.com" });
+    // /auth/activate will match the token's email to the invitation and link its subject.
+    const verified = await new LocalIdentityAdapter(SECRET).verifyAccessToken(result.accessToken);
+    expect(verified.subject).toBe("local:user-7");
+    expect(verified.email).toBe("ira@example.com");
+  });
+
+  it("is unauthenticated, with activation's message, for a dead or unknown invitation", async () => {
+    const { service, findFirst } = harness({}, INVITED, null);
+    await expect(service.signInForInvite("stale")).rejects.toMatchObject({
+      code: "unauthenticated",
+      message: "Invalid or expired invitation",
+    });
+    expect(findFirst).not.toHaveBeenCalled();
+  });
+
+  it("is unauthenticated when the invited account has been removed", async () => {
+    const { service } = harness({}, null, LIVE_INVITE);
+    await expect(service.signInForInvite("raw-invite")).rejects.toMatchObject({
+      code: "unauthenticated",
+    });
+  });
+
+  it("is a conflict, with activation's message, once the account is no longer invited", async () => {
+    const { service } = harness({}, { ...INVITED, status: "active" }, LIVE_INVITE);
+    await expect(service.signInForInvite("raw-invite")).rejects.toMatchObject({
+      code: "conflict",
+      message: "This account is already activated",
+    });
+  });
+
+  it("is refused (404, denial equals absence) outside a local, non-production config", async () => {
+    for (const env of [
+      { IDENTITY_PROVIDER: "cognito" },
+      { NODE_ENV: "production" },
+      { IDENTITY_LOCAL_SECRET: undefined },
+    ] as const) {
+      const { service, findValidInvite } = harness(env, INVITED, LIVE_INVITE);
+      await expect(service.signInForInvite("raw-invite")).rejects.toMatchObject({
+        code: "not_found",
+      });
+      // Refused before the invitation is even looked up.
+      expect(findValidInvite).not.toHaveBeenCalled();
+    }
   });
 });
