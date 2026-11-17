@@ -156,16 +156,26 @@ describe("LeadDetailScreen", () => {
     await convertAndReadToast("Converted — invite pending");
   });
 
-  it("says when someone converted the lead first", async () => {
+  it("says a refused convert was converted already or its email has an account", async () => {
     const routes: Routes = { [`${LEAD_PATH}/convert`]: () => failure("conflict", 409) };
     await renderDetail(detailFetch(leadFixture(), routes));
-    await convertAndReadToast("This lead was already converted");
+    await fireEvent.press(await screen.findByText("Create account and invite"));
+    expect(
+      await screen.findByText(
+        "It was converted already, or this email already has an AMPM account.",
+      ),
+    ).toBeOnTheScreen();
+    expect(screen.getByText("Could not convert the lead")).toBeOnTheScreen();
+    await fireEvent.press(screen.getByLabelText(uiCopy.dismiss));
   });
 
-  it("reports any other failure to convert", async () => {
+  it("reports any other failure to convert, without guessing why", async () => {
     const routes: Routes = { [`${LEAD_PATH}/convert`]: () => failure("internal", 500) };
     await renderDetail(detailFetch(leadFixture(), routes));
-    await convertAndReadToast("Could not convert the lead");
+    await fireEvent.press(await screen.findByText("Create account and invite"));
+    expect(await screen.findByText("Could not convert the lead")).toBeOnTheScreen();
+    expect(screen.queryByText(/already has an AMPM account/)).toBeNull();
+    await fireEvent.press(screen.getByLabelText(uiCopy.dismiss));
   });
 
   it("shows a converted lead as done, without the action", async () => {
@@ -184,12 +194,6 @@ describe("LeadDetailScreen", () => {
     await renderDetail(detailFetch(lead));
     expect(await screen.findByText("This lead is closed")).toBeOnTheScreen();
     expect(screen.getByText("Chose another planner.")).toBeOnTheScreen();
-    expect(screen.queryByText("Create account and invite")).toBeNull();
-  });
-
-  it("asks for an email before the lead can be converted", async () => {
-    await renderDetail(detailFetch(leadFixture({ email: null })));
-    expect(await screen.findByText("Add an email before converting this lead")).toBeOnTheScreen();
     expect(screen.queryByText("Create account and invite")).toBeNull();
   });
 
