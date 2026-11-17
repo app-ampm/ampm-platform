@@ -1,8 +1,9 @@
 import { Inject, Injectable } from "@nestjs/common";
-import { errors, type DevLoginResponse } from "@ampm/core";
+import { ACTIVATION_ERRORS, errors, type DevLoginResponse } from "@ampm/core";
 
 import { PrismaService } from "../db/prisma.service.js";
 import { ENV, type Env } from "../env.js";
+import { AuthTokenService } from "./auth-token.service.js";
 import { LocalIdentityAdapter } from "./local.adapter.js";
 
 /**
@@ -21,14 +22,23 @@ export class DevLoginService {
   constructor(
     @Inject(ENV) private readonly env: Env,
     private readonly prisma: PrismaService,
+    private readonly tokens: AuthTokenService,
   ) {}
 
-  async signIn(email: string): Promise<DevLoginResponse> {
+  /**
+   * The local signing secret, or a 404 outside a local, non-production config: denial equals absence
+   * (security.md), so there these endpoints do not exist.
+   */
+  private localSecret(): string {
     const secret = this.env.IDENTITY_LOCAL_SECRET;
-    // Denial equals absence (security.md): outside a local, non-production config this does not exist.
     if (this.env.IDENTITY_PROVIDER !== "local" || this.env.NODE_ENV === "production" || !secret) {
       throw errors.notFound();
     }
+    return secret;
+  }
+
+  async signIn(email: string): Promise<DevLoginResponse> {
+    const secret = this.localSecret();
     // email is not unique (a soft-deleted row may share it): findFirst, never findUnique.
     // Staff sign into the Sales workspace; an active client signs into the portal (both dev-only).
     const user = await this.prisma.user.findFirst({
@@ -54,11 +64,7 @@ export class DevLoginService {
    * replaces without touching this path.
    */
   async signInDemo(): Promise<DevLoginResponse> {
-    const secret = this.env.IDENTITY_LOCAL_SECRET;
-    // Denial equals absence (security.md): outside a local, non-production config this does not exist.
-    if (this.env.IDENTITY_PROVIDER !== "local" || this.env.NODE_ENV === "production" || !secret) {
-      throw errors.notFound();
-    }
+    const secret = this.localSecret();
     const user = await this.prisma.user.findFirst({
       where: { userType: "demo", status: "active", deletedAt: null },
       select: { id: true, name: true, email: true, identitySubject: true },
@@ -67,6 +73,33 @@ export class DevLoginService {
       throw errors.unauthenticated("No demo account is available");
     }
     const accessToken = await new LocalIdentityAdapter(secret).mint(user.identitySubject, {
+      email: user.email,
+    });
+    return { accessToken, user: { id: user.id, name: user.name, email: user.email } };
+  }
+
+  /**
+   * The local stand-in for the provider sign-in that comes before activation (D-041). Under Cognito an
+   * invitee signs in to the pool and presents that access token to `/auth/activate`; the local provider
+   * has no pool, so this mints a local access token for the invitation's account — a subject of its own
+   * (`local:<user id>`, unique like the column it will fill) carrying the invited email — for the
+   * activation screen to present to `/auth/activate` exactly as it would a Cognito token. It activates
+   * nothing: the invitation is checked here, not claimed, and the real activation still links the
+   * subject, claims the invitation once and audits. Same fail-closed gate as `signIn`, so there is no
+   * production path, and not self-registration (A-13): without a live invitation there is no token.
+   */
+  async signInForInvite(inviteToken: string): Promise<DevLoginResponse> {
+    const secret = this.localSecret();
+    const invite = await this.tokens.findValidInvite(inviteToken);
+    if (!invite) throw errors.unauthenticated(ACTIVATION_ERRORS.invalidInvite);
+    const user = await this.prisma.user.findFirst({
+      where: { id: invite.userId, deletedAt: null },
+      select: { id: true, name: true, email: true, status: true },
+    });
+    if (!user) throw errors.unauthenticated(ACTIVATION_ERRORS.invalidInvite);
+    // The same refusal activation gives, so the screen says "already active" before it tries.
+    if (user.status !== "invited") throw errors.conflict(ACTIVATION_ERRORS.alreadyActive);
+    const accessToken = await new LocalIdentityAdapter(secret).mint(`local:${user.id}`, {
       email: user.email,
     });
     return { accessToken, user: { id: user.id, name: user.name, email: user.email } };

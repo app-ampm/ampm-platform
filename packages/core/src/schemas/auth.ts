@@ -23,6 +23,20 @@ export const activateResponse = z.object({
 });
 export type ActivateResponse = z.infer<typeof activateResponse>;
 
+/**
+ * The refusals of activation that the activation screen tells apart. The error envelope carries a code
+ * and a message but no finer reason, and `conflict` covers both an account already active and an
+ * invitation already used, so the API raises these exact messages and the screen matches on them.
+ */
+export const ACTIVATION_ERRORS = {
+  /** 401: no live invitation for that token (unknown, expired, superseded or already redeemed). */
+  invalidInvite: "Invalid or expired invitation",
+  /** 409: the invitation is live but its account is no longer `invited`. */
+  alreadyActive: "This account is already activated",
+  /** 409: a concurrent activation claimed the same invitation first. */
+  inviteUsed: "This invitation has already been used",
+} as const;
+
 /*
  * Development sign-in (feature TW-11 demo). A seeded, active staff user's email is exchanged for a
  * minted local access token. Dev-only: the API refuses it unless IDENTITY_PROVIDER=local and NODE_ENV
@@ -35,6 +49,11 @@ export const devLoginRequest = z.object({
   email: z.string().email(),
 });
 export type DevLoginRequest = z.infer<typeof devLoginRequest>;
+
+/*
+ * The dev-only stand-in for the provider sign-in that comes before activation: the body is the invite
+ * token (`activateRequest`), the answer the same minted session as dev-login, for the invited account.
+ */
 
 /** A minted local access token and the signed-in staff account it belongs to. */
 export const devLoginResponse = z.object({

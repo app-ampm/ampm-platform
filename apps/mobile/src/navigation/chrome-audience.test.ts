@@ -23,8 +23,8 @@ describe("chromeAudience", () => {
     expect(chromeAudience("/field-notes", "client")).toBeNull();
   });
 
-  it("draws nothing on sign-in, the gallery or the entry redirect", () => {
-    for (const path of ["/sign-in", "/gallery", "/"]) {
+  it("draws nothing on sign-in, activation, the gallery or the entry redirect", () => {
+    for (const path of ["/sign-in", "/activate", "/gallery", "/"]) {
       expect(chromeAudience(path, "staff")).toBeNull();
       expect(chromeAudience(path, "client")).toBeNull();
     }
@@ -43,8 +43,9 @@ describe("isAudienceRoute", () => {
     for (const path of [...routes, "/account"]) expect(isAudienceRoute(path)).toBe(true);
   });
 
-  it("fails for sign-in, the gallery, the entry redirect and a look-alike path", () => {
-    for (const path of ["/sign-in", "/gallery", "/", "/leadership"]) {
+  it("fails for sign-in, activation, the gallery, the entry redirect and a look-alike path", () => {
+    // Activation is reached signed out from an email link, so the chrome never asks /me there.
+    for (const path of ["/sign-in", "/activate", "/gallery", "/", "/leadership"]) {
       expect(isAudienceRoute(path)).toBe(false);
     }
   });

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { useDemoSignIn, useDevLogin } from "./use-dev-login";
+import { useDemoSignIn, useDevInviteSignIn, useDevLogin } from "./use-dev-login";
 import { useCreateDemoClient, useRequestDevOtp, useVerifyDevOtp } from "./use-dev-otp";
 
 interface Seen {
@@ -30,6 +30,7 @@ vi.mock("../provider", () => ({
 const SIGN_IN_HOOKS = [
   { name: "useDevLogin", hook: useDevLogin, path: "/auth/dev-login" },
   { name: "useDemoSignIn", hook: useDemoSignIn, path: "/auth/dev-login/demo" },
+  { name: "useDevInviteSignIn", hook: useDevInviteSignIn, path: "/auth/dev-login/invite" },
   { name: "useRequestDevOtp", hook: useRequestDevOtp, path: "/auth/dev-login/request-otp" },
   { name: "useVerifyDevOtp", hook: useVerifyDevOtp, path: "/auth/dev-login/verify-otp" },
   { name: "useCreateDemoClient", hook: useCreateDemoClient, path: "/auth/dev-login/create-client" },

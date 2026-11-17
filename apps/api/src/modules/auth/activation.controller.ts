@@ -32,7 +32,9 @@ import { DevOtpService } from "../../identity/dev-otp.service.js";
  * refused outside a local, non-production config (DevLoginService). `dev-login/request-otp` and
  * `dev-login/verify-otp` are the same dev-only path for mobile+OTP sign-in — the demo stand-in until the
  * SMS provider is wired; the request returns the one-time code for the screen to show, and both are
- * refused in production too (DevOtpService, SMS/OTP audit).
+ * refused in production too (DevOtpService, SMS/OTP audit). `dev-login/invite` is the local stand-in
+ * for the provider sign-in that precedes `activate`: it exchanges a live invite token for a local access
+ * token that the activation screen then presents to `activate` (DevLoginService.signInForInvite).
  */
 @Controller("auth")
 export class ActivationController {
@@ -78,6 +80,19 @@ export class ActivationController {
   )
   demoLogin(): Promise<DevLoginResponse> {
     return this.devLogin.signInDemo();
+  }
+
+  // Under `dev-login/` on purpose: the test box keeps `/_api/auth/dev-login*` behind its Basic-Auth
+  // (D-080), and this mints a token for whoever holds a live invitation link.
+  @Post("dev-login/invite")
+  @Public()
+  @RateLimit({ name: "auth.dev_invite", limit: 10, windowMs: 60_000 })
+  @HttpCode(200)
+  @AuditExempt(
+    "dev-only stand-in for the provider sign-in before activation: mints a local token for the account of a live invitation and writes nothing (the activation that follows self-audits); the API refuses it unless IDENTITY_PROVIDER=local and NODE_ENV is not production",
+  )
+  inviteLogin(@ZodBody(activateRequest) body: ActivateRequest): Promise<DevLoginResponse> {
+    return this.devLogin.signInForInvite(body.token);
   }
 
   @Post("dev-login/request-otp")

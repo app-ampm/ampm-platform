@@ -1,9 +1,13 @@
 import { ScreenHeader, useSignInLayoutMode } from "@ampm/ui";
 
-/** The headline for each tab: D1's "Welcome back." to sign in, "Join AMPM." to sign up. */
+/**
+ * The headline for each tab: D1's "Welcome back." to sign in, "Join AMPM." to sign up; and
+ * "Welcome aboard." on the activation screen an invitation link opens.
+ */
 const HEADLINE = {
   "sign-in": { title: "Welcome", emphasis: "back." },
   "sign-up": { title: "Join", emphasis: "AMPM." },
+  activate: { title: "Welcome", emphasis: "aboard." },
 } as const;
 
 /**
@@ -13,17 +17,17 @@ const HEADLINE = {
  */
 export function SignInHero({
   subtitle,
-  tab = "sign-in",
+  headline = "sign-in",
 }: {
   readonly subtitle: string;
-  readonly tab?: keyof typeof HEADLINE | undefined;
+  readonly headline?: keyof typeof HEADLINE | undefined;
 }) {
   const mode = useSignInLayoutMode();
   return (
     <ScreenHeader
       size={mode === "split" ? "hero" : "title"}
-      title={HEADLINE[tab].title}
-      emphasis={HEADLINE[tab].emphasis}
+      title={HEADLINE[headline].title}
+      emphasis={HEADLINE[headline].emphasis}
       subtitle={subtitle}
       // D1 sets the hero 2% tight; at 88 that keeps "Welcome back." on one line in its 576 column.
       titleClassName="lg:tracking-tight"
