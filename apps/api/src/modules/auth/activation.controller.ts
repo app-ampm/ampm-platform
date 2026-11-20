@@ -46,7 +46,7 @@ export class ActivationController {
 
   @Post("activate")
   @Public()
-  @RateLimit({ name: "auth.activate", limit: 10, windowMs: 60_000 })
+  @RateLimit({ name: "auth.activate", limit: 10, windowMs: 60_000, failClosed: true })
   @HttpCode(200)
   @SelfAudited()
   activate(
@@ -62,7 +62,7 @@ export class ActivationController {
 
   @Post("dev-login")
   @Public()
-  @RateLimit({ name: "auth.dev_login", limit: 10, windowMs: 60_000 })
+  @RateLimit({ name: "auth.dev_login", limit: 10, windowMs: 60_000, failClosed: true })
   @HttpCode(200)
   @AuditExempt(
     "dev-only local sign-in; mints a token for an existing active staff or client account and writes nothing; the API refuses it unless IDENTITY_PROVIDER=local and NODE_ENV is not production",
@@ -73,7 +73,7 @@ export class ActivationController {
 
   @Post("dev-login/demo")
   @Public()
-  @RateLimit({ name: "auth.dev_demo", limit: 10, windowMs: 60_000 })
+  @RateLimit({ name: "auth.dev_demo", limit: 10, windowMs: 60_000, failClosed: true })
   @HttpCode(200)
   @AuditExempt(
     "dev-only demo sign-in; mints a token for the seeded demo prospect and writes nothing; the API refuses it unless IDENTITY_PROVIDER=local and NODE_ENV is not production",
@@ -86,7 +86,7 @@ export class ActivationController {
   // (D-080), and this mints a token for whoever holds a live invitation link.
   @Post("dev-login/invite")
   @Public()
-  @RateLimit({ name: "auth.dev_invite", limit: 10, windowMs: 60_000 })
+  @RateLimit({ name: "auth.dev_invite", limit: 10, windowMs: 60_000, failClosed: true })
   @HttpCode(200)
   @AuditExempt(
     "dev-only stand-in for the provider sign-in before activation: mints a local token for the account of a live invitation and writes nothing (the activation that follows self-audits); the API refuses it unless IDENTITY_PROVIDER=local and NODE_ENV is not production",
@@ -97,7 +97,7 @@ export class ActivationController {
 
   @Post("dev-login/request-otp")
   @Public()
-  @RateLimit({ name: "auth.dev_otp_request", limit: 10, windowMs: 60_000 })
+  @RateLimit({ name: "auth.dev_otp_request", limit: 10, windowMs: 60_000, failClosed: true })
   @HttpCode(200)
   @AuditExempt(
     "dev-only demo OTP: generates a one-time code for an existing active client and writes nothing; the API refuses it unless IDENTITY_PROVIDER=local and NODE_ENV is not production",
@@ -108,7 +108,7 @@ export class ActivationController {
 
   @Post("dev-login/verify-otp")
   @Public()
-  @RateLimit({ name: "auth.dev_otp_verify", limit: 10, windowMs: 60_000 })
+  @RateLimit({ name: "auth.dev_otp_verify", limit: 10, windowMs: 60_000, failClosed: true })
   @HttpCode(200)
   @AuditExempt(
     "dev-only demo OTP: mints a token for an existing active client on a correct code and writes nothing; the API refuses it unless IDENTITY_PROVIDER=local and NODE_ENV is not production",
@@ -119,7 +119,7 @@ export class ActivationController {
 
   @Post("dev-login/create-client")
   @Public()
-  @RateLimit({ name: "auth.dev_create_client", limit: 10, windowMs: 60_000 })
+  @RateLimit({ name: "auth.dev_create_client", limit: 10, windowMs: 60_000, failClosed: true })
   @HttpCode(201)
   @AuditExempt(
     "dev-only demo: creates a synthetic active prospect client for the mobile+OTP demo; dev-gated with no principal to attribute, and refused unless IDENTITY_PROVIDER=local and NODE_ENV is not production",

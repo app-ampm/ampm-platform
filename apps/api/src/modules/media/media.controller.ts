@@ -18,6 +18,8 @@ import {
 import type { Request, Response } from "express";
 import { z } from "zod";
 
+import { RateLimit } from "../../common/rate-limit/rate-limit.decorator.js";
+import { UPLOADS } from "../../common/rate-limit/route-limits.js";
 import { ZodBody, ZodParams, ZodQuery } from "../../common/zod.js";
 import {
   Audited,
@@ -50,6 +52,8 @@ function staffId(principal: Principal): string {
  * `hotels.hotel_media_rights_status.*`; `GET /media/blob` is the public, signature-verified byte stream a
  * minted link points at (never a permanent path — security.md). `blob` is declared before `:mediaId` so it
  * is not read as an id. Create is audited by the interceptor; update, delete and upload self-audit.
+ * `blob` is limited per network and fails open (a gallery loads many images; the signature is the
+ * gate); an upload shares the staff upload limit, which fails closed (D-149).
  */
 @Controller("media")
 export class MediaController {
@@ -58,6 +62,7 @@ export class MediaController {
   // Declared before `:mediaId` so "blob" resolves here, not to the detail handler.
   @Get("blob")
   @Public()
+  @RateLimit({ name: "media.blob", limit: 600, windowMs: 60_000, failClosed: false })
   async blob(@ZodQuery(blobQuery) query: BlobQuery, @Res() res: Response): Promise<void> {
     const { bytes, mimeType } = await this.media.streamBlob(query.key, query.exp, query.sig);
     res.setHeader("Content-Type", mimeType);
@@ -101,6 +106,7 @@ export class MediaController {
   // The raw file bytes are the request body (application/octet-stream); content, not extension, decides type.
   @Post(":mediaId/upload")
   @RequirePermission("hotels.hotel_media_rights_status.update")
+  @RateLimit(UPLOADS)
   @HttpCode(200)
   @SelfAudited()
   upload(

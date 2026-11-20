@@ -10,6 +10,8 @@ import {
 } from "@ampm/core";
 import { z } from "zod";
 
+import { RateLimit } from "../../common/rate-limit/rate-limit.decorator.js";
+import { CLIENT_READS, CLIENT_WRITES } from "../../common/rate-limit/route-limits.js";
 import { ZodBody, ZodParams, ZodQuery } from "../../common/zod.js";
 import { CurrentPrincipal, SelfAudited } from "../../policy/decorators.js";
 import type { Principal } from "../../policy/principal.types.js";
@@ -24,6 +26,7 @@ const enquiryParam = z.object({ enquiryId: uuid });
  * change, so it self-audits in the shared transition's transaction; the reads carry CLIENT fields only.
  */
 @Controller("consultancy")
+@RateLimit(CLIENT_READS)
 export class ProposalsClientController {
   constructor(private readonly proposals: ProposalsClientService) {}
 
@@ -46,6 +49,7 @@ export class ProposalsClientController {
 
   @Post("proposals/:proposalId/decision")
   @HttpCode(200)
+  @RateLimit(CLIENT_WRITES)
   @SelfAudited()
   decide(
     @ZodParams(z.object({ proposalId: uuid })) params: { proposalId: string },

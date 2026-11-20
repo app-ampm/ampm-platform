@@ -20,6 +20,8 @@ import {
 } from "@ampm/core";
 import { z } from "zod";
 
+import { RateLimit } from "../../common/rate-limit/rate-limit.decorator.js";
+import { CLIENT_READS, CLIENT_WRITES } from "../../common/rate-limit/route-limits.js";
 import { ZodBody, ZodParams, ZodQuery } from "../../common/zod.js";
 import { AuditExempt, CurrentPrincipal } from "../../policy/decorators.js";
 import type { Principal } from "../../policy/principal.types.js";
@@ -35,6 +37,7 @@ type HotelParam = z.infer<typeof hotelParam>;
  * entitlements. Every denial is a 404 (security.md, denial equals absence).
  */
 @Controller("hotels")
+@RateLimit(CLIENT_READS)
 export class HotelsController {
   constructor(private readonly hotels: HotelsService) {}
 
@@ -88,6 +91,7 @@ export class HotelsController {
   // @AuditExempt with a reason satisfies the audit-coverage test (decorators.ts) for this mutation.
   @Post(":hotelId/save")
   @HttpCode(201)
+  @RateLimit(CLIENT_WRITES)
   @AuditExempt(
     "a client saves a hotel to their own account shortlist; the saved_hotels row is a convenience list, not a §9 internal-user action",
   )
@@ -99,6 +103,7 @@ export class HotelsController {
   }
 
   @Patch(":hotelId/save")
+  @RateLimit(CLIENT_WRITES)
   @AuditExempt(
     "a client edits their own free-text note on their account shortlist; a convenience annotation, not a §9 internal-user action",
   )
@@ -111,6 +116,7 @@ export class HotelsController {
   }
 
   @Delete(":hotelId/save")
+  @RateLimit(CLIENT_WRITES)
   @AuditExempt(
     "a client removes a hotel from their own account shortlist; a convenience list, not a §9 internal-user action",
   )

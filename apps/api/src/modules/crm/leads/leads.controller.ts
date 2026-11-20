@@ -61,7 +61,9 @@ export class LeadsController {
 
   @Post("enquiries")
   @Public()
-  @RateLimit({ name: "crm.enquiry", limit: 20, windowMs: 60_000 })
+  // Fails closed (D-149): each enquiry costs a bot check, a lead and an email to Sales, so none runs
+  // uncounted; the website shows the error and the visitor can send again.
+  @RateLimit({ name: "crm.enquiry", limit: 20, windowMs: 60_000, failClosed: true })
   @HttpCode(201)
   @AuditExempt(
     "public anonymous enquiry; the lead row and the Sales notification are the record, not a §9 internal-user action",

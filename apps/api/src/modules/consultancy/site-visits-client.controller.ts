@@ -10,6 +10,8 @@ import {
 } from "@ampm/core";
 import { z } from "zod";
 
+import { RateLimit } from "../../common/rate-limit/rate-limit.decorator.js";
+import { CLIENT_READS, CLIENT_WRITES } from "../../common/rate-limit/route-limits.js";
 import { ZodBody, ZodParams, ZodQuery } from "../../common/zod.js";
 import { AuditExempt, CurrentPrincipal } from "../../policy/decorators.js";
 import type { Principal } from "../../policy/principal.types.js";
@@ -24,6 +26,7 @@ const enquiryParam = z.object({ enquiryId: uuid });
  * client action, not a §9 internal-user action, so it is audit-exempt with a reason (the visit is the record).
  */
 @Controller("consultancy")
+@RateLimit(CLIENT_READS)
 export class SiteVisitsClientController {
   constructor(private readonly visits: SiteVisitsClientService) {}
 
@@ -37,6 +40,7 @@ export class SiteVisitsClientController {
   }
 
   @Patch("visits/:visitId/feedback")
+  @RateLimit(CLIENT_WRITES)
   @AuditExempt(
     "client submits their own site-visit feedback; the visit row is the record, not a §9 internal-user action",
   )

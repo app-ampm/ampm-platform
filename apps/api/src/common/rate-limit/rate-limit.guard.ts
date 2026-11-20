@@ -9,11 +9,19 @@ import { clientKey } from "./client-key.js";
 import { RATE_LIMIT, type RateLimitOptions } from "./rate-limit.decorator.js";
 import { RateLimitStore, type RateLimitHit } from "./rate-limit.store.js";
 
+/** One window a request counts against: its bucket key and its ceiling. */
+interface Window {
+  readonly key: string;
+  readonly limit: number;
+}
+
 /**
  * Enforces a route's @RateLimit, after AuthGuard so the caller is known: the window is keyed by the
- * authenticated principal, or by the client IP before they authenticate (so a public endpoint like
- * activation is capped per client). Over the limit answers 429 `rate_limited` with `Retry-After`. It
- * fails OPEN on a store outage — a broken limiter must not lock everyone out — logging that it did.
+ * authenticated principal, or by the client network before they authenticate (so a public endpoint like
+ * activation is capped per client); for a signed-in caller `perIpLimit` adds a window per network. Over
+ * a limit answers 429 `rate_limited` with `Retry-After`. On a store outage a fail-closed route answers
+ * 503 `unavailable`, and any other route lets the request through, so a broken limiter never locks
+ * everyone out of reading; either way it logs that the store was down (D-046, D-149).
  */
 @Injectable()
 export class RateLimitGuard implements CanActivate {
@@ -29,28 +37,47 @@ export class RateLimitGuard implements CanActivate {
       context.getClass(),
     ]);
     if (!options) return true;
-    const key = `rl:${options.name}:${this.caller()}`;
-    let hit: RateLimitHit;
-    try {
-      hit = await this.store.hit(key, options.windowMs);
-    } catch {
-      // Fail open: a broken limiter must not lock everyone out (the trade-off is recorded in D-046).
-      this.logger.warn("rate_limit.store_unavailable", { name: options.name });
-      return true;
-    }
-    if (hit.count > options.limit) {
-      const response = context.switchToHttp().getResponse<Response>();
-      response.setHeader("Retry-After", Math.ceil(hit.resetMs / 1000));
-      throw errors.rateLimited();
+    for (const window of this.windows(options)) {
+      const hit = await this.count(window.key, options);
+      if (!hit) return true; // the store is down, and this route fails open
+      if (hit.count > window.limit) {
+        const response = context.switchToHttp().getResponse<Response>();
+        response.setHeader("Retry-After", Math.ceil(hit.resetMs / 1000));
+        throw errors.rateLimited();
+      }
     }
     return true;
   }
 
-  /** The caller identity for the window: the authenticated user, else the client IP. */
-  private caller(): string {
-    const principal = requestContext.get()?.principal;
-    if (principal && "userId" in principal) return `user:${principal.userId}`;
-    // An IPv6 client counts by its /64, so rotating addresses inside one subnet earns no extra tries.
-    return `ip:${clientKey(requestContext.get()?.ip)}`;
+  /**
+   * The windows this request counts against: the signed-in user's (plus their network's, when the route
+   * caps networks too), else the client network's. An IPv6 client counts by its /64, so rotating
+   * addresses inside one subnet earns no extra tries.
+   */
+  private windows(options: RateLimitOptions): readonly Window[] {
+    const current = requestContext.get();
+    const network = {
+      key: `rl:${options.name}:ip:${clientKey(current?.ip)}`,
+      limit: options.limit,
+    };
+    const principal = current?.principal;
+    if (!principal || !("userId" in principal)) return [network];
+    const user = { key: `rl:${options.name}:user:${principal.userId}`, limit: options.limit };
+    if (options.perIpLimit === undefined) return [user];
+    return [user, { ...network, limit: options.perIpLimit }];
+  }
+
+  /** Counts one hit; null when the store is down on a route that fails open, 503 when it fails closed. */
+  private async count(key: string, options: RateLimitOptions): Promise<RateLimitHit | null> {
+    try {
+      return await this.store.hit(key, options.windowMs);
+    } catch {
+      this.logger.warn("rate_limit.store_unavailable", {
+        name: options.name,
+        failClosed: options.failClosed,
+      });
+      if (options.failClosed) throw errors.unavailable();
+      return null;
+    }
   }
 }
