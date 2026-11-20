@@ -140,9 +140,12 @@ services:
       dockerfile: infra/docker/web.Dockerfile
       args:
         # Inlined at build time: the enquiry form posts to the API through app.'s /_api proxy, and
-        # "Client sign-in" opens the portal.
+        # "Client sign-in" opens the portal. The site key is the Turnstile widget "AMPM website"
+        # (Managed; ampmverse.com, site. and www.), public by design: the form's bot check, whose
+        # tokens the API verifies with the matching BOT_CHECK_SECRET.
         NEXT_PUBLIC_API_URL: "https://app.ampmverse.com/_api"
         NEXT_PUBLIC_PORTAL_URL: "https://app.ampmverse.com"
+        NEXT_PUBLIC_TURNSTILE_SITE_KEY: "0x4AAAAAAGKBfk9-4261LTAN"
     ports:
       - "127.0.0.1:7102:3000" # loopback only; site.ampmverse.com's .htaccess proxies here
     # A network of its own: the site reaches the API as a visitor's browser does, through the public URL.

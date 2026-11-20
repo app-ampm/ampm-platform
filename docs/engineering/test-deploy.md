@@ -140,6 +140,9 @@ same source.
   `/_api` proxy, a different origin from the site, as it will be under Caddy in production, so the API's
   `CORS_ORIGINS` lists `https://site.ampmverse.com`. The server-side reads (the discovery price on How it
   works, from `GET /crm/plans`) use the same public URL; `/_api` is outside the gate, so they need no login.
+  The third, `NEXT_PUBLIC_TURNSTILE_SITE_KEY`, is the enquiry form's Cloudflare Turnstile widget: the test
+  site takes Cloudflare's always-pass test key `1x00000000000000000000AA`, whose dummy token the test API's
+  stub bot check accepts; production builds take the real widget's key.
 - **Container**: the `web` service of the box override, published on `127.0.0.1:7002` only, on a network
   of its own, read-only with a tmpfs for `.next/cache`, a 1 CPU / 1 GB limit and a healthcheck.
 

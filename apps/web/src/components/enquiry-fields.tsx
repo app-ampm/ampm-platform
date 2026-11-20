@@ -14,6 +14,7 @@ import { PRIVACY_HREF } from "@/components/site/site-links";
 import { CheckboxField } from "./contact/checkbox-field";
 import { ChoiceSegments, type ChoiceOption } from "./contact/choice-segments";
 import { channelHref } from "./contact/contact-channels";
+import { BOT_CHECK_STATUS_ID } from "./contact/contact-ids";
 import { fullRowStyles } from "./contact/contact.styles";
 import { reachOf, type ReceivedRequest } from "./contact/contact-request";
 import { DateRangeField } from "./contact/date-range-field";
@@ -203,17 +204,32 @@ export function ConsentFields({ fields, onCheck }: FieldGroupProps) {
   );
 }
 
+/** Why the last send failed: too many sends, a bot-check token the API refused, or anything else. */
+export type SendFailure = "rate_limited" | "bot_check" | "other";
+
+const FAILURE_COPY: Record<SendFailure, string> = {
+  rate_limited: COPY.rateLimited,
+  bot_check: COPY.botCheckRefused,
+  other: COPY.failed,
+};
+
 export interface FormActionsProps {
   readonly isPending: boolean;
-  readonly isError: boolean;
-  readonly isRateLimited: boolean;
+  /** False until the bot check has a token for Send to carry; Send waits, dashed, until then. */
+  readonly canSend: boolean;
+  /** Why the last send failed, if it did. */
+  readonly failure: SendFailure | undefined;
 }
 
-/** The error notice (gold glass) and the gold "Send request" at the foot of the form. */
-export function FormActions({ isPending, isError, isRateLimited }: FormActionsProps) {
+/**
+ * The error notice (gold glass) and the gold "Send request" at the foot of the form. Send is described
+ * by the bot check's status line, which says why it waits.
+ */
+export function FormActions({ isPending, canSend, failure }: FormActionsProps) {
+  const isWaiting = !canSend && !isPending;
   return (
     <>
-      {isError ? (
+      {failure ? (
         <p
           role="alert"
           className={cn(
@@ -222,16 +238,17 @@ export function FormActions({ isPending, isError, isRateLimited }: FormActionsPr
             textStyles({ variant: "bodySmall", tone: "primary" }),
           )}
         >
-          {isRateLimited ? COPY.rateLimited : COPY.failed}
+          {FAILURE_COPY[failure]}
         </p>
       ) : null}
       <button
         type="submit"
-        disabled={isPending}
+        disabled={isPending || !canSend}
         aria-busy={isPending}
-        className={buttonStyles({ size: "lg", fullWidth: true })}
+        aria-describedby={BOT_CHECK_STATUS_ID}
+        className={buttonStyles({ size: "lg", fullWidth: true, disabled: isWaiting })}
       >
-        <span className={buttonLabelStyles({ size: "lg" })}>
+        <span className={buttonLabelStyles({ size: "lg", disabled: isWaiting })}>
           {isPending ? COPY.submitting : COPY.submit}
         </span>
       </button>

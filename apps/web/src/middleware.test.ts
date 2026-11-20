@@ -3,6 +3,17 @@ import { describe, expect, it } from "vitest";
 
 import { middleware } from "./middleware.js";
 
+/** One directive of a response's CSP, e.g. "frame-src https://…", or "" when it has none. */
+function directive(response: Response, name: string): string {
+  const csp = response.headers.get("content-security-policy") ?? "";
+  return (
+    csp
+      .split(";")
+      .map((part) => part.trim())
+      .find((part) => part.startsWith(`${name} `)) ?? ""
+  );
+}
+
 describe("web security middleware", () => {
   it("sets a per-request nonce CSP with no inline scripts", () => {
     const response = middleware(new NextRequest("https://app.example/"));
@@ -22,6 +33,19 @@ describe("web security middleware", () => {
       .find((directive) => directive.trim().startsWith("connect-src"));
     // The default API origin (NEXT_PUBLIC_API_URL) must be present, not just 'self'.
     expect(connectSrc).toContain("http://localhost:3900");
+  });
+
+  it("lets the enquiry form's bot check, Cloudflare Turnstile, load and frame its challenge (PUB-06)", () => {
+    const response = middleware(new NextRequest("https://app.example/contact"));
+    const scriptSrc = directive(response, "script-src");
+    // Still nonce-based and strict-dynamic; Turnstile's origin covers browsers without strict-dynamic.
+    expect(scriptSrc).toMatch(
+      /^script-src 'self' 'nonce-[^']+' 'strict-dynamic' https:\/\/challenges\.cloudflare\.com$/,
+    );
+    // Its challenge is the only frame the site allows (default-src would otherwise refuse it).
+    expect(directive(response, "frame-src")).toBe("frame-src https://challenges.cloudflare.com");
+    // Turnstile's requests are its iframe's own: connect-src stays the site and the API.
+    expect(directive(response, "connect-src")).toBe("connect-src 'self' http://localhost:3900");
   });
 
   it("gives each request a different nonce", () => {

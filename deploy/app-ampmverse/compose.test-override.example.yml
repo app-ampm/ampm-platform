@@ -92,6 +92,9 @@ services:
         # opens the portal.
         NEXT_PUBLIC_API_URL: "https://test-app.ampmverse.com/_api"
         NEXT_PUBLIC_PORTAL_URL: "https://test-app.ampmverse.com"
+        # Cloudflare's always-pass test widget: the test API's stub bot check accepts its dummy token,
+        # and test-site. is not one of the production widget's hostnames.
+        NEXT_PUBLIC_TURNSTILE_SITE_KEY: "1x00000000000000000000AA"
     ports:
       - "127.0.0.1:7002:3000" # loopback only; the site's .htaccess [P] proxies to this
     # A network of its own: the site reaches the API as a visitor's browser does, through the public URL.

@@ -68,6 +68,20 @@ describe("contact form", () => {
     expect(html).toMatch(/<button type="submit"[^>]*><span[^>]*>Send request<\/span>/);
   });
 
+  it("puts the bot check between the consent and Send, which waits for its token (PUB-06)", () => {
+    const html = renderForm(false);
+    expect(html).toContain('<div id="bot-check" class="min-h-16"></div>');
+    expect(html).toContain(
+      '<p id="bot-check-status" role="status" class="sr-only">Running a quick security check before you send…</p>',
+    );
+    expect(html).toMatch(
+      /<button type="submit" disabled=""[^>]*aria-describedby="bot-check-status"/,
+    );
+    const widgetAt = html.indexOf('id="bot-check"');
+    expect(widgetAt).toBeGreaterThan(html.indexOf('id="consentMarketing"'));
+    expect(widgetAt).toBeLessThan(html.indexOf('type="submit"'));
+  });
+
   it("opens the privacy notice in a new tab, so nothing typed is lost, and says so", () => {
     expect(renderForm(false)).toMatch(
       /href="\/privacy" target="_blank" rel="noreferrer"[^>]*>Privacy notice<span class="sr-only"> \(opens in a new tab\)<\/span><\/a>/,

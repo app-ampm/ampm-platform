@@ -6,6 +6,10 @@ import { CHAT_HREF } from "@/components/site/site-links";
 export const CONTACT_HEADING_ID = "contact-heading";
 export const RECEIVED_HEADING_ID = "request-received-heading";
 
+/** The bot check's widget container, and the status line that describes Send while it waits. */
+export const BOT_CHECK_ID = "bot-check";
+export const BOT_CHECK_STATUS_ID = "bot-check-status";
+
 /**
  * Where "Chat with AMPM" (`/contact#chat`) lands: the contact channels, or the form while AMPM's
  * channels have no addresses. Read from the link so the two never drift apart.

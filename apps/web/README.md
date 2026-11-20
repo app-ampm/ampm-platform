@@ -17,9 +17,10 @@ pnpm --filter web typecheck
 
 Read once, validated, in `src/env.ts`; Next inlines `NEXT_PUBLIC_*` at build time, so set them for the build.
 
-| Variable                 | Default                 | What it is                                                                                                           |
-| ------------------------ | ----------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| `NEXT_PUBLIC_API_URL`    | `http://localhost:3900` | The API the enquiry form posts to; its origin is allowed in the CSP's `connect-src`.                                 |
-| `NEXT_PUBLIC_PORTAL_URL` | `http://localhost:8082` | The client portal (the Expo web export). "Client sign-in" opens its `/sign-in`; locally the Expo dev server on 8082. |
+| Variable                         | Default                    | What it is                                                                                                                                                                                                                                                                         |
+| -------------------------------- | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `NEXT_PUBLIC_API_URL`            | `http://localhost:3900`    | The API the enquiry form posts to; its origin is allowed in the CSP's `connect-src`.                                                                                                                                                                                               |
+| `NEXT_PUBLIC_PORTAL_URL`         | `http://localhost:8082`    | The client portal (the Expo web export). "Client sign-in" opens its `/sign-in`; locally the Expo dev server on 8082.                                                                                                                                                               |
+| `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | `1x00000000000000000000AA` | The Cloudflare Turnstile widget the enquiry form draws as its bot check; the form sends its token as `botToken`. The default is Cloudflare's always-pass test key, which a local or test API (stub bot check) accepts and production refuses; production builds pass the real key. |
 
 Theme values come only from `packages/tokens` through the Tailwind preset; the app's Tailwind config holds the preset and the content globs and nothing else. Peacock Night is dark only, so the site has no scheme switch.
