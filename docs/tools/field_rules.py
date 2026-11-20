@@ -37,8 +37,7 @@ TABLES["users"] = T(
     password_hash=F(editor=SYS, visibility="SECRET", validation="Argon2id PHC string; 12 to 128 character passwords"),
     totp_secret_enc=F(editor=SYS, visibility="SECRET", validation="AES-256-GCM under AUTH_ENCRYPTION_KEY"),
     totp_pending_enc=F(editor=SYS, visibility="SECRET", automation="Cleared when the authenticator is confirmed"),
-    failed_sign_ins=F(editor=SYS, automation="Ten in a row pause sign-in for 15 minutes"),
-    locked_until=F(editor=SYS, automation="Sign-in refused until then; cleared by a password reset"),
+    failed_codes=F(editor=SYS, automation="Twenty wrong codes in a row lock the account; only a correct code clears it"),
 )
 TABLES["roles"] = T("Configuration", "SA", required=["role_key", "name"],
                     is_system=F(automation="System roles cannot be deleted or renamed"))
@@ -79,7 +78,7 @@ TABLES["auth_tokens"] = T(
 TABLES["user_recovery_codes"] = T(
     "System", SYS, required=["user_id", "code_hash"], assumptions="A-13 (Q13), D-142",
     code_hash=F(visibility="SECRET",
-                validation="SHA-256 of the normalised code; ten issued when the authenticator is confirmed"),
+                validation="HMAC-SHA256 of the normalised code; ten issued when the authenticator is confirmed"),
     used_at=F(automation="Single use; a used code is refused"),
 )
 TABLES["notifications"] = T(

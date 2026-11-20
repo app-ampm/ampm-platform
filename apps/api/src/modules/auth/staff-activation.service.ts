@@ -88,7 +88,17 @@ export class StaffActivationService {
     if (step === null) throw errors.unauthenticated(SIGN_IN_ERRORS.invalidCode);
     const recoveryCodes = generateRecoveryCodes();
     const identitySubject = user.identitySubject ?? `ampm:${user.id}`;
-    await this.activate({ invite, user, pending, step, identitySubject, recoveryCodes, now });
+    const recoveryKey = keys.recoveryKey;
+    await this.activate({
+      invite,
+      user,
+      pending,
+      step,
+      identitySubject,
+      recoveryCodes,
+      recoveryKey,
+      now,
+    });
     await this.credentials.recordSuccess(user.id, now);
     return { ...(await this.grants.grant({ ...user, identitySubject }, now)), recoveryCodes };
   }
@@ -115,6 +125,7 @@ export class StaffActivationService {
     step: number;
     identitySubject: string;
     recoveryCodes: readonly string[];
+    recoveryKey: Buffer;
     now: Date;
   }): Promise<void> {
     const { invite, user, now } = input;
@@ -126,7 +137,7 @@ export class StaffActivationService {
         userId: user.id,
         secretEnc: input.pending,
         step: input.step,
-        codeHashes: input.recoveryCodes.map(hashRecoveryCode),
+        codeHashes: input.recoveryCodes.map((code) => hashRecoveryCode(code, input.recoveryKey)),
         now,
       });
       await tx.user.update({

@@ -81,16 +81,6 @@ describe("AMPM's own staff sign-in screen", () => {
     await fireEvent.press(screen.getByText("Use a recovery code instead"));
     expect(toggleRecoveryCode).toHaveBeenCalled();
   });
-
-  it("shows the recovery codes once and leaves them only when they are saved", async () => {
-    const finish = jest.fn();
-    const codes = Array.from({ length: 10 }, (_, i) => `ABCD${i}-EFGHJ`);
-    mockSession.current = session({ phase: { kind: "recoveryCodes", codes }, finish });
-    await renderWithProviders(<AmpmSignInScreen />);
-    for (const code of codes) expect(screen.getByText(code)).toBeTruthy();
-    await fireEvent.press(screen.getByText("I’ve saved them"));
-    expect(finish).toHaveBeenCalled();
-  });
 });
 
 describe("AMPM's own activation screen", () => {
@@ -136,6 +126,20 @@ describe("AMPM's own activation screen", () => {
     mockActivation.current = activation({ kind: "password" });
     await renderWithProviders(<AmpmActivateScreen inviteToken="invite" />);
     expect(screen.getByText(SIGN_IN_ERRORS.clientActivationUnavailable)).toBeTruthy();
+  });
+
+  it("shows the recovery codes once and enters the app only when they are saved", async () => {
+    mockApi.preview = {
+      ...mockApi.preview,
+      data: { name: "Sana", email: "sana@ampm.example", userType: "staff" },
+    };
+    const codes = Array.from({ length: 10 }, (_, i) => `ABCD${i}-EFGHJ`);
+    const ready = activation({ kind: "recoveryCodes", codes });
+    mockActivation.current = ready;
+    await renderWithProviders(<AmpmActivateScreen inviteToken="invite" />);
+    for (const code of codes) expect(screen.getByText(code)).toBeTruthy();
+    await fireEvent.press(screen.getByText("I’ve saved them"));
+    expect(ready.finish).toHaveBeenCalled();
   });
 
   it("explains an incomplete link", async () => {

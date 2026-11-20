@@ -20,7 +20,7 @@ Global conventions that apply to every row: money is `numeric(14,2)` with a sibl
 
 | Module | Tables | Fields | Required at creation | Client or public visible | Restricted, sensitive or secret |
 |---|---|---|---|---|---|
-| A — Identity, access and administration | 20 | 129 | 61 | 10 | 5 |
+| A — Identity, access and administration | 20 | 128 | 61 | 10 | 5 |
 | B — CRM, subscriptions and commercial agreements | 13 | 139 | 55 | 90 | 4 |
 | C — Hotel intelligence | 10 | 101 | 38 | 83 | 11 |
 | D — Hotel consultancy | 6 | 70 | 28 | 65 | 3 |
@@ -37,9 +37,9 @@ Global conventions that apply to every row: money is `numeric(14,2)` with a sibl
 | O — Checklists, closure and feedback | 4 | 30 | 17 | 7 | 0 |
 | P — Public website content (dormant) | 2 | 17 | 8 | 17 | 0 |
 | Q — Live chat | 2 | 16 | 6 | 16 | 0 |
-| **Total** | **117** | **1168** | **502** | **647** | **108** |
+| **Total** | **117** | **1167** | **502** | **647** | **108** |
 
-Fields by visibility class: CLIENT 614, INTERNAL 356, Other (per record, recipient or parent) 57, RESTRICTED-NOTES 34, PUBLIC 33, RESTRICTED-FINANCE 31, RESTRICTED-CONTACT 13, RESTRICTED-IDENTITY 13, SECRET 11, RESTRICTED-BANK 4, SENSITIVE-GUEST 2.
+Fields by visibility class: CLIENT 614, INTERNAL 355, Other (per record, recipient or parent) 57, RESTRICTED-NOTES 34, PUBLIC 33, RESTRICTED-FINANCE 31, RESTRICTED-CONTACT 13, RESTRICTED-IDENTITY 13, SECRET 11, RESTRICTED-BANK 4, SENSITIVE-GUEST 2.
 
 ---
 
@@ -66,8 +66,7 @@ Created at stage: **Account setup** · Default editor: SA; SM and PM (a) for cli
 | `totp_pending_enc` | string, up to 255 characters; SECRET; a secret shown for enrolment, not yet confirmed |  | SYS | SECRET | Optional | Cleared when the authenticator is confirmed |
 | `totp_confirmed_at` | timestamp (UTC) |  | SYS (when the action happens) | INTERNAL | System | — |
 | `totp_last_step` | integer, 0 or more; the step of the last accepted code; never accepted twice |  | SA; SM and PM (a) for client logins | INTERNAL | Optional | — |
-| `failed_sign_ins` | integer, 0 or more; consecutive failures; ten pause sign-in |  | SYS | INTERNAL | Optional | Ten in a row pause sign-in for 15 minutes |
-| `locked_until` | timestamp (UTC) |  | SYS | INTERNAL | Optional | Sign-in refused until then; cleared by a password reset |
+| `failed_codes` | integer, 0 or more; consecutive wrong authenticator or recovery codes; twenty lock the account |  | SYS | INTERNAL | Optional | Twenty wrong codes in a row lock the account; only a correct code clears it |
 
 ### `user_recovery_codes`
 
@@ -77,7 +76,7 @@ Created at stage: **System** · Default editor: SYS · Default visibility: INTER
 |---|---|---|---|---|---|---|
 | `id` (PK) | UUID v7, generated |  | SYS | INTERNAL | System | — |
 | `user_id` (FK) | references see data model |  | SYS | INTERNAL | At creation | — |
-| `code_hash` | SHA-256 of the normalised code; ten issued when the authenticator is confirmed |  | SYS | SECRET | At creation | — |
+| `code_hash` | HMAC-SHA256 of the normalised code; ten issued when the authenticator is confirmed |  | SYS | SECRET | At creation | — |
 | `used_at` | timestamp (UTC) |  | SYS (when the action happens) | INTERNAL | System | Single use; a used code is refused |
 
 ### `roles`

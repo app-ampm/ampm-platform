@@ -2,8 +2,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 
-import { SIGN_IN_ERRORS, type SignInResponse } from "@ampm/core";
-import { useSignIn, useSignInCode, useSignInEnrol } from "@ampm/api-client";
+import { SIGN_IN_ERRORS } from "@ampm/core";
+import { useSignIn, useSignInCode } from "@ampm/api-client";
 
 import { setAccessToken } from "@/lib/session";
 
@@ -13,12 +13,6 @@ function messageOf(error: unknown): string {
   return error instanceof Error && error.message.length > 0
     ? error.message
     : "Something went wrong. Please try again.";
-}
-
-function phaseAfterPassword(step: SignInResponse): Phase {
-  return step.kind === "totp"
-    ? { kind: "totpCode" }
-    : { kind: "enrollTotp", secret: step.enrolment.secret, otpauthUri: step.enrolment.otpauthUri };
 }
 
 /** Runs one step at a time, keeping its pending flag and error; a timed-out challenge restarts sign-in. */
@@ -54,23 +48,20 @@ function useCompleteSignIn(): (accessToken: string) => void {
 
 /**
  * Drives the staff sign-in screen through AMPM's own sign-in (D-142): the password, then the
- * authenticator code or a recovery code, or (after an administrator's reset) adding a new authenticator
- * and saving its recovery codes. A timed-out challenge returns to the password step with the API's
- * message. The access token becomes the session only at the very end: `flow` holds the challenge between
- * the steps and, after an enrolment, the granted token until the recovery codes are saved.
+ * authenticator code or one of the recovery codes. A timed-out challenge returns to the password step
+ * with the API's message. The access token becomes the session only at the very end. An account
+ * without an authenticator never reaches the code step: it activates from its invitation instead.
  *
  *   const session = useAmpmSignIn(); // <StaffSignInScreen session={session} />
  */
 export function useAmpmSignIn(): StaffSignIn {
   const signIn = useSignIn();
   const signInCode = useSignInCode();
-  const signInEnrol = useSignInEnrol();
   const complete = useCompleteSignIn();
   const [phase, setPhase] = useState<Phase>({ kind: "credentials" });
-  const [{ challenge, grantToken }, setFlow] = useState({ challenge: "", grantToken: "" });
+  const [challenge, setChallenge] = useState("");
   const [email, setEmail] = useState("");
   const { pending, error, setError, run } = useStepRunner(() => setPhase({ kind: "credentials" }));
-
   return {
     phase,
     pending,
@@ -79,9 +70,8 @@ export function useAmpmSignIn(): StaffSignIn {
     setEmail,
     signIn: (password) =>
       run(async () => {
-        const step = await signIn.mutateAsync({ email, password });
-        setFlow({ challenge: step.challenge, grantToken: "" });
-        setPhase(phaseAfterPassword(step));
+        setChallenge((await signIn.mutateAsync({ email, password })).challenge);
+        setPhase({ kind: "totpCode" });
       }),
     submitChallenge: (code) =>
       run(async () => complete((await signInCode.mutateAsync({ challenge, code })).accessToken)),
@@ -93,12 +83,7 @@ export function useAmpmSignIn(): StaffSignIn {
       run(async () =>
         complete((await signInCode.mutateAsync({ challenge, recoveryCode })).accessToken),
       ),
-    confirmEnrollment: (code) =>
-      run(async () => {
-        const grant = await signInEnrol.mutateAsync({ challenge, code });
-        setFlow({ challenge, grantToken: grant.accessToken });
-        setPhase({ kind: "recoveryCodes", codes: grant.recoveryCodes });
-      }),
-    finish: () => (grantToken ? complete(grantToken) : undefined),
+    // Enrolment happens in activation, never at sign-in, for AMPM's own sign-in.
+    confirmEnrollment: () => undefined,
   };
 }

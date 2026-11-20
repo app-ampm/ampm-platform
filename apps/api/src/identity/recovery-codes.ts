@@ -1,13 +1,14 @@
-import { createHash, randomBytes } from "node:crypto";
+import { createHmac, randomBytes } from "node:crypto";
 
 /**
  * Single-use recovery codes for a staff authenticator (D-142): ten codes of ten base32 characters
- * (50 random bits each), written XXXXX-XXXXX, shown once at enrolment. Only a SHA-256 of the normalised
- * code is stored; that is enough for a high-entropy value, and every wrong try counts toward lockout.
+ * (50 random bits each), written XXXXX-XXXXX, shown once at enrolment. Only an HMAC-SHA256 of the
+ * normalised code under a server key is stored: 50 bits is too few to survive an offline search of a
+ * leaked database with a plain hash, but without the key the stored values cannot be searched at all.
  *
  * @example
  * const codes = generateRecoveryCodes(); // ["K7Q2M-ZP4XA", …]
- * hashRecoveryCode("k7q2mzp4xa") === hashRecoveryCode("K7Q2M-ZP4XA"); // true
+ * hashRecoveryCode("k7q2mzp4xa", key) === hashRecoveryCode("K7Q2M-ZP4XA", key); // true
  */
 const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
 export const RECOVERY_CODE_COUNT = 10;
@@ -27,6 +28,6 @@ export function normaliseRecoveryCode(input: string): string {
   return input.toUpperCase().replace(/[^A-Z2-7]/g, "");
 }
 
-export function hashRecoveryCode(input: string): string {
-  return createHash("sha256").update(normaliseRecoveryCode(input)).digest("hex");
+export function hashRecoveryCode(input: string, key: Buffer): string {
+  return createHmac("sha256", key).update(normaliseRecoveryCode(input)).digest("hex");
 }

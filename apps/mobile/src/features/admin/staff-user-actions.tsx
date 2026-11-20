@@ -93,7 +93,7 @@ function useStaffUserActions(user: StaffUserView) {
     // Clears the authenticator and recovery codes and signs the account out everywhere (D-142).
     resetAuthenticator: (): void =>
       resetMfa.mutate(undefined, {
-        onSuccess: done("Authenticator reset"),
+        onSuccess: done("Sign-in reset · invitation sent"),
         onError: failed("Could not reset the authenticator"),
       }),
     resend: (): void =>
@@ -132,7 +132,7 @@ function StaffUserConfirmSheets({
         onClose={close}
         destructive
         title="Reset authenticator?"
-        description={`${user.name} is signed out everywhere and sets up their authenticator app again at their next sign-in. Their recovery codes stop working.`}
+        description={`${user.name} is signed out everywhere, their password, authenticator and recovery codes are cleared, and we email them a new invitation to set them up again.`}
         confirmLabel="Reset authenticator"
         loading={resetPending}
         onConfirm={resetAuthenticator}

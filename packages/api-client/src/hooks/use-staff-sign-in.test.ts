@@ -7,7 +7,7 @@ import {
   useInvitationPreview,
   useResetPassword,
 } from "./use-account-setup";
-import { useSignIn, useSignInCode, useSignInEnrol, useSignOut } from "./use-staff-sign-in";
+import { useSignIn, useSignInCode, useSignOut } from "./use-staff-sign-in";
 
 interface Seen {
   fn: ((variables?: unknown) => Promise<unknown>) | null;
@@ -45,7 +45,6 @@ function useInvitationPreviewOfToken() {
 const ANONYMOUS_HOOKS = [
   { name: "useSignIn", hook: useSignIn, path: "/auth/sign-in" },
   { name: "useSignInCode", hook: useSignInCode, path: "/auth/sign-in/code" },
-  { name: "useSignInEnrol", hook: useSignInEnrol, path: "/auth/sign-in/enrol" },
   {
     name: "useInvitationPreview",
     hook: useInvitationPreviewOfToken,

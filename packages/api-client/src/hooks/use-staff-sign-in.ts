@@ -1,13 +1,10 @@
 import { useMutation } from "@tanstack/react-query";
 import {
   acknowledged,
-  enrolledGrant,
   signInGrant,
   signInResponse,
   type Acknowledged,
-  type EnrolledGrant,
   type SignInCodeRequest,
-  type SignInEnrolRequest,
   type SignInGrant,
   type SignInRequest,
   type SignInResponse,
@@ -54,23 +51,6 @@ export function useSignInCode() {
         method: "POST",
         body,
         schema: signInGrant,
-        anonymous: true,
-      }),
-  });
-}
-
-/**
- * Step two after a reset (`POST /auth/sign-in/enrol`): confirm the newly added authenticator with its
- * first code. Answers with the access token and ten new recovery codes, shown once.
- */
-export function useSignInEnrol() {
-  const api = useApiClient();
-  return useMutation<EnrolledGrant, Error, SignInEnrolRequest>({
-    mutationFn: (body) =>
-      api.request("/auth/sign-in/enrol", {
-        method: "POST",
-        body,
-        schema: enrolledGrant,
         anonymous: true,
       }),
   });

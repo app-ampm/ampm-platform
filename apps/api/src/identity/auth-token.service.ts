@@ -130,6 +130,21 @@ export class AuthTokenService {
     }
   }
 
+  /**
+   * Retires a user's live sign-in challenges and reset links (D-142 security review): a password reset or
+   * an administrator's reset must also cancel a sign-in already past the old password, which would
+   * otherwise finish within its five minutes and open a session after every session was revoked.
+   */
+  async retireSignInTokens(
+    userId: string,
+    client: Prisma.TransactionClient = this.prisma,
+  ): Promise<void> {
+    await client.authToken.updateMany({
+      where: { userId, purpose: { in: ["sign_in_challenge", "password_reset"] }, usedAt: null },
+      data: { usedAt: new Date() },
+    });
+  }
+
   /** The valid (unused, unexpired) invite matching this raw token, or null. */
   async findValidInvite(raw: string): Promise<ValidInvite | null> {
     return this.prisma.authToken.findFirst({

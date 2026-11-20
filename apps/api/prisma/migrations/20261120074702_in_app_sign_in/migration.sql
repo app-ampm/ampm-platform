@@ -5,8 +5,7 @@ ALTER TYPE "AuthTokenPurpose" ADD VALUE 'sign_in_challenge';
 ALTER TABLE "auth_tokens" ADD COLUMN     "attempts" INTEGER NOT NULL DEFAULT 0;
 
 -- AlterTable
-ALTER TABLE "users" ADD COLUMN     "failed_sign_ins" INTEGER NOT NULL DEFAULT 0,
-ADD COLUMN     "locked_until" TIMESTAMPTZ(6),
+ALTER TABLE "users" ADD COLUMN     "failed_codes" INTEGER NOT NULL DEFAULT 0,
 ADD COLUMN     "password_changed_at" TIMESTAMPTZ(6),
 ADD COLUMN     "password_hash" VARCHAR(255),
 ADD COLUMN     "totp_confirmed_at" TIMESTAMPTZ(6),

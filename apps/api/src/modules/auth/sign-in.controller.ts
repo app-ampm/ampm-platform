@@ -6,7 +6,6 @@ import {
   invitationTokenRequest,
   resetPasswordRequest,
   signInCodeRequest,
-  signInEnrolRequest,
   signInRequest,
   type Acknowledged,
   type ActivationConfirmRequest,
@@ -18,7 +17,6 @@ import {
   type InvitationTokenRequest,
   type ResetPasswordRequest,
   type SignInCodeRequest,
-  type SignInEnrolRequest,
   type SignInGrant,
   type SignInRequest,
   type SignInResponse,
@@ -63,15 +61,6 @@ export class SignInController {
   @AuditExempt("issues an access token; the session it opens is audited on first use")
   signInCode(@ZodBody(signInCodeRequest) body: SignInCodeRequest): Promise<SignInGrant> {
     return this.signIns.verifyCode(body);
-  }
-
-  @Post("sign-in/enrol")
-  @Public()
-  @RateLimit({ name: "auth.sign_in_enrol", limit: 10, windowMs: MINUTE })
-  @HttpCode(200)
-  @SelfAudited()
-  signInEnrol(@ZodBody(signInEnrolRequest) body: SignInEnrolRequest): Promise<EnrolledGrant> {
-    return this.signIns.confirmEnrolment(body);
   }
 
   @Post("sign-out")

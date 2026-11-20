@@ -4,7 +4,8 @@ import { deriveKey, keyFromBase64, SecretBox } from "./secret-box.js";
 
 /**
  * What AMPM's own sign-in (D-142) signs and seals with: the token signer whose tokens the identity
- * adapter accepts, and the box that encrypts authenticator secrets at rest. Production (`ampm`) uses
+ * adapter accepts, the box that encrypts authenticator secrets at rest, and the key that HMACs the
+ * recovery codes (derived from the encryption key, so it needs no secret of its own). Production (`ampm`) uses
  * its two dedicated secrets; the development provider derives both from its local secret, so the real
  * flow also runs on the test stack and in the tests. Null under Cognito, where the provider signs people
  * in, so the in-app sign-in routes answer 404 there.
@@ -14,6 +15,7 @@ import { deriveKey, keyFromBase64, SecretBox } from "./secret-box.js";
 export interface SignInKeys {
   readonly tokens: LocalIdentityAdapter;
   readonly box: SecretBox;
+  readonly recoveryKey: Buffer;
 }
 
 export const SIGN_IN_KEYS = Symbol("SIGN_IN_KEYS");
@@ -34,12 +36,14 @@ export function signInKeysFor(env: SignInKeysEnv): SignInKeys | null {
         provider: "ampm",
       }),
       box: new SecretBox(keyFromBase64(env.AUTH_ENCRYPTION_KEY)),
+      recoveryKey: deriveKey(env.AUTH_ENCRYPTION_KEY, "ampm/recovery-codes"),
     };
   }
   if (env.IDENTITY_PROVIDER === "local" && env.IDENTITY_LOCAL_SECRET) {
     return {
       tokens: new LocalIdentityAdapter(env.IDENTITY_LOCAL_SECRET),
       box: new SecretBox(deriveKey(env.IDENTITY_LOCAL_SECRET, "ampm/totp-secrets")),
+      recoveryKey: deriveKey(env.IDENTITY_LOCAL_SECRET, "ampm/recovery-codes"),
     };
   }
   return null;

@@ -110,8 +110,15 @@ describe("recovery codes", () => {
   });
 
   it("treats case, the dash and spaces as the same code", () => {
+    const key = deriveKey("a test secret that is long enough", "recovery");
     expect(normaliseRecoveryCode(" abcde-23456 ")).toBe("ABCDE23456");
-    expect(hashRecoveryCode("abcde23456")).toBe(hashRecoveryCode("ABCDE-23456"));
-    expect(hashRecoveryCode("ABCDE-23457")).not.toBe(hashRecoveryCode("ABCDE-23456"));
+    expect(hashRecoveryCode("abcde23456", key)).toBe(hashRecoveryCode("ABCDE-23456", key));
+    expect(hashRecoveryCode("ABCDE-23457", key)).not.toBe(hashRecoveryCode("ABCDE-23456", key));
+  });
+
+  it("keys the stored hash, so a leaked table cannot be searched without the server key", () => {
+    const one = deriveKey("a test secret that is long enough", "recovery");
+    const other = deriveKey("a different secret, also long enough", "recovery");
+    expect(hashRecoveryCode("ABCDE-23456", one)).not.toBe(hashRecoveryCode("ABCDE-23456", other));
   });
 });

@@ -42,13 +42,11 @@ export const totpEnrolment = z.object({
 export type TotpEnrolment = z.infer<typeof totpEnrolment>;
 
 /**
- * The second step after a correct password, with a short-lived single-use challenge: enter the code
- * (`totp`), or, when the authenticator was reset by an administrator, add one first (`enrol`).
+ * The second step after a correct password: a short-lived, single-use challenge for the authenticator
+ * code. An account without a confirmed authenticator never gets this far: it activates from an
+ * invitation, which sets both (D-142).
  */
-export const signInResponse = z.discriminatedUnion("kind", [
-  z.object({ kind: z.literal("totp"), challenge: z.string().min(1) }),
-  z.object({ kind: z.literal("enrol"), challenge: z.string().min(1), enrolment: totpEnrolment }),
-]);
+export const signInResponse = z.object({ kind: z.literal("totp"), challenge: z.string().min(1) });
 export type SignInResponse = z.infer<typeof signInResponse>;
 
 /** Finish signing in with the authenticator code, or with one of the recovery codes instead. */
@@ -62,13 +60,6 @@ export const signInCodeRequest = z
     message: "Send either the authenticator code or a recovery code",
   });
 export type SignInCodeRequest = z.infer<typeof signInCodeRequest>;
-
-/** Confirm a newly added authenticator with its first code (the `enrol` step). */
-export const signInEnrolRequest = z.object({
-  challenge: z.string().min(1),
-  code: totpCode,
-});
-export type SignInEnrolRequest = z.infer<typeof signInEnrolRequest>;
 
 /** A signed-in session: the access token sent as the Bearer, and who it belongs to. */
 export const signInGrant = z.object({

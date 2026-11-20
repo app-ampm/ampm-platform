@@ -5,6 +5,7 @@ import type { Response } from "express";
 
 import { AppLogger } from "../logger.service.js";
 import { requestContext } from "../request-context.js";
+import { clientKey } from "./client-key.js";
 import { RATE_LIMIT, type RateLimitOptions } from "./rate-limit.decorator.js";
 import { RateLimitStore, type RateLimitHit } from "./rate-limit.store.js";
 
@@ -49,6 +50,7 @@ export class RateLimitGuard implements CanActivate {
   private caller(): string {
     const principal = requestContext.get()?.principal;
     if (principal && "userId" in principal) return `user:${principal.userId}`;
-    return `ip:${requestContext.get()?.ip ?? "unknown"}`;
+    // An IPv6 client counts by its /64, so rotating addresses inside one subnet earns no extra tries.
+    return `ip:${clientKey(requestContext.get()?.ip)}`;
   }
 }
