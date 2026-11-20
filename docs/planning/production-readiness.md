@@ -31,7 +31,7 @@ AMPM develops and works on production from now on, behind the password curtain. 
 - [x] **Email through Resend (D-143),** 20 Nov: `ampmverse.com` verified in Resend (its DKIM and sending records added at GoDaddy through Domain Connect, the Google records untouched), the send-only API key stored as `SMTP_PASSWORD`, and `EMAIL_FROM` set to `AMPM <noreply@ampmverse.com>`.
 - [x] **Cloudflare Turnstile,** 20 Nov: the widget "AMPM website" and its secret stored as `BOT_CHECK_SECRET` (rotated once after a paste went astray). The website widget itself is the enquiry-form item in section 4.
 - [x] ~~Plesk + GoDaddy: test-app. and test-site.ampmverse.com~~: not needed, the test stack is retired (D-144).
-- [ ] **The first Super Admin.** Invited on 20 Nov; the one-time activation link is in `ampm-prod-secrets/first-admin-link.txt` on the box. Left: open it once the edge points at production, choose a password, scan the authenticator QR code and save the recovery codes in a password manager.
+- [x] **The first Super Admin,** activated on 20 Nov 2026: password, authenticator and ten recovery codes, with the first sign-in at 10:00 UTC, all audited. The one-time link file was deleted once its token was spent. Later staff are invited from the app.
 - [ ] Keep an off-box copy of the backup cipher passphrase (`postgres.env`) in a password manager.
 
 ## 4. Before pitching clients (go-live blockers)
