@@ -1,7 +1,8 @@
 #!/bin/bash
-# Tests for docs/tools/checkpoint.sh: a push the remote refuses is reported to the session, not only logged, and
-# commits left unpushed by an earlier turn are pushed by the next checkpoint (on 27 October 2026 the main checkout's
-# main had split from origin/main and six hours of refused pushes went unnoticed).
+# Tests for docs/tools/checkpoint.sh: a push the remote refuses is reported to the session, not only logged; commits
+# left unpushed by an earlier turn are pushed by the next checkpoint (on 27 October 2026 the main checkout's main had
+# split from origin/main and six hours of refused pushes went unnoticed); and a branch that is only behind its upstream
+# catches up by rebasing and pushes (by 20 November 2026 the main checkout had 107 local-only commits).
 #
 #   bash docs/tools/checkpoint_test.sh   # prints "checkpoint tests passed", exit 0
 #
@@ -32,16 +33,17 @@ setup() {  # name: a bare remote and a clone of it with checkpoint.sh, a stand-i
   git -C "$d/work" remote add origin "$d/remote.git"; git -C "$d/work" push -q -u origin main
   echo "$d"
 }
-diverge() {  # dir: the remote gets a commit the work clone does not have, as when another checkout pushed
+diverge() {  # dir [file]: the remote gets a commit the work clone lacks (a.txt conflicts with the tests' local edit)
+  local file="${2:-b.txt}"
   git clone -q "$1/remote.git" "$1/other"; identity "$1/other"
-  echo other > "$1/other/b.txt"; git -C "$1/other" add -A; git -C "$1/other" commit -q -m "chore: elsewhere"
+  echo other >> "$1/other/$file"; git -C "$1/other" add -A; git -C "$1/other" commit -q -m "chore: elsewhere"
   git -C "$1/other" push -q
 }
 hook() { printf '{}' | bash "$1/work/docs/tools/checkpoint.sh" --hook; }
 unpushed() { git -C "$1/work" rev-list --count origin/main..main; }
 
-test_refused_push_is_reported() {
-  local d out; d=$(setup refused); diverge "$d"
+test_refused_push_is_reported() {  # a real conflict cannot be caught up with, so it is still refused and reported
+  local d out; d=$(setup refused); diverge "$d" a.txt
   echo two >> "$d/work/a.txt"; out=$(hook "$d")
   printf '%s' "$out" | python3 -c 'import json,sys; json.loads(sys.stdin.read())' 2>/dev/null \
     || fail "the hook output is not one JSON object: $out"
@@ -51,7 +53,7 @@ test_refused_push_is_reported() {
 }
 
 test_unpushed_commits_are_reported_on_a_quiet_turn() {
-  local d out; d=$(setup quiet); diverge "$d"
+  local d out; d=$(setup quiet); diverge "$d" a.txt
   echo two >> "$d/work/a.txt"; hook "$d" > /dev/null
   out=$(hook "$d")  # nothing left to commit, but the earlier commit is still not on origin
   printf '%s' "$out" | grep -q "push to origin failed" || fail "unpushed commits went unreported on a quiet turn: '$out'"
@@ -66,6 +68,18 @@ test_unpushed_commits_are_pushed_once_the_remote_accepts() {
   [ -z "$out" ] || fail "a quiet turn whose push went through printed: $out"
 }
 
+test_a_branch_behind_its_upstream_catches_up_and_pushes() {
+  local d out; d=$(setup behind); diverge "$d"
+  echo two >> "$d/work/a.txt"; out=$(hook "$d")
+  git -C "$d/work" fetch -q
+  [ "$(unpushed "$d")" = 0 ] || fail "a branch only behind its upstream did not catch up and push: $out"
+  [ "$(git -C "$d/work" rev-list --count main..origin/main)" = 0 ] || fail "the caught-up branch still lacks the remote's commit"
+  [ -f "$d/work/b.txt" ] || fail "the remote's commit is not in the work tree after catching up"
+  printf '%s' "$out" | grep -q "push to origin failed" && fail "a healed push was reported as failed: $out"
+  [ -z "$(git -C "$d/work" status --porcelain)" ] || fail "catching up left the work tree dirty"
+  return 0
+}
+
 test_ordinary_checkpoint_is_unchanged() {
   local d out; d=$(setup plain)
   echo two >> "$d/work/a.txt"; out=$(hook "$d")
@@ -78,6 +92,7 @@ test_ordinary_checkpoint_is_unchanged() {
 test_refused_push_is_reported
 test_unpushed_commits_are_reported_on_a_quiet_turn
 test_unpushed_commits_are_pushed_once_the_remote_accepts
+test_a_branch_behind_its_upstream_catches_up_and_pushes
 test_ordinary_checkpoint_is_unchanged
 [ "$FAILURES" -eq 0 ] && echo "checkpoint tests passed" || echo "checkpoint tests: $FAILURES failure(s)"
 [ "$FAILURES" -eq 0 ]

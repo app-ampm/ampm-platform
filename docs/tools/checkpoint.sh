@@ -23,6 +23,16 @@ fi
 # the checkpoint commits inside the worktrees every session runs in, not only the main checkout (F9).
 in_git_repo() { git rev-parse --is-inside-work-tree >/dev/null 2>&1; }
 
+catch_up() {  # after a refused push: replay this branch's commits onto its upstream, aborting cleanly on any conflict
+  # The main checkout's main never pulls, while pull requests land on origin/main as squash merges, so every
+  # checkpoint push was refused and local-only commits piled up (107 by 20 Nov 2026). Rebasing onto the
+  # upstream heals that; a real conflict still fails, and is reported as before.
+  git fetch -q 2>/dev/null || return 1
+  git rebase -q '@{upstream}' >/dev/null 2>&1 && return 0
+  git rebase --abort >/dev/null 2>&1
+  return 1
+}
+
 push() {  # pushes the branch when it has commits its upstream lacks; PUSH_FAILED counts them when the push is refused
   git rev-parse -q --verify '@{upstream}' >/dev/null 2>&1 || return 0
   local ahead; ahead=$(git rev-list --count '@{upstream}..HEAD' 2>/dev/null || echo 0)
@@ -37,6 +47,7 @@ push() {  # pushes the branch when it has commits its upstream lacks; PUSH_FAILE
     return 0
   fi
   if git push -q; then echo "project: pushed"
+  elif catch_up && git push -q; then echo "project: caught up with $(git rev-parse --abbrev-ref '@{upstream}') and pushed"
   else
     ahead=$(git rev-list --count '@{upstream}..HEAD' 2>/dev/null || echo "$ahead")
     PUSH_FAILED="$ahead"; echo "project: push failed ($ahead commit(s) not on $(git rev-parse --abbrev-ref '@{upstream}'))"
