@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Back up the box's local media store (D-106) — the only persistent state outside Postgres. Media lives on
 # the box disk (STORAGE_PROVIDER=local), not S3, so it needs its own backup until the S3-in-Mumbai move;
-# the provider's daily disk backup is the second layer. Run nightly via cron on the box, e.g.:
-#   15 2 * * *  /var/www/vhosts/app.ampmverse.com/ampm-test/deploy/app-ampmverse/backup-media.sh >> /var/log/ampm-media-backup.log 2>&1
+# the provider's daily disk backup is the second layer. Production's nightly cron entry on the box (the
+# SSH user's crontab, UTC, installed 20 Nov 2026; V=/var/www/vhosts/app.ampmverse.com written out in full):
+#   15 2 * * * MEDIA_DIR=$V/ampm-prod-storage BACKUP_DIR=$V/ampm-backups/media-prod bash $V/ampm-prod/deploy/app-ampmverse/backup-media.sh >> $V/ampm-backups/media-backup.log 2>&1
 set -euo pipefail
 
 SRC="${MEDIA_DIR:-/var/www/vhosts/app.ampmverse.com/ampm-storage}"

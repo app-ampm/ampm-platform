@@ -7,8 +7,8 @@
 
 # The pre-launch curtain: until AMPM opens to clients, the whole portal stays behind the shared
 # password, except /_api, where the app sends its own Bearer token (which replaces the browser's Basic
-# credentials). The production API accepts only Cognito tokens and answers the dev sign-in routes with
-# 404, so nothing behind /_api is open without a real account. Remove this block (and the site's) to go
+# credentials). The production API accepts only the tokens of AMPM's own sign-in (D-142) and has no dev
+# sign-in routes (404), so nothing behind /_api is open without a real account. Remove this block (and the site's) to go
 # live. A wrong Authorization scheme here counts toward Plesk's fail2ban (5 in 10 minutes = a ban).
 AuthType Basic
 AuthName "AMPM"
@@ -27,9 +27,9 @@ Header always set X-Frame-Options "DENY"
 Header always set Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(self \"https://checkout.razorpay.com\" \"https://api.razorpay.com\")"
 # The portal's content security policy (security.md: no inline scripts). Scripts come from this origin
 # and Razorpay's checkout; react-native-web writes its styles at run time, hence the inline styles; the
-# browser talks to this origin's /_api, Cognito in Mumbai and Razorpay. Report-Only first: the console
+# browser talks to this origin's /_api and to Razorpay (sign-in is in-house, D-142). Report-Only first: the console
 # lists what the live app would break, and the header switches to Content-Security-Policy once clean.
-Header always set Content-Security-Policy-Report-Only "default-src 'self'; script-src 'self' https://checkout.razorpay.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://cognito-idp.ap-south-1.amazonaws.com https://api.razorpay.com https://lumberjack.razorpay.com; frame-src https://api.razorpay.com https://checkout.razorpay.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+Header always set Content-Security-Policy-Report-Only "default-src 'self'; script-src 'self' https://checkout.razorpay.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://api.razorpay.com https://lumberjack.razorpay.com; frame-src https://api.razorpay.com https://checkout.razorpay.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
 Header always unset X-Powered-By
 Header unset X-Powered-By
 </IfModule>
