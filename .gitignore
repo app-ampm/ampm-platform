@@ -24,6 +24,10 @@ graphify-out/.graphify_python
 graphify-out/.graphify_root
 graphify-out/.graphify_*.json
 graphify-out/.graphify_*.txt
+# Per-session hook state and the last-query stamp: rewritten by every session and never shared. Tracked, they gave
+# the checkpoint a commit on every turn and split the main checkout's main from origin/main (20 Nov 2026).
+graphify-out/cache/hook_sessions/
+graphify-out/cache/last_query_stamp
 graphify-out/.needs_update
 # graphify writes a dated backup of the curated graph on each rebuild; it is a local artifact, not committed.
 graphify-out/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]/
