@@ -31,7 +31,7 @@ pnpm --filter mobile android
 
 On the Android emulator `localhost` is the emulator itself, so forward the local API port first: `adb reverse tcp:3900 tcp:3900`.
 
-Native builds link Expo's precompiled modules, which must match one another, so keep every Expo package at the version the SDK expects. A drifted patch builds cleanly and then crashes at launch on a missing symbol, which Expo Go and the web export never show. `expo install --check` lists the drift; only the Jest 29 to 30 major is expected there for now. `expo install` cannot write a package's config plugin into `app.config.ts`, so add it to `plugins` in `app.json` by hand. After a change to the native configuration, regenerate the projects:
+Native builds link Expo's precompiled modules, which must match one another, so keep every Expo package at the version the SDK expects. A drifted patch builds cleanly and then crashes at launch on a missing symbol, which Expo Go and the web export never show. `expo install --check` lists the drift and should report nothing, in this folder and in `packages/ui`. `expo install` cannot write a package's config plugin into `app.config.ts`, so add it to `plugins` in `app.json` by hand. After a change to the native configuration, regenerate the projects:
 
 ```bash
 pnpm --filter mobile native:prebuild
