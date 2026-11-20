@@ -26,6 +26,8 @@ const prodValid = {
   SMS_API_KEY: "sms-api-key",
   SMS_OTP_TEMPLATE: "1707000000000000001",
   SMS_SENDER_ID: "AMPMVS",
+  AV_PROVIDER: "clamav",
+  CLAMAV_HOST: "clamav",
 };
 
 describe("loadEnv", () => {
@@ -173,6 +175,37 @@ describe("loadEnv", () => {
       IDENTITY_LOCAL_SECRET: "a-development-secret-that-is-32chars",
     });
     expect(env.PAYMENT_PROVIDER).toBe("stub");
+  });
+});
+
+describe("loadEnv: the upload antivirus scan (AC-20.3)", () => {
+  it("refuses the stub scanner in production", () => {
+    expect(() => loadEnv({ ...prodValid, AV_PROVIDER: "stub" })).toThrow(/AV_PROVIDER/);
+  });
+
+  it("requires clamd's host with the clamav scanner, in every environment", () => {
+    const { CLAMAV_HOST: _host, ...withoutHost } = prodValid;
+    expect(() => loadEnv(withoutHost)).toThrow(/CLAMAV_HOST/);
+    expect(() =>
+      loadEnv({
+        DATABASE_URL: "postgres://localhost:5432/ampm",
+        IDENTITY_PROVIDER: "local",
+        IDENTITY_LOCAL_SECRET: "a-development-secret-that-is-32chars",
+        AV_PROVIDER: "clamav",
+      }),
+    ).toThrow(/CLAMAV_HOST/);
+  });
+
+  it("defaults to the stub in development, and to clamd's port and a 30 s timeout", () => {
+    const env = loadEnv({
+      DATABASE_URL: "postgres://localhost:5432/ampm",
+      IDENTITY_PROVIDER: "local",
+      IDENTITY_LOCAL_SECRET: "a-development-secret-that-is-32chars",
+    });
+    expect(env.AV_PROVIDER).toBe("stub");
+    expect(env.CLAMAV_PORT).toBe(3310);
+    expect(env.CLAMAV_TIMEOUT_MS).toBe(30000);
+    expect(loadEnv(prodValid).AV_PROVIDER).toBe("clamav");
   });
 });
 

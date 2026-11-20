@@ -7,7 +7,8 @@
 # Order (infra rule: migrate before the new API, health gate, roll back to the previous image):
 #   1  preflight: the box override, the secrets (prod-secrets.sh check), disk headroom
 #   2  build the app image (tagged with the commit, kept for rollback) and the postgres and website images
-#   3  start postgres, redis and the pgBackRest scheduler (services that did not change keep running)
+#   3  start postgres, redis, the pgBackRest scheduler and the virus scanner (clamav + freshclam);
+#      services that did not change keep running
 #   4  safety dump of the live database into ampm-backups/pgdump (14 days kept)
 #   5  migrate with a one-off container of the NEW image (prisma migrate deploy)
 #   6  recreate api, worker and web on the new image and wait for them
@@ -35,6 +36,10 @@ die() {
 [[ -f .deployed-commit ]] || die "missing .deployed-commit (write the shipped commit there)"
 commit="$(tr -d '[:space:]' <.deployed-commit)"
 [[ "$commit" =~ ^[0-9a-f]{7,40}$ ]] || die ".deployed-commit does not hold a commit id"
+# Production refuses the stub virus scanner, so an override without these lines would fail the health
+# gate only after the build and the migration; stop here instead.
+grep -Eq '^[[:space:]]+AV_PROVIDER:[[:space:]]*"?clamav"?[[:space:]]*$' "$OVR" ||
+  die "$OVR lacks 'AV_PROVIDER: clamav' (and CLAMAV_HOST): copy them from deploy/app-ampmverse/compose.production-box.example.yml"
 AMPM_PROD_SECRETS="$SECRETS" bash deploy/app-ampmverse/prod-secrets.sh check ||
   die "secrets incomplete: set the missing keys with deploy/app-ampmverse/prod-secrets.sh set"
 free_gb="$(df -BG --output=avail / | tail -1 | tr -dc 0-9)"
@@ -83,9 +88,14 @@ log "[2/7] build images"
 "${COMPOSE[@]}" build api postgres web
 
 # 3. The data tier first: a fresh server gets its database here; on a redeploy these keep running.
-log "[3/7] start postgres, redis and the pgBackRest scheduler"
+log "[3/7] start postgres, redis, the pgBackRest scheduler and the virus scanner"
 "${COMPOSE[@]}" up -d --wait --wait-timeout 180 postgres redis
 "${COMPOSE[@]}" up -d pgbackrest
+# Not waited for: on a first start freshclam downloads the signatures before clamd can load them, and
+# meanwhile the API refuses uploads (503) rather than storing them unscanned. Not fatal either (an image
+# pull can fail): the API runs without it and only uploads wait. Its health is reported at the end.
+"${COMPOSE[@]}" up -d freshclam clamav ||
+  log "WARNING: the virus scanner did not start; uploads are refused (503) until it runs"
 
 # 4. A logical dump before any migration: the quickest way back from a bad migration (pgBackRest's
 #    point-in-time restore is the other). PGPASSWORD comes from postgres.env inside the container.
@@ -131,4 +141,12 @@ docker image ls ampm-prod-app --format '{{.Repository}}:{{.Tag}}' | while read -
   [[ " $keep " == *" $img "* ]] || docker image rm "$img" >/dev/null 2>&1 || true
 done
 curl -s "http://127.0.0.1:${PORT}/health" && echo
+# The scanner is outside the gate (uploads fail closed while it is down), but say how it stands.
+scanner="$("${COMPOSE[@]}" ps --format '{{.Health}}' clamav 2>/dev/null || true)"
+if [[ "$scanner" == "healthy" ]]; then
+  log "virus scanner healthy"
+else
+  log "virus scanner ${scanner:-not running}: uploads are refused (503) until clamav is healthy" \
+    "(a first start downloads the signatures first; production-setup.md, 'Antivirus')"
+fi
 log "REDEPLOY_PROD_OK ${commit:0:12}"

@@ -61,7 +61,7 @@ Content and legal
 - [ ] Real hotels, photos and verified rate cards loaded by the Hotel team.
 
 Security and operations
-- [ ] **A real antivirus scan.** `StubAvScanner` is wired on every upload path and only detects the EICAR test string; local production media is now allowed (D-106). Add a ClamAV adapter and refuse the stub in production.
+- [x] ~~**A real antivirus scan.**~~ Built 20 Nov 2026 (D-151). Every upload is streamed to ClamAV's clamd (`ClamAvScanner`, INSTREAM over TCP) and stored only if it comes back clean. An error or a timeout refuses the upload with a 503 (fail closed), and production refuses the stub. clamd runs alone on the internal network, and freshclam fetches the signatures over egress (runbook, "Antivirus"). **Deploy pending:** add `AV_PROVIDER: clamav` and `CLAMAV_HOST: clamav` to production's `compose.box.yml`, then redeploy. The first start downloads 113 MB of signatures.
 - [ ] Enforce the portal CSP (switch Report-Only to enforcing once the console is clean in the live app).
 - [ ] Error tracking (Sentry is listed in the secrets but read nowhere in the code), an external uptime monitor, and an API `/metrics` endpoint so the monitoring profile can start. Then the alert route.
 - [ ] Log-table partitions end in January 2027 (`audit_events`, `notifications`), and no roll-forward job exists yet. Without one, rows land in the DEFAULT partition from February 2027.
