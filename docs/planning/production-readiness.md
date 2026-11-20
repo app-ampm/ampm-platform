@@ -1,6 +1,6 @@
 # Production readiness: the shared VPS
 
-_Status: 20 November 2026. Production runs on the current VPS beside the test stack (D-138 to D-141). The runbook is [deploy/app-ampmverse/production-setup.md](../../deploy/app-ampmverse/production-setup.md)._
+_Status: 20 November 2026. Production runs on the current VPS and serves app.ampmverse.com and site.ampmverse.com behind the curtain; the test stack is retired (D-138 to D-144). The runbook is [deploy/app-ampmverse/production-setup.md](../../deploy/app-ampmverse/production-setup.md)._
 
 AMPM develops and works on production from now on, behind the password curtain. "Live" is the day the curtain comes off and clients are pointed at the website. Everything under section 3 must be closed first. The findings come from two audits on 20 November 2026: one of the live box, and one of the code on `main` at `bb2c0af`.
 
@@ -19,11 +19,17 @@ AMPM develops and works on production from now on, behind the password curtain. 
 - [x] Production Compose override, deploy script (migrate before the API, safety dump, health gate, rollback), secrets helper, production `.htaccess` files with HSTS, security headers and a report-only CSP, and a target-aware web deploy that refuses to put a test bundle in production.
 - [x] Reference-only bootstrap and the first-Super-Admin invite (`prisma/bootstrap.ts`), with e2e tests.
 - [x] Production secrets generated on the box (database, Redis, backup cipher, media signing); Razorpay test keys copied.
+- [x] **Production is running (20 Nov 2026):**
+  - The API, worker and website run on `26387e5` and pass their health gate.
+  - The Resend sign-in and the Turnstile secret are verified, without sending mail or printing a value.
+  - app.ampmverse.com and site.ampmverse.com serve production behind the curtain. `/_api` reaches the production API, and the dev sign-in routes answer 404.
+  - The test stack is stopped, its volumes kept (D-144).
+  - A nightly media archive is scheduled in the SSH user's crontab.
 
 ## 3. Before production runs (operator actions)
 
-- [ ] **Email through Resend (D-143).** Done on 20 Nov: `ampmverse.com` verified in Resend (its DKIM and sending records added at GoDaddy through Domain Connect, the Google records untouched), the send-only API key created, and `EMAIL_FROM` set to `AMPM <noreply@ampmverse.com>`. Left: paste the key as `SMTP_PASSWORD`.
-- [ ] **Cloudflare Turnstile.** Done on 20 Nov: the widget "AMPM website" (its secret rotated once after a paste went astray). Left: paste the secret as `BOT_CHECK_SECRET`. The website widget itself is the enquiry-form item in section 4.
+- [x] **Email through Resend (D-143),** 20 Nov: `ampmverse.com` verified in Resend (its DKIM and sending records added at GoDaddy through Domain Connect, the Google records untouched), the send-only API key stored as `SMTP_PASSWORD`, and `EMAIL_FROM` set to `AMPM <noreply@ampmverse.com>`.
+- [x] **Cloudflare Turnstile,** 20 Nov: the widget "AMPM website" and its secret stored as `BOT_CHECK_SECRET` (rotated once after a paste went astray). The website widget itself is the enquiry-form item in section 4.
 - [x] ~~Plesk + GoDaddy: test-app. and test-site.ampmverse.com~~: not needed, the test stack is retired (D-144).
 - [ ] **The first Super Admin.** Invited on 20 Nov; the one-time activation link is in `ampm-prod-secrets/first-admin-link.txt` on the box. Left: open it once the edge points at production, choose a password, scan the authenticator QR code and save the recovery codes in a password manager.
 - [ ] Keep an off-box copy of the backup cipher passphrase (`postgres.env`) in a password manager.
@@ -52,6 +58,8 @@ Security and operations
 - [ ] Off-box backups (D-139): S3 Mumbai (about ₹50–100 a month, needs approval under the ₹0-AWS rule), DigitalOcean Spaces Bangalore, or a second India machine. A first monthly restore rehearsal, recorded in the vault.
 - [ ] **Tokens in link query strings reach the Plesk access logs** (D-142 security review, low): activation `?token=`, reset links, document and media links. Move them to the URL fragment (`#token=`), and shorten the staff invitation lifetime (7 days today). Under AMPM's own sign-in, an invitation link alone sets the password and the authenticator.
 - [ ] Remove the sprint-2 `SpikeModule` (in-memory field notes) and the `/gallery` and `/field-notes` portal routes from production builds.
+- [ ] The API and worker outlive Docker's 10-second stop: when the test stack was stopped on 20 Nov, both were killed (exit 137) although `enableShutdownHooks()` is on. A deploy therefore cuts in-flight requests and jobs after 10 s (jobs retry, being idempotent). Find what holds shutdown (BullMQ `close()`, keep-alive sockets) and give the services a `stop_grace_period` that fits.
+- [ ] Install `openssl` in `infra/docker/Dockerfile` (`apt-get install -y --no-install-recommends openssl`). Prisma cannot detect the libssl version in the slim image and warns at install and at every `migrate deploy`. Migrations run today; a future engine may not (low).
 - [ ] A security review or penetration test, an accessibility pass and a load profile; then the launch checklist and the R17 go-live decision.
 
 ## 5. The server itself (needs the server owner: AMPM's SSH user has no root)

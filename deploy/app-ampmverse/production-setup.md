@@ -18,14 +18,15 @@ Both stacks sit behind Plesk: nginx terminates TLS, Apache applies each docroot'
 
 Box paths outside the source trees (none is served by a web root):
 
-| Path                            | Holds                                                                 | Owner                             |
-| ------------------------------- | --------------------------------------------------------------------- | --------------------------------- |
-| `ampm-prod-secrets/` (700)      | `app.env`, `postgres.env`, `redis.env` (600): every production secret | app_ampmverse                     |
-| `ampm-prod-storage/`            | uploaded media (D-106)                                                | uid 1000 (the containers' `node`) |
-| `ampm-backups/pgbackrest-prod/` | the encrypted pgBackRest repository (D-139)                           | uid 999 (the image's `postgres`)  |
-| `ampm-backups/pgdump/` (700)    | a logical dump before every deploy, 14 days kept                      | app_ampmverse                     |
-| `ampm-prod-state/app-image`     | the app image that last passed the health gate (the rollback target)  | app_ampmverse                     |
-| `bin/prod-secrets.sh`           | the secrets helper, also at `deploy/app-ampmverse/prod-secrets.sh`    | app_ampmverse                     |
+| Path                             | Holds                                                                 | Owner                             |
+| -------------------------------- | --------------------------------------------------------------------- | --------------------------------- |
+| `ampm-prod-secrets/` (700)       | `app.env`, `postgres.env`, `redis.env` (600): every production secret | app_ampmverse                     |
+| `ampm-prod-storage/`             | uploaded media (D-106)                                                | uid 1000 (the containers' `node`) |
+| `ampm-backups/pgbackrest-prod/`  | the encrypted pgBackRest repository (D-139)                           | uid 999 (the image's `postgres`)  |
+| `ampm-backups/pgdump/` (700)     | a logical dump before every deploy, 14 days kept                      | app_ampmverse                     |
+| `ampm-backups/media-prod/` (700) | a nightly archive of the media store, 14 days kept                    | app_ampmverse                     |
+| `ampm-prod-state/app-image`      | the app image that last passed the health gate (the rollback target)  | app_ampmverse                     |
+| `bin/prod-secrets.sh`            | the secrets helper, also at `deploy/app-ampmverse/prod-secrets.sh`    | app_ampmverse                     |
 
 ## 2. Secrets (D-140)
 
@@ -56,7 +57,9 @@ Where the operator values come from (set up on 20 November 2026, both accounts o
 6. Reference data and the first Super Admin, in a one-off container of the app image (so it works before the API can boot), with the link going straight into a private file:
    `docker compose -f … -f … --profile migrate run --rm -T migrate node --import tsx prisma/bootstrap.ts --super-admin-email <email> --super-admin-name "<name>" > ~/ampm-prod-secrets/first-admin-link.txt`
    They open the link (it works once, for 7 days), choose a password, scan the authenticator QR code, confirm its first code and save the ten recovery codes; the account is then active (D-142). Later staff are invited from the app, and a lost phone is an administrator's **Reset authenticator**.
-7. Web: copy the two production `.htaccess` files into place, then `AMPM_WEB_TARGET=production WEB_SSH=<box> WEB_SSH_KEY=~/.ssh/ampm_test_vps bash deploy/deploy-web.sh` (add `AMPM_WEB_RETARGET=1` the first time, when `httpdocs` still carries the test marker).
+7. Web: copy the two production `.htaccess` files into place, then `AMPM_WEB_TARGET=production WEB_SSH=<box> WEB_SSH_KEY=~/.ssh/ampm_test_vps bash deploy/deploy-web.sh` (add `AMPM_WEB_RETARGET=1` the first time, when `httpdocs` still carries the test marker). Keep staged or backup `.htaccess` copies outside `httpdocs`: the web deploy's `rsync --delete` spares only the exact names `.htaccess`, `.htpasswd`, `.well-known/` and `.ampm-target`.
+
+Done on 20 Nov 2026 (UTC): production built at 09:02. The API and worker started on `26387e5` at 09:41, after the operator values were in. The portal bundle and both production `.htaccess` files went in at 09:44, and the test stack stopped right after (D-144). The test stack's previous `.htaccess` files are kept in `ampm-prod-state/edge-20261120/`.
 
 ## 4. Deploying a change
 
@@ -68,7 +71,7 @@ The test stack deploys exactly as before, with `AMPM_WEB_TARGET=test` for its we
 
 ## 5. Backups and restore (D-139)
 
-- **What runs:** Postgres archives WAL every minute into the encrypted pgBackRest repository on this disk; the `pgbackrest` service takes a full backup on first start and then a full on Sundays and a differential on other days at 03:00 UTC, with a check after each (recorded on `job_runs`). Every deploy also writes a `pg_dump` into `ampm-backups/pgdump`. Media is copied nightly by [`backup-media.sh`](backup-media.sh) (cron).
+- **What runs:** Postgres archives WAL every minute into the encrypted pgBackRest repository on this disk; the `pgbackrest` service takes a full backup on first start and then a full on Sundays and a differential on other days at 03:00 UTC, with a check after each (recorded on `job_runs`). Every deploy also writes a `pg_dump` into `ampm-backups/pgdump`. Media is archived nightly at 02:15 UTC by [`backup-media.sh`](backup-media.sh) into `ampm-backups/media-prod` (the SSH user's crontab, installed 20 Nov 2026; the entry is in the script's header; its log is `ampm-backups/media-backup.log`).
 - **What it does not cover:** losing this server. Nothing leaves the box until an off-box copy is chosen (D-139 lists the options). The provider's own VPS backups are the server owner's, not AMPM's.
 - **Postgres runs under an init** (`init: true`, D-139): pgBackRest's async archiver leaves an orphaned process that the postmaster, as PID 1, would treat as a crashed backend. On 19–20 Nov 2026 that restarted the test stack's database every ~10 s.
 - **Point-in-time restore:** stop api and worker, then `docker compose -f … -f … --profile restore run --rm restore` with `RESTORE_TARGET_TIME` set for a point in time (see [`infra/runbooks/restore.md`](../../infra/runbooks/restore.md)), start, verify, restart. **From a dump:** `pg_restore --clean --if-exists` into the stopped stack's database.
@@ -76,4 +79,4 @@ The test stack deploys exactly as before, with `AMPM_WEB_TARGET=test` for its we
 
 ## 6. Going live (when AMPM starts pitching clients)
 
-Production sits behind the same password as test until then. Going live means working through the list in [production-readiness.md](../../docs/planning/production-readiness.md), then removing the `AuthType … </RequireAny>` block from both production `.htaccess` files. Before that, confirm two things: `POST https://app.ampmverse.com/_api/auth/dev-login` answers 404, and the API runs with `NODE_ENV=production`.
+Production sits behind the same password as test until then. Going live means working through the list in [production-readiness.md](../../docs/planning/production-readiness.md), then removing the `AuthType … </RequireAny>` block from both production `.htaccess` files. Before that, confirm two things: `POST https://app.ampmverse.com/_api/auth/dev-login` with a well-formed body (`{"email":"nobody@example.com"}`) answers 404 (an empty body gets validation's 400 first: the route exists everywhere and refuses outside a local, non-production build), and the API runs with `NODE_ENV=production`. Both held on 20 Nov 2026.
