@@ -1,26 +1,28 @@
 /**
- * Synthetic seed (data.md): the nine roles with their permission keys from the policy package, a
- * Super Admin, and a project manager, a creative and a client representative who are members of
- * one project. Example-domain emails, reserved phone range, local identity subjects. Never real
- * people. Every write is an upsert, so the seed runs again without duplicating anything.
+ * Synthetic seed (data.md) for development, the e2e tests and the test stack: on top of the reference
+ * data (seed-reference.ts), a Super Admin, a project manager, a creative and a client representative
+ * who are members of one project, plus demo hotels, leads and the consultancy demo. Example-domain
+ * emails, reserved phone range, local identity subjects. Never real people. Every write is an upsert,
+ * so the seed runs again without duplicating anything. It refuses to run in production (D-141), where
+ * prisma/bootstrap.ts seeds the reference data and invites the first Super Admin instead.
  */
 import { PrismaPg } from "@prisma/adapter-pg";
-import { CONFIG_REGISTRY } from "@ampm/core";
-import {
-  GRANTABLE_CAPABILITIES,
-  permissionKeysForRole,
-  STAFF_ROLE_CODES,
-  STAFF_ROLES,
-  type StaffRole,
-} from "@ampm/policy";
+import { GRANTABLE_CAPABILITIES, type StaffRole } from "@ampm/policy";
 
-import { Prisma, PrismaClient, type ServiceCategory } from "../src/generated/prisma/client.js";
+import { PrismaClient } from "../src/generated/prisma/client.js";
 import { upsertDemoAccount, upsertDemoUser } from "../src/modules/demo/demo-baseline.js";
 import { seedConsultancyDemo } from "./seed-consultancy.js";
 import { seedHotels } from "./seed-hotels.js";
 import { seedHotelSubresources } from "./seed-hotel-subresources.js";
 import { seedLeads } from "./seed-leads.js";
+import { roleIdFor, seedReference } from "./seed-reference.js";
 
+if (process.env["NODE_ENV"] === "production") {
+  throw new Error(
+    "seed.ts creates synthetic accounts and demo data and never runs in production; " +
+      "use prisma/bootstrap.ts there (D-141)",
+  );
+}
 const url = process.env["DATABASE_URL"];
 if (!url) throw new Error("DATABASE_URL is required to seed");
 const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: url }) });
@@ -77,39 +79,6 @@ async function upsertAccount(account: Account, options: AccountOptions) {
   });
 }
 
-/** The nine roles with their permission keys from the policy package; role ids by code. */
-async function seedRoles(): Promise<ReadonlyMap<StaffRole, string>> {
-  const roleIds = new Map<StaffRole, string>();
-  for (const code of STAFF_ROLE_CODES) {
-    const { key, name } = STAFF_ROLES[code];
-    const role = await prisma.role.upsert({
-      where: { roleKey: key },
-      update: { name },
-      create: { roleKey: key, name, isSystem: true },
-    });
-    roleIds.set(code, role.id);
-    for (const permissionKey of permissionKeysForRole(code)) {
-      const permission = await prisma.permission.upsert({
-        where: { permissionKey },
-        update: {},
-        create: { permissionKey },
-      });
-      await prisma.rolePermission.upsert({
-        where: { roleId_permissionId: { roleId: role.id, permissionId: permission.id } },
-        update: {},
-        create: { roleId: role.id, permissionId: permission.id },
-      });
-    }
-  }
-  return roleIds;
-}
-
-function roleId(roleIds: ReadonlyMap<StaffRole, string>, code: StaffRole): string {
-  const id = roleIds.get(code);
-  if (!id) throw new Error(`role ${code} was not seeded`);
-  return id;
-}
-
 async function assignRole(userId: string, roleId: string): Promise<void> {
   await prisma.userRole.upsert({
     where: { userId_roleId: { userId, roleId } },
@@ -141,7 +110,7 @@ async function seedStaff(roleIds: ReadonlyMap<StaffRole, string>): Promise<void>
     options: Omit<AccountOptions, "userType"> = {},
   ): Promise<string> => {
     const user = await upsertAccount(account, { userType: "staff", ...options });
-    await assignRole(user.id, roleId(roleIds, role));
+    await assignRole(user.id, roleIdFor(roleIds, role));
     return user.id;
   };
   await member(SEED.superAdmin, "SA", { phone: "+911234567001", mfaEnabled: true });
@@ -213,149 +182,24 @@ async function seedPortalDemoClient(): Promise<void> {
   });
 }
 
-/** The baseline configuration rows from the registry; the Super Admin edits them later. */
-async function seedConfigurations(): Promise<void> {
-  for (const [configKey, { default: value }] of Object.entries(CONFIG_REGISTRY)) {
-    await prisma.configuration.upsert({
-      where: { configKey },
-      // Re-seeding never clobbers a value the Super Admin has edited.
-      update: {},
-      create: { configKey, valueJson: value as Prisma.InputJsonValue, scope: "global" },
-    });
-  }
-}
-
-/**
- * The code-defined capability catalog (D-036) from @ampm/policy — the same set serialised to
- * packages/policy/src/generated/capabilities.json. Each capability is upserted by its stable key and
- * rows no longer in the catalog are removed, so the table mirrors the matrix. Dormant: nothing reads
- * it yet, and no `role_grants` reference it, so the reconciling delete is safe.
- */
-async function seedGrantableCapabilities(): Promise<void> {
-  for (const capability of GRANTABLE_CAPABILITIES) {
-    const data = {
-      module: capability.module,
-      resource: capability.resource,
-      action: capability.action,
-      scope: capability.scope,
-      conditions: [...capability.conditions] as Prisma.InputJsonValue,
-      sourceRoles: [...capability.sourceRoles] as Prisma.InputJsonValue,
-      isStaffOnly: capability.isStaffOnly,
-      isEscalationLocked: capability.isEscalationLocked,
-      label: capability.label,
-    };
-    await prisma.grantableCapability.upsert({
-      where: { capabilityKey: capability.id },
-      update: data,
-      create: { capabilityKey: capability.id, ...data },
-    });
-  }
-  const current = GRANTABLE_CAPABILITIES.map((capability) => capability.id);
-  await prisma.grantableCapability.deleteMany({ where: { capabilityKey: { notIn: current } } });
-}
-
-/** The lead sources the enquiry form and the Sales workspace classify leads by (SA-editable reference). */
-async function seedLeadSources(): Promise<void> {
-  const sources: ReadonlyArray<{ sourceKey: string; name: string }> = [
-    { sourceKey: "website", name: "Website" },
-    { sourceKey: "instagram", name: "Instagram" },
-    { sourceKey: "advertisement", name: "Advertisement" },
-    { sourceKey: "referral", name: "Referral" },
-    { sourceKey: "call", name: "Phone call" },
-    { sourceKey: "other", name: "Other" },
-  ];
-  for (const source of sources) {
-    await prisma.leadSource.upsert({
-      where: { sourceKey: source.sourceKey },
-      update: { name: source.name },
-      create: { sourceKey: source.sourceKey, name: source.name },
-    });
-  }
-}
-
-/**
- * The v1 subscription catalogue (feature 8.3): the Hotel Discovery plan, Rs 50,000 one-time for one
- * month, granting hotel discovery and hotel assistance. The price is data in the `plans` reference
- * table, never a code literal (AC-02.9/AC-25.4) — the seed is the one place a currency amount appears.
- */
-async function seedPlans(): Promise<void> {
-  const plan = await prisma.plan.upsert({
-    where: { planKey: "discovery" },
-    update: {},
-    create: {
-      planKey: "discovery",
-      name: "Hotel Discovery",
-      planType: "hotel_discovery",
-      billingType: "one_time",
-      priceAmount: new Prisma.Decimal("50000.00"),
-      currency: "INR",
-      termDays: 30,
-      isDemo: false,
-      status: "active",
-      termsVersion: "2026-11",
-    },
-    select: { id: true },
-  });
-  for (const moduleKey of ["hotel_discovery", "hotel_assistance"]) {
-    await prisma.planModule.upsert({
-      where: { planId_moduleKey: { planId: plan.id, moduleKey } },
-      update: { accessLevel: "full" },
-      create: { planId: plan.id, moduleKey, accessLevel: "full" },
-    });
-  }
-}
-
-/**
- * The v1 service-type catalogue (feature 10.2, GP-5): the paid services beyond the subscription. A
- * reference table (Super-Admin editable, data.md §1); `service_key` is the stable business key and
- * `category` maps to the entitlement module. The hotel-assistance pipeline keys are seeded now; the
- * design / vendor / full-management services are stubbed for the categories their modules will build.
- */
-async function seedServiceTypes(): Promise<void> {
-  const types: ReadonlyArray<{ serviceKey: string; name: string; category: ServiceCategory }> = [
-    { serviceKey: "availability_check", name: "Availability check", category: "hotel_assistance" },
-    { serviceKey: "negotiation", name: "Rate negotiation", category: "hotel_assistance" },
-    { serviceKey: "site_visit", name: "Site visit", category: "hotel_assistance" },
-    { serviceKey: "contract_review", name: "Contract review", category: "hotel_assistance" },
-    { serviceKey: "booking_assistance", name: "Booking assistance", category: "hotel_assistance" },
-    { serviceKey: "design", name: "Design", category: "design" },
-    {
-      serviceKey: "vendor_coordination",
-      name: "Vendor coordination",
-      category: "vendor_coordination",
-    },
-    { serviceKey: "full_management", name: "Full management", category: "full_management" },
-  ];
-  for (const type of types) {
-    await prisma.serviceType.upsert({
-      where: { serviceKey: type.serviceKey },
-      update: { name: type.name, category: type.category },
-      create: { serviceKey: type.serviceKey, name: type.name, category: type.category },
-    });
-  }
-}
-
 async function main(): Promise<void> {
-  const roleIds = await seedRoles();
+  // Roles, configuration, lead sources, plans, service types and the capability catalog first: the
+  // synthetic accounts, leads and the consultancy demo below depend on them.
+  const roleIds = await seedReference(prisma);
   await seedStaff(roleIds);
   const clientUserId = await seedClient();
   await seedPortalDemoClient();
   // The canonical demo account, defined once in the demo baseline the nightly restore also rebuilds (5.5).
   await upsertDemoUser(prisma);
-  await seedConfigurations();
-  await seedLeadSources();
   await seedLeads(prisma);
   // The demo prospect's account, self contact and originating lead — after the demo user, the lead
   // source and Sales staff exist, so saved hotels persist and assistance routes to the lead (P-7).
   await upsertDemoAccount(prisma);
-  await seedPlans();
-  await seedServiceTypes();
   await seedHotels(prisma);
   // Venues, rooms and a verified client-visible rate card per hotel, so discovery renders with real figures.
   await seedHotelSubresources(prisma);
   // Depends on the discovery plan, the negotiation service type and the Lake Pavilion hotel seeded above.
   await seedConsultancyDemo(prisma, clientUserId);
-  await seedGrantableCapabilities();
   console.log(
     "seeded roles, permissions, eight synthetic accounts, four synthetic hotels, Rhea's hotel " +
       `consultancy demo, the baseline configuration and ${GRANTABLE_CAPABILITIES.length} grantable capabilities`,
