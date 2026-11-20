@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
+import { TURNSTILE_ORIGIN } from "./components/contact/turnstile";
 import { env } from "./env";
 
 /** The API's origin (scheme://host:port) from NEXT_PUBLIC_API_URL, for connect-src. */
@@ -11,18 +12,25 @@ const API_ORIGIN = new URL(env.NEXT_PUBLIC_API_URL).origin;
  * enforces the same policy from the response header. `strict-dynamic` lets those nonced scripts load
  * what they need without an allow-list. Styles stay `unsafe-inline` (a style is not a script-XSS vector);
  * HSTS is Caddy's (infra.md).
+ *
+ * The enquiry form's bot check (PUB-06) is Cloudflare Turnstile: the form's own script adds Turnstile's
+ * script, which `strict-dynamic` trusts, and Turnstile's origin in script-src covers browsers that do
+ * not know `strict-dynamic` (Cloudflare's CSP guidance). Its challenge runs in an iframe from that
+ * origin, the only frame the site allows, and its requests are the iframe's own, so connect-src does
+ * not name it.
  */
 export function middleware(request: NextRequest): NextResponse {
   const nonce = btoa(crypto.randomUUID());
   const csp = [
     `default-src 'self'`,
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`,
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' ${TURNSTILE_ORIGIN}`,
     `style-src 'self' 'unsafe-inline'`,
     `img-src 'self' data: blob:`,
     `font-src 'self'`,
     // The enquiry form (PUB-06) posts to the API, a different origin than the site in development and
     // under Caddy, so the API origin must be allowed or the browser blocks the fetch (C2).
     `connect-src 'self' ${API_ORIGIN}`,
+    `frame-src ${TURNSTILE_ORIGIN}`,
     `object-src 'none'`,
     `base-uri 'self'`,
     `frame-ancestors 'none'`,

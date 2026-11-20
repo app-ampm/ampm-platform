@@ -42,7 +42,7 @@ Identity and access
 - [ ] Retire Cognito: remove the Cognito adapters, the Amplify screens and the pre-token Lambda, delete the AWS user pool, and update `docs/decisions.json` (Q13/Q14 name Cognito) with the generators.
 
 Public forms and payments
-- [ ] **Website enquiry form.** It sends a hard-coded `dev-bot-check` token (`apps/web/src/components/enquiry-payload.ts`), so production refuses every enquiry. Add the Turnstile widget, the site-key build argument and `challenges.cloudflare.com` in the website's CSP.
+- [x] ~~**Website enquiry form.** It sends a hard-coded `dev-bot-check` token, so production refuses every enquiry.~~ The form draws the Turnstile widget "AMPM website" and sends its token (Send waits for one; each token is spent once), the site key is the required build argument `NEXT_PUBLIC_TURNSTILE_SITE_KEY`, and the website's CSP admits `challenges.cloudflare.com` (`script-src`, `frame-src`) (D-145). Live once production's website is rebuilt with the key in `compose.box.yml`.
 - [ ] **Razorpay live:** KYC, the live key id, secret and webhook secret in `app.env`, a webhook registered to `https://app.ampmverse.com/_api/…`, and confirm auto-capture. Then make `env.ts` refuse `rzp_test_` keys in production.
 - [ ] Rate limits on the unthrottled public and costly routes: client assistance requests, portal subscribe (creates an order on every call), uploads. Plus edge limits. Make the limiter fail closed rather than open on a Redis error.
 

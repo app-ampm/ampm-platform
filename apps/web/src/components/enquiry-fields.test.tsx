@@ -59,10 +59,43 @@ describe("PUB-06 fields", () => {
 
   it("shows the rate-limited message on the actions when rate limited", () => {
     const html = renderToStaticMarkup(
-      <FormActions isPending={false} isError={true} isRateLimited={true} />,
+      <FormActions isPending={false} canSend={true} failure="rate_limited" />,
     );
     expect(html).toContain('role="alert"');
     expect(html).toContain("wait a moment");
+  });
+
+  it("keeps Send off and dashed, described by the bot check, until the check has a token", () => {
+    const waiting = renderToStaticMarkup(
+      <FormActions isPending={false} canSend={false} failure={undefined} />,
+    );
+    expect(waiting).toMatch(
+      /<button type="submit" disabled=""[^>]*aria-describedby="bot-check-status"[^>]*class="[^"]*border-dashed/,
+    );
+    const ready = renderToStaticMarkup(
+      <FormActions isPending={false} canSend={true} failure={undefined} />,
+    );
+    expect(ready).toMatch(/<button type="submit" aria-busy="false"/);
+    expect(ready).not.toContain("border-dashed");
+    expect(ready).not.toContain('role="alert"');
+  });
+
+  it("stays gold and busy while sending, though the spent token is already gone", () => {
+    const html = renderToStaticMarkup(
+      <FormActions isPending={true} canSend={false} failure={undefined} />,
+    );
+    expect(html).toMatch(/<button type="submit" disabled="" aria-busy="true"/);
+    expect(html).toContain("Sending…");
+    expect(html).not.toContain("border-dashed");
+  });
+
+  it("asks for a fresh check when the API refused the bot check's token", () => {
+    const html = renderToStaticMarkup(
+      <FormActions isPending={false} canSend={false} failure="bot_check" />,
+    );
+    expect(html).toContain(
+      "We could not confirm the security check. Please wait for it to finish, then send again.",
+    );
   });
 
   it("offers Any after the three channels, so a chosen channel can be taken back", () => {

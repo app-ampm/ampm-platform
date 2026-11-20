@@ -15,13 +15,17 @@ RUN pnpm install --frozen-lockfile
 # The workspace packages the site imports (@ampm/tokens' generated preset, @ampm/core, @ampm/policy).
 RUN pnpm build --filter=web^...
 # Next inlines NEXT_PUBLIC_* at build time, into the browser bundle and the CSP middleware alike, so the
-# site's API and portal addresses are build arguments; the build refuses to run without them rather than
-# baking in the localhost defaults. next/font downloads the fonts here, so the build needs the network.
+# site's API and portal addresses and its Cloudflare Turnstile site key (the enquiry form's bot check)
+# are build arguments; the build refuses to run without them rather than baking in the localhost
+# defaults and Cloudflare's always-pass test key, whose tokens production's API refuses. next/font
+# downloads the fonts here, so the build needs the network.
 ARG NEXT_PUBLIC_API_URL
 ARG NEXT_PUBLIC_PORTAL_URL
+ARG NEXT_PUBLIC_TURNSTILE_SITE_KEY
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN : "${NEXT_PUBLIC_API_URL:?the build arg NEXT_PUBLIC_API_URL is required}" \
       "${NEXT_PUBLIC_PORTAL_URL:?the build arg NEXT_PUBLIC_PORTAL_URL is required}" \
+      "${NEXT_PUBLIC_TURNSTILE_SITE_KEY:?the build arg NEXT_PUBLIC_TURNSTILE_SITE_KEY is required}" \
   && pnpm --filter web build \
   && mkdir -p apps/web/public
 
