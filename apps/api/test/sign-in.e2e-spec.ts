@@ -170,6 +170,34 @@ describe("Staff sign-in (e2e)", () => {
     expect(late.body.error.message).toBe(SIGN_IN_ERRORS.challengeExpired);
   });
 
+  it("shares a challenge's five tries between codes sent at once", async () => {
+    const invited = await invite();
+    const { secret } = await activate(invited.token);
+    const { challenge } = (await signIn(invited.email)).body.data;
+    // A code the authenticator shows nowhere near now, even if the test crosses a 30-second step.
+    const near = new Set([-1, 0, 1, 2].map((offset) => codeFor(secret, offset)));
+    const wrong = ["000000", "111111", "222222"].find((code) => !near.has(code)) ?? "333333";
+    const guesses = await Promise.all(
+      Array.from({ length: 12 }, () => post("/auth/sign-in/code", { challenge, code: wrong })),
+    );
+    expect(guesses.every((guess) => guess.status === 401)).toBe(true);
+    const messages = guesses.map((guess) => guess.body.error.message);
+    // Five tries were compared; the other seven found the challenge out of tries or burned.
+    expect(messages.filter((m) => m === SIGN_IN_ERRORS.invalidCode)).toHaveLength(5);
+    expect(messages.filter((m) => m === SIGN_IN_ERRORS.challengeExpired)).toHaveLength(7);
+    const row = await prisma.authToken.findFirstOrThrow({
+      where: { userId: invited.id, purpose: "sign_in_challenge" },
+      orderBy: { createdAt: "desc" },
+    });
+    expect(row.attempts).toBe(5);
+    expect(row.usedAt).not.toBeNull();
+    // Only the compared codes count toward the twenty-in-a-row lock.
+    const user = await prisma.user.findUniqueOrThrow({ where: { id: invited.id } });
+    expect(user.failedCodes).toBe(5);
+    const late = await post("/auth/sign-in/code", { challenge, code: codeFor(secret, 1) });
+    expect(late.body.error.message).toBe(SIGN_IN_ERRORS.challengeExpired);
+  });
+
   it("locks the account after twenty wrong codes in a row, for an administrator", async () => {
     const invited = await invite();
     await activate(invited.token);

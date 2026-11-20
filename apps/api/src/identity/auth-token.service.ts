@@ -34,7 +34,6 @@ export interface ValidInvite {
   readonly userId: string;
 }
 
-/** A live sign-in challenge or reset token: who it is for, and how many wrong answers it has taken. */
 /** A client's live one-time code: its row, its HMAC and the wrong tries so far (D-147). */
 export interface LiveCode {
   readonly id: string;
@@ -42,6 +41,7 @@ export interface LiveCode {
   readonly attempts: number;
 }
 
+/** A live sign-in challenge or reset token: who it is for, and how many tries it has taken. */
 export interface LiveToken {
   readonly id: string;
   readonly userId: string;
@@ -141,9 +141,10 @@ export class AuthTokenService {
   }
 
   /**
-   * Reserves one try at a client's code before it is compared (D-147 review): an atomic increment that
-   * only succeeds while the code is live and under CHALLENGE_MAX_ATTEMPTS tries, so guesses sent at once
-   * cannot compare more than five times between them. False when the code is used, burned or expired.
+   * Reserves one try at a client's code or a staff sign-in challenge before its answer is compared
+   * (D-147 review): an atomic increment that only succeeds while the token is live and under
+   * CHALLENGE_MAX_ATTEMPTS tries, so guesses sent at once cannot compare more than five times between
+   * them. False when the token is used, burned or expired.
    */
   async claimAttempt(id: string): Promise<boolean> {
     const claimed = await this.prisma.authToken.updateMany({
@@ -158,7 +159,10 @@ export class AuthTokenService {
     return claimed.count === 1;
   }
 
-  /** Burns a code whose last try was just spent on a wrong answer. */
+  /**
+   * Burns a code or challenge whose last try was just spent on a wrong answer, so guessing on means
+   * starting again (for staff, from the password, which counts toward the account's lockout too).
+   */
   async burnIfSpent(id: string): Promise<void> {
     await this.prisma.authToken.updateMany({
       where: { id, usedAt: null, attempts: { gte: CHALLENGE_MAX_ATTEMPTS } },
@@ -173,24 +177,6 @@ export class AuthTokenService {
       orderBy: { createdAt: "desc" },
       select: { id: true, tokenHash: true, attempts: true },
     });
-  }
-
-  /**
-   * Counts a wrong answer against a token; at CHALLENGE_MAX_ATTEMPTS it is burned (used), so guessing a
-   * code means starting again from the password, which counts toward the account's lockout too.
-   */
-  async countWrongAnswer(id: string): Promise<void> {
-    const token = await this.prisma.authToken.update({
-      where: { id },
-      data: { attempts: { increment: 1 } },
-      select: { attempts: true },
-    });
-    if (token.attempts >= CHALLENGE_MAX_ATTEMPTS) {
-      await this.prisma.authToken.updateMany({
-        where: { id, usedAt: null },
-        data: { usedAt: new Date() },
-      });
-    }
   }
 
   /**

@@ -44,7 +44,8 @@ function canSignIn(user: CredentialRecord): user is SignInAccount {
  *   person out, and a burst cannot outrun the count, which is one atomic increment.
  * - An account without a confirmed authenticator cannot sign in at all; its holder activates from an
  *   invitation, which sets both (an administrator's reset re-invites).
- * - A challenge burns after five wrong codes, and twenty wrong codes in a row lock the account for an
+ * - A challenge takes five tries, each reserved before its code is compared, so codes sent at once share
+ *   them; the fifth wrong one burns it. Twenty wrong codes in a row lock the account for an
  *   administrator, whatever resets happen in between.
  * The routes do not exist under Cognito (404).
  */
@@ -80,10 +81,17 @@ export class StaffSignInService {
     return { kind: "totp", challenge };
   }
 
-  /** Step two: the authenticator code or a recovery code. Grants the session. */
+  /**
+   * Step two: the authenticator code or a recovery code. Grants the session. The try is reserved on the
+   * challenge before the code is compared (as client codes do, D-147 review): a check-then-count let
+   * guesses sent at once compare more than five times between them.
+   */
   async verifyCode(request: SignInCodeRequest, now: Date = new Date()): Promise<SignInGrant> {
     const keys = this.signer();
     const { token, user } = await this.openChallenge(request.challenge);
+    if (!(await this.tokens.claimAttempt(token.id))) {
+      throw errors.unauthenticated(SIGN_IN_ERRORS.challengeExpired);
+    }
     const accepted = request.code
       ? await this.acceptCode(keys, user, request.code, now)
       : await this.credentials.spendRecoveryCode(
@@ -113,8 +121,10 @@ export class StaffSignInService {
 
   /**
    * One atomic increment per try, before any password is hashed: the same for an unknown email as for a
-   * real one, keyed by a hash of the email so no address is stored. A broken store fails open (D-046):
-   * the authenticator code and the code-failure lock still stand behind the password.
+   * real one, keyed by a hash of the email so no address is stored. A broken store fails open here
+   * (D-046): the authenticator code and the code-failure lock still stand behind the password. The
+   * route's own limit, counted in the same store just before, fails closed (D-149), so this path only
+   * opens if the store breaks between the two counts.
    */
   private async withinPasswordTries(email: string): Promise<boolean> {
     const emailKey = createHash("sha256").update(email.trim().toLowerCase()).digest("hex");
@@ -147,9 +157,12 @@ export class StaffSignInService {
     return step !== null && (await this.credentials.claimStep(user.id, step));
   }
 
-  /** A wrong code: the challenge counts it, and so does the account, which locks at the ceiling. */
+  /**
+   * A wrong code: its try was already counted on the challenge, which burns when that was the fifth; the
+   * account counts it too, and locks at the ceiling.
+   */
   private async refuseCode(token: LiveToken, user: CredentialRecord): Promise<never> {
-    await this.tokens.countWrongAnswer(token.id);
+    await this.tokens.burnIfSpent(token.id);
     if (await this.credentials.recordCodeFailure(user.id)) {
       await this.sessions.revokeAllForUser(user.id, "too_many_wrong_codes");
       await this.audit.record({
