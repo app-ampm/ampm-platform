@@ -148,6 +148,13 @@ export const CONFIG_REGISTRY = {
         text: "Hi {{name}},\n\nSomeone asked to reset the password of your AMPM account. Choose a new password:\n{{resetUrl}}\n\nThe link works once and expires in 60 minutes. If you did not ask for this, ignore this email: your password stays the same.",
       },
     },
+    // The client sign-in code (D-147). DLT registers this text with {#var#} in place of {{code}}; the
+    // code leads so phones can offer to fill it in. Keep the wording and the registered template equal.
+    "auth.client_otp": {
+      sms: {
+        text: "{{code}} is your AMPM sign-in code. It expires in 5 minutes. Do not share it with anyone. - AMPM",
+      },
+    },
   }),
 };
 

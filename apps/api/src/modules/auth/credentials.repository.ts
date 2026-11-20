@@ -14,6 +14,7 @@ const CREDENTIALS = {
   id: true,
   name: true,
   email: true,
+  phone: true,
   userType: true,
   status: true,
   identitySubject: true,
@@ -47,6 +48,37 @@ export class CredentialsRepository {
       LIMIT 2`;
     const [only] = rows;
     return rows.length === 1 && only ? this.findById(only.id) : null;
+  }
+
+  /**
+   * The active client account with exactly this mobile (E.164, as the request schema normalised it), or
+   * null; never a deleted one (D-147). The number is not unique in the table, so two active clients
+   * sharing it count as no match: a code then goes to nobody rather than to the wrong account.
+   */
+  async findActiveClientByPhone(phone: string): Promise<CredentialRecord | null> {
+    const rows = await this.prisma.user.findMany({
+      where: { phone, userType: "client", status: "active", deletedAt: null },
+      select: CREDENTIALS,
+      take: 2,
+    });
+    const [only] = rows;
+    return rows.length === 1 && only ? only : null;
+  }
+
+  /**
+   * How many OTHER active client accounts have this mobile. Activation refuses a number already in use:
+   * a shared number matches no one at sign-in, so it would lock both clients out (D-147 review).
+   */
+  countOtherActiveClients(phone: string, exceptUserId: string): Promise<number> {
+    return this.prisma.user.count({
+      where: {
+        phone,
+        userType: "client",
+        status: "active",
+        deletedAt: null,
+        NOT: { id: exceptUserId },
+      },
+    });
   }
 
   findById(id: string): Promise<CredentialRecord | null> {

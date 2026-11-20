@@ -15,6 +15,7 @@ function delivery(overrides: Partial<NotificationDelivery> = {}): NotificationDe
     address: PHONE,
     templateKey: "client.otp",
     content: { kind: "sms", text: OTP_TEXT },
+    variables: { code: "123456" },
     ...overrides,
   };
 }
@@ -40,7 +41,9 @@ describe("GatewaySmsAdapter (offline contract)", () => {
     const result = await adapter.send(delivery());
 
     expect(result.providerRef).toBe("sms-123");
-    expect(sent).toEqual([{ to: PHONE, text: OTP_TEXT }]);
+    expect(sent).toEqual([
+      { to: PHONE, text: OTP_TEXT, templateKey: "client.otp", variables: { code: "123456" } },
+    ]);
     const logged = entries.find((entry) => entry.event === "notification.sms_sent");
     // Exactly these three fields — no recipient number, no OTP text, nothing added (security.md).
     expect(logged?.fields).toEqual({

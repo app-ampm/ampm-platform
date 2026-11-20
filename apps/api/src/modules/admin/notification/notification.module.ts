@@ -12,6 +12,8 @@ import {
 import { NotificationController } from "./notification.controller.js";
 import { NotificationRepository, PrismaNotificationRepository } from "./notification.repository.js";
 import { NotificationService } from "./notification.service.js";
+import { GatewaySmsAdapter } from "./gateway-sms.adapter.js";
+import { smsTransportFor } from "./sms-transports.js";
 import { SmtpEmailAdapter, type MailTransport } from "./smtp-email.adapter.js";
 
 /** Builds the SMTP transport from env; isolates the nodemailer import to this composition root. */
@@ -36,14 +38,26 @@ function smtpTransport(env: Env): MailTransport {
   };
 }
 
-/** Email goes to the real SMTP adapter when configured, else the console stub; other channels stub. */
+/**
+ * Email goes to the real SMTP adapter when configured, SMS to the configured DLT provider (D-147), and
+ * either falls back to the console stub, as every other channel does.
+ */
 export function buildAdapters(env: Env, logger: AppLogger): NotificationAdapters {
   const stub = new ConsoleNotificationAdapter(logger);
   const email: NotificationAdapter =
     env.EMAIL_PROVIDER === "smtp"
       ? new SmtpEmailAdapter(smtpTransport(env), env.EMAIL_FROM, logger)
       : stub;
-  return { for: (channel) => (channel === "email" ? email : stub) };
+  const smsTransport = smsTransportFor(env);
+  const sms: NotificationAdapter = smsTransport
+    ? new GatewaySmsAdapter(smsTransport, logger)
+    : stub;
+  return {
+    for: (channel) => {
+      if (channel === "email") return email;
+      return channel === "sms" ? sms : stub;
+    },
+  };
 }
 
 /**

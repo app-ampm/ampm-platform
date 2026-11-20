@@ -77,6 +77,32 @@ const fields = z.object({
   SMTP_PASSWORD: z.string().min(1).optional(),
   /** The From address for outgoing email; set to a verified sender in staging/production. */
   EMAIL_FROM: z.string().min(1).default("AMPM <no-reply@localhost>"),
+  /**
+   * SMS delivery (D-147): `console` logs only the channel and template (dev, test, and production until a
+   * provider is wired); `2factor` or `msg91` sends through that DLT-registered provider.
+   */
+  SMS_PROVIDER: z.enum(["console", "2factor", "msg91"]).default("console"),
+  /** The provider's API key (2Factor) or auth key (MSG91): a secret, set in the secret zone. */
+  SMS_API_KEY: z.string().min(1).optional(),
+  /** The DLT-approved sender ID (the six-letter header); 2Factor takes it on every message. */
+  SMS_SENDER_ID: z.string().min(1).optional(),
+  /**
+   * The sign-in code's template (`auth.client_otp`) at the provider: its DLT content-template ID for
+   * 2Factor, its own template ID (mapped to the DLT template in its panel) for MSG91.
+   */
+  SMS_OTP_TEMPLATE: z.string().min(1).optional(),
+  /** The DLT principal-entity ID (PE ID); 2Factor takes it per message to skip a template sync delay. */
+  SMS_DLT_ENTITY_ID: z.string().min(1).optional(),
+  /**
+   * TEMPORARY (D-147): also return each client sign-in code to the screen while SMS delivery is not live.
+   * Anyone who knows a client's mobile can then sign in as that client, so it belongs behind the
+   * pre-launch curtain only, the API warns at every boot while it is on, and turning it off is a go-live
+   * blocker.
+   */
+  CLIENT_OTP_SCREEN_ECHO: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((value) => value === "true"),
   /** Trusted proxy hops (Caddy) so `req.ip` is the real client for rate limits and audit; 0 trusts none. */
   TRUST_PROXY: z.coerce.number().int().min(0).default(0),
   /**
@@ -213,6 +239,38 @@ function deliveryIssues(value: EnvFields): EnvIssue[] {
 }
 
 /**
+ * SMS (D-147): a provider needs its key and the sign-in code's DLT template. In production the console
+ * stub is allowed only while the code is also shown on screen, since otherwise no client could ever
+ * receive one.
+ */
+function smsIssues(value: EnvFields): EnvIssue[] {
+  const needed = {
+    console: [],
+    msg91: ["SMS_API_KEY", "SMS_OTP_TEMPLATE"],
+    "2factor": ["SMS_API_KEY", "SMS_OTP_TEMPLATE", "SMS_SENDER_ID"],
+  } as const;
+  const issues: EnvIssue[] = needed[value.SMS_PROVIDER]
+    .filter((key) => !value[key])
+    .map((key) => ({
+      path: [key],
+      message: `required when SMS_PROVIDER is ${value.SMS_PROVIDER}`,
+    }));
+  if (
+    value.NODE_ENV === "production" &&
+    value.SMS_PROVIDER === "console" &&
+    !value.CLIENT_OTP_SCREEN_ECHO
+  ) {
+    issues.push({
+      path: ["SMS_PROVIDER"],
+      message:
+        "no client could receive a sign-in code: set an SMS provider, or CLIENT_OTP_SCREEN_ECHO=true " +
+        "while production is behind the pre-launch curtain (D-147)",
+    });
+  }
+  return issues;
+}
+
+/**
  * Jobs: production must have `REDIS_URL` (A6). Without it the inline driver runs jobs in the request,
  * the scheduled jobs (session reaper, demo restore, follow-up reminder) never run, and the rate limiter
  * is per-process in memory, none of which is safe for a real deployment (D-031).
@@ -338,6 +396,7 @@ const schema = fields.superRefine((value, ctx) => {
   for (const issue of [
     ...identityIssues(value),
     ...deliveryIssues(value),
+    ...smsIssues(value),
     ...jobIssues(value),
     ...botCheckIssues(value),
     ...paymentIssues(value),

@@ -94,7 +94,10 @@ describe("SecretBox (AES-256-GCM)", () => {
 
   it("refuses a tampered value and a different key", () => {
     const sealed = box.seal("JBSWY3DPEHPK3PXP");
-    const tampered = `${sealed.slice(0, -2)}${sealed.endsWith("A") ? "B" : "A"}${sealed.slice(-1)}`;
+    // Change the second-to-last character (all ciphertext bits, unlike the last), and never to itself:
+    // choosing the new letter from a different position left the value intact one run in 64.
+    const at = sealed.length - 2;
+    const tampered = `${sealed.slice(0, at)}${sealed[at] === "A" ? "B" : "A"}${sealed.slice(at + 1)}`;
     expect(() => box.open(tampered)).toThrow();
     const other = new SecretBox(deriveKey("a different secret, also long enough", "totp"));
     expect(() => other.open(sealed)).toThrow();

@@ -62,7 +62,8 @@ function useDevSignIn() {
  * mobile (and, to sign up, a name first), then the one-time code shown on screen. Under it, "Explore
  * the demo" enters the seeded demo prospect (P-7) via `/auth/dev-login/demo`, and one tap on a seeded
  * staff or client account exchanges its email for a local token via `/auth/dev-login`. All of it is
- * refused outside a local, non-production config; the production sign-in is Cognito, with no sign-up.
+ * refused outside a local, non-production config; the production sign-in is AMPM's own
+ * (`AmpmSignInScreen`), with no sign-up.
  * P1 on a phone, one centred card from 768, D1's split from 1024.
  */
 export function SignInScreen() {

@@ -50,6 +50,11 @@ export interface QueueNotification {
   readonly entityId?: string | null;
   /** Per-notification render variables (e.g. the activation link); stored server-only on the row. */
   readonly variables?: Readonly<Record<string, string>>;
+  /**
+   * A security message the person must get whatever their preferences say (a sign-in code, D-147):
+   * it skips the per-user channel preference.
+   */
+  readonly required?: boolean;
 }
 
 export type QueueResult = { suppressed: true } | { suppressed: false; notificationId: string };
@@ -130,6 +135,7 @@ export class NotificationService implements OnModuleInit {
   async queue(input: QueueNotification): Promise<QueueResult> {
     if (
       input.recipientType === "user" &&
+      input.required !== true &&
       !(await this.repository.isChannelEnabled(input.recipientId, input.eventType, input.channel))
     ) {
       return { suppressed: true };
@@ -179,12 +185,13 @@ export class NotificationService implements OnModuleInit {
       return;
     }
     const channel = externalChannel(row.channel);
-    const content = channel ? await this.render(row.templateKey, channel, row.data) : null;
+    const variables = renderVariables.catch({}).parse(row.data);
+    const content = channel ? await this.render(row.templateKey, channel, variables) : null;
     if (!channel || !content) {
       await this.advance(row, { status: "failed", clearData: true });
       return;
     }
-    await this.dispatch(row, channel, content);
+    await this.dispatch(row, channel, content, variables);
   }
 
   /** Resolves the address, dispatches through the channel's adapter, and advances the row (5.3). */
@@ -192,12 +199,12 @@ export class NotificationService implements OnModuleInit {
     row: NotificationRow,
     channel: ExternalChannel,
     content: RenderedContent,
+    variables: Readonly<Record<string, string>>,
   ): Promise<void> {
-    // Email needs a delivery address; resolve it here (adapters never read persistence) and fail
+    // Email and SMS need a delivery address; resolve it here (adapters never read persistence) and fail
     // closed when the recipient has none, rather than hand the adapter an unsendable message.
-    const address =
-      channel === "email" ? await this.repository.recipientEmail(row.recipientId) : null;
-    if (channel === "email" && !address) {
+    const address = await this.addressFor(channel, row.recipientId);
+    if ((channel === "email" || channel === "sms") && !address) {
       this.logger.warn("notification.no_address", { templateKey: row.templateKey, channel });
       await this.advance(row, { status: "failed", clearData: true });
       return;
@@ -211,6 +218,7 @@ export class NotificationService implements OnModuleInit {
         address,
         templateKey: row.templateKey,
         content,
+        variables,
       });
     } catch (error) {
       // A failed external send is transient and retryable (SMTP blips, provider outages): rethrow so
@@ -228,20 +236,25 @@ export class NotificationService implements OnModuleInit {
     });
   }
 
+  /** The address a channel delivers to: the email for email, the mobile for SMS, none otherwise. */
+  private async addressFor(channel: ExternalChannel, recipientId: string): Promise<string | null> {
+    if (channel === "email") return this.repository.recipientEmail(recipientId);
+    if (channel === "sms") return this.repository.recipientPhone(recipientId);
+    return null;
+  }
+
   /** Renders the channel's content; returns null (and logs the names) when it is absent or incomplete. */
   private async render(
     templateKey: string,
     channel: ExternalChannel,
-    data: unknown,
+    variables: Readonly<Record<string, string>>,
   ): Promise<RenderedContent | null> {
     const templates = await this.config.get("notification.templates");
     // A template added in code after a database was seeded is not in its stored copy yet (the seed never
     // overwrites a value the Super Admin may have edited), so fall back to the code default for that key.
     const template =
       templates[templateKey] ?? CONFIG_REGISTRY["notification.templates"].default[templateKey];
-    const rendered = template
-      ? renderTemplate(template, channel, renderVariables.catch({}).parse(data))
-      : null;
+    const rendered = template ? renderTemplate(template, channel, variables) : null;
     if (!rendered || !rendered.content || rendered.missing.length > 0) {
       this.logger.warn("notification.render_failed", {
         templateKey,

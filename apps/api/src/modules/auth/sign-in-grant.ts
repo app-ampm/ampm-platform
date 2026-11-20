@@ -13,6 +13,16 @@ import type { CredentialRecord } from "./credentials.repository.js";
  */
 export const STAFF_TOKEN_TTL = "12h";
 
+/**
+ * How long a client access token lives (D-147): the clients' idle window (`session.idle_timeouts`), so a
+ * client is not asked for a paid SMS code every day. The server-side session still ends after its idle
+ * timeout and on any revocation.
+ */
+export const CLIENT_TOKEN_TTL = "30d";
+
+/** The token lifetimes a grant may carry. */
+export type GrantTtl = typeof STAFF_TOKEN_TTL | typeof CLIENT_TOKEN_TTL;
+
 /** The fields a grant needs: who the token is for, and the subject it carries. */
 export type GrantUser = Pick<CredentialRecord, "id" | "name" | "email" | "identitySubject">;
 
@@ -33,12 +43,16 @@ export class SignInGrants {
     private readonly sessions: SessionService,
   ) {}
 
-  async grant(user: GrantUser, now: Date = new Date()): Promise<SignInGrant> {
+  async grant(
+    user: GrantUser,
+    now: Date = new Date(),
+    expiresIn: GrantTtl = STAFF_TOKEN_TTL,
+  ): Promise<SignInGrant> {
     if (!this.keys) throw errors.notFound();
     if (!user.identitySubject) throw errors.unauthenticated(SIGN_IN_ERRORS.challengeExpired);
     const accessToken = await this.keys.tokens.mint(user.identitySubject, {
       email: user.email,
-      expiresIn: STAFF_TOKEN_TTL,
+      expiresIn,
     });
     const verified = await this.keys.tokens.verifyAccessToken(accessToken);
     const principal = await this.principals.resolve(verified);

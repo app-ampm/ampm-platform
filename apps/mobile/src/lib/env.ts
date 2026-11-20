@@ -6,8 +6,9 @@ const schema = z.object({
   EXPO_PUBLIC_API_URL: z.string().url().default("http://localhost:3900"),
   /**
    * Which identity provider the app signs in against, mirroring the API's `IDENTITY_PROVIDER`.
-   * `local` (the default) keeps the dev-login path; `ampm` is AMPM's own sign-in (password +
-   * authenticator, D-142), the production build; `cognito` drives Amazon Cognito (being retired).
+   * `local` (the default) keeps the dev-login path; `ampm` is AMPM's own sign-in (staff: password +
+   * authenticator, D-142; clients: a code sent to their mobile, D-147), the production build;
+   * `cognito` drives Amazon Cognito (being retired).
    */
   EXPO_PUBLIC_IDENTITY_PROVIDER: z.enum(["cognito", "local", "ampm"]).default("local"),
   /** The Cognito user pool the app signs in against; required when the provider is `cognito`. Public ids, not secrets. */

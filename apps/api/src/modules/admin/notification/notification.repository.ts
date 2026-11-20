@@ -60,6 +60,8 @@ export abstract class NotificationRepository {
   abstract isChannelEnabled(userId: string, eventType: string, channel: string): Promise<boolean>;
   /** The recipient user's email, for the email channel's delivery address; null if there is none. */
   abstract recipientEmail(userId: string): Promise<string | null>;
+  /** The recipient user's mobile (E.164), for the SMS channel's delivery address; null if none. */
+  abstract recipientPhone(userId: string): Promise<string | null>;
 }
 
 @Injectable()
@@ -112,8 +114,11 @@ export class PrismaNotificationRepository extends NotificationRepository {
     // scope "all" (no ownerId) and reads the whole user log (permission-matrix §5.1 "Notifications log").
     // Keyset pagination on the time-ordered uuid v7 id: notifications is partitioned (composite PK
     // id + created_at), so id alone is not a Prisma `cursor`; an id range uses the PK's leading column.
+    // Security messages (a sign-in code's SMS, a password-reset email; template keys `auth.*`) are not
+    // part of anyone's feed (D-147).
     const where = {
       recipientType: "user" as const,
+      NOT: { templateKey: { startsWith: "auth." } },
       ...(scope.ownerId !== undefined ? { recipientId: scope.ownerId } : {}),
       ...(cursor ? { id: { lt: cursor } } : {}),
     };
@@ -140,5 +145,13 @@ export class PrismaNotificationRepository extends NotificationRepository {
       select: { email: true },
     });
     return user ? user.email : null;
+  }
+
+  async recipientPhone(userId: string): Promise<string | null> {
+    const user = await this.prisma.user.findFirst({
+      where: { id: userId, deletedAt: null },
+      select: { phone: true },
+    });
+    return user?.phone ?? null;
   }
 }

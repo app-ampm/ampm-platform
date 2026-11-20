@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 import { SignInLayout, Text, useSignInLayoutMode } from "@ampm/ui";
 
 import { EnrollForm, RecoveryCodesForm } from "./authenticator-forms";
@@ -108,6 +110,8 @@ interface StaffSignInScreenProps {
   readonly session: StaffSignIn;
   /** "Forgot password?" on the first step, when the provider offers a reset (AMPM's own sign-in). */
   readonly onForgot?: () => void;
+  /** Quieter ways in under the card: AMPM's own sign-in offers the way back to the client sign-in. */
+  readonly aside?: ReactNode;
 }
 
 /**
@@ -116,7 +120,7 @@ interface StaffSignInScreenProps {
  * Clients sign in by mobile + OTP through a separate flow. P1 on a phone, one centred card from 768,
  * D1's split from 1024 with the phase's form alone in the glass card.
  */
-export function StaffSignInScreen({ session, onForgot }: StaffSignInScreenProps) {
+export function StaffSignInScreen({ session, onForgot, aside }: StaffSignInScreenProps) {
   const mode = useSignInLayoutMode();
   return (
     <SignInLayout
@@ -126,6 +130,7 @@ export function StaffSignInScreen({ session, onForgot }: StaffSignInScreenProps)
       // D1's card has a title; P1's staff form never had one, so a phone and the centred card keep none.
       cardTitle={mode === "split" ? "Staff sign-in" : undefined}
       card={<PhaseForm session={session} {...(onForgot ? { onForgot } : {})} />}
+      aside={aside}
       footer="No sign-up · AMPM sets up every account"
     />
   );

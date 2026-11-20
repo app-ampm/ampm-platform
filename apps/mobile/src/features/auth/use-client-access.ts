@@ -1,11 +1,10 @@
-import { useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "expo-router";
 import { useState } from "react";
 
 import { useCreateDemoClient, useRequestDevOtp, useVerifyDevOtp } from "@ampm/api-client";
 import { indianPhone, isAppError } from "@ampm/core";
 
-import { setAccessToken } from "@/lib/session";
+import type { SentCode } from "./client-code-step.types";
+import { useStartSession } from "./use-start-session";
 
 /** Sign in with a mobile AMPM has on file, or sign up (demo only) with a name and a mobile. */
 export type ClientAccessMode = "sign-in" | "sign-up";
@@ -14,12 +13,6 @@ export type ClientAccessMode = "sign-in" | "sign-up";
 export interface AccessError {
   readonly text: string;
   readonly switchTo?: ClientAccessMode | undefined;
-}
-
-/** The code the API sent (and, with no SMS yet, returned for the screen to show). */
-export interface SentCode {
-  readonly code: string;
-  readonly expiresInSeconds: number;
 }
 
 const INVALID_MOBILE: AccessError = { text: "Enter a 10-digit mobile number" };
@@ -37,18 +30,6 @@ function accessError(error: unknown): AccessError | undefined {
   return { text: error.message };
 }
 
-/** Stores a new session's token and lets the "/" gate route by role. */
-function useStartSession() {
-  const router = useRouter();
-  const queryClient = useQueryClient();
-  return (accessToken: string): void => {
-    setAccessToken(accessToken);
-    // Clear (not invalidate) so a new principal never sees the previous one's cached data.
-    queryClient.clear();
-    router.replace("/");
-  };
-}
-
 /** Requesting a code for a mobile and exchanging it for a session. */
 function useCodeExchange() {
   const startSession = useStartSession();
@@ -59,8 +40,13 @@ function useCodeExchange() {
 
   const send = (phone: string): void => {
     if (request.isPending) return;
+    // The demo's code shows on screen (no SMS), and another may be asked for at once.
     const onSuccess = (result: { demoCode: string; expiresInSeconds: number }) => {
-      setSent({ code: result.demoCode, expiresInSeconds: result.expiresInSeconds });
+      setSent({
+        screenCode: result.demoCode,
+        expiresInSeconds: result.expiresInSeconds,
+        resendAfterSeconds: 0,
+      });
       setCode("");
       verify.reset();
     };
@@ -97,6 +83,7 @@ function codeStep(exchange: CodeExchange, phone: string) {
     resend: () => exchange.send(phone),
     change: exchange.discard,
     verifying: exchange.verify.isPending,
+    sending: exchange.request.isPending,
     codeError: accessError(exchange.verify.error)?.text,
   };
 }

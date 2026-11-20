@@ -19,6 +19,7 @@ describe("ConsoleNotificationAdapter", () => {
         html: "<p>secret-body</p>",
         text: "secret-body",
       },
+      variables: {},
     });
     expect(result.providerRef).toBe("console:email:welcome");
     const logged = entries.find((entry) => entry.event === "notification.console_delivery");
@@ -38,6 +39,7 @@ describe("ConsoleNotificationAdapter", () => {
       address: "+919812345678",
       templateKey: "client.otp",
       content: { kind: "sms", text: "123456 is your AMPM verification code" },
+      variables: { code: "123456" },
     });
     expect(result.providerRef).toBe("console:sms:client.otp");
     const logged = entries.find((entry) => entry.event === "notification.console_delivery");

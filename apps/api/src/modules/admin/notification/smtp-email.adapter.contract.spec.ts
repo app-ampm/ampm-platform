@@ -12,6 +12,7 @@ function delivery(overrides: Partial<NotificationDelivery> = {}): NotificationDe
     address: "pat@example.com",
     templateKey: "staff.invite",
     content: { kind: "email", subject: "Hi", html: "<p>secret</p>", text: "secret" },
+    variables: {},
     ...overrides,
   };
 }

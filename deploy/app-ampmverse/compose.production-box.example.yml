@@ -37,6 +37,14 @@ x-prod-env: &prod-env
   SMTP_PORT: "587"
   SMTP_SECURE: "false"
   SMTP_USER: resend
+  # Client sign-in codes (D-147). No SMS provider is wired yet, so each code goes to the console stub AND
+  # back to the screen. TEMPORARY: while CLIENT_OTP_SCREEN_ECHO is "true", anyone who knows a client's
+  # mobile can sign in as that client, so it is for the pre-launch curtain only, and the API warns at
+  # every boot. To go live: register DLT, then set SMS_PROVIDER (2factor | msg91), SMS_SENDER_ID,
+  # SMS_OTP_TEMPLATE (and SMS_DLT_ENTITY_ID for 2Factor) here, SMS_API_KEY in app.env, send a real code,
+  # and only then set CLIENT_OTP_SCREEN_ECHO to "false" (production-setup.md, "Wiring SMS").
+  SMS_PROVIDER: console
+  CLIENT_OTP_SCREEN_ECHO: "true"
   # Cloudflare Turnstile for the website's enquiry form; BOT_CHECK_SECRET comes from app.env.
   BOT_CHECK_PROVIDER: siteverify
   BOT_CHECK_URL: https://challenges.cloudflare.com/turnstile/v0/siteverify
