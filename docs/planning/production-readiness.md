@@ -1,8 +1,8 @@
 # Production readiness: the shared VPS
 
-_Status: 20 November 2026. Production runs on the current VPS and serves app.ampmverse.com and site.ampmverse.com behind the curtain; the test stack is retired (D-138 to D-144). The runbook is [deploy/app-ampmverse/production-setup.md](../../deploy/app-ampmverse/production-setup.md)._
+_Status: 20 November 2026. Production runs on the current VPS and serves app.ampmverse.com and site.ampmverse.com publicly since 20 Nov 2026 (D-148: the password curtain is off, both sites send `noindex`); the test stack is retired (D-138 to D-144). The runbook is [deploy/app-ampmverse/production-setup.md](../../deploy/app-ampmverse/production-setup.md)._
 
-AMPM develops and works on production from now on, behind the password curtain. "Live" is the day the curtain comes off and clients are pointed at the website. Everything under section 3 must be closed first. The findings come from two audits on 20 November 2026: one of the live box, and one of the code on `main` at `bb2c0af`.
+AMPM develops and works on production from now on. The password curtain came off on 20 Nov 2026 (D-148); "live" is the day clients are pointed at the website and the `noindex` header comes off. Everything under section 3 must be closed first. The findings come from two audits on 20 November 2026: one of the live box, and one of the code on `main` at `bb2c0af`.
 
 ## 1. Decided (20 November 2026)
 
@@ -22,7 +22,7 @@ AMPM develops and works on production from now on, behind the password curtain. 
 - [x] **Production is running (20 Nov 2026):**
   - The API, worker and website ran first on `26387e5`. Since 10:46 UTC they run on `943ff61`: the website's Turnstile widget (D-145) and the clean shutdown (D-146). Each deploy passed the health gate.
   - The Resend sign-in and the Turnstile secret are verified, without sending mail or printing a value.
-  - app.ampmverse.com and site.ampmverse.com serve production behind the curtain. `/_api` reaches the production API, and the dev sign-in routes answer 404.
+  - app.ampmverse.com and site.ampmverse.com serve production (behind the curtain until it came off later that day, D-148). `/_api` reaches the production API, and the dev sign-in routes answer 404.
   - The test stack is stopped, its volumes kept (D-144).
   - A nightly media archive is scheduled in the SSH user's crontab.
 
@@ -39,13 +39,13 @@ AMPM develops and works on production from now on, behind the password curtain. 
 Identity and access
 - [ ] **Client sign-in by mobile OTP (D-147, Q13): built on 20 Nov 2026, SMS not wired yet.**
   - Built: active clients sign in, and invited clients activate, with a six-digit code to the mobile on file. Codes are kept as an HMAC, expire in 5 minutes, and burn after 5 wrong tries. A number is limited to 5 codes an hour and 10 a day, with a 30-second pause between codes. Unknown numbers get the same answer and no SMS. The code goes out through the notification pipeline, and the 2Factor and MSG91 transports are ready.
-  - **Until a provider is wired, production shows each code on screen** (`CLIENT_OTP_SCREEN_ECHO=true`), so anyone who knows a client's mobile can sign in as that client. The client-code routes therefore stay behind the curtain (the portal `.htaccess`), although the rest of `/_api` is outside it.
+  - **Until a provider is wired, production shows each code on screen** (`CLIENT_OTP_SCREEN_ECHO=true`), so anyone who knows a client's mobile can sign in as that client. With the curtain off (D-148), **convert and invite no real client until step 5 below**: only test clients on AMPM's own numbers.
   - Left, in this order (runbook, "Wiring SMS"):
     1. DLT registration (2–4 weeks, so start it now).
     2. The provider account and its template.
     3. `SMS_PROVIDER` and the keys.
     4. A real SMS test.
-    5. **`CLIENT_OTP_SCREEN_ECHO=false` before the curtain comes off.**
+    5. **`CLIENT_OTP_SCREEN_ECHO=false`, before any real client is converted or invited (D-148).**
   - Demo prospects (`user_type demo`) still have no production sign-in.
 - [x] ~~Invited staff cannot finish their first sign-in~~: solved by AMPM's own sign-in (D-142); the invitation link sets the password and the authenticator.
 - [ ] Retire Cognito: remove the Cognito adapters, the Amplify screens and the pre-token Lambda, delete the AWS user pool, and update `docs/decisions.json` (Q13/Q14 name Cognito) with the generators.
@@ -56,7 +56,8 @@ Public forms and payments
 - [ ] Rate limits on the unthrottled public and costly routes: client assistance requests, portal subscribe (creates an order on every call), uploads. Plus edge limits. Make the limiter fail closed rather than open on a Redis error.
 
 Content and legal
-- [ ] Privacy notice and terms (placeholders today; consent already cites versions "2026-10" and "2026-11"), a refund policy, and the contact channels.
+- [ ] Remove the `X-Robots-Tag: noindex, nofollow` lines from both production `.htaccess` files at launch (D-148).
+- [ ] Privacy notice and terms, more urgent now the public website takes enquiries (D-148) (placeholders today; consent already cites versions "2026-10" and "2026-11"), a refund policy, and the contact channels.
 - [ ] Real hotels, photos and verified rate cards loaded by the Hotel team.
 
 Security and operations

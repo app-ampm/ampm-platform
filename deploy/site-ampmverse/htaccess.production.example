@@ -4,17 +4,20 @@
 # mod_proxy_http and mod_headers (Plesk has them). The website sets its own content security policy (a
 # per-request nonce, apps/web/src/middleware.ts); this file adds the transport headers Caddy would.
 
-# The pre-launch curtain, with app.ampmverse.com's user file so one login works on both sites. Remove it
-# to go live. The ACME challenge stays open so Plesk's Let's Encrypt can renew the certificate.
-AuthType Basic
-AuthName "AMPM"
-AuthUserFile /var/www/vhosts/app.ampmverse.com/httpdocs/.htpasswd
-<RequireAny>
-Require expr %{REQUEST_URI} =~ m#^/\.well-known/acme-challenge/#
-Require valid-user
-</RequireAny>
+# The pre-launch password curtain was removed on 20 Nov 2026 at the user's decision (D-148): the site is
+# public. To put it back, uncomment these lines (one login with app.ampmverse.com's user file; the ACME
+# challenge stays open so Plesk's Let's Encrypt can renew the certificate):
+# AuthType Basic
+# AuthName "AMPM"
+# AuthUserFile /var/www/vhosts/app.ampmverse.com/httpdocs/.htpasswd
+# <RequireAny>
+# Require expr %{REQUEST_URI} =~ m#^/\.well-known/acme-challenge/#
+# Require valid-user
+# </RequireAny>
 
 <IfModule mod_headers.c>
+# Not launched yet (D-148): keep search engines from listing the site. Remove this line at launch.
+Header always set X-Robots-Tag "noindex, nofollow"
 Header always set Strict-Transport-Security "max-age=31536000"
 Header always set X-Content-Type-Options "nosniff"
 Header always set Referrer-Policy "strict-origin-when-cross-origin"

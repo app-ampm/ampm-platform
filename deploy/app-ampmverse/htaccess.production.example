@@ -5,27 +5,27 @@
 # dedicated server: security headers, the /_api reverse proxy and the SPA fallback. Needs mod_rewrite,
 # mod_proxy, mod_proxy_http and mod_headers (Plesk has them).
 
-# The pre-launch curtain: until AMPM opens to clients, the whole portal stays behind the shared
-# password, except /_api, where the app sends its own Bearer token (which replaces the browser's Basic
-# credentials). The production API accepts only the tokens of AMPM's own sign-in (D-142) and has no dev
-# sign-in routes (404).
+# The pre-launch password curtain was removed on 20 Nov 2026 at the user's decision (D-148): the portal is
+# public. The production API accepts only the tokens of AMPM's own sign-in (D-142) and has no dev sign-in
+# routes (404). WARNING: client sign-in codes are still shown on screen (CLIENT_OTP_SCREEN_ECHO, D-147), so
+# anyone who knows a client's mobile can sign in as that client. Convert and invite no real client until SMS
+# is wired and the on-screen code is off (runbook, "Wiring SMS").
 #
-# The client sign-in code routes (/_api/auth/client/ and /_api/auth/activation/client/, D-147) stay
-# BEHIND the curtain: while codes are shown on screen (CLIENT_OTP_SCREEN_ECHO), anyone who could reach
-# them could sign in as any client whose mobile they know. They send no Bearer, so the browser sends the
-# curtain's Basic credentials with them, and they cannot trip fail2ban.
-#
-# To go live: switch the on-screen code off first (runbook, "Wiring SMS"), then remove this block (and the
-# site's). A wrong Authorization scheme here counts toward Plesk's fail2ban (5 in 10 minutes = a ban).
-AuthType Basic
-AuthName "AMPM"
-AuthUserFile /var/www/vhosts/app.ampmverse.com/httpdocs/.htpasswd
-<RequireAny>
-Require expr "%{REQUEST_URI} =~ m#^/_api/# && %{REQUEST_URI} !~ m#^/_api/auth/(client|activation/client)/#"
-Require valid-user
-</RequireAny>
+# To put the curtain back, uncomment these lines. Everything stays behind the password except /_api, where
+# the app sends its own Bearer token, but the client-code routes stay behind it too while codes are on
+# screen. They send no Bearer, so they cannot trip fail2ban; a wrong Authorization scheme on a
+# password-protected path counts toward Plesk's fail2ban (5 in 10 minutes = a ban).
+# AuthType Basic
+# AuthName "AMPM"
+# AuthUserFile /var/www/vhosts/app.ampmverse.com/httpdocs/.htpasswd
+# <RequireAny>
+# Require expr "%{REQUEST_URI} =~ m#^/_api/# && %{REQUEST_URI} !~ m#^/_api/auth/(client|activation/client)/#"
+# Require valid-user
+# </RequireAny>
 
 <IfModule mod_headers.c>
+# Not launched yet (D-148): keep search engines from listing the portal. Remove this line at launch.
+Header always set X-Robots-Tag "noindex, nofollow"
 # HTTPS only, for a year (no includeSubDomains: other ampmverse.com names are not all ours to vouch for).
 Header always set Strict-Transport-Security "max-age=31536000"
 Header always set X-Content-Type-Options "nosniff"
