@@ -82,6 +82,8 @@ no token → 401; bad body → 400.
 - The Expo web export of the client portals does not carry the team store; a web team view, if ever
   needed, adds the sqlite-wasm Metro setup.
 - **Spike artifacts to remove before shipping the feature** (all marked `SPIKE STAND-IN`): the
-  `@nozbe/watermelondb` dependency and `watermelon-store.ts`; the `apps/api/src/modules/spike` module;
-  the `field-note` contract in `packages/core`; the `/field-notes` route and screen. Keep the queue and
-  idempotency helpers and their tests.
+  `apps/api/src/modules/spike` module; the `field-note` contract in `packages/core`; the `/field-notes`
+  route and screen. Keep the queue and idempotency helpers and their tests. The `@nozbe/watermelondb`
+  dependency and `watermelon-store.ts` went on 20 Nov 2026 (D-152): the first native Android build
+  failed on WatermelonDB 0.28's Java code, which reads a `BuildConfig` that current Android Gradle
+  Plugin versions no longer generate for libraries.

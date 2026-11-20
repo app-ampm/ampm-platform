@@ -45,6 +45,9 @@ export const ampm = defineConfig([
     "**/.turbo/**",
     "**/coverage/**",
     "**/expo-env.d.ts",
+    // Native projects `expo prebuild` generates from app.json (D-152); never committed or edited.
+    "apps/mobile/ios/**",
+    "apps/mobile/android/**",
     "apps/api/src/generated/**",
     "docs/**",
     "vault/**",
