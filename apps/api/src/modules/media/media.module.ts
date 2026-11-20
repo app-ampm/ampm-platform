@@ -1,6 +1,5 @@
 import { Module } from "@nestjs/common";
 
-import { AV_SCANNER, StubAvScanner } from "../../storage/av-scanner.js";
 import { IMAGE_PROCESSOR, SharpImageProcessor } from "./image.processor.js";
 import { MediaController } from "./media.controller.js";
 import { MediaRepository } from "./media.repository.js";
@@ -15,14 +14,12 @@ import { MediaService } from "./media.service.js";
  */
 @Module({
   controllers: [MediaController],
-  // The storage adapter is global (StorageModule); the AV scanner is a stub this sprint (fail-closed),
-  // with a real provider a later config swap — production media is gated by the storage prod guard until then.
+  // The storage adapter and the AV scanner are global (StorageModule; ClamAV in production, AV_PROVIDER).
   // The image processor (sharp) generates the metadata-stripped derivatives on upload (feature 9.3c).
   providers: [
     MediaService,
     MediaUploadService,
     MediaRepository,
-    { provide: AV_SCANNER, useClass: StubAvScanner },
     { provide: IMAGE_PROCESSOR, useClass: SharpImageProcessor },
   ],
   exports: [MediaService],

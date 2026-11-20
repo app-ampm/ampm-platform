@@ -55,6 +55,10 @@ x-prod-env: &prod-env
   STORAGE_PROVIDER: local
   STORAGE_LOCAL_DIR: /data/storage
   STORAGE_LOCAL_PERSISTENT: "true"
+  # Every upload is scanned by clamd (the base file's clamav service, AC-20.3) before it is stored, and
+  # production refuses the stub scanner: redeploy-prod.sh stops early when compose.box.yml lacks these.
+  AV_PROVIDER: clamav
+  CLAMAV_HOST: clamav
   # Super-Admin custom roles grant their capabilities (D-036), as on the test box.
   DYNAMIC_ROLES: "true"
   LOG_LEVEL: info

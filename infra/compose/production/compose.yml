@@ -12,7 +12,8 @@
 # publishes PUBLIC ports. Prometheus and Alertmanager bind 127.0.0.1 only (loopback, reached via `ssh -L`),
 # so nothing but Caddy faces the internet. Postgres and pgBackRest also join an outbound-only egress
 # network (no published ports -> no inbound) so they can reach the S3 backup repo; Alertmanager joins it
-# to POST pages to the external webhook.
+# to POST pages to the external webhook, and freshclam to fetch ClamAV's signatures, while clamd, which
+# scans the uploads, stays on the internal network alone.
 name: ampm
 
 x-app: &app
@@ -22,6 +23,16 @@ x-app: &app
       required: false
   read_only: true
   tmpfs: ["/tmp"]
+  security_opt: ["no-new-privileges:true"]
+  restart: unless-stopped
+
+# The upload virus scan (AC-20.3, security.md), from the official ClamAV image pinned by tag and digest.
+# Its init starts as root to own the signature volume and render clamd.conf from CLAMD_CONF_* variables,
+# then clamd and freshclam drop to its unprivileged `clamav` user; so not read_only.
+x-clamav: &clamav
+  image: clamav/clamav:1.5.5_base@sha256:7e43db777ae70ed9b60e75fcbdfda6f462c710565c69ccff2ed83a7ec5aba417
+  volumes:
+    - clamav-db:/var/lib/clamav
   security_opt: ["no-new-privileges:true"]
   restart: unless-stopped
 
@@ -149,6 +160,60 @@ services:
     deploy:
       resources:
         limits: { cpus: "0.5", memory: 512m }
+
+  # The virus scanner, split in two so the daemon that reads untrusted files never reaches the internet.
+  # clamav is clamd alone, on the internal network: the API streams every upload to clamav:3310
+  # (INSTREAM, AV_PROVIDER=clamav) and stores it only on a clean verdict. freshclam (below) fetches the
+  # signatures over egress into the shared volume; clamd notices new ones within its 10-minute self-check.
+  clamav:
+    <<: *clamav
+    # clamd is the container's main process (behind the image's tini), so a crash or an out-of-memory kill
+    # ends the container and `restart` brings it back; the image's default entrypoint would keep running
+    # with clamd dead. clamd refuses to start without signatures, so on a first start it waits for
+    # freshclam's download (113 MB; about 30 s when measured on 20 Nov 2026).
+    command:
+      - sh
+      - -c
+      - |
+        until ls /var/lib/clamav/main.c?d /var/lib/clamav/daily.c?d /var/lib/clamav/bytecode.c?d >/dev/null 2>&1; do sleep 10; done
+        exec clamd --foreground
+    environment:
+      # One copy of the signatures in memory: a reload swaps them in place (scans wait some seconds, and
+      # an upload that outwaits the API's timeout gets a 503 and is retried) instead of holding a second
+      # engine, which would double memory and break the limit below. Measured on 20 Nov 2026 (ClamAV
+      # 1.5.5, 3.6 million signatures): 0.97 GB steady, 0.98 GB peak through a reload.
+      CLAMD_CONF_ConcurrentDatabaseReload: "no"
+    networks: [internal]
+    healthcheck:
+      test: ["CMD-SHELL", '[ "$$(echo PING | nc -w 5 127.0.0.1 3310)" = PONG ]']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10m
+    deploy:
+      resources:
+        limits: { cpus: "1", memory: 1536m }
+
+  # The signature updater: freshclam as a daemon, checking 12 times a day. It joins egress only (it takes
+  # no connections). Each new set is test-loaded before it replaces the old one (TestDatabases, on by
+  # default), so a broken download never reaches clamd; that test is its memory peak (0.71 GB measured).
+  # It logs "Clamd was NOT notified" after each update: expected, clamd is in its own container and picks
+  # the update up itself.
+  freshclam:
+    <<: *clamav
+    command: ["freshclam", "--daemon", "--foreground", "--stdout", "--checks=12"]
+    networks: [egress]
+    healthcheck:
+      # Unhealthy once the daily signatures are three days old (ClamAV publishes them several times a
+      # day): the updates are failing and clamd is scanning with ageing signatures.
+      test: ["CMD-SHELL", "find /var/lib/clamav -name 'daily.c[lv]d' -mtime -3 | grep -q ."]
+      interval: 5m
+      timeout: 10s
+      retries: 2
+      start_period: 10m
+    deploy:
+      resources:
+        limits: { cpus: "0.5", memory: 1536m }
 
   api:
     <<: *app
@@ -369,6 +434,7 @@ volumes:
   node-metrics: # the db-metrics collector writes here; node-exporter reads it (feature 6.7)
   prometheus-data:
   alertmanager-data:
+  clamav-db: # ClamAV's signatures: freshclam writes them, clamd reads them
 
 networks:
   internal: { internal: true }

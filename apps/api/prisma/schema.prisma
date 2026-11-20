@@ -1891,8 +1891,8 @@ enum DocumentVisibility {
 /// relation on the owner — the repository scopes by the owning record). storage_key is RESTRICTED and
 /// never serialised; a signed link is minted only through DocumentAccessLink. First built by Module D
 /// feature 10.1 (the first document_id consumer: enquiry/agreement/proposal/contract attachments).
-/// size_bytes/checksum are filled at upload-finalize, so they are nullable until then. Antivirus
-/// scanning (security.md) is wired with the real storage adapter, like MediaAsset's stub scanner.
+/// size_bytes/checksum are filled at upload-finalize, so they are nullable until then. Every upload is
+/// scanned before it is stored (security.md), by the scanner MediaAsset shares (ClamAV in production, D-151).
 model Document {
   id                String             @id @default(uuid(7)) @db.Uuid
   projectId         String?            @map("project_id") @db.Uuid

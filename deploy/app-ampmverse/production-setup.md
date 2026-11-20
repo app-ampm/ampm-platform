@@ -28,6 +28,38 @@ Box paths outside the source trees (none is served by a web root):
 | `ampm-prod-state/app-image`      | the app image that last passed the health gate (the rollback target)  | app_ampmverse                     |
 | `bin/prod-secrets.sh`            | the secrets helper, also at `deploy/app-ampmverse/prod-secrets.sh`    | app_ampmverse                     |
 
+### Antivirus
+
+Every upload (gallery media and documents) is streamed to ClamAV and stored only if it comes back clean (AC-20.3). Two containers run from the official image pinned in the base compose (`clamav/clamav:1.5.5_base`):
+
+- `clamav` is clamd alone, on the internal network, with no internet. The API connects to `clamav:3310`, set by `AV_PROVIDER: clamav` and `CLAMAV_HOST: clamav` in `compose.box.yml`. Production refuses the stub scanner, and `redeploy-prod.sh` stops early when those lines are missing.
+- `freshclam` downloads the signatures over egress into the `ampm_clamav-db` volume and checks 12 times a day. clamd picks new signatures up within 10 minutes (its self-check) and reloads them in place.
+
+How it behaves:
+
+- **Fail closed.** A threat is refused: media is quarantined, and a document gets a 400 ("failed the antivirus scan"). If clamd is down, slow (`CLAMAV_TIMEOUT_MS`, 30 s) or answers anything else, the upload gets a 503 ("The virus scanner is unavailable…") and nothing is stored or changed, so the uploader can retry. The API starts and serves everything else without the scanner.
+- **First start.** freshclam downloads 113 MB (`main`, `daily`, `bytecode`) and test-loads each set; clamd waits for them, then loads them in about 10 s. On a laptop on 20 Nov 2026 both were healthy 34 s after `up`. `redeploy-prod.sh` starts the pair without waiting and reports the scanner's health at its end.
+- **Memory** (measured with ClamAV 1.5.5 and 3.6 million signatures): clamd uses about 1.0 GB, also through a reload, because `ConcurrentDatabaseReload no` keeps one copy of the signatures (scans pause for a few seconds instead). freshclam idles at about 50 MB and peaks at 0.7 GB while it test-loads a new set. Each is limited to 1.5 GB.
+- **Restarts.** clamd is its container's main process, so a crash or an out-of-memory kill ends the container and Docker restarts it.
+- **Health and logs.** `clamav` is healthy while clamd answers `PING`. `freshclam` turns unhealthy once the daily signatures are three days old, which means updates are failing (its logs show why, for example a CDN cool-down after HTTP 429). `docker compose -f … -f … logs clamav freshclam` shows both. freshclam's "Clamd was NOT notified" after an update is expected, since clamd runs in another container. The API logs `storage.av_scan.threat_found` with the signature name, and `storage.av_scan.unavailable` or `storage.av_scan.no_verdict` when it got no verdict.
+
+Smoke test after a deploy, run on the box from `~/ampm-prod` (nothing is stored):
+
+```bash
+docker compose -f infra/compose/production/compose.yml -f infra/compose/production/compose.box.yml exec -T clamav sh -c 'echo VERSION | nc -w 5 127.0.0.1 3310'
+```
+
+It prints the engine, the daily signature version and its date, for example `ClamAV 1.5.5/28189/Fri Nov 20 06:29:13 2026`. Then check that the daemon finds the EICAR test file, here as a PDF stream object:
+
+```bash
+python3 - <<'PY' | docker compose -f infra/compose/production/compose.yml -f infra/compose/production/compose.box.yml exec -T clamav clamdscan --no-summary -
+e = "X5O!P%@AP[4\\PZX54(P^)7CC)7}$" + "EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*"
+print(f"%PDF-1.4\n1 0 obj\n<< /Length {len(e)} >>\nstream\n{e}\nendstream\nendobj\ntrailer\n<< /Root 1 0 R >>\n%%EOF")
+PY
+```
+
+It must print `stream: Eicar-Signature FOUND`. The same PDF uploaded as a document in the app must be refused with "The file failed the antivirus scan and was not stored", and any photo uploaded to a hotel gallery must be stored, which proves the API reaches clamd. ClamAV flags the EICAR file only at the start of a file or as a PDF stream object. The development stub flags it anywhere, so a JPEG with EICAR hidden after its header is quarantined in tests but clean in production.
+
 ## 2. Secrets (D-140)
 
 Every production secret is in `ampm-prod-secrets/*.env`, written by [`prod-secrets.sh`](prod-secrets.sh) and never printed, committed or passed on a command line:
@@ -83,7 +115,7 @@ Done on 20 Nov 2026 (UTC): production built at 09:02. The API and worker started
 ## 4. Deploying a change
 
 1. Merge to `main`, then ship that commit to `~/ampm-prod` exactly as in step 3.1. `tar` adds and replaces files, so a file deleted on `main` stays on the box until it is removed by hand.
-2. `bash deploy/redeploy-prod.sh` on the box. Its order: preflight (override, secrets, disk), build, data tier, safety dump, **migrate before the new API**, recreate api/worker/web, health gate. A failed gate puts api and worker back on the previous image. It never seeds demo data.
+2. `bash deploy/redeploy-prod.sh` on the box. Its order: preflight (override, secrets, disk), build, data tier and virus scanner, safety dump, **migrate before the new API**, recreate api/worker/web, health gate, then the scanner's health (reported, not gated). A failed gate puts api and worker back on the previous image. It never seeds demo data.
 3. If the change touched the portal: `AMPM_WEB_TARGET=production … deploy/deploy-web.sh` **after** the API (a contract change needs the new API first). Load a page and read the browser console.
 
 The test stack deploys exactly as before, with `AMPM_WEB_TARGET=test` for its web bundle. Keep checking free disk (`df -h /`, `docker system df`) before a build; `redeploy-prod.sh` prunes dangling build cache itself below 15 GB free. Never prune volumes: other tenants' data lives in them.
