@@ -32,6 +32,8 @@ export abstract class SessionRepository {
   /** Opens the session for a token, idempotently: a lost create race returns the winner's row. */
   abstract openSession(data: NewSession): Promise<OpenedSession>;
   abstract touchLastSeen(id: string, at: Date): Promise<void>;
+  /** Revokes the live session of one access token (sign-out); returns its id, or null if none was live. */
+  abstract revokeToken(tokenId: string, reason: string, at: Date): Promise<string | null>;
   /** Revokes every live session of a user; returns the ids this call revoked, for the audit trail. */
   abstract revokeAllForUser(userId: string, reason: string, at: Date): Promise<string[]>;
   /** Deletes sessions whose access token has expired (so re-presenting it fails at verify); returns the count. */
@@ -64,6 +66,19 @@ export class PrismaSessionRepository extends SessionRepository {
 
   async touchLastSeen(id: string, at: Date): Promise<void> {
     await this.prisma.session.update({ where: { id }, data: { lastSeenAt: at } });
+  }
+
+  async revokeToken(tokenId: string, reason: string, at: Date): Promise<string | null> {
+    const session = await this.prisma.session.findUnique({
+      where: { tokenId },
+      select: { id: true, revokedAt: true },
+    });
+    if (!session || session.revokedAt) return null;
+    await this.prisma.session.update({
+      where: { id: session.id },
+      data: { revokedAt: at, revokedReason: reason },
+    });
+    return session.id;
   }
 
   async revokeAllForUser(userId: string, reason: string, at: Date): Promise<string[]> {

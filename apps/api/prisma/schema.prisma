@@ -47,6 +47,7 @@ enum AuthTokenPurpose {
   password_reset
   otp
   magic_link
+  sign_in_challenge
 }
 
 enum RecipientType {
@@ -284,23 +285,38 @@ enum HotelStatus {
   inactive
 }
 
-/// Staff, client and demo accounts. Credentials live in the identity service (Cognito, T-6): the
-/// API keeps the identity subject that maps a verified token to this row; it never stores a password.
+/// Staff, client and demo accounts. Since D-142 the API is the identity service: staff credentials (an
+/// Argon2id password hash and an encrypted authenticator secret) live on this row, and the identity
+/// subject (`ampm:<id>`) maps a token the API minted back to it. The credential columns are SECRET and
+/// never serialised.
 model User {
-  id              String     @id @default(uuid(7)) @db.Uuid
-  userType        UserType   @map("user_type")
-  name            String     @db.VarChar(255)
+  id                String     @id @default(uuid(7)) @db.Uuid
+  userType          UserType   @map("user_type")
+  name              String     @db.VarChar(255)
   /// Unique only among LIVE rows: a partial unique index (WHERE deleted_at IS NULL) lets a person be
   /// re-created after a soft delete (B9). Prisma cannot express a partial unique, so it is a raw SQL
   /// migration (like the Q5 side index) and not an @unique here.
-  email           String     @db.VarChar(255)
-  phone           String?    @db.VarChar(32)
-  status          UserStatus @default(invited)
+  email             String     @db.VarChar(255)
+  phone             String?    @db.VarChar(32)
+  status            UserStatus @default(invited)
   /// The identity service's subject (Cognito `sub`); null until the account is activated there.
-  identitySubject String?    @unique @map("identity_subject") @db.VarChar(255)
+  identitySubject   String?    @unique @map("identity_subject") @db.VarChar(255)
   /// Mandatory for staff (A-13); enforced by the identity service, mirrored here for reporting.
-  mfaEnabled      Boolean    @default(false) @map("mfa_enabled")
-  lastLoginAt     DateTime?  @map("last_login_at") @db.Timestamptz(6)
+  mfaEnabled        Boolean    @default(false) @map("mfa_enabled")
+  lastLoginAt       DateTime?  @map("last_login_at") @db.Timestamptz(6)
+  /// PHC-format Argon2id hash; null until the account sets a password at activation.
+  passwordHash      String?    @map("password_hash") @db.VarChar(255)
+  passwordChangedAt DateTime?  @map("password_changed_at") @db.Timestamptz(6)
+  /// The confirmed authenticator secret, AES-256-GCM under AUTH_ENCRYPTION_KEY.
+  totpSecretEnc     String?    @map("totp_secret_enc")
+  /// A secret shown for enrolment and not yet confirmed with a code.
+  totpPendingEnc    String?    @map("totp_pending_enc")
+  totpConfirmedAt   DateTime?  @map("totp_confirmed_at") @db.Timestamptz(6)
+  /// The time step of the last accepted code: a code is never accepted twice.
+  totpLastStep      Int?       @map("totp_last_step")
+  /// Consecutive wrong authenticator or recovery codes; only a correct code clears it, and at 20 the
+  /// account is locked for an administrator (D-142). Passwords are throttled per email and client instead.
+  failedCodes       Int        @default(0) @map("failed_codes")
 
   createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   createdBy String?   @map("created_by") @db.Uuid
@@ -319,6 +335,7 @@ model User {
   leadActivities        LeadActivity[]
   clientAccountsPrimary ClientAccount[]
   accountContacts       AccountContact[]
+  recoveryCodes         UserRecoveryCode[]
 
   @@index([userType, status])
   @@index([deletedAt])
@@ -513,8 +530,9 @@ model ProjectMember {
   @@map("project_members")
 }
 
-/// One-time tokens the API still mints itself (invitations and links); OTP and passwords are the
-/// identity service's. The hash is SECRET and never serialised.
+/// One-time tokens the API mints itself: invitations, password-reset links and the short-lived
+/// challenge between a correct password and the authenticator code (D-142). The hash is SECRET and never
+/// serialised; `attempts` counts wrong answers against a challenge.
 model AuthToken {
   id        String           @id @default(uuid(7)) @db.Uuid
   userId    String           @map("user_id") @db.Uuid
@@ -522,6 +540,7 @@ model AuthToken {
   tokenHash String           @map("token_hash") @db.VarChar(255)
   expiresAt DateTime         @map("expires_at") @db.Timestamptz(6)
   usedAt    DateTime?        @map("used_at") @db.Timestamptz(6)
+  attempts  Int              @default(0)
   createdAt DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
 
   user User @relation(fields: [userId], references: [id])
@@ -529,6 +548,21 @@ model AuthToken {
   @@index([userId, purpose])
   @@index([expiresAt])
   @@map("auth_tokens")
+}
+
+/// A staff member's single-use recovery codes (D-142): ten, issued when the authenticator is confirmed
+/// and shown once. Only a SHA-256 of each code is stored (SECRET); using one sets `used_at`.
+model UserRecoveryCode {
+  id        String    @id @default(uuid(7)) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  codeHash  String    @map("code_hash") @db.VarChar(64)
+  usedAt    DateTime? @map("used_at") @db.Timestamptz(6)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, codeHash])
+  @@map("user_recovery_codes")
 }
 
 /// A server-side session keyed by the access token's `jti` (security.md, D-033): the token proves
@@ -812,8 +846,8 @@ model ClientAccount {
   updatedBy String?   @map("updated_by") @db.Uuid
   deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
 
-  lead           Lead?            @relation(fields: [leadId], references: [id])
-  primaryContact User?            @relation(fields: [primaryContactUserId], references: [id])
+  lead              Lead?              @relation(fields: [leadId], references: [id])
+  primaryContact    User?              @relation(fields: [primaryContactUserId], references: [id])
   contacts          AccountContact[]
   subscriptions     Subscription[]
   payments          Payment[]
@@ -1045,23 +1079,23 @@ model ServiceType {
 /// defaulted (Q4). Cross-module links (project, hotel_enquiry, document, actor) are plain columns until
 /// their modules land — `hotel_enquiry_id` is the reciprocal of hotel_enquiries.service_agreement_id.
 model ServiceAgreement {
-  id                String                 @id @default(uuid(7)) @db.Uuid
-  accountId         String                 @map("account_id") @db.Uuid
+  id               String                 @id @default(uuid(7)) @db.Uuid
+  accountId        String                 @map("account_id") @db.Uuid
   /// Gains its relation when module E (wedding projects) lands; back-filled on project creation (GP-27).
-  projectId         String?                @map("project_id") @db.Uuid
-  serviceTypeId     String                 @map("service_type_id") @db.Uuid
+  projectId        String?                @map("project_id") @db.Uuid
+  serviceTypeId    String                 @map("service_type_id") @db.Uuid
   /// Reciprocal of hotel_enquiries.service_agreement_id; a plain column (module D), no Prisma relation.
-  hotelEnquiryId    String?                @map("hotel_enquiry_id") @db.Uuid
-  scopeText         String                 @map("scope_text")
-  feeAmount         Decimal                @map("fee_amount") @db.Decimal(14, 2)
-  feeStructure      ServiceFeeStructure    @map("fee_structure")
-  currency          String                 @default("INR") @db.VarChar(3)
-  termsVersion      String?                @map("terms_version") @db.VarChar(255)
-  status            ServiceAgreementStatus @default(draft)
-  acceptedAt        DateTime?              @map("accepted_at") @db.Timestamptz(6)
-  acceptedByUserId  String?                @map("accepted_by_user_id") @db.Uuid
+  hotelEnquiryId   String?                @map("hotel_enquiry_id") @db.Uuid
+  scopeText        String                 @map("scope_text")
+  feeAmount        Decimal                @map("fee_amount") @db.Decimal(14, 2)
+  feeStructure     ServiceFeeStructure    @map("fee_structure")
+  currency         String                 @default("INR") @db.VarChar(3)
+  termsVersion     String?                @map("terms_version") @db.VarChar(255)
+  status           ServiceAgreementStatus @default(draft)
+  acceptedAt       DateTime?              @map("accepted_at") @db.Timestamptz(6)
+  acceptedByUserId String?                @map("accepted_by_user_id") @db.Uuid
   /// Gains its FK when the documents service (module N) lands; a plain column meanwhile.
-  documentId        String?                @map("document_id") @db.Uuid
+  documentId       String?                @map("document_id") @db.Uuid
 
   createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   createdBy String?   @map("created_by") @db.Uuid
@@ -1618,15 +1652,15 @@ model HotelEnquiryEvent {
 /// (INTERNAL) and `outcome_internal` (RESTRICTED-NOTES) are ABSENT from the client view, never a
 /// hide-flag — and never reach a client/guest/demo principal. Standard columns per data.md §1.
 model SiteVisit {
-  id             String          @id @default(uuid(7)) @db.Uuid
-  enquiryId      String          @map("enquiry_id") @db.Uuid
+  id              String          @id @default(uuid(7)) @db.Uuid
+  enquiryId       String          @map("enquiry_id") @db.Uuid
   /// The enquiry's hotel (Module C); a plain column, no Prisma relation (cross-module).
-  hotelId        String          @map("hotel_id") @db.Uuid
-  scheduledAt    DateTime        @map("scheduled_at") @db.Timestamptz(6)
-  status         SiteVisitStatus @default(proposed)
-  attendeesText  String?         @map("attendees_text") @db.Text
-  outcomeInternal String?        @map("outcome_internal") @db.Text
-  clientFeedback String?         @map("client_feedback") @db.Text
+  hotelId         String          @map("hotel_id") @db.Uuid
+  scheduledAt     DateTime        @map("scheduled_at") @db.Timestamptz(6)
+  status          SiteVisitStatus @default(proposed)
+  attendeesText   String?         @map("attendees_text") @db.Text
+  outcomeInternal String?         @map("outcome_internal") @db.Text
+  clientFeedback  String?         @map("client_feedback") @db.Text
 
   createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   createdBy String?   @map("created_by") @db.Uuid
@@ -1651,25 +1685,25 @@ model SiteVisit {
 /// supersedes the old (`supersedes_proposal_id`, `version_number`), and approvals (Module I, nullable)
 /// reference the exact version. `document_id` (Module N) and `approval_id` are plain columns meanwhile.
 model HotelProposal {
-  id                  String              @id @default(uuid(7)) @db.Uuid
-  enquiryId           String              @map("enquiry_id") @db.Uuid
+  id                   String              @id @default(uuid(7)) @db.Uuid
+  enquiryId            String              @map("enquiry_id") @db.Uuid
   /// The enquiry's hotel (Module C); a plain column, no Prisma relation (cross-module).
-  hotelId             String              @map("hotel_id") @db.Uuid
-  versionNumber       Int                 @map("version_number")
-  status              HotelProposalStatus @default(draft)
-  validUntil          DateTime?           @map("valid_until") @db.Date
-  clientTotalAmount   Decimal             @map("client_total_amount") @db.Decimal(14, 2)
-  internalTotalAmount Decimal             @map("internal_total_amount") @db.Decimal(14, 2)
-  currency            String              @default("INR") @db.VarChar(3)
+  hotelId              String              @map("hotel_id") @db.Uuid
+  versionNumber        Int                 @map("version_number")
+  status               HotelProposalStatus @default(draft)
+  validUntil           DateTime?           @map("valid_until") @db.Date
+  clientTotalAmount    Decimal             @map("client_total_amount") @db.Decimal(14, 2)
+  internalTotalAmount  Decimal             @map("internal_total_amount") @db.Decimal(14, 2)
+  currency             String              @default("INR") @db.VarChar(3)
   /// Gains its FK when the documents service (module N) lands; a plain column meanwhile.
-  documentId          String?             @map("document_id") @db.Uuid
-  sharedAt            DateTime?           @map("shared_at") @db.Timestamptz(6)
-  decidedAt           DateTime?           @map("decided_at") @db.Timestamptz(6)
-  decidedByUserId     String?             @map("decided_by_user_id") @db.Uuid
+  documentId           String?             @map("document_id") @db.Uuid
+  sharedAt             DateTime?           @map("shared_at") @db.Timestamptz(6)
+  decidedAt            DateTime?           @map("decided_at") @db.Timestamptz(6)
+  decidedByUserId      String?             @map("decided_by_user_id") @db.Uuid
   /// Gains its FK when approvals (module I) land; a plain column meanwhile (brief §2.3).
-  approvalId          String?             @map("approval_id") @db.Uuid
+  approvalId           String?             @map("approval_id") @db.Uuid
   /// Self-reference to the version this one supersedes; a plain column (set within the revision txn).
-  supersedesProposalId String?            @map("supersedes_proposal_id") @db.Uuid
+  supersedesProposalId String?             @map("supersedes_proposal_id") @db.Uuid
 
   createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   createdBy String?   @map("created_by") @db.Uuid
@@ -1693,14 +1727,14 @@ model HotelProposal {
 /// all of them. Lines are owned per version (a revision creates new lines), so they are immutable once
 /// their proposal is shared.
 model HotelProposalLine {
-  id            String           @id @default(uuid(7)) @db.Uuid
-  proposalId    String           @map("proposal_id") @db.Uuid
+  id            String            @id @default(uuid(7)) @db.Uuid
+  proposalId    String            @map("proposal_id") @db.Uuid
   itemType      HotelRateItemType @map("item_type")
-  description   String           @db.Text
-  quantity      Decimal          @db.Decimal(14, 2)
-  unitAmount    Decimal          @map("unit_amount") @db.Decimal(14, 2)
-  totalAmount   Decimal          @map("total_amount") @db.Decimal(14, 2)
-  clientVisible Boolean          @map("client_visible")
+  description   String            @db.Text
+  quantity      Decimal           @db.Decimal(14, 2)
+  unitAmount    Decimal           @map("unit_amount") @db.Decimal(14, 2)
+  totalAmount   Decimal           @map("total_amount") @db.Decimal(14, 2)
+  clientVisible Boolean           @map("client_visible")
 
   createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   createdBy String?   @map("created_by") @db.Uuid

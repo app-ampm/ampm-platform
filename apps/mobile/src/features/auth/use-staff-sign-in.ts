@@ -12,23 +12,9 @@ import {
 } from "@/lib/cognito-auth";
 import { setCognitoSignedIn } from "@/lib/session";
 
-/** The step the sign-in screen is showing, mapped from Cognito's challenges. */
-export type Phase =
-  | { readonly kind: "credentials" }
-  | { readonly kind: "totpCode" }
-  | { readonly kind: "newPassword" }
-  | { readonly kind: "enrollTotp"; readonly secret: string; readonly otpauthUri: string };
+import type { Phase, StaffSignIn } from "./staff-sign-in.types";
 
-export interface StaffSignIn {
-  readonly phase: Phase;
-  readonly pending: boolean;
-  readonly error: string | undefined;
-  readonly email: string;
-  readonly setEmail: (value: string) => void;
-  readonly signIn: (password: string) => void;
-  readonly submitChallenge: (answer: string) => void;
-  readonly confirmEnrollment: (code: string) => void;
-}
+export type { Phase, StaffSignIn } from "./staff-sign-in.types";
 
 function messageOf(error: unknown): string {
   return error instanceof Error && error.message.length > 0

@@ -158,6 +158,7 @@ erDiagram
     users ||--o{ audit_events : performs
     users ||--o{ import_jobs : runs
     users ||--o{ sessions : has
+    users ||--o{ user_recovery_codes : keeps
 
     users {
         uuid id PK
@@ -166,9 +167,22 @@ erDiagram
         string email UK
         string phone
         string status "enum invited / active / disabled / locked"
-        string identity_subject UK "the identity service's subject (Cognito sub, T-6); null until activated"
-        bool mfa_enabled "mandatory true for staff (A-13); enforced by the identity service, mirrored here"
+        string identity_subject UK "the token subject: ampm:<id> (D-142); null until activated"
+        bool mfa_enabled "mandatory true for staff (A-13); set when the authenticator is confirmed"
         datetime last_login_at
+        string password_hash "SECRET; Argon2id PHC string (D-142)"
+        datetime password_changed_at
+        string totp_secret_enc "SECRET; AES-256-GCM authenticator secret"
+        string totp_pending_enc "SECRET; a secret shown for enrolment, not yet confirmed"
+        datetime totp_confirmed_at
+        int totp_last_step "the step of the last accepted code; never accepted twice"
+        int failed_codes "consecutive wrong authenticator or recovery codes; twenty lock the account"
+    }
+    user_recovery_codes {
+        uuid id PK
+        uuid user_id FK
+        string code_hash "SECRET; HMAC-SHA256 of a single-use recovery code (D-142)"
+        datetime used_at
     }
     roles {
         uuid id PK
@@ -239,10 +253,11 @@ erDiagram
     auth_tokens {
         uuid id PK
         uuid user_id FK
-        string purpose "enum invite / password_reset / otp / magic_link"
+        string purpose "enum invite / password_reset / otp / magic_link / sign_in_challenge"
         string token_hash "RESTRICTED"
         datetime expires_at
         datetime used_at
+        int attempts "wrong answers against a sign-in challenge; five burn it"
     }
     notifications {
         uuid id PK
@@ -321,6 +336,7 @@ Notes:
 - `permissions.permission_key` follows `module.resource.action` and optionally `.scope`; the permission matrix lists them.
 - `audit_events.project_id` is denormalised so a project manager can read the history of their own project without scanning everything.
 - **26 October 2026 (T-6, D-022):** credentials, OTP and authenticator codes live in Amazon Cognito; `users` keeps `identity_subject` instead of `password_hash` and `mfa_secret_ref`, and `auth_tokens` remains for the invitation and link tokens the API still mints. Implemented in `apps/api/prisma/schema.prisma` (bootstrap step 5).
+- **20 November 2026 (D-142):** AMPM signs people in itself, superseding the Cognito arrangement above: staff credentials live on `users` (an Argon2id `password_hash`, the authenticator secret encrypted under `AUTH_ENCRYPTION_KEY`, the count of consecutive wrong codes that locks the account at twenty), single-use recovery codes in `user_recovery_codes` (HMAC-SHA256 under a key derived from `AUTH_ENCRYPTION_KEY`), and `auth_tokens` also carries the five-minute `sign_in_challenge` between password and code. Implemented in migration `20261120074702_in_app_sign_in`.
 - **28 October 2026 (D-036, dormant):** dynamic RBAC. `grantable_capabilities` is the code-defined capability catalog, seeded from `packages/policy/src/generated/capabilities.json` (every grant variant a system role holds; the matrix stays the source). A Super Admin builds custom roles from it: `role_grants` are a role's direct capabilities, `permission_sets` are reusable bundles attached through `role_permission_sets`, and a set's capabilities are `permission_set_grants`. The nine system roles stay matrix-authoritative and golden-pinned; these tables add custom roles *on top*. The engine does not read them yet — the API resolves a custom role's capabilities and injects them as `PolicyPrincipal.resolvedGrants`, validated against the catalog, once custom roles are wired (supersedes A-6/P-1). FKs are `ON DELETE RESTRICT`, so a capability, role or set in use cannot be removed.
 - **`sessions` (28 October 2026, D-033):** the server-side session security.md requires. The access token proves identity; a `sessions` row, keyed by the token's `jti`, is what the API can expire (staff 12 h / client 30 d idle, from `configurations`) and revoke (on sign-out or a role or membership change). Added here because the original model left it to the identity service, which cannot revoke on an AMPM role change.
 - **Client-login cap (28 October 2026, feature 5.3):** the Q5 "two client logins per wedding, one per side" rule is enforced at the database by a partial unique index on `project_members (project_id, client_side)` where `deleted_at IS NULL AND status <> 'removed' AND client_side IS NOT NULL` (raw migration; partial indexes are not expressible in the Prisma schema). The service also pre-checks it for a friendly error, but the index is the race-safe backstop. Staff memberships (`client_side` NULL) are unconstrained.

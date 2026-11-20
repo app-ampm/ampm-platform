@@ -92,10 +92,16 @@ async function precheck(
       reason: "a Super Admin is already active; invite further staff from the app",
     };
   }
-  const existing = await tx.user.findFirst({
-    where: { email: { equals: email, mode: "insensitive" }, deletedAt: null },
-    select: { id: true, status: true, userType: true },
-  });
+  // An exact lower() match: Prisma's case-insensitive equals compiles to ILIKE, where `_` and `%` in
+  // the email would be wildcards (D-142 security review).
+  const [match] = await tx.$queryRaw<{ id: string }[]>`
+    SELECT id FROM users WHERE lower(email) = lower(${email}) AND deleted_at IS NULL LIMIT 1`;
+  const existing = match
+    ? await tx.user.findUnique({
+        where: { id: match.id },
+        select: { id: true, status: true, userType: true },
+      })
+    : null;
   if (!existing) return { kind: "ok" };
   if (existing.status !== "invited" || existing.userType !== "staff") {
     return {

@@ -57,6 +57,12 @@ class FakeSessionRepository extends SessionRepository {
       if (row.id === id) this.byToken.set(key, { ...row, lastSeenAt: at });
     }
   }
+  async revokeToken(tokenId: string, _reason: string, at: Date): Promise<string | null> {
+    const row = this.byToken.get(tokenId);
+    if (!row || row.revokedAt) return null;
+    this.byToken.set(tokenId, { ...row, revokedAt: at });
+    return row.id;
+  }
   async revokeAllForUser(userId: string, _reason: string, at: Date): Promise<string[]> {
     const ids: string[] = [];
     for (const [key, row] of this.byToken) {
@@ -87,6 +93,9 @@ class RaceLoserRepository extends SessionRepository {
   async touchLastSeen(): Promise<void> {
     this.touched = true;
   }
+  async revokeToken(): Promise<string | null> {
+    return null;
+  }
   async revokeAllForUser(): Promise<string[]> {
     return [];
   }
@@ -107,6 +116,9 @@ class ForeignRepository extends SessionRepository {
     throw new Error("openSession should not be reached");
   }
   async touchLastSeen(): Promise<void> {}
+  async revokeToken(): Promise<string | null> {
+    return null;
+  }
   async revokeAllForUser(): Promise<string[]> {
     return [];
   }

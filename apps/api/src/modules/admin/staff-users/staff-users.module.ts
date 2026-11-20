@@ -3,6 +3,10 @@ import { Module } from "@nestjs/common";
 import { IdentityModule } from "../../../identity/identity.module.js";
 import { PolicyModule } from "../../../policy/policy.module.js";
 import { NotificationModule } from "../notification/notification.module.js";
+import {
+  StaffAuthenticatorRepository,
+  StaffAuthenticatorService,
+} from "./staff-authenticator.service.js";
 import { StaffUsersController } from "./staff-users.controller.js";
 import { PrismaStaffUsersRepository, StaffUsersRepository } from "./staff-users.repository.js";
 import { StaffUsersService } from "./staff-users.service.js";
@@ -17,6 +21,8 @@ import { StaffUsersService } from "./staff-users.service.js";
   providers: [
     { provide: StaffUsersRepository, useClass: PrismaStaffUsersRepository },
     StaffUsersService,
+    StaffAuthenticatorRepository,
+    StaffAuthenticatorService,
   ],
 })
 export class StaffUsersModule {}

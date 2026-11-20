@@ -20,7 +20,7 @@ DIR="${AMPM_PROD_SECRETS:-/var/www/vhosts/app.ampmverse.com/ampm-prod-secrets}"
 
 REQUIRED_postgres="POSTGRES_USER POSTGRES_DB POSTGRES_PASSWORD PGPASSWORD DATABASE_URL PGBACKREST_REPO1_CIPHER_PASS"
 REQUIRED_redis="REDIS_PASSWORD"
-REQUIRED_app="DATABASE_URL REDIS_URL MEDIA_SIGNING_SECRET SMTP_USER SMTP_PASSWORD EMAIL_FROM BOT_CHECK_SECRET RAZORPAY_KEY_ID RAZORPAY_KEY_SECRET RAZORPAY_WEBHOOK_SECRET"
+REQUIRED_app="DATABASE_URL REDIS_URL MEDIA_SIGNING_SECRET AUTH_TOKEN_SECRET AUTH_ENCRYPTION_KEY SMTP_USER SMTP_PASSWORD EMAIL_FROM BOT_CHECK_SECRET RAZORPAY_KEY_ID RAZORPAY_KEY_SECRET RAZORPAY_WEBHOOK_SECRET"
 
 die() {
   echo "prod-secrets: $*" >&2
@@ -113,6 +113,10 @@ cmd_init() {
   ensure "$app" DATABASE_URL "postgresql://ampm:${pw}@postgres:5432/ampm"
   ensure "$app" REDIS_URL "redis://:${rpw}@redis:6379"
   ensure "$app" MEDIA_SIGNING_SECRET "$(random_secret)"
+  # AMPM's own sign-in (D-142): the token-signing secret (rotating it signs everyone out) and the key
+  # that encrypts the staff authenticator secrets (changing it makes every authenticator unreadable).
+  ensure "$app" AUTH_TOKEN_SECRET "$(random_secret)"
+  ensure "$app" AUTH_ENCRYPTION_KEY "$(openssl rand -base64 32 | tr -d '\n')"
   # No Razorpay webhook is registered yet (checkout callbacks activate); replace this with the
   # dashboard's webhook secret when the webhook is added.
   ensure "$app" RAZORPAY_WEBHOOK_SECRET "$(random_secret)"

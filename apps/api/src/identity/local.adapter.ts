@@ -6,24 +6,37 @@ import { SignJWT, jwtVerify } from "jose";
 import type { IdentityAdapter, VerifiedIdentity } from "./identity.types.js";
 
 export const LOCAL_ISSUER = "ampm-local";
+/** The issuer of the tokens AMPM's own sign-in mints in production (D-142). */
+export const AMPM_ISSUER = "ampm";
+
+/** Which provider a token signer speaks for: the development one, or AMPM's own sign-in. */
+export interface TokenSignerOptions {
+  readonly issuer?: string;
+  readonly provider?: "local" | "ampm";
+}
 
 /**
- * Development and tests only (refused in production by env.ts): HS256 tokens carrying the same shape
- * of claims as a Cognito access token (`sub`, `jti`, `email`), minted by `pnpm --filter api dev:token`.
- * A minted email is trusted as verified — there is no `email_verified` gate as in the Cognito adapter
- * (D-041), so that gate is covered by cognito.adapter.contract.spec.ts, not by the local e2e path.
+ * HS256 access tokens the API mints and verifies itself, with the same claims a Cognito access token
+ * carries (`sub`, `jti`, `email`). Two uses: the development provider (issuer `ampm-local`, minted by
+ * dev sign-in and `pnpm --filter api dev:token`, refused in production by env.ts), and AMPM's own
+ * production sign-in (issuer `ampm`, minted only after a password and an authenticator code, D-142).
+ * A minted email is trusted as verified: the API itself checked who the user is before minting.
  */
 export class LocalIdentityAdapter implements IdentityAdapter {
   private readonly key: Uint8Array;
+  private readonly issuer: string;
+  private readonly provider: "local" | "ampm";
 
-  constructor(secret: string) {
+  constructor(secret: string, options: TokenSignerOptions = {}) {
     this.key = new TextEncoder().encode(secret);
+    this.issuer = options.issuer ?? LOCAL_ISSUER;
+    this.provider = options.provider ?? "local";
   }
 
   async verifyAccessToken(token: string): Promise<VerifiedIdentity> {
     try {
       const { payload } = await jwtVerify(token, this.key, {
-        issuer: LOCAL_ISSUER,
+        issuer: this.issuer,
         algorithms: ["HS256"],
       });
       if (payload.token_use !== "access" || typeof payload.sub !== "string")
@@ -34,7 +47,7 @@ export class LocalIdentityAdapter implements IdentityAdapter {
       if (typeof payload.exp !== "number") throw new Error("no token expiry");
       return {
         subject: payload.sub,
-        provider: "local",
+        provider: this.provider,
         tokenId: payload.jti,
         expiresAt: new Date(payload.exp * 1000),
         email: typeof payload.email === "string" ? payload.email : null,
@@ -52,7 +65,7 @@ export class LocalIdentityAdapter implements IdentityAdapter {
   ): Promise<string> {
     return new SignJWT({ token_use: "access", ...(options.email ? { email: options.email } : {}) })
       .setProtectedHeader({ alg: "HS256" })
-      .setIssuer(LOCAL_ISSUER)
+      .setIssuer(this.issuer)
       .setSubject(subject)
       .setJti(options.jti ?? randomUUID())
       .setIssuedAt()

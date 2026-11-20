@@ -21,11 +21,9 @@ name: ampm
 
 # Non-secret production settings for the api and the worker (secrets come from app.env).
 x-prod-env: &prod-env
-  IDENTITY_PROVIDER: cognito
-  COGNITO_REGION: ap-south-1
-  # The pool and the public app client (cognito-setup.md); identifiers, not secrets.
-  COGNITO_USER_POOL_ID: ap-south-1_wcaro5oAK
-  COGNITO_CLIENT_ID: 5n6agn2iipgt93i5b2okto2ftv
+  # AMPM's own sign-in (D-142): staff password + authenticator code, checked and minted by the API.
+  # AUTH_TOKEN_SECRET and AUTH_ENCRYPTION_KEY come from app.env.
+  IDENTITY_PROVIDER: ampm
   WEB_APP_URL: https://app.ampmverse.com
   # The client portal (app.) and the website's enquiry form (site.) call the API from the browser.
   CORS_ORIGINS: https://app.ampmverse.com,https://site.ampmverse.com

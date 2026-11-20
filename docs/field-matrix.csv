@@ -5,9 +5,20 @@ A,users,Account setup,name,string,,,"string, up to 255 characters",SA; SM and PM
 A,users,Account setup,email,string,UK,,"valid email address, stored lowercase; unique",SA; SM and PM (a) for client logins,INTERNAL,At creation,Invite or activation email on creation,"A-13 (Q13), P-6 (Q13)"
 A,users,Account setup,phone,string,,,"E.164 format, default +91; required when OTP is enabled",SA; SM and PM (a) for client logins,INTERNAL,Optional,—,"A-13 (Q13), P-6 (Q13)"
 A,users,Account setup,status,string,,"invited, active, disabled, locked",one of the listed options,SA; SM and PM (a) for client logins,INTERNAL,At creation,disabled or locked refuses sign-in at once and revokes sessions,"A-13 (Q13), P-6 (Q13)"
-A,users,Account setup,identity_subject,string,UK,,"string, up to 255 characters; the identity service's subject (Cognito sub, T-6); null until activated",SA; SM and PM (a) for client logins,INTERNAL,Optional,—,"A-13 (Q13), P-6 (Q13)"
-A,users,Account setup,mfa_enabled,bool,,,"true or false; mandatory true for staff (A-13); enforced by the identity service, mirrored here",SYS; must be true for staff before first sign-in,INTERNAL,At creation for staff,—,"A-13 (Q13), P-6 (Q13)"
+A,users,Account setup,identity_subject,string,UK,,"string, up to 255 characters; the token subject: ampm:<id> (D-142); null until activated",SA; SM and PM (a) for client logins,INTERNAL,Optional,—,"A-13 (Q13), P-6 (Q13)"
+A,users,Account setup,mfa_enabled,bool,,,true or false; mandatory true for staff (A-13); set when the authenticator is confirmed,SYS; must be true for staff before first sign-in,INTERNAL,At creation for staff,—,"A-13 (Q13), P-6 (Q13)"
 A,users,Account setup,last_login_at,datetime,,,timestamp (UTC),SYS,INTERNAL,System,Inactive accounts reported for review,"A-13 (Q13), P-6 (Q13)"
+A,users,Account setup,password_hash,string,,,Argon2id PHC string; 12 to 128 character passwords,SYS,SECRET,Optional,—,"A-13 (Q13), P-6 (Q13)"
+A,users,Account setup,password_changed_at,datetime,,,timestamp (UTC),SYS (when the action happens),INTERNAL,System,—,"A-13 (Q13), P-6 (Q13)"
+A,users,Account setup,totp_secret_enc,string,,,AES-256-GCM under AUTH_ENCRYPTION_KEY,SYS,SECRET,Optional,—,"A-13 (Q13), P-6 (Q13)"
+A,users,Account setup,totp_pending_enc,string,,,"string, up to 255 characters; SECRET; a secret shown for enrolment, not yet confirmed",SYS,SECRET,Optional,Cleared when the authenticator is confirmed,"A-13 (Q13), P-6 (Q13)"
+A,users,Account setup,totp_confirmed_at,datetime,,,timestamp (UTC),SYS (when the action happens),INTERNAL,System,—,"A-13 (Q13), P-6 (Q13)"
+A,users,Account setup,totp_last_step,int,,,"integer, 0 or more; the step of the last accepted code; never accepted twice",SA; SM and PM (a) for client logins,INTERNAL,Optional,—,"A-13 (Q13), P-6 (Q13)"
+A,users,Account setup,failed_codes,int,,,"integer, 0 or more; consecutive wrong authenticator or recovery codes; twenty lock the account",SYS,INTERNAL,Optional,Twenty wrong codes in a row lock the account; only a correct code clears it,"A-13 (Q13), P-6 (Q13)"
+A,user_recovery_codes,System,id,uuid,PK,,"UUID v7, generated",SYS,INTERNAL,System,—,"A-13 (Q13), D-142"
+A,user_recovery_codes,System,user_id,uuid,FK,,references see data model,SYS,INTERNAL,At creation,—,"A-13 (Q13), D-142"
+A,user_recovery_codes,System,code_hash,string,,,HMAC-SHA256 of the normalised code; ten issued when the authenticator is confirmed,SYS,SECRET,At creation,—,"A-13 (Q13), D-142"
+A,user_recovery_codes,System,used_at,datetime,,,timestamp (UTC),SYS (when the action happens),INTERNAL,System,Single use; a used code is refused,"A-13 (Q13), D-142"
 A,roles,Configuration,id,uuid,PK,,"UUID v7, generated",SYS,INTERNAL,System,—,
 A,roles,Configuration,role_key,string,UK,,"lowercase snake_case; unique; super_admin, sales, hotel_team, project_manager, creative, vendor_coordinator, rsvp_team, hospitality, finance",SA,INTERNAL,At creation,—,
 A,roles,Configuration,name,string,,,"string, up to 255 characters",SA,INTERNAL,At creation,—,
@@ -56,10 +67,11 @@ A,project_members,Project setup,invited_at,datetime,,,timestamp (UTC),SYS (when 
 A,project_members,Project setup,accepted_at,datetime,,,timestamp (UTC),SYS (when the action happens),CLIENT,System,—,"A-5 (Q5), P-2 (Q5)"
 A,auth_tokens,System,id,uuid,PK,,"UUID v7, generated",SYS,INTERNAL,System,—,A-13 (Q13)
 A,auth_tokens,System,user_id,uuid,FK,,references see data model,SYS,INTERNAL,At creation,—,A-13 (Q13)
-A,auth_tokens,System,purpose,string,,"invite, password_reset, otp, magic_link",one of the listed options,SYS,INTERNAL,At creation,—,A-13 (Q13)
+A,auth_tokens,System,purpose,string,,"invite, password_reset, otp, magic_link, sign_in_challenge",one of the listed options,SYS,INTERNAL,At creation,—,A-13 (Q13)
 A,auth_tokens,System,token_hash,string,,,"string, up to 255 characters",SYS,SECRET,At creation,—,A-13 (Q13)
 A,auth_tokens,System,expires_at,datetime,,,invite 7 days; password reset 1 hour; OTP 10 minutes,SYS,INTERNAL,System,Refused after expiry,A-13 (Q13)
 A,auth_tokens,System,used_at,datetime,,,timestamp (UTC),SYS (when the action happens),INTERNAL,System,Single use; a used token is refused,A-13 (Q13)
+A,auth_tokens,System,attempts,int,,,"integer, 0 or more; wrong answers against a sign-in challenge; five burn it",SYS,INTERNAL,Optional,—,A-13 (Q13)
 A,notifications,System,id,uuid,PK,,"UUID v7, generated",SYS,Recipient only,System,—,A-11 (Q11)
 A,notifications,System,recipient_type,string,,"user, guest",one of the listed options,SYS,Recipient only,At creation,—,A-11 (Q11)
 A,notifications,System,recipient_id,uuid,,,UUID,SYS,Recipient only,At creation,—,A-11 (Q11)

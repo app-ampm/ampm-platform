@@ -1,4 +1,4 @@
-import { Controller, Delete, Get, Patch, Post } from "@nestjs/common";
+import { Controller, Delete, Get, HttpCode, Patch, Post } from "@nestjs/common";
 import {
   staffUserCreateRequest,
   staffUserQuery,
@@ -17,6 +17,7 @@ import { z } from "zod";
 import { ZodBody, ZodParams, ZodQuery } from "../../../common/zod.js";
 import { CurrentPrincipal, RequirePermission, SelfAudited } from "../../../policy/decorators.js";
 import type { Principal } from "../../../policy/principal.types.js";
+import { StaffAuthenticatorService } from "./staff-authenticator.service.js";
 import { StaffUsersService } from "./staff-users.service.js";
 
 const idParam = z.object({ id: uuid });
@@ -33,7 +34,10 @@ function staffId(principal: Principal): string {
  */
 @Controller("admin")
 export class StaffUsersController {
-  constructor(private readonly users: StaffUsersService) {}
+  constructor(
+    private readonly users: StaffUsersService,
+    private readonly authenticators: StaffAuthenticatorService,
+  ) {}
 
   @Get("staff-users")
   @RequirePermission("admin.staff_users.read")
@@ -84,6 +88,15 @@ export class StaffUsersController {
   @SelfAudited()
   reinvite(@ZodParams(idParam) params: { id: string }): Promise<StaffUserView> {
     return this.users.reinvite(params.id);
+  }
+
+  /** Clears the account's authenticator and recovery codes and signs it out (D-142, a lost phone). */
+  @Post("staff-users/:id/reset-authenticator")
+  @RequirePermission("admin.staff_users.update")
+  @HttpCode(200)
+  @SelfAudited()
+  resetAuthenticator(@ZodParams(idParam) params: { id: string }): Promise<StaffUserView> {
+    return this.authenticators.reset(params.id);
   }
 
   @Delete("staff-users/:id")

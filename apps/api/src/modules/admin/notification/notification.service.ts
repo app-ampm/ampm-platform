@@ -1,5 +1,6 @@
 import { Inject, Injectable, type OnModuleInit } from "@nestjs/common";
 import {
+  CONFIG_REGISTRY,
   errors,
   notificationView,
   page,
@@ -234,7 +235,10 @@ export class NotificationService implements OnModuleInit {
     data: unknown,
   ): Promise<RenderedContent | null> {
     const templates = await this.config.get("notification.templates");
-    const template = templates[templateKey];
+    // A template added in code after a database was seeded is not in its stored copy yet (the seed never
+    // overwrites a value the Super Admin may have edited), so fall back to the code default for that key.
+    const template =
+      templates[templateKey] ?? CONFIG_REGISTRY["notification.templates"].default[templateKey];
     const rendered = template
       ? renderTemplate(template, channel, renderVariables.catch({}).parse(data))
       : null;

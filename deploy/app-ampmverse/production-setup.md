@@ -4,15 +4,15 @@ Production runs on the current VPS (31.97.62.74, Hostinger India, Mumbai), besid
 
 ## 1. What runs where
 
-|                     | Production                                                                   | Test (demos, dev sign-in, synthetic data)                                     |
-| ------------------- | ---------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
-| Portal              | https://app.ampmverse.com (`httpdocs/`)                                      | https://test-app.ampmverse.com                                                |
-| Website             | https://site.ampmverse.com                                                   | https://test-site.ampmverse.com                                               |
-| Compose project     | `ampm`: `infra/compose/production/compose.yml` + `compose.box.yml`           | `ampm-local`: `infra/compose/local/compose.yml` + `compose.test-override.yml` |
-| Source on the box   | `/var/www/vhosts/app.ampmverse.com/ampm-prod`                                | `/var/www/vhosts/app.ampmverse.com/ampm-test`                                 |
-| API / website ports | 127.0.0.1:7101 / 7102                                                        | 127.0.0.1:7001 / 7002                                                         |
-| Sign-in             | Amazon Cognito (staff today; clients once mobile OTP exists)                 | dev sign-in behind the password                                               |
-| Deploy              | `deploy/redeploy-prod.sh`, `AMPM_WEB_TARGET=production deploy/deploy-web.sh` | `deploy/redeploy-box.sh`, `AMPM_WEB_TARGET=test deploy/deploy-web.sh`         |
+|                     | Production                                                                              | Test (demos, dev sign-in, synthetic data)                                     |
+| ------------------- | --------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| Portal              | https://app.ampmverse.com (`httpdocs/`)                                                 | https://test-app.ampmverse.com                                                |
+| Website             | https://site.ampmverse.com                                                              | https://test-site.ampmverse.com                                               |
+| Compose project     | `ampm`: `infra/compose/production/compose.yml` + `compose.box.yml`                      | `ampm-local`: `infra/compose/local/compose.yml` + `compose.test-override.yml` |
+| Source on the box   | `/var/www/vhosts/app.ampmverse.com/ampm-prod`                                           | `/var/www/vhosts/app.ampmverse.com/ampm-test`                                 |
+| API / website ports | 127.0.0.1:7101 / 7102                                                                   | 127.0.0.1:7001 / 7002                                                         |
+| Sign-in             | AMPM's own (D-142): staff password + authenticator code; clients once mobile OTP exists | dev sign-in behind the password                                               |
+| Deploy              | `deploy/redeploy-prod.sh`, `AMPM_WEB_TARGET=production deploy/deploy-web.sh`            | `deploy/redeploy-box.sh`, `AMPM_WEB_TARGET=test deploy/deploy-web.sh`         |
 
 Both stacks sit behind Plesk: nginx terminates TLS, Apache applies each docroot's `.htaccess` (the reverse proxy, the security headers, the password curtain) and proxies to the loopback ports. Caddy does not run here. The production docroots use [`htaccess.production.example`](htaccess.production.example) and [`../site-ampmverse/htaccess.production.example`](../site-ampmverse/htaccess.production.example).
 
@@ -49,7 +49,7 @@ Never run `docker compose … config` unfiltered on the box: it prints the env f
 5. `bash ~/ampm-prod/deploy/redeploy-prod.sh`: builds, starts the data tier, takes a full backup on first start (the pgBackRest scheduler), migrates, starts the API, worker and website, and gates on `/health`.
 6. Reference data and the first Super Admin, in a one-off container of the app image (so it works before the API can boot), with the link going straight into a private file:
    `docker compose -f … -f … --profile migrate run --rm -T migrate node --import tsx prisma/bootstrap.ts --super-admin-email <email> --super-admin-name "<name>" > ~/ampm-prod-secrets/first-admin-link.txt`
-   The Super Admin's Cognito user must exist with that email verified (cognito-setup.md). They sign in on app.ampmverse.com, enrol TOTP and open the link, which links their Cognito account (D-041). Later staff are invited from the app.
+   They open the link (it works once, for 7 days), choose a password, scan the authenticator QR code, confirm its first code and save the ten recovery codes; the account is then active (D-142). Later staff are invited from the app, and a lost phone is an administrator's **Reset authenticator**.
 7. Web: copy the two production `.htaccess` files into place, then `AMPM_WEB_TARGET=production WEB_SSH=<box> WEB_SSH_KEY=~/.ssh/ampm_test_vps bash deploy/deploy-web.sh` (add `AMPM_WEB_RETARGET=1` the first time, when `httpdocs` still carries the test marker).
 
 ## 4. Deploying a change

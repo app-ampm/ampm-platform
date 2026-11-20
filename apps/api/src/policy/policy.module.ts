@@ -42,6 +42,7 @@ import { SessionService } from "./session.service.js";
     { provide: APP_GUARD, useClass: RateLimitGuard },
     { provide: APP_GUARD, useClass: PermissionGuard },
   ],
-  exports: [PrincipalService, PrincipalRepository, SessionService],
+  // RateLimitStore also backs the sign-in throttle per email and client network (D-142).
+  exports: [PrincipalService, PrincipalRepository, SessionService, RateLimitStore],
 })
 export class PolicyModule {}
