@@ -10,6 +10,7 @@ import { AuditLogModule } from "./modules/admin/audit-log/audit-log.module.js";
 import { ClientLoginsModule } from "./modules/admin/client-logins/client-logins.module.js";
 import { ConfigModule } from "./modules/admin/config/config.module.js";
 import { NotificationModule } from "./modules/admin/notification/notification.module.js";
+import { PartitionsModule } from "./modules/admin/partitions/partitions.module.js";
 import { ConsultancyModule } from "./modules/consultancy/consultancy.module.js";
 import { CrmModule } from "./modules/crm/crm.module.js";
 import { ServiceAgreementsModule } from "./modules/crm/service-agreements/service-agreements.module.js";
@@ -43,6 +44,7 @@ import { PolicyModule } from "./policy/policy.module.js";
     RolesModule,
     PermissionSetsModule,
     AuditLogModule,
+    PartitionsModule,
     StaffUsersModule,
     ClientLoginsModule,
     CrmModule,

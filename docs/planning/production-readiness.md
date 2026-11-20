@@ -64,7 +64,12 @@ Security and operations
 - [ ] **A real antivirus scan.** `StubAvScanner` is wired on every upload path and only detects the EICAR test string; local production media is now allowed (D-106). Add a ClamAV adapter and refuse the stub in production.
 - [ ] Enforce the portal CSP (switch Report-Only to enforcing once the console is clean in the live app).
 - [ ] Error tracking (Sentry is listed in the secrets but read nowhere in the code), an external uptime monitor, and an API `/metrics` endpoint so the monitoring profile can start. Then the alert route.
-- [ ] Log-table partitions end in January 2027 (`audit_events`, `notifications`), and no roll-forward job exists yet. Without one, rows land in the DEFAULT partition from February 2027.
+- [x] ~~Log-table partitions end in January 2027 (`audit_events`, `notifications`), and no roll-forward job exists yet. Without one, rows land in the DEFAULT partition from February 2027.~~ Done on 20 Nov 2026 (D-150, data-model §3 "Partition maintenance").
+  - Migration `20261120133309_partition_audit_notifications_2027` adds February to December 2027.
+  - The daily worker job `admin.partitions.maintain` keeps the current month and the six after it, recording each run on `job_runs`.
+  - If the DEFAULT partition already holds rows of a month, the job leaves that month uncreated, records the run as failed and logs an error. The fix is written in the data model.
+  - Production was checked read-only on 20 Nov 2026: it runs in UTC and both DEFAULT partitions are empty.
+  - **Takes effect with the next normal production deploy**, which runs the migration before the new API and worker.
 - [ ] Off-box backups (D-139): S3 Mumbai (about ₹50–100 a month, needs approval under the ₹0-AWS rule), DigitalOcean Spaces Bangalore, or a second India machine. A first monthly restore rehearsal, recorded in the vault.
 - [ ] **Tokens in link query strings reach the Plesk access logs** (D-142 security review, low): activation `?token=`, reset links, document and media links. Move them to the URL fragment (`#token=`), and shorten the staff invitation lifetime (7 days today). Under AMPM's own sign-in, an invitation link alone sets the password and the authenticator.
 - [ ] Remove the sprint-2 `SpikeModule` (in-memory field notes) and the `/gallery` and `/field-notes` portal routes from production builds.

@@ -342,6 +342,22 @@ Notes:
 - **`sessions` (28 October 2026, D-033):** the server-side session security.md requires. The access token proves identity; a `sessions` row, keyed by the token's `jti`, is what the API can expire (staff 12 h / client 30 d idle, from `configurations`) and revoke (on sign-out or a role or membership change). Added here because the original model left it to the identity service, which cannot revoke on an AMPM role change.
 - **Client-login cap (28 October 2026, feature 5.3):** the Q5 "two client logins per wedding, one per side" rule is enforced at the database by a partial unique index on `project_members (project_id, client_side)` where `deleted_at IS NULL AND status <> 'removed' AND client_side IS NOT NULL` (raw migration; partial indexes are not expressible in the Prisma schema). The service also pre-checks it for a friendly error, but the index is the race-safe backstop. Staff memberships (`client_side` NULL) are unconstrained.
 - **`job_runs` (29 October 2026, feature 5.5):** the recorded outcome api.md requires for a background job — the session reaper only logs. Append-only: one row per run with its `job_name`, `idempotency_key`, `status`, a `detail_json` of per-table counts and a sanitised `error`. The nightly demo-restore job writes one; other scheduled jobs reuse it. No soft-delete columns (operational, like `sessions`). Not partitioned yet — volume is a handful of rows a day; revisit with the other operational tables if it grows.
+- **Partition maintenance (20 November 2026, D-150):** `audit_events` (on `occurred_at`) and `notifications` (on `created_at`) have one partition per UTC month, named `<table>_YYYY_MM`, plus a `<table>_default` partition for anything outside them. The partition migrations create October 2026 to December 2027 (`20261028050928_partition_audit_notifications`, then `20261120133309_partition_audit_notifications_2027`).
+  - **The job.** From then on the worker job `admin.partitions.maintain` (`apps/api/src/modules/admin/partitions/`) keeps the current month and the six after it in place. It runs daily at 02:30 UTC and records each run on `job_runs`. It creates a missing month with the migrations' own statement, `CREATE TABLE … PARTITION OF … FOR VALUES FROM ('YYYY-MM-01 00:00:00+00') TO (…)`, so the partition inherits the parent's primary key, indexes and foreign key.
+  - **Idempotent.** The catalog read takes no lock, so a run with nothing to create (every run until 1 July 2027, when January 2028 enters the window) changes nothing. A create takes the parent's lock first, gives up after 5 seconds rather than queue the table's traffic behind it, and checks again under the lock.
+  - **Rows stranded in DEFAULT.** The job never creates a month whose rows already sit in DEFAULT: PostgreSQL would refuse, and the rows need a person to look at them. It still creates the other months. The run is recorded `failed` with the partition and its row count, an `admin.partition_blocked` error is logged, and the job throws, so BullMQ retries it and then dead-letters it.
+  - **Moving the rows.** To clear it, move the month's rows in one transaction (shown for `notifications`, February 2027; `audit_events` is the same on `occurred_at`). The next run then finds the month in place:
+    ```sql
+    BEGIN;
+    SET LOCAL lock_timeout = '5s';
+    ALTER TABLE notifications DETACH PARTITION notifications_default;
+    CREATE TABLE "notifications_2027_02" PARTITION OF "notifications" FOR VALUES FROM ('2027-02-01 00:00:00+00') TO ('2027-03-01 00:00:00+00');
+    INSERT INTO notifications SELECT * FROM notifications_default WHERE created_at >= '2027-02-01 00:00:00+00' AND created_at < '2027-03-01 00:00:00+00';
+    DELETE FROM notifications_default WHERE created_at >= '2027-02-01 00:00:00+00' AND created_at < '2027-03-01 00:00:00+00';
+    ALTER TABLE notifications ATTACH PARTITION notifications_default DEFAULT;
+    COMMIT;
+    ```
+  - **Never dropped.** Partitions are never dropped; deleting old log rows stays a retention proposal for a Super Admin to approve (§1).
 
 ---
 
@@ -2198,4 +2214,4 @@ These are design choices a reviewer should confirm; each has a default in the dr
 4. **Comments table scope.** One polymorphic `comments` table serves designs, proposals, menus, requests, tasks, incidents and enquiries. Splitting it per entity is cleaner for indexing but multiplies code; the draft keeps one table with a type check constraint.
 5. **Demo hotels.** Demo accounts see real hotels flagged `demo_visible` with rate items masked. If AMPM prefers invented sample hotels, seed them as `hotels` rows with `status = inactive` and `demo_visible = true` (A-28).
 6. **Audit granularity.** Restricted-field reads are audited for identity documents and internal cost. Auditing every read of every restricted field is possible but noisy; confirm the list in permission matrix §9.
-7. **Partitioning.** `audit_events` and `notifications` are partitioned monthly from day one; `guest_function_attendance` is indexed by project and function. Revisit if volumes exceed A-15.
+7. **Partitioning.** `audit_events` and `notifications` are partitioned monthly from day one, and a daily job keeps the coming six months' partitions in place (§3, partition maintenance); `guest_function_attendance` is indexed by project and function. Revisit if volumes exceed A-15.
