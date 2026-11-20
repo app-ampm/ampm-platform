@@ -10,6 +10,11 @@ export interface NotificationDelivery {
   readonly templateKey: string;
   /** The rendered, per-channel content (feature 5.2); the live adapter sends it, the stub ignores it. */
   readonly content: RenderedContent;
+  /**
+   * The values the template was rendered with, for a provider that sends a registered template and its
+   * values instead of the text (an Indian SMS under DLT, D-147). Never logged: they may hold a code.
+   */
+  readonly variables: Readonly<Record<string, string>>;
 }
 
 export interface NotificationResult {

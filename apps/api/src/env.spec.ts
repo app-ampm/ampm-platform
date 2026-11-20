@@ -22,6 +22,10 @@ const prodValid = {
   RAZORPAY_KEY_SECRET: "rzp-key-secret",
   RAZORPAY_WEBHOOK_SECRET: "rzp-webhook-secret",
   STORAGE_PROVIDER: "s3",
+  SMS_PROVIDER: "2factor",
+  SMS_API_KEY: "sms-api-key",
+  SMS_OTP_TEMPLATE: "1707000000000000001",
+  SMS_SENDER_ID: "AMPMVS",
 };
 
 describe("loadEnv", () => {
@@ -205,5 +209,39 @@ describe("loadEnv: AMPM's own sign-in (D-142)", () => {
     expect(() =>
       loadEnv({ ...ampm, IDENTITY_PROVIDER: "local", IDENTITY_LOCAL_SECRET: "l".repeat(40) }),
     ).toThrow(/IDENTITY_PROVIDER/);
+  });
+});
+
+describe("loadEnv: SMS and the on-screen client code (D-147)", () => {
+  it("defaults to the console stub with the code kept off screen", () => {
+    const env = loadEnv({
+      DATABASE_URL: "postgres://localhost:5432/ampm",
+      IDENTITY_PROVIDER: "local",
+      IDENTITY_LOCAL_SECRET: "a-development-secret-that-is-32chars",
+    });
+    expect(env.SMS_PROVIDER).toBe("console");
+    expect(env.CLIENT_OTP_SCREEN_ECHO).toBe(false);
+  });
+
+  it("refuses production with no SMS provider unless the code is shown on screen", () => {
+    const consoleSms = { ...prodValid, SMS_PROVIDER: "console" };
+    expect(() => loadEnv(consoleSms)).toThrow(/SMS_PROVIDER/);
+    expect(loadEnv({ ...consoleSms, CLIENT_OTP_SCREEN_ECHO: "true" }).CLIENT_OTP_SCREEN_ECHO).toBe(
+      true,
+    );
+  });
+
+  it("needs a provider's key and its sign-in code template", () => {
+    const { SMS_API_KEY: _key, ...withoutKey } = prodValid;
+    expect(() => loadEnv(withoutKey)).toThrow(/SMS_API_KEY/);
+    const { SMS_OTP_TEMPLATE: _template, ...withoutTemplate } = prodValid;
+    expect(() => loadEnv(withoutTemplate)).toThrow(/SMS_OTP_TEMPLATE/);
+    expect(loadEnv({ ...prodValid, SMS_PROVIDER: "msg91" }).SMS_PROVIDER).toBe("msg91");
+  });
+
+  it("needs the DLT sender ID with 2Factor, which takes it on every message", () => {
+    const { SMS_SENDER_ID: _sender, ...withoutSender } = prodValid;
+    expect(() => loadEnv(withoutSender)).toThrow(/SMS_SENDER_ID/);
+    expect(loadEnv({ ...withoutSender, SMS_PROVIDER: "msg91" }).SMS_PROVIDER).toBe("msg91");
   });
 });

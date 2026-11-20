@@ -1,6 +1,7 @@
 import { Button, Callout, Input, SegmentedControl, Stack, Text } from "@ampm/ui";
 
-import { ClientCodeStep } from "./client-code-step";
+import { ClientCodeStep, displayMobile } from "./client-code-step";
+import { MobileNumberField } from "./mobile-number-field";
 import { useClientAccess, type ClientAccess, type ClientAccessMode } from "./use-client-access";
 
 const ACCESS_TABS = [
@@ -59,17 +60,12 @@ function AccessHeading({ mode }: { readonly mode: ClientAccessMode }) {
   );
 }
 
-/** The mobile, with the +91 the schema assumes for ten digits; errors without a way out sit under it. */
+/** The mobile; errors without a way out sit under it, the others in the switch prompt. */
 function MobileField({ access }: { readonly access: ClientAccess }) {
   return (
-    <Input
-      label="Mobile number"
-      prefix="+91"
+    <MobileNumberField
       value={access.phone}
       onChangeText={access.setPhone}
-      placeholder="98765 43210"
-      keyboardType="phone-pad"
-      autoComplete="tel"
       errorText={access.formError?.switchTo ? undefined : access.formError?.text}
       onSubmitEditing={access.submit}
     />
@@ -111,11 +107,24 @@ function AccessForm({ access }: { readonly access: ClientAccess }) {
  * The client card (demo only): a Sign in / Sign up switch over the tab's form, then the code step with
  * the one-time code on screen. Sign in takes a mobile AMPM has on file; sign up takes a name, then a
  * mobile, and creates the client. Both run on the dev-only `/auth/dev-login` rails (refused outside a
- * local, non-production config); production signs in through Cognito, where no one signs up. The
- * screen holds the state (`useClientAccess`) so the headline can follow the tab.
+ * local, non-production config); production clients sign in with AMPM's own mobile code
+ * (`ClientSignInCard`, D-147), where no one signs up. The screen holds the state (`useClientAccess`)
+ * so the headline can follow the tab.
  */
 export function ClientAccessCard({ access }: { readonly access: ClientAccess }) {
-  if (access.sent) return <ClientCodeStep access={access} sent={access.sent} />;
+  if (access.sent) {
+    return (
+      <ClientCodeStep
+        step={access}
+        sent={access.sent}
+        delivery="screen"
+        eyebrow={
+          access.mode === "sign-up" ? `Account created for ${access.name.trim()}` : "Signing in"
+        }
+        destination={displayMobile(access.phone)}
+      />
+    );
+  }
   return (
     <Stack gap={4.5}>
       <SegmentedControl

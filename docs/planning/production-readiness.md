@@ -37,7 +37,16 @@ AMPM develops and works on production from now on, behind the password curtain. 
 ## 4. Before pitching clients (go-live blockers)
 
 Identity and access
-- [ ] **Client sign-in by mobile OTP** in AMPM's own sign-in (D-142): an API OTP service (the dev one exists; production needs hashed, rate-limited codes), the SMS transport through a DLT-registered provider (2Factor; registration takes 2–4 weeks, so start it now) and the client sign-in and activation screens. Until then clients, prospects and the demo cannot sign in on production.
+- [ ] **Client sign-in by mobile OTP (D-147, Q13): built on 20 Nov 2026, SMS not wired yet.**
+  - Built: active clients sign in, and invited clients activate, with a six-digit code to the mobile on file. Codes are kept as an HMAC, expire in 5 minutes, and burn after 5 wrong tries. A number is limited to 5 codes an hour and 10 a day, with a 30-second pause between codes. Unknown numbers get the same answer and no SMS. The code goes out through the notification pipeline, and the 2Factor and MSG91 transports are ready.
+  - **Until a provider is wired, production shows each code on screen** (`CLIENT_OTP_SCREEN_ECHO=true`), so anyone who knows a client's mobile can sign in as that client. The client-code routes therefore stay behind the curtain (the portal `.htaccess`), although the rest of `/_api` is outside it.
+  - Left, in this order (runbook, "Wiring SMS"):
+    1. DLT registration (2–4 weeks, so start it now).
+    2. The provider account and its template.
+    3. `SMS_PROVIDER` and the keys.
+    4. A real SMS test.
+    5. **`CLIENT_OTP_SCREEN_ECHO=false` before the curtain comes off.**
+  - Demo prospects (`user_type demo`) still have no production sign-in.
 - [x] ~~Invited staff cannot finish their first sign-in~~: solved by AMPM's own sign-in (D-142); the invitation link sets the password and the authenticator.
 - [ ] Retire Cognito: remove the Cognito adapters, the Amplify screens and the pre-token Lambda, delete the AWS user pool, and update `docs/decisions.json` (Q13/Q14 name Cognito) with the generators.
 
@@ -61,6 +70,8 @@ Security and operations
 - [x] ~~The API and worker outlive Docker's 10-second stop~~ (fixed 20 Nov 2026; live since the 10:46 UTC deploy, after which the production worker stopped in 0.25 s with exit 143). The rate-limit store's Redis client was never closed, and node, PID 1 in the container, ignores the SIGTERM Nest re-raises after its hooks, so it waited on that socket until Docker's SIGKILL (exit 137). The client now closes in `onApplicationShutdown`. Prisma and the job queue close in the same phase, after the HTTP server has drained, so a request in flight keeps the database (before, Prisma reconnected for it and left that pool open). `api` and `worker` run under `init: true` with `stop_grace_period: 30s`; a local `docker compose stop` now ends in about a second (exit 143).
 - [x] ~~Install `openssl` in `infra/docker/Dockerfile`~~ (done 20 Nov 2026 in the build and runtime stages; live since the 10:46 UTC deploy, whose migrate step no longer warned). The image build and `prisma migrate deploy` no longer warn that Prisma cannot detect OpenSSL.
 - [x] ~~Next.js 16.4.3 carries seven moderate advisories~~, published 16–19 Nov 2026 and fixed in 16.4.5: GHSA-mfr8-8qww-v76h, GHSA-vc7v-qv4w-wrv8, GHSA-rhh4-g77r-r9qj, GHSA-vvgp-ww4w-46vf, GHSA-f3mh-rxg3-f5g2, GHSA-pc58-hwjq-p385 and GHSA-7qx7-33qx-rqx2. The website moved to 16.4.6 on 20 Nov. None applied to it as built: it has no `use cache`, cache components, route handlers, cookies or remote image hosts.
+- [ ] The staff sign-in challenge counts a wrong code after comparing it, so authenticator guesses sent at once can exceed its five tries (the race the D-147 review found and fixed for client codes; behind the password, low). Reserve the try first (`claimAttempt`), as client codes do.
+- [ ] Anyone can spend a client number's daily allowance of codes (10), blocking new codes for up to a day (an accepted trade-off of per-number limits, D-147). Consider an administrator's reset of a number's limits.
 - [ ] A security review or penetration test, an accessibility pass and a load profile; then the launch checklist and the R17 go-live decision.
 
 ## 5. The server itself (needs the server owner: AMPM's SSH user has no root)

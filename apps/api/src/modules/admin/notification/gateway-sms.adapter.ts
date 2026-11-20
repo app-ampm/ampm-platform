@@ -17,10 +17,19 @@ import {
  * or network error it throws, and the adapter sanitises that to a non-PII code.
  */
 export interface SmsTransport {
-  sendSms(message: {
-    readonly to: string;
-    readonly text: string;
-  }): Promise<{ readonly providerRef: string }>;
+  sendSms(message: SmsMessage): Promise<{ readonly providerRef: string }>;
+}
+
+/** One SMS for a transport: the number, the rendered text, and what a DLT template needs. */
+export interface SmsMessage {
+  /** E.164, e.g. "+919876543210". */
+  readonly to: string;
+  /** The rendered text, worded exactly as the DLT-registered template (D-147). */
+  readonly text: string;
+  /** The notification's template, which the transport maps to the provider's registered template. */
+  readonly templateKey: string;
+  /** The values the text was rendered with, for a provider that fills its registered template itself. */
+  readonly variables: Readonly<Record<string, string>>;
 }
 
 /**
@@ -46,6 +55,8 @@ export class GatewaySmsAdapter implements NotificationAdapter {
       ({ providerRef } = await this.transport.sendSms({
         to: delivery.address,
         text: delivery.content.text,
+        templateKey: delivery.templateKey,
+        variables: delivery.variables,
       }));
     } catch (error) {
       // The gateway error may echo the recipient number or the OTP text; drop it and keep only a

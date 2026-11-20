@@ -243,6 +243,12 @@ export {
 export { SERVICE_TYPES_QUERY_KEY, useServiceTypes } from "./hooks/use-service-types";
 export { useSignIn, useSignInCode, useSignOut } from "./hooks/use-staff-sign-in";
 export {
+  useClientSignIn,
+  useConfirmClientActivation,
+  useRequestClientCode,
+  useSendClientActivationCode,
+} from "./hooks/use-client-sign-in";
+export {
   useActivationConfirm,
   useActivationPassword,
   useForgotPassword,

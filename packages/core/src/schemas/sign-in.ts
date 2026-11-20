@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { uuid } from "./common.js";
+import { indianPhone } from "./leads.js";
 
 /*
  * AMPM's own staff sign-in (D-142): an email and password, then a six-digit authenticator code (TOTP,
@@ -112,6 +113,44 @@ export type ResetPasswordRequest = z.infer<typeof resetPasswordRequest>;
 export const acknowledged = z.object({ ok: z.literal(true) });
 export type Acknowledged = z.infer<typeof acknowledged>;
 
+/*
+ * Client sign-in by a one-time code sent to the mobile AMPM has on file (D-147). There is no password and
+ * no sign-up: an active client asks for a code and exchanges it for a session; an invited client
+ * activates from the invitation link the same way. The code goes out by SMS. Until an SMS provider is
+ * wired the API may also return it for the screen to show (`screenCode`). A number with no client gets
+ * the same answer, without a code.
+ */
+
+/** Ask for a sign-in code by mobile (normalised to E.164, +91 for ten digits). */
+export const clientCodeRequest = z.object({ phone: indianPhone });
+export type ClientCodeRequest = z.infer<typeof clientCodeRequest>;
+
+/**
+ * A code is on its way: how long it lives, how long until another may be asked for, and, while SMS
+ * delivery is not live yet, the code itself to show on screen.
+ */
+export const clientCodeSent = z.object({
+  expiresInSeconds: z.number().int().positive(),
+  resendAfterSeconds: z.number().int().nonnegative(),
+  screenCode: totpCode.optional(),
+});
+export type ClientCodeSent = z.infer<typeof clientCodeSent>;
+
+/** Exchange the mobile and its code for a session (answered with a `signInGrant`). */
+export const clientSignInRequest = z.object({ phone: indianPhone, code: totpCode });
+export type ClientSignInRequest = z.infer<typeof clientSignInRequest>;
+
+/** An activation code was sent to the invited client's mobile, shown masked ("+91 ••••• •3210"). */
+export const clientActivationCodeSent = clientCodeSent.extend({ maskedPhone: z.string().min(1) });
+export type ClientActivationCodeSent = z.infer<typeof clientActivationCodeSent>;
+
+/** Activate an invited client with the invitation and the code (answered with a `signInGrant`). */
+export const clientActivationConfirmRequest = z.object({
+  token: z.string().min(1),
+  code: totpCode,
+});
+export type ClientActivationConfirmRequest = z.infer<typeof clientActivationConfirmRequest>;
+
 /**
  * The refusals the sign-in screens show. The error envelope has a code and a message but no finer
  * reason, so the API raises these exact messages. One credentials message covers an unknown email, a
@@ -127,7 +166,25 @@ export const SIGN_IN_ERRORS = {
   challengeExpired: "Your sign-in timed out. Please start again.",
   /** 401: an unknown, used or expired password-reset link. */
   invalidResetLink: "This reset link is invalid or has expired. Ask for a new one.",
-  /** 400: client accounts sign in with a mobile code, which is not available yet. */
+  /** 400: a client invitation used on the staff (password) activation; clients activate by mobile code. */
   clientActivationUnavailable:
-    "Client accounts are activated with a code sent to your mobile, which is not available yet.",
+    "Client accounts are activated with a code sent to your mobile, not with a password.",
+  /**
+   * 401: every refusal of a client code (wrong, used, replaced, expired, out of tries, or a number with
+   * no client) gets this one message, so the answer never tells which numbers have accounts (D-147).
+   */
+  invalidClientCode: "That code didn't work or has expired. Check it, or ask for a new one.",
+  /** 503: the per-number limits cannot be counted, so no code is issued (failing closed, D-147). */
+  clientCodesUnavailable:
+    "Sign-in codes can't be sent right now. Please try again in a few minutes.",
+  /** 409: another active client account already has this mobile, so codes could reach neither. */
+  mobileInUse:
+    "This mobile number is already used by another client account. Ask AMPM to correct it, then open this link again.",
+  /** 429: another code was asked for too soon after the last one. */
+  clientCodeTooSoon: "Please wait a few seconds before asking for another code.",
+  /** 429: too many codes for this number in the last hour or day. */
+  clientCodeLimit: "Too many codes for this number. Please try again later.",
+  /** 409: an invited client account with no mobile on file cannot receive an activation code. */
+  noMobileOnFile:
+    "There's no mobile number on this account yet. Ask AMPM to add it, then open this link again.",
 } as const;

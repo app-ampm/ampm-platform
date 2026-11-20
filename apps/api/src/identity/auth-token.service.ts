@@ -35,6 +35,13 @@ export interface ValidInvite {
 }
 
 /** A live sign-in challenge or reset token: who it is for, and how many wrong answers it has taken. */
+/** A client's live one-time code: its row, its HMAC and the wrong tries so far (D-147). */
+export interface LiveCode {
+  readonly id: string;
+  readonly tokenHash: string;
+  readonly attempts: number;
+}
+
 export interface LiveToken {
   readonly id: string;
   readonly userId: string;
@@ -109,6 +116,62 @@ export class AuthTokenService {
     return this.prisma.authToken.findFirst({
       where: { purpose, tokenHash: hashToken(raw), usedAt: null, expiresAt: { gt: new Date() } },
       select: { id: true, userId: true, attempts: true },
+    });
+  }
+
+  /**
+   * Stores a client's new one-time sign-in code (D-147) by its HMAC (`hashOneTimeCode`), retiring their
+   * still-live one first, so only the newest code works.
+   */
+  async issueOneTimeCode(userId: string, codeHash: string, ttlMs: number): Promise<void> {
+    await this.prisma.$transaction([
+      this.prisma.authToken.updateMany({
+        where: { userId, purpose: "otp", usedAt: null },
+        data: { usedAt: new Date() },
+      }),
+      this.prisma.authToken.create({
+        data: {
+          userId,
+          purpose: "otp",
+          tokenHash: codeHash,
+          expiresAt: new Date(Date.now() + ttlMs),
+        },
+      }),
+    ]);
+  }
+
+  /**
+   * Reserves one try at a client's code before it is compared (D-147 review): an atomic increment that
+   * only succeeds while the code is live and under CHALLENGE_MAX_ATTEMPTS tries, so guesses sent at once
+   * cannot compare more than five times between them. False when the code is used, burned or expired.
+   */
+  async claimAttempt(id: string): Promise<boolean> {
+    const claimed = await this.prisma.authToken.updateMany({
+      where: {
+        id,
+        usedAt: null,
+        attempts: { lt: CHALLENGE_MAX_ATTEMPTS },
+        expiresAt: { gt: new Date() },
+      },
+      data: { attempts: { increment: 1 } },
+    });
+    return claimed.count === 1;
+  }
+
+  /** Burns a code whose last try was just spent on a wrong answer. */
+  async burnIfSpent(id: string): Promise<void> {
+    await this.prisma.authToken.updateMany({
+      where: { id, usedAt: null, attempts: { gte: CHALLENGE_MAX_ATTEMPTS } },
+      data: { usedAt: new Date() },
+    });
+  }
+
+  /** The client's live one-time code (unused and unexpired; at most one), or null. */
+  async findLiveOneTimeCode(userId: string): Promise<LiveCode | null> {
+    return this.prisma.authToken.findFirst({
+      where: { userId, purpose: "otp", usedAt: null, expiresAt: { gt: new Date() } },
+      orderBy: { createdAt: "desc" },
+      select: { id: true, tokenHash: true, attempts: true },
     });
   }
 

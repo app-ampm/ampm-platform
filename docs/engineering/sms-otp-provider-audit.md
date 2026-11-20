@@ -252,6 +252,20 @@ not wired live**):
 6. The client-OTP broker (Cognito `CUSTOM_AUTH` Lambdas → AMPM API → this adapter) is still an **unratified API
    surface** — settle that next.
 
+## 10. Built and waiting on DLT (20 Nov 2026, D-147)
+
+Client sign-in by mobile code is built into AMPM's own sign-in (D-142), so the Cognito `CUSTOM_AUTH` broker in §9 is no longer needed. What exists:
+
+- **Codes:** AMPM's API generates and checks them itself. They are kept as an HMAC in `auth_tokens` (purpose `otp`), expire in 5 minutes and burn after 5 wrong tries. The limits are 5 an hour and 10 a day per number, with a 30-second pause. Unknown numbers get the same answer and no SMS.
+- **Delivery:** through the notification pipeline (`auth.client_otp` on the `sms` channel, required, variables cleared once sent) to `GatewaySmsAdapter`.
+- **Transports:** `apps/api/src/modules/admin/notification/sms-transports.ts` uses each provider's plain DLT SMS endpoint, never its OTP service, which would keep a copy of the code.
+  - **2Factor:** R1 `TRANS_SMS`, with the rendered text, the header and the DLT IDs, the key in the body.
+  - **MSG91:** the Flow API, with its template ID and `##code##`, the key in a header, only `type: "success"` accepted, the server IP whitelisted.
+  - Offline contract tests pin both request shapes.
+- **Configuration:** `SMS_PROVIDER` (`console` | `2factor` | `msg91`), `SMS_API_KEY`, `SMS_SENDER_ID`, `SMS_OTP_TEMPLATE`, `SMS_DLT_ENTITY_ID`. Production refuses `console` unless `CLIENT_OTP_SCREEN_ECHO=true`, the temporary mode that shows the code on screen.
+
+The remaining steps are DLT registration, the provider account, the keys and a real-SMS test, then switching the on-screen code off. They are in `deploy/app-ampmverse/production-setup.md`, "Wiring SMS".
+
 ## Sources
 
 **AWS pricing (follow-up §8):** [Amazon Cognito pricing](https://aws.amazon.com/cognito/pricing/),

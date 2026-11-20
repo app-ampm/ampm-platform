@@ -16,6 +16,8 @@ export interface SignInKeys {
   readonly tokens: LocalIdentityAdapter;
   readonly box: SecretBox;
   readonly recoveryKey: Buffer;
+  /** HMACs the clients' one-time sign-in codes at rest (D-147); derived like the recovery-code key. */
+  readonly otpKey: Buffer;
 }
 
 export const SIGN_IN_KEYS = Symbol("SIGN_IN_KEYS");
@@ -37,6 +39,7 @@ export function signInKeysFor(env: SignInKeysEnv): SignInKeys | null {
       }),
       box: new SecretBox(keyFromBase64(env.AUTH_ENCRYPTION_KEY)),
       recoveryKey: deriveKey(env.AUTH_ENCRYPTION_KEY, "ampm/recovery-codes"),
+      otpKey: deriveKey(env.AUTH_ENCRYPTION_KEY, "ampm/client-otp"),
     };
   }
   if (env.IDENTITY_PROVIDER === "local" && env.IDENTITY_LOCAL_SECRET) {
@@ -44,6 +47,7 @@ export function signInKeysFor(env: SignInKeysEnv): SignInKeys | null {
       tokens: new LocalIdentityAdapter(env.IDENTITY_LOCAL_SECRET),
       box: new SecretBox(deriveKey(env.IDENTITY_LOCAL_SECRET, "ampm/totp-secrets")),
       recoveryKey: deriveKey(env.IDENTITY_LOCAL_SECRET, "ampm/recovery-codes"),
+      otpKey: deriveKey(env.IDENTITY_LOCAL_SECRET, "ampm/client-otp"),
     };
   }
   return null;

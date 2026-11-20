@@ -46,6 +46,25 @@ Where the operator values come from (set up on 20 November 2026, both accounts o
 - **Turnstile** (`BOT_CHECK_SECRET`): the widget "AMPM website", Managed, for `ampmverse.com`, `site.ampmverse.com` and `www.ampmverse.com`. Its site key `0x4AAAAAAGKBfk9-4261LTAN` is public and goes into the website build; the secret is `BOT_CHECK_SECRET`. A secret can be rotated once every two hours (Edit widget → Rotate Secret Key), and the previous one keeps working for two hours.
 - **Pasting a value:** open the `set` prompt only once the value is on the clipboard, with `ssh -t -o ServerAliveInterval=15 …` so an idle prompt is not dropped, and copy commands from this runbook, never from a terminal's wrapped scrollback. On 20 Nov 2026 a prompt left waiting was reset, the pasted Turnstile secret landed in the Mac shell instead, and the secret was rotated.
 
+### Wiring SMS (client sign-in codes, D-147)
+
+Clients sign in, and invited clients activate, with a six-digit code sent to the mobile AMPM has on file. Until an SMS provider is wired, the box runs `SMS_PROVIDER: console` with `CLIENT_OTP_SCREEN_ECHO: "true"`. Each code then goes to the console stub, which logs only the channel and template, and back to the screen. While that holds, **anyone who knows a client's mobile can sign in as that client**. So the portal's `.htaccess` keeps the client-code routes (`/_api/auth/client/`, `/_api/auth/activation/client/`) behind the curtain, although the rest of `/_api` is outside it, and the API logs `auth.client_code_screen_echo_on` at every boot. To wire SMS:
+
+1. **Register on a DLT portal**: AMPM as the principal entity (PE ID), a six-letter sender ID (header), and this content template. It is the text the API sends, with the code as the variable:
+   `{#var#} is your AMPM sign-in code. It expires in 5 minutes. Do not share it with anyone. - AMPM`
+   The text must stay equal to `auth.client_otp` in `packages/core/src/schemas/config.ts`. It takes 2–4 weeks, about ₹5,000–10,000 a year.
+2. **Open the provider account and register the template there.**
+   - **2Factor:** add the header and the template with their DLT IDs. `SMS_OTP_TEMPLATE` is the DLT content-template ID, `SMS_DLT_ENTITY_ID` the PE ID, and `SMS_SENDER_ID` the header.
+   - **MSG91:** create the SMS template with `##code##` in place of `{#var#}`, mapped to the DLT template ID and the header, and approve it. `SMS_OTP_TEMPLATE` is MSG91's template ID. Whitelist the box's outgoing IP (31.97.62.74) on the auth key.
+3. **On the box:**
+   - `ssh -t -o ServerAliveInterval=15 <box> '~/bin/prod-secrets.sh set app SMS_API_KEY'`.
+   - In `compose.box.yml` set `SMS_PROVIDER` and the IDs above, keeping `CLIENT_OTP_SCREEN_ECHO: "true"`.
+   - Run `deploy/redeploy-prod.sh`.
+4. **Test with a real number.** Sign in as a client account that has your own mobile, and check that the SMS arrives with the same code the screen shows. The provider's answer is logged as `notification.sms_sent` with its reference. A failure is logged as a bare code such as `2factor_400` or `msg91_200`, and the job retries it.
+5. **Switch the on-screen code off.** Set `CLIENT_OTP_SCREEN_ECHO: "false"`, redeploy, and tick the item in the readiness tracker. Production refuses `console` without the on-screen code, so the order matters, and the curtain (with it, the client-code routes' protection) may come off only after this step.
+
+The limits: five codes an hour and ten a day per number, with a 30-second pause between codes. A code lasts 5 minutes and burns after 5 wrong tries. A number with no client gets the same answer and no SMS, so the endpoint cannot text arbitrary numbers. Neither provider deduplicates, so a job retry after a timeout can send the same code twice.
+
 ## 3. First build (done once, recorded here)
 
 1. Ship merged `main` without the knowledge graph and record the commit:
@@ -79,4 +98,4 @@ The test stack deploys exactly as before, with `AMPM_WEB_TARGET=test` for its we
 
 ## 6. Going live (when AMPM starts pitching clients)
 
-Production sits behind the same password as test until then. Going live means working through the list in [production-readiness.md](../../docs/planning/production-readiness.md), then removing the `AuthType … </RequireAny>` block from both production `.htaccess` files. Before that, confirm two things: `POST https://app.ampmverse.com/_api/auth/dev-login` with a well-formed body (`{"email":"nobody@example.com"}`) answers 404 (an empty body gets validation's 400 first: the route exists everywhere and refuses outside a local, non-production build), and the API runs with `NODE_ENV=production`. Both held on 20 Nov 2026.
+Production sits behind the same password as test until then. Going live means working through the list in [production-readiness.md](../../docs/planning/production-readiness.md), **switching the on-screen client code off ("Wiring SMS") first**, then removing the `AuthType … </RequireAny>` block from both production `.htaccess` files. Before that, confirm two things: `POST https://app.ampmverse.com/_api/auth/dev-login` with a well-formed body (`{"email":"nobody@example.com"}`) answers 404 (an empty body gets validation's 400 first: the route exists everywhere and refuses outside a local, non-production build), and the API runs with `NODE_ENV=production`. Both held on 20 Nov 2026.

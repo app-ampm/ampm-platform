@@ -8,13 +8,20 @@
 # The pre-launch curtain: until AMPM opens to clients, the whole portal stays behind the shared
 # password, except /_api, where the app sends its own Bearer token (which replaces the browser's Basic
 # credentials). The production API accepts only the tokens of AMPM's own sign-in (D-142) and has no dev
-# sign-in routes (404), so nothing behind /_api is open without a real account. Remove this block (and the site's) to go
-# live. A wrong Authorization scheme here counts toward Plesk's fail2ban (5 in 10 minutes = a ban).
+# sign-in routes (404).
+#
+# The client sign-in code routes (/_api/auth/client/ and /_api/auth/activation/client/, D-147) stay
+# BEHIND the curtain: while codes are shown on screen (CLIENT_OTP_SCREEN_ECHO), anyone who could reach
+# them could sign in as any client whose mobile they know. They send no Bearer, so the browser sends the
+# curtain's Basic credentials with them, and they cannot trip fail2ban.
+#
+# To go live: switch the on-screen code off first (runbook, "Wiring SMS"), then remove this block (and the
+# site's). A wrong Authorization scheme here counts toward Plesk's fail2ban (5 in 10 minutes = a ban).
 AuthType Basic
 AuthName "AMPM"
 AuthUserFile /var/www/vhosts/app.ampmverse.com/httpdocs/.htpasswd
 <RequireAny>
-Require expr "%{REQUEST_URI} =~ m#^/_api/#"
+Require expr "%{REQUEST_URI} =~ m#^/_api/# && %{REQUEST_URI} !~ m#^/_api/auth/(client|activation/client)/#"
 Require valid-user
 </RequireAny>
 
