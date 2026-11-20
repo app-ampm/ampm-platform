@@ -54,6 +54,22 @@ echo "smoke-mon: migrated (job_runs exists)"
 pq() { $COMPOSE exec -T prometheus promtool query instant http://localhost:9090 "$1" 2>/dev/null; }
 # The scalar value after "=>" (empty if the query returned no series).
 pqval() { pq "$1" | sed -n 's/.*=> \([0-9.e+-]*\) .*/\1/p' | head -1; }
+# Poll a query every 5s, for up to ~150s, until its value reaches a minimum (default 1), then print the last
+# value seen (empty if no series ever came back). Prometheus spreads each target's first scrape across the
+# 30s interval, so its own metrics (prometheus_*, from the self-scrape) and the blackbox job's `up` can still
+# be missing when the collector heartbeat below arrives; read once, the rule count flaked to 0 in CI.
+pqwait() {
+	_min=${2:-1}
+	_i=0
+	_v=""
+	while [ "$_i" -lt 30 ]; do
+		_v=$(pqval "$1")
+		[ -n "$_v" ] && [ "${_v%%.*}" -ge "$_min" ] 2>/dev/null && break
+		_i=$((_i + 1))
+		sleep 5
+	done
+	printf '%s\n' "$_v"
+}
 
 # Wait for the end-to-end path: the collector writes the textfile, node-exporter exposes it, Prometheus
 # scrapes it (scrape_interval 30s). Poll up to ~150s for the collector heartbeat metric to appear.
@@ -73,8 +89,9 @@ done
 }
 echo "smoke-mon: collector textfile metric is in Prometheus (end-to-end path works)"
 
-# The alert rules actually loaded in the running Prometheus (not just promtool-valid on disk).
-rules=$(pqval 'sum(prometheus_rule_group_rules)')
+# The alert rules actually loaded in the running Prometheus (not just promtool-valid on disk), once its
+# self-scrape has recorded them.
+rules=$(pqwait 'sum(prometheus_rule_group_rules)' "$EXPECTED_RULES")
 echo "smoke-mon: Prometheus loaded ${rules:-0} rules (expect >= $EXPECTED_RULES)"
 case "${rules:-0}" in *.*) rules=${rules%%.*} ;; esac # promtool may print 18 or 18.0
 if ! { [ -n "$rules" ] && [ "$rules" -ge "$EXPECTED_RULES" ]; }; then
@@ -84,12 +101,12 @@ fi
 
 # node-exporter is being scraped, and the blackbox job + its relabeling are wired (blackbox answers even
 # when its probe target is down, so up{job=blackbox}=1 proves the scrape config, not the edge).
-[ "$(pqval 'up{job="node"}')" = "1" ] || { echo "smoke-mon FAILED: node-exporter target is not up"; exit 1; }
-[ "$(pqval 'up{job="blackbox"}')" = "1" ] || { echo "smoke-mon FAILED: blackbox job is not up (scrape/relabel wiring)"; exit 1; }
+[ "$(pqwait 'up{job="node"}')" = "1" ] || { echo "smoke-mon FAILED: node-exporter target is not up"; exit 1; }
+[ "$(pqwait 'up{job="blackbox"}')" = "1" ] || { echo "smoke-mon FAILED: blackbox job is not up (scrape/relabel wiring)"; exit 1; }
 echo "smoke-mon: node + blackbox scrape targets are up"
 
 # Prometheus found Alertmanager (the alerting wiring).
-amd=$(pqval 'prometheus_notifications_alertmanagers_discovered')
+amd=$(pqwait 'prometheus_notifications_alertmanagers_discovered')
 if ! { [ -n "$amd" ] && [ "${amd%%.*}" -ge 1 ]; }; then
 	echo "smoke-mon FAILED: Prometheus discovered no Alertmanager (got '${amd:-}')"
 	exit 1
