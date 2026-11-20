@@ -3,9 +3,10 @@ import type { FieldNoteStatus, FieldNoteView, QueuedMutation } from "@ampm/core"
 /**
  * SPIKE STAND-IN — sprint 2 offline spike (docs/review/build-plan.md §11.4). The team app's local
  * store + change queue (.claude/rules/offline.md): reads come from here first; a write is saved
- * locally and appended to the queue; the queue replays in order on reconnection. Two engines
- * implement this one interface so the spike can compare them: `sqlite-store` (plain expo-sqlite, the
- * one wired into the app) and `watermelon-store` (WatermelonDB, for the comparison).
+ * locally and appended to the queue; the queue replays in order on reconnection. `sqlite-store`
+ * (plain expo-sqlite, D-026) implements it on native, and `memory-store` stands in on the web. The
+ * spike's WatermelonDB arm was removed with its dependency once native builds began (D-152): its
+ * Android code no longer compiles, and nothing imported it.
  */
 
 /** A note as held on the device; `pending` is true while a write for it waits in the queue. */
