@@ -58,4 +58,24 @@ describe("RedisRateLimitStore (the production path)", () => {
       expect(await store.hit("k", 60_000)).toEqual({ count: 0, resetMs: 60_000 });
     }
   });
+
+  it("closes its Redis client when the application shuts down, so the process can exit", async () => {
+    // An open client kept the API and the worker alive past Docker's stop timeout (exit 137).
+    const quit = vi.fn().mockResolvedValue("OK");
+    const disconnect = vi.fn();
+    const store = new RedisRateLimitStore({ quit, disconnect } as unknown as Redis);
+    await store.onApplicationShutdown();
+    expect(quit).toHaveBeenCalledOnce();
+    expect(disconnect).not.toHaveBeenCalled();
+  });
+
+  it("drops the connection when Redis refuses QUIT, rather than reconnecting forever", async () => {
+    // With the offline queue off, QUIT on a client that is not connected rejects; disconnect() then
+    // stops the reconnect timer, which would otherwise hold the process open just as the socket did.
+    const quit = vi.fn().mockRejectedValue(new Error("Stream isn't writeable"));
+    const disconnect = vi.fn();
+    const store = new RedisRateLimitStore({ quit, disconnect } as unknown as Redis);
+    await expect(store.onApplicationShutdown()).resolves.toBeUndefined();
+    expect(disconnect).toHaveBeenCalledOnce();
+  });
 });

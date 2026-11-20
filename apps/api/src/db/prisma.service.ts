@@ -1,4 +1,4 @@
-import { Inject, Injectable, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common";
+import { Inject, Injectable, type OnApplicationShutdown, type OnModuleInit } from "@nestjs/common";
 import { PrismaPg } from "@prisma/adapter-pg";
 
 import { ENV, type Env } from "../env.js";
@@ -6,7 +6,7 @@ import { PrismaClient } from "../generated/prisma/client.js";
 
 /** One Prisma client per process, on the pg driver adapter (Prisma 7). */
 @Injectable()
-export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
+export class PrismaService extends PrismaClient implements OnModuleInit, OnApplicationShutdown {
   constructor(@Inject(ENV) env: Env) {
     super({ adapter: new PrismaPg({ connectionString: env.DATABASE_URL }) });
   }
@@ -15,7 +15,11 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     await this.$connect();
   }
 
-  async onModuleDestroy(): Promise<void> {
+  /**
+   * Disconnects in Nest's last shutdown phase, after the HTTP server has drained and the job workers
+   * have finished (JobQueue), so neither a request in flight nor an active job loses the database.
+   */
+  async onApplicationShutdown(): Promise<void> {
     await this.$disconnect();
   }
 

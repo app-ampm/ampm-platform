@@ -124,6 +124,9 @@ services:
       context: ../../..
       dockerfile: infra/docker/Dockerfile
     command: ["node", "dist/main.js"]
+    # Graceful stop, as in production: an init delivers the SIGTERM Nest re-raises after its hooks.
+    init: true
+    stop_grace_period: 30s
     environment: *app-env
     depends_on:
       postgres: { condition: service_healthy }
@@ -149,6 +152,8 @@ services:
       context: ../../..
       dockerfile: infra/docker/Dockerfile
     command: ["node", "dist/worker.js"]
+    init: true
+    stop_grace_period: 30s
     environment:
       <<: *app-env
       JOB_WORKER: "true"

@@ -1,5 +1,5 @@
 import { createMemoryLogger } from "@ampm/core";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 import { InlineJobDriver } from "./inline.driver.js";
@@ -29,5 +29,13 @@ describe("JobQueue", () => {
     jobs.register(greet, async () => undefined);
     // Type-valid but schema-invalid (min length 2), so the contract is enforced at runtime.
     await expect(jobs.enqueue(greet, { name: "a" })).rejects.toThrow();
+  });
+
+  it("closes the driver (its workers, queues and Redis connection) when the application shuts down", async () => {
+    const driver = new InlineJobDriver(createMemoryLogger().logger);
+    const close = vi.spyOn(driver, "close");
+    const jobs = new JobQueue(driver);
+    await jobs.onApplicationShutdown();
+    expect(close).toHaveBeenCalledOnce();
   });
 });

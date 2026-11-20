@@ -7,6 +7,11 @@ ARG NODE_VERSION=24.22.1
 
 FROM node:${NODE_VERSION}-bookworm-slim AS build
 ENV CI=true
+# OpenSSL for Prisma: the slim image has no libssl, so Prisma cannot detect the version it should build
+# for and warns (falling back to openssl-1.1.x) at the @prisma/engines postinstall and `prisma generate`.
+RUN apt-get update \
+	&& apt-get install -y --no-install-recommends openssl \
+	&& rm -rf /var/lib/apt/lists/*
 RUN corepack enable
 WORKDIR /repo
 COPY . .
@@ -18,6 +23,11 @@ RUN pnpm build --filter=api
 
 FROM node:${NODE_VERSION}-bookworm-slim AS runtime
 ENV NODE_ENV=production
+# The same OpenSSL here: the migration job runs `prisma migrate deploy` in this stage, which detects it
+# the same way (and warned at every deploy without it).
+RUN apt-get update \
+	&& apt-get install -y --no-install-recommends openssl \
+	&& rm -rf /var/lib/apt/lists/*
 # The whole built workspace: with the hoisted pnpm linker node_modules is a flat tree, so copying it
 # with the compiled dist (including dist/generated/prisma) yields a runnable image. Trimming to
 # production-only dependencies (pnpm deploy / distroless) is a later optimisation (D-048).
