@@ -17,6 +17,8 @@ import {
 import type { Request } from "express";
 import { z } from "zod";
 
+import { RateLimit } from "../../common/rate-limit/rate-limit.decorator.js";
+import { UPLOADS } from "../../common/rate-limit/route-limits.js";
 import type { Access } from "../../common/request-context.js";
 import { ZodBody, ZodParams, ZodQuery } from "../../common/zod.js";
 import {
@@ -106,6 +108,7 @@ export class BookingMilestonesController {
   @Post("booking-milestones/:milestoneId/contract")
   @HttpCode(200)
   @RequirePermission("consultancy.booking_milestones.update")
+  @RateLimit(UPLOADS)
   @SelfAudited()
   attachContract(
     @ZodParams(milestoneParam) params: { milestoneId: string },

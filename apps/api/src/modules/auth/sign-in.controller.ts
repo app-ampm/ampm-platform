@@ -34,8 +34,10 @@ const MINUTE = 60_000;
 /**
  * AMPM's own sign-in (D-142): staff password + authenticator code, invitation activation that sets both,
  * a forgotten-password link, and sign-out. Public except sign-out; every route is capped per client
- * address (the limiter keys by IP before sign-in), on top of the per-account lockout in the services.
- * Under Cognito the services answer 404, so these routes do not exist there.
+ * address (the limiter keys by IP before sign-in), on top of the per-account lockout in the services,
+ * and refuses (503) while the limiter cannot count, so no credential is ever tried uncounted (D-149).
+ * Sign-out is capped per account and fails open: ending a session must always work. Under Cognito the
+ * services answer 404, so these routes do not exist there.
  */
 @Controller("auth")
 export class SignInController {
@@ -47,7 +49,7 @@ export class SignInController {
 
   @Post("sign-in")
   @Public()
-  @RateLimit({ name: "auth.sign_in", limit: 10, windowMs: MINUTE })
+  @RateLimit({ name: "auth.sign_in", limit: 10, windowMs: MINUTE, failClosed: true })
   @HttpCode(200)
   @AuditExempt("checks a password and issues a short-lived challenge; changes no business record")
   signIn(@ZodBody(signInRequest) body: SignInRequest): Promise<SignInResponse> {
@@ -56,7 +58,7 @@ export class SignInController {
 
   @Post("sign-in/code")
   @Public()
-  @RateLimit({ name: "auth.sign_in_code", limit: 10, windowMs: MINUTE })
+  @RateLimit({ name: "auth.sign_in_code", limit: 10, windowMs: MINUTE, failClosed: true })
   @HttpCode(200)
   @AuditExempt("issues an access token; the session it opens is audited on first use")
   signInCode(@ZodBody(signInCodeRequest) body: SignInCodeRequest): Promise<SignInGrant> {
@@ -64,6 +66,7 @@ export class SignInController {
   }
 
   @Post("sign-out")
+  @RateLimit({ name: "auth.sign_out", limit: 30, windowMs: MINUTE, failClosed: false })
   @HttpCode(200)
   @SelfAudited()
   signOut(): Promise<Acknowledged> {
@@ -72,7 +75,7 @@ export class SignInController {
 
   @Post("activation/preview")
   @Public()
-  @RateLimit({ name: "auth.activation_preview", limit: 20, windowMs: MINUTE })
+  @RateLimit({ name: "auth.activation_preview", limit: 20, windowMs: MINUTE, failClosed: true })
   @HttpCode(200)
   @AuditExempt("reads who an invitation is for; changes nothing")
   preview(
@@ -83,7 +86,7 @@ export class SignInController {
 
   @Post("activation/password")
   @Public()
-  @RateLimit({ name: "auth.activation_password", limit: 10, windowMs: MINUTE })
+  @RateLimit({ name: "auth.activation_password", limit: 10, windowMs: MINUTE, failClosed: true })
   @HttpCode(200)
   @AuditExempt("sets the credentials of a still-invited account; activation itself is audited")
   activationPassword(
@@ -94,7 +97,7 @@ export class SignInController {
 
   @Post("activation/confirm")
   @Public()
-  @RateLimit({ name: "auth.activation_confirm", limit: 10, windowMs: MINUTE })
+  @RateLimit({ name: "auth.activation_confirm", limit: 10, windowMs: MINUTE, failClosed: true })
   @HttpCode(200)
   @SelfAudited()
   activationConfirm(
@@ -105,7 +108,7 @@ export class SignInController {
 
   @Post("password/forgot")
   @Public()
-  @RateLimit({ name: "auth.password_forgot", limit: 5, windowMs: 15 * MINUTE })
+  @RateLimit({ name: "auth.password_forgot", limit: 5, windowMs: 15 * MINUTE, failClosed: true })
   @HttpCode(200)
   @AuditExempt("queues a reset email; changes no business record")
   forgotPassword(
@@ -116,7 +119,7 @@ export class SignInController {
 
   @Post("password/reset")
   @Public()
-  @RateLimit({ name: "auth.password_reset", limit: 10, windowMs: MINUTE })
+  @RateLimit({ name: "auth.password_reset", limit: 10, windowMs: MINUTE, failClosed: true })
   @HttpCode(200)
   @SelfAudited()
   resetPassword(@ZodBody(resetPasswordRequest) body: ResetPasswordRequest): Promise<Acknowledged> {

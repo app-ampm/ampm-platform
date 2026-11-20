@@ -20,7 +20,8 @@ import { PAYMENT_ADAPTER, type PaymentAdapter } from "./payment.adapter.js";
  * so it is `@Public()` and rate-limited (architecture §6 step 1). The signature is verified at the edge
  * over the RAW request bytes — a bad or absent signature is a 401 that writes nothing (AC-02.6) — and
  * only then is the event stored and an idempotent activation job enqueued. Audited through the stored
- * event and the activation's own audit, so the route itself is `@AuditExempt`.
+ * event and the activation's own audit, so the route itself is `@AuditExempt`. Its limit fails open
+ * (D-149): a paid order must reach AMPM even while the limiter is down, and the signature is the gate.
  */
 @Controller("crm")
 export class PaymentWebhookController {
@@ -31,7 +32,7 @@ export class PaymentWebhookController {
 
   @Post("webhooks/razorpay")
   @Public()
-  @RateLimit({ name: "crm.webhook.razorpay", limit: 120, windowMs: 60_000 })
+  @RateLimit({ name: "crm.webhook.razorpay", limit: 120, windowMs: 60_000, failClosed: false })
   @AuditExempt(
     "provider webhook authenticated by signature; the stored event and the activation audit are the record",
   )

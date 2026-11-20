@@ -9,7 +9,8 @@ import { RateLimitGuard } from "./rate-limit.guard.js";
 import { type RateLimitHit, RateLimitStore } from "./rate-limit.store.js";
 import type { RateLimitOptions } from "./rate-limit.decorator.js";
 
-const OPTIONS: RateLimitOptions = { name: "t", limit: 2, windowMs: 1000 };
+const OPTIONS: RateLimitOptions = { name: "t", limit: 2, windowMs: 1000, failClosed: false };
+const PRINCIPAL = { type: "client", userId: "u1" } as unknown as RequestContext["principal"];
 
 function execContext(setHeader = vi.fn()): ExecutionContext {
   return {
@@ -20,20 +21,25 @@ function execContext(setHeader = vi.fn()): ExecutionContext {
 }
 
 function build(
-  hit: RateLimitHit | (() => Promise<RateLimitHit>),
+  hit: RateLimitHit | ((key: string) => Promise<RateLimitHit>),
   meta: RateLimitOptions | undefined,
 ) {
   const reflector = { getAllAndOverride: () => meta } as unknown as Reflector;
   const hitFn = vi.fn(typeof hit === "function" ? hit : async () => hit);
   const store = { hit: hitFn } as unknown as RateLimitStore;
-  const { logger } = createMemoryLogger();
-  return { guard: new RateLimitGuard(reflector, store, logger as unknown as AppLogger), hitFn };
+  const { logger, entries } = createMemoryLogger();
+  const guard = new RateLimitGuard(reflector, store, logger as unknown as AppLogger);
+  return { guard, hitFn, entries };
 }
 
 function run<T>(partial: Partial<RequestContext>, fn: () => T): T {
   const base: RequestContext = { requestId: "r", ip: "1.2.3.4", principal: null, access: null };
   return requestContext.run({ ...base, ...partial }, fn);
 }
+
+const storeDown = async (): Promise<RateLimitHit> => {
+  throw new Error("redis down");
+};
 
 describe("RateLimitGuard", () => {
   it("allows a route with no @RateLimit without touching the store", async () => {
@@ -55,19 +61,54 @@ describe("RateLimitGuard", () => {
 
   it("keys the window by the authenticated user, else by IP", async () => {
     const authed = build({ count: 1, resetMs: 1000 }, OPTIONS);
-    const principal = { type: "staff", userId: "u1" } as unknown as RequestContext["principal"];
-    await run({ principal }, () => authed.guard.canActivate(execContext()));
-    expect(authed.hitFn).toHaveBeenCalledWith("rl:t:user:u1", 1000);
+    await run({ principal: PRINCIPAL }, () => authed.guard.canActivate(execContext()));
+    expect(authed.hitFn).toHaveBeenCalledExactlyOnceWith("rl:t:user:u1", 1000);
 
     const anon = build({ count: 1, resetMs: 1000 }, OPTIONS);
     await run({ ip: "9.9.9.9" }, () => anon.guard.canActivate(execContext()));
-    expect(anon.hitFn).toHaveBeenCalledWith("rl:t:ip:9.9.9.9", 1000);
+    expect(anon.hitFn).toHaveBeenCalledExactlyOnceWith("rl:t:ip:9.9.9.9", 1000);
   });
 
-  it("fails open when the store throws", async () => {
-    const { guard } = build(async () => {
-      throw new Error("redis down");
-    }, OPTIONS);
+  it("also counts a signed-in caller's network when the route caps networks", async () => {
+    const capped = { ...OPTIONS, perIpLimit: 5 };
+    const both = build({ count: 1, resetMs: 1000 }, capped);
+    await run({ principal: PRINCIPAL, ip: "9.9.9.9" }, () => both.guard.canActivate(execContext()));
+    expect(both.hitFn.mock.calls).toEqual([
+      ["rl:t:user:u1", 1000],
+      ["rl:t:ip:9.9.9.9", 1000],
+    ]);
+
+    // Under the user's own limit, but the network has had more than its five: refused.
+    const busy = build(
+      async (key) => ({ count: key.includes(":ip:") ? 6 : 1, resetMs: 1000 }),
+      capped,
+    );
+    await expect(
+      run({ principal: PRINCIPAL }, () => busy.guard.canActivate(execContext())),
+    ).rejects.toMatchObject({ code: "rate_limited" });
+  });
+
+  it("counts an anonymous caller once, by network, whatever the network cap", async () => {
+    const { guard, hitFn } = build({ count: 1, resetMs: 1000 }, { ...OPTIONS, perIpLimit: 5 });
+    await run({ ip: "9.9.9.9" }, () => guard.canActivate(execContext()));
+    expect(hitFn).toHaveBeenCalledExactlyOnceWith("rl:t:ip:9.9.9.9", 1000);
+  });
+
+  it("fails open when the store throws on a route that allows it, and says so in the log", async () => {
+    const { guard, entries } = build(storeDown, OPTIONS);
     await expect(run({}, () => guard.canActivate(execContext()))).resolves.toBe(true);
+    expect(entries).toContainEqual(
+      expect.objectContaining({
+        event: "rate_limit.store_unavailable",
+        fields: { name: "t", failClosed: false },
+      }),
+    );
+  });
+
+  it("fails closed with 503 when the store throws on a route that must not run uncounted", async () => {
+    const { guard } = build(storeDown, { ...OPTIONS, failClosed: true });
+    await expect(run({}, () => guard.canActivate(execContext()))).rejects.toMatchObject({
+      code: "unavailable",
+    });
   });
 });

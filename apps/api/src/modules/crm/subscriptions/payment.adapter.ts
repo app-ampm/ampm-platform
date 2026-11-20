@@ -26,8 +26,6 @@ export interface CreateOrderInput {
 export interface CreatedOrder {
   /** The gateway order id; stored as the payment's `provider_ref` and used to match the webhook. */
   readonly orderId: string;
-  /** The gateway's PUBLIC key id, which the browser's hosted checkout needs (never the secret). */
-  readonly keyId: string;
 }
 
 /** The fields we read from a verified webhook event; the order id links it to the pending payment. */
@@ -41,6 +39,11 @@ export interface PaymentAdapter {
   /** The active gateway: "razorpay", or "stub" for the in-process dev/staging gateway. The client portal
    *  branches on it — a stub order completes through the dev endpoint, a razorpay order through checkout. */
   readonly provider: "razorpay" | "stub";
+  /**
+   * The gateway's PUBLIC key id, which the browser's hosted checkout needs with every order, a new one or
+   * one handed back again (never the secret).
+   */
+  readonly keyId: string;
   /** Create a hosted-checkout order (an HTTPS POST for the real gateway). */
   createOrder(input: CreateOrderInput): Promise<CreatedOrder>;
   /**
@@ -124,7 +127,7 @@ export class RazorpayPaymentAdapter implements PaymentAdapter {
   readonly provider = "razorpay";
 
   constructor(
-    private readonly keyId: string,
+    readonly keyId: string,
     private readonly keySecret: string,
     private readonly webhookSecret: string,
     private readonly logger: PaymentLogger,
@@ -147,7 +150,7 @@ export class RazorpayPaymentAdapter implements PaymentAdapter {
       const order: unknown = await response.json();
       const orderId = (order as { id?: unknown }).id;
       if (typeof orderId !== "string") throw new Error("order response has no id");
-      return { orderId, keyId: this.keyId };
+      return { orderId };
     } catch (error) {
       this.logger.warn("crm.payment.create_order_failed", { error: String(error) });
       throw new Error("payment gateway order creation failed", { cause: error });
@@ -187,14 +190,12 @@ export class StubPaymentAdapter implements PaymentAdapter {
   static readonly KEY_ID = "rzp_test_stub";
 
   readonly provider = "stub";
+  readonly keyId = StubPaymentAdapter.KEY_ID;
 
   createOrder(input: CreateOrderInput): Promise<CreatedOrder> {
     // A unique order id per call, like a real gateway (so a retried/reused purchase never collides on
     // the payment's unique provider_ref); the receipt is kept in the id for debuggability.
-    return Promise.resolve({
-      orderId: `order_stub_${input.receipt}_${randomUUID()}`,
-      keyId: StubPaymentAdapter.KEY_ID,
-    });
+    return Promise.resolve({ orderId: `order_stub_${input.receipt}_${randomUUID()}` });
   }
 
   verifyWebhookSignature(rawBody: Buffer, signature: string | undefined): boolean {

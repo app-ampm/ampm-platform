@@ -2,6 +2,7 @@ import { Controller, Get, HttpCode, Res } from "@nestjs/common";
 import { healthResponse, type HealthResponse } from "@ampm/core";
 import type { Response } from "express";
 
+import { RateLimitExempt } from "../../common/rate-limit/rate-limit.decorator.js";
 import { Public } from "../../policy/decorators.js";
 import { HealthService } from "./health.service.js";
 
@@ -11,6 +12,9 @@ export class HealthController {
 
   /** 200 while the database answers, 503 otherwise, so the load balancer and the uptime check agree. */
   @Public()
+  @RateLimitExempt(
+    "the deploy gate and the uptime check poll it; it reads one row and refusing it would read as an outage",
+  )
   @Get()
   @HttpCode(200)
   async get(@Res({ passthrough: true }) response: Response): Promise<HealthResponse> {

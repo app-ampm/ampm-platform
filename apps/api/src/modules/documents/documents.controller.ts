@@ -3,6 +3,7 @@ import { uuid } from "@ampm/core";
 import type { Response } from "express";
 import { z } from "zod";
 
+import { RateLimit } from "../../common/rate-limit/rate-limit.decorator.js";
 import { ZodParams } from "../../common/zod.js";
 import { Public } from "../../policy/decorators.js";
 import { DocumentsService } from "./documents.service.js";
@@ -19,7 +20,8 @@ type LinkParams = z.infer<typeof linkParams>;
  * the capability: the owning module checked the principal's access to the record before minting it, and
  * this route checks the token, expiry, revocation and download cap. Anything wrong is a 404 (denial
  * equals absence). Never cached; served inline under its detected type (PDF, JPEG or PNG only, nosniff
- * set globally) with a PII-free file name.
+ * set globally) with a PII-free file name. Limited per network and failing open (D-149): the token, not
+ * the limiter, is the gate, and the link's own download cap bounds each document.
  */
 @Controller("documents")
 export class DocumentsController {
@@ -27,6 +29,7 @@ export class DocumentsController {
 
   @Get("links/:linkId/:token")
   @Public()
+  @RateLimit({ name: "documents.link", limit: 60, windowMs: 60_000, failClosed: false })
   async open(@ZodParams(linkParams) params: LinkParams, @Res() res: Response): Promise<void> {
     const blob = await this.documents.open(params.linkId, params.token);
     res.setHeader("Content-Type", blob.mimeType);

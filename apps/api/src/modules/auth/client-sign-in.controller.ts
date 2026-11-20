@@ -35,7 +35,7 @@ export class ClientSignInController {
 
   @Post("client/code")
   @Public()
-  @RateLimit({ name: "auth.client_code", limit: 10, windowMs: MINUTE })
+  @RateLimit({ name: "auth.client_code", limit: 10, windowMs: MINUTE, failClosed: true })
   @HttpCode(200)
   @AuditExempt("issues a short-lived sign-in code and queues its SMS; changes no business record")
   requestCode(@ZodBody(clientCodeRequest) body: ClientCodeRequest): Promise<ClientCodeSent> {
@@ -44,7 +44,7 @@ export class ClientSignInController {
 
   @Post("client/sign-in")
   @Public()
-  @RateLimit({ name: "auth.client_sign_in", limit: 10, windowMs: MINUTE })
+  @RateLimit({ name: "auth.client_sign_in", limit: 10, windowMs: MINUTE, failClosed: true })
   @HttpCode(200)
   @AuditExempt("issues an access token; the session it opens is audited when it opens")
   signIn(@ZodBody(clientSignInRequest) body: ClientSignInRequest): Promise<SignInGrant> {
@@ -53,7 +53,7 @@ export class ClientSignInController {
 
   @Post("activation/client/code")
   @Public()
-  @RateLimit({ name: "auth.client_activation_code", limit: 10, windowMs: MINUTE })
+  @RateLimit({ name: "auth.client_activation_code", limit: 10, windowMs: MINUTE, failClosed: true })
   @HttpCode(200)
   @AuditExempt(
     "issues a short-lived activation code and queues its SMS; changes no business record",
@@ -66,7 +66,12 @@ export class ClientSignInController {
 
   @Post("activation/client/confirm")
   @Public()
-  @RateLimit({ name: "auth.client_activation_confirm", limit: 10, windowMs: MINUTE })
+  @RateLimit({
+    name: "auth.client_activation_confirm",
+    limit: 10,
+    windowMs: MINUTE,
+    failClosed: true,
+  })
   @HttpCode(200)
   @SelfAudited()
   confirmActivation(

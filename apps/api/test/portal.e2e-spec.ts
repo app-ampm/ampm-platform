@@ -118,6 +118,27 @@ describe("Client portal (e2e)", () => {
     expect(await modulesOf(token)).toContain("hotel_discovery"); // after: unlocked
   });
 
+  it("hands back the open order when the client buys again, and caps purchases per client", async () => {
+    const token = await devLogin(await provisionClient("repeat"));
+    const buy = () =>
+      http()
+        .post("/crm/portal/subscriptions")
+        .set("authorization", `Bearer ${token}`)
+        .send({ planId });
+    const first = await buy().expect(201);
+    const second = await buy().expect(201);
+    const subscriptionId = first.body.data.subscriptionId as string;
+    expect(second.body.data.subscriptionId).toBe(subscriptionId);
+    expect(second.body.data.order).toEqual(first.body.data.order);
+    expect(await prisma.payment.count({ where: { relatedId: subscriptionId } })).toBe(1);
+    // Ten purchases an hour per client (D-149): the eleventh is refused before any order is made.
+    for (let i = 2; i < 10; i += 1) await buy().expect(201);
+    const limited = await buy();
+    expect(limited.status).toBe(429);
+    expect(limited.body.error.code).toBe("rate_limited");
+    expect(await prisma.payment.count({ where: { relatedId: subscriptionId } })).toBe(1);
+  });
+
   it("refuses the client purchase route for a staff principal (denial equals absence)", async () => {
     const staff = await devLogin("sales@example.com");
     await http()

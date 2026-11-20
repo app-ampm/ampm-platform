@@ -16,7 +16,7 @@ export class PlansController {
 
   @Get("plans")
   @Public()
-  @RateLimit({ name: "crm.plans", limit: 60, windowMs: 60_000 })
+  @RateLimit({ name: "crm.plans", limit: 60, windowMs: 60_000, failClosed: false })
   list(): Promise<PlansResponse> {
     return this.plans.listActive();
   }

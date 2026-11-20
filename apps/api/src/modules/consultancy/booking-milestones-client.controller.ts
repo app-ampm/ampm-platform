@@ -8,6 +8,8 @@ import {
 } from "@ampm/core";
 import { z } from "zod";
 
+import { RateLimit } from "../../common/rate-limit/rate-limit.decorator.js";
+import { CLIENT_READS } from "../../common/rate-limit/route-limits.js";
 import { ZodParams, ZodQuery } from "../../common/zod.js";
 import { CurrentPrincipal } from "../../policy/decorators.js";
 import type { Principal } from "../../policy/principal.types.js";
@@ -22,6 +24,7 @@ const enquiryParam = z.object({ enquiryId: uuid });
  * present only where the W-14 config flag is on.
  */
 @Controller("consultancy")
+@RateLimit(CLIENT_READS)
 export class BookingMilestonesClientController {
   constructor(private readonly milestones: BookingMilestonesClientService) {}
 

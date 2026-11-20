@@ -261,6 +261,9 @@ describe("Subscription purchase and activation (e2e)", () => {
     expect(
       await prisma.subscription.count({ where: { accountId, status: "pending_payment" } }),
     ).toBe(1);
+    // ...and its still-open gateway order: a repeated purchase mints no second order (D-149).
+    expect(second.orderId).toBe(first.orderId);
+    expect(await prisma.payment.count({ where: { accountId } })).toBe(1);
   });
 
   it("re-drives a stored-but-unprocessed webhook event, recovering a failed enqueue (review fix)", async () => {

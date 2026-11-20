@@ -9,6 +9,8 @@ import {
 } from "@ampm/core";
 import { z } from "zod";
 
+import { RateLimit } from "../../../common/rate-limit/rate-limit.decorator.js";
+import { CLIENT_READS, CLIENT_WRITES } from "../../../common/rate-limit/route-limits.js";
 import { ZodBody, ZodParams, ZodQuery } from "../../../common/zod.js";
 import { CurrentPrincipal, SelfAudited } from "../../../policy/decorators.js";
 import type { Principal } from "../../../policy/principal.types.js";
@@ -23,6 +25,7 @@ const agreementParam = z.object({ agreementId: uuid });
  * client earns `hotel_assistance`); it self-audits inside the shared transition's transaction.
  */
 @Controller("crm/portal")
+@RateLimit(CLIENT_READS)
 export class ServiceAgreementsClientController {
   constructor(private readonly agreements: ServiceAgreementsClientService) {}
 
@@ -44,6 +47,7 @@ export class ServiceAgreementsClientController {
 
   @Post("service-agreements/:agreementId/accept")
   @HttpCode(200)
+  @RateLimit(CLIENT_WRITES)
   @SelfAudited()
   accept(
     @ZodParams(agreementParam) params: { agreementId: string },

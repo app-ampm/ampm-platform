@@ -17,6 +17,8 @@ import {
 import type { Request } from "express";
 import { z } from "zod";
 
+import { RateLimit } from "../../../common/rate-limit/rate-limit.decorator.js";
+import { UPLOADS } from "../../../common/rate-limit/route-limits.js";
 import type { Access } from "../../../common/request-context.js";
 import { ZodBody, ZodParams, ZodQuery } from "../../../common/zod.js";
 import {
@@ -105,6 +107,7 @@ export class ServiceAgreementsController {
   @Post("service-agreements/:agreementId/signed-copy")
   @HttpCode(200)
   @RequirePermission("crm.service_agreements.update")
+  @RateLimit(UPLOADS)
   @SelfAudited()
   markSignedOffline(
     @ZodParams(agreementParam) params: { agreementId: string },
