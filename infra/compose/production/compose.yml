@@ -153,6 +153,12 @@ services:
   api:
     <<: *app
     command: ["node", "dist/main.js"]
+    # Graceful stop (20 Nov 2026): on SIGTERM the API stops listening, lets the requests in flight finish,
+    # then closes Redis and the database. An init as PID 1 delivers the SIGTERM Nest re-raises once its
+    # hooks are done (node as PID 1 ignored it, so one open socket held the container until SIGKILL,
+    # exit 137); 30 s leaves room for a slow request or job before Docker kills it.
+    init: true
+    stop_grace_period: 30s
     environment:
       NODE_ENV: production
     depends_on:
@@ -176,6 +182,9 @@ services:
   worker:
     <<: *app
     command: ["node", "dist/worker.js"]
+    # As the api: on SIGTERM the BullMQ workers finish their active jobs before anything closes.
+    init: true
+    stop_grace_period: 30s
     environment:
       NODE_ENV: production
       JOB_WORKER: "true"
