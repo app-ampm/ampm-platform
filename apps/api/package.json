@@ -12,6 +12,7 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:seed": "node --env-file-if-exists=.env --import tsx prisma/seed.ts",
+    "db:bootstrap": "node --env-file-if-exists=.env --import tsx prisma/bootstrap.ts",
     "dev": "nest start --watch --env-file .env",
     "dev:token": "node --env-file-if-exists=.env --import tsx scripts/dev-token.ts",
     "lint": "eslint .",

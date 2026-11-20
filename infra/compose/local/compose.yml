@@ -19,6 +19,9 @@ services:
     build:
       context: ../../..
       dockerfile: infra/docker/postgres.Dockerfile
+    # An init as PID 1 so the async archive-push's orphan is reaped by it, not by the postmaster (which
+    # would treat its failed exit as a backend crash and restart the server); see the production file.
+    init: true
     command:
       - postgres
       - -c

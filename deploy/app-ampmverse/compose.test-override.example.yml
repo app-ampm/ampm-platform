@@ -1,8 +1,11 @@
-# Example of the box-only Compose override the app.ampmverse.com test box keeps at
-# infra/compose/local/compose.test-override.yml. Copy this to that path on the box; the real file is not
-# committed because it is box-specific (like httpdocs/.htaccess, whose template is deploy/app-ampmverse/).
-# It publishes the API and the public website on the box's loopback only and points both at their
-# public origins. No secrets: the token-signing key comes from the box's own infra/compose/local/.env.
+# Example of the box-only Compose override the TEST stack keeps at
+# infra/compose/local/compose.test-override.yml on the shared box. Since D-138 the test stack (dev sign-in,
+# synthetic data, the demo banner) answers at test-app.ampmverse.com and test-site.ampmverse.com; the
+# production stack beside it owns app. and site. (compose.production-box.example.yml). Copy this to that
+# path on the box; the real file is not committed because it is box-specific (like the docroot .htaccess
+# files, whose templates are in deploy/). It publishes the API and the public website on the box's loopback
+# only and points both at their public origins. No secrets: keys come from the box's own
+# infra/compose/local/.env.
 name: ampm-local
 
 # The box's token-signing key, never the development value committed in compose.yml: /_api is reachable
@@ -21,13 +24,22 @@ x-box-media-secret: &box-media-secret "${AMPM_BOX_MEDIA_SIGNING_SECRET:?set AMPM
 services:
   api:
     ports:
-      - "127.0.0.1:7001:3900" # loopback only; httpdocs/.htaccess [P] proxies /_api to this
+      - "127.0.0.1:7001:3900" # loopback only; test-app.ampmverse.com's .htaccess [P] proxies /_api to this
     environment:
-      # Browser origins that call the API: the client portals (app.) and the website's enquiry form (site.).
-      CORS_ORIGINS: "https://app.ampmverse.com,https://site.ampmverse.com"
-      WEB_APP_URL: "https://app.ampmverse.com"
+      # Browser origins that call the API: the test portal and the test website's enquiry form.
+      CORS_ORIGINS: "https://test-app.ampmverse.com,https://test-site.ampmverse.com"
+      WEB_APP_URL: "https://test-app.ampmverse.com"
       TRUST_PROXY: "1"
       IDENTITY_LOCAL_SECRET: *box-identity-secret
+      # Super-Admin custom roles grant their capabilities (D-036), switched on at the user's request.
+      DYNAMIC_ROLES: "true"
+      # Razorpay's hosted checkout in TEST mode (test cards only; no money moves). The keys live in the
+      # box's infra/compose/local/.env. No webhook is registered: the checkout callback activates, and the
+      # webhook secret there is a placeholder until one is.
+      PAYMENT_PROVIDER: razorpay
+      RAZORPAY_KEY_ID: "${RAZORPAY_KEY_ID:?set RAZORPAY_KEY_ID in infra/compose/local/.env on the box}"
+      RAZORPAY_KEY_SECRET: "${RAZORPAY_KEY_SECRET:?set RAZORPAY_KEY_SECRET in infra/compose/local/.env on the box}"
+      RAZORPAY_WEBHOOK_SECRET: "${RAZORPAY_WEBHOOK_SECRET:?set RAZORPAY_WEBHOOK_SECRET in infra/compose/local/.env on the box}"
       # Local object store on the box disk (D-106). The container root FS is read-only, so the store is a
       # writable host bind-mount (below), owned by the container's node uid (1000); media uploaded through
       # the photo manager lands here and the /media/blob download route reads it back. One-time host setup
@@ -48,6 +60,15 @@ services:
   worker:
     environment:
       IDENTITY_LOCAL_SECRET: *box-identity-secret
+      # The same switches as the API: the worker runs the same modules.
+      DYNAMIC_ROLES: "true"
+      # Razorpay's hosted checkout in TEST mode (test cards only; no money moves). The keys live in the
+      # box's infra/compose/local/.env. No webhook is registered: the checkout callback activates, and the
+      # webhook secret there is a placeholder until one is.
+      PAYMENT_PROVIDER: razorpay
+      RAZORPAY_KEY_ID: "${RAZORPAY_KEY_ID:?set RAZORPAY_KEY_ID in infra/compose/local/.env on the box}"
+      RAZORPAY_KEY_SECRET: "${RAZORPAY_KEY_SECRET:?set RAZORPAY_KEY_SECRET in infra/compose/local/.env on the box}"
+      RAZORPAY_WEBHOOK_SECRET: "${RAZORPAY_WEBHOOK_SECRET:?set RAZORPAY_WEBHOOK_SECRET in infra/compose/local/.env on the box}"
       # The same object store as the API, so any worker job that touches media uses the same dir (D-106).
       STORAGE_LOCAL_DIR: "/data/storage"
       STORAGE_LOCAL_PERSISTENT: "true"
@@ -69,8 +90,8 @@ services:
         # Inlined at build time. The enquiry form posts to the API through app.'s /_api proxy, a
         # different origin from the site, as it will be under Caddy in production; "Client sign-in"
         # opens the portal.
-        NEXT_PUBLIC_API_URL: "https://app.ampmverse.com/_api"
-        NEXT_PUBLIC_PORTAL_URL: "https://app.ampmverse.com"
+        NEXT_PUBLIC_API_URL: "https://test-app.ampmverse.com/_api"
+        NEXT_PUBLIC_PORTAL_URL: "https://test-app.ampmverse.com"
     ports:
       - "127.0.0.1:7002:3000" # loopback only; the site's .htaccess [P] proxies to this
     # A network of its own: the site reaches the API as a visitor's browser does, through the public URL.

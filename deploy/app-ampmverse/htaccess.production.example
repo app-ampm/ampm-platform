@@ -1,0 +1,52 @@
+# httpdocs/.htaccess of app.ampmverse.com: the PRODUCTION client and staff portal on the shared Plesk
+# box (D-138). Version-controlled so the box's web config lives in the repo (infra.md); deploys never
+# overwrite it (deploy-web.sh's rsync excludes it, the .htpasswd it names and the .ampm-target marker).
+# Plesk's nginx terminates TLS and hands these requests to Apache; this file does what Caddy does on a
+# dedicated server: security headers, the /_api reverse proxy and the SPA fallback. Needs mod_rewrite,
+# mod_proxy, mod_proxy_http and mod_headers (Plesk has them).
+
+# The pre-launch curtain: until AMPM opens to clients, the whole portal stays behind the shared
+# password, except /_api, where the app sends its own Bearer token (which replaces the browser's Basic
+# credentials). The production API accepts only Cognito tokens and answers the dev sign-in routes with
+# 404, so nothing behind /_api is open without a real account. Remove this block (and the site's) to go
+# live. A wrong Authorization scheme here counts toward Plesk's fail2ban (5 in 10 minutes = a ban).
+AuthType Basic
+AuthName "AMPM"
+AuthUserFile /var/www/vhosts/app.ampmverse.com/httpdocs/.htpasswd
+<RequireAny>
+Require expr "%{REQUEST_URI} =~ m#^/_api/#"
+Require valid-user
+</RequireAny>
+
+<IfModule mod_headers.c>
+# HTTPS only, for a year (no includeSubDomains: other ampmverse.com names are not all ours to vouch for).
+Header always set Strict-Transport-Security "max-age=31536000"
+Header always set X-Content-Type-Options "nosniff"
+Header always set Referrer-Policy "no-referrer"
+Header always set X-Frame-Options "DENY"
+Header always set Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(self \"https://checkout.razorpay.com\" \"https://api.razorpay.com\")"
+# The portal's content security policy (security.md: no inline scripts). Scripts come from this origin
+# and Razorpay's checkout; react-native-web writes its styles at run time, hence the inline styles; the
+# browser talks to this origin's /_api, Cognito in Mumbai and Razorpay. Report-Only first: the console
+# lists what the live app would break, and the header switches to Content-Security-Policy once clean.
+Header always set Content-Security-Policy-Report-Only "default-src 'self'; script-src 'self' https://checkout.razorpay.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://cognito-idp.ap-south-1.amazonaws.com https://api.razorpay.com https://lumberjack.razorpay.com; frame-src https://api.razorpay.com https://checkout.razorpay.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+Header always unset X-Powered-By
+Header unset X-Powered-By
+</IfModule>
+
+<IfModule mod_rewrite.c>
+RewriteEngine On
+RewriteBase /
+
+# Dot files (the target marker, any stray config) are never served; Let's Encrypt's challenge is.
+RewriteRule (^|/)\.(?!well-known/) - [F,L]
+
+# API: /_api/* to the production API, published on the box's loopback only (compose.box.yml: 7101).
+RewriteRule ^_api/(.*)$ http://127.0.0.1:7101/$1 [P,L]
+
+# SPA fallback: a path that is not a real file or directory loads index.html, so a deep link such as
+# /portal/requests/<id> opens the app and its router resolves it.
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ /index.html [L]
+</IfModule>

@@ -24,6 +24,9 @@ x-app: &app
 services:
   postgres:
     image: ${AMPM_POSTGRES_IMAGE:?set AMPM_POSTGRES_IMAGE to the released postgres+pgbackrest image tag@sha256 digest (the deploy workflow sets it)}
+    # An init as PID 1 so the async archive-push's orphan is reaped by it, not by the postmaster (which
+    # would treat its failed exit as a backend crash and restart the server); see the production file.
+    init: true
     # Tuned config + restrictive pg_hba + the pgBackRest archive command (feature 6.3). PGBACKREST_* and
     # the POSTGRES_* credentials come from the sops-decrypted env.
     command:
@@ -68,6 +71,8 @@ services:
   # limits and its own encrypted S3 repo via the sops-decrypted env.
   pgbackrest:
     image: ${AMPM_POSTGRES_IMAGE:?set AMPM_POSTGRES_IMAGE to the released postgres+pgbackrest image tag@sha256 digest (the deploy workflow sets it)}
+    # The scheduler shell would otherwise be PID 1 and leave pgBackRest's forked children unreaped.
+    init: true
     user: postgres
     depends_on:
       postgres: { condition: service_healthy }

@@ -22,6 +22,34 @@ export interface ValidInvite {
 }
 
 /**
+ * Issues an invite for a user through the given client, retiring any still-live one (one live invite
+ * per user), and returns the RAW token to deliver. Exported so a command-line bootstrap outside Nest
+ * (prisma/bootstrap.ts) mints exactly the token the app accepts at activation.
+ *
+ * @example
+ * const raw = await issueInviteToken(tx, user.id); // deliver `${WEB_APP_URL}/activate?token=${raw}`
+ */
+export async function issueInviteToken(
+  client: Prisma.TransactionClient,
+  userId: string,
+): Promise<string> {
+  const raw = randomBytes(32).toString("base64url");
+  await client.authToken.updateMany({
+    where: { userId, purpose: "invite", usedAt: null },
+    data: { usedAt: new Date() },
+  });
+  await client.authToken.create({
+    data: {
+      userId,
+      purpose: "invite",
+      tokenHash: hashToken(raw),
+      expiresAt: new Date(Date.now() + INVITE_TTL_MS),
+    },
+  });
+  return raw;
+}
+
+/**
  * The invite/link tokens the API itself mints (`auth_tokens`); credentials, OTP and TOTP stay with
  * the identity service (T-6). Feature 5.2 uses the `invite` purpose: a single-use, expiring token
  * delivered out of band, exchanged at activation. Only the token's sha256 hash is ever stored.
@@ -39,20 +67,7 @@ export class AuthTokenService {
     userId: string,
     client: Prisma.TransactionClient = this.prisma,
   ): Promise<string> {
-    const raw = randomBytes(32).toString("base64url");
-    await client.authToken.updateMany({
-      where: { userId, purpose: "invite", usedAt: null },
-      data: { usedAt: new Date() },
-    });
-    await client.authToken.create({
-      data: {
-        userId,
-        purpose: "invite",
-        tokenHash: hashToken(raw),
-        expiresAt: new Date(Date.now() + INVITE_TTL_MS),
-      },
-    });
-    return raw;
+    return issueInviteToken(client, userId);
   }
 
   /** The valid (unused, unexpired) invite matching this raw token, or null. */

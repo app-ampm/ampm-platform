@@ -28,6 +28,12 @@ x-app: &app
 services:
   postgres:
     image: ${AMPM_POSTGRES_IMAGE:?set AMPM_POSTGRES_IMAGE to the released postgres+pgbackrest image tag@sha256 digest (the deploy workflow sets it)}
+    # An init (tini) as PID 1, not the postmaster. pgBackRest's async archive-push daemonises, and its
+    # orphan is re-parented to PID 1; when PID 1 is the postmaster, a non-zero exit of that unknown child
+    # counts as a backend crash, so every failed archive attempt restarts the whole server (the test box
+    # crash-restarted every ~10 s from 19 to 20 Nov 2026 while the stanza was missing). tini reaps it
+    # (D-139).
+    init: true
     # Load the tuned config + restrictive pg_hba (feature 6.3). The archive_command runs pgbackrest, so
     # the image bundles it and the PGBACKREST_* env (repo type, S3 target, cipher pass) comes from the
     # sops-decrypted env; POSTGRES_USER / POSTGRES_PASSWORD / POSTGRES_DB come from that env too.
@@ -67,6 +73,8 @@ services:
   # the record, PGBACKREST_* for the repo), so it takes the env_file; it publishes no port.
   pgbackrest:
     image: ${AMPM_POSTGRES_IMAGE:?set AMPM_POSTGRES_IMAGE to the released postgres+pgbackrest image tag@sha256 digest (the deploy workflow sets it)}
+    # The scheduler shell would otherwise be PID 1 and leave pgBackRest's forked children unreaped.
+    init: true
     user: postgres
     depends_on:
       postgres: { condition: service_healthy }

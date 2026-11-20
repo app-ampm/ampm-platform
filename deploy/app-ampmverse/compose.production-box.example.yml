@@ -1,0 +1,188 @@
+# The PRODUCTION stack on the shared Plesk VPS (31.97.62.74), running beside the test stack (Compose
+# project ampm-local) — D-138. It is the repository's production compose plus this override:
+#   docker compose -f infra/compose/production/compose.yml -f infra/compose/production/compose.box.yml ...
+# Copy this file to infra/compose/production/compose.box.yml on the box: it must sit next to the base
+# file, because Compose resolves an override's relative paths (the build contexts) from the base file's
+# directory. deploy/redeploy-prod.sh drives it; the runbook is deploy/app-ampmverse/production-setup.md.
+#
+# What differs from the dedicated-VPS design (docs/engineering/vps-setup.md), and why:
+# - Plesk's nginx/Apache own ports 80 and 443 and terminate TLS, so Caddy does not run. The API and the
+#   website publish on loopback only; each domain's .htaccess reverse-proxies to them and adds the
+#   headers Caddy would (deploy/app-ampmverse/htaccess.production.example).
+# - Images are built on the box from the shipped source, because the GHCR images are private.
+#   redeploy-prod.sh sets AMPM_IMAGE (tagged by commit, kept for rollback) and AMPM_POSTGRES_IMAGE.
+# - Secrets are box-only env files (mode 600) made by deploy/app-ampmverse/prod-secrets.sh, outside the
+#   source tree and the web roots, not sops (D-140). Only non-secret settings are written below.
+# - The encrypted pgBackRest repository is a directory on this server's disk, not the Mumbai bucket
+#   (D-139): it guards against mistakes and corruption, not against losing the server.
+# - Media is stored on a persistent host directory (D-106).
+# - Limits are sized for a server shared with the test stack and other tenants (~10 GB free).
+name: ampm
+
+# Non-secret production settings for the api and the worker (secrets come from app.env).
+x-prod-env: &prod-env
+  IDENTITY_PROVIDER: cognito
+  COGNITO_REGION: ap-south-1
+  # The pool and the public app client (cognito-setup.md); identifiers, not secrets.
+  COGNITO_USER_POOL_ID: ap-south-1_wcaro5oAK
+  COGNITO_CLIENT_ID: 5n6agn2iipgt93i5b2okto2ftv
+  WEB_APP_URL: https://app.ampmverse.com
+  # The client portal (app.) and the website's enquiry form (site.) call the API from the browser.
+  CORS_ORIGINS: https://app.ampmverse.com,https://site.ampmverse.com
+  # One proxy hop as seen by the API: Plesk's nginx -> Apache -> the loopback port.
+  TRUST_PROXY: "1"
+  # Google Workspace hosts ampmverse.com mail (SPF, DKIM and DMARC already published); SMTP_USER,
+  # SMTP_PASSWORD (an app password) and EMAIL_FROM come from app.env. 587 is STARTTLS.
+  EMAIL_PROVIDER: smtp
+  SMTP_HOST: smtp.gmail.com
+  SMTP_PORT: "587"
+  SMTP_SECURE: "false"
+  # Cloudflare Turnstile for the website's enquiry form; BOT_CHECK_SECRET comes from app.env.
+  BOT_CHECK_PROVIDER: siteverify
+  BOT_CHECK_URL: https://challenges.cloudflare.com/turnstile/v0/siteverify
+  # Razorpay: the key id, key secret and webhook secret come from app.env. They hold the TEST keys until
+  # AMPM starts selling (test cards only, no money moves); going live replaces all three there.
+  PAYMENT_PROVIDER: razorpay
+  # Local media on a persistent, backed-up host directory (D-106); MEDIA_SIGNING_SECRET is in app.env.
+  STORAGE_PROVIDER: local
+  STORAGE_LOCAL_DIR: /data/storage
+  STORAGE_LOCAL_PERSISTENT: "true"
+  # Super-Admin custom roles grant their capabilities (D-036), as on the test box.
+  DYNAMIC_ROLES: "true"
+  LOG_LEVEL: info
+
+services:
+  postgres:
+    build:
+      context: ../../..
+      dockerfile: infra/docker/postgres.Dockerfile
+    env_file:
+      - path: /var/www/vhosts/app.ampmverse.com/ampm-prod-secrets/postgres.env
+        required: true
+    volumes:
+      # The encrypted pgBackRest repository on this server's disk (D-139). archive-push writes WAL here
+      # every minute. Owned by the image's postgres user (uid 999).
+      - /var/www/vhosts/app.ampmverse.com/ampm-backups/pgbackrest-prod:/var/lib/pgbackrest
+    deploy:
+      resources:
+        limits: { cpus: "1.5", memory: 3g }
+
+  pgbackrest:
+    pull_policy: never
+    env_file:
+      - path: /var/www/vhosts/app.ampmverse.com/ampm-prod-secrets/postgres.env
+        required: true
+    volumes:
+      - /var/www/vhosts/app.ampmverse.com/ampm-backups/pgbackrest-prod:/var/lib/pgbackrest
+
+  restore:
+    pull_policy: never
+    env_file:
+      - path: /var/www/vhosts/app.ampmverse.com/ampm-prod-secrets/postgres.env
+        required: true
+    volumes:
+      - /var/www/vhosts/app.ampmverse.com/ampm-backups/pgbackrest-prod:/var/lib/pgbackrest
+
+  redis:
+    env_file:
+      - path: /var/www/vhosts/app.ampmverse.com/ampm-prod-secrets/redis.env
+        required: true
+    deploy:
+      resources:
+        limits: { cpus: "0.5", memory: 256m }
+
+  api:
+    build:
+      context: ../../..
+      dockerfile: infra/docker/Dockerfile
+    env_file:
+      - path: /var/www/vhosts/app.ampmverse.com/ampm-prod-secrets/app.env
+        required: true
+    environment:
+      <<: *prod-env
+      NODE_ENV: production
+    ports:
+      - "127.0.0.1:7101:3900" # loopback only; app.ampmverse.com's .htaccess proxies /_api here
+    volumes:
+      - /var/www/vhosts/app.ampmverse.com/ampm-prod-storage:/data/storage
+    deploy:
+      resources:
+        limits: { cpus: "1", memory: 1g }
+
+  worker:
+    pull_policy: never
+    env_file:
+      - path: /var/www/vhosts/app.ampmverse.com/ampm-prod-secrets/app.env
+        required: true
+    environment:
+      <<: *prod-env
+      NODE_ENV: production
+      JOB_WORKER: "true"
+    volumes:
+      - /var/www/vhosts/app.ampmverse.com/ampm-prod-storage:/data/storage
+    deploy:
+      resources:
+        limits: { cpus: "1", memory: 768m }
+
+  migrate:
+    pull_policy: never
+    env_file:
+      - path: /var/www/vhosts/app.ampmverse.com/ampm-prod-secrets/app.env
+        required: true
+    environment:
+      <<: *prod-env
+      NODE_ENV: production
+
+  # The public website (apps/web) at site.ampmverse.com, whose .htaccess proxies every request here.
+  web:
+    build:
+      context: ../../..
+      dockerfile: infra/docker/web.Dockerfile
+      args:
+        # Inlined at build time: the enquiry form posts to the API through app.'s /_api proxy, and
+        # "Client sign-in" opens the portal.
+        NEXT_PUBLIC_API_URL: "https://app.ampmverse.com/_api"
+        NEXT_PUBLIC_PORTAL_URL: "https://app.ampmverse.com"
+    ports:
+      - "127.0.0.1:7102:3000" # loopback only; site.ampmverse.com's .htaccess proxies here
+    # A network of its own: the site reaches the API as a visitor's browser does, through the public URL.
+    networks: [site]
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    read_only: true
+    tmpfs: ["/tmp", "/site/apps/web/.next/cache"]
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits: { cpus: "0.5", memory: 512m }
+
+  # Plesk owns 80/443, so Caddy never starts here (a profile nothing enables).
+  caddy:
+    profiles: [caddy-not-on-this-box]
+
+  # The monitoring stack (feature 6.7) stays off until its alert route is configured: Alertmanager needs
+  # its webhook secret, and Prometheus would scrape an API /metrics endpoint that does not exist yet.
+  # Start it with `--profile monitoring` once both are in place.
+  node-exporter:
+    profiles: [monitoring]
+  blackbox-exporter:
+    profiles: [monitoring]
+  prometheus:
+    profiles: [monitoring]
+  alertmanager:
+    profiles: [monitoring]
+  db-metrics:
+    profiles: [monitoring]
+    pull_policy: never
+
+networks:
+  site: {}

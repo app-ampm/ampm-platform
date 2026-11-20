@@ -1,8 +1,9 @@
-# httpdocs/.htaccess of app.ampmverse.com, the throwaway test box (docs/engineering/test-deploy.md), as it
-# runs there. Version-controlled so the box's web config is written back into the repo (infra.md);
-# deploys never overwrite it (deploy-web.sh's rsync excludes it and the .htpasswd it names). On a fresh
-# box copy it to httpdocs/.htaccess and create that user file with htpasswd. This is the test box, not
-# the production VPS (D-015). Needs mod_rewrite, mod_proxy and mod_proxy_http (Plesk has them).
+# .htaccess of test-app.ampmverse.com: the TEST stack's portal on the shared box (dev sign-in, synthetic
+# data; docs/engineering/test-deploy.md). Since D-138 production owns app.ampmverse.com, whose file is
+# htaccess.production.example. Version-controlled so the box's web config is written back into the repo
+# (infra.md); deploys never overwrite it (deploy-web.sh's rsync excludes it, the .htpasswd it names and
+# the .ampm-target marker). The user file stays in app.ampmverse.com/httpdocs so one login works on every
+# site. Needs mod_rewrite, mod_proxy and mod_proxy_http (Plesk has them).
 
 # Basic-Auth gate over the whole site, except /_api: the app sends its own Bearer token there, which
 # replaces the browser's Basic credentials, so a gated /_api would refuse every signed-in call (and the
@@ -22,7 +23,7 @@ Require valid-user
 RewriteEngine On
 RewriteBase /
 
-# API: /_api/* to the box-local NestJS API (default port 7001).
+# API: /_api/* to the test stack's NestJS API (loopback port 7001).
 RewriteRule ^_api/(.*)$ http://127.0.0.1:7001/$1 [P,L]
 
 # SPA fallback: a path that is not a real file or directory loads index.html, so a deep link such as
