@@ -1,5 +1,7 @@
 # Amazon Cognito — setup guide (identity service)
 
+> **Superseded on 20 November 2026 by D-142.** AMPM now signs people in itself (staff password + authenticator code, `IDENTITY_PROVIDER=ampm`); this guide is kept for the record until the Cognito code and the AWS user pool are removed.
+
 AMPM's identity provider is **Amazon Cognito (Mumbai, `ap-south-1`)** — locked 26 October 2026 (T‑6, R13). This is the end‑to‑end guide to standing it up and flipping the API from the development sign‑in (`IDENTITY_PROVIDER=local`) to Cognito. It supersedes the earlier short note; the D‑041 / D‑043 material is kept in §3.
 
 > **Read this first.** The API's Cognito *verification* code is already built and tested offline. What does **not** exist yet is the AWS side (pool, app client, four Lambdas), the step that *creates* a Cognito user at invite time, the client sign‑in wiring in the apps, and the cutover. "Setting up Cognito" is therefore a small AWS job **plus a real build backlog** (§14). Do not expect a pure console click‑through to produce working sign‑in.

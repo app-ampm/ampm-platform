@@ -79,6 +79,7 @@ export type {
   SubscriptionPolicy,
 } from "./config";
 export * from "./auth";
+export * from "./sign-in";
 export {
   clientLoginCreateRequest,
   clientLoginList,

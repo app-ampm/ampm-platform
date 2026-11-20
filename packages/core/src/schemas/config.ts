@@ -141,6 +141,13 @@ export const CONFIG_REGISTRY = {
         text: "Hi {{name}},\n\nYou have been invited to your wedding portal on AMPM. Activate your account:\n{{activationUrl}}\n\nThis invitation expires in 7 days.",
       },
     },
+    "auth.password_reset": {
+      email: {
+        subject: "Reset your AMPM password",
+        html: '<p>Hi {{name}},</p>\n<p>Someone asked to reset the password of your AMPM account. <a href="{{resetUrl}}">Choose a new password</a>.</p>\n<p>The link works once and expires in 60 minutes. If you did not ask for this, ignore this email: your password stays the same.</p>',
+        text: "Hi {{name}},\n\nSomeone asked to reset the password of your AMPM account. Choose a new password:\n{{resetUrl}}\n\nThe link works once and expires in 60 minutes. If you did not ask for this, ignore this email: your password stays the same.",
+      },
+    },
   }),
 };
 

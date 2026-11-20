@@ -84,3 +84,22 @@ export function useReinviteStaffUser(userId: string) {
     },
   });
 }
+
+/**
+ * Resets a staff member's authenticator (`POST /admin/staff-users/:id/reset-authenticator`, D-142): clears
+ * it and the recovery codes and signs the account out everywhere; their next sign-in adds a new one.
+ */
+export function useResetStaffAuthenticator(userId: string) {
+  const api = useApiClient();
+  const queryClient = useQueryClient();
+  return useMutation<StaffUserView, Error, void>({
+    mutationFn: () =>
+      api.request(`/admin/staff-users/${userId}/reset-authenticator`, {
+        method: "POST",
+        schema: staffUserView,
+      }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: STAFF_USERS_QUERY_KEY });
+    },
+  });
+}

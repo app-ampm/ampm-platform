@@ -7,8 +7,25 @@ const fields = z.object({
   PORT: z.coerce.number().int().min(1).max(65535).default(3900),
   LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),
   DATABASE_URL: z.string().url(),
-  IDENTITY_PROVIDER: z.enum(["cognito", "local"]).default("cognito"),
+  /**
+   * Who signs people in. `ampm` is AMPM's own sign-in (D-142): staff password + authenticator code,
+   * verified and minted by the API itself. `local` is the development provider (dev sign-in, refused in
+   * production). `cognito` verifies Amazon Cognito tokens (being retired by D-142).
+   */
+  IDENTITY_PROVIDER: z.enum(["cognito", "local", "ampm"]).default("cognito"),
   IDENTITY_LOCAL_SECRET: z.string().min(32).optional(),
+  /** Signs the access tokens the `ampm` provider mints (HS256). Rotating it signs everyone out. */
+  AUTH_TOKEN_SECRET: z.string().min(32).optional(),
+  /**
+   * Base64 of 32 random bytes: encrypts the staff authenticator secrets at rest (AES-256-GCM, `ampm`
+   * provider). Changing it makes every enrolled authenticator unreadable, so it is never rotated casually.
+   */
+  AUTH_ENCRYPTION_KEY: z
+    .string()
+    .refine((value) => Buffer.from(value, "base64").length === 32, {
+      message: "must be base64 of exactly 32 bytes (openssl rand -base64 32)",
+    })
+    .optional(),
   COGNITO_REGION: z.string().min(1).optional(),
   COGNITO_USER_POOL_ID: z.string().min(1).optional(),
   COGNITO_CLIENT_ID: z.string().min(1).optional(),
@@ -110,22 +127,40 @@ interface EnvIssue {
 
 /** Identity-provider consistency: local is refused in production; each provider's keys are required. */
 function identityIssues(value: EnvFields): EnvIssue[] {
+  if (value.IDENTITY_PROVIDER === "local") return localIdentityIssues(value);
+  if (value.IDENTITY_PROVIDER === "ampm") return ampmIdentityIssues(value);
+  return cognitoIdentityIssues(value);
+}
+
+function localIdentityIssues(value: EnvFields): EnvIssue[] {
   const issues: EnvIssue[] = [];
-  if (value.IDENTITY_PROVIDER === "local") {
-    if (value.NODE_ENV === "production") {
-      issues.push({
-        path: ["IDENTITY_PROVIDER"],
-        message: "the local identity provider is refused in production",
-      });
-    }
-    if (!value.IDENTITY_LOCAL_SECRET) {
-      issues.push({
-        path: ["IDENTITY_LOCAL_SECRET"],
-        message: "required with the local identity provider",
-      });
-    }
-    return issues;
+  if (value.NODE_ENV === "production") {
+    issues.push({
+      path: ["IDENTITY_PROVIDER"],
+      message: "the local identity provider is refused in production",
+    });
   }
+  if (!value.IDENTITY_LOCAL_SECRET) {
+    issues.push({
+      path: ["IDENTITY_LOCAL_SECRET"],
+      message: "required with the local identity provider",
+    });
+  }
+  return issues;
+}
+
+/** AMPM's own sign-in (D-142) needs its token-signing secret and its encryption key, in every environment. */
+function ampmIdentityIssues(value: EnvFields): EnvIssue[] {
+  const issues: EnvIssue[] = [];
+  for (const key of ["AUTH_TOKEN_SECRET", "AUTH_ENCRYPTION_KEY"] as const) {
+    if (!value[key])
+      issues.push({ path: [key], message: "required with the ampm identity provider" });
+  }
+  return issues;
+}
+
+function cognitoIdentityIssues(value: EnvFields): EnvIssue[] {
+  const issues: EnvIssue[] = [];
   for (const key of ["COGNITO_REGION", "COGNITO_USER_POOL_ID", "COGNITO_CLIENT_ID"] as const) {
     if (!value[key]) {
       issues.push({ path: [key], message: "required with the Cognito identity provider" });

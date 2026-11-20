@@ -37,7 +37,10 @@ export class AuthGuard implements CanActivate {
     const principal = await this.principals.resolve(verified);
     // Set the principal before touching the session, so the session-create audit has its actor.
     const store = requestContext.get();
-    if (store) store.principal = principal;
+    if (store) {
+      store.principal = principal;
+      store.tokenId = verified.tokenId;
+    }
     await this.sessions.touch(verified, principal, new Date());
     return true;
   }

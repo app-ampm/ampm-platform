@@ -33,6 +33,12 @@ TABLES["users"] = T(
     status=F(automation="disabled or locked refuses sign-in at once and revokes sessions"),
     mfa_enabled=F(editor="SYS; must be true for staff before first sign-in", required="At creation for staff"),
     last_login_at=F(editor=SYS, automation="Inactive accounts reported for review"),
+    # AMPM's own sign-in (D-142): credentials never leave the API.
+    password_hash=F(editor=SYS, visibility="SECRET", validation="Argon2id PHC string; 12 to 128 character passwords"),
+    totp_secret_enc=F(editor=SYS, visibility="SECRET", validation="AES-256-GCM under AUTH_ENCRYPTION_KEY"),
+    totp_pending_enc=F(editor=SYS, visibility="SECRET", automation="Cleared when the authenticator is confirmed"),
+    failed_sign_ins=F(editor=SYS, automation="Ten in a row pause sign-in for 15 minutes"),
+    locked_until=F(editor=SYS, automation="Sign-in refused until then; cleared by a password reset"),
 )
 TABLES["roles"] = T("Configuration", "SA", required=["role_key", "name"],
                     is_system=F(automation="System roles cannot be deleted or renamed"))
@@ -69,6 +75,12 @@ TABLES["auth_tokens"] = T(
     "System", SYS, required=["user_id", "purpose", "token_hash", "expires_at"], assumptions="A-13 (Q13)",
     expires_at=F(editor=SYS, validation="invite 7 days; password reset 1 hour; OTP 10 minutes", required="System"),
     used_at=F(automation="Single use; a used token is refused"),
+)
+TABLES["user_recovery_codes"] = T(
+    "System", SYS, required=["user_id", "code_hash"], assumptions="A-13 (Q13), D-142",
+    code_hash=F(visibility="SECRET",
+                validation="SHA-256 of the normalised code; ten issued when the authenticator is confirmed"),
+    used_at=F(automation="Single use; a used code is refused"),
 )
 TABLES["notifications"] = T(
     "System", SYS, "Recipient only", required=["recipient_type", "recipient_id", "channel", "template_key", "status"],

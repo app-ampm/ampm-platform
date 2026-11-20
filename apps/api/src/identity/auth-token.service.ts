@@ -10,6 +10,19 @@ import { Prisma } from "../generated/prisma/client.js";
  * `configurations` key when the auth config lands; a constant keeps feature 5.2 self-contained.
  */
 const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+/** The window between a correct password and the authenticator code (D-142). */
+const CHALLENGE_TTL_MS = 5 * 60 * 1000;
+/** How long an emailed password-reset link works. */
+const PASSWORD_RESET_TTL_MS = 60 * 60 * 1000;
+/** Wrong codes a sign-in challenge takes before it is burned and the sign-in starts again. */
+export const CHALLENGE_MAX_ATTEMPTS = 5;
+
+/** The short-lived tokens of AMPM's own sign-in, with how long each lives. */
+const SIGN_IN_TOKEN_TTL_MS = {
+  sign_in_challenge: CHALLENGE_TTL_MS,
+  password_reset: PASSWORD_RESET_TTL_MS,
+} as const;
+export type SignInTokenPurpose = keyof typeof SIGN_IN_TOKEN_TTL_MS;
 
 /** A high-entropy random token is looked up by a fast hash — the right primitive, unlike a password. */
 function hashToken(raw: string): string {
@@ -19,6 +32,13 @@ function hashToken(raw: string): string {
 export interface ValidInvite {
   readonly id: string;
   readonly userId: string;
+}
+
+/** A live sign-in challenge or reset token: who it is for, and how many wrong answers it has taken. */
+export interface LiveToken {
+  readonly id: string;
+  readonly userId: string;
+  readonly attempts: number;
 }
 
 /**
@@ -33,26 +53,31 @@ export async function issueInviteToken(
   client: Prisma.TransactionClient,
   userId: string,
 ): Promise<string> {
+  return issueToken(client, userId, "invite", INVITE_TTL_MS);
+}
+
+/** Mints a token of one purpose for a user, retiring their still-live one of that purpose first. */
+async function issueToken(
+  client: Prisma.TransactionClient,
+  userId: string,
+  purpose: "invite" | SignInTokenPurpose,
+  ttlMs: number,
+): Promise<string> {
   const raw = randomBytes(32).toString("base64url");
   await client.authToken.updateMany({
-    where: { userId, purpose: "invite", usedAt: null },
+    where: { userId, purpose, usedAt: null },
     data: { usedAt: new Date() },
   });
   await client.authToken.create({
-    data: {
-      userId,
-      purpose: "invite",
-      tokenHash: hashToken(raw),
-      expiresAt: new Date(Date.now() + INVITE_TTL_MS),
-    },
+    data: { userId, purpose, tokenHash: hashToken(raw), expiresAt: new Date(Date.now() + ttlMs) },
   });
   return raw;
 }
 
 /**
- * The invite/link tokens the API itself mints (`auth_tokens`); credentials, OTP and TOTP stay with
- * the identity service (T-6). Feature 5.2 uses the `invite` purpose: a single-use, expiring token
- * delivered out of band, exchanged at activation. Only the token's sha256 hash is ever stored.
+ * The one-time tokens the API mints (`auth_tokens`): invitations (feature 5.2), and for AMPM's own
+ * sign-in (D-142) the challenge between password and authenticator code and the password-reset link.
+ * Each is single-use, expiring and delivered out of band. Only the token's sha256 hash is ever stored.
  */
 @Injectable()
 export class AuthTokenService {
@@ -68,6 +93,41 @@ export class AuthTokenService {
     client: Prisma.TransactionClient = this.prisma,
   ): Promise<string> {
     return issueInviteToken(client, userId);
+  }
+
+  /** Mints a sign-in challenge or a password-reset token (D-142); the RAW token goes to the user. */
+  async issueSignInToken(
+    userId: string,
+    purpose: SignInTokenPurpose,
+    client: Prisma.TransactionClient = this.prisma,
+  ): Promise<string> {
+    return issueToken(client, userId, purpose, SIGN_IN_TOKEN_TTL_MS[purpose]);
+  }
+
+  /** The unused, unexpired sign-in challenge or reset token matching this raw token, or null. */
+  async findLiveSignInToken(raw: string, purpose: SignInTokenPurpose): Promise<LiveToken | null> {
+    return this.prisma.authToken.findFirst({
+      where: { purpose, tokenHash: hashToken(raw), usedAt: null, expiresAt: { gt: new Date() } },
+      select: { id: true, userId: true, attempts: true },
+    });
+  }
+
+  /**
+   * Counts a wrong answer against a token; at CHALLENGE_MAX_ATTEMPTS it is burned (used), so guessing a
+   * code means starting again from the password, which counts toward the account's lockout too.
+   */
+  async countWrongAnswer(id: string): Promise<void> {
+    const token = await this.prisma.authToken.update({
+      where: { id },
+      data: { attempts: { increment: 1 } },
+      select: { attempts: true },
+    });
+    if (token.attempts >= CHALLENGE_MAX_ATTEMPTS) {
+      await this.prisma.authToken.updateMany({
+        where: { id, usedAt: null },
+        data: { usedAt: new Date() },
+      });
+    }
   }
 
   /** The valid (unused, unexpired) invite matching this raw token, or null. */

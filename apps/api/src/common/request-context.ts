@@ -16,6 +16,8 @@ export interface RequestContext {
   readonly ip: string | null;
   principal: Principal | null;
   access: Access | null;
+  /** The `jti` of the access token AuthGuard verified: the session that sign-out ends (D-142). */
+  tokenId?: string;
 }
 
 const storage = new AsyncLocalStorage<RequestContext>();

@@ -3,8 +3,9 @@ import { useSyncExternalStore } from "react";
 import { getCognitoAccessToken, isCognitoSignedIn, onCognitoAuthEvent } from "./cognito-auth";
 import { env } from "./env";
 
-/** Whether the app signs in through Amazon Cognito (vs the local dev-login), fixed at build time. */
-const isCognito = env.EXPO_PUBLIC_IDENTITY_PROVIDER === "cognito";
+/** Who signs people in, fixed at build time: Cognito holds its own session; local and ampm hold a token here. */
+const provider = env.EXPO_PUBLIC_IDENTITY_PROVIDER;
+const isCognito = provider === "cognito";
 
 /**
  * The access token sent as the Bearer on every API request, and the signed-in flag the entry gate and
@@ -16,9 +17,11 @@ const isCognito = env.EXPO_PUBLIC_IDENTITY_PROVIDER === "cognito";
  * - `local` (dev-login): an in-memory token the dev sign-in screen sets. A development build seeds it from
  *   the env token; production never carries one (`__DEV__` is false, so the minifier drops the read, and
  *   the API refuses local tokens anyway — security.md).
+ * - `ampm` (AMPM's own sign-in, D-142): the token the API minted after the password and the
+ *   authenticator code, held the same way under its own storage key, never seeded from the env.
  */
 let localToken: string | null =
-  !isCognito && __DEV__ ? (env.EXPO_PUBLIC_DEV_ACCESS_TOKEN ?? null) : null;
+  provider === "local" && __DEV__ ? (env.EXPO_PUBLIC_DEV_ACCESS_TOKEN ?? null) : null;
 
 let cognitoSignedIn = false;
 
@@ -45,8 +48,11 @@ export function getAccessToken(): string | null | Promise<string | null> {
   return isCognito ? getCognitoAccessToken() : localToken;
 }
 
-/** Where the dev-login token is persisted on the web so a refresh keeps the session (local provider only). */
-const DEV_TOKEN_KEY = "ampm.devToken";
+/**
+ * Where the token is persisted on the web so a refresh keeps the session. Each provider has its own key,
+ * so a stale dev-login token can never be sent as the session of an AMPM sign-in build, or the reverse.
+ */
+const DEV_TOKEN_KEY = provider === "ampm" ? "ampm.accessToken" : "ampm.devToken";
 
 /** The persisted dev token, or null — web localStorage only, guarded for SSR / native / private mode. */
 function readPersistedToken(): string | null {

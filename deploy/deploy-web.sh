@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Build the Expo web export of the client and staff portals and sync it to a docroot on the shared
 # Plesk box, for one of its two stacks (D-138):
-#   production  app.ampmverse.com (httpdocs): signs in with Amazon Cognito, no demo banner, and calls
+#   production  app.ampmverse.com (httpdocs): AMPM's own sign-in (D-142), no demo banner, and calls
 #               the production API (127.0.0.1:7101 behind the domain's /_api proxy)
 #   test        the test stack (dev sign-in, demo banner) at its test-app address
 # The docroot keeps a `.ampm-target` marker, and the script refuses to put one target's bundle into the
@@ -27,13 +27,8 @@ case "$AMPM_WEB_TARGET" in
   production)
     HTTPDOCS="${WEB_HTTPDOCS:-$VHOST/httpdocs}"
     API_URL="${EXPO_PUBLIC_API_URL:-https://app.ampmverse.com/_api}"
-    # Cognito sign-in (staff today; clients once mobile OTP exists). Public ids, not secrets.
-    BUILD_ENV=(
-      EXPO_PUBLIC_IDENTITY_PROVIDER=cognito
-      EXPO_PUBLIC_COGNITO_REGION=ap-south-1
-      EXPO_PUBLIC_COGNITO_USER_POOL_ID=ap-south-1_wcaro5oAK
-      EXPO_PUBLIC_COGNITO_CLIENT_ID=5n6agn2iipgt93i5b2okto2ftv
-    )
+    # AMPM's own sign-in (D-142): password + authenticator code, no third-party identity service.
+    BUILD_ENV=(EXPO_PUBLIC_IDENTITY_PROVIDER=ampm)
     ;;
   test)
     HTTPDOCS="${WEB_HTTPDOCS:-$VHOST/test-app.ampmverse.com}"

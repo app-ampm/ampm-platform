@@ -1,6 +1,10 @@
 import { useState } from "react";
 
-import { useReinviteStaffUser, useSetStaffUserStatus, useUpdateStaffUser } from "@ampm/api-client";
+import {
+  useReinviteStaffUser,
+  useResetStaffAuthenticator,
+  useSetStaffUserStatus,
+} from "@ampm/api-client";
 import type { StaffUserView } from "@ampm/core";
 import { Button, Card, ConfirmSheet, Stack, Text, useToast } from "@ampm/ui";
 
@@ -62,7 +66,7 @@ function StatusAction({ user, onDisable, onEnable, onResend, pending }: StatusAc
 function useStaffUserActions(user: StaffUserView) {
   const toast = useToast();
   const setStatus = useSetStaffUserStatus(user.id);
-  const update = useUpdateStaffUser(user.id);
+  const resetMfa = useResetStaffAuthenticator(user.id);
   const reinvite = useReinviteStaffUser(user.id);
   const [confirm, setConfirm] = useState<Confirm>(null);
   const done = (title: string) => (): void => {
@@ -74,7 +78,7 @@ function useStaffUserActions(user: StaffUserView) {
     confirm,
     setConfirm,
     statusPending: setStatus.isPending,
-    updatePending: update.isPending,
+    resetPending: resetMfa.isPending,
     reinvitePending: reinvite.isPending,
     disable: (): void =>
       setStatus.mutate(
@@ -86,14 +90,12 @@ function useStaffUserActions(user: StaffUserView) {
         { status: "active" },
         { onSuccess: done("Account enabled"), onError: failed("Could not enable the account") },
       ),
+    // Clears the authenticator and recovery codes and signs the account out everywhere (D-142).
     resetAuthenticator: (): void =>
-      update.mutate(
-        { mfaEnabled: false },
-        {
-          onSuccess: done("Authenticator reset"),
-          onError: failed("Could not reset the authenticator"),
-        },
-      ),
+      resetMfa.mutate(undefined, {
+        onSuccess: done("Authenticator reset"),
+        onError: failed("Could not reset the authenticator"),
+      }),
     resend: (): void =>
       reinvite.mutate(undefined, {
         onSuccess: done("Invitation resent"),
@@ -110,8 +112,7 @@ function StaffUserConfirmSheets({
   readonly user: StaffUserView;
   readonly actions: ReturnType<typeof useStaffUserActions>;
 }) {
-  const { confirm, setConfirm, statusPending, updatePending, disable, resetAuthenticator } =
-    actions;
+  const { confirm, setConfirm, statusPending, resetPending, disable, resetAuthenticator } = actions;
   const close = (): void => setConfirm(null);
   return (
     <>
@@ -131,9 +132,9 @@ function StaffUserConfirmSheets({
         onClose={close}
         destructive
         title="Reset authenticator?"
-        description={`${user.name} sets up their authenticator app again at their next sign-in.`}
+        description={`${user.name} is signed out everywhere and sets up their authenticator app again at their next sign-in. Their recovery codes stop working.`}
         confirmLabel="Reset authenticator"
-        loading={updatePending}
+        loading={resetPending}
         onConfirm={resetAuthenticator}
         testID="confirm-reset"
       />

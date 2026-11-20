@@ -47,6 +47,18 @@ export class SessionService {
     await this.audit.record({ action: "create", entityType: "session", entityId: session.id });
   }
 
+  /** Ends the session of one access token (sign-out, D-142); audited like any revocation. */
+  async revokeToken(tokenId: string, reason: string, now: Date = new Date()): Promise<void> {
+    const id = await this.repository.revokeToken(tokenId, reason, now);
+    if (!id) return;
+    await this.audit.record({
+      action: "update",
+      entityType: "session",
+      entityId: id,
+      after: { revokedReason: reason },
+    });
+  }
+
   /** Ends every live session of a user (a role or membership change, or sign-out). */
   async revokeAllForUser(userId: string, reason: string, now: Date = new Date()): Promise<void> {
     const revoked = await this.repository.revokeAllForUser(userId, reason, now);

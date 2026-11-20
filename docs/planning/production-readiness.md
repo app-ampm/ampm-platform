@@ -10,6 +10,7 @@ AMPM develops and works on production from now on, behind the password curtain. 
 - **Backups stay on the server for now (D-139):** an encrypted pgBackRest repository plus pre-deploy dumps and nightly media copies, all on this disk. Postgres runs under an init.
 - **Secrets are box-only env files (D-140),** written by `prod-secrets.sh`, mode 600, never printed.
 - **Production starts clean (D-141):** reference data only, plus an invited first Super Admin. The synthetic seed refuses to run in production.
+- **Sign-in is AMPM's own (D-142):** staff password (Argon2id) + authenticator code (TOTP) + recovery codes, password reset by email, lockout after ten failures, admin authenticator reset; no Amazon Cognito.
 
 ## 2. Done
 
@@ -24,15 +25,15 @@ AMPM develops and works on production from now on, behind the password curtain. 
 - [ ] **SMTP** through Google Workspace (ampmverse.com already publishes SPF, DKIM and DMARC): `SMTP_USER`, `SMTP_PASSWORD` (an app password) and `EMAIL_FROM` via `prod-secrets.sh set`.
 - [ ] **Cloudflare Turnstile** widget for site.ampmverse.com: the site key to the build, the secret via `prod-secrets.sh set app BOT_CHECK_SECRET`.
 - [ ] **Plesk + GoDaddy:** test-app.ampmverse.com and test-site.ampmverse.com (A records to 31.97.62.74, Let's Encrypt, HTTP→HTTPS).
-- [ ] **The first Super Admin:** confirm the email, make sure the Cognito user exists with that email verified and a permanent password, then sign in, enrol TOTP and open the bootstrap link.
+- [ ] **The first Super Admin:** tell Claude the email; the bootstrap writes a one-time activation link to the box; open it, choose a password, scan the authenticator QR code and save the recovery codes in a password manager.
 - [ ] Keep an off-box copy of the backup cipher passphrase (`postgres.env`) in a password manager.
 
 ## 4. Before pitching clients (go-live blockers)
 
 Identity and access
-- [ ] **Client sign-in.** In a Cognito build only staff can sign in. It needs the three CUSTOM_AUTH challenge Lambdas, an OTP broker, a DLT-registered SMS transport (2Factor; registration takes 2–4 weeks, so start it now) and the client sign-in screen. Until then prospects, clients and the demo cannot sign in, activate or buy.
-- [ ] **Invited staff cannot finish their first sign-in.** Cognito users are created with `MessageAction: SUPPRESS`, no temporary password and no forgot-password screen (`cognito-provisioner.adapter.ts`). Either let Cognito send its invitation email or deliver a temporary password. Until then the interim is the CLI `admin-set-user-password`.
-- [ ] Optional now, needed to invite staff from the app: the Cognito provisioning IAM user's keys (`COGNITO_PROVISIONING_*` in `app.env`).
+- [ ] **Client sign-in by mobile OTP** in AMPM's own sign-in (D-142): an API OTP service (the dev one exists; production needs hashed, rate-limited codes), the SMS transport through a DLT-registered provider (2Factor; registration takes 2–4 weeks, so start it now) and the client sign-in and activation screens. Until then clients, prospects and the demo cannot sign in on production.
+- [x] ~~Invited staff cannot finish their first sign-in~~: solved by AMPM's own sign-in (D-142); the invitation link sets the password and the authenticator.
+- [ ] Retire Cognito: remove the Cognito adapters, the Amplify screens and the pre-token Lambda, delete the AWS user pool, and update `docs/decisions.json` (Q13/Q14 name Cognito) with the generators.
 
 Public forms and payments
 - [ ] **Website enquiry form.** It sends a hard-coded `dev-bot-check` token (`apps/web/src/components/enquiry-payload.ts`), so production refuses every enquiry. Add the Turnstile widget, the site-key build argument and `challenges.cloudflare.com` in the website's CSP.

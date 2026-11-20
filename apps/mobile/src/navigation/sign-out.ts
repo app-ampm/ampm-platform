@@ -1,6 +1,8 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 
+import { useSignOut as useServerSignOut } from "@ampm/api-client";
+
 import { cognitoSignOut } from "@/lib/cognito-auth";
 import { env } from "@/lib/env";
 import { setAccessToken, setCognitoSignedIn } from "@/lib/session";
@@ -17,15 +19,28 @@ import { setAccessToken, setCognitoSignedIn } from "@/lib/session";
 export function useSignOut(): () => void {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const serverSignOut = useServerSignOut();
+  const leave = (): void => {
+    queryClient.clear();
+    router.replace("/sign-in");
+  };
   return () => {
-    if (env.EXPO_PUBLIC_IDENTITY_PROVIDER === "cognito") {
+    const provider = env.EXPO_PUBLIC_IDENTITY_PROVIDER;
+    if (provider === "cognito") {
       void cognitoSignOut().finally(() => {
         setCognitoSignedIn(false);
       });
+    } else if (provider === "ampm") {
+      // End the server-side session with the token first (best effort), then drop it here (D-142).
+      void serverSignOut
+        .mutateAsync()
+        .catch(() => undefined)
+        .finally(() => {
+          setAccessToken(null);
+        });
     } else {
       setAccessToken(null);
     }
-    queryClient.clear();
-    router.replace("/sign-in");
+    leave();
   };
 }

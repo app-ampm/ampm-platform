@@ -1,6 +1,6 @@
 # AMPM Platform — Field Matrix
 
-**Status:** DRAFT v0.1, generated 2026-11-13 from [data-model.md](data-model.md) by `docs/tools/field_matrix_build.py`. Do not edit by hand; change the data model or `docs/tools/field_rules.py` and rebuild.
+**Status:** DRAFT v0.1, generated 2026-11-20 from [data-model.md](data-model.md) by `docs/tools/field_matrix_build.py`. Do not edit by hand; change the data model or `docs/tools/field_rules.py` and rebuild.
 **Companions:** [requirements-audit.md](requirements-audit.md) (Q numbers), [data-model.md](data-model.md) (assumptions A-1 to A-30), [permission-matrix.md](permission-matrix.md) (role codes, visibility classes, assumptions P-1 to P-11).
 **Spreadsheet version:** [field-matrix.csv](field-matrix.csv) has the same rows for filtering.
 
@@ -20,7 +20,7 @@ Global conventions that apply to every row: money is `numeric(14,2)` with a sibl
 
 | Module | Tables | Fields | Required at creation | Client or public visible | Restricted, sensitive or secret |
 |---|---|---|---|---|---|
-| A — Identity, access and administration | 19 | 116 | 59 | 10 | 1 |
+| A — Identity, access and administration | 20 | 129 | 61 | 10 | 5 |
 | B — CRM, subscriptions and commercial agreements | 13 | 139 | 55 | 90 | 4 |
 | C — Hotel intelligence | 10 | 101 | 38 | 83 | 11 |
 | D — Hotel consultancy | 6 | 70 | 28 | 65 | 3 |
@@ -37,9 +37,9 @@ Global conventions that apply to every row: money is `numeric(14,2)` with a sibl
 | O — Checklists, closure and feedback | 4 | 30 | 17 | 7 | 0 |
 | P — Public website content (dormant) | 2 | 17 | 8 | 17 | 0 |
 | Q — Live chat | 2 | 16 | 6 | 16 | 0 |
-| **Total** | **116** | **1155** | **500** | **647** | **104** |
+| **Total** | **117** | **1168** | **502** | **647** | **108** |
 
-Fields by visibility class: CLIENT 614, INTERNAL 347, Other (per record, recipient or parent) 57, RESTRICTED-NOTES 34, PUBLIC 33, RESTRICTED-FINANCE 31, RESTRICTED-CONTACT 13, RESTRICTED-IDENTITY 13, SECRET 7, RESTRICTED-BANK 4, SENSITIVE-GUEST 2.
+Fields by visibility class: CLIENT 614, INTERNAL 356, Other (per record, recipient or parent) 57, RESTRICTED-NOTES 34, PUBLIC 33, RESTRICTED-FINANCE 31, RESTRICTED-CONTACT 13, RESTRICTED-IDENTITY 13, SECRET 11, RESTRICTED-BANK 4, SENSITIVE-GUEST 2.
 
 ---
 
@@ -57,9 +57,28 @@ Created at stage: **Account setup** · Default editor: SA; SM and PM (a) for cli
 | `email` (unique) | valid email address, stored lowercase; unique |  | SA; SM and PM (a) for client logins | INTERNAL | At creation | Invite or activation email on creation |
 | `phone` | E.164 format, default +91; required when OTP is enabled |  | SA; SM and PM (a) for client logins | INTERNAL | Optional | — |
 | `status` | one of the listed options | invited, active, disabled, locked | SA; SM and PM (a) for client logins | INTERNAL | At creation | disabled or locked refuses sign-in at once and revokes sessions |
-| `identity_subject` (unique) | string, up to 255 characters; the identity service's subject (Cognito sub, T-6); null until activated |  | SA; SM and PM (a) for client logins | INTERNAL | Optional | — |
-| `mfa_enabled` | true or false; mandatory true for staff (A-13); enforced by the identity service, mirrored here |  | SYS; must be true for staff before first sign-in | INTERNAL | At creation for staff | — |
+| `identity_subject` (unique) | string, up to 255 characters; the token subject: ampm:<id> (D-142); null until activated |  | SA; SM and PM (a) for client logins | INTERNAL | Optional | — |
+| `mfa_enabled` | true or false; mandatory true for staff (A-13); set when the authenticator is confirmed |  | SYS; must be true for staff before first sign-in | INTERNAL | At creation for staff | — |
 | `last_login_at` | timestamp (UTC) |  | SYS | INTERNAL | System | Inactive accounts reported for review |
+| `password_hash` | Argon2id PHC string; 12 to 128 character passwords |  | SYS | SECRET | Optional | — |
+| `password_changed_at` | timestamp (UTC) |  | SYS (when the action happens) | INTERNAL | System | — |
+| `totp_secret_enc` | AES-256-GCM under AUTH_ENCRYPTION_KEY |  | SYS | SECRET | Optional | — |
+| `totp_pending_enc` | string, up to 255 characters; SECRET; a secret shown for enrolment, not yet confirmed |  | SYS | SECRET | Optional | Cleared when the authenticator is confirmed |
+| `totp_confirmed_at` | timestamp (UTC) |  | SYS (when the action happens) | INTERNAL | System | — |
+| `totp_last_step` | integer, 0 or more; the step of the last accepted code; never accepted twice |  | SA; SM and PM (a) for client logins | INTERNAL | Optional | — |
+| `failed_sign_ins` | integer, 0 or more; consecutive failures; ten pause sign-in |  | SYS | INTERNAL | Optional | Ten in a row pause sign-in for 15 minutes |
+| `locked_until` | timestamp (UTC) |  | SYS | INTERNAL | Optional | Sign-in refused until then; cleared by a password reset |
+
+### `user_recovery_codes`
+
+Created at stage: **System** · Default editor: SYS · Default visibility: INTERNAL · Assumptions: A-13 (Q13), D-142
+
+| Field | Type and validation | Options | Edited by | Visibility | Required | Automation and report impact |
+|---|---|---|---|---|---|---|
+| `id` (PK) | UUID v7, generated |  | SYS | INTERNAL | System | — |
+| `user_id` (FK) | references see data model |  | SYS | INTERNAL | At creation | — |
+| `code_hash` | SHA-256 of the normalised code; ten issued when the authenticator is confirmed |  | SYS | SECRET | At creation | — |
+| `used_at` | timestamp (UTC) |  | SYS (when the action happens) | INTERNAL | System | Single use; a used code is refused |
 
 ### `roles`
 
@@ -185,10 +204,11 @@ Created at stage: **System** · Default editor: SYS · Default visibility: INTER
 |---|---|---|---|---|---|---|
 | `id` (PK) | UUID v7, generated |  | SYS | INTERNAL | System | — |
 | `user_id` (FK) | references see data model |  | SYS | INTERNAL | At creation | — |
-| `purpose` | one of the listed options | invite, password_reset, otp, magic_link | SYS | INTERNAL | At creation | — |
+| `purpose` | one of the listed options | invite, password_reset, otp, magic_link, sign_in_challenge | SYS | INTERNAL | At creation | — |
 | `token_hash` | string, up to 255 characters |  | SYS | SECRET | At creation | — |
 | `expires_at` | invite 7 days; password reset 1 hour; OTP 10 minutes |  | SYS | INTERNAL | System | Refused after expiry |
 | `used_at` | timestamp (UTC) |  | SYS (when the action happens) | INTERNAL | System | Single use; a used token is refused |
+| `attempts` | integer, 0 or more; wrong answers against a sign-in challenge; five burn it |  | SYS | INTERNAL | Optional | — |
 
 ### `notifications`
 

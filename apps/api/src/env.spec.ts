@@ -171,3 +171,39 @@ describe("loadEnv", () => {
     expect(env.PAYMENT_PROVIDER).toBe("stub");
   });
 });
+
+describe("loadEnv: AMPM's own sign-in (D-142)", () => {
+  // Built at run time so no secret-looking literal sits in the repository.
+  const ampm = {
+    ...prodValid,
+    IDENTITY_PROVIDER: "ampm",
+    AUTH_TOKEN_SECRET: "t".repeat(40),
+    AUTH_ENCRYPTION_KEY: Buffer.alloc(32, 7).toString("base64"),
+  };
+
+  it("accepts the ampm provider in production, without any Cognito setting", () => {
+    const { COGNITO_REGION, COGNITO_USER_POOL_ID, COGNITO_CLIENT_ID, ...withoutCognito } = ampm;
+    expect([COGNITO_REGION, COGNITO_USER_POOL_ID, COGNITO_CLIENT_ID]).toHaveLength(3);
+    expect(loadEnv(withoutCognito).IDENTITY_PROVIDER).toBe("ampm");
+  });
+
+  it("requires the token secret and the encryption key", () => {
+    const { AUTH_TOKEN_SECRET, ...withoutSecret } = ampm;
+    expect(AUTH_TOKEN_SECRET).toHaveLength(40);
+    expect(() => loadEnv(withoutSecret)).toThrow(/AUTH_TOKEN_SECRET/);
+    const { AUTH_ENCRYPTION_KEY, ...withoutKey } = ampm;
+    expect(AUTH_ENCRYPTION_KEY).toBeTruthy();
+    expect(() => loadEnv(withoutKey)).toThrow(/AUTH_ENCRYPTION_KEY/);
+  });
+
+  it("refuses an encryption key that is not 32 bytes", () => {
+    const short = Buffer.alloc(16, 7).toString("base64");
+    expect(() => loadEnv({ ...ampm, AUTH_ENCRYPTION_KEY: short })).toThrow(/AUTH_ENCRYPTION_KEY/);
+  });
+
+  it("still refuses the local provider in production", () => {
+    expect(() =>
+      loadEnv({ ...ampm, IDENTITY_PROVIDER: "local", IDENTITY_LOCAL_SECRET: "l".repeat(40) }),
+    ).toThrow(/IDENTITY_PROVIDER/);
+  });
+});

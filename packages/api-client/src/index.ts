@@ -53,6 +53,7 @@ export {
 export {
   useInviteStaffUser,
   useReinviteStaffUser,
+  useResetStaffAuthenticator,
   useSetStaffUserStatus,
   useUpdateStaffUser,
 } from "./hooks/use-staff-user-mutations";
@@ -240,3 +241,11 @@ export {
   type StaffServiceAgreementsQuery,
 } from "./hooks/use-staff-service-agreements";
 export { SERVICE_TYPES_QUERY_KEY, useServiceTypes } from "./hooks/use-service-types";
+export { useSignIn, useSignInCode, useSignInEnrol, useSignOut } from "./hooks/use-staff-sign-in";
+export {
+  useActivationConfirm,
+  useActivationPassword,
+  useForgotPassword,
+  useInvitationPreview,
+  useResetPassword,
+} from "./hooks/use-account-setup";
