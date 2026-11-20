@@ -15,7 +15,7 @@
     "@ampm/core": "workspace:*",
     "@ampm/ui": "workspace:*",
     "@tanstack/react-query": "catalog:",
-    "next": "16.4.3",
+    "next": "16.4.6",
     "react": "catalog:",
     "react-dom": "catalog:",
     "zod": "catalog:"
