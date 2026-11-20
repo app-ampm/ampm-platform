@@ -22,7 +22,7 @@ AMPM develops and works on production from now on, behind the password curtain. 
 
 ## 3. Before production runs (operator actions)
 
-- [ ] **SMTP** through Google Workspace (ampmverse.com already publishes SPF, DKIM and DMARC): `SMTP_USER`, `SMTP_PASSWORD` (an app password) and `EMAIL_FROM` via `prod-secrets.sh set`.
+- [ ] **Email through Resend (D-143):** a Resend API key as `SMTP_PASSWORD` and the sender as `EMAIL_FROM` via `prod-secrets.sh set`. The sender's domain must be verified in Resend: for `ampmverse.com`, add Resend's SPF and DKIM records at GoDaddy beside the existing Google ones.
 - [ ] **Cloudflare Turnstile** widget for site.ampmverse.com: the site key to the build, the secret via `prod-secrets.sh set app BOT_CHECK_SECRET`.
 - [ ] **Plesk + GoDaddy:** test-app.ampmverse.com and test-site.ampmverse.com (A records to 31.97.62.74, Let's Encrypt, HTTP→HTTPS).
 - [ ] **The first Super Admin:** tell Claude the email; the bootstrap writes a one-time activation link to the box; open it, choose a password, scan the authenticator QR code and save the recovery codes in a password manager.

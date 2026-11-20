@@ -29,12 +29,14 @@ x-prod-env: &prod-env
   CORS_ORIGINS: https://app.ampmverse.com,https://site.ampmverse.com
   # One proxy hop as seen by the API: Plesk's nginx -> Apache -> the loopback port.
   TRUST_PROXY: "1"
-  # Google Workspace hosts ampmverse.com mail (SPF, DKIM and DMARC already published); SMTP_USER,
-  # SMTP_PASSWORD (an app password) and EMAIL_FROM come from app.env. 587 is STARTTLS.
+  # Email goes out through Resend's SMTP relay (D-143). Its login name is always "resend"; the password
+  # is a Resend API key (SMTP_PASSWORD in app.env), and EMAIL_FROM (app.env) must use a domain verified in
+  # the Resend account. 587 is STARTTLS; the API still refuses to send without TLS.
   EMAIL_PROVIDER: smtp
-  SMTP_HOST: smtp.gmail.com
+  SMTP_HOST: smtp.resend.com
   SMTP_PORT: "587"
   SMTP_SECURE: "false"
+  SMTP_USER: resend
   # Cloudflare Turnstile for the website's enquiry form; BOT_CHECK_SECRET comes from app.env.
   BOT_CHECK_PROVIDER: siteverify
   BOT_CHECK_URL: https://challenges.cloudflare.com/turnstile/v0/siteverify

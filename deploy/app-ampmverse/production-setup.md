@@ -37,7 +37,7 @@ ssh -t <box> '~/bin/prod-secrets.sh set app SMTP_PASSWORD'   # an operator-held 
 ~/bin/prod-secrets.sh check                    # names only; exit 1 while one is missing
 ```
 
-Never run `docker compose … config` unfiltered on the box: it prints the env files' values. The operator supplies `SMTP_USER`, `SMTP_PASSWORD` (a Google Workspace app password), `EMAIL_FROM`, `BOT_CHECK_SECRET` (Cloudflare Turnstile) and the Razorpay keys. **Keep an off-box copy of `postgres.env`'s `PGBACKREST_REPO1_CIPHER_PASS` in your password manager: without it no backup can be read.** Rotate a generated value by deleting its line and running `init` again, then redeploy (the database password also needs `ALTER ROLE ampm PASSWORD …`).
+Never run `docker compose … config` unfiltered on the box: it prints the env files' values. The operator supplies `SMTP_PASSWORD` (a Resend API key with sending access; D-143), `EMAIL_FROM` (an address on a domain verified in Resend, for example `AMPM <noreply@ampmverse.com>`), `BOT_CHECK_SECRET` (Cloudflare Turnstile) and the Razorpay keys. **Keep an off-box copy of `postgres.env`'s `PGBACKREST_REPO1_CIPHER_PASS` in your password manager: without it no backup can be read.** Rotate a generated value by deleting its line and running `init` again, then redeploy (the database password also needs `ALTER ROLE ampm PASSWORD …`).
 
 ## 3. First build (done once, recorded here)
 
