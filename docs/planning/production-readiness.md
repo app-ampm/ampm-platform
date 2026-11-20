@@ -6,11 +6,11 @@ AMPM develops and works on production from now on, behind the password curtain. 
 
 ## 1. Decided (20 November 2026)
 
-- **One server, two stacks (D-138).** Production (`ampm`) takes app.ampmverse.com and site.ampmverse.com. The test stack (`ampm-local`: dev sign-in, synthetic data, demos) moves to test-app. and test-site.ampmverse.com. The box is in Mumbai: the Hostinger India range, with DE-CIX Mumbai as its upstream. That meets the India data-residency requirement.
+- **One server, production only (D-138, D-144).** Production (`ampm`) takes app.ampmverse.com and site.ampmverse.com. The test stack (`ampm-local`: dev sign-in, synthetic data, demos) was to move to test-app. and test-site.ampmverse.com; instead it is retired at the cutover (D-144): its containers stop, its volumes and source stay on the box, and demos run on the developer's machine. The box is in Mumbai: the Hostinger India range, with DE-CIX Mumbai as its upstream. That meets the India data-residency requirement.
 - **Backups stay on the server for now (D-139):** an encrypted pgBackRest repository plus pre-deploy dumps and nightly media copies, all on this disk. Postgres runs under an init.
 - **Secrets are box-only env files (D-140),** written by `prod-secrets.sh`, mode 600, never printed.
 - **Production starts clean (D-141):** reference data only, plus an invited first Super Admin. The synthetic seed refuses to run in production.
-- **Sign-in is AMPM's own (D-142):** staff password (Argon2id) + authenticator code (TOTP) + recovery codes, password reset by email, lockout after ten failures, admin authenticator reset; no Amazon Cognito.
+- **Sign-in is AMPM's own (D-142):** staff password (Argon2id) + authenticator code (TOTP) + recovery codes, password reset by email, passwords throttled to 10 tries per 15 minutes per email and network, the account locked after 20 wrong codes in a row, admin authenticator reset; no Amazon Cognito.
 
 ## 2. Done
 
@@ -22,10 +22,10 @@ AMPM develops and works on production from now on, behind the password curtain. 
 
 ## 3. Before production runs (operator actions)
 
-- [ ] **SMTP** through Google Workspace (ampmverse.com already publishes SPF, DKIM and DMARC): `SMTP_USER`, `SMTP_PASSWORD` (an app password) and `EMAIL_FROM` via `prod-secrets.sh set`.
-- [ ] **Cloudflare Turnstile** widget for site.ampmverse.com: the site key to the build, the secret via `prod-secrets.sh set app BOT_CHECK_SECRET`.
-- [ ] **Plesk + GoDaddy:** test-app.ampmverse.com and test-site.ampmverse.com (A records to 31.97.62.74, Let's Encrypt, HTTP→HTTPS).
-- [ ] **The first Super Admin:** tell Claude the email; the bootstrap writes a one-time activation link to the box; open it, choose a password, scan the authenticator QR code and save the recovery codes in a password manager.
+- [ ] **Email through Resend (D-143).** Done on 20 Nov: `ampmverse.com` verified in Resend (its DKIM and sending records added at GoDaddy through Domain Connect, the Google records untouched), the send-only API key created, and `EMAIL_FROM` set to `AMPM <noreply@ampmverse.com>`. Left: paste the key as `SMTP_PASSWORD`.
+- [ ] **Cloudflare Turnstile.** Done on 20 Nov: the widget "AMPM website" (its secret rotated once after a paste went astray). Left: paste the secret as `BOT_CHECK_SECRET`. The website widget itself is the enquiry-form item in section 4.
+- [x] ~~Plesk + GoDaddy: test-app. and test-site.ampmverse.com~~: not needed, the test stack is retired (D-144).
+- [ ] **The first Super Admin.** Invited on 20 Nov; the one-time activation link is in `ampm-prod-secrets/first-admin-link.txt` on the box. Left: open it once the edge points at production, choose a password, scan the authenticator QR code and save the recovery codes in a password manager.
 - [ ] Keep an off-box copy of the backup cipher passphrase (`postgres.env`) in a password manager.
 
 ## 4. Before pitching clients (go-live blockers)

@@ -11,8 +11,8 @@
 #   prod-secrets.sh check                   list each zone's keys (names only); exit 1 if one is missing
 #
 # Zones (infra/secrets/examples/ lists the keys): postgres (postgres + pgBackRest), redis, app (api +
-# worker). The operator sets SMTP_USER, SMTP_PASSWORD, EMAIL_FROM and BOT_CHECK_SECRET with `set`, and the
-# Razorpay keys with `set` or `copy`; everything else is generated here.
+# worker). The operator sets SMTP_PASSWORD (a Resend API key), EMAIL_FROM and BOT_CHECK_SECRET with
+# `set`, and the Razorpay keys with `set` or `copy`; everything else is generated here.
 set -euo pipefail
 umask 077
 
@@ -20,7 +20,7 @@ DIR="${AMPM_PROD_SECRETS:-/var/www/vhosts/app.ampmverse.com/ampm-prod-secrets}"
 
 REQUIRED_postgres="POSTGRES_USER POSTGRES_DB POSTGRES_PASSWORD PGPASSWORD DATABASE_URL PGBACKREST_REPO1_CIPHER_PASS"
 REQUIRED_redis="REDIS_PASSWORD"
-REQUIRED_app="DATABASE_URL REDIS_URL MEDIA_SIGNING_SECRET AUTH_TOKEN_SECRET AUTH_ENCRYPTION_KEY SMTP_USER SMTP_PASSWORD EMAIL_FROM BOT_CHECK_SECRET RAZORPAY_KEY_ID RAZORPAY_KEY_SECRET RAZORPAY_WEBHOOK_SECRET"
+REQUIRED_app="DATABASE_URL REDIS_URL MEDIA_SIGNING_SECRET AUTH_TOKEN_SECRET AUTH_ENCRYPTION_KEY SMTP_PASSWORD EMAIL_FROM BOT_CHECK_SECRET RAZORPAY_KEY_ID RAZORPAY_KEY_SECRET RAZORPAY_WEBHOOK_SECRET"
 
 die() {
   echo "prod-secrets: $*" >&2

@@ -4,10 +4,10 @@ Production runs on the current VPS (31.97.62.74, Hostinger India, Mumbai), besid
 
 ## 1. What runs where
 
-|                     | Production                                                                              | Test (demos, dev sign-in, synthetic data)                                     |
+|                     | Production                                                                              | Test (retired at the cutover, D-144: stopped, volumes kept)                   |
 | ------------------- | --------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
-| Portal              | https://app.ampmverse.com (`httpdocs/`)                                                 | https://test-app.ampmverse.com                                                |
-| Website             | https://site.ampmverse.com                                                              | https://test-site.ampmverse.com                                               |
+| Portal              | https://app.ampmverse.com (`httpdocs/`)                                                 | none (it served app.ampmverse.com until the cutover)                          |
+| Website             | https://site.ampmverse.com                                                              | none (it served site.ampmverse.com until the cutover)                         |
 | Compose project     | `ampm`: `infra/compose/production/compose.yml` + `compose.box.yml`                      | `ampm-local`: `infra/compose/local/compose.yml` + `compose.test-override.yml` |
 | Source on the box   | `/var/www/vhosts/app.ampmverse.com/ampm-prod`                                           | `/var/www/vhosts/app.ampmverse.com/ampm-test`                                 |
 | API / website ports | 127.0.0.1:7101 / 7102                                                                   | 127.0.0.1:7001 / 7002                                                         |
@@ -33,11 +33,17 @@ Every production secret is in `ampm-prod-secrets/*.env`, written by [`prod-secre
 
 ```bash
 ~/bin/prod-secrets.sh init                     # generate the database, Redis, backup-cipher, media and webhook secrets
-ssh -t <box> '~/bin/prod-secrets.sh set app SMTP_PASSWORD'   # an operator-held value, typed with no echo
+ssh -t -o ServerAliveInterval=15 <box> '~/bin/prod-secrets.sh set app SMTP_PASSWORD'   # an operator-held value, pasted with no echo
 ~/bin/prod-secrets.sh check                    # names only; exit 1 while one is missing
 ```
 
-Never run `docker compose … config` unfiltered on the box: it prints the env files' values. The operator supplies `SMTP_USER`, `SMTP_PASSWORD` (a Google Workspace app password), `EMAIL_FROM`, `BOT_CHECK_SECRET` (Cloudflare Turnstile) and the Razorpay keys. **Keep an off-box copy of `postgres.env`'s `PGBACKREST_REPO1_CIPHER_PASS` in your password manager: without it no backup can be read.** Rotate a generated value by deleting its line and running `init` again, then redeploy (the database password also needs `ALTER ROLE ampm PASSWORD …`).
+Never run `docker compose … config` unfiltered on the box: it prints the env files' values. The operator supplies `SMTP_PASSWORD` (a Resend API key with sending access; D-143), `EMAIL_FROM` (an address on a domain verified in Resend, for example `AMPM <noreply@ampmverse.com>`), `BOT_CHECK_SECRET` (Cloudflare Turnstile) and the Razorpay keys. **Keep an off-box copy of `postgres.env`'s `PGBACKREST_REPO1_CIPHER_PASS` in your password manager: without it no backup can be read.** Rotate a generated value by deleting its line and running `init` again, then redeploy (the database password also needs `ALTER ROLE ampm PASSWORD …`).
+
+Where the operator values come from (set up on 20 November 2026, both accounts on AMPM's operations Google login):
+
+- **Resend** (`SMTP_PASSWORD`, D-143): the domain `ampmverse.com`, region Tokyo (`ap-northeast-1`), verified on 20 Nov 2026. Resend's **Auto configure** added its three records at GoDaddy through Domain Connect (template `resend.com/mail-mta`, groups `dkim`, `outbound`, `mta`): TXT `resend._domainkey` (the DKIM key), CNAME `send` → `send.forge.rmta.net` and CNAME `rsend` → `rsend-apne1.forge.rmta.net`. The root MX and SPF records (Google) are untouched and receiving is off; DMARC (`p=quarantine`, relaxed alignment) passes on the DKIM signature for `ampmverse.com`. `SMTP_PASSWORD` is the API key "AMPM production server (SMTP)": sending access, `ampmverse.com` only. Resend shows a key once; a lost key is replaced, not recovered.
+- **Turnstile** (`BOT_CHECK_SECRET`): the widget "AMPM website", Managed, for `ampmverse.com`, `site.ampmverse.com` and `www.ampmverse.com`. Its site key `0x4AAAAAAGKBfk9-4261LTAN` is public and goes into the website build; the secret is `BOT_CHECK_SECRET`. A secret can be rotated once every two hours (Edit widget → Rotate Secret Key), and the previous one keeps working for two hours.
+- **Pasting a value:** open the `set` prompt only once the value is on the clipboard, with `ssh -t -o ServerAliveInterval=15 …` so an idle prompt is not dropped, and copy commands from this runbook, never from a terminal's wrapped scrollback. On 20 Nov 2026 a prompt left waiting was reset, the pasted Turnstile secret landed in the Mac shell instead, and the secret was rotated.
 
 ## 3. First build (done once, recorded here)
 
