@@ -11,10 +11,10 @@ export const fields = z.object({
   DATABASE_URL: z.string().url(),
   /**
    * Who signs people in. `ampm` is AMPM's own sign-in (D-142): staff password + authenticator code,
-   * verified and minted by the API itself. `local` is the development provider (dev sign-in, refused in
-   * production). `cognito` verifies Amazon Cognito tokens (being retired by D-142).
+   * verified and minted by the API itself, and the default. `local` is the development provider (dev
+   * sign-in, refused in production).
    */
-  IDENTITY_PROVIDER: z.enum(["cognito", "local", "ampm"]).default("cognito"),
+  IDENTITY_PROVIDER: z.enum(["local", "ampm"]).default("ampm"),
   IDENTITY_LOCAL_SECRET: z.string().min(32).optional(),
   /** Signs the access tokens the `ampm` provider mints (HS256). Rotating it signs everyone out. */
   AUTH_TOKEN_SECRET: z.string().min(32).optional(),
@@ -28,17 +28,6 @@ export const fields = z.object({
       message: "must be base64 of exactly 32 bytes (openssl rand -base64 32)",
     })
     .optional(),
-  COGNITO_REGION: z.string().min(1).optional(),
-  COGNITO_USER_POOL_ID: z.string().min(1).optional(),
-  COGNITO_CLIENT_ID: z.string().min(1).optional(),
-  /**
-   * Scoped admin IAM credentials for provisioning Cognito users at invite time (cognito-setup §6) — the
-   * only AWS credentials the API holds; the verify path needs none. Optional: absent, provisioning uses the
-   * default AWS provider chain (so a verify-only node boots), and a provisioning call then fails best-effort
-   * and is logged, never fatal. The pair is all-or-nothing (below). Lives in the SOPS app zone, never code.
-   */
-  COGNITO_PROVISIONING_ACCESS_KEY_ID: z.string().min(1).optional(),
-  COGNITO_PROVISIONING_SECRET_ACCESS_KEY: z.string().min(1).optional(),
   /** The job queue's Redis; absent in development and tests, where jobs run inline (D-031). */
   REDIS_URL: z.string().url().optional(),
   /** `true` in the worker process only; the API process enqueues but does not consume (D-031). */

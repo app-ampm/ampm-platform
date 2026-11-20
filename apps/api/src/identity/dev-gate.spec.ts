@@ -20,10 +20,10 @@ describe("assertDevBuild (the test-build-only gate)", () => {
     expect(assertDevBuild(env({ NODE_ENV: "test" }))).toBe(SECRET);
   });
 
-  it("is a 404 (denial equals absence) in production, under Cognito, or without the secret", () => {
+  it("is a 404 (denial equals absence) in production, under AMPM's own sign-in, or without the secret", () => {
     for (const closed of [
       env({ NODE_ENV: "production" }),
-      env({ IDENTITY_PROVIDER: "cognito" }),
+      env({ IDENTITY_PROVIDER: "ampm" }),
       env({ IDENTITY_LOCAL_SECRET: undefined }),
     ]) {
       expect(() => assertDevBuild(closed)).toThrow(expect.objectContaining({ code: "not_found" }));

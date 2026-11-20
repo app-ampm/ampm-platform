@@ -152,18 +152,10 @@ export function RecoveryCodeForm({ onSubmit, onBack, pending, errorText }: Recov
 interface NewPasswordFormProps extends FormState {
   readonly onSubmit: (password: string) => void;
   readonly cta?: string | undefined;
-  /** The policy line under the field; the minimum length is always enforced on the button. */
-  readonly caption?: string | undefined;
 }
 
-/** A new password: at activation, after a reset, or Cognito's first-sign-in change. */
-export function NewPasswordForm({
-  onSubmit,
-  pending,
-  errorText,
-  cta,
-  caption,
-}: NewPasswordFormProps) {
+/** A new password: at activation, or after a reset. The minimum length is enforced on the button. */
+export function NewPasswordForm({ onSubmit, pending, errorText, cta }: NewPasswordFormProps) {
   const [password, setPassword] = useState("");
   const submit = (): void => {
     onSubmit(password);
@@ -181,7 +173,7 @@ export function NewPasswordForm({
         onSubmitEditing={submit}
       />
       <Text variant="caption">
-        {caption ?? `At least ${MIN_PASSWORD_LENGTH} characters. A short sentence works well.`}
+        At least {MIN_PASSWORD_LENGTH} characters. A short sentence works well.
       </Text>
       <Button
         fullWidth

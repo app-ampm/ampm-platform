@@ -49,9 +49,9 @@ export const DEMO_CONTACT = { id: "0192f3a0-7d3e-7b1a-9c2f-0000000000d3" } as co
  */
 export async function upsertDemoUser(db: DemoWriter): Promise<void> {
   const { id, identitySubject, ...fields } = DEMO_USER;
-  // The identity subject is set only on create, never on the nightly restore (B8): under Cognito the
-  // demo account is linked to a real subject once, and overwriting it with the `local:demo` placeholder
-  // every night would break its sign-in. `deletedAt: null` on update still resets a soft-deleted demo
+  // The identity subject is set only on create, never on the nightly restore (B8): once the demo account
+  // is linked to a real sign-in subject, overwriting it with the `local:demo` placeholder every night
+  // would break its sign-in. `deletedAt: null` on update still resets a soft-deleted demo
   // account to baseline.
   await db.user.upsert({
     where: { id },

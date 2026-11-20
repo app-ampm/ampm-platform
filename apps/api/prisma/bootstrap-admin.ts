@@ -1,7 +1,7 @@
 /**
  * The first Super Admin of a fresh production database (D-141). The account is created `invited`, holds
- * the Super Admin role and gets a single-use invite; its holder signs in with Cognito (whose verified
- * email must equal this one) and opens the activation link, which binds their Cognito subject (D-041).
+ * the Super Admin role and gets a single-use invite; its holder opens the activation link and sets their
+ * password and authenticator there, which activates the account (D-142).
  * It refuses once any Super Admin is active: from then on staff are invited from the app, so this
  * command can never mint an admin invite on a live system. Run through prisma/bootstrap.ts.
  *

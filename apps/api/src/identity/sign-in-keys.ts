@@ -7,10 +7,10 @@ import { deriveKey, keyFromBase64, SecretBox } from "./secret-box.js";
  * adapter accepts, the box that encrypts authenticator secrets at rest, and the key that HMACs the
  * recovery codes (derived from the encryption key, so it needs no secret of its own). Production (`ampm`) uses
  * its two dedicated secrets; the development provider derives both from its local secret, so the real
- * flow also runs on the test stack and in the tests. Null under Cognito, where the provider signs people
- * in, so the in-app sign-in routes answer 404 there.
+ * flow also runs on the test stack and in the tests. env.ts refuses either provider without its secrets,
+ * so the throws below only narrow the types.
  *
- *   const keys = signInKeysFor(env); // keys?.tokens.mint(subject, { email })
+ *   const keys = signInKeysFor(env); // keys.tokens.mint(subject, { email })
  */
 export interface SignInKeys {
   readonly tokens: LocalIdentityAdapter;
@@ -27,7 +27,7 @@ export type SignInKeysEnv = Pick<
   "IDENTITY_PROVIDER" | "IDENTITY_LOCAL_SECRET" | "AUTH_TOKEN_SECRET" | "AUTH_ENCRYPTION_KEY"
 >;
 
-export function signInKeysFor(env: SignInKeysEnv): SignInKeys | null {
+export function signInKeysFor(env: SignInKeysEnv): SignInKeys {
   if (env.IDENTITY_PROVIDER === "ampm") {
     if (!env.AUTH_TOKEN_SECRET || !env.AUTH_ENCRYPTION_KEY) {
       throw new Error("AUTH_TOKEN_SECRET and AUTH_ENCRYPTION_KEY are required for ampm sign-in");
@@ -42,13 +42,13 @@ export function signInKeysFor(env: SignInKeysEnv): SignInKeys | null {
       otpKey: deriveKey(env.AUTH_ENCRYPTION_KEY, "ampm/client-otp"),
     };
   }
-  if (env.IDENTITY_PROVIDER === "local" && env.IDENTITY_LOCAL_SECRET) {
-    return {
-      tokens: new LocalIdentityAdapter(env.IDENTITY_LOCAL_SECRET),
-      box: new SecretBox(deriveKey(env.IDENTITY_LOCAL_SECRET, "ampm/totp-secrets")),
-      recoveryKey: deriveKey(env.IDENTITY_LOCAL_SECRET, "ampm/recovery-codes"),
-      otpKey: deriveKey(env.IDENTITY_LOCAL_SECRET, "ampm/client-otp"),
-    };
+  if (!env.IDENTITY_LOCAL_SECRET) {
+    throw new Error("IDENTITY_LOCAL_SECRET is required for the local identity provider");
   }
-  return null;
+  return {
+    tokens: new LocalIdentityAdapter(env.IDENTITY_LOCAL_SECRET),
+    box: new SecretBox(deriveKey(env.IDENTITY_LOCAL_SECRET, "ampm/totp-secrets")),
+    recoveryKey: deriveKey(env.IDENTITY_LOCAL_SECRET, "ampm/recovery-codes"),
+    otpKey: deriveKey(env.IDENTITY_LOCAL_SECRET, "ampm/client-otp"),
+  };
 }

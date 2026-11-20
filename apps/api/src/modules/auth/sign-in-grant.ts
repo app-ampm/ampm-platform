@@ -38,7 +38,7 @@ export type GrantUser = Pick<CredentialRecord, "id" | "name" | "email" | "identi
 @Injectable()
 export class SignInGrants {
   constructor(
-    @Inject(SIGN_IN_KEYS) private readonly keys: SignInKeys | null,
+    @Inject(SIGN_IN_KEYS) private readonly keys: SignInKeys,
     private readonly principals: PrincipalService,
     private readonly sessions: SessionService,
   ) {}
@@ -48,7 +48,6 @@ export class SignInGrants {
     now: Date = new Date(),
     expiresIn: GrantTtl = STAFF_TOKEN_TTL,
   ): Promise<SignInGrant> {
-    if (!this.keys) throw errors.notFound();
     if (!user.identitySubject) throw errors.unauthenticated(SIGN_IN_ERRORS.challengeExpired);
     const accessToken = await this.keys.tokens.mint(user.identitySubject, {
       email: user.email,

@@ -36,8 +36,7 @@ const MINUTE = 60_000;
  * a forgotten-password link, and sign-out. Public except sign-out; every route is capped per client
  * address (the limiter keys by IP before sign-in), on top of the per-account lockout in the services,
  * and refuses (503) while the limiter cannot count, so no credential is ever tried uncounted (D-149).
- * Sign-out is capped per account and fails open: ending a session must always work. Under Cognito the
- * services answer 404, so these routes do not exist there.
+ * Sign-out is capped per account and fails open: ending a session must always work.
  */
 @Controller("auth")
 export class SignInController {

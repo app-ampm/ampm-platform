@@ -20,12 +20,10 @@ const NEAR = new Set([-1, 0, 1].map((offset) => totpAt(SECRET, stepAt(NOW) + off
 const WRONG = ["000000", "111111", "222222"].find((code) => !NEAR.has(code)) ?? "333333";
 
 function keys(): SignInKeys {
-  const found = signInKeysFor({
+  return signInKeysFor({
     IDENTITY_PROVIDER: "local",
     IDENTITY_LOCAL_SECRET: "a-development-secret-that-is-long-enough-32",
   });
-  if (!found) throw new Error("the local provider has sign-in keys");
-  return found;
 }
 
 /** The challenge row as `auth_tokens` keeps it: five tries, each reserved before its code is compared. */

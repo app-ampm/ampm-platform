@@ -24,7 +24,6 @@ const MINUTE = 60_000;
 /**
  * Client sign-in and activation by a one-time code sent to the mobile on file (D-147). Public, capped
  * per client address here, on top of the per-number limits and the per-code tries in the services.
- * Under Cognito the services answer 404, so these routes do not exist there.
  */
 @Controller("auth")
 export class ClientSignInController {

@@ -56,7 +56,7 @@ cp apps/mobile/.env.example apps/mobile/.env
 pnpm --filter api dev:token local:admin   # also local:pm, local:client, local:disabled; paste it into apps/mobile/.env
 ```
 
-Production never accepts these tokens: the API refuses the local identity provider outside development and test, and real sign-in goes through Amazon Cognito (Mumbai).
+Production never accepts these tokens: the API refuses the local identity provider outside development and test, and real sign-in is AMPM's own (`IDENTITY_PROVIDER=ampm`: staff password and authenticator code, clients a one-time code by SMS; D-142, D-147).
 
 ## Running and checking
 

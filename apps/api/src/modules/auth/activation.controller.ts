@@ -28,7 +28,7 @@ import { DevOtpService } from "../../identity/dev-otp.service.js";
  * The public auth flows the API owns. `activate` (Module A, feature 5.2) is public because the
  * activating user has no linked identity yet; it verifies the provider access token and the invite
  * token itself and self-audits. `dev-login` (feature TW-11 demo) is a dev-only local sign-in: it mints
- * a token for a seeded staff account so the Sales workspace can authenticate without Cognito, and is
+ * a token for a seeded staff account so the Sales workspace can authenticate without a password, and is
  * refused outside a local, non-production config (DevLoginService). `dev-login/request-otp` and
  * `dev-login/verify-otp` are the same dev-only path for mobile+OTP sign-in — the demo stand-in until the
  * SMS provider is wired; the request returns the one-time code for the screen to show, and both are

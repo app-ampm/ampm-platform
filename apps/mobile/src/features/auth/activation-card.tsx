@@ -71,12 +71,6 @@ const OUTCOME_COPY: Record<
     body: "Open the link in your invitation email again. If it still doesn't work, ask the person who invited you for a new one.",
     action: "Go to sign in",
   },
-  "sign-in-first": {
-    kind: "info",
-    title: "Sign in first",
-    body: "Sign in with the email your invitation was sent to, then open this link again to finish.",
-    action: "Go to sign in",
-  },
 };
 
 /** The invitation, ready to redeem; after a refusal that can be tried again, why, above the button. */

@@ -58,10 +58,8 @@ function session(overrides: Partial<StaffSignIn>): StaffSignIn {
     setEmail: jest.fn(),
     signIn: jest.fn(),
     submitChallenge: jest.fn(),
-    confirmEnrollment: jest.fn(),
     toggleRecoveryCode: jest.fn(),
     submitRecoveryCode: jest.fn(),
-    finish: jest.fn(),
     ...overrides,
   };
 }

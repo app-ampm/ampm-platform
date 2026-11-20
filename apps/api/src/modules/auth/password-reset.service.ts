@@ -12,7 +12,6 @@ import { PrismaService } from "../../db/prisma.service.js";
 import { ENV, type Env } from "../../env.js";
 import { AuthTokenService } from "../../identity/auth-token.service.js";
 import { hashPassword } from "../../identity/password-hasher.js";
-import { SIGN_IN_KEYS, type SignInKeys } from "../../identity/sign-in-keys.js";
 import { AuditService } from "../../policy/audit.service.js";
 import { SessionService } from "../../policy/session.service.js";
 import { NotificationService } from "../admin/notification/notification.service.js";
@@ -30,7 +29,6 @@ import { CredentialsRepository } from "./credentials.repository.js";
 @Injectable()
 export class PasswordResetService {
   constructor(
-    @Inject(SIGN_IN_KEYS) private readonly keys: SignInKeys | null,
     @Inject(ENV) private readonly env: Env,
     private readonly credentials: CredentialsRepository,
     private readonly tokens: AuthTokenService,
@@ -43,7 +41,6 @@ export class PasswordResetService {
 
   /** Answers at once; an eligible account is emailed its link after the answer has gone. */
   async request(request: ForgotPasswordRequest): Promise<Acknowledged> {
-    this.signer();
     void this.sendLink(request.email).catch((error: unknown) =>
       this.logger.warn("auth.password_reset_request_failed", { error: String(error) }),
     );
@@ -73,7 +70,6 @@ export class PasswordResetService {
 
   /** Sets the new password with the link's token, then signs out every session of the account. */
   async reset(request: ResetPasswordRequest, now: Date = new Date()): Promise<Acknowledged> {
-    this.signer();
     const token = await this.tokens.findLiveSignInToken(request.token, "password_reset");
     const user = token ? await this.credentials.findById(token.userId) : null;
     const eligible = user?.userType === "staff" && user.status === "active" && user.totpSecretEnc;
@@ -99,10 +95,5 @@ export class PasswordResetService {
     });
     await this.sessions.revokeAllForUser(user.id, "password_reset", now);
     return { ok: true };
-  }
-
-  private signer(): SignInKeys {
-    if (!this.keys) throw errors.notFound();
-    return this.keys;
   }
 }

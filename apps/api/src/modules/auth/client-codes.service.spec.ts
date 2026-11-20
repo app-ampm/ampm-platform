@@ -9,7 +9,7 @@ import {
 import type { Env } from "../../env.js";
 import type { AuthTokenService } from "../../identity/auth-token.service.js";
 import { hashOneTimeCode } from "../../identity/one-time-code.js";
-import { signInKeysFor, type SignInKeys } from "../../identity/sign-in-keys.js";
+import { signInKeysFor } from "../../identity/sign-in-keys.js";
 import type {
   NotificationService,
   QueueNotification,
@@ -61,7 +61,6 @@ function harness(
   options: {
     echo?: boolean;
     nodeEnv?: string;
-    keys?: SignInKeys | null;
     limiter?: MemoryRateLimitStore;
   } = {},
 ) {
@@ -76,7 +75,7 @@ function harness(
     CLIENT_OTP_SCREEN_ECHO: options.echo ?? false,
   } as unknown as Env;
   const codes = new ClientCodes(
-    options.keys === undefined ? KEYS : options.keys,
+    KEYS,
     env,
     tokens as unknown as AuthTokenService,
     { queue } as unknown as NotificationService,
@@ -187,10 +186,5 @@ describe("ClientCodes (D-147)", () => {
     const hidden = harness({ echo: false, nodeEnv: "production" });
     hidden.codes.onModuleInit();
     expect(hidden.logger.warn).not.toHaveBeenCalled();
-  });
-
-  it("answers 404 where the identity provider signs people in itself (Cognito)", async () => {
-    const { codes } = harness({ keys: null });
-    await expect(codes.send(CLIENT)).rejects.toThrow(/not found/i);
   });
 });

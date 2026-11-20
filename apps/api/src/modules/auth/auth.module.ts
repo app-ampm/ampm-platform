@@ -20,8 +20,8 @@ import { StaffSignInService } from "./staff-sign-in.service.js";
 
 /**
  * The auth flows the API owns (Module A): AMPM's own staff sign-in, activation and password reset
- * (D-142), client sign-in and activation by a mobile code (D-147), the Cognito-era link-on-activate
- * (feature 5.2), and the dev-only local sign-in (feature TW-11 demo). IdentityModule provides the
+ * (D-142), client sign-in and activation by a mobile code (D-147), the link-on-activate the dev provider
+ * still uses (feature 5.2), and the dev-only local sign-in (feature TW-11 demo). IdentityModule provides the
  * identity adapter, the sign-in keys and AuthTokenService; PolicyModule the sessions and the rate-limit
  * store; NotificationModule the reset email and the code SMS; PrismaService and the ENV are global.
  */

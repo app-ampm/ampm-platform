@@ -1,11 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type { AppLogger } from "../../../common/logger.service.js";
 import type { PrismaService } from "../../../db/prisma.service.js";
 import type { Env } from "../../../env.js";
 import type { AuthTokenService } from "../../../identity/auth-token.service.js";
 import type { ClientUserService } from "../../../identity/client-user.service.js";
-import type { IdentityProvisioner } from "../../../identity/identity.types.js";
 import type { AuditService } from "../../../policy/audit.service.js";
 import type { NotificationService } from "../../admin/notification/notification.service.js";
 import { AccountContactsService } from "./account-contacts.service.js";
@@ -42,8 +40,6 @@ function harness(overrides: Partial<Env> = {}, status: string | null = "invited"
     { statusOf } as unknown as ClientUserService,
     { issueInvite } as unknown as AuthTokenService,
     {} as unknown as NotificationService,
-    {} as unknown as AppLogger,
-    {} as unknown as IdentityProvisioner,
     env,
   );
   const service = new AccountContactsService(
@@ -57,7 +53,7 @@ function harness(overrides: Partial<Env> = {}, status: string | null = "invited"
 
 describe("AccountContactsService.inviteLink (test builds only)", () => {
   it("is a 404 outside a test build before any lookup, so production learns nothing", async () => {
-    for (const closed of [{ NODE_ENV: "production" }, { IDENTITY_PROVIDER: "cognito" }] as const) {
+    for (const closed of [{ NODE_ENV: "production" }, { IDENTITY_PROVIDER: "ampm" }] as const) {
       const { service, findAccount, findContact, $transaction } = harness(closed);
       await expect(service.inviteLink("account-1", "contact-1")).rejects.toMatchObject({
         code: "not_found",

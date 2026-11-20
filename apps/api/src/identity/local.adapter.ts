@@ -16,8 +16,8 @@ export interface TokenSignerOptions {
 }
 
 /**
- * HS256 access tokens the API mints and verifies itself, with the same claims a Cognito access token
- * carries (`sub`, `jti`, `email`). Two uses: the development provider (issuer `ampm-local`, minted by
+ * HS256 access tokens the API mints and verifies itself, carrying `sub`, `jti`, `exp` and the email.
+ * Two uses: the development provider (issuer `ampm-local`, minted by
  * dev sign-in and `pnpm --filter api dev:token`, refused in production by env.ts), and AMPM's own
  * production sign-in (issuer `ampm`, minted only after a password and an authenticator code, D-142).
  * A minted email is trusted as verified: the API itself checked who the user is before minting.

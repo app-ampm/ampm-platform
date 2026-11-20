@@ -16,7 +16,6 @@ function harness(options: { onScreen: boolean; known: boolean }) {
   const held = new Promise<void>((resolve) => (release = resolve));
   const send = vi.fn(async () => ({ ...NOTHING, screenCode: "482913" }));
   const codes = {
-    signer: vi.fn(),
     allow: vi.fn(async () => undefined),
     showsOnScreen: () => options.onScreen,
     send,

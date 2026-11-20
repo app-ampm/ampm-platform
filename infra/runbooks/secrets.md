@@ -22,52 +22,22 @@ One file per **trust zone**, so each container loads only the secrets it needs:
 
 ## Secret registry
 
-| Secret                                                      | Zone                    | Used by                                                     | Rotation                                                                      |
-| ----------------------------------------------------------- | ----------------------- | ----------------------------------------------------------- | ----------------------------------------------------------------------------- |
-| `POSTGRES_PASSWORD` / `PGPASSWORD`                          | postgres                | Postgres auth; pgBackRest + the job_runs recorder           | on suspicion; yearly otherwise                                                |
-| `DATABASE_URL`                                              | postgres, app           | the app and the backup sidecar                              | follows `POSTGRES_PASSWORD`                                                   |
-| `PGBACKREST_REPO1_CIPHER_PASS`                              | postgres                | encrypts the backup repository                              | **never** rotate without re-encrypting the repo (losing it loses the backups) |
-| `PGBACKREST_REPO1_S3_KEY` / `_KEY_SECRET`                   | postgres                | pgBackRest → the Mumbai S3 bucket                           | yearly; immediately if the IAM user is exposed                                |
-| `REDIS_PASSWORD` / `REDIS_URL`                              | redis, app              | Redis auth                                                  | yearly                                                                        |
-| `COGNITO_REGION`/`_USER_POOL_ID`/`_CLIENT_ID`               | app                     | identity verification (public ids, not secrets)             | managed in Cognito; update on pool/client change                              |
-| `COGNITO_PROVISIONING_ACCESS_KEY_ID` / `_SECRET_ACCESS_KEY` | app                     | Cognito user provisioning at invite time (cognito-setup §6) | yearly; immediately if exposed (the only AWS key the app holds)               |
-| `SMTP_USER` / `SMTP_PASSWORD`                               | app                     | transactional email (SES)                                   | yearly; immediately on exposure                                               |
-| `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET`                   | app                     | payments (when they land)                                   | per Razorpay policy; test keys on staging only                                |
-| `SENTRY_DSN`                                                | app                     | api/worker error reporting (feature 6.7)                    | on Sentry project change; separate DSN per environment                        |
-| `ALERT_WEBHOOK_URL`                                         | monitoring              | Alertmanager paging (feature 6.7)                           | on channel change or exposure; separate URL per environment                   |
-| age private key                                             | host + password manager | sops decrypt at deploy                                      | on operator change or exposure (re-encrypt every file)                        |
+| Secret                                    | Zone                    | Used by                                                                                            | Rotation                                                                                                   |
+| ----------------------------------------- | ----------------------- | -------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `POSTGRES_PASSWORD` / `PGPASSWORD`        | postgres                | Postgres auth; pgBackRest + the job_runs recorder                                                  | on suspicion; yearly otherwise                                                                             |
+| `DATABASE_URL`                            | postgres, app           | the app and the backup sidecar                                                                     | follows `POSTGRES_PASSWORD`                                                                                |
+| `PGBACKREST_REPO1_CIPHER_PASS`            | postgres                | encrypts the backup repository                                                                     | **never** rotate without re-encrypting the repo (losing it loses the backups)                              |
+| `PGBACKREST_REPO1_S3_KEY` / `_KEY_SECRET` | postgres                | pgBackRest → the Mumbai S3 bucket                                                                  | yearly; immediately if the IAM user is exposed                                                             |
+| `REDIS_PASSWORD` / `REDIS_URL`            | redis, app              | Redis auth                                                                                         | yearly                                                                                                     |
+| `AUTH_TOKEN_SECRET`                       | app                     | signs the access tokens of AMPM's own sign-in (D-142)                                              | on suspicion only: rotating it signs everyone out                                                          |
+| `AUTH_ENCRYPTION_KEY`                     | app                     | encrypts the staff authenticator secrets; derives the recovery and client-code keys (D-142, D-147) | **never** rotate casually: changing it makes every enrolled authenticator and saved recovery code unusable |
+| `SMTP_USER` / `SMTP_PASSWORD`             | app                     | transactional email (SES)                                                                          | yearly; immediately on exposure                                                                            |
+| `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` | app                     | payments (when they land)                                                                          | per Razorpay policy; test keys on staging only                                                             |
+| `SENTRY_DSN`                              | app                     | api/worker error reporting (feature 6.7)                                                           | on Sentry project change; separate DSN per environment                                                     |
+| `ALERT_WEBHOOK_URL`                       | monitoring              | Alertmanager paging (feature 6.7)                                                                  | on channel change or exposure; separate URL per environment                                                |
+| age private key                           | host + password manager | sops decrypt at deploy                                                                             | on operator change or exposure (re-encrypt every file)                                                     |
 
 Keep this table current: every new secret gets a row before it ships.
-
-## Cognito provisioning IAM credentials (cognito-setup §6)
-
-The verify path is credential-free, but provisioning Cognito users at invite time needs **scoped** admin
-credentials — the only AWS key the app holds. Create a dedicated IAM user (no console access) in the account
-that owns the pool, attach **only** the actions the code calls, scoped to the pool ARN, and put its access
-key in the app zone as `COGNITO_PROVISIONING_ACCESS_KEY_ID` / `COGNITO_PROVISIONING_SECRET_ACCESS_KEY`.
-Least-privilege policy (replace the ARN with the real pool):
-
-```json
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Action": [
-        "cognito-idp:AdminCreateUser",
-        "cognito-idp:AdminSetUserPassword",
-        "cognito-idp:AdminUpdateUserAttributes"
-      ],
-      "Resource": "arn:aws:cognito-idp:ap-south-1:<ACCOUNT_ID>:userpool/ap-south-1_xxxxxxxxx"
-    }
-  ]
-}
-```
-
-Both keys are set together or not at all (a half-set pair is refused at startup); omit both to run a node
-verify-only. The lifecycle actions (`AdminDisableUser`, `AdminUserGlobalSignOut`) are added with the
-deprovision/forced-sign-out build (cognito-setup §10), not before. Creating this IAM user is a founder
-action (it needs the AWS console); nothing here provisions it automatically.
 
 ## One-time: the age key
 
@@ -113,7 +83,7 @@ A value duplicated across zones must change in every file that holds it, or the 
 and fails to connect after redeploy. The split duplicates two: the DB password (postgres zone AND the app
 zone's `DATABASE_URL`) and the Redis password (redis zone AND the app zone's `REDIS_URL`).
 
-1. Change it at the source (the DB, Cognito, the IAM user, the provider).
+1. Change it at the source (the DB, the IAM user, the provider).
 2. Edit every zone file that holds it with `sops`, and commit:
    - DB password → `<env>.postgres.enc.yaml` (`POSTGRES_PASSWORD`, `PGPASSWORD`, `DATABASE_URL`) **and** `<env>.app.enc.yaml` (`DATABASE_URL`).
    - Redis password → `<env>.redis.enc.yaml` (`REDIS_PASSWORD`) **and** `<env>.app.enc.yaml` (`REDIS_URL`).

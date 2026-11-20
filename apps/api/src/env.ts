@@ -14,9 +14,9 @@ interface EnvIssue {
 
 /** Identity-provider consistency: local is refused in production; each provider's keys are required. */
 function identityIssues(value: EnvFields): EnvIssue[] {
-  if (value.IDENTITY_PROVIDER === "local") return localIdentityIssues(value);
-  if (value.IDENTITY_PROVIDER === "ampm") return ampmIdentityIssues(value);
-  return cognitoIdentityIssues(value);
+  return value.IDENTITY_PROVIDER === "local"
+    ? localIdentityIssues(value)
+    : ampmIdentityIssues(value);
 }
 
 function localIdentityIssues(value: EnvFields): EnvIssue[] {
@@ -42,29 +42,6 @@ function ampmIdentityIssues(value: EnvFields): EnvIssue[] {
   for (const key of ["AUTH_TOKEN_SECRET", "AUTH_ENCRYPTION_KEY"] as const) {
     if (!value[key])
       issues.push({ path: [key], message: "required with the ampm identity provider" });
-  }
-  return issues;
-}
-
-function cognitoIdentityIssues(value: EnvFields): EnvIssue[] {
-  const issues: EnvIssue[] = [];
-  for (const key of ["COGNITO_REGION", "COGNITO_USER_POOL_ID", "COGNITO_CLIENT_ID"] as const) {
-    if (!value[key]) {
-      issues.push({ path: [key], message: "required with the Cognito identity provider" });
-    }
-  }
-  // Provisioning credentials are optional, but a half-set pair is a misconfiguration: one key without the
-  // other silently falls back to the default AWS chain and looks like working provisioning that isn't.
-  const hasKeyId = Boolean(value.COGNITO_PROVISIONING_ACCESS_KEY_ID);
-  const hasSecret = Boolean(value.COGNITO_PROVISIONING_SECRET_ACCESS_KEY);
-  if (hasKeyId !== hasSecret) {
-    issues.push({
-      path: [
-        hasKeyId ? "COGNITO_PROVISIONING_SECRET_ACCESS_KEY" : "COGNITO_PROVISIONING_ACCESS_KEY_ID",
-      ],
-      message:
-        "set both COGNITO_PROVISIONING_ACCESS_KEY_ID and COGNITO_PROVISIONING_SECRET_ACCESS_KEY, or neither",
-    });
   }
   return issues;
 }
