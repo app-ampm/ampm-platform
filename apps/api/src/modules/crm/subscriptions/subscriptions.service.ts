@@ -10,7 +10,7 @@ import {
 } from "@ampm/core";
 
 import { PrismaService } from "../../../db/prisma.service.js";
-import { Prisma } from "../../../generated/prisma/client.js";
+import { Prisma, type PaymentStatus } from "../../../generated/prisma/client.js";
 import { AuditService } from "../../../policy/audit.service.js";
 import { toClientMoney } from "./money.js";
 import { PAYMENT_ADAPTER, type PaymentAdapter } from "./payment.adapter.js";
@@ -21,10 +21,21 @@ import { SubscriptionsRepository, type SubscriptionRow } from "./subscriptions.r
 import { toSubscriptionView } from "./subscriptions.view.js";
 
 /**
+ * How long a purchase hands back its subscription's open gateway order rather than minting another
+ * (D-149): long enough for a checkout and its retries, short enough that an order made before a gateway
+ * change (new keys, say) is replaced within the hour.
+ */
+const ORDER_REUSE_MS = 60 * 60 * 1000;
+/** An order whose payment is still initiated, or whose attempt failed, can still be paid at the gateway. */
+const PAYABLE: ReadonlySet<PaymentStatus> = new Set(["initiated", "failed"]);
+
+/**
  * Subscriptions (Module B CRM, feature 8.3). A purchase creates a `pending_payment` subscription, an
  * `initiated` payment and a gateway order for hosted checkout; the signed webhook (or a Finance manual
  * bank transfer, TW-14) then activates it through the shared activation step. The client self-purchase
- * screen (CP-11) defers, so the purchase route is staff-initiated (`crm.subscriptions.create`).
+ * screen (CP-11) defers, so the purchase route is staff-initiated (`crm.subscriptions.create`). A
+ * purchase repeated while its order is still open hands that order back, so repeating it (a double
+ * click, a retry, the client portal's subscribe route called again) mints no second gateway order.
  */
 @Injectable()
 export class SubscriptionsService {
@@ -52,6 +63,42 @@ export class SubscriptionsService {
     const subscriptionId =
       (await this.subscriptions.findPendingForAccountPlan(request.accountId, plan.id)) ??
       (await this.createPendingSubscription(request, plan, actorId));
+    // ...and that subscription's still-open order, so a repeated purchase mints no second one (D-149).
+    const orderId =
+      (await this.openOrderFor(subscriptionId, plan)) ??
+      (await this.createOrder(request.accountId, subscriptionId, plan, actorId));
+    return {
+      subscriptionId,
+      status: "pending_payment",
+      order: {
+        provider: this.adapter.provider,
+        orderId,
+        amount: toClientMoney(plan.priceAmount),
+        keyId: this.adapter.keyId,
+      },
+    };
+  }
+
+  /**
+   * The order a pending subscription can still be paid through (D-149): its newest gateway order while
+   * that is payable, made for the plan's current price, and less than ORDER_REUSE_MS old. Null means a
+   * new order: the price changed, the order was paid, or it is too old to hand out again.
+   */
+  private async openOrderFor(subscriptionId: string, plan: PlanRow): Promise<string | null> {
+    const latest = await this.payments.latestGatewayOrder(subscriptionId);
+    if (!latest || !PAYABLE.has(latest.status)) return null;
+    const recent = Date.now() - latest.createdAt.getTime() < ORDER_REUSE_MS;
+    const samePrice = latest.amount.equals(plan.priceAmount) && latest.currency === plan.currency;
+    return recent && samePrice ? latest.orderId : null;
+  }
+
+  /** Mints a gateway order for the subscription and records its initiated payment; the order id. */
+  private async createOrder(
+    accountId: string,
+    subscriptionId: string,
+    plan: PlanRow,
+    actorId: string,
+  ): Promise<string> {
     // The gateway order is a network call, kept outside the transaction; card data never touches AMPM.
     const order = await this.adapter.createOrder({
       amountMinor: toClientMoney(plan.priceAmount).minor,
@@ -59,18 +106,9 @@ export class SubscriptionsService {
       receipt: subscriptionId,
     });
     await this.recordPayment(
-      gatewayPaymentData(request.accountId, subscriptionId, plan, order.orderId, actorId),
+      gatewayPaymentData(accountId, subscriptionId, plan, order.orderId, actorId),
     );
-    return {
-      subscriptionId,
-      status: "pending_payment",
-      order: {
-        provider: this.adapter.provider,
-        orderId: order.orderId,
-        amount: toClientMoney(plan.priceAmount),
-        keyId: order.keyId,
-      },
-    };
+    return order.orderId;
   }
 
   /** Create the pending subscription and record any basic wedding details (§0a) in one transaction. */

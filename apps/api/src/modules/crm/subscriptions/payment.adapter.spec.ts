@@ -64,7 +64,8 @@ describe("RazorpayPaymentAdapter.createOrder (contract against the sandbox API s
       receipt: "sub-1",
     });
 
-    expect(order).toEqual({ orderId: "order_test_1", keyId: "rzp_test_key" });
+    expect(order).toEqual({ orderId: "order_test_1" });
+    expect(adapter.keyId).toBe("rzp_test_key");
     expect(calls[0]!.url).toBe("https://api.razorpay.com/v1/orders");
     const headers = calls[0]!.init.headers as Record<string, string>;
     expect(headers.authorization).toBe(

@@ -50,6 +50,15 @@ export interface PaymentWriteData {
   readonly createdBy: string | null;
 }
 
+/** A subscription's gateway order as its payment row records it. */
+export interface GatewayOrderRow {
+  readonly orderId: string;
+  readonly status: PaymentStatus;
+  readonly amount: Prisma.Decimal;
+  readonly currency: string;
+  readonly createdAt: Date;
+}
+
 export interface PaymentListFilters {
   readonly accountId?: string | undefined;
   readonly direction?: PaymentDirection | undefined;
@@ -106,6 +115,14 @@ export class PaymentsRepository {
 
   /** The gateway order reference recorded for a subscription's purchase — the dev stub completion anchor. */
   async gatewayRefForSubscription(subscriptionId: string): Promise<string | null> {
+    return (await this.latestGatewayOrder(subscriptionId))?.orderId ?? null;
+  }
+
+  /**
+   * The newest gateway order recorded for a subscription's purchase, with what deciding to hand it back
+   * again needs: its payment's status, the amount and currency it was made for, and when (D-149).
+   */
+  async latestGatewayOrder(subscriptionId: string): Promise<GatewayOrderRow | null> {
     const payment = await this.prisma.payment.findFirst({
       where: {
         relatedType: "subscription",
@@ -114,9 +131,11 @@ export class PaymentsRepository {
         deletedAt: null,
       },
       orderBy: { createdAt: "desc" },
-      select: { providerRef: true },
+      select: { providerRef: true, status: true, amount: true, currency: true, createdAt: true },
     });
-    return payment?.providerRef ?? null;
+    if (!payment?.providerRef) return null;
+    const { providerRef, ...rest } = payment;
+    return { orderId: providerRef, ...rest };
   }
 
   async markFailed(id: string, client: Prisma.TransactionClient): Promise<void> {
