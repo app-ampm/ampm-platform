@@ -1,4 +1,4 @@
-import { Inject, Injectable, type OnModuleDestroy } from "@nestjs/common";
+import { Inject, Injectable, type OnApplicationShutdown } from "@nestjs/common";
 
 import {
   JOB_DRIVER,
@@ -19,7 +19,7 @@ import {
  * await this.jobs.enqueue(sendNotification, { notificationId }, { idempotencyKey: notificationId });
  */
 @Injectable()
-export class JobQueue implements OnModuleDestroy {
+export class JobQueue implements OnApplicationShutdown {
   constructor(@Inject(JOB_DRIVER) private readonly driver: JobDriver) {}
 
   /**
@@ -60,7 +60,14 @@ export class JobQueue implements OnModuleDestroy {
     await this.driver.scheduleRepeatable(job.name, cronPattern, job.schema.parse(payload));
   }
 
-  async onModuleDestroy(): Promise<void> {
+  /**
+   * Closes the driver on SIGTERM: the BullMQ workers finish their active jobs and take no new ones, then
+   * the queues and the Redis connection close. It runs after the HTTP server has drained (Nest's last
+   * shutdown phase), so a request still in flight can enqueue, and before the database disconnects
+   * (DbModule is registered before JobsModule, and this phase runs in reverse order), so a job finishing
+   * here still has Prisma.
+   */
+  async onApplicationShutdown(): Promise<void> {
     await this.driver.close();
   }
 }

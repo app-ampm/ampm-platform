@@ -1,3 +1,4 @@
+import type { OnApplicationShutdown } from "@nestjs/common";
 import { Redis } from "ioredis";
 
 export interface RateLimitHit {
@@ -16,7 +17,7 @@ export abstract class RateLimitStore {
  * Redis-backed fixed window for staging/production: INCR the key, set its TTL on the first hit, and read
  * the remaining TTL — in one atomic Lua script, so concurrent requests cannot miss the expiry.
  */
-export class RedisRateLimitStore extends RateLimitStore {
+export class RedisRateLimitStore extends RateLimitStore implements OnApplicationShutdown {
   private static readonly SCRIPT =
     "local c = redis.call('INCR', KEYS[1]) " +
     "if c == 1 then redis.call('PEXPIRE', KEYS[1], ARGV[1]) end " +
@@ -44,6 +45,21 @@ export class RedisRateLimitStore extends RateLimitStore {
     const count = typeof pair[0] === "number" ? pair[0] : 0;
     const ttl = typeof pair[1] === "number" ? pair[1] : windowMs;
     return { count, resetMs: ttl >= 0 ? ttl : windowMs };
+  }
+
+  /**
+   * Closes the client after the HTTP server has drained (Nest runs this hook once it stops serving, so a
+   * request still in flight keeps its limiter). Left open, this socket held the API and the worker past
+   * Docker's stop timeout: node is PID 1 in the container, so the SIGTERM Nest re-raises after its hooks
+   * is ignored and the process can only exit once nothing is left open — it was SIGKILLed instead (137).
+   */
+  async onApplicationShutdown(): Promise<void> {
+    try {
+      await this.redis.quit();
+    } catch {
+      // Not connected (the offline queue is off, so QUIT is refused): drop the socket and stop reconnecting.
+      this.redis.disconnect();
+    }
   }
 }
 
