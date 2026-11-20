@@ -47,7 +47,8 @@ const FLEXIBLE_MIN_WIDTH = 300;
  * that timed out and an error each drop the token at once, and Turnstile's own recovery runs the
  * check again (`refresh-expired`, `refresh-timeout` and `retry` keep their `auto` defaults; after an
  * error it tries again every 8 seconds). A reset from the error callback would spin instead on an
- * error that never clears, such as a hostname the widget does not list.
+ * error that never clears, such as a hostname the widget does not list. Throws when Turnstile draws
+ * nothing (it answers with no widget id rather than an error), so that counts as a failed check.
  *
  *   const widget = renderBotCheck(turnstile, { container, width: 360, siteKey }, setCheck);
  */
@@ -56,6 +57,8 @@ export function renderBotCheck(
   target: BotCheckTarget,
   report: (check: BotCheck) => void,
 ): BotCheckWidget {
+  // Drawn into afresh: whatever a failed attempt left in the container would make Turnstile refuse it.
+  if (typeof target.container !== "string") target.container.replaceChildren();
   const widgetId = turnstile.render(target.container, {
     sitekey: target.siteKey,
     theme: "dark",
@@ -70,13 +73,10 @@ export function renderBotCheck(
     },
     "unsupported-callback": () => report({ status: "unsupported" }),
   });
+  if (!widgetId) throw new Error("Turnstile drew no widget");
   return {
-    reset: () => {
-      if (widgetId) turnstile.reset(widgetId);
-    },
-    remove: () => {
-      if (widgetId) turnstile.remove(widgetId);
-    },
+    reset: () => turnstile.reset(widgetId),
+    remove: () => turnstile.remove(widgetId),
   };
 }
 
@@ -90,8 +90,8 @@ export interface BotCheckMount {
 
 /**
  * Loads Turnstile and draws the widget in `target`, reporting where the check stands. A script that
- * does not load, or a widget Turnstile refuses to draw, is a failed check, so the form never waits on
- * a check that cannot finish.
+ * does not load (or takes too long), or a widget Turnstile refuses to draw, is a failed check, so the
+ * form never waits on a check that cannot finish.
  *
  *   const mount = mountBotCheck({ container, width: container.clientWidth, siteKey }, setCheck);
  *   mount.unmount();

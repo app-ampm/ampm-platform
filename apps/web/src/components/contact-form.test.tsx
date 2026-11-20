@@ -72,7 +72,7 @@ describe("contact form", () => {
     const html = renderForm(false);
     expect(html).toContain('<div id="bot-check" class="min-h-16"></div>');
     expect(html).toContain(
-      '<p id="bot-check-status" role="status" class="sr-only">Running a quick security check before you send…</p>',
+      '<p id="bot-check-status" class="sr-only">Running a quick security check before you send…</p>',
     );
     expect(html).toMatch(
       /<button type="submit" disabled=""[^>]*aria-describedby="bot-check-status"/,

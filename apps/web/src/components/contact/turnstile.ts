@@ -48,9 +48,13 @@ declare global {
 
 let loading: Promise<TurnstileApi> | undefined;
 
+/** How long the script may take: a stalled fetch fires neither `load` nor `error`, so it would never fail. */
+export const TURNSTILE_LOAD_TIMEOUT_MS = 15_000;
+
 /**
  * Turnstile's API, adding its script to the page the first time. Calls made while it loads share that
- * script; a failed load is forgotten, so the next call (the form's "Try again") fetches it afresh.
+ * script; a failed or timed-out load is forgotten, so the next call (the form's "Try again") fetches
+ * it afresh.
  *
  *   const turnstile = await loadTurnstile();
  *   const widgetId = turnstile.render(container, options);
@@ -65,15 +69,25 @@ export function loadTurnstile(): Promise<TurnstileApi> {
   return loading;
 }
 
-/** Appends Turnstile's script; resolves with its API once it has run, or removes it and rejects. */
+/**
+ * Appends Turnstile's script; resolves with its API once it has run, or removes it and rejects when
+ * it fails or takes longer than `TURNSTILE_LOAD_TIMEOUT_MS`.
+ */
 function addScript(): Promise<TurnstileApi> {
   return new Promise((resolve, reject) => {
     const script = document.createElement("script");
+    // `fail` runs only after `timer` exists: from the timer itself, or from a later load or error.
     const fail = (reason: string): void => {
+      clearTimeout(timer);
       script.remove();
       reject(new Error(reason));
     };
+    const timer = setTimeout(
+      () => fail("Turnstile's script took too long"),
+      TURNSTILE_LOAD_TIMEOUT_MS,
+    );
     script.addEventListener("load", () => {
+      clearTimeout(timer);
       const api = window.turnstile;
       if (api) resolve(api);
       else fail("Turnstile's script ran without its API");

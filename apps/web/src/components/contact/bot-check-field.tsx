@@ -27,19 +27,26 @@ const NOTICE_STYLES = cn(
 
 /**
  * The bot check above Send (PUB-06): Turnstile's widget, which `useBotCheck` draws in the container,
- * and one status line saying where the check stands. The line is polite, so a screen reader hears each
- * change, and it describes Send while Send waits. It stays visually hidden while the widget shows its
- * own progress, and becomes a notice once the check has failed, with a way to run it again unless the
- * browser cannot run it at all. Until then the container keeps the widget's height, so nothing jumps.
+ * and one line saying where the check stands, which describes Send. While the check runs or has passed,
+ * the line is visually hidden and silent: the widget shows its own progress, and a token's routine
+ * refresh (after each send, and every 300 seconds) is not worth announcing. A failure replaces it with
+ * a notice that is announced at once (a new `role="alert"`), with a way to run the check again unless
+ * the browser cannot run it at all. Until then the container keeps the widget's height, so nothing jumps.
  */
 export function BotCheckField({ check, containerRef, onRetry }: BotCheckFieldProps) {
   const hasFailed = check.status === "failed" || check.status === "unsupported";
   return (
     <div className="flex flex-col gap-3">
       <div ref={containerRef} id={BOT_CHECK_ID} className={hasFailed ? undefined : "min-h-16"} />
-      <p id={BOT_CHECK_STATUS_ID} role="status" className={hasFailed ? NOTICE_STYLES : "sr-only"}>
-        {COPY.botCheck[check.status]}
-      </p>
+      {hasFailed ? (
+        <p key="alert" id={BOT_CHECK_STATUS_ID} role="alert" className={NOTICE_STYLES}>
+          {COPY.botCheck[check.status]}
+        </p>
+      ) : (
+        <p key="status" id={BOT_CHECK_STATUS_ID} className="sr-only">
+          {COPY.botCheck[check.status]}
+        </p>
+      )}
       {check.status === "failed" ? (
         <button
           type="button"

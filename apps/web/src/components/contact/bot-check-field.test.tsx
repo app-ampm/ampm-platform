@@ -12,28 +12,30 @@ function render(check: BotCheck): string {
 }
 
 describe("bot check field", () => {
-  it("keeps the widget's room and tells a screen reader the check is running", () => {
+  it("keeps the widget's room and describes Send, silently, while the check runs", () => {
     const html = render({ status: "checking" });
     expect(html).toContain('<div id="bot-check" class="min-h-16"></div>');
+    // Visually hidden and not a live region: a token's routine refresh is never announced.
     expect(html).toContain(
-      '<p id="bot-check-status" role="status" class="sr-only">Running a quick security check before you send…</p>',
+      '<p id="bot-check-status" class="sr-only">Running a quick security check before you send…</p>',
     );
+    expect(html).not.toContain("role=");
     expect(html).not.toContain("<button");
   });
 
-  it("tells a screen reader that Send is ready, without ever printing the token", () => {
+  it("describes Send as ready once the check passes, without ever printing the token", () => {
     const html = render({ status: "passed", token: "token-1" });
-    expect(html).toMatch(
-      /role="status" class="sr-only">Security check passed. You can send your request.<\/p>/,
+    expect(html).toContain(
+      '<p id="bot-check-status" class="sr-only">Security check passed. You can send your request.</p>',
     );
     expect(html).not.toContain("token-1");
   });
 
-  it("shows a failed check as a notice, with a way to run it again", () => {
+  it("announces a failed check as a notice, with a way to run it again", () => {
     const html = render({ status: "failed" });
     expect(html).toContain('<div id="bot-check"></div>');
     expect(html).toMatch(
-      /<p id="bot-check-status" role="status" class="[^"]+">The security check did not finish. Check your connection, then try again.<\/p>/,
+      /<p id="bot-check-status" role="alert" class="[^"]+">The security check did not finish. Check your connection, then try again.<\/p>/,
     );
     expect(html).not.toContain('class="sr-only"');
     expect(html).toMatch(
@@ -43,8 +45,8 @@ describe("bot check field", () => {
 
   it("offers no retry to a browser that cannot run the check", () => {
     const html = render({ status: "unsupported" });
-    expect(html).toContain(
-      "This browser cannot run our security check. Please try another browser.",
+    expect(html).toMatch(
+      /role="alert"[^>]*>This browser cannot run our security check. Please try another browser.<\/p>/,
     );
     expect(html).not.toContain("<button");
   });

@@ -43,8 +43,9 @@ export type SubmitStep =
 
 /**
  * Pressing Send: the fields are checked with the shared schema first, so their errors show whatever
- * the bot check is doing; without a token the form waits (Send is disabled then, so only an Enter in a
- * field lands here), and otherwise the request carries the token.
+ * the bot check is doing; without a token the form waits (a guard: Send is disabled then, and a
+ * browser does not submit by Enter while the only submit button is disabled), and otherwise the
+ * request carries the token.
  */
 export function submitStep(fields: FormFields, botToken: string | null): SubmitStep {
   const parsed = leadEnquiryRequest.safeParse(toPayload(fields, botToken));

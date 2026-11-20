@@ -95,6 +95,37 @@ describe("loadTurnstile", () => {
     await expect(retried).resolves.toBe(TURNSTILE);
   });
 
+  it("gives up on a script that stalls, and fetches it afresh on the next call", async () => {
+    const loadTurnstile = await freshLoader();
+    vi.useFakeTimers();
+    try {
+      const stalled = loadTurnstile();
+      const refused = expect(stalled).rejects.toThrow("Turnstile's script took too long");
+      await vi.advanceTimersByTimeAsync(15_000);
+      await refused;
+      expect(scripts[0]?.isRemoved).toBe(true);
+      void loadTurnstile().catch(() => undefined);
+      expect(scripts).toHaveLength(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("stops the clock once the script has run", async () => {
+    const loadTurnstile = await freshLoader();
+    vi.useFakeTimers();
+    try {
+      const loaded = loadTurnstile();
+      page.turnstile = TURNSTILE;
+      scripts[0]?.fire("load");
+      await expect(loaded).resolves.toBe(TURNSTILE);
+      await vi.advanceTimersByTimeAsync(15_000);
+      expect(scripts[0]?.isRemoved).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("refuses a script that ran without Turnstile's API", async () => {
     const loadTurnstile = await freshLoader();
     const loaded = loadTurnstile();

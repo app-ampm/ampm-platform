@@ -97,20 +97,20 @@ describe("renderBotCheck", () => {
     expect(seen).toEqual([{ status: "unsupported" }]);
   });
 
-  it("resets and removes its own widget, and touches nothing when none was drawn", () => {
+  it("resets and removes its own widget", () => {
     const drawn = fakeTurnstile();
     const widget = renderBotCheck(drawn.api, TARGET, () => undefined);
     widget.reset();
     widget.remove();
     expect(drawn.resets).toEqual(["widget-1"]);
     expect(drawn.removals).toEqual(["widget-1"]);
+  });
 
+  it("throws when Turnstile draws nothing, which it signals with no widget id rather than an error", () => {
     const none = fakeTurnstile(null);
-    const missing = renderBotCheck(none.api, TARGET, () => undefined);
-    missing.reset();
-    missing.remove();
-    expect(none.resets).toEqual([]);
-    expect(none.removals).toEqual([]);
+    expect(() => renderBotCheck(none.api, TARGET, () => undefined)).toThrow(
+      "Turnstile drew no widget",
+    );
   });
 });
 
@@ -156,6 +156,15 @@ describe("mountBotCheck", () => {
     await settle();
     expect(seen).toEqual([{ status: "failed" }]);
     // No widget was drawn, so "Try the check again" loads and draws afresh.
+    expect(mount.reset()).toBe(false);
+  });
+
+  it("reports a failed check when Turnstile answers with no widget id, rather than waiting forever", async () => {
+    vi.mocked(loadTurnstile).mockResolvedValue(fakeTurnstile(null).api);
+    const { seen, report } = reports();
+    const mount = mountBotCheck(TARGET, report);
+    await settle();
+    expect(seen).toEqual([{ status: "failed" }]);
     expect(mount.reset()).toBe(false);
   });
 
