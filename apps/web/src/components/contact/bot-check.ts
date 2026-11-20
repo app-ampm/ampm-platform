@@ -89,8 +89,9 @@ export interface BotCheckMount {
 }
 
 /**
- * Loads Turnstile and draws the widget in `target`, reporting where the check stands; a script that
- * does not load is a failed check.
+ * Loads Turnstile and draws the widget in `target`, reporting where the check stands. A script that
+ * does not load, or a widget Turnstile refuses to draw, is a failed check, so the form never waits on
+ * a check that cannot finish.
  *
  *   const mount = mountBotCheck({ container, width: container.clientWidth, siteKey }, setCheck);
  *   mount.unmount();
@@ -104,12 +105,11 @@ export function mountBotCheck(
   const update = (check: BotCheck): void => {
     if (isMounted) report(check);
   };
-  loadTurnstile().then(
-    (turnstile) => {
+  loadTurnstile()
+    .then((turnstile) => {
       if (isMounted) widget = renderBotCheck(turnstile, target, update);
-    },
-    () => update({ status: "failed" }),
-  );
+    })
+    .catch(() => update({ status: "failed" }));
   return {
     reset: () => {
       widget?.reset();

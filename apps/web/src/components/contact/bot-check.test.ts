@@ -142,6 +142,23 @@ describe("mountBotCheck", () => {
     expect(mount.reset()).toBe(false);
   });
 
+  it("reports a failed check when Turnstile refuses to draw the widget, rather than waiting forever", async () => {
+    const turnstile = fakeTurnstile();
+    const refusing: TurnstileApi = {
+      ...turnstile.api,
+      render: () => {
+        throw new Error("Turnstile could not find the container");
+      },
+    };
+    vi.mocked(loadTurnstile).mockResolvedValue(refusing);
+    const { seen, report } = reports();
+    const mount = mountBotCheck(TARGET, report);
+    await settle();
+    expect(seen).toEqual([{ status: "failed" }]);
+    // No widget was drawn, so "Try the check again" loads and draws afresh.
+    expect(mount.reset()).toBe(false);
+  });
+
   it("removes the widget on unmount and reports nothing afterwards", async () => {
     const turnstile = fakeTurnstile();
     vi.mocked(loadTurnstile).mockResolvedValue(turnstile.api);
