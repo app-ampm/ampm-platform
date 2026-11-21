@@ -14,7 +14,7 @@ export const screenHeaderStyles = variants("flex flex-col gap-4", {
 });
 
 export type ScreenHeaderStyleProps = VariantProps<typeof screenHeaderStyles>;
-/** title: Gilda 36, 44 from 1024 · display: Gilda 64 for wide desktop pages · hero: 44, 88 from 1024. */
+/** title: Gilda 36, 44 from 1024 · display: Gilda 64 for wide desktop pages · hero: 44, 64 from 1024, 88 from 1280. */
 export type ScreenHeaderSize = NonNullable<ScreenHeaderStyleProps["size"]>;
 /** plain (default): on the canvas · panel: on its own glass panel, a record's header (T3). */
 export type ScreenHeaderVariant = NonNullable<ScreenHeaderStyleProps["variant"]>;
@@ -37,11 +37,13 @@ export const screenHeaderTitleGroupStyles =
 /**
  * The title's size per header size, on top of its Text variant. Desktop page titles are larger than a
  * phone's (T 39, D and C 41–68): a screen title steps up to 44 from 1024. The hero (D1's 86) starts
- * at 44 on a phone, where P1's title is 49, and takes the full 88 from 1024.
+ * at 44 on a phone, where P1's title is 49, steps to 64 from 1024 and takes the full 88 from 1280.
+ * D1 sets 88 in a 576 column; from 1024 to 1279 the sign-in's headline column is only 336 to 464
+ * wide, and "Welcome" at 88 (about 350) broke inside the word on a 13-inch iPad held upright.
  */
 export const screenHeaderTitleStyles = variants("", {
   variants: {
-    size: { title: "lg:text-5xl", display: "", hero: "text-5xl lg:text-7xl" },
+    size: { title: "lg:text-5xl", display: "", hero: "text-5xl lg:text-6xl xl:text-7xl" },
   },
   defaultVariants: { size: "title" },
 });

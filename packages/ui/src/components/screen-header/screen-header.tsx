@@ -41,7 +41,7 @@ export interface ScreenHeaderProps extends Omit<ViewProps, "children"> {
   readonly actions?: ReactNode;
   /** plain (default) · panel: the header on its own glass panel, for a record's page (T3). */
   readonly variant?: ScreenHeaderVariant | undefined;
-  /** title (default): Gilda 36, 44 from 1024 · display: Gilda 64 for wide desktop pages · hero: 44, 88 from 1024 (D1). */
+  /** title (default): Gilda 36, 44 from 1024 · display: Gilda 64 for wide desktop pages · hero: 44, 64 from 1024, 88 from 1280 (D1). */
   readonly size?: ScreenHeaderSize | undefined;
   /** Responsive sizes for the title and its gold word: `md:text-5xl`. */
   readonly titleClassName?: string | undefined;

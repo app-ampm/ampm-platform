@@ -11,9 +11,10 @@ const HEADLINE = {
 } as const;
 
 /**
- * The headline over the line saying how to sign in: D1's 88 hero beside the form from 1024, the
- * screen title below that (P1 and the centred card), so a phone keeps its header. Both headlines stay
- * on one line at 88, so switching tabs never reflows the column.
+ * The headline over the line saying how to sign in: the hero beside the form from 1024 (64, and D1's
+ * 88 from 1280, where the column has room for it), the screen title below that (P1 and the centred
+ * card), so a phone keeps its header. In D1's 576 column both headlines sit on one line at 88, so
+ * switching tabs never reflows it.
  */
 export function SignInHero({
   subtitle,
