@@ -268,6 +268,7 @@ export * from "./subscription-report"; // §5.16 report, every name `subscriptio
 // collide, so `export *` is unambiguous.
 export * from "./hotels";
 export * from "./hotels-admin";
+export * from "./saved-hotels-staff"; // staff read of clients' saved hotels, every name `savedHotelStaff`-prefixed
 export * from "./hotel-rates";
 export * from "./hotel-references";
 export * from "./media";

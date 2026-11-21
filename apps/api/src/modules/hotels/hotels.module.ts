@@ -18,6 +18,9 @@ import { HotelsAdminService } from "./hotels-admin.service.js";
 import { HotelsController } from "./hotels.controller.js";
 import { HotelsRepository } from "./hotels.repository.js";
 import { HotelsService } from "./hotels.service.js";
+import { SavedHotelsStaffController } from "./saved-hotels-staff.controller.js";
+import { SavedHotelsStaffRepository } from "./saved-hotels-staff.repository.js";
+import { SavedHotelsStaffService } from "./saved-hotels-staff.service.js";
 
 /**
  * Module C — Hotel intelligence (docs/data-model.md §5). Client-facing discovery: browse/search the
@@ -40,6 +43,7 @@ import { HotelsService } from "./hotels.service.js";
     HotelsAdminController,
     HotelRatesController,
     HotelReferencesController,
+    SavedHotelsStaffController,
   ],
   providers: [
     HotelsService,
@@ -54,6 +58,8 @@ import { HotelsService } from "./hotels.service.js";
     HotelReferencesService,
     HotelReferencesRepository,
     HotelFreshnessService,
+    SavedHotelsStaffService,
+    SavedHotelsStaffRepository,
   ],
   // ConsultancyModule (Module D, feature 10.1) injects HotelsService for the enquiry reach check.
   exports: [HotelsService],

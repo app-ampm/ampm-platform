@@ -4,6 +4,7 @@ import { useRouter } from "expo-router";
 import { useAccounts, type CursorListResult } from "@ampm/api-client";
 import type { AccountView } from "@ampm/core";
 import {
+  Button,
   EmptyState,
   LoadMore,
   QueryErrorState,
@@ -18,6 +19,7 @@ import { useGoToSignIn } from "@/navigation/sign-in";
 
 import { AccountsList } from "./accounts-list";
 import { AccountsTable } from "./accounts-table";
+import { useAccountPermissions } from "./use-account-permissions";
 
 /** "Clients · 12", with a "+" while more pages wait beyond the loaded ones. */
 function clientsEyebrow(accounts: CursorListResult<AccountView>): string {
@@ -98,13 +100,15 @@ export interface AccountsListScreenProps {
 /**
  * The client accounts directory (the "Clients" half of Leads & Clients): every converted account, newest
  * first, opening the account's record with its contacts and subscriptions. Staff with CRM access read it;
- * the server refuses the rest. Reached from the leads workspace.
+ * the server refuses the rest. Reached from the leads workspace. A role that may read clients' saved
+ * hotels also gets the link to every client's saved hotels.
  *
  *   <AccountsListScreen tabBar={<AppTabBar />} />
  */
 export function AccountsListScreen({ tabBar }: AccountsListScreenProps) {
   const router = useRouter();
   const accounts = useAccounts();
+  const { canReadSavedHotels } = useAccountPermissions();
   const openAccount = (accountId: string): void =>
     router.push({ pathname: "/leads/accounts/[accountId]", params: { accountId } });
   return (
@@ -116,6 +120,19 @@ export function AccountsListScreen({ tabBar }: AccountsListScreenProps) {
           eyebrow={clientsEyebrow(accounts)}
           title="Clients"
           onBack={() => router.back()}
+          actions={
+            canReadSavedHotels ? (
+              <Button
+                variant="secondary"
+                size="sm"
+                icon="heart"
+                onPress={() => router.push("/leads/saved-hotels")}
+                testID="accounts-saved-hotels-link"
+              >
+                Saved hotels
+              </Button>
+            ) : undefined
+          }
         />
       }
     >

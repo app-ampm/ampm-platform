@@ -8,6 +8,7 @@ import {
   ok,
   renderWithApi,
   routedFetch,
+  staffMeFixture,
   type FetchFn,
 } from "./accounts.test-utils";
 
@@ -76,6 +77,18 @@ describe("AccountsListScreen", () => {
     expect(await screen.findByText("The Verma wedding")).toBeOnTheScreen();
     expect(screen.getByText("The Sharma wedding")).toBeOnTheScreen();
     expect(screen.queryByTestId("accounts-load-more")).toBeNull();
+  });
+
+  it("links a role that may read them to every client's saved hotels", async () => {
+    await renderWithApi(
+      <AccountsListScreen />,
+      routedFetch({
+        "/crm/accounts": () => ok({ items: [accountViewFixture()], nextCursor: null }),
+        "/me": () => ok(staffMeFixture(["SM"])),
+      }),
+    );
+    await fireEvent.press(await screen.findByTestId("accounts-saved-hotels-link"));
+    expect(mockPush).toHaveBeenCalledWith("/leads/saved-hotels");
   });
 
   it("marks the client count as a floor while more pages wait", async () => {
