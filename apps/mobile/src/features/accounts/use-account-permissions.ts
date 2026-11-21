@@ -10,6 +10,8 @@ export interface AccountPermissions {
   /** Remove a contact who has no portal login (`crm.accounts.delete`). */
   readonly canRemoveContact: boolean;
   readonly canReadEnquiries: boolean;
+  /** The hotels the client saved while exploring (`hotels.saved_hotels.read`: SA, SM, HT). */
+  readonly canReadSavedHotels: boolean;
   readonly canReadAgreements: boolean;
   readonly canReadLeads: boolean;
 }
@@ -19,6 +21,7 @@ const NONE: AccountPermissions = {
   canAddContact: false,
   canRemoveContact: false,
   canReadEnquiries: false,
+  canReadSavedHotels: false,
   canReadAgreements: false,
   canReadLeads: false,
 };
@@ -38,6 +41,7 @@ export function accountPermissionsFor(roles: readonly StaffRole[]): AccountPermi
     canAddContact: allows("crm.accounts.create"),
     canRemoveContact: allows("crm.accounts.delete"),
     canReadEnquiries: allows("consultancy.enquiries.read"),
+    canReadSavedHotels: allows("hotels.saved_hotels.read"),
     canReadAgreements: allows("crm.service_agreements.read"),
     canReadLeads: allows("crm.leads.read"),
   };

@@ -16,6 +16,7 @@ import { AccountEnquiries } from "./account-enquiries";
 import { AccountFacts } from "./account-facts";
 import { AccountHeader } from "./account-header";
 import { AccountPayments } from "./account-payments";
+import { AccountSavedHotels } from "./account-saved-hotels";
 import { AccountSubscriptions } from "./account-subscriptions";
 import { RecordPaymentSheet } from "./record-payment-sheet";
 import { RemoveContactConfirm } from "./remove-contact-confirm";
@@ -47,8 +48,8 @@ interface ContentProps {
 }
 
 /**
- * The loaded account in T3's `1.3 : 1` columns from 1024. Main: the people and what they bought and
- * asked for (contacts, subscriptions, hotel enquiries, service agreements). Side: the facts with the
+ * The loaded account in T3's `1.3 : 1` columns from 1024. Main: the people and what they bought, saved
+ * and asked for (contacts, subscriptions, saved hotels, hotel enquiries, service agreements). Side: the facts with the
  * originating lead, the Finance ledger and the internal notes, the reference panels a record keeps
  * beside its working ones. Stacked, that is the phone's order.
  */
@@ -62,6 +63,7 @@ function AccountDetailContent({ accountId, account, permissions, actions }: Cont
           onAdd={actions.onAddContact}
         />
         <AccountSubscriptions accountId={accountId} onRecordPayment={actions.onRecordPayment} />
+        <AccountSavedHotels accountId={accountId} canRead={permissions.canReadSavedHotels} />
         <AccountEnquiries accountId={accountId} canRead={permissions.canReadEnquiries} />
         <AccountAgreements accountId={accountId} canRead={permissions.canReadAgreements} />
       </Stack>
@@ -206,8 +208,8 @@ function hubActions(
 
 /**
  * One client account, the hub for the client (TW-13): a header panel with its name, status and facts
- * (Edit details; Record payment while one subscription waits), then its contacts, subscriptions, hotel
- * enquiries and service agreements beside its details with the originating lead, payment ledger and
+ * (Edit details; Record payment while one subscription waits), then its contacts, subscriptions, saved
+ * hotels, hotel enquiries and service agreements beside its details with the originating lead, payment ledger and
  * internal notes. Sales and the Super Admin keep the details and contacts up to date (add, edit, invite
  * to the portal, remove one without a login); every reader sees only what their role may, and the
  * server decides the same way.

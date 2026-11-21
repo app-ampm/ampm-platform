@@ -5,6 +5,7 @@ import type {
   MeResponse,
   PaymentFinanceView,
   PlanPublicView,
+  SavedHotelStaffView,
   SubscriptionView,
 } from "@ampm/core";
 
@@ -23,6 +24,8 @@ export const SUBSCRIPTION_ID = "018f0000-0000-7000-8000-0000000d0003";
 export const PLAN_ID = "018f0000-0000-7000-8000-0000000d0004";
 export const PAYMENT_ID = "018f0000-0000-7000-8000-0000000d0005";
 export const FINANCE_USER_ID = "018f0000-0000-7000-8000-0000000d00fe";
+export const SAVED_HOTEL_ID = "018f0000-0000-7000-8000-0000000d0006";
+export const SAVED_HOTEL_HOTEL_ID = "018f0000-0000-7000-8000-0000000d0007";
 
 /** A signed-in staff `/me` with the given roles — gates the Finance-only payment ledger. */
 export function staffMeFixture(roles: MeResponse["roles"]): MeResponse {
@@ -127,6 +130,26 @@ export function subscriptionViewFixture(
     activationSource: null,
     createdAt: "2026-11-01T09:00:00Z",
     updatedAt: "2026-11-01T09:00:00Z",
+    ...overrides,
+  };
+}
+
+/** One hotel the Sharmas saved, as the staff read of clients' saved hotels returns it. */
+export function savedHotelStaffFixture(
+  overrides: Partial<SavedHotelStaffView> = {},
+): SavedHotelStaffView {
+  return {
+    id: SAVED_HOTEL_ID,
+    hotel: {
+      id: SAVED_HOTEL_HOTEL_ID,
+      name: "The Lake Pavilion",
+      starCategory: "5",
+      status: "active",
+      destinationName: "Udaipur",
+    },
+    account: { id: ACCOUNT_ID, name: "The Sharma wedding" },
+    note: "Loved the lake-facing lawn",
+    savedAt: "2026-11-20T10:00:00Z",
     ...overrides,
   };
 }

@@ -85,20 +85,22 @@ describe("account details form", () => {
 });
 
 describe("accountPermissionsFor", () => {
-  it("lets Sales keep the account and its contacts and open its enquiries, agreements and lead", () => {
+  it("lets Sales keep the account and its contacts and open its saved hotels, enquiries, agreements and lead", () => {
     expect(accountPermissionsFor(["SM"])).toEqual({
       canEdit: true,
       canAddContact: true,
       canRemoveContact: true,
       canReadEnquiries: true,
+      canReadSavedHotels: true,
       canReadAgreements: true,
       canReadLeads: true,
     });
   });
 
-  it("leaves the hotel team reading: enquiries yes, edits no", () => {
+  it("leaves the hotel team reading: enquiries and saved hotels yes, edits no", () => {
     const permissions = accountPermissionsFor(["HT"]);
     expect(permissions.canReadEnquiries).toBe(true);
+    expect(permissions.canReadSavedHotels).toBe(true);
     expect(permissions.canEdit).toBe(false);
     expect(permissions.canAddContact).toBe(false);
     expect(permissions.canRemoveContact).toBe(false);
@@ -106,5 +108,9 @@ describe("accountPermissionsFor", () => {
 
   it("gives a Project Manager's assigned-only grant no edit on an account route", () => {
     expect(accountPermissionsFor(["PM"]).canEdit).toBe(false);
+  });
+
+  it("keeps clients' saved hotels from Finance, whose role has no read of them", () => {
+    expect(accountPermissionsFor(["FA"]).canReadSavedHotels).toBe(false);
   });
 });
