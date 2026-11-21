@@ -94,12 +94,18 @@ describe("ScreenHeader", () => {
     const pipeline = String(screen.getByText("Pipeline").props.className);
     expect(pipeline).toContain("text-4xl");
     expect(pipeline).toContain("lg:text-5xl");
-    // The hero: 44 on a phone (P1's 49), 88 from 1024 (D1's 86), and the gold word with it.
+    // The hero: 44 on a phone (P1's 49), 64 from 1024 and D1's 88 (its 86) only from 1280, the gold
+    // word with it. Below 1280 the headline column is narrower than D1's 576 (about 340 on a 13-inch
+    // iPad held upright), and "Welcome" at 88 broke in the middle of the word there.
     const hero = String(screen.getByRole("header", { name: "Welcome back." }).props.className);
     expect(hero).toContain("font-display");
     expect(hero).toContain("text-5xl");
-    expect(hero).toContain("lg:text-7xl");
-    expect(String(screen.getByText("back.").props.className)).toContain("lg:text-7xl");
+    expect(hero).toContain("lg:text-6xl");
+    expect(hero).toContain("xl:text-7xl");
+    expect(hero).not.toContain("lg:text-7xl");
+    const gold = String(screen.getByText("back.").props.className);
+    expect(gold).toContain("lg:text-6xl");
+    expect(gold).toContain("xl:text-7xl");
     // Its lead paragraph is D1's 18, a reading line wide at most.
     const lead = String(
       screen.getByText("Sign in with the mobile number AMPM has on file.").props.className,

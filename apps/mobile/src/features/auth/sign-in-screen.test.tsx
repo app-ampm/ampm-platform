@@ -104,9 +104,11 @@ describe("SignInScreen", () => {
     await renderWithProviders(<SignInScreen />);
     const hero = within(screen.getByTestId("sign-in-hero"));
     const title = hero.getByRole("header", { name: "Welcome back." });
+    // D1's 88 from 1280; 64 from 1024, where the headline column is too narrow for "Welcome" at 88.
     expect(classes(title.props.className)).toEqual(
-      expect.arrayContaining(["lg:text-7xl", "lg:tracking-tight"]),
+      expect.arrayContaining(["lg:text-6xl", "xl:text-7xl", "lg:tracking-tight"]),
     );
+    expect(classes(title.props.className)).not.toContain("lg:text-7xl");
     expect(hero.getByText(FOOTER)).toBeOnTheScreen();
 
     const card = within(screen.getByTestId("sign-in-card"));
