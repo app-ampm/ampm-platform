@@ -42,12 +42,14 @@ export const savedHotelStaffView = z
 export type SavedHotelStaffView = z.infer<typeof savedHotelStaffView>;
 
 /**
- * `GET /hotels-admin/saved-hotels`: every client's saved hotels, newest first, or one client's whole list
- * (`accountId`, the client hub). Cursor-paginated by saved-hotel id.
+ * `GET /hotels-admin/saved-hotels`: every client's saved hotels, newest first; one client's whole list
+ * (`accountId`, the client hub); or every client who saved one hotel (`hotelId`, the hotel's staff page).
+ * Cursor-paginated by saved-hotel id. A client saves a hotel once, so a hotel's list has a row per client.
  */
 export const savedHotelStaffListQuery = cursorQuery.extend({
   cursor: uuid.optional(),
   accountId: uuid.optional(),
+  hotelId: uuid.optional(),
 });
 export type SavedHotelStaffListQuery = z.infer<typeof savedHotelStaffListQuery>;
 

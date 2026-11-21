@@ -5,8 +5,8 @@ import { hotelStatusLabel, hotelStatusTone } from "../hotels-admin/hotels-admin.
 import { starLabel } from "../hotels/hotels.format";
 
 /*
- * Presentation helpers for the staff read of clients' saved hotels (the client hub's panel and the
- * all-clients list). No fetching, no rules.
+ * Presentation helpers for the staff read of clients' saved hotels (the client hub's panel, the
+ * all-clients list and a hotel's "Saved by" panel in the catalogue). No fetching, no rules.
  */
 
 /** Where the hotel is and its stars: "Udaipur · 5-star", or the destination alone. */
@@ -56,4 +56,24 @@ export function savedHotelSummary(item: SavedHotelStaffView, withClient = false)
 /** "Saved hotels · 6", with a "+" while more pages wait beyond the loaded ones. */
 export function savedHotelsCount(label: string, count: number, hasMore: boolean): string {
   return `${label} · ${count}${hasMore ? "+" : ""}`;
+}
+
+/**
+ * A hotel's "Saved by" heading: "Saved by 3 clients", "Saved by 1 client", "Saved by 50+ clients" while
+ * more pages wait, or "Saved by no clients yet". A client saves a hotel once, so each save is a client.
+ */
+export function savedByClientsHeading(count: number, hasMore: boolean): string {
+  if (count === 0 && !hasMore) return "Saved by no clients yet";
+  const plus = hasMore ? "+" : "";
+  return `Saved by ${count}${plus} ${count === 1 && !hasMore ? "client" : "clients"}`;
+}
+
+/** A screen-reader summary of one client's save of the hotel the page is about. */
+export function savedByClientSummary(item: SavedHotelStaffView): string {
+  const parts = [
+    item.account.name,
+    item.note ? `note: ${item.note}` : null,
+    `saved ${formatDay(item.savedAt)}`,
+  ];
+  return parts.filter((part): part is string => part !== null).join(", ");
 }

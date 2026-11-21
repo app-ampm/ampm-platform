@@ -50,10 +50,10 @@ interface SavedItem {
 
 /**
  * Clients' saved hotels for staff (permission-matrix §5.3, `hotels.saved_hotels.read`): SA, SM and HT
- * read every client's list or one client's whole list; Finance, Creative and clients are refused with the
- * 404 of an absent record. A Project Manager's assigned-wedding grant is not route-reachable yet (no
- * wedding on the route; the service-agreements precedent), so the route refuses it, while the service
- * already scopes it to saves on their weddings. Demo accounts and removed saves never appear. Rows are
+ * read every client's list, one client's whole list or one hotel's savers; Finance, Creative and clients
+ * are refused with the 404 of an absent record. A Project Manager's assigned-wedding grant is not
+ * route-reachable yet (no wedding on the route; the service-agreements precedent), so the route refuses
+ * it, while the service already scopes it to saves on their weddings. Demo accounts and removed saves never appear. Rows are
  * written straight to the database; the reads go through the API.
  */
 describe("Clients' saved hotels for staff (e2e)", () => {
@@ -214,5 +214,48 @@ describe("Clients' saved hotels for staff (e2e)", () => {
 
   it("rejects a malformed account id at the edge (400)", async () => {
     await list("local:admin", "?accountId=not-a-uuid", 400);
+  });
+
+  describe("one hotel's savers (`hotelId`, the hotel's staff page)", () => {
+    it("lists every client who saved the hotel, newest first, leaving out the demo account", async () => {
+      const res = await list("local:ht", `?hotelId=${hotels.lake}`);
+      const items: SavedItem[] = res.body.data.items;
+      expect(items.map((item) => item.id)).toEqual([saves.bLake, saves.aLake]);
+      expect(items.map((item) => item.account)).toEqual([
+        { id: accounts.b, name: `${TAG} b` },
+        { id: accounts.a, name: `${TAG} a` },
+      ]);
+      expect(items.every((item) => item.hotel.id === hotels.lake)).toBe(true);
+      expect(res.body.data.nextCursor).toBeNull();
+    });
+
+    it("leaves a removed save out, so a hotel no client keeps has no savers", async () => {
+      const res = await list("local:sm", `?hotelId=${hotels.dunes}`);
+      expect(res.body.data).toEqual({ items: [], nextCursor: null });
+    });
+
+    it("narrows to one client's save of the hotel when both filters are given", async () => {
+      const res = await list("local:admin", `?hotelId=${hotels.lake}&accountId=${accounts.a}`);
+      expect(ours(res.body.data.items)).toEqual([saves.aLake]);
+    });
+
+    it("pages a hotel's savers with a cursor", async () => {
+      const first = await list("local:ht", `?hotelId=${hotels.lake}&limit=1`);
+      expect(ours(first.body.data.items)).toEqual([saves.bLake]);
+      const cursor: string = first.body.data.nextCursor;
+      const second = await list("local:ht", `?hotelId=${hotels.lake}&limit=1&cursor=${cursor}`);
+      expect(ours(second.body.data.items)).toEqual([saves.aLake]);
+      expect(second.body.data.nextCursor).toBeNull();
+    });
+
+    it("refuses Finance and a client a hotel's savers with the 404 of an absent record", async () => {
+      for (const subject of ["local:fa", "local:client"]) {
+        await list(subject, `?hotelId=${hotels.lake}`, 404);
+      }
+    });
+
+    it("rejects a malformed hotel id at the edge (400)", async () => {
+      await list("local:admin", "?hotelId=not-a-uuid", 400);
+    });
   });
 });

@@ -19,6 +19,7 @@ import {
   planPublicViewFixture,
   renderWithApi,
   routedFetch,
+  savedHotelStaffFixture,
   staffMeFixture,
   type FetchFn,
 } from "./accounts.test-utils";
@@ -95,6 +96,7 @@ function hubFetch(sent: Sent[], roles: Roles = ["SM"]): FetchFn {
       ok({ items: [enquiryFixture({ accountId: ACCOUNT_ID })], nextCursor: null }),
     "/crm/service-agreements": () =>
       ok({ items: [agreementFixture({ accountId: ACCOUNT_ID })], nextCursor: null }),
+    "/hotels-admin/saved-hotels": () => ok({ items: [savedHotelStaffFixture()], nextCursor: null }),
   });
 }
 
@@ -207,9 +209,12 @@ describe("the client hub (TW-13)", () => {
     ]);
   });
 
-  it("leaves a read-only role reading: the enquiries show, no edit actions do", async () => {
+  it("leaves a read-only role reading: the enquiries and saved hotels show, no edit actions do", async () => {
+    // The Hotel team reaches the hub from a row of the clients' saved hotels (crm.accounts.read).
     await renderHub([], ["HT"]);
     expect(await screen.findByTestId("account-enquiries")).toBeOnTheScreen();
+    const saved = await screen.findByTestId("account-saved-hotels");
+    expect(await within(saved).findByText("The Lake Pavilion")).toBeOnTheScreen();
     await act(() => new Promise((resolve) => setTimeout(resolve, 50)));
     expect(screen.queryByTestId("account-edit-details")).toBeNull();
     expect(screen.queryByTestId("contact-add")).toBeNull();

@@ -40,4 +40,10 @@ describe("savedHotelStaffListQuery", () => {
     expect(savedHotelStaffListQuery.parse({ accountId: UUID }).accountId).toBe(UUID);
     expect(savedHotelStaffListQuery.safeParse({ accountId: "x" }).success).toBe(false);
   });
+
+  it("takes an optional hotel id and refuses a malformed one", () => {
+    expect(savedHotelStaffListQuery.parse({ hotelId: UUID }).hotelId).toBe(UUID);
+    expect(savedHotelStaffListQuery.parse({}).hotelId).toBeUndefined();
+    expect(savedHotelStaffListQuery.safeParse({ hotelId: "x" }).success).toBe(false);
+  });
 });

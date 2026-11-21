@@ -14,7 +14,8 @@ import { SavedHotelsStaffService } from "./saved-hotels-staff.service.js";
 /**
  * Clients' saved hotels for staff (permission-matrix §5.3, `hotels.saved_hotels.read`: SA, SM and HT read
  * every client's), under the `hotels-admin` prefix beside the other staff hotel routes. One read-only
- * list: every client's saves, or one client's whole list for the client hub (`?accountId=`). PM's
+ * list: every client's saves, one client's whole list for the client hub (`?accountId=`), or every
+ * client who saved one hotel for the hotel's staff page (`?hotelId=`). PM's
  * assigned-wedding grant is not route-reachable yet (no wedding on the route until module E, the
  * service-agreements precedent); the repository already applies that scope. A plain read of CLIENT-class
  * rows, so it writes no audit event.

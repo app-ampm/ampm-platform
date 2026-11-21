@@ -21,6 +21,7 @@ import { useGoToSignIn } from "@/navigation/sign-in";
 import { HotelProfileEditSheet } from "./hotel-profile-edit-sheet";
 import { hotelRowSummary } from "./hotels-admin.format";
 import { useHotelColumns } from "./hotels-table.columns";
+import { useClientInterestPermissions } from "./use-client-interest-permissions";
 
 function HotelsLoading() {
   return (
@@ -88,16 +89,32 @@ function HotelsBody({
   return <HotelsTable hotels={hotels.data.items} onOpen={onOpen} />;
 }
 
-/** The page's actions (T4): Import on glass, then the gold New hotel. */
+/**
+ * The page's actions (T4): Import on glass, then the gold New hotel; before them, for a role that may
+ * read clients' saved hotels, the way to every client's saves on glass too.
+ */
 function HotelsActions({
+  onOpenSaved,
   onImport,
   onCreate,
 }: {
+  readonly onOpenSaved: (() => void) | undefined;
   readonly onImport: () => void;
   readonly onCreate: () => void;
 }) {
   return (
     <>
+      {onOpenSaved ? (
+        <Button
+          variant="glass"
+          size="sm"
+          icon="heart"
+          onPress={onOpenSaved}
+          testID="hotels-saved-by-clients-link"
+        >
+          Saved by clients
+        </Button>
+      ) : null}
       <Button variant="glass" size="sm" icon="upload" onPress={onImport} testID="hotel-import-link">
         Import
       </Button>
@@ -115,7 +132,8 @@ export interface HotelsListScreenProps {
 /**
  * The staff hotel catalogue (H1.1, T4): the private hotel database. Add a hotel with "New hotel", bulk-load
  * many from a CSV with "Import", or tap one to manage it (edit its profile, add photos, rate cards). From
- * 1024 the table carries T4's verification and visibility columns. Hotel team and Super Admin only, gated
+ * 1024 the table carries T4's verification and visibility columns. "Saved by clients" opens every
+ * client's saved hotels, for a role that may read them. Hotel team and Super Admin only, gated
  * server-side.
  *
  *   <HotelsListScreen tabBar={<AppTabBar />} />
@@ -124,6 +142,7 @@ export function HotelsListScreen({ tabBar }: HotelsListScreenProps) {
   const router = useRouter();
   const hotels = useStaffHotels();
   const [creating, setCreating] = useState(false);
+  const { canReadSavedHotels } = useClientInterestPermissions();
   const open = (hotel: HotelStaffView): void =>
     router.push({ pathname: "/hotels-admin/[hotelId]", params: { hotelId: hotel.id } });
   return (
@@ -136,6 +155,9 @@ export function HotelsListScreen({ tabBar }: HotelsListScreenProps) {
           title="Hotel catalogue"
           actions={
             <HotelsActions
+              onOpenSaved={
+                canReadSavedHotels ? () => router.push("/leads/saved-hotels") : undefined
+              }
               onImport={() => router.push("/hotels-admin/import")}
               onCreate={() => setCreating(true)}
             />
