@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Rebuild and restart the public website (apps/web) on the test box; Apache serves it at
 # https://site.ampmverse.com through the site's .htaccess (deploy/site-ampmverse/htaccess.example).
-# Run ON the box, from the repo root, after shipping the source (the same `git archive` step as
-# redeploy-box.sh; docs/engineering/test-deploy.md):  bash deploy/redeploy-site.sh
+# Run ON the box, from the repo root, after shipping the source with deploy/ship-source.sh
+# (AMPM_SHIP_TARGET=test, as for redeploy-box.sh; docs/engineering/test-deploy.md):  bash deploy/redeploy-site.sh
 #
 # Touches ONLY the web container (--no-deps): the API, worker, Postgres and Redis keep running.
 set -uo pipefail

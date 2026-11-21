@@ -102,10 +102,10 @@ HT/SA signs in, opens a hotel, adds a photo, and sets visibility `client` + a cl
 
 ## Deploy the API at latest main
 
-Get the latest source onto the box (its checkout has no git remote of its own — ship it with
-`git archive HEAD -- . ':(exclude)graphify-out' | ssh <box> 'cd <repo-on-box> && tar -xf -'` from a clean
-worktree; the knowledge graph is not needed on the box), write the commit to the box's `.deployed-commit`,
-then run the box redeploy, which rebuilds the API/worker image and re-seeds:
+Get the latest source onto the box (its checkout has no git remote of its own): from a checkout, run
+`AMPM_SHIP_TARGET=test SHIP_SSH=<box> SHIP_SSH_KEY=<key> bash deploy/ship-source.sh`, which ships `origin/main`
+without the knowledge graph, removes what `main` deleted since the last ship and records the commit
+(D-156). Then run the box redeploy, which rebuilds the API/worker image and re-seeds:
 
 ```bash
 bash deploy/redeploy-box.sh
@@ -171,7 +171,7 @@ same source.
 
 ### Deploy the website
 
-Ship the source as for the API (the `git archive` step above), then on the box:
+Ship the source as for the API (`deploy/ship-source.sh`, above), then on the box:
 
 ```bash
 bash deploy/redeploy-site.sh
