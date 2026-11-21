@@ -10,9 +10,11 @@ import { useGoToSignIn } from "@/navigation/sign-in";
 
 import { ContactEditSheet } from "./contact-edit-sheet";
 import { HotelRecordHeader } from "./hotel-record-header";
+import { HotelSavedByClients } from "./hotel-saved-by-clients";
 import { contactSummary, roomSummary, venueSummary } from "./hotels-admin.format";
 import { ManagedSection } from "./managed-subresource-section";
 import { RoomEditSheet } from "./room-edit-sheet";
+import { useClientInterestPermissions } from "./use-client-interest-permissions";
 import { VenueEditSheet } from "./venue-edit-sheet";
 
 function DetailsLoading() {
@@ -97,12 +99,25 @@ function HotelContacts({ hotelId, hotel }: SectionsProps) {
   );
 }
 
-/** Rooms and venues beside the contacts; every section stays in its slot at every width. */
+/**
+ * Rooms and venues beside the contacts and the clients who saved the hotel; every section stays in its
+ * slot at every width.
+ */
 function HotelSubresources({ hotelId, hotel }: SectionsProps) {
+  const { canReadSavedHotels, canOpenClient } = useClientInterestPermissions();
   return (
     <SplitPane
       sideWidth="sm"
-      side={<HotelContacts hotelId={hotelId} hotel={hotel} />}
+      side={
+        <Stack gap={8}>
+          <HotelContacts hotelId={hotelId} hotel={hotel} />
+          <HotelSavedByClients
+            hotelId={hotelId}
+            canRead={canReadSavedHotels}
+            canOpenClient={canOpenClient}
+          />
+        </Stack>
+      }
       testID="details-split"
     >
       <RoomsAndVenues hotelId={hotelId} hotel={hotel} />
@@ -144,8 +159,8 @@ export interface HotelDetailsScreenProps {
  * The staff hotel detail workspace (H1.1): the hotel's room categories, event venues and contacts, each
  * with inline add / edit / remove. Reads the nested collections from the staff hotel detail; writes go
  * through the hotels-admin subresource endpoints. Contacts are RESTRICTED-CONTACT — staff only, never
- * sent to clients — and sit in T5's side column from 1024. Hotel team and Super Admin only, gated
- * server-side.
+ * sent to clients — and sit in T5's side column from 1024, above the clients who saved the hotel (a role
+ * that may read clients' saved hotels). Hotel team and Super Admin only, gated server-side.
  *
  *   <HotelDetailsScreen hotelId={id} tabBar={<AppTabBar />} />
  */

@@ -14,6 +14,8 @@ export const CLIENT_SAVED_HOTELS_QUERY_KEY = ["hotels-admin", "saved-hotels"] as
 export interface ClientSavedHotelsQuery {
   /** One client's whole list (the client hub); every client's when absent. */
   readonly accountId?: string | undefined;
+  /** Every client who saved one hotel (the hotel's staff page); every hotel when absent. */
+  readonly hotelId?: string | undefined;
   readonly cursor?: string | undefined;
   readonly limit?: number | undefined;
 }
@@ -27,6 +29,7 @@ export interface ClientSavedHotelsQuery {
 export function clientSavedHotelsPath(query: ClientSavedHotelsQuery): string {
   const params = new URLSearchParams();
   if (query.accountId) params.set("accountId", query.accountId);
+  if (query.hotelId) params.set("hotelId", query.hotelId);
   if (query.cursor) params.set("cursor", query.cursor);
   params.set("limit", String(query.limit ?? 50));
   return `/hotels-admin/saved-hotels?${params.toString()}`;
@@ -37,6 +40,7 @@ export function clientSavedHotelsPath(query: ClientSavedHotelsQuery): string {
  * when the signed-in role lacks the grant, so no refused request is sent.
  *
  *   const saved = useClientSavedHotels({ accountId }, { enabled: canRead });
+ *   const savers = useClientSavedHotels({ hotelId }, { enabled: canRead });
  */
 export function useClientSavedHotels(
   query: Omit<ClientSavedHotelsQuery, "cursor"> = {},

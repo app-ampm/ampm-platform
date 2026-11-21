@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { clientSavedHotelsPath } from "./use-client-saved-hotels";
 
 const ACCOUNT = "0192f1a0-0000-7000-8000-000000000001";
+const HOTEL = "0192f1a0-0000-7000-8000-000000000002";
 
 describe("clientSavedHotelsPath", () => {
   it("is every client's list, a page of 50, with no filters", () => {
@@ -15,9 +16,15 @@ describe("clientSavedHotelsPath", () => {
     );
   });
 
-  it("leaves an unset filter out rather than sending it empty", () => {
-    expect(clientSavedHotelsPath({ accountId: undefined, cursor: undefined })).toBe(
-      "/hotels-admin/saved-hotels?limit=50",
+  it("names one hotel, for every client who saved it", () => {
+    expect(clientSavedHotelsPath({ hotelId: HOTEL })).toBe(
+      `/hotels-admin/saved-hotels?hotelId=${HOTEL}&limit=50`,
     );
+  });
+
+  it("leaves an unset filter out rather than sending it empty", () => {
+    expect(
+      clientSavedHotelsPath({ accountId: undefined, hotelId: undefined, cursor: undefined }),
+    ).toBe("/hotels-admin/saved-hotels?limit=50");
   });
 });

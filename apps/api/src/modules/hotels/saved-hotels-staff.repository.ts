@@ -41,7 +41,10 @@ export type SavedHotelStaffRow = Prisma.SavedHotelGetPayload<{
 export class SavedHotelsStaffRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  /** Newest save first, optionally one client's list; cursor-paginated by saved-hotel id. */
+  /**
+   * Newest save first, optionally one client's list (`accountId`) or one hotel's savers (`hotelId`);
+   * cursor-paginated by saved-hotel id.
+   */
   async list(
     scope: RecordScope,
     query: SavedHotelStaffListQuery,
@@ -49,6 +52,7 @@ export class SavedHotelsStaffRepository {
     const where: Prisma.SavedHotelWhereInput = {
       ...scope.where,
       ...(query.accountId ? { accountId: query.accountId } : {}),
+      ...(query.hotelId ? { hotelId: query.hotelId } : {}),
       account: { deletedAt: null, isDemo: scope.isDemo ?? false },
       hotel: { deletedAt: null },
     };

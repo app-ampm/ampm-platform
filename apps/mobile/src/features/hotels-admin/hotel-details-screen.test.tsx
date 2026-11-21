@@ -1,5 +1,6 @@
 import { pendingFetch } from "../../test/api";
-import { fireEvent, screen } from "../../test/render";
+import { fireEvent, screen, within } from "../../test/render";
+import { savedHotelStaffFixture, staffMeFixture } from "../accounts/accounts.test-utils";
 import { HotelDetailsScreen } from "./hotel-details-screen";
 import {
   CONTACT_ID,
@@ -103,5 +104,25 @@ describe("HotelDetailsScreen", () => {
     await fireEvent.press(screen.getByTestId("contact-remove-confirm"));
     expect(await screen.findByText("Priya Sharma removed")).toBeOnTheScreen();
     expect(captured.deletedMethod).toBe("DELETE");
+  });
+
+  it("names the clients who saved the hotel, for the Hotel team, asking for this hotel's savers", async () => {
+    const asked: string[] = [];
+    const fetch: FetchFn = (input, init) => {
+      asked.push(String(input));
+      return routedFetch({
+        [`/hotels-admin/hotels/${HOTEL_ID}`]: () => ok(loadedDetail()),
+        "/me": () => ok(staffMeFixture(["HT"])),
+        "/hotels-admin/saved-hotels": () =>
+          ok({ items: [savedHotelStaffFixture()], nextCursor: null }),
+      })(input, init);
+    };
+    await renderWithApi(<HotelDetailsScreen hotelId={HOTEL_ID} />, fetch);
+    const panel = await screen.findByTestId("hotel-saved-by-clients");
+    expect(await within(panel).findByText("Saved by 1 client")).toBeOnTheScreen();
+    expect(within(panel).getByText("The Sharma wedding")).toBeOnTheScreen();
+    expect(asked.find((url) => url.includes("/hotels-admin/saved-hotels"))).toContain(
+      `hotelId=${HOTEL_ID}`,
+    );
   });
 });
