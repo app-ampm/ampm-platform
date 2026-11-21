@@ -299,7 +299,7 @@ model User {
   email             String     @db.VarChar(255)
   phone             String?    @db.VarChar(32)
   status            UserStatus @default(invited)
-  /// The identity service's subject (Cognito `sub`); null until the account is activated there.
+  /// The sign-in subject (the token's `sub`: `ampm:<id>`, `local:…` in development); null until activated.
   identitySubject   String?    @unique @map("identity_subject") @db.VarChar(255)
   /// Mandatory for staff (A-13); enforced by the identity service, mirrored here for reporting.
   mfaEnabled        Boolean    @default(false) @map("mfa_enabled")

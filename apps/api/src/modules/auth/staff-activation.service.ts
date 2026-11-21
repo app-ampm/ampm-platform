@@ -33,7 +33,7 @@ const PASSWORD_IS_EMAIL = "Choose a password that is not your email address";
 @Injectable()
 export class StaffActivationService {
   constructor(
-    @Inject(SIGN_IN_KEYS) private readonly keys: SignInKeys | null,
+    @Inject(SIGN_IN_KEYS) private readonly keys: SignInKeys,
     private readonly credentials: CredentialsRepository,
     private readonly tokens: AuthTokenService,
     private readonly prisma: PrismaService,
@@ -43,7 +43,6 @@ export class StaffActivationService {
 
   /** Who the invitation is for, so the screen can greet them. Changes nothing. */
   async preview(raw: string): Promise<InvitationPreview> {
-    this.signer();
     const { user } = await this.invited(raw);
     return {
       name: user.name,
@@ -54,7 +53,6 @@ export class StaffActivationService {
 
   /** Step one: the password, and an authenticator secret to add. The account stays `invited`. */
   async setPassword(request: ActivationPasswordRequest): Promise<ActivationPasswordResponse> {
-    const keys = this.signer();
     const { user } = await this.invited(request.token);
     if (user.userType !== "staff") {
       throw errors.validation([
@@ -71,24 +69,23 @@ export class StaffActivationService {
     const secret = generateTotpSecret();
     await this.prisma.$transaction(async (tx) => {
       await this.credentials.savePassword(user.id, passwordHash, new Date(), tx);
-      await this.credentials.savePending(user.id, keys.box.seal(secret), tx);
+      await this.credentials.savePending(user.id, this.keys.box.seal(secret), tx);
     });
     return { enrolment: { secret, otpauthUri: totpUri(user.email, secret) } };
   }
 
   /** Step two: the first authenticator code. Activates the account and signs it in. */
   async confirm(request: ActivationConfirmRequest, now: Date = new Date()): Promise<EnrolledGrant> {
-    const keys = this.signer();
     const { invite, user } = await this.invited(request.token);
     const pending = user.totpPendingEnc;
     if (user.userType !== "staff" || !user.passwordHash || !pending) {
       throw errors.conflict("Choose a password first");
     }
-    const step = matchTotp(keys.box.open(pending), request.code, now, null);
+    const step = matchTotp(this.keys.box.open(pending), request.code, now, null);
     if (step === null) throw errors.unauthenticated(SIGN_IN_ERRORS.invalidCode);
     const recoveryCodes = generateRecoveryCodes();
     const identitySubject = user.identitySubject ?? `ampm:${user.id}`;
-    const recoveryKey = keys.recoveryKey;
+    const recoveryKey = this.keys.recoveryKey;
     await this.activate({
       invite,
       user,
@@ -101,11 +98,6 @@ export class StaffActivationService {
     });
     await this.credentials.recordSuccess(user.id, now);
     return { ...(await this.grants.grant({ ...user, identitySubject }, now)), recoveryCodes };
-  }
-
-  private signer(): SignInKeys {
-    if (!this.keys) throw errors.notFound();
-    return this.keys;
   }
 
   /** The live invitation and its still-invited account, or the activation refusals the screen knows. */

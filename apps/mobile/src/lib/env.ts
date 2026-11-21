@@ -7,14 +7,9 @@ const schema = z.object({
   /**
    * Which identity provider the app signs in against, mirroring the API's `IDENTITY_PROVIDER`.
    * `local` (the default) keeps the dev-login path; `ampm` is AMPM's own sign-in (staff: password +
-   * authenticator, D-142; clients: a code sent to their mobile, D-147), the production build;
-   * `cognito` drives Amazon Cognito (being retired).
+   * authenticator, D-142; clients: a code sent to their mobile, D-147), the production build.
    */
-  EXPO_PUBLIC_IDENTITY_PROVIDER: z.enum(["cognito", "local", "ampm"]).default("local"),
-  /** The Cognito user pool the app signs in against; required when the provider is `cognito`. Public ids, not secrets. */
-  EXPO_PUBLIC_COGNITO_REGION: z.string().optional(),
-  EXPO_PUBLIC_COGNITO_USER_POOL_ID: z.string().optional(),
-  EXPO_PUBLIC_COGNITO_CLIENT_ID: z.string().optional(),
+  EXPO_PUBLIC_IDENTITY_PROVIDER: z.enum(["local", "ampm"]).default("local"),
   /** Development only: a local access token until the sign-in screens arrive (sprint 2). */
   EXPO_PUBLIC_DEV_ACCESS_TOKEN: z.string().optional(),
   /** "true" on the demo/test deploy so the app shows the demo banner; unset in a real build. */
@@ -31,9 +26,6 @@ const schema = z.object({
 export const env = parseEnv(schema, {
   EXPO_PUBLIC_API_URL: process.env.EXPO_PUBLIC_API_URL,
   EXPO_PUBLIC_IDENTITY_PROVIDER: process.env.EXPO_PUBLIC_IDENTITY_PROVIDER,
-  EXPO_PUBLIC_COGNITO_REGION: process.env.EXPO_PUBLIC_COGNITO_REGION,
-  EXPO_PUBLIC_COGNITO_USER_POOL_ID: process.env.EXPO_PUBLIC_COGNITO_USER_POOL_ID,
-  EXPO_PUBLIC_COGNITO_CLIENT_ID: process.env.EXPO_PUBLIC_COGNITO_CLIENT_ID,
   EXPO_PUBLIC_DEV_ACCESS_TOKEN: __DEV__ ? process.env.EXPO_PUBLIC_DEV_ACCESS_TOKEN : undefined,
   EXPO_PUBLIC_DEMO: process.env.EXPO_PUBLIC_DEMO,
 });

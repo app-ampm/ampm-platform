@@ -4,8 +4,10 @@ import type { PrismaService } from "../db/prisma.service.js";
 import type { AuditService } from "../policy/audit.service.js";
 import { ActivationService } from "./activation.service.js";
 import type { AuthTokenService } from "./auth-token.service.js";
-import { cognitoIdentityFromClaims } from "./cognito.adapter.js";
 import type { IdentityAdapter, VerifiedIdentity } from "./identity.types.js";
+import { LocalIdentityAdapter } from "./local.adapter.js";
+
+const SECRET = "a-development-secret-that-is-long-enough-32";
 
 interface Config {
   verifiedEmail?: string | null;
@@ -129,38 +131,19 @@ describe("ActivationService", () => {
     expect(txUserUpdate).not.toHaveBeenCalled();
   });
 
-  // The adapter -> service seam for the D-041 gate: a VerifiedIdentity produced by the real Cognito
-  // claim mapping, so a regression in either the email_verified gate or the guard is caught together.
-  it("activates when a verified Cognito email matches the invitation", async () => {
-    const identity = cognitoIdentityFromClaims(
-      {
-        sub: "cog-sub",
-        token_use: "access",
-        client_id: "c",
-        jti: "jti-cog",
-        exp: 2_000_000_000,
-        email: "u@x.com",
-        email_verified: true,
-      },
-      "c",
-    );
-    const { service } = build({ identity });
+  // The adapter -> service seam for the D-041 gate: a VerifiedIdentity produced by the real token
+  // adapter (the dev provider and AMPM's own sign-in share it), so a regression in either the email
+  // claim mapping or the guard is caught together.
+  it("activates when the token's email matches the invitation", async () => {
+    const adapter = new LocalIdentityAdapter(SECRET);
+    const token = await adapter.mint("local:u1", { email: "u@x.com" });
+    const { service } = build({ identity: await adapter.verifyAccessToken(token) });
     await expect(service.activate("raw", "access")).resolves.toMatchObject({ status: "active" });
   });
 
-  it("fails closed when the Cognito token's email is present but not verified", async () => {
-    const identity = cognitoIdentityFromClaims(
-      {
-        sub: "cog-sub",
-        token_use: "access",
-        client_id: "c",
-        jti: "jti-cog",
-        exp: 2_000_000_000,
-        email: "u@x.com",
-        email_verified: false,
-      },
-      "c",
-    );
+  it("fails closed when the token carries no email", async () => {
+    const adapter = new LocalIdentityAdapter(SECRET);
+    const identity = await adapter.verifyAccessToken(await adapter.mint("local:u1"));
     const { service, markUsedIfLive } = build({ identity });
     await expect(service.activate("raw", "access")).rejects.toMatchObject({ code: "forbidden" });
     expect(markUsedIfLive).not.toHaveBeenCalled();

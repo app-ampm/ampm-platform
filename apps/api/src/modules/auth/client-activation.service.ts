@@ -43,7 +43,6 @@ export class ClientActivationService {
 
   /** Sends the activation code to the invited client's mobile, which the answer shows masked. */
   async sendCode(request: InvitationTokenRequest): Promise<ClientActivationCodeSent> {
-    this.codes.signer();
     const { user } = await this.invitedClient(request.token);
     const phone = await this.usableMobile(user);
     await this.codes.allow(phone);
@@ -55,7 +54,6 @@ export class ClientActivationService {
     request: ClientActivationConfirmRequest,
     now: Date = new Date(),
   ): Promise<SignInGrant> {
-    this.codes.signer();
     const { invite, user } = await this.invitedClient(request.token);
     await this.usableMobile(user);
     await this.codes.verify(user.id, request.code);

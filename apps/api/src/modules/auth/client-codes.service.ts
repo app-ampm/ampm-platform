@@ -38,7 +38,7 @@ export type CodeRecipient = Pick<CredentialRecord, "id" | "phone">;
 @Injectable()
 export class ClientCodes implements OnModuleInit {
   constructor(
-    @Inject(SIGN_IN_KEYS) private readonly keys: SignInKeys | null,
+    @Inject(SIGN_IN_KEYS) private readonly keys: SignInKeys,
     @Inject(ENV) private readonly env: Env,
     private readonly tokens: AuthTokenService,
     private readonly notifications: NotificationService,
@@ -69,7 +69,7 @@ export class ClientCodes implements OnModuleInit {
 
   /** Issues and sends a code to this account's mobile; answers what the screen needs. */
   async send(recipient: CodeRecipient): Promise<ClientCodeSent> {
-    const { otpKey } = this.signer();
+    const { otpKey } = this.keys;
     const code = generateOneTimeCode();
     await this.tokens.issueOneTimeCode(
       recipient.id,
@@ -113,7 +113,7 @@ export class ClientCodes implements OnModuleInit {
    * atomically, so two racing requests with it cannot both pass. Every refusal is the same message.
    */
   async verify(userId: string, code: string): Promise<void> {
-    const { otpKey } = this.signer();
+    const { otpKey } = this.keys;
     const refused = errors.unauthenticated(SIGN_IN_ERRORS.invalidClientCode);
     const live = await this.tokens.findLiveOneTimeCode(userId);
     if (!live || !(await this.tokens.claimAttempt(live.id))) throw refused;
@@ -122,12 +122,6 @@ export class ClientCodes implements OnModuleInit {
       throw refused;
     }
     if (!(await this.tokens.markUsedIfLive(live.id))) throw refused;
-  }
-
-  /** The sign-in keys, or 404 where the provider signs people in itself (Cognito). */
-  signer(): SignInKeys {
-    if (!this.keys) throw errors.notFound();
-    return this.keys;
   }
 
   /**

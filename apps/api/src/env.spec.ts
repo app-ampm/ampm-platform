@@ -2,12 +2,13 @@ import { describe, expect, it } from "vitest";
 
 import { loadEnv } from "./env.js";
 
+/** A production config on the default identity provider, AMPM's own sign-in (D-142). */
 const prodValid = {
   NODE_ENV: "production",
   DATABASE_URL: "postgres://localhost:5432/ampm",
-  COGNITO_REGION: "ap-south-1",
-  COGNITO_USER_POOL_ID: "pool",
-  COGNITO_CLIENT_ID: "client",
+  // Built at run time so no secret-looking literal sits in the repository.
+  AUTH_TOKEN_SECRET: "t".repeat(40),
+  AUTH_ENCRYPTION_KEY: Buffer.alloc(32, 7).toString("base64"),
   EMAIL_PROVIDER: "smtp",
   SMTP_HOST: "smtp.example.com",
   EMAIL_FROM: "AMPM <no-reply@ampm.example>",
@@ -107,24 +108,6 @@ describe("loadEnv", () => {
     ).toThrow(/local identity provider/);
   });
 
-  it("accepts both Cognito provisioning credentials together", () => {
-    const env = loadEnv({
-      ...prodValid,
-      COGNITO_PROVISIONING_ACCESS_KEY_ID: "AKIA_EXAMPLE",
-      COGNITO_PROVISIONING_SECRET_ACCESS_KEY: "secret-example",
-    });
-    expect(env.COGNITO_PROVISIONING_ACCESS_KEY_ID).toBe("AKIA_EXAMPLE");
-  });
-
-  it("refuses a half-set provisioning credential pair", () => {
-    expect(() =>
-      loadEnv({ ...prodValid, COGNITO_PROVISIONING_ACCESS_KEY_ID: "AKIA_EXAMPLE" }),
-    ).toThrow(/COGNITO_PROVISIONING_SECRET_ACCESS_KEY/);
-    expect(() =>
-      loadEnv({ ...prodValid, COGNITO_PROVISIONING_SECRET_ACCESS_KEY: "secret-example" }),
-    ).toThrow(/COGNITO_PROVISIONING_ACCESS_KEY_ID/);
-  });
-
   it("requires REDIS_URL in production (A6)", () => {
     const { REDIS_URL: _omit, ...withoutRedis } = prodValid;
     expect(() => loadEnv(withoutRedis)).toThrow(/REDIS_URL/);
@@ -210,18 +193,15 @@ describe("loadEnv: the upload antivirus scan (AC-20.3)", () => {
 });
 
 describe("loadEnv: AMPM's own sign-in (D-142)", () => {
-  // Built at run time so no secret-looking literal sits in the repository.
-  const ampm = {
-    ...prodValid,
-    IDENTITY_PROVIDER: "ampm",
-    AUTH_TOKEN_SECRET: "t".repeat(40),
-    AUTH_ENCRYPTION_KEY: Buffer.alloc(32, 7).toString("base64"),
-  };
+  const ampm = { ...prodValid, IDENTITY_PROVIDER: "ampm" };
 
-  it("accepts the ampm provider in production, without any Cognito setting", () => {
-    const { COGNITO_REGION, COGNITO_USER_POOL_ID, COGNITO_CLIENT_ID, ...withoutCognito } = ampm;
-    expect([COGNITO_REGION, COGNITO_USER_POOL_ID, COGNITO_CLIENT_ID]).toHaveLength(3);
-    expect(loadEnv(withoutCognito).IDENTITY_PROVIDER).toBe("ampm");
+  it("is the default provider, and accepted in production", () => {
+    expect(loadEnv(prodValid).IDENTITY_PROVIDER).toBe("ampm");
+    expect(loadEnv(ampm).IDENTITY_PROVIDER).toBe("ampm");
+  });
+
+  it("refuses the retired Cognito provider, so a stale config fails at boot", () => {
+    expect(() => loadEnv({ ...ampm, IDENTITY_PROVIDER: "cognito" })).toThrow(/IDENTITY_PROVIDER/);
   });
 
   it("requires the token secret and the encryption key", () => {

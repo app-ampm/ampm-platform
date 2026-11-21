@@ -10,7 +10,7 @@ import { LocalIdentityAdapter } from "./local.adapter.js";
 /**
  * Development sign-in (features TW-11 + CP-11 demo). Exchanges a seeded, active staff or client user's
  * email for a freshly minted local access token, so the Sales workspace and the client portal sign in
- * against the real API without Cognito.
+ * against the real API without a password or a code.
  *
  * Fail-closed: refused unless the local identity provider is active AND NODE_ENV is not production (and
  * the local secret is set). `env.ts` already refuses `IDENTITY_PROVIDER=local` in production, so there
@@ -54,11 +54,10 @@ export class DevLoginService {
   /**
    * Dev-only demo sign-in (P-7): mints a local session for the seeded demo prospect so the demo
    * experience — a curated set of hotels with indicative prices — can be entered without the real
-   * mobile/OTP transport (still Cognito-pending). There is no identifier to supply: there is one demo
+   * mobile/OTP transport. There is no identifier to supply: there is one demo
    * prospect, resolved by `user_type = "demo"` rather than widening the email/mobile sign-in to demo
    * accounts. Same fail-closed gate as `signIn`, so there is no production path, and it mints for the
-   * demo account's STORED identity_subject (the session key, D-033), which a future Cognito link
-   * replaces without touching this path.
+   * demo account's STORED identity_subject (the session key, D-033).
    */
   async signInDemo(): Promise<DevLoginResponse> {
     const secret = this.localSecret();
@@ -76,11 +75,10 @@ export class DevLoginService {
   }
 
   /**
-   * The local stand-in for the provider sign-in that comes before activation (D-041). Under Cognito an
-   * invitee signs in to the pool and presents that access token to `/auth/activate`; the local provider
-   * has no pool, so this mints a local access token for the invitation's account — a subject of its own
-   * (`local:<user id>`, unique like the column it will fill) carrying the invited email — for the
-   * activation screen to present to `/auth/activate` exactly as it would a Cognito token. It activates
+   * The local stand-in for the provider sign-in that comes before activation (D-041): it mints a local
+   * access token for the invitation's account — a subject of its own (`local:<user id>`, unique like the
+   * column it will fill) carrying the invited email — for the activation screen to present to
+   * `/auth/activate`. It activates
    * nothing: the invitation is checked here, not claimed, and the real activation still links the
    * subject, claims the invitation once and audits. Same fail-closed gate as `signIn`, so there is no
    * production path, and not self-registration (A-13): without a live invitation there is no token.

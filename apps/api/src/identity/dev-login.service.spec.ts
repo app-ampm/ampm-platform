@@ -54,9 +54,9 @@ describe("DevLoginService.signInDemo (dev-only demo sign-in)", () => {
   });
 
   it("is refused (404, denial equals absence) outside a local, non-production config", async () => {
-    await expect(
-      harness({ IDENTITY_PROVIDER: "cognito" }).service.signInDemo(),
-    ).rejects.toMatchObject({ code: "not_found" });
+    await expect(harness({ IDENTITY_PROVIDER: "ampm" }).service.signInDemo()).rejects.toMatchObject(
+      { code: "not_found" },
+    );
     await expect(harness({ NODE_ENV: "production" }).service.signInDemo()).rejects.toMatchObject({
       code: "not_found",
     });
@@ -116,7 +116,7 @@ describe("DevLoginService.signInForInvite (the local stand-in for the provider s
 
   it("is refused (404, denial equals absence) outside a local, non-production config", async () => {
     for (const env of [
-      { IDENTITY_PROVIDER: "cognito" },
+      { IDENTITY_PROVIDER: "ampm" },
       { NODE_ENV: "production" },
       { IDENTITY_LOCAL_SECRET: undefined },
     ] as const) {

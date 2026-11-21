@@ -46,12 +46,4 @@ describe("useActivate", () => {
       },
     ]);
   });
-
-  it("leaves the Bearer to the session when no token is given (Cognito)", async () => {
-    useActivate();
-    await seen.mutationFn?.({ token: "invite" });
-    expect(seen.requests[0]?.options).toMatchObject({ body: { token: "invite" } });
-    expect(seen.requests[0]?.options["accessToken"]).toBeUndefined();
-    expect(seen.requests[0]?.options["anonymous"]).toBeUndefined();
-  });
 });

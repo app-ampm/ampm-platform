@@ -50,7 +50,7 @@ describe("createApiClient", () => {
     const headers = capture.init?.headers as Record<string, string>;
     expect(headers["authorization"]).toBeUndefined();
     expect(headers["content-type"]).toBe("application/json");
-    // Not even asked for: under Cognito the getter may refresh a session the sign-in is replacing.
+    // Not even asked for: an anonymous request has no use for the session's token.
     expect(getAccessToken).not.toHaveBeenCalled();
   });
 

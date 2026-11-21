@@ -83,7 +83,5 @@ export function useAmpmSignIn(): StaffSignIn {
       run(async () =>
         complete((await signInCode.mutateAsync({ challenge, recoveryCode })).accessToken),
       ),
-    // Enrolment happens in activation, never at sign-in, for AMPM's own sign-in.
-    confirmEnrollment: () => undefined,
   };
 }

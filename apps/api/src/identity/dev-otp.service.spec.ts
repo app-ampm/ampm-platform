@@ -93,7 +93,7 @@ describe("DevOtpService (dev-only demo OTP)", () => {
 
   it("is refused outside a local, non-production config (no code is ever generated)", async () => {
     await expect(
-      harness({ IDENTITY_PROVIDER: "cognito" }).service.sendOtp(PHONE),
+      harness({ IDENTITY_PROVIDER: "ampm" }).service.sendOtp(PHONE),
     ).rejects.toMatchObject({ code: "not_found" });
     await expect(harness({ NODE_ENV: "production" }).service.sendOtp(PHONE)).rejects.toMatchObject({
       code: "not_found",
@@ -102,7 +102,7 @@ describe("DevOtpService (dev-only demo OTP)", () => {
       harness({ IDENTITY_LOCAL_SECRET: undefined }).service.sendOtp(PHONE),
     ).rejects.toMatchObject({ code: "not_found" });
     await expect(
-      harness({ IDENTITY_PROVIDER: "cognito" }).service.verifyOtp(PHONE, "123456"),
+      harness({ IDENTITY_PROVIDER: "ampm" }).service.verifyOtp(PHONE, "123456"),
     ).rejects.toMatchObject({ code: "not_found" });
     await expect(
       harness({ NODE_ENV: "production" }).service.verifyOtp(PHONE, "123456"),
@@ -179,11 +179,11 @@ describe("DevOtpService.createClient (dev-only demo client)", () => {
   });
 
   it("is refused outside a local, non-production config (creates nothing)", async () => {
-    const cognito = createHarness({ IDENTITY_PROVIDER: "cognito" });
-    await expect(cognito.service.createClient("A", PHONE)).rejects.toMatchObject({
+    const ampm = createHarness({ IDENTITY_PROVIDER: "ampm" });
+    await expect(ampm.service.createClient("A", PHONE)).rejects.toMatchObject({
       code: "not_found",
     });
-    expect(cognito.userCreate).not.toHaveBeenCalled();
+    expect(ampm.userCreate).not.toHaveBeenCalled();
     await expect(
       createHarness({ NODE_ENV: "production" }).service.createClient("A", PHONE),
     ).rejects.toMatchObject({ code: "not_found" });

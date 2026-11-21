@@ -3,7 +3,7 @@
 The AMPM API and worker: NestJS 12 with Prisma 7 on PostgreSQL 16. Setup and the common scripts are in the root [README](../../README.md); the rules are `.claude/rules/api.md`, `security.md` and `data.md`.
 
 - `src/common/` request context, logger, the error filter and the envelope interceptor, Zod parameter decorators
-- `src/identity/` the identity adapters (Cognito, local development) behind one interface
+- `src/identity/` AMPM's own sign-in (D-142): the token adapter behind the identity interface, the sign-in keys, passwords, authenticator and one-time codes
 - `src/policy/` the pipeline: `AuthGuard`, `PermissionGuard`, principal resolution, entitlement cache, audit
 - `src/db/` the Prisma service and the repository scoping helpers
 - `src/modules/<module>/` one folder per data-model module (A to Q): controllers, services, repositories

@@ -23,7 +23,6 @@ jest.mock("@ampm/api-client", () => ({
 jest.mock("@/lib/env", () => ({ env: { EXPO_PUBLIC_IDENTITY_PROVIDER: "local" } }));
 jest.mock("@/lib/session", () => ({
   setAccessToken: (token: string | null) => mockSetAccessToken(token),
-  useIsSignedIn: () => false,
 }));
 
 const INVITE = "inv-1";

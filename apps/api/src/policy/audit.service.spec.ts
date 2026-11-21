@@ -61,7 +61,7 @@ describe("AuditService", () => {
     const token = { id: "t-1", tokenHash: "abc123", purpose: "invite", usedAt: null };
     const user = {
       id: "u-1",
-      identitySubject: "cognito-sub",
+      identitySubject: "ampm:sub-1",
       name: "Asha",
       email: "a@example.com",
     };
@@ -81,7 +81,7 @@ describe("AuditService", () => {
       identitySubject: "[redacted]",
       email: "[redacted]",
     });
-    expect(JSON.stringify(data)).not.toMatch(/abc123|cognito-sub/);
+    expect(JSON.stringify(data)).not.toMatch(/abc123|ampm:sub-1/);
   });
 
   it("records the system as the actor without a user, and nothing when there is no request", async () => {

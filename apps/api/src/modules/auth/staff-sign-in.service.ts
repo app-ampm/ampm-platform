@@ -47,12 +47,11 @@ function canSignIn(user: CredentialRecord): user is SignInAccount {
  * - A challenge takes five tries, each reserved before its code is compared, so codes sent at once share
  *   them; the fifth wrong one burns it. Twenty wrong codes in a row lock the account for an
  *   administrator, whatever resets happen in between.
- * The routes do not exist under Cognito (404).
  */
 @Injectable()
 export class StaffSignInService {
   constructor(
-    @Inject(SIGN_IN_KEYS) private readonly keys: SignInKeys | null,
+    @Inject(SIGN_IN_KEYS) private readonly keys: SignInKeys,
     private readonly credentials: CredentialsRepository,
     private readonly tokens: AuthTokenService,
     private readonly audit: AuditService,
@@ -64,7 +63,6 @@ export class StaffSignInService {
 
   /** Step one: the email and password. Answers with the challenge for the authenticator code. */
   async signIn(request: SignInRequest): Promise<SignInResponse> {
-    this.signer();
     if (!(await this.withinPasswordTries(request.email))) {
       throw errors.unauthenticated(SIGN_IN_ERRORS.invalidCredentials);
     }
@@ -87,16 +85,15 @@ export class StaffSignInService {
    * guesses sent at once compare more than five times between them.
    */
   async verifyCode(request: SignInCodeRequest, now: Date = new Date()): Promise<SignInGrant> {
-    const keys = this.signer();
     const { token, user } = await this.openChallenge(request.challenge);
     if (!(await this.tokens.claimAttempt(token.id))) {
       throw errors.unauthenticated(SIGN_IN_ERRORS.challengeExpired);
     }
     const accepted = request.code
-      ? await this.acceptCode(keys, user, request.code, now)
+      ? await this.acceptCode(user, request.code, now)
       : await this.credentials.spendRecoveryCode(
           user.id,
-          hashRecoveryCode(request.recoveryCode ?? "", keys.recoveryKey),
+          hashRecoveryCode(request.recoveryCode ?? "", this.keys.recoveryKey),
           now,
         );
     if (!accepted) return this.refuseCode(token, user);
@@ -112,11 +109,6 @@ export class StaffSignInService {
     const tokenId = requestContext.get()?.tokenId;
     if (tokenId) await this.sessions.revokeToken(tokenId, "signed_out", now);
     return { ok: true };
-  }
-
-  private signer(): SignInKeys {
-    if (!this.keys) throw errors.notFound();
-    return this.keys;
   }
 
   /**
@@ -147,13 +139,8 @@ export class StaffSignInService {
   }
 
   /** A code matches and claims its time step, so the same code cannot be used twice. */
-  private async acceptCode(
-    keys: SignInKeys,
-    user: SignInAccount,
-    code: string,
-    now: Date,
-  ): Promise<boolean> {
-    const step = matchTotp(keys.box.open(user.totpSecretEnc), code, now, user.totpLastStep);
+  private async acceptCode(user: SignInAccount, code: string, now: Date): Promise<boolean> {
+    const step = matchTotp(this.keys.box.open(user.totpSecretEnc), code, now, user.totpLastStep);
     return step !== null && (await this.credentials.claimStep(user.id, step));
   }
 

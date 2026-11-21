@@ -33,7 +33,6 @@ export class ClientSignInService {
 
   /** Sends a sign-in code to the client with this mobile, if there is exactly one. */
   async requestCode(request: ClientCodeRequest): Promise<ClientCodeSent> {
-    this.codes.signer();
     await this.codes.allow(request.phone);
     if (this.codes.showsOnScreen()) return this.sendIfClient(request.phone);
     void this.sendIfClient(request.phone).catch((error: unknown) =>
@@ -44,7 +43,6 @@ export class ClientSignInService {
 
   /** Exchanges the mobile and its live code for a client session. */
   async signIn(request: ClientSignInRequest, now: Date = new Date()): Promise<SignInGrant> {
-    this.codes.signer();
     const client = await this.credentials.findActiveClientByPhone(request.phone);
     if (!client) throw errors.unauthenticated(SIGN_IN_ERRORS.invalidClientCode);
     await this.codes.verify(client.id, request.code);

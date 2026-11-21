@@ -13,7 +13,8 @@ function inviteTokenOf(value: string | string[] | undefined): string | undefined
 /** `/activate?token=…`, the link in the invitation email. Reachable signed out (no session gate). */
 export default function ActivateRoute() {
   const { token } = useLocalSearchParams<{ token?: string | string[] }>();
-  // AMPM's own sign-in sets the password and the authenticator here (D-142); the others link a provider.
+  // AMPM's own sign-in sets the password and the authenticator here (D-142); the dev provider redeems
+  // the link for a local token instead.
   return env.EXPO_PUBLIC_IDENTITY_PROVIDER === "ampm" ? (
     <AmpmActivateScreen inviteToken={inviteTokenOf(token)} />
   ) : (

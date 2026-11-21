@@ -28,7 +28,7 @@ export function activationRefusal(error: unknown): ActivationRefusal {
       return { kind: "failed", reason: "network" };
     case "rate_limited":
       return { kind: "failed", reason: "rate-limited" };
-    // The provider's verified email is not the invitation's (Cognito: signed in as someone else).
+    // The provider's verified email is not the invitation's.
     case "forbidden":
       return { kind: "failed", reason: "email-mismatch" };
     // The only other conflict: that sign-in is already linked to another account.

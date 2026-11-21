@@ -48,7 +48,8 @@ Identity and access
     5. **`CLIENT_OTP_SCREEN_ECHO=false`, before any real client is converted or invited (D-148).**
   - Demo prospects (`user_type demo`) still have no production sign-in.
 - [x] ~~Invited staff cannot finish their first sign-in~~: solved by AMPM's own sign-in (D-142); the invitation link sets the password and the authenticator.
-- [ ] Retire Cognito: remove the Cognito adapters, the Amplify screens and the pre-token Lambda, delete the AWS user pool, and update `docs/decisions.json` (Q13/Q14 name Cognito) with the generators.
+- [x] ~~Retire Cognito: remove the Cognito adapters, the Amplify screens and the pre-token Lambda, and update `docs/decisions.json` (Q13/Q14 name Cognito) with the generators.~~ Done 21 Nov 2026 (D-153): the API's Cognito adapter and provisioner, the `COGNITO_*` settings, the Amplify sign-in and packages, and the pre-token Lambda source are gone; `IDENTITY_PROVIDER` is `ampm` (the default) or `local`, and a leftover `cognito` fails at boot. Q13/Q14 and the A-13, T-2 and T-6 notes record the change.
+- [ ] **Delete the retired AWS resources** (the developer, in the AWS console): the user pool `ap-south-1_wcaro5oAK` with its app client, the `ampm-cognito-pretoken` Lambda with its execution role and log group, and any IAM user made for Cognito provisioning. Then check that the bill shows no Cognito charge.
 
 Public forms and payments
 - [x] ~~**Website enquiry form.** It sends a hard-coded `dev-bot-check` token, so production refuses every enquiry.~~ The form draws the Turnstile widget "AMPM website" and sends its token (Send waits for one; each token is spent once), the site key is the required build argument `NEXT_PUBLIC_TURNSTILE_SITE_KEY`, and the website's CSP admits `challenges.cloudflare.com` (`script-src`, `frame-src`) (D-145). Live since 20 Nov 2026 10:46 UTC, with the key in production's `compose.box.yml`.
@@ -64,7 +65,7 @@ Native apps (Q1 and R17: the iOS and Android apps launch with everything else)
 - [ ] **AMPM's app icon and splash.** `apps/mobile/assets` still holds the Expo template's icons, so the installed app shows Expo's blue chevron.
 - [ ] **A reviewer sign-in.** Apple and Google both need a working account to review the app, and today every way in needs an SMS code or an authenticator. Decide how a reviewer gets in.
 - [ ] **First internal builds:** `eas build --profile preview`, then TestFlight and the Play internal track. Google Play takes the first upload by hand.
-- [ ] **The retired Cognito code leaves the app before the first store build** (the Retire Cognito item above).
+- [x] ~~**The retired Cognito code leaves the app before the first store build**~~ (D-153): `aws-amplify`, `@aws-amplify/react-native`, `react-native-get-random-values` and AsyncStorage are out of `apps/mobile`, so no native build carries them.
 - [ ] **Export compliance** (`ITSAppUsesNonExemptEncryption`), answered at the first iOS submission once the encrypted offline store (D-026) is built.
 - [ ] **Push notifications** (architecture §0): not built. Needs `expo-notifications`, an APNs key and Firebase Cloud Messaging.
 - [ ] **A store-review allowance** of one to two weeks before every release in the plan (D-013).

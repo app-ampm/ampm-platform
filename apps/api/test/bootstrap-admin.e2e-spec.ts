@@ -79,7 +79,7 @@ describe("First Super Admin bootstrap (e2e)", () => {
         where: { id: outcome.userId },
         include: { roles: true },
       });
-      // Stored lower-cased and trimmed: activation compares it with Cognito's verified email.
+      // Stored lower-cased and trimmed: sign-in and activation compare emails exactly.
       expect(user).toMatchObject({
         email: "first.admin@ampmverse.com",
         userType: "staff",
