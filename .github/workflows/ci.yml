@@ -12,6 +12,7 @@
 #   mobile        mobile or its deps  Expo bundle for web, iOS and Android (Metro resolves what lint/tsc cannot)
 #   matrix        policy or the doc   regenerate packages/policy/src/generated and fail on drift
 #   tools         docs/tools changed  the redactor, memory-hook and checkpoint self-tests
+#   deploy        deploy changed      shellcheck the deploy scripts + the source-ship test against a stand-in box
 #   secrets-scan  always              refuse any committed plaintext secret (feature 6.4)
 #   infra         infra changed       shellcheck + Compose/Caddy/monitoring validation + three stack smokes (heavy)
 # `ci-ok` is a single stable status (green when every job that ran passed; skipped jobs are fine) so
@@ -59,6 +60,7 @@ jobs:
       mobile: ${{ steps.filter.outputs.mobile }}
       matrix: ${{ steps.filter.outputs.matrix }}
       tools: ${{ steps.filter.outputs.tools }}
+      deploy: ${{ steps.filter.outputs.deploy }}
       infra: ${{ steps.filter.outputs.infra }}
     steps:
       - uses: actions/checkout@v7
@@ -126,6 +128,9 @@ jobs:
             tools:
               - *workflow
               - 'docs/tools/**'
+            deploy:
+              - *workflow
+              - 'deploy/**'
             infra:
               - *toolchain
               - *workflow
@@ -320,6 +325,20 @@ jobs:
       - name: docs/tools tests (redactor, memory + checkpoint hooks)
         run: pnpm run test:tools
 
+  # The deploy scripts run by hand against production, so they are shellchecked, and the source ship is
+  # tested end to end against a stand-in box (an ssh shim and a scratch directory; D-156).
+  deploy:
+    needs: changes
+    if: ${{ needs.changes.outputs.deploy == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - name: shellcheck the deploy scripts
+        run: find deploy -type f -name '*.sh' -print0 | xargs -0r shellcheck
+      - name: deploy/ship-source.sh against a stand-in box
+        run: bash deploy/ship-source.test.sh
+
   # A committed plaintext secret could land in any file, so this runs on every change (feature 6.4):
   # reuse the transcript redactor's detector over every tracked file, and refuse any plaintext-secret
   # file by location.
@@ -405,7 +424,8 @@ jobs:
   # covers every job in `needs:` automatically, so a new job is included the moment it is added there.
   ci-ok:
     if: ${{ always() }}
-    needs: [changes, format, quality, api, build, mobile, matrix, tools, secrets-scan, infra]
+    needs:
+      [changes, format, quality, api, build, mobile, matrix, tools, deploy, secrets-scan, infra]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:

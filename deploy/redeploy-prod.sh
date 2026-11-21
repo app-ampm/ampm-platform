@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Redeploys the PRODUCTION stack on the shared Plesk box (D-138) from the source tree it sits in: ship
-# a commit with `git archive <commit> -- . ':(exclude)graphify-out' | ssh <box> 'cd <prod dir> && tar -xf -'`,
-# write the commit to .deployed-commit, then run ON the box:  bash deploy/redeploy-prod.sh
+# Redeploys the PRODUCTION stack on the shared Plesk box (D-138) from the source tree it sits in: ship a
+# commit from a checkout with `AMPM_SHIP_TARGET=production SHIP_SSH=<box> bash deploy/ship-source.sh`
+# (D-156), then run ON the box:  bash deploy/redeploy-prod.sh
 # The test stack (ampm-local, deploy/redeploy-box.sh) is a different Compose project and is not touched.
 #
 # Order (infra rule: migrate before the new API, health gate, roll back to the previous image):
-#   1  preflight: the box override, the secrets (prod-secrets.sh check), disk headroom
+#   1  preflight: the tree as shipped, the box override, the secrets (prod-secrets.sh check), disk headroom
 #   2  build the app image (tagged with the commit, kept for rollback) and the postgres and website images
 #   3  start postgres, redis, the pgBackRest scheduler and the virus scanner (clamav + freshclam);
 #      services that did not change keep running
@@ -36,6 +36,10 @@ die() {
 [[ -f .deployed-commit ]] || die "missing .deployed-commit (write the shipped commit there)"
 commit="$(tr -d '[:space:]' <.deployed-commit)"
 [[ "$commit" =~ ^[0-9a-f]{7,40}$ ]] || die ".deployed-commit does not hold a commit id"
+# The tree must be that commit as deploy/ship-source.sh shipped it: a `git archive | tar` by hand leaves
+# the files a commit deleted in place, and the build still compiles them (D-156).
+bash deploy/verify-shipped-source.sh ||
+  die "the source tree is not ${commit:0:12} as shipped: ship it with deploy/ship-source.sh"
 # Production refuses the stub virus scanner, so an override without these lines would fail the health
 # gate only after the build and the migration; stop here instead.
 grep -Eq '^[[:space:]]+AV_PROVIDER:[[:space:]]*"?clamav"?[[:space:]]*$' "$OVR" ||
@@ -107,6 +111,7 @@ log "[4/7] safety dump"
 dump="$DUMPS/ampm-prod-$(date -u +%Y%m%dT%H%M%SZ)-${commit:0:12}.dump"
 (
   umask 077
+  # shellcheck disable=SC2016  # the container's sh expands them, from postgres.env
   "${COMPOSE[@]}" exec -T postgres sh -c \
     'pg_dump -h 127.0.0.1 -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc -Z 6' >"$dump"
 ) || die "safety dump failed — nothing was migrated or replaced"

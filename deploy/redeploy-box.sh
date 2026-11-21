@@ -2,8 +2,8 @@
 # Redeploy the app.ampmverse.com test box's API + worker from the repo on the box, and re-seed.
 # Run ON the box, from the repo root:  bash deploy/redeploy-box.sh
 # (Get the latest source onto the box first; the box checkout has no git remote of its own, so ship it
-#  with `git archive HEAD -- . ':(exclude)graphify-out' | ssh <box> 'cd <repo-on-box> && tar -xf -'`
-#  from a clean worktree, and record the commit in the box's .deployed-commit.)
+#  from a checkout with `AMPM_SHIP_TARGET=test SHIP_SSH=<box> bash deploy/ship-source.sh`, which also
+#  removes what main deleted since the last ship and records the commit in .deployed-commit; D-156.)
 #
 # NON-DESTRUCTIVE: `migrate deploy` (not reset) applies any pending migrations, and the seed upserts by
 # fixed id (it never resets an enquiry's status), so data a tester has already driven forward is kept.
