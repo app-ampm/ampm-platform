@@ -105,6 +105,34 @@ describe("AccountDetailScreen", () => {
     expect(await screen.findByText("Pending payment")).toBeOnTheScreen();
   });
 
+  it("titles a client named after the couple once, with the bride and groom and their fathers", async () => {
+    const couple = accountDetailViewFixture({
+      name: "Priya & Arjun",
+      coupleNames: "Priya & Arjun",
+      brideName: "Priya",
+      brideFatherName: "Rahul Sharma",
+      groomName: "Arjun",
+      groomFatherName: null,
+    });
+    const fetchFn = routedFetch({
+      [`/crm/accounts/${ACCOUNT_ID}`]: () => ok(couple),
+      "/crm/subscriptions": () => ok({ items: [], nextCursor: null }),
+      "/crm/plans": () => ok({ items: [planPublicViewFixture()] }),
+      "/me": () => ok(staffMeFixture(["SM"])),
+    });
+    await renderWithApi(<AccountDetailScreen accountId={ACCOUNT_ID} />, fetchFn);
+    const header = await screen.findByTestId("account-header");
+    expect(within(header).getByText("Priya & Arjun")).toBeOnTheScreen();
+    // The facts line does not repeat the couple the title already names.
+    expect(within(header).getByText(/^Client account · Added/)).toBeOnTheScreen();
+    const bride = screen.getByTestId("account-bride");
+    expect(within(bride).getByText("Priya")).toBeOnTheScreen();
+    expect(within(bride).getByText("Father: Rahul Sharma")).toBeOnTheScreen();
+    const groom = screen.getByTestId("account-groom");
+    expect(within(groom).getByText("Arjun")).toBeOnTheScreen();
+    expect(within(groom).queryByText(/^Father:/)).toBeNull();
+  });
+
   it("records a manual payment on a pending subscription", async () => {
     const captured: Captured = {};
     await renderWithApi(<AccountDetailScreen accountId={ACCOUNT_ID} />, detailFetch(captured));

@@ -1,4 +1,5 @@
 import {
+  coupleSubtitle,
   formatDay,
   type ClientAccountStatus,
   type ManualPaymentRequest,
@@ -94,17 +95,18 @@ export function accountTypeLabel(isDemo: boolean): string {
 }
 
 /**
- * The record header's facts line (T3's meta line): the kind of account, the couple and when it was
- * added: "Client account · Priya & Arjun · Added 1 NOV 2026".
+ * The record header's facts line (T3's meta line): the kind of account, the couple when the title is not
+ * already theirs, and when it was added: "Client account · Priya & Arjun · Added 1 NOV 2026".
  */
 export function accountFactsLine(account: {
   readonly isDemo: boolean;
+  readonly name: string;
   readonly coupleNames: string | null;
   readonly createdAt: string;
 }): string {
   return [
     accountTypeLabel(account.isDemo),
-    account.coupleNames,
+    coupleSubtitle(account),
     accountCreatedLabel(account.createdAt),
   ]
     .filter((part): part is string => Boolean(part))

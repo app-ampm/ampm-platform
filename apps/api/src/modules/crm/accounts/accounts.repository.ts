@@ -13,6 +13,10 @@ export interface AccountRow {
   readonly id: string;
   readonly name: string;
   readonly coupleNames: string | null;
+  readonly brideName: string | null;
+  readonly brideFatherName: string | null;
+  readonly groomName: string | null;
+  readonly groomFatherName: string | null;
   readonly preferredLocations: string | null;
   readonly isDemo: boolean;
   readonly status: ClientAccountStatus;
@@ -76,6 +80,10 @@ export interface AccountContactPatch {
 export interface AccountPatch {
   readonly name?: string;
   readonly coupleNames?: string | null;
+  readonly brideName?: string | null;
+  readonly brideFatherName?: string | null;
+  readonly groomName?: string | null;
+  readonly groomFatherName?: string | null;
   readonly preferredLocations?: string | null;
   readonly internalNotes?: string | null;
 }
@@ -89,6 +97,10 @@ const ACCOUNT_FIELDS = {
   id: true,
   name: true,
   coupleNames: true,
+  brideName: true,
+  brideFatherName: true,
+  groomName: true,
+  groomFatherName: true,
   preferredLocations: true,
   isDemo: true,
   status: true,
@@ -119,6 +131,10 @@ function toAccountRow(account: SelectedAccount): AccountRow {
     id: account.id,
     name: account.name,
     coupleNames: account.coupleNames,
+    brideName: account.brideName,
+    brideFatherName: account.brideFatherName,
+    groomName: account.groomName,
+    groomFatherName: account.groomFatherName,
     preferredLocations: account.preferredLocations,
     isDemo: account.isDemo,
     status: account.status,

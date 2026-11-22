@@ -1,4 +1,4 @@
-import type { AccountView } from "@ampm/core";
+import { coupleSubtitle, type AccountView } from "@ampm/core";
 import { Card, ListItem, Stack, StatusChip } from "@ampm/ui";
 
 import {
@@ -15,8 +15,8 @@ export interface AccountsListProps {
 }
 
 /**
- * The client accounts as a glass panel of rows: each shows the account, its couple names and when it was
- * added, with a status chip, and opens the account's record.
+ * The client accounts as a glass panel of rows: each shows the account, its couple names (unless the
+ * account is already named after them) and when it was added, with a status chip, and opens the record.
  */
 export function AccountsList({ accounts, onOpen }: AccountsListProps) {
   return (
@@ -26,7 +26,7 @@ export function AccountsList({ accounts, onOpen }: AccountsListProps) {
           <ListItem
             key={account.id}
             title={account.name}
-            subtitle={account.coupleNames ?? undefined}
+            subtitle={coupleSubtitle(account) ?? undefined}
             meta={accountCreatedLabel(account.createdAt)}
             trailing={
               <StatusChip

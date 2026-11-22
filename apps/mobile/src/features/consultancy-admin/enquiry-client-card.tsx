@@ -1,7 +1,11 @@
 import { useRouter } from "expo-router";
 
 import { useAccount } from "@ampm/api-client";
-import type { AccountContactView, HotelEnquiryStaffDetailView } from "@ampm/core";
+import {
+  coupleSubtitle,
+  type AccountContactView,
+  type HotelEnquiryStaffDetailView,
+} from "@ampm/core";
 import { Avatar, Button, Card, Icon, Row, Stack, Text, type IconName } from "@ampm/ui";
 
 import { useSectionCard } from "./use-section-card";
@@ -45,7 +49,10 @@ export function EnquiryClientCard({ enquiry }: { readonly enquiry: Enquiry }) {
   return (
     <Card tone={card.tone} className={card.className} testID="enquiry-client-card">
       <Stack gap={4}>
-        <ClientIdentity name={name} coupleNames={account.data?.coupleNames ?? null} />
+        <ClientIdentity
+          name={name}
+          coupleNames={coupleSubtitle({ name, coupleNames: account.data?.coupleNames ?? null })}
+        />
         {contact ? <ContactLines contact={contact} /> : null}
         {enquiry.contactPreference ? (
           <ContactLine icon="message" label="Prefers" value={enquiry.contactPreference} />
@@ -62,7 +69,7 @@ export function EnquiryClientCard({ enquiry }: { readonly enquiry: Enquiry }) {
   );
 }
 
-/** The account's name beside its initials, and the couple's names when the account has them. */
+/** The account's name beside its initials, and the couple's names when they are not the name itself. */
 function ClientIdentity({
   name,
   coupleNames,

@@ -16,7 +16,7 @@ import { AuditService } from "../../../policy/audit.service.js";
 import { LeadsRepository } from "../leads/leads.repository.js";
 import { DEFAULT_CONTACT_RELATION } from "./account-constants.js";
 import { AccountInviteService, type Invitee, type MintedInvite } from "./account-invite.service.js";
-import { accountPatchOf, beforeImage } from "./account-patches.js";
+import { accountPatchOf, beforeImage, withCoupleNaming } from "./account-patches.js";
 import {
   AccountsRepository,
   type AccountContactWriteData,
@@ -139,8 +139,10 @@ export class AccountsService {
   }
 
   /**
-   * Edit the account's details from the hub (TW-13): name, couple names, preferred locations and the
-   * internal notes. One transaction with its audit, which holds exactly the changed fields.
+   * Edit the account's details from the hub (TW-13): name, the couple (bride and groom with their
+   * fathers), preferred locations and the internal notes. Once the bride and groom are both named the
+   * account takes the couple's name (withCoupleNaming). One transaction with its audit, which holds
+   * exactly the changed fields.
    */
   async update(
     accountId: string,
@@ -149,7 +151,7 @@ export class AccountsService {
   ): Promise<AccountDetailView> {
     const current = await this.accounts.findAccount(accountId);
     if (!current) throw errors.notFound("No such account");
-    const patch = accountPatchOf(request);
+    const patch = withCoupleNaming(current, accountPatchOf(request));
     await this.prisma.$transaction(async (tx) => {
       await this.accounts.updateAccount(accountId, patch, actorId, tx);
       await this.audit.record(

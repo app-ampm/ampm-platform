@@ -114,6 +114,49 @@ describe("Client account hub (e2e)", () => {
     expect(audit.afterJson).toEqual({ preferredLocations: null });
   });
 
+  it("names the client after the couple once the bride and groom are given, fathers kept", async () => {
+    const patch = (body: object) =>
+      as("local:sm").then((auth) =>
+        http()
+          .patch(`/crm/accounts/${accountId}`)
+          .set("authorization", auth)
+          .send(body)
+          .expect(200),
+      );
+    const brideOnly = await patch({ brideName: "Riya", brideFatherName: "Anil Sharma" });
+    // One of the couple alone does not rename the client.
+    expect(brideOnly.body.data).toMatchObject({
+      name: `${TAG} Sharma & Kapoor`,
+      brideName: "Riya",
+      brideFatherName: "Anil Sharma",
+      groomName: null,
+    });
+
+    const couple = await patch({ groomName: "Arjun", groomFatherName: "Vikram Kapoor" });
+    expect(couple.body.data).toMatchObject({
+      name: "Riya & Arjun",
+      coupleNames: "Riya & Arjun",
+      brideName: "Riya",
+      brideFatherName: "Anil Sharma",
+      groomName: "Arjun",
+      groomFatherName: "Vikram Kapoor",
+    });
+    const listed = await http()
+      .get("/crm/accounts")
+      .query({ q: "Riya & Arjun" })
+      .set("authorization", await as("local:sm"))
+      .expect(200);
+    expect(listed.body.data.items.map((item: { id: string }) => item.id)).toContain(accountId);
+
+    // The audit holds the rename with the name it replaced.
+    const audit = await prisma.auditEvent.findFirstOrThrow({
+      where: { entityType: "client_account", entityId: accountId, action: "update" },
+      orderBy: { occurredAt: "desc" },
+    });
+    expect(audit.beforeJson).toMatchObject({ name: `${TAG} Sharma & Kapoor`, groomName: null });
+    expect(audit.afterJson).toMatchObject({ name: "Riya & Arjun", groomName: "Arjun" });
+  });
+
   it("refuses an edit to a read-only role (403) and to a role that cannot see accounts (404)", async () => {
     await http()
       .patch(`/crm/accounts/${accountId}`)

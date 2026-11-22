@@ -4,9 +4,11 @@ import { useUpdateAccount } from "@ampm/api-client";
 import { isAppError, type AccountDetailView } from "@ampm/core";
 import { Button, Input, Sheet, Stack, useToast } from "@ampm/ui";
 
+import { AccountCoupleFields } from "./account-couple-fields";
 import {
   buildDetailsUpdate,
   detailsDraftOf,
+  draftCoupleTitle,
   validateDetails,
   type DetailsDraft,
   type DetailsErrors,
@@ -53,28 +55,28 @@ interface FieldsProps {
   readonly errors: DetailsErrors;
 }
 
-/** Who the client is: the account's name and the couple. */
-function NameFields({ draft, patch, errors }: FieldsProps) {
+/**
+ * The client's name: typed until the bride and groom are both named, then their names ("Priya &
+ * Arjun"), shown here as they will save and not typed over.
+ */
+function NameField({ draft, patch, errors }: FieldsProps) {
+  const coupleName = draftCoupleTitle(draft);
   return (
-    <>
-      <Input
-        label="Client name"
-        required
-        value={draft.name}
-        onChangeText={(name) => patch({ name })}
-        maxLength={255}
-        errorText={errors.name}
-        testID="account-name"
-      />
-      <Input
-        label="Couple"
-        value={draft.coupleNames}
-        onChangeText={(coupleNames) => patch({ coupleNames })}
-        helpText="Priya & Arjun"
-        maxLength={255}
-        testID="account-couple"
-      />
-    </>
+    <Input
+      label="Client name"
+      required={coupleName === null}
+      disabled={coupleName !== null}
+      value={coupleName ?? draft.name}
+      onChangeText={(name) => patch({ name })}
+      helpText={
+        coupleName === null
+          ? "Becomes the couple's names once the bride and groom are given."
+          : "Follows the bride's and the groom's names."
+      }
+      maxLength={255}
+      errorText={errors.name}
+      testID="account-name"
+    />
   );
 }
 
@@ -110,9 +112,10 @@ export interface AccountDetailsSheetProps {
 }
 
 /**
- * Edit a client account's details (TW-13 Overview and Notes): its name, the couple, the preferred
- * locations and the internal notes, which are staff-only (RESTRICTED-NOTES) and never reach the client.
- * An emptied optional box clears its field; the name may not be emptied.
+ * Edit a client account's details (TW-13 Overview and Notes): its name, the couple (bride and groom with
+ * their fathers), the preferred locations and the internal notes, which are staff-only (RESTRICTED-NOTES)
+ * and never reach the client. An emptied optional box clears its field; the name may not be emptied
+ * while it is typed, and follows the couple once both are named.
  */
 export function AccountDetailsSheet({ account, open, onClose }: AccountDetailsSheetProps) {
   const { draft, patch, errors, pending, submit } = useDetailsForm(account, open, onClose);
@@ -129,7 +132,8 @@ export function AccountDetailsSheet({ account, open, onClose }: AccountDetailsSh
       }
     >
       <Stack gap={4}>
-        <NameFields draft={draft} patch={patch} errors={errors} />
+        <NameField draft={draft} patch={patch} errors={errors} />
+        <AccountCoupleFields draft={draft} patch={patch} />
         <NoteFields draft={draft} patch={patch} />
       </Stack>
     </Sheet>

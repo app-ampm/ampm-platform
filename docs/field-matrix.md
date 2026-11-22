@@ -1,6 +1,6 @@
 # AMPM Platform — Field Matrix
 
-**Status:** DRAFT v0.1, generated 2026-11-21 from [data-model.md](data-model.md) by `docs/tools/field_matrix_build.py`. Do not edit by hand; change the data model or `docs/tools/field_rules.py` and rebuild.
+**Status:** DRAFT v0.1, generated 2026-11-22 from [data-model.md](data-model.md) by `docs/tools/field_matrix_build.py`. Do not edit by hand; change the data model or `docs/tools/field_rules.py` and rebuild.
 **Companions:** [requirements-audit.md](requirements-audit.md) (Q numbers), [data-model.md](data-model.md) (assumptions A-1 to A-30), [permission-matrix.md](permission-matrix.md) (role codes, visibility classes, assumptions P-1 to P-11).
 **Spreadsheet version:** [field-matrix.csv](field-matrix.csv) has the same rows for filtering.
 
@@ -21,7 +21,7 @@ Global conventions that apply to every row: money is `numeric(14,2)` with a sibl
 | Module | Tables | Fields | Required at creation | Client or public visible | Restricted, sensitive or secret |
 |---|---|---|---|---|---|
 | A — Identity, access and administration | 20 | 128 | 61 | 10 | 5 |
-| B — CRM, subscriptions and commercial agreements | 13 | 139 | 55 | 90 | 4 |
+| B — CRM, subscriptions and commercial agreements | 13 | 143 | 55 | 94 | 4 |
 | C — Hotel intelligence | 10 | 101 | 38 | 83 | 11 |
 | D — Hotel consultancy | 6 | 70 | 28 | 65 | 3 |
 | E — Wedding project | 3 | 36 | 13 | 29 | 3 |
@@ -37,9 +37,9 @@ Global conventions that apply to every row: money is `numeric(14,2)` with a sibl
 | O — Checklists, closure and feedback | 4 | 30 | 17 | 7 | 0 |
 | P — Public website content (dormant) | 2 | 17 | 8 | 17 | 0 |
 | Q — Live chat | 2 | 16 | 6 | 16 | 0 |
-| **Total** | **117** | **1167** | **502** | **647** | **108** |
+| **Total** | **117** | **1171** | **502** | **651** | **108** |
 
-Fields by visibility class: CLIENT 614, INTERNAL 355, Other (per record, recipient or parent) 57, RESTRICTED-NOTES 34, PUBLIC 33, RESTRICTED-FINANCE 31, RESTRICTED-CONTACT 13, RESTRICTED-IDENTITY 13, SECRET 11, RESTRICTED-BANK 4, SENSITIVE-GUEST 2.
+Fields by visibility class: CLIENT 618, INTERNAL 355, Other (per record, recipient or parent) 57, RESTRICTED-NOTES 34, PUBLIC 33, RESTRICTED-FINANCE 31, RESTRICTED-CONTACT 13, RESTRICTED-IDENTITY 13, SECRET 11, RESTRICTED-BANK 4, SENSITIVE-GUEST 2.
 
 ---
 
@@ -381,6 +381,10 @@ Created at stage: **Conversion** · Default editor: SM; SA; FA (billing fields) 
 | `id` (PK) | UUID v7, generated |  | SYS | CLIENT | System | — |
 | `name` | string, up to 255 characters; couple or family name |  | SM; SA; FA (billing fields) | CLIENT | At creation | — |
 | `couple_names` | string, up to 255 characters; entered at activation (Q2) |  | SM; SA; FA (billing fields) | CLIENT | Optional | — |
+| `bride_name` | string, up to 120 characters |  | SM; SA | CLIENT | Optional | With groom_name given, renames name and couple_names to "Bride & Groom" (D-158) |
+| `bride_father_name` | string, up to 255 characters |  | SM; SA | CLIENT | Optional | — |
+| `groom_name` | string, up to 120 characters |  | SM; SA | CLIENT | Optional | With bride_name given, renames name and couple_names to "Bride & Groom" (D-158) |
+| `groom_father_name` | string, up to 255 characters |  | SM; SA | CLIENT | Optional | — |
 | `preferred_locations` | text, up to 10,000 characters; entered at activation (Q2) |  | SM; SA; FA (billing fields) | CLIENT | Optional | — |
 | `is_demo` | true or false; fixed at creation |  | SM; SA | INTERNAL | Optional | Scopes every query for demo users (A-28); demo data reset on schedule |
 | `status` | one of the listed options | prospect, active, suspended, closed | SM; SA; FA (billing fields) | CLIENT | At creation | suspended refuses sign-in for every user of the account |

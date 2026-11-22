@@ -90,6 +90,29 @@ describe("accountUpdateRequest", () => {
     expect(accountUpdateRequest.safeParse({ name: "   " }).success).toBe(false);
     expect(accountUpdateRequest.safeParse({ name: null }).success).toBe(false);
   });
+
+  it("takes the couple with each one's father, and clears an emptied name", () => {
+    const parsed = accountUpdateRequest.safeParse({
+      brideName: " Priya ",
+      brideFatherName: "Rahul Sharma",
+      groomName: "Arjun",
+      groomFatherName: "",
+    });
+    expect(parsed.success).toBe(true);
+    if (!parsed.success) return;
+    expect(parsed.data).toEqual({
+      brideName: "Priya",
+      brideFatherName: "Rahul Sharma",
+      groomName: "Arjun",
+      groomFatherName: null,
+    });
+  });
+
+  it("caps the bride's and groom's names so the couple's name fits the account name", () => {
+    expect(accountUpdateRequest.safeParse({ brideName: "a".repeat(120) }).success).toBe(true);
+    expect(accountUpdateRequest.safeParse({ brideName: "a".repeat(121) }).success).toBe(false);
+    expect(accountUpdateRequest.safeParse({ groomName: "a".repeat(121) }).success).toBe(false);
+  });
 });
 
 describe("accountContactCreateRequest", () => {

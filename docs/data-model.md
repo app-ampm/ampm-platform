@@ -427,6 +427,10 @@ erDiagram
         uuid id PK
         string name "couple or family name"
         string couple_names "entered at activation (Q2)"
+        string bride_name "the couple; with groom_name names the account"
+        string bride_father_name
+        string groom_name "the couple; with bride_name names the account"
+        string groom_father_name
         text preferred_locations "entered at activation (Q2)"
         bool is_demo "A-28"
         string status "enum prospect / active / suspended / closed"

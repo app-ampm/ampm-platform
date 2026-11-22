@@ -30,12 +30,13 @@ function useRefreshAccounts() {
 }
 
 /**
- * Edit the account's details (`PATCH /crm/accounts/:id`): name, couple names, preferred locations and
- * internal notes; null (or "") clears an optional one.
+ * Edit the account's details (`PATCH /crm/accounts/:id`): name, the couple (bride and groom with their
+ * fathers), preferred locations and internal notes; null (or "") clears an optional one. Once the bride
+ * and groom are both named the server renames the account after them ("Riya & Arjun").
  *
  * @example
  * const update = useUpdateAccount(accountId);
- * update.mutate({ coupleNames: "Riya & Arjun" });
+ * update.mutate({ brideName: "Riya", brideFatherName: "Anil Sharma", groomName: "Arjun" });
  */
 export function useUpdateAccount(accountId: string) {
   const api = useApiClient();
