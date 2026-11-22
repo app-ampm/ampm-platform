@@ -28,6 +28,19 @@ describe("leadConvertRequest", () => {
     expect(leadConvertRequest.safeParse({}).success).toBe(false);
   });
 
+  it("takes the couple's names, each capped so the couple's name fits the account name", () => {
+    const parsed = leadConvertRequest.safeParse({
+      brideName: " Priya ",
+      groomName: "Arjun",
+      primaryContact: { email: "a@example.com" },
+    });
+    expect(parsed.success).toBe(true);
+    if (!parsed.success) return;
+    expect(parsed.data).toMatchObject({ brideName: "Priya", groomName: "Arjun" });
+    const tooLong = { brideName: "a".repeat(121), primaryContact: { email: "a@example.com" } };
+    expect(leadConvertRequest.safeParse(tooLong).success).toBe(false);
+  });
+
   it("normalises an Indian phone number to E.164 (AC-01.3)", () => {
     const parsed = leadConvertRequest.safeParse({
       primaryContact: { email: "a@example.com", phone: "9876500000" },
