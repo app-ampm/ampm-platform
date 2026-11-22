@@ -8,9 +8,44 @@ type CoupleDraft = Pick<
   "brideName" | "brideFatherName" | "groomName" | "groomFatherName"
 >;
 
+type Side = "bride" | "groom";
+
+const SIDE: Record<
+  Side,
+  { readonly label: string; readonly name: keyof CoupleDraft; readonly father: keyof CoupleDraft }
+> = {
+  bride: { label: "Bride", name: "brideName", father: "brideFatherName" },
+  groom: { label: "Groom", name: "groomName", father: "groomFatherName" },
+};
+
 export interface AccountCoupleFieldsProps {
   readonly draft: CoupleDraft;
   readonly patch: (next: Partial<CoupleDraft>) => void;
+}
+
+/** One of the couple: their name and their father's ("Bride's name", "Bride's father's name"). */
+function PartnerFields({ side, draft, patch }: AccountCoupleFieldsProps & { readonly side: Side }) {
+  const { label, name, father } = SIDE[side];
+  return (
+    <>
+      <Input
+        label={`${label}'s name`}
+        value={draft[name]}
+        onChangeText={(value) => patch({ [name]: value })}
+        maxLength={COUPLE_PERSON_NAME_MAX}
+        autoCapitalize="words"
+        testID={`account-${side}-name`}
+      />
+      <Input
+        label={`${label}'s father's name`}
+        value={draft[father]}
+        onChangeText={(value) => patch({ [father]: value })}
+        maxLength={255}
+        autoCapitalize="words"
+        testID={`account-${side}-father`}
+      />
+    </>
+  );
 }
 
 /**
@@ -28,38 +63,8 @@ export function AccountCoupleFields({ draft, patch }: AccountCoupleFieldsProps) 
           Once the bride and the groom are both named, the client takes their names.
         </Text>
       </Stack>
-      <Input
-        label="Bride's name"
-        value={draft.brideName}
-        onChangeText={(brideName) => patch({ brideName })}
-        maxLength={COUPLE_PERSON_NAME_MAX}
-        autoCapitalize="words"
-        testID="account-bride-name"
-      />
-      <Input
-        label="Bride's father's name"
-        value={draft.brideFatherName}
-        onChangeText={(brideFatherName) => patch({ brideFatherName })}
-        maxLength={255}
-        autoCapitalize="words"
-        testID="account-bride-father"
-      />
-      <Input
-        label="Groom's name"
-        value={draft.groomName}
-        onChangeText={(groomName) => patch({ groomName })}
-        maxLength={COUPLE_PERSON_NAME_MAX}
-        autoCapitalize="words"
-        testID="account-groom-name"
-      />
-      <Input
-        label="Groom's father's name"
-        value={draft.groomFatherName}
-        onChangeText={(groomFatherName) => patch({ groomFatherName })}
-        maxLength={255}
-        autoCapitalize="words"
-        testID="account-groom-father"
-      />
+      <PartnerFields side="bride" draft={draft} patch={patch} />
+      <PartnerFields side="groom" draft={draft} patch={patch} />
     </Stack>
   );
 }
