@@ -154,6 +154,28 @@ describe("LeadDetailScreen", () => {
     ]);
   });
 
+  it("converts with the couple's names, saying the client will be named after them", async () => {
+    const bodies: unknown[] = [];
+    const routes: Routes = {
+      [`${LEAD_PATH}/convert`]: (init) => {
+        bodies.push(JSON.parse(String(init?.body)));
+        return ok(convertResult(true));
+      },
+    };
+    await renderDetail(detailFetch(leadFixture(), routes));
+    await fireEvent.changeText(await screen.findByTestId("convert-bride-name"), "Priya");
+    await fireEvent.changeText(screen.getByTestId("convert-groom-name"), "Rohan");
+    expect(screen.getByText("The client will be named Priya & Rohan.")).toBeOnTheScreen();
+    await convertAndReadToast("Converted — invite sent");
+    expect(bodies).toEqual([
+      {
+        primaryContact: { email: "rohit@example.com", isDecisionMaker: true },
+        brideName: "Priya",
+        groomName: "Rohan",
+      },
+    ]);
+  });
+
   it("says when the invite is still pending after the account exists", async () => {
     const routes: Routes = { [`${LEAD_PATH}/convert`]: () => ok(convertResult(false)) };
     await renderDetail(detailFetch(leadFixture(), routes));

@@ -1,32 +1,32 @@
 # Graph Report - couple-name-client-conversion-29541d  (2026-11-22)
 
 ## Corpus Check
-- 1879 files · ~1,060,277 words
+- 1882 files · ~1,061,292 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 27 file(s) not represented in the graph (top: (none) 11, .example 6, .conf 3)
 
 ## Summary
-- 15274 nodes · 49722 edges · 505 communities (414 shown, 91 thin omitted)
+- 15287 nodes · 49767 edges · 481 communities (412 shown, 69 thin omitted)
 - Extraction: 95% EXTRACTED · 5% INFERRED · 0% AMBIGUOUS · INFERRED: 2514 edges (avg confidence: 0.88)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `393dcb1b`
+- Built from commit: `dc640c3b`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
-- enquiries.service.ts
+- apps_api_src_generated_prisma_client
 - User flows
 - AuthTokenService
 - AMPM's Answers and Business Rules
 - peerDependencies
 - request-context.ts
-- proposals.service.ts
+- ProposalsRepository
 - Round-Two Open Questions (R1 to R19)
 - PrismaService
 - json
-- formatDay
+- finance-screen.tsx
 - hotel-rates.controller.ts
 - ui/src/index.ts
 - AMPM Developer Technical Specification v1.0 (20 October 2026)
@@ -45,32 +45,32 @@
 - ref_react_native
 - checkbox.tsx
 - hotel-results.tsx
-- site-visits.service.ts
+- BookingMilestoneListQuery
 - PNPM Workspace Catalog
 - postgres
-- notification.module.ts
-- Text
+- notification.service.ts
+- rate-cards.form.ts
 - Tokens Package Manifest
 - PermissionSetsService
-- StatusTone
+- lead-enquiry.service.ts
 - tab-bar-item.tsx
 - API Client Package Manifest
 - Decision Log and Source Documents
-- wedding projects
+- guests
 - staff-user-detail-screen.tsx
 - date-range-field/date-range-field.tsx
 - Decisions — Native Apps, Offline & Hosting
-- booking-milestones.service.ts
+- Principal
 - T1 List and filter template
 - Policy Package Manifest
-- enquiries-list-screen.tsx
+- consultancy-admin.format.ts
 - Brief section 1: getting in and paying
-- use-client-access.ts
+- account-contacts.service.ts
 - VPS Setup & Runbooks
 - Engineering Standards — Apps & Frontend
 - apps_api_src_generated_prisma_client
 - enquiry-fields.tsx
-- hotel-detail-screen.tsx
+- MeResponse
 - Team App Flowchart and Operations
 - service-agreements.service.ts
 - site/index.ts
@@ -83,29 +83,29 @@
 - Technology and Operations Decisions
 - ref_react
 - Shared Base TSConfig
-- recordScope
-- account-detail-screen.tsx
+- accounts.ts
+- ServiceAgreementListQuery
 - nav-rail.tsx
 - Platform, Subscription and Access Decisions
-- saved-hotel-card.tsx
+- sms-transports.ts
 - API TSConfig
 - Standards, Contributing & Handover
 - parse-matrix.ts
 - ampm-activate-screen.tsx
 - Root Workspace & Turbo
 - config/package.json
-- permission.guard.spec.ts
+- field-note.service.ts
 - principal.service.ts
-- @nestjs/common
+- principal.types.ts
 - Data Platform & Identity Options
-- account-details-sheet.tsx
+- account-detail-screen.tsx
 - Stack
 - Web TSConfig
 - Guest Identity and Privacy Decisions
-- consultancy-admin.form.ts
+- leads.reminder.service.ts
 - Turbo Pipeline Config
 - bot-check-field.tsx
-- golden/classes.ts
+- exports.test.ts
 - scrape_configs
 - sign-in-layout.tsx
 - user-flows.md
@@ -115,23 +115,23 @@
 - partition-maintenance.service.ts
 - ok
 - Hotel Data Findings
-- PhotoPlaceholder
+- account-saved-hotels.tsx
 - AMPM Platform Data Model and ER Diagrams
 - Client-visible Finance Decision
 - install_global_memory_hooks_test.py
 - configuration-edit-sheet.tsx
-- rate-limit.guard.spec.ts
+- client-logins.service.spec.ts
 - schemas/index.ts
-- MediaAssetView
+- media.service.ts
 - Client Portal Flowchart (as supplied)
 - Q3 — Hotel-Discovery Subscription & Demo
-- staff-users.service.ts
+- .record
 - ui/tsconfig.json
 - 2.7 Bootstrap plan (6 phases, each ending pnpm check green)
 - policy/tsconfig.json
-- ref_tanstack_react_query
+- client.ts
 - Q9/Q15 — Hotel Data & Scale
-- .warn
+- client-logins.controller.ts
 - Lefthook Git Hooks
 - ui/package.json
 - mempalace_global_hook_test.sh
@@ -152,7 +152,7 @@
 - Q20/Q21 — Tracked Requests & Chat
 - app-chrome.tsx
 - Phase 1 — Foundation
-- cn
+- destinations-page.tsx
 - Shared React TSConfig
 - Tokens TSConfig
 - Nest CLI Config
@@ -160,8 +160,8 @@
 - Q4 — Fees & Internal Costs
 - Q7 — Guest Invitations & RSVP
 - AMPM Developer Technical Specification v1.0 (SPEC)
-- hotel-compare-table.tsx
-- LeadView
+- hotels.format.ts
+- leads.service.ts
 - devDependencies
 - env
 - re
@@ -170,14 +170,14 @@
 - Q25 — Material-Change Thresholds
 - Q8 — Identity-Document Collection
 - name
-- Background jobs (§9): idempotent and outcome-recorded
-- AppLogger
+- about-cta.tsx
+- JobQueue
 - Q16 — Currency & Language
 - Q23 — Post-Wedding Access
 - Q6 — Staff Access Control
-- screen.tsx
+- hotel-import-screen.tsx
 - Web PostCSS Config
-- RateLimit
+- subscriptions.controller.ts
 - Q22 — No Vendor or Hotel Logins
 - app.module.ts
 - Q18 — Multiple Hotels per Wedding
@@ -185,7 +185,7 @@
 - Q24 — Feedback & Archiving
 - Requirement 11 — Internal Use Only
 - Phase 5 — Stabilisation & Launch
-- api-client/src/index.ts
+- core/src/index.ts
 - Tokens Package Readme
 - Assumption A-29
 - Assumption P-10 — Finance Exposure
@@ -221,8 +221,8 @@
 - Obsidian Vault
 - media.format.ts
 - SectionHeading
-- AuditService
-- use-accounts.ts
+- ConfigService
+- client-code-step.tsx
 - memory_hook.sh
 - _matches
 - clamav-scanner.ts
@@ -233,7 +233,7 @@
 - scripts
 - PrismaPermissionSetsRepository
 - nativewind
-- use-hotel-rates.ts
+- text-field.tsx
 - web.tsx
 - 3. Horizon 1 — Close the gap (frontend for backend we already have)
 - entitlements.ts
@@ -244,7 +244,7 @@
 - audit-log.service.ts
 - Build verification, 27 October 2026
 - golden/transitions.ts
-- media-upload.service.ts
+- media.module.ts
 - route
 - commercial.fixtures.tsx
 - checkpoint_test.sh
@@ -252,22 +252,22 @@
 - monday.com board sync
 - vault_sync.py
 - Permission assumptions P-1 to P-11
-- use-hotel-enquiries.ts
+- apps/api - NestJS 12 + Prisma 7 on PostgreSQL 16
 - Client portal: engaged wedding CP-20 to CP-42 (Phases 2 to 4)
 - dependencies
 - site_build.mjs
 - uiCopy
 - scan_secrets.py
-- hotels.view.ts
-- configuration.format.ts
+- health.controller.ts
+- use-field-notes.ts
 - AMPM User-Flow Diagrams (DRAFT v0.2)
-- callout.tsx
-- hotels.format.ts
-- transitions.test.ts
+- IconName
+- crm.module.ts
+- StaffRole
 - app-chrome.test.tsx
 - WHY: Why AMPM App
 - seed.ts
-- config.service.ts
+- Audit — free & low-cost SMS services for client login (OTP)
 - tokens/src/index.ts
 - services
 - worker
@@ -298,13 +298,13 @@
 - blackbox-exporter
 - blackbox-exporter
 - visibility.ts
-- roles-screen.tsx
+- capability-picker.tsx
 - postgres
 - progress-bar.tsx
 - use-ampm-sign-in.ts
 - postgres
 - postgres
-- otp-input.tsx
+- PrismaStaffUsersRepository
 - restore
 - Monitoring and alerts runbook (feature 6.7, D-054)
 - http
@@ -334,8 +334,8 @@
 - db-metrics
 - migrate
 - prometheus
-- use-field-notes.ts
-- Button
+- FieldNoteView
+- useToast
 - deploy.yml
 - deploy
 - alertmanager
@@ -343,12 +343,12 @@
 - pgbackrest
 - prometheus
 - Host bootstrap runbook (feature 6.5, D-052)
-- app-error.filter.ts
+- AppLogger
 - Avatar
 - with
 - context
 - accounts.test-utils.tsx
-- hotel-actions.tsx
+- saved-hotels-staff.controller.ts
 - env
 - build
 - steps
@@ -361,41 +361,41 @@
 - destinations-section.tsx
 - deploy.sh
 - ship-source.test.sh
-- T-6 Authentication inside the API
+- Integration plan (§10): one adapter per provider
 - devDependencies
-- subscription-report.repository.ts
-- RolesService
+- subscription-report.controller.ts
+- AMPM App — Compiled Questions & Answers (Q1-Q25 + hotel discovery demo requirements)
 - x-prod-env
 - smoke-monitoring.sh
 - smoke-restore.sh
 - glow-backdrop.tsx
 - collect-metrics.sh
 - backup.sh
-- proposal-draft.ts
+- leads.form.ts
 - creation_rules
 - scheduler.sh
 - environment
 - video.tsx
-- mobile/package.json
+- data-table.tsx
 - decrypt-secrets.sh
 - restore.sh
-- core/src/index.ts
+- dates.ts
 - AMPM Technical Architecture and Integration Plan (DRAFT v0.2)
 - styles.ts
-- media.repository.ts
-- dependencies
+- What was built
+- mobile/package.json
 - SpikeModule
 - session.ts
 - styles.test.ts
 - ship-source.sh
-- media.service.ts
+- MemoryStore
 - matrix-load.ts
-- Principal
+- RequirePermission
 - screen-header.tsx
 - glow-orbs.tsx
 - T2 Record detail with tabs template
-- engine.ts
-- LocalStorageAdapter
+- main
+- media-acceptance.e2e-spec.ts
 - notification-templates-screen.tsx
 - MediaUploadService
 - Team workspace (TW screens)
@@ -416,15 +416,15 @@
 - scripts
 - Test deployment — app.ampmverse.com and site.ampmverse.com (throwaway test box)
 - use-ampm-client-activation.ts
-- expo@~58.0.26
+- PlansResponse
 - The Open Points (R1 to R19)
 - Backup alerts
-- expo-device@~58.0.5
+- mobile/jest.config.mjs
 - Incident response (feature 6.8, D-056)
 - deploy-web.sh
-- expo-font
+- Key flow 7.3: approval of a vendor proposal version
 - apps/api - NestJS 12 + Prisma 7 on PostgreSQL 16
-- expo-glass-effect@~58.0.5
+- i18n/index.ts
 - api
 - redeploy-site.sh
 - redeploy-box.sh
@@ -433,22 +433,20 @@
 - Phase 0 — Sprint 0 and Bootstrap
 - Sprint 0 Lock List
 - Upgrade PostgreSQL to a new major version (feature 6.8, D-056)
-- expo-router@~58.0.32
+- Offline spike: the team app's local store and sync library
 - scripts
 - Offline-first (largest technical risk)
 - The Permission Pipeline (eight steps)
 - Input
 - verify-shipped-source.sh
-- SiteContainer
-- staff.ts
+- GlowOrbs
+- Host alerts
 - notification-template-edit-sheet.tsx
-- proposal-lines-editor.tsx
-- expo-sqlite
+- AMPM VPS runbooks (feature 6.8, D-056)
 - Amazon Cognito — setup guide (retired)
-- expo-symbols@~58.0.5
 - Data layer (§8)
 - TW-35 Function workspace
-- enquiry-next-step.ts
+- consultancy.ts
 - expo-blur
 - PrismaRolesRepository
 - services
@@ -459,17 +457,12 @@
 - backup-media.sh
 - @types/react@catalog:
 - prod-secrets.sh
-- nativewind@catalog:
 - api
 - web
 - notifications.format.ts
 - seed-reference.ts
-- consultancy-admin.form-widgets.tsx
 - record-rows.ts
-- react-native@0.88.1
-- agreement-create-form.tsx
-- roles.service.ts
-- permission-sets.controller.ts
+- catalog.ts
 - render.ts
 - redeploy-prod.sh
 - clamav
@@ -486,29 +479,12 @@
 - healthcheck
 - stat.tsx
 - limits
-- expo-blur@~58.0.6
-- react-native-worklets@0.13.0
-- @expo-google-fonts/rozha-one
-- expo-splash-screen
-- expo-status-bar
-- expo-video@~58.0.14
-- react@catalog:
-- react-dom@catalog:
-- react-native-gesture-handler@~3.3.0
-- react-native-qrcode-svg
-- react-native-reanimated@4.7.1
-- react-native-safe-area-context@~5.11.1
-- react-native-svg@15.16.0
+- session.ts
 - seed-hotel-subresources.ts
-- use-new-request.ts
-- Build verification, 31 October 2026
-- PermissionSetView
-- formatAmount
-- StorageModule
 
 ## God Nodes (most connected - your core abstractions)
-1. `Stack()` - 550 edges
-2. `Text()` - 531 edges
+1. `Stack()` - 552 edges
+2. `Text()` - 533 edges
 3. `Principal` - 296 edges
 4. `cn()` - 292 edges
 5. `Row()` - 282 edges
@@ -519,6 +495,8 @@
 10. `@nestjs/common` - 203 edges
 
 ## Surprising Connections (you probably didn't know these)
+- `Rule 4 — Show Clear Statuses (pending, in progress, awaiting approval, confirmed, completed)` --semantically_similar_to--> `Statuses and Workflow Rules (lead, subscription, hotel enquiry, wedding project, approval, task, room allocation, function readiness, incident, wedding closure)`  [INFERRED] [semantically similar]
+  reference_docs/AMPM Website & App —  Business Explanation for Developer.pdf → graphify-out/converted/AMPM_Developer_Technical_Specification_v1_4babf6ee.md
 - `Client Portal Navigation (Home, My Wedding, Approvals, More)` --semantically_similar_to--> `Client Portal — Engaged Wedding Client Screens (dashboard, overview and decision-maker contacts, functions, client-facing budget, vendor options, design studio, invitations/save-the-dates, RSVP progress, menus, documents and notifications)`  [INFERRED] [semantically similar]
   reference_docs/AMPM_Client_Portal_Visual_Flowchart.pdf → graphify-out/converted/AMPM_Developer_Technical_Specification_v1_4babf6ee.md
 - `Developer Acceptance Checklist (first-release scenarios that must pass before approval)` --semantically_similar_to--> `Acceptance Test Scenarios (15 scenarios: enquiry capture, subscription scope, demo isolation, pricing freshness, private negotiation notes, project permissions, independent functions, vendor shortlist size, version-locked approvals, de-duplicated RSVP, attendance impacts, URL/API/file access control, readiness exceptions, incidents, closure checks)`  [INFERRED] [semantically similar]
@@ -527,8 +505,6 @@
   reference_docs/Why AMPM App.pdf → graphify-out/converted/AMPM_Developer_Technical_Specification_v1_4babf6ee.md
 - `AMPM as a Private, Paid, Client-Based Platform` --semantically_similar_to--> `Product Definition — connected wedding-planning and management platform from enquiry and paid hotel discovery through consultancy, planning, guest management, execution and closure (not merely a public hotel or vendor directory)`  [INFERRED] [semantically similar]
   reference_docs/Why AMPM App.pdf → graphify-out/converted/AMPM_Developer_Technical_Specification_v1_4babf6ee.md
-- `Rule 4 — Show Clear Statuses (pending, in progress, awaiting approval, confirmed, completed)` --semantically_similar_to--> `Statuses and Workflow Rules (lead, subscription, hotel enquiry, wedding project, approval, task, room allocation, function readiness, incident, wedding closure)`  [INFERRED] [semantically similar]
-  reference_docs/AMPM Website & App —  Business Explanation for Developer.pdf → graphify-out/converted/AMPM_Developer_Technical_Specification_v1_4babf6ee.md
 
 ## Import Cycles
 - None detected.
@@ -571,127 +547,127 @@
 - **Contract-first feature build flow (schema -> policy -> Prisma -> hook -> UI -> tests)** — docs_contributing_zod_schemas, docs_contributing_permission_row, docs_contributing_prisma_model, docs_contributing_tanstack_hook, docs_contributing_ui_screen, docs_contributing_tests [INFERRED 0.90]
 - **Bootstrap plan phases 1-6 (D-017 to D-023, each ending pnpm check green)** — docs_engineering_standards_step1_skeleton, docs_engineering_standards_step2_styling, docs_engineering_standards_step3_quality, docs_engineering_standards_step4_ui, docs_engineering_standards_step5_domain_api, docs_engineering_standards_step6_handover [INFERRED 0.95]
 
-## Communities (505 total, 91 thin omitted)
+## Communities (481 total, 69 thin omitted)
 
-### Community 0 - "enquiries.service.ts"
-Cohesion: 0.03
-Nodes (90): buildEnquiryWrite(), EnquiriesClientService, isOpenEnquiryConflict(), build(), makeRow(), request, staff, buildStaffPatch() (+82 more)
+### Community 0 - "apps_api_src_generated_prisma_client"
+Cohesion: 0.02
+Nodes (118): defineEvent(), DomainEvent, EventBus, EventHandler, userJoined, milestoneDue, MilestoneEvent, milestoneEventPayload (+110 more)
 
 ### Community 1 - "User flows"
 Cohesion: 0.03
-Nodes (74): AM-12: invitations are design work (Phase 2) and distribution work (Phase 3), AM-14: 'a paid business asset' could hint at licensing to other planners, AM-3: function readiness versus a function's own status, AM-6: 'Database' under More read as the hotel database, AM-8: 'three distinct environments' - three hosted systems or three experiences of one, AMPM Website & App — Simple Business Explanation for Developer, AMPM business process (Steps 1-10), CF-1: the demo belongs to neither the four experiences nor the three environments, and to no phase (+66 more)
+Nodes (97): AMPM Platform — Your Brief, Annotated, Fifteen acceptance test scenarios, AM-12: invitations are design work (Phase 2) and distribution work (Phase 3), AM-14: 'a paid business asset' could hint at licensing to other planners, AM-2: a function's venue may be outside the hotel database and a wedding may use more than one hotel, AM-3: function readiness versus a function's own status, AM-5: room category capacity - number of rooms or people per room (now two fields), AM-6: 'Database' under More read as the hotel database (+89 more)
 
 ### Community 2 - "AuthTokenService"
-Cohesion: 0.03
-Nodes (113): ioredis@^6.0.0, MemoryRateLimitStore, RateLimitStore, RedisRateLimitStore, fakeRedis(), AuthTokenService, CHALLENGE_MAX_ATTEMPTS, hashToken() (+105 more)
+Cohesion: 0.02
+Nodes (113): MemoryRateLimitStore, RateLimitHit, RateLimitStore, RedisRateLimitStore, fakeRedis(), ENV, AuthTokenService, CHALLENGE_MAX_ATTEMPTS (+105 more)
 
 ### Community 3 - "AMPM's Answers and Business Rules"
-Cohesion: 0.09
-Nodes (57): Decisions AMPM Must Confirm Before Implementation (commercial plans, service catalogue, approvals, financial visibility, hotel data governance, guest communications, identity documents, languages/currency, technology ownership, launch scope), Technical and Non-Functional Requirements (responsive desktop/tablet/mobile; shared backend with separate experiences; secure role-based project-scoped auth; server-side validation; encryption; private file storage; audit trail; backups; search/bulk operations; media optimisation; configurable commercial rules; duplicate-submission prevention; retention rules; documented integration boundaries), Decisions Still to Be Confirmed by AMPM (subscription price/duration/inclusions, cancellation and refund terms, hotel service fees, management fees and payment stages, release scope, roles and data-access rules), AMPM App — Compiled Questions & Answers (Q1-Q25 + hotel discovery demo requirements), EVA (AMPM team authority: maintains hotel data, approves operational exceptions, accesses guest counts), Hotel Discovery Demo Requirements (no independent registration; mobile + OTP login; max three locations with limited hotel info and street view; approximate pricing; optional 15-20 min Zoom call; AMPM-created account; INR 50,000 one-month fee; read-only after expiry; full modules only after confirming complete management), Q1 — iOS and Android apps with offline access and automatic sync on reconnect, Q2 — Subscription payment: AMPM creates the account or sends an invitation link; client enters basic wedding details; online card and UPI (+49 more)
+Cohesion: 0.13
+Nodes (41): Decisions AMPM Must Confirm Before Implementation (commercial plans, service catalogue, approvals, financial visibility, hotel data governance, guest communications, identity documents, languages/currency, technology ownership, launch scope), Table: audit_events (id, actor_id, action, entity_type/id, timestamp, metadata; important change history), Technical and Non-Functional Requirements (responsive desktop/tablet/mobile; shared backend with separate experiences; secure role-based project-scoped auth; server-side validation; encryption; private file storage; audit trail; backups; search/bulk operations; media optimisation; configurable commercial rules; duplicate-submission prevention; retention rules; documented integration boundaries), User Roles and Permissions (Super Admin, Sales/Relationship Manager, Hotel/Destination Team, Wedding Project Manager, Creative/Design Team, Vendor Coordinator, RSVP/Guest Team, Hospitality/Logistics Team, Finance/Accounts, Client/Family Decision-Maker, Guest), Access Control (role-based permissions, internal vs client data, activity history), Q1 — iOS and Android apps with offline access and automatic sync on reconnect, Q5 — Two authorised family representatives (one bride side, one groom side) using the same login credentials; families decide who manages the portal, Q7 — RSVP: separate bride/groom links or one common link (TBD); guests cannot see others or edit submissions; corrections via change request or RSVP caller; representatives view but cannot change the RSVP list; EVA's team sees guest counts (+33 more)
 
 ### Community 4 - "peerDependencies"
 Cohesion: 0.15
 Nodes (13): expo@~58.0.26, expo-image@~58.0.18, react-native@0.88.1, react-native-svg@15.16.0, expo, expo-image, react-native, react-native-svg (+5 more)
 
 ### Community 5 - "request-context.ts"
-Cohesion: 0.05
-Nodes (30): storage, hotelParam, HotelReferencesController, referenceParam, staffId(), CLIENT_REFERENCE_SELECT, HotelReferencesRepository, REFERENCE_SELECT (+22 more)
+Cohesion: 0.08
+Nodes (19): hotelParam, HotelReferencesController, referenceParam, staffId(), CLIENT_REFERENCE_SELECT, HotelReferencesRepository, REFERENCE_SELECT, WeddingReferenceClientRow (+11 more)
 
-### Community 6 - "proposals.service.ts"
-Cohesion: 0.04
-Nodes (59): isProposalTransitionAllowed(), PROPOSAL_TRANSITIONS, TERMINAL_PROPOSAL_STATUSES, ProposalsClientController, ProposalsClientService, proposalAccepted, proposalDeclined, ProposalEvent (+51 more)
+### Community 6 - "ProposalsRepository"
+Cohesion: 0.09
+Nodes (9): ProposalsClientController, ProposalsClientService, ProposalsRepository, ProposalProps, HotelProposalClientPage, HotelProposalClientView, HotelProposalDecisionRequest, HotelProposalListQuery (+1 more)
 
 ### Community 7 - "Round-Two Open Questions (R1 to R19)"
 Cohesion: 0.05
-Nodes (68): Milestone schedule and cost estimate, CF-5: AMPM creates every account (Why note) versus a payment journey from the website (specification), Cost estimate and milestone schedule (held), Decisions AMPM must confirm (specification §13), GP-18: no tax fields, GP-31: secure authentication not specified (client sign-in, staff second factor, password reset), GP-32: notifications have no channels or preferences defined, GP-6: no records or rules for wedding-management payment stages (+60 more)
+Nodes (71): Architecture (architecture.md), Milestone schedule and cost estimate, Part B8: architecture.md, Identifier family R1 to R19 (open after the 25 October answers), Decisions AMPM must confirm (specification §13), GP-31: secure authentication not specified (client sign-in, staff second factor, password reset), GP-4: recurring versus one-time subscription not stated, GP-6: no records or rules for wedding-management payment stages (+63 more)
 
 ### Community 8 - "PrismaService"
 Cohesion: 0.02
-Nodes (51): BootstrapAdminInput, BootstrapAdminOutcome, bootstrapSuperAdminIn(), createInvitedStaff(), precheck(), PrismaService, issueInviteToken(), CreateArg (+43 more)
+Nodes (48): BootstrapAdminInput, BootstrapAdminOutcome, bootstrapSuperAdminIn(), createInvitedStaff(), precheck(), PrismaService, issueInviteToken(), CreateArg (+40 more)
 
 ### Community 9 - "json"
 Cohesion: 0.05
 Nodes (51): _apply(), _complete_part(), find(), _in_escape(), _is_newer_copy(), main(), _mask_in_place(), _open_lock() (+43 more)
 
-### Community 10 - "formatDay"
+### Community 10 - "finance-screen.tsx"
 Cohesion: 0.04
-Nodes (117): FinanceRoute(), AccountPayments(), AccountPaymentsProps, PaymentRow(), AccountSavedHotelRow(), AccountSavedHotels(), AccountSavedHotelsProps, SavedHotelList() (+109 more)
+Nodes (100): FinanceRoute(), AccountHeader(), HeaderActions(), AccountPayments(), AccountPaymentsProps, PaymentRow(), buildPaymentBody(), emptyPaymentDraft() (+92 more)
 
 ### Community 11 - "hotel-rates.controller.ts"
 Cohesion: 0.06
-Nodes (29): cardParam, hotelParam, itemParam, decimalToMoney(), moneyToDecimalString(), HotelRatesRepository, RATE_CARD_SELECT, RATE_ITEM_SELECT (+21 more)
+Nodes (35): cardParam, hotelParam, itemParam, decimalToMoney(), moneyToDecimalString(), HotelRatesRepository, RATE_CARD_SELECT, RATE_ITEM_SELECT (+27 more)
 
 ### Community 12 - "ui/src/index.ts"
 Cohesion: 0.04
-Nodes (88): AccountRoute(), GalleryRoute(), AccessCard(), AccountDetails(), AppLink, AppLinks(), EntitlementRows(), FIELD_NOTES (+80 more)
+Nodes (84): AccountRoute(), GalleryRoute(), AccessCard(), AccountDetails(), AppLink, AppLinks(), EntitlementRows(), FIELD_NOTES (+76 more)
 
 ### Community 13 - "AMPM Developer Technical Specification v1.0 (20 October 2026)"
 Cohesion: 0.09
-Nodes (37): AMPM Developer Technical Specification v1.0 (20 October 2026), Acceptance Test Scenarios (15 scenarios: enquiry capture, subscription scope, demo isolation, pricing freshness, private negotiation notes, project permissions, independent functions, vendor shortlist size, version-locked approvals, de-duplicated RSVP, attendance impacts, URL/API/file access control, readiness exceptions, incidents, closure checks), AMPM Team Workspace (leads, hotels, projects, vendors, budgets, guests, approvals, execution; role-based and project-scoped access), Client Portal (hotel discovery for subscribers; wedding workspace for engaged clients; access depends on subscription, service agreement and project permissions), Client Portal — Engaged Wedding Client Screens (dashboard, overview and decision-maker contacts, functions, client-facing budget, vendor options, design studio, invitations/save-the-dates, RSVP progress, menus, documents and notifications), Deliverables Expected from the Development Team (wireframes, user-flow diagrams, ER diagram and schema/migrations, field matrix, role/permission matrix, architecture and integration plan, milestone schedule and cost, test cases, deployment/backup/handover documentation), Field Specification Pattern (name, type/validation, who edits, client/internal visibility, requiredness by stage, automation and report impact; example fields incl. hotel verification date, vendor decision, approval decision, identity document), Four Connected Experiences with Access Rules (public website, client portal, AMPM team workspace, guest RSVP portal) (+29 more)
+Nodes (35): AMPM Developer Technical Specification v1.0 (20 October 2026), Acceptance Test Scenarios (15 scenarios: enquiry capture, subscription scope, demo isolation, pricing freshness, private negotiation notes, project permissions, independent functions, vendor shortlist size, version-locked approvals, de-duplicated RSVP, attendance impacts, URL/API/file access control, readiness exceptions, incidents, closure checks), AMPM Team Workspace (leads, hotels, projects, vendors, budgets, guests, approvals, execution; role-based and project-scoped access), Client Portal (hotel discovery for subscribers; wedding workspace for engaged clients; access depends on subscription, service agreement and project permissions), Client Portal — Engaged Wedding Client Screens (dashboard, overview and decision-maker contacts, functions, client-facing budget, vendor options, design studio, invitations/save-the-dates, RSVP progress, menus, documents and notifications), Deliverables Expected from the Development Team (wireframes, user-flow diagrams, ER diagram and schema/migrations, field matrix, role/permission matrix, architecture and integration plan, milestone schedule and cost, test cases, deployment/backup/handover documentation), Field Specification Pattern (name, type/validation, who edits, client/internal visibility, requiredness by stage, automation and report impact; example fields incl. hotel verification date, vendor decision, approval decision, identity document), Four Connected Experiences with Access Rules (public website, client portal, AMPM team workspace, guest RSVP portal) (+27 more)
 
 ### Community 14 - "stories/index.ts"
-Cohesion: 0.04
-Nodes (75): video(), stories, TEAM, stories, EXAMPLES, stories, CheckboxProps, Demo() (+67 more)
+Cohesion: 0.05
+Nodes (66): TEAM, stories, EXAMPLES, stories, Demo(), DemoProps, stories, ConfirmSheetProps (+58 more)
 
 ### Community 15 - "lead-detail-screen.tsx"
-Cohesion: 0.06
-Nodes (61): activityStep(), LeadActivityCardProps, STATE_LABELS, Timeline(), TimelineSkeleton(), LeadAdvanceButton(), cardLabel(), LeadBoardCard() (+53 more)
+Cohesion: 0.05
+Nodes (81): LeadRoute(), activityStep(), LeadActivityCard(), LeadActivityCardProps, STATE_LABELS, Timeline(), TimelineSkeleton(), LeadActivitySheet() (+73 more)
 
 ### Community 16 - "Decision Brief Open Areas"
 Cohesion: 0.06
 Nodes (33): Screen prefixes PUB, AUTH, DM, CP, TW, GR, Demo reached by mobile OTP, Four experiences in one system, Guest identity documents, never Aadhaar, Margin model with separate internal cost, Offline wedding-day operations, Private RSVP link per household, Q1 - Website or native app, and is offline use required (+25 more)
 
 ### Community 17 - "Part B: developer drafts"
-Cohesion: 0.05
-Nodes (72): decision-register.md, Acceptance-criterion test cases (AC-nn.m), AMPM (client), AMPM's answers of 25 October 2026 (reference_docs/answers/), AMPM Dashboard.base, AMPM Platform Design Package, Annotated brief (review/annotated-brief.md), Architecture (architecture.md) (+64 more)
+Cohesion: 0.06
+Nodes (59): decision-register.md, Acceptance-criterion test cases (AC-nn.m), AMPM Dashboard.base, Annotated brief (review/annotated-brief.md), Assumption prefixes A, P, T, U, W, V, Assumption registers (A, P, T, U, W, V), Assumptions taken (review/assumptions-taken.md), Audit findings (CF, GP, AM, RK) (+51 more)
 
 ### Community 18 - "layout/index.ts"
-Cohesion: 0.12
-Nodes (37): cellLayout(), ColumnTable(), DataRow(), DataRowProps, DataTableProps, HeaderRow(), DataTableRowFrame(), DataTableRowFrameProps (+29 more)
+Cohesion: 0.14
+Nodes (30): ColumnsProps, keyOf(), DividerProps, GridColumns, GridProps, rowsOf(), Align, alignClass (+22 more)
 
 ### Community 19 - "AMPM Role and Permission Matrix (DRAFT v0.2)"
 Cohesion: 0.07
-Nodes (37): S3 restricted identity bucket (separate KMS key, no CDN, access audited), Export pipeline in the worker with class stripping and audit, File handling controls, Authorisation test suite generated from the permission matrix, Identity document controls, Integration: accounting export (CSV, Tally XML if used), Job: export build, Policy and entitlements module (+29 more)
+Nodes (35): S3 restricted identity bucket (separate KMS key, no CDN, access audited), Export pipeline in the worker with class stripping and audit, Authorisation test suite generated from the permission matrix, Identity document controls, Integration: accounting export (CSV, Tally XML if used), Job: export build, Policy pipeline: eight-step enforcement of the permission matrix (§6), Security and privacy controls by layer (§11) (+27 more)
 
 ### Community 20 - "Specification Amendments and Rules"
 Cohesion: 0.09
 Nodes (24): Added requirement: configurable settings for subscription price and duration, demo limits, categories, thresholds and approval rules, Added requirement: tracked request statuses submitted, under review, accepted, rejected, implemented, closed, Decision Q21: change requests submitted, reviewed, accepted or rejected, implemented, closed; new version on a change to an approved item, Decision Q25: material-change thresholds configurable; values and approval rules to be defined by AMPM, AM-4 Material changes undefined, BIZ: AMPM Website and App Business Explanation for Developer, CF-7 Roles: proposal or decision, GP-10 Saved hotels, favourites and compare have no entity (+16 more)
 
 ### Community 21 - "Specification Data Model and Phases"
-Cohesion: 0.14
-Nodes (39): Function Readiness Status (not started, in progress, blocked, ready, live, completed; requires the checklist or a documented authorised exception), Module: Administration (user, role, permission, notification, audit event, configuration -> secure configurable operation), Module: Budget / Finance (budget category/line, quote, contract, invoice, payment, cost entry -> estimate, approval, actuals, variance), Module: Creative / Approvals (design brief, version, comment, approval, change request -> versioned creative decisions), Module: Food / Entertainment / Production (menu version, artist booking, technical rider, production item, readiness check -> function readiness), Module: Functions (function, schedule, checklist, venue, run-of-show -> function-level plans connected to the wedding), Module Inventory (14 modules with core records and outcomes), Module: Invitations / RSVP (invitation, recipient, guest, family group, response, attendance -> invitation-to-attendance workflow) (+31 more)
+Cohesion: 0.11
+Nodes (52): Function Readiness Status (not started, in progress, blocked, ready, live, completed; requires the checklist or a documented authorised exception), Module: Administration (user, role, permission, notification, audit event, configuration -> secure configurable operation), Module: Budget / Finance (budget category/line, quote, contract, invoice, payment, cost entry -> estimate, approval, actuals, variance), Module: Creative / Approvals (design brief, version, comment, approval, change request -> versioned creative decisions), Module: CRM / Subscriptions (lead, contact, account, subscription, payment, service agreement -> lead conversion and access control), Module: Food / Entertainment / Production (menu version, artist booking, technical rider, production item, readiness check -> function readiness), Module: Functions (function, schedule, checklist, venue, run-of-show -> function-level plans connected to the wedding), Module: Hotel Consultancy (availability enquiry, response, negotiation, site visit, proposal, booking milestone -> traceable hotel assistance) (+44 more)
 
 ### Community 22 - "web/package.json"
-Cohesion: 0.12
-Nodes (23): description, devDependencies, @ampm/tokens@workspace:*, autoprefixer@^10.6.1, postcss@^8.5.31, tailwindcss@catalog:, @types/node@catalog:, @types/react@catalog: (+15 more)
+Cohesion: 0.13
+Nodes (21): description, devDependencies, @ampm/tokens@workspace:*, autoprefixer@^10.6.1, tailwindcss@catalog:, @types/node@catalog:, @types/react@catalog:, @types/react-dom@^19 (+13 more)
 
 ### Community 23 - "api/src/env.ts"
-Cohesion: 0.04
-Nodes (49): [subject = "local:admin", email], ampmIdentityIssues(), antivirusIssues(), botCheckIssues(), deliveryIssues(), EnvIssue, EnvFields, fields (+41 more)
+Cohesion: 0.03
+Nodes (64): [subject = "local:admin", email], ampmIdentityIssues(), antivirusIssues(), botCheckIssues(), deliveryIssues(), EnvIssue, EnvFields, fields (+56 more)
 
 ### Community 24 - "AMPM Platform Wireframe Specifications (wireframes.md v0.2)"
 Cohesion: 0.14
 Nodes (25): Wireframes assumptions register W-1 to W-15 (section 0), AUTH-01 Sign in, AUTH-02 Account activation, AUTH-03 Password reset, AUTH-04 Access help, AUTH-05 Authenticator enrolment (staff), AUTH-06 Mobile OTP sign-in (prospects and clients), Authentication screens AUTH (sign-in, activation, recovery, OTP) (+17 more)
 
 ### Community 25 - "Subscription and Customer Journey"
-Cohesion: 0.11
-Nodes (30): Enquiry Form (name, contact, contact preference, tentative dates/destination, guest estimate, source/consent -> lead record in CRM), Module: CRM / Subscriptions (lead, contact, account, subscription, payment, service agreement -> lead conversion and access control), Table: client_accounts (id, primary_contact_id, status; subscriptions, service agreements, projects), Table: leads (id, source, status, contact, requirements, owner_user_id; can convert to client account), Table: service_agreements (id, account_id, service_type, scope, fee, terms_version, status; determines service access), Table: subscriptions (id, account_id, plan_id, status, starts_at, ends_at; controls hotel-discovery entitlement), CLIENTS tab — leads, profiles, follow-ups (enquiry/lead -> consultation -> questionnaire), Client Enquiry (Step 1: Instagram, ads, referrals, website; record contact, requirements, source) (+22 more)
+Cohesion: 0.16
+Nodes (22): Hotel-Discovery Subscription (Step 3), Hotel Discovery Demo Requirements (no independent registration; mobile + OTP login; max three locations with limited hotel info and street view; approximate pricing; optional 15-20 min Zoom call; AMPM-created account; INR 50,000 one-month fee; read-only after expiry; full modules only after confirming complete management), Q13 — Sign in with mobile number + OTP; no unrestricted self-registration; AMPM creates the account or sends an invitation link; demo access process to be confirmed, Client Journey: Enquiry to Wedding Management (Stages 1-4), Stage 1 — Enquiry and Demo (website enquiry; AMPM authorises demo; mobile + OTP; limited hotel info and sample pricing; optional 15-20 min Zoom call), Stage 2 — Account Creation and Subscription (AMPM creates account or invitation; basic wedding details; pay fee; activation after payment; AMPM can create accounts, send invitations, manage demo access, activate/suspend subscriptions), Stage 3 — Hotel Discovery Subscription (explore, compare, save favourites, submit enquiries; excludes complete planning and vendor selection), Stage 4 — Appointment of AMPM for the Wedding (mutual confirmation; fee determined separately; agreement recorded; project created; client and team modules activated) (+14 more)
 
 ### Community 26 - "ref_react_native"
-Cohesion: 0.05
-Nodes (45): colors, FILL, INK, variantNames, DISPLAY_NONE, KINDS, RECIPE, Harness() (+37 more)
+Cohesion: 0.06
+Nodes (41): FILL, INK, variantNames, DISPLAY_NONE, KINDS, RECIPE, Harness(), HarnessProps (+33 more)
 
 ### Community 27 - "checkbox.tsx"
 Cohesion: 0.04
-Nodes (79): CalloutBody(), TextAction, TextActionProps, BoxProps, CheckboxBox(), CheckboxRow(), CheckboxText(), ErrorProps (+71 more)
+Nodes (79): E. Component library, tokens, API client, mobile and web shells (25 findings; the reviewer executed the tailwind-merge and contrast checks and the mobile bundle check), CalloutAction, CalloutBodyProps, CalloutKind, calloutKinds, CalloutKindSpec, CalloutProps, Example (+71 more)
 
 ### Community 28 - "hotel-results.tsx"
-Cohesion: 0.04
-Nodes (96): DestinationRoute(), DestinationsRoute(), HotelsRoute(), DestinationFilter(), DestinationFilterProps, DestinationHotelsScreen(), DestinationHotelsScreenProps, DestinationTile() (+88 more)
-
-### Community 29 - "site-visits.service.ts"
 Cohesion: 0.05
-Nodes (32): isTerminalVisit(), isVisitTransitionAllowed(), TERMINAL_VISIT_STATUSES, VISIT_TRANSITIONS, SiteVisitsClientController, SiteVisitsClientService, SiteVisitsController, visitParam (+24 more)
+Nodes (76): DestinationRoute(), DestinationFilter(), DestinationHotelsScreen(), DestinationHotelsScreenProps, CompareBar(), CompareBarProps, HotelCompareCheckbox(), HotelCompareCheckboxProps (+68 more)
+
+### Community 29 - "BookingMilestoneListQuery"
+Cohesion: 0.08
+Nodes (13): BookingMilestonesClientController, BookingMilestonesClientService, SiteVisitsClientService, iso(), toSiteVisitClientView(), BookingMilestoneClientPage, BookingMilestoneClientView, BookingMilestoneListQuery (+5 more)
 
 ### Community 30 - "PNPM Workspace Catalog"
 Cohesion: 0.05
@@ -701,13 +677,13 @@ Nodes (37): allowBuilds, esbuild, lefthook, msgpackr-extract, @parcel/watcher, p
 Cohesion: 0.15
 Nodes (13): services, POSTGRES_DB, POSTGRES_PASSWORD, POSTGRES_USER, env, image, options, ports (+5 more)
 
-### Community 32 - "notification.module.ts"
-Cohesion: 0.04
-Nodes (64): GatewaySmsAdapter, SmsMessage, SmsTransport, AdapterLogger, ConsoleNotificationAdapter, NOTIFICATION_ADAPTERS, NotificationAdapter, NotificationDelivery (+56 more)
+### Community 32 - "notification.service.ts"
+Cohesion: 0.03
+Nodes (56): GatewaySmsAdapter, SmsTransport, AdapterLogger, ConsoleNotificationAdapter, NotificationAdapter, NotificationAdapters, NotificationDelivery, NotificationResult (+48 more)
 
-### Community 33 - "Text"
-Cohesion: 0.05
-Nodes (86): CapabilityPicker(), CapabilityPickerProps, ModuleSection(), ModuleSectionProps, PickerBody(), ConfigurationDetailSheet(), Field(), ConfigFieldControl() (+78 more)
+### Community 33 - "rate-cards.form.ts"
+Cohesion: 0.07
+Nodes (67): ContactEditSheetProps, NO_ERRORS, useContactForm(), facilitiesToText(), hasErrors(), intOrNull(), isWholeNumber(), numberToText() (+59 more)
 
 ### Community 34 - "Tokens Package Manifest"
 Cohesion: 0.07
@@ -715,15 +691,15 @@ Nodes (31): description, devDependencies, @ampm/config@workspace:*, tailwindcss@
 
 ### Community 35 - "PermissionSetsService"
 Cohesion: 0.13
-Nodes (8): PermissionSetRow, PermissionSetsRepository, PermissionSetsService, customSet, FakeRepository, harness(), service(), systemSet
+Nodes (5): assertAssignable(), PermissionSetsRepository, PermissionSetsService, PermissionSetCreateRequest, PermissionSetView
 
-### Community 36 - "StatusTone"
-Cohesion: 0.33
-Nodes (12): DemoStage, Chip(), ChipProps, ICON_TONE, StatusChipProps, chipDotStyles, ChipSize, ChipStyleProps (+4 more)
+### Community 36 - "lead-enquiry.service.ts"
+Cohesion: 0.08
+Nodes (22): ConvertPlan, CLOSED_LEAD_STATUSES, DEFAULT_SOURCE_KEY, PRIVACY_NOTICE_VERSION, buildEnquiryLead(), firstName(), LeadEnquiryService, toDate() (+14 more)
 
 ### Community 37 - "tab-bar-item.tsx"
 Cohesion: 0.09
-Nodes (39): Indicator(), LockGlyph(), Marked(), MarkerPlace, stateOf(), TabBarItem, TabBarTab(), TabBarTabProps (+31 more)
+Nodes (38): Indicator(), LockGlyph(), Marked(), MarkerPlace, stateOf(), TabBarItem, TabBarTab(), TabBarTabProps (+30 more)
 
 ### Community 38 - "API Client Package Manifest"
 Cohesion: 0.08
@@ -733,25 +709,25 @@ Nodes (30): dependencies, @ampm/core@workspace:*, @tanstack/react-query@catalog:
 Cohesion: 0.11
 Nodes (22): Added requirement: public website limited to company information, enquiries, demo requests, contact, login and invitation entry points, with no staff editing, AMPM App Compiled Questions and Answers (PDF, 25 Oct 2026), AMPM Management Final App Decision Brief and Developer Requirements (PDF, 25 Oct 2026), AMPM Platform Decision Log (25 Oct 2026), data-model.md, Decision Q12: no website editing in the app, Decision Q18: a wedding can involve multiple hotels and venues, Decision Q19: room blocks by hotel, category and dates; team-managed allocation; room-wise and person-wise counts (+14 more)
 
-### Community 40 - "wedding projects"
-Cohesion: 0.05
-Nodes (86): Assumptions register (§0), Coverage against the audit (§20), audit events, auth tokens, AMPM Business Rules (BIZ), client feedback, client requests, cms pages (+78 more)
+### Community 40 - "guests"
+Cohesion: 0.22
+Nodes (19): family groups, guest departures, guest function attendance, guest support requests, guests, invitation recipients, invitations, menu headcounts (+11 more)
 
 ### Community 41 - "staff-user-detail-screen.tsx"
-Cohesion: 0.19
-Nodes (24): StaffUserRoute(), authenticatorLabel(), authenticatorTone(), lastSignInLabel(), ROLE_NAME_BY_KEY, roleName(), roleSummary(), staffUserSummary() (+16 more)
+Cohesion: 0.20
+Nodes (23): StaffUserRoute(), authenticatorLabel(), authenticatorTone(), lastSignInLabel(), ROLE_NAME_BY_KEY, roleName(), roleSummary(), staffUserSummary() (+15 more)
 
 ### Community 42 - "date-range-field/date-range-field.tsx"
-Cohesion: 0.07
-Nodes (62): FiltersProps, CheckboxError(), DATE_RANGE_PRESET_KEYS, DateRange, DateRangePreset, DateRangePresetKey, DateRangeField(), DateRangeFieldProps (+54 more)
+Cohesion: 0.05
+Nodes (86): FiltersProps, DATE_RANGE_PRESET_KEYS, DateRange, DateRangePreset, DateRangePresetKey, DateRangeField(), DateRangeFieldProps, DateRangeSheet() (+78 more)
 
 ### Community 43 - "Decisions — Native Apps, Offline & Hosting"
 Cohesion: 0.08
 Nodes (29): A-1 - native apps + offline from launch, browser portals, tablets, A-13 - client OTP, staff password + TOTP, Cognito identity, A-14 - hosted on AMPM VPS (Hostinger KVM 4, Mumbai), data in India, P-6 - mobile OTP for clients; staff method TBD, T-1 - one codebase native apps + browser client build + tablet layouts, T-11 - offline-first native apps with sync & conflict detection, T-13 - pgBackRest backup & restore regime, measured RPO/RTO, T-2 - Hostinger KVM 4 Mumbai, S3 buckets, Cognito (+21 more)
 
-### Community 44 - "booking-milestones.service.ts"
-Cohesion: 0.04
-Nodes (60): defineEvent(), DomainEvent, EventBus, EventHandler, userJoined, isMilestoneTransitionAllowed(), isTerminalMilestone(), MILESTONE_TRANSITIONS (+52 more)
+### Community 44 - "Principal"
+Cohesion: 0.03
+Nodes (80): Access, recordScope, NotificationController, toView(), isMilestoneTransitionAllowed(), isTerminalMilestone(), MILESTONE_TRANSITIONS, TERMINAL_MILESTONE_STATUSES (+72 more)
 
 ### Community 45 - "T1 List and filter template"
 Cohesion: 0.13
@@ -761,17 +737,17 @@ Nodes (26): CP-31 Guest list, CP-32 Household and guest detail, CP-38 Documents 
 Cohesion: 0.09
 Nodes (27): dependencies, @ampm/core@workspace:*, description, devDependencies, @ampm/config@workspace:*, tsup@catalog:, @types/node@catalog:, typescript@catalog: (+19 more)
 
-### Community 47 - "enquiries-list-screen.tsx"
-Cohesion: 0.13
-Nodes (34): StaffEnquiryDetailRoute(), StaffEnquiriesRoute(), queueEyebrow(), EnquiriesQuery, NothingOpen(), QueueFilter, QueueHeader(), QueuePage() (+26 more)
+### Community 47 - "consultancy-admin.format.ts"
+Cohesion: 0.07
+Nodes (69): StaffEnquiryDetailRoute(), StaffEnquiriesRoute(), AccountEnquiriesProps, AccountEnquiryRow(), ASSIGNED_BADGE, enquiryClientTitle(), enquiryQueueLine(), Holder (+61 more)
 
 ### Community 48 - "Brief section 1: getting in and paying"
 Cohesion: 0.23
 Nodes (11): Added requirement: client completes basic wedding details before paying, Decision Q2: AMPM creates or invites the account; client enters basic wedding details and pays online by card or UPI, Open: payment gateway provider and transaction-handling requirements, CF-1 Three environments vs four experiences, GP-2 Trial mechanics, GP-4 One-time vs recurring subscription, Q2 Payment mode for Phase 1, Q3 Subscription shape (+3 more)
 
-### Community 49 - "use-client-access.ts"
-Cohesion: 0.09
-Nodes (30): FAILURE_COPY, Notice, OUTCOME_COPY, OutcomeKind, ActivationFailure, activationRefusal, AccountActivation, ActivationStep (+22 more)
+### Community 49 - "account-contacts.service.ts"
+Cohesion: 0.10
+Nodes (14): AccountContactsService, assertInvitable(), INVITABLE_STATUSES, inviteeFor(), ACCOUNT, CONTACT, harness(), TX (+6 more)
 
 ### Community 50 - "VPS Setup & Runbooks"
 Cohesion: 0.12
@@ -783,43 +759,43 @@ Nodes (25): prisma/ - schema (mirrors data-model.md), migrations, synthetic seed
 
 ### Community 52 - "apps_api_src_generated_prisma_client"
 Cohesion: 0.02
-Nodes (76): toClientMoney(), CreatedOrder, CreateOrderInput, ParsedWebhookEvent, parseRazorpayEvent(), PAYMENT_ADAPTER, PaymentAdapter, PaymentLogger (+68 more)
+Nodes (68): toClientMoney(), CreatedOrder, CreateOrderInput, ParsedWebhookEvent, parseRazorpayEvent(), PAYMENT_ADAPTER, PaymentAdapter, PaymentLogger (+60 more)
 
 ### Community 53 - "enquiry-fields.tsx"
-Cohesion: 0.04
-Nodes (92): ContactPage(), dynamic, metadata, ChoiceOption, ChoiceSegment(), ChoiceSegmentProps, ChoiceSegments(), ChoiceSegmentsProps (+84 more)
+Cohesion: 0.06
+Nodes (64): BotCheckFieldProps, NOTICE_STYLES, CheckboxField(), CheckboxFieldProps, ChoiceOption, ChoiceSegment(), ChoiceSegmentProps, ChoiceSegments() (+56 more)
 
-### Community 54 - "hotel-detail-screen.tsx"
+### Community 54 - "MeResponse"
 Cohesion: 0.11
-Nodes (33): useHotelPagePermissions(), HotelDesktopMainProps, HotelDesktopPage(), HotelDesktopPageProps, HotelPage(), HotelPageProps, NOT_FOUND, HotelFacilitiesProps (+25 more)
+Nodes (23): paymentFinanceViewFixture(), mockDownloadCsv, mockWindow, activeRow(), activeRowAsSubscription(), awaitingRows(), exportFor(), fakeFinanceApi (+15 more)
 
 ### Community 55 - "Team App Flowchart and Operations"
-Cohesion: 0.13
-Nodes (26): Business Journey (lead -> controlled demo -> subscription after payment -> destination/hotel discovery -> optional consultancy -> scope/fees/agreement and wedding project -> parallel planning -> 5-10 vendor options per category -> execution, departures, closure), Module: Closure (departure record, lost-and-found item, vendor completion, final account -> formal closeout), Module: Tasks / Risk (task, dependency, staff assignment, incident, resolution -> operational accountability), Notifications and Automation (payment activates only the purchased entitlement; stale pricing flagged after configurable age; approval notifications; material-change flags on budgets/contracts/tasks/run-of-show; RSVP changes recalculate attendance; logistics alerts; dashboard exceptions; incident escalation; notification log), Table: tasks / incidents (id, project_id, owner, due_at/severity, status, outcome; accountability and response), Table: travel_segments / transfers (id, guest/group_id, mode, pickup, destination, time, status; feeds transport planning), AMPM Team App — Level 1 Visual Flowchart, Access Control (role-based permissions, internal vs client data, activity history) (+18 more)
+Cohesion: 0.14
+Nodes (25): Business Journey (lead -> controlled demo -> subscription after payment -> destination/hotel discovery -> optional consultancy -> scope/fees/agreement and wedding project -> parallel planning -> 5-10 vendor options per category -> execution, departures, closure), Enquiry Form (name, contact, contact preference, tentative dates/destination, guest estimate, source/consent -> lead record in CRM), Module: Closure (departure record, lost-and-found item, vendor completion, final account -> formal closeout), Table: leads (id, source, status, contact, requirements, owner_user_id; can convert to client account), AMPM Team App — Level 1 Visual Flowchart, CLIENTS tab — leads, profiles, follow-ups (enquiry/lead -> consultation -> questionnaire), Connected Throughout (tasks & alerts, approvals & documents, budget & reporting), Qualified Client -> Create Wedding Record (unique Wedding ID + approved service scope) (+17 more)
 
 ### Community 56 - "service-agreements.service.ts"
 Cohesion: 0.04
-Nodes (43): EnquiryLookupService, actorOf(), AgreementSignedCopyService, ownerOf(), AGREEMENT_TRANSITIONS, agreementAffectsEntitlement(), isAgreementTransitionAllowed(), isStaffStatusMove() (+35 more)
+Nodes (34): EnquiryLookupModule, EnquiryLookupService, AGREEMENT_TRANSITIONS, agreementAffectsEntitlement(), isAgreementTransitionAllowed(), isStaffStatusMove(), isTerminalAgreement(), STAFF_ACCEPT_REFUSAL (+26 more)
 
 ### Community 57 - "site/index.ts"
 Cohesion: 0.05
-Nodes (83): devanagari, display, fontVariables, sans, dynamic, metadata, RootLayout(), viewport (+75 more)
+Nodes (79): dynamic, metadata, RootLayout(), viewport, ButtonLinkVariant, ChatPill(), EyebrowProps, GlassCardProps (+71 more)
 
 ### Community 58 - "monday_sync.py"
-Cohesion: 0.07
-Nodes (30): build_log_columns(), build_update_body(), _clean_body(), _collapse(), gql(), load_map(), log_pr(), main() (+22 more)
+Cohesion: 0.14
+Nodes (18): sync_card(), check_both_succeed(), check_done_stamps_date(), check_log_pr_creates_row(), check_log_pr_unconfigured(), check_note_failure_returns_false(), check_parse_pr_body_fallback(), check_parse_pr_body_sections() (+10 more)
 
 ### Community 59 - "Mobile Expo App Config"
 Cohesion: 0.07
 Nodes (28): backgroundColor, backgroundImage, foregroundImage, monochromeImage, adaptiveIcon, package, predictiveBackGestureEnabled, reactCompiler (+20 more)
 
 ### Community 60 - "API Modules and Build Phases"
-Cohesion: 0.22
-Nodes (24): Build-out by phase (§13), Key flow 7.5: daily hotel freshness job, Maintained hotel search view (tsvector and trigram index), Module boundaries inside the API (§5), Budget and finance module (G), Checklists, closure, feedback module (O), Public content module (P), Hotel consultancy module (D) (+16 more)
+Cohesion: 0.23
+Nodes (23): Build-out by phase (§13), Key flow 7.5: daily hotel freshness job, Maintained hotel search view (tsvector and trigram index), Module boundaries inside the API (§5), Budget and finance module (G), Checklists, closure, feedback module (O), Public content module (P), Hotel consultancy module (D) (+15 more)
 
 ### Community 61 - "AMPM Developer Technical Specification v1.0 (20 October 2026)"
-Cohesion: 0.06
-Nodes (36): Fifteen acceptance test scenarios, AM-1: 'a link' - one link for the whole wedding or a private link per household, AM-2: a function's venue may be outside the hotel database and a wedding may use more than one hotel, AM-4: 'material changes' has no definition, AM-5: room category capacity - number of rooms or people per room (now two fields), CF-7: specification lists eleven roles as final while the brief says roles must not be assumed, Client vs internal visibility rule (server-side enforcement), Digital Personal Data Protection Act (+28 more)
+Cohesion: 0.07
+Nodes (26): AM-1: 'a link' - one link for the whole wedding or a private link per household, AM-4: 'material changes' has no definition, Client vs internal visibility rule (server-side enforcement), Digital Personal Data Protection Act, GP-13: counting guests by family or by person left open, GP-17: payments and invoices have no direction, GP-18: no tax fields, GP-24: meal preferences and allergies not mentioned though menus and caterers need them (+18 more)
 
 ### Community 62 - "Core Package Manifest"
 Cohesion: 0.09
@@ -827,7 +803,7 @@ Nodes (26): dependencies, i18next@catalog:, zod@catalog:, description, devDepend
 
 ### Community 63 - "policy/src/index.ts"
 Cohesion: 0.06
-Nodes (71): ALL_ACTIONS, COLUMNS, BY_ID, GRANTABLE_CAPABILITIES, isAssignable(), resolveCustomGrants(), ResolvedCustomGrants, ACTION_TITLES (+63 more)
+Nodes (62): PermissionRequirement, ClientInterestPermissions, clientInterestPermissionsFor(), NONE, ALL_ACTIONS, COLUMNS, Condition, conditionMet() (+54 more)
 
 ### Community 64 - "Technology and Operations Decisions"
 Cohesion: 0.12
@@ -835,19 +811,19 @@ Nodes (24): architecture.md, Decision Q11: email and WhatsApp required, SMS prop
 
 ### Community 65 - "ref_react"
 Cohesion: 0.02
-Nodes (245): Card, AuditLogRoute(), ConfigurationRoute(), AdminRoute(), NotificationTemplatesRoute(), NotificationsLogRoute(), StaffUsersRoute(), FieldNotesRoute() (+237 more)
+Nodes (294): Card, AuditLogRoute(), ConfigurationRoute(), AdminRoute(), NotificationTemplatesRoute(), NotificationsLogRoute(), RolesRoute(), StaffUsersRoute() (+286 more)
 
 ### Community 66 - "Shared Base TSConfig"
 Cohesion: 0.08
 Nodes (23): compilerOptions, declaration, declarationMap, esModuleInterop, exactOptionalPropertyTypes, forceConsistentCasingInFileNames, isolatedModules, lib (+15 more)
 
-### Community 67 - "recordScope"
-Cohesion: 0.10
-Nodes (17): isInScope(), LIVE, recordScope, ScopedRecord, FieldNoteController, projectParams, FieldNoteService, EVERY_PROJECT (+9 more)
+### Community 67 - "accounts.ts"
+Cohesion: 0.09
+Nodes (18): AccountsController, AccountClientView, AccountContactCreateRequest, AccountContactRemovedResponse, AccountContactUpdateRequest, AccountListQuery, accountName, AccountPage (+10 more)
 
-### Community 68 - "account-detail-screen.tsx"
-Cohesion: 0.05
-Nodes (76): AccountContactSheet(), AccountContactSheetProps, ContactIdentityFields(), ContactReachFields(), ContactTarget, InviteOrAccess(), AccountContacts(), AccountContactsProps (+68 more)
+### Community 68 - "ServiceAgreementListQuery"
+Cohesion: 0.13
+Nodes (6): ServiceAgreementsClientController, ServiceAgreementsClientService, makeEnquiry(), ServiceAgreementClientPage, ServiceAgreementClientView, ServiceAgreementListQuery
 
 ### Community 69 - "nav-rail.tsx"
 Cohesion: 0.10
@@ -857,25 +833,25 @@ Nodes (39): Badge(), BadgeContent, BadgeProps, badgeLabelStyles, BadgeStyleProps
 Cohesion: 0.13
 Nodes (21): Added requirement: demo after mobile OTP with up to three locations and sample hotels with indicative prices, Added requirement: staff offline scope with visible sync state, conflict detection and role-limited local data, Decision Q1: native iOS and Android apps with offline wedding-day access and sync, Decision Q23: three months read-only client access after the wedding, then archive on AMPM approval, Decision Q3: hotel-discovery subscription Rs 50,000 one-time for one month; demo via OTP instead of a trial, Open: exact demo duration and final hotel and location limits, Open: exact workflow for archiving projects and restoring access after archiving, Open: final material-change thresholds and approval rules (+13 more)
 
-### Community 71 - "saved-hotel-card.tsx"
-Cohesion: 0.18
-Nodes (23): destinationLabel(), starLabel(), SavedHotelActions(), SavedHotelActionsProps, CardHeading(), Fact(), SavedHotelCard(), SavedHotelCardProps (+15 more)
+### Community 71 - "sms-transports.ts"
+Cohesion: 0.14
+Nodes (17): SmsMessage, bodyOf(), MESSAGE, SECRETS, TWO_FACTOR, Msg91Config, Msg91SmsTransport, msg91Success (+9 more)
 
 ### Community 72 - "API TSConfig"
 Cohesion: 0.10
 Nodes (20): compilerOptions, allowSyntheticDefaultImports, declaration, emitDecoratorMetadata, esModuleInterop, experimentalDecorators, incremental, isolatedModules (+12 more)
 
 ### Community 73 - "Standards, Contributing & Handover"
-Cohesion: 0.13
-Nodes (18): Before a feature, Before a merge, Building it, CI (.github/workflows/ci.yml), Commits, hooks and CI, Commits, hooks & CI, Contributing: how a feature is built and merged, lefthook (Prettier, ESLint on staged, commitlint) (+10 more)
+Cohesion: 0.10
+Nodes (23): Web export - browser version of the client portals, Before a feature, Before a merge, Building it, CI (.github/workflows/ci.yml), Commits, hooks and CI, Commits, hooks & CI, Contributing: how a feature is built and merged (+15 more)
 
 ### Community 74 - "parse-matrix.ts"
 Cohesion: 0.06
-Nodes (52): PermissionRequirement, lookup(), TABLES, EDITS_BEYOND_READ, NO_GRANT_CELLS, OTHER_NOTES, OTHER_PREFIXES, OTHER_VERBS (+44 more)
+Nodes (54): lookup(), TABLES, EDITS_BEYOND_READ, NO_GRANT_CELLS, OTHER_NOTES, OTHER_PREFIXES, OTHER_VERBS, READINGS (+46 more)
 
 ### Community 75 - "ampm-activate-screen.tsx"
 Cohesion: 0.04
-Nodes (94): ActivateRoute(), inviteTokenOf(), ForgotPasswordRoute(), ResetPasswordRoute(), tokenOf(), SignInRoute(), ActivateScreen(), ActivationCard() (+86 more)
+Nodes (99): ActivateRoute(), inviteTokenOf(), ForgotPasswordRoute(), ResetPasswordRoute(), tokenOf(), SignInRoute(), ActivateScreen(), ActivationCard() (+91 more)
 
 ### Community 76 - "Root Workspace & Turbo"
 Cohesion: 0.05
@@ -885,29 +861,29 @@ Nodes (44): description, devDependencies, @commitlint/cli@^21.2.4, @commitlint/c
 Cohesion: 0.06
 Nodes (41): boundaries, frameworkFree, noApps, noFrameworkRouting, presentational, ampm, ARBITRARY, arbitraryValueSelectors (+33 more)
 
-### Community 78 - "permission.guard.spec.ts"
-Cohesion: 0.06
-Nodes (38): CLIENT, DEMO, membership, NO_ENTITLEMENTS, SYSTEM, PermissionGuard, projectOf(), CLIENT (+30 more)
+### Community 78 - "field-note.service.ts"
+Cohesion: 0.07
+Nodes (28): FieldNoteService, EVERY_PROJECT, MEMBER_OF_OTHER, PM, refusedWith(), writerOf(), canSee(), refusalFor() (+20 more)
 
 ### Community 79 - "principal.service.ts"
 Cohesion: 0.05
-Nodes (18): EntitlementCache, VALUE, PrincipalRecord, PrincipalRepository, PrincipalRole, PrismaPrincipalRepository, StaffRoleRecord, effectiveSubscription() (+10 more)
+Nodes (24): assigneeWhere(), ENQUIRY_HOLDER_KEY, EnquiryAssignmentService, assignment(), HEMA, EntitlementCache, VALUE, PrincipalRecord (+16 more)
 
-### Community 80 - "@nestjs/common"
-Cohesion: 0.05
-Nodes (38): RateLimitExempt(), CLIENT_READS, CLIENT_WRITES, UPLOADS, MeController, MeService, NO_ENTITLEMENTS, client (+30 more)
+### Community 80 - "principal.types.ts"
+Cohesion: 0.06
+Nodes (31): LIVE, CLIENT, DEMO, membership, NO_ENTITLEMENTS, SYSTEM, AdminModule, MeController (+23 more)
 
 ### Community 81 - "Data Platform & Identity Options"
 Cohesion: 0.15
 Nodes (7): Data Platform and Identity: Options and Prices, India data residency requirement, MSG91 (Indian DLT-registered SMS provider), S3 Mumbai identity-document bucket (hybrid), Managed identity service (Cognito in Mumbai), Supabase (solo-friendly data/auth/storage variant), Cognito (Mumbai) identity
 
-### Community 82 - "account-details-sheet.tsx"
-Cohesion: 0.08
-Nodes (44): blankToNull(), blankToUndefined(), buildContactCreate(), buildContactUpdate(), Built, changesOf(), ContactDraft, contactDraftOf() (+36 more)
+### Community 82 - "account-detail-screen.tsx"
+Cohesion: 0.05
+Nodes (80): AccountDetailRoute(), blankToNull(), blankToUndefined(), buildContactCreate(), buildContactUpdate(), Built, changesOf(), ContactDraft (+72 more)
 
 ### Community 83 - "Stack"
-Cohesion: 0.03
-Nodes (221): ProfileCard(), AccountAgreements(), AccountAgreementsProps, AgreementList(), AgreementRow(), AccountEnquiries(), AccountEnquiriesProps, AccountEnquiryRow() (+213 more)
+Cohesion: 0.02
+Nodes (305): ProfileCard(), AccountAgreements(), AccountAgreementsProps, AgreementList(), AgreementRow(), AccountContacts(), ContactChips(), ContactList() (+297 more)
 
 ### Community 84 - "Web TSConfig"
 Cohesion: 0.11
@@ -917,29 +893,29 @@ Nodes (18): compilerOptions, allowJs, esModuleInterop, incremental, isolatedModu
 Cohesion: 0.15
 Nodes (19): Decision Q17: AMPM decides privacy wording and retention; no automatic deletion, Decision Q7: RSVP links per side or combined; RSVP team loads the list; guests cannot edit after submission; per-person counting, Decision Q8: identity documents only where a hotel requires them, never Aadhaar, restricted storage, no automatic deletion, Open: final RSVP link structure, per side or one combined link, Open: privacy wording and retention periods for leads, guest records and identity documents, wireframes.md, AM-1 RSVP link model: shared wedding link vs per-guest token, GP-13 Guest atomic unit: individual vs family group (+11 more)
 
-### Community 86 - "consultancy-admin.form.ts"
-Cohesion: 0.19
-Nodes (20): amountError(), dateError(), FEE_STRUCTURE_LABEL, FEE_STRUCTURE_OPTIONS, MILESTONE_TYPE_OPTIONS, RATE_ITEM_OPTIONS, textError(), MilestoneCreateForm() (+12 more)
+### Community 86 - "leads.reminder.service.ts"
+Cohesion: 0.11
+Nodes (9): DueReminder, LeadActivitiesRepository, LeadActivityRow, LeadActivityWriteData, toRow(), leadFollowUpReminderJob, LeadReminderService, ActivityDraft (+1 more)
 
 ### Community 87 - "Turbo Pipeline Config"
 Cohesion: 0.11
 Nodes (18): dependsOn, env, outputs, cache, dependsOn, persistent, dependsOn, $schema (+10 more)
 
 ### Community 88 - "bot-check-field.tsx"
-Cohesion: 0.07
-Nodes (32): page(), BotCheck, BotCheckMount, BotCheckStatus, BotCheckTarget, BotCheckWidget, CHECKING, BotCheckField() (+24 more)
+Cohesion: 0.10
+Nodes (22): page(), BotCheck, BotCheckMount, BotCheckStatus, BotCheckTarget, BotCheckWidget, CHECKING, mountBotCheck() (+14 more)
 
-### Community 89 - "golden/classes.ts"
-Cohesion: 0.06
-Nodes (45): FINANCE_EXPORT_ROLES, NEVER_EXPORTED, RECORD_VISIBILITIES, VISIBILITY_CLASSES, VisibilityClass, baseClasses(), exportableClasses(), exportShape (+37 more)
+### Community 89 - "exports.test.ts"
+Cohesion: 0.09
+Nodes (31): ScopedRecord, DocumentRow, documentRows(), documentTableRows(), isSeparator(), lineOf(), LINES, transitionRows() (+23 more)
 
 ### Community 90 - "scrape_configs"
 Cohesion: 0.09
 Nodes (22): alerting, alertmanagers, static_configs, monitor, files, global, evaluation_interval, external_labels (+14 more)
 
 ### Community 91 - "sign-in-layout.tsx"
-Cohesion: 0.18
-Nodes (18): PartProps, SignInLayoutProps, SignInLayoutSlots, ByMode, signInAsideGap, signInAsideStyles, signInCardBodyGap, signInColumnsGap (+10 more)
+Cohesion: 0.19
+Nodes (17): PartProps, SignInLayoutProps, SignInLayoutSlots, ByMode, signInAsideGap, signInAsideStyles, signInCardBodyGap, signInColumnsGap (+9 more)
 
 ### Community 92 - "user-flows.md"
 Cohesion: 0.17
@@ -954,8 +930,8 @@ Cohesion: 0.10
 Nodes (28): all_commands(), bin_dir(), check(), copy_files(), edit_in_place(), home(), hook_commands(), hook_keys() (+20 more)
 
 ### Community 95 - "Table: hotel_verifications (id, hotel_id, field_group, verified_at, source, status; freshness of price/facility information)"
-Cohesion: 0.22
-Nodes (16): Client Portal — Hotel Discovery Screens (sign-in/activation, subscriber home, destinations, hotel search/filter, hotel detail with last-verified commercial information, compare and save, request assistance, track enquiry/negotiation/visit/proposal/booking status), Module: Hotel Consultancy (availability enquiry, response, negotiation, site visit, proposal, booking milestone -> traceable hotel assistance), Module: Hotel Intelligence (destination, hotel, room category, inventory snapshot, venue, media, verification -> curated discovery with freshness labels), Table: destinations (id, name, region, country, status; has many hotels), Table: hotel_enquiries (id, account/project_id, hotel_id, dates, guest_count, status; responses, visits, proposals, negotiation events), Table: hotel_rooms / venues (id, hotel_id, category/type, capacity, facilities; may be proposed for a wedding), Table: hotel_verifications (id, hotel_id, field_group, verified_at, source, status; freshness of price/facility information), Table: hotels (id, destination_id, profile, address, contact, status; rooms, venues, media, verification history) (+8 more)
+Cohesion: 0.24
+Nodes (13): Client Portal — Hotel Discovery Screens (sign-in/activation, subscriber home, destinations, hotel search/filter, hotel detail with last-verified commercial information, compare and save, request assistance, track enquiry/negotiation/visit/proposal/booking status), Table: hotel_verifications (id, hotel_id, field_group, verified_at, source, status; freshness of price/facility information), Additional Hotel Services (Step 5: availability checks, price negotiation, site visits, contract review, booking assistance), Hotel Exploration (Step 4: location, venues/capacities, rooms, media, previous weddings, pricing/availability), EVA (AMPM team authority: maintains hotel data, approves operational exceptions, accesses guest counts), Q9 — Hotel data: EVA provides and updates ~3 times a year; venue/room/photos/menus/approximate package pricing shown as price ranges; availability checked only on request or cart add; photo rights controlled by AMPM, Q10 — First release: hotel discovery demo + subscription workflow; OTP-gated demo with limited hotels and locations; wedding planning and vendor modules after booking; only EVA's team approves exceptions, Eva (AMPM authority who approves operational exceptions and helps maintain hotel data) (+5 more)
 
 ### Community 96 - "partition-maintenance.service.ts"
 Cohesion: 0.08
@@ -963,19 +939,19 @@ Nodes (38): BlockedPartition, emptyOutcome(), failureMessage(), PARTITION_MAINTE
 
 ### Community 97 - "ok"
 Cohesion: 0.05
-Nodes (82): SAVED_HOTEL_ID, Captured, contactFetch(), mockRouter, mockWindow, renderDetails(), Captured, detailFetch() (+74 more)
+Nodes (80): Captured, contactFetch(), mockRouter, mockWindow, renderDetails(), Captured, detailFetch(), loadedDetail() (+72 more)
 
 ### Community 98 - "Hotel Data Findings"
 Cohesion: 0.32
 Nodes (11): Added requirement: adding a hotel to the selection or cart can trigger an availability request to the hotel team, Added requirement: hotel page content distinguishing indicative, requested, verified and awaiting-confirmation information, Decision Q9: Eva maintains about 200 hotels with indicative price ranges verified about three times a year, GP-20 Media rights for previous clients' wedding photos, GP-22 Bulk import and migration, GP-8 Hotel prices have nowhere to live, GP-9 Availability has no entity or calendar, Q9 Hotel data (+3 more)
 
-### Community 99 - "PhotoPlaceholder"
-Cohesion: 0.26
-Nodes (15): MediaImage(), MediaImageProps, BackRow(), DetailLoading(), HotelBackButton(), HotelHero(), HotelHeroFrame(), HotelHeroFrameProps (+7 more)
+### Community 99 - "account-saved-hotels.tsx"
+Cohesion: 0.20
+Nodes (21): AccountSavedHotelRow(), AccountSavedHotels(), AccountSavedHotelsProps, SavedHotelList(), BodyProps, ClientSavedHotelsTableProps, COLUMNS, HotelCell() (+13 more)
 
 ### Community 100 - "AMPM Platform Data Model and ER Diagrams"
-Cohesion: 0.06
-Nodes (90): architecture.md, AMPM Platform Data Model and ER Diagrams, Changes from AMPM's decisions of 25 October 2026 (§0a), Entity index with phases and restricted fields (§19), Module overview ER diagram (§2), decision-log.md, field-matrix.md, permission-matrix.md (+82 more)
+Cohesion: 0.07
+Nodes (91): architecture.md, AMPM Technical Architecture and Integration Plan (DRAFT v0.2), AMPM Platform Data Model and ER Diagrams, Changes from AMPM's decisions of 25 October 2026 (§0a), Entity index with phases and restricted fields (§19), Module overview ER diagram (§2), decision-log.md, field-matrix.md (+83 more)
 
 ### Community 101 - "Client-visible Finance Decision"
 Cohesion: 0.23
@@ -986,20 +962,20 @@ Cohesion: 0.18
 Nodes (23): check_a_record_that_is_not_an_object(), check_every_mempalace_form_under_every_key(), check_install_rewrites_only_the_three_commands(), check_invalid_json_is_refused(), check_legacy_shell_hooks_and_other_hooks(), check_no_settings_file(), check_other_bytes_are_kept(), check_symlinked_settings_are_written_through() (+15 more)
 
 ### Community 103 - "configuration-edit-sheet.tsx"
-Cohesion: 0.12
-Nodes (29): ConfigurationDetailSheetProps, asRecord(), CONFIG_EDIT_FIELDS, ConfigDraft, configDraftFromValue(), ConfigDraftValue, ConfigEditField, ConfigEditFieldKind (+21 more)
+Cohesion: 0.11
+Nodes (33): asRecord(), CONFIG_EDIT_FIELDS, ConfigDraft, configDraftFromValue(), ConfigDraftValue, ConfigEditField, ConfigEditFieldKind, configEditFields() (+25 more)
 
-### Community 104 - "rate-limit.guard.spec.ts"
-Cohesion: 0.15
-Nodes (9): clientKey(), expandIPv6(), RateLimitOptions, RateLimitGuard, build(), OPTIONS, PRINCIPAL, Window (+1 more)
+### Community 104 - "client-logins.service.spec.ts"
+Cohesion: 0.13
+Nodes (9): ClientLoginRow, ClientLoginsRepository, MemberWithUser, PrismaClientLoginsRepository, toRow(), WITH_USER, create, FakeRepository (+1 more)
 
 ### Community 105 - "schemas/index.ts"
-Cohesion: 0.04
-Nodes (79): toView(), BodyProps, BodyProps, RateItemDraft, RATE_ITEM_TYPE_LABEL, AccountClientView, AccountContactCreateRequest, AccountContactUpdateRequest (+71 more)
+Cohesion: 0.03
+Nodes (102): ConfigCache, VALUE, ConfigController, keyParams, NotificationList, idParam, userParam, userRoleParam (+94 more)
 
-### Community 106 - "MediaAssetView"
-Cohesion: 0.09
-Nodes (13): MediaService, refHash(), rightsImage(), build(), toMediaAssetView(), BodyProps, Data, MediaEditSheetProps (+5 more)
+### Community 106 - "media.service.ts"
+Cohesion: 0.06
+Nodes (29): CLIENT_VISIBILITIES, mimeForRef(), PUBLISHABLE_RIGHTS, COVER_SELECT, GALLERY_SELECT, MEDIA_SELECT, MediaCoverRow, MediaGalleryRow (+21 more)
 
 ### Community 107 - "Client Portal Flowchart (as supplied)"
 Cohesion: 0.35
@@ -1009,33 +985,33 @@ Nodes (13): AMPM Client Portal — Level 1 Visual Flowchart, Access Verified? ga
 Cohesion: 0.24
 Nodes (12): A-28 - demo after OTP, no time limit, admin-managed, A-3 - subscription Rs 50,000, one month, configurable; demo as trial, P-7 - demo shows limited hotels at indicative prices, U-1 - demo authorised by sales, OTP, no expiry, optional Zoom, V-10 - demo content tests (three hotels, no expiry), Confirm 1 - demo duration & hotel/location limits, Confirm 2 - one or two sample hotels per location, Q3 - hotel-discovery subscription terms & demo (+4 more)
 
-### Community 109 - "staff-users.service.ts"
-Cohesion: 0.06
-Nodes (21): assertNotLastSuperAdmin(), StaffAuthenticatorRepository, StaffAuthenticatorService, PrismaStaffUsersRepository, SELECT, repoWith(), UserRow, StaffUserRow (+13 more)
+### Community 109 - ".record"
+Cohesion: 0.04
+Nodes (31): RolesController, staffId(), RolesRepository, RolesService, service(), StaffAuthenticatorRepository, StaffAuthenticatorService, idParam (+23 more)
 
 ### Community 110 - "ui/tsconfig.json"
 Cohesion: 0.29
 Nodes (6): compilerOptions, rootDir, types, extends, include, @ampm/config/tsconfig.react.json
 
 ### Community 111 - "2.7 Bootstrap plan (6 phases, each ending pnpm check green)"
-Cohesion: 0.08
-Nodes (36): src/app - Expo Router routes (index gallery, account shows /me), Web export - browser version of the client portals, Permission matrix row + pnpm authz:generate + @RequirePermission(), TanStack Query hook in packages/api-client, Tests (Vitest, supertest e2e, Jest+Testing Library, Playwright, Maestro), Screen from packages/ui components (all states, a11y, phone+tablet), Zod request/response schemas in packages/core/src/schemas, 2.7 Bootstrap plan (6 phases, each ending pnpm check green) (+28 more)
+Cohesion: 0.15
+Nodes (22): Permission matrix row + pnpm authz:generate + @RequirePermission(), 2.7 Bootstrap plan (6 phases, each ending pnpm check green), Eight-step permission pipeline, Monorepo (pnpm 12 + Turborepo 2), packages/api-client (typed client + hooks), packages/core (domain, Zod schemas, errors), packages/policy (permission matrix as code), packages/tokens (design tokens) (+14 more)
 
 ### Community 112 - "policy/tsconfig.json"
 Cohesion: 0.29
 Nodes (6): compilerOptions, allowImportingTsExtensions, types, extends, include, @ampm/config/tsconfig.base.json
 
-### Community 113 - "ref_tanstack_react_query"
-Cohesion: 0.07
-Nodes (24): ApiClient, ApiClientOptions, useCompare(), DESTINATIONS_QUERY_KEY, hotelQueryKey(), HOTELS_QUERY_KEY, hotelsPath(), ME_QUERY_KEY (+16 more)
+### Community 113 - "client.ts"
+Cohesion: 0.16
+Nodes (10): ApiClient, createApiClient(), authHeaders(), request(), run(), upload(), RequestOptions, schema (+2 more)
 
 ### Community 114 - "Q9/Q15 — Hotel Data & Scale"
 Cohesion: 0.20
 Nodes (10): A-15 - ~200 hotels, 20 concurrent weddings; capacity TBC, A-27 - (not addressed; stands), A-9 - indicative hotel pricing ranges, menu grids, ~200 hotels, T-7 - sized for 200 hotels/20 weddings; monolith fits, V-5 - load profiles rescaled to 200 hotels/20 weddings, Confirm 7 - initial capacity for staff, hotels, weddings, guests, Q15 - scale: hotels, concurrent weddings & capacity, Q9 - hotel data, pages & indicative pricing (+2 more)
 
-### Community 115 - ".warn"
-Cohesion: 0.06
-Nodes (17): ClientLoginRow, ClientLoginsRepository, MemberWithUser, PrismaClientLoginsRepository, toRow(), WITH_USER, ClientLoginsService, create (+9 more)
+### Community 115 - "client-logins.controller.ts"
+Cohesion: 0.10
+Nodes (11): ClientLoginsController, projectParam, projectUserParam, staffId(), ClientLoginsService, harness(), toView(), 10. Lifecycle — deprovision, forced sign‑out, recovery (+3 more)
 
 ### Community 116 - "Lefthook Git Hooks"
 Cohesion: 0.24
@@ -1055,7 +1031,7 @@ Nodes (7): Added requirement: readiness exceptions record the unmet check, reaso
 
 ### Community 120 - "segmented-control.tsx"
 Cohesion: 0.04
-Nodes (77): motionMs, groupFocusRingStyles, Image(), imageAccessibility(), ImageProps, LoadState, RADIUS, sample (+69 more)
+Nodes (84): RegionFilter(), motionMs, BusyIndicator(), Image(), imageAccessibility(), ImageProps, LoadState, RADIUS (+76 more)
 
 ### Community 121 - "Q2 — Account Payment (Razorpay)"
 Cohesion: 0.31
@@ -1066,8 +1042,8 @@ Cohesion: 0.25
 Nodes (9): A-5 - two equal family-rep accounts, no viewer/finance role, P-2 - two equal family reps replace owner/approver/viewer, P-9 - on-behalf decisions with note/record, U-4 - on-behalf decisions with note/record, V-14 - on-behalf decision tests, W-5 - no finance flag; portal finance display TBC, Confirm 4 - family-rep login model, Q5 - client-portal family representatives & logins (+1 more)
 
 ### Community 123 - "accounts.service.ts"
-Cohesion: 0.03
-Nodes (66): ClientUserService, ProvisionInvitedClientInput, DEFAULT_CONTACT_RELATION, INVITABLE_STATUSES, inviteeFor(), ACCOUNT, CONTACT, harness() (+58 more)
+Cohesion: 0.07
+Nodes (32): DEFAULT_CONTACT_RELATION, MintedInvite, accountPatchOf(), CoupleState, Mutable, COUPLE_NAMED, LEAD_NAMED, withCoupleNaming() (+24 more)
 
 ### Community 124 - "Handoff: Peacock Night design system for the AMPM platform"
 Cohesion: 0.07
@@ -1082,8 +1058,8 @@ Cohesion: 0.22
 Nodes (8): compilerOptions, paths, strict, types, extends, include, @/assets/*, expo/tsconfig.base
 
 ### Community 127 - "parse-transitions.ts"
-Cohesion: 0.09
-Nodes (26): capabilities, doc, here, others, output, staff, transitions, ACTORS (+18 more)
+Cohesion: 0.13
+Nodes (21): ACTORS, checkActors(), Clause, joined(), machineFor(), Movers, NO_MOVER_CLAUSES, NO_MOVER_ROWS (+13 more)
 
 ### Community 128 - "Effort Estimate (about 510 developer-days)"
 Cohesion: 0.15
@@ -1098,8 +1074,8 @@ Cohesion: 0.29
 Nodes (6): compilerOptions, rootDir, exclude, extends, include, ./tsconfig.json
 
 ### Community 131 - "audit-log.format.ts"
-Cohesion: 0.13
-Nodes (22): AuditEventDetailSheet(), AuditEventDetailSheetProps, Field(), jsonText(), SnapshotBlock(), auditCsv(), csvRow(), HEADERS (+14 more)
+Cohesion: 0.15
+Nodes (19): AuditEventDetailSheet(), AuditEventDetailSheetProps, Field(), jsonText(), SnapshotBlock(), auditCsv(), csvRow(), HEADERS (+11 more)
 
 ### Community 132 - "Q10 — First-Release Scope"
 Cohesion: 0.33
@@ -1110,16 +1086,16 @@ Cohesion: 0.33
 Nodes (7): A-20 - live chat in addition to tracked requests, A-21 - change-request lifecycle with closed status, U-12 - live chat added alongside tracked requests, W-8 - live chat screen added, Q20 - tracked requests & live chat, Q21 - change-request lifecycle, Requirement 6 - tracked request statuses
 
 ### Community 134 - "app-chrome.tsx"
-Cohesion: 0.06
-Nodes (55): AuthedRedirect(), IndexRoute(), AppChrome(), FRAME, railRoom(), remPx(), ScreenInsets(), ScreenInsetsProps (+47 more)
+Cohesion: 0.11
+Nodes (33): AppChrome(), FRAME, railRoom(), remPx(), ScreenInsets(), ScreenInsetsProps, useChromeAudience(), useNavRoom() (+25 more)
 
 ### Community 135 - "Phase 1 — Foundation"
 Cohesion: 0.19
 Nodes (15): Gate G1 — Foundation (lead to subscriber), Gate G2 — Wedding Planning, Gate G3 — Guest Operations, Phase 1 — Foundation, Phase 2 — Wedding Planning, Phase 3 — Guest Operations, The Pilot Wedding, AMPM Acceptance Scenarios (twenty) (+7 more)
 
-### Community 136 - "cn"
-Cohesion: 0.07
-Nodes (56): dynamic, metadata, Page(), dynamic, metadata, Page(), ButtonLink(), Eyebrow() (+48 more)
+### Community 136 - "destinations-page.tsx"
+Cohesion: 0.14
+Nodes (24): dynamic, metadata, Page(), DestinationCard(), DestinationsBrowser(), DestinationsBrowserProps, RegionCard, Destination (+16 more)
 
 ### Community 137 - "Shared React TSConfig"
 Cohesion: 0.29
@@ -1146,16 +1122,16 @@ Cohesion: 0.33
 Nodes (6): A-7 - RSVP links per side/combined, guest self-identify, no post-submit edit, P-4 - RSVP link access & guest isolation, U-5 - RSVP links, no post-submit edit, corrections via team, V-9 - per-side link tests; household-token alternative, W-6 - RSVP wizard with per-side links, Q7 - guest invitation links & RSVP collection
 
 ### Community 143 - "AMPM Developer Technical Specification v1.0 (SPEC)"
-Cohesion: 0.06
-Nodes (67): account contacts, AMPM Developer Technical Specification v1.0 (SPEC), approval decisions, approvals, artist bookings, booking milestones, budget categories, budget lines (+59 more)
+Cohesion: 0.04
+Nodes (125): account contacts, AMPM Developer Technical Specification v1.0 (SPEC), approval decisions, approvals, artist bookings, Assumptions register (§0), Coverage against the audit (§20), audit events (+117 more)
 
-### Community 144 - "hotel-compare-table.tsx"
-Cohesion: 0.11
-Nodes (39): CompareAttr, compareAttrs(), compareCellText(), compareFreshnessChip(), RATE_ROWS, rateForType(), rateRowLabel(), rateValueText() (+31 more)
+### Community 144 - "hotels.format.ts"
+Cohesion: 0.03
+Nodes (183): HotelRoute(), MediaImage(), MediaImageProps, CheckAvailabilityButton(), CompareButton(), HotelPagePermissions, SaveButton(), SaveButtonProps (+175 more)
 
-### Community 145 - "LeadView"
-Cohesion: 0.05
-Nodes (57): ConvertPlan, isLeadTransitionAllowed(), isTerminalLead(), LEAD_TRANSITIONS, OWNED_STATUSES, TERMINAL_STATUSES, leadParam, LeadsController (+49 more)
+### Community 145 - "leads.service.ts"
+Cohesion: 0.14
+Nodes (15): isLeadTransitionAllowed(), isTerminalLead(), LEAD_TRANSITIONS, OWNED_STATUSES, TERMINAL_STATUSES, LeadRow, buildPatch(), LeadsService (+7 more)
 
 ### Community 146 - "devDependencies"
 Cohesion: 0.10
@@ -1166,8 +1142,8 @@ Cohesion: 0.08
 Nodes (24): MONDAY_API_TOKEN, PR_AUTHOR, PR_BODY, PR_MERGED_AT, PR_NUMBER, PR_TITLE, PR_URL, jobs (+16 more)
 
 ### Community 148 - "re"
-Cohesion: 0.12
-Nodes (18): decisions.json, build(), q_titles(), audit_questions(), build(), load_old_graph(), main(), current_session() (+10 more)
+Cohesion: 0.07
+Nodes (30): decisions.json, build(), q_titles(), audit_questions(), build(), load_old_graph(), main(), build_log_columns() (+22 more)
 
 ### Community 149 - "Q11 — Communication Channels"
 Cohesion: 0.40
@@ -1189,13 +1165,13 @@ Nodes (5): A-8 - identity docs per wedding, no Aadhaar, retention per policy, P-
 Cohesion: 0.14
 Nodes (19): steps, steps, matrix, mobile, if, needs, runs-on, steps (+11 more)
 
-### Community 154 - "Background jobs (§9): idempotent and outcome-recorded"
-Cohesion: 0.22
-Nodes (12): Background jobs (§9): idempotent and outcome-recorded, Key flow 7.1: subscription purchase and activation, Idempotent payment webhook activation on provider_ref, Integration: payment gateway, Job: import apply, Job: media processing, Job: overdue surfacing (tasks, milestones, vendors, readiness), Job: payment webhook processing (+4 more)
+### Community 154 - "about-cta.tsx"
+Cohesion: 0.16
+Nodes (15): dynamic, metadata, Page(), ABOUT_COPY, Principle, PRINCIPLES, TEAM, TeamRole (+7 more)
 
-### Community 155 - "AppLogger"
-Cohesion: 0.02
-Nodes (102): AppLogger, ENV, BullMqJobDriver, JobLogger, makeDriver(), Registration, InlineJobDriver, JobLogger (+94 more)
+### Community 155 - "JobQueue"
+Cohesion: 0.03
+Nodes (58): isInScope(), BullMqJobDriver, JobLogger, makeDriver(), Registration, InlineJobDriver, JobLogger, Registration (+50 more)
 
 ### Community 156 - "Q16 — Currency & Language"
 Cohesion: 0.50
@@ -1209,61 +1185,61 @@ Nodes (4): A-23 - three months read-only then archiving, U-8 - three months read
 Cohesion: 0.50
 Nodes (4): A-6 - department-based staff access; roles & cost access TBC, P-1 - departments confirmed; roles & cost access TBC, Confirm 5 - final staff roles & cost-data access, Q6 - staff access control & department permissions
 
-### Community 159 - "screen.tsx"
-Cohesion: 0.13
-Nodes (28): BodyProps, FooterProps, ScreenFrame, ScreenFrameContext, ScreenFrameProvider(), ScreenFrameProviderProps, useScreenFrame(), isPresent() (+20 more)
+### Community 159 - "hotel-import-screen.tsx"
+Cohesion: 0.19
+Nodes (18): HotelImportRoute(), hasRejections(), IMPORT_COLUMNS, IMPORT_TEMPLATE_HEADER, importSummary(), rejectedHeadline(), rejectedRowText(), REQUIRED_COLUMNS (+10 more)
 
-### Community 161 - "RateLimit"
+### Community 161 - "subscriptions.controller.ts"
 Cohesion: 0.08
-Nodes (15): RateLimit(), ActivationController, ClientSignInController, SignInController, EnquiriesClientController, PortalController, AuditExempt(), Public() (+7 more)
+Nodes (20): PortalController, PortalService, staffId(), SubscriptionsController, toRow(), manualPaymentData(), toSubscriptionView(), Pending (+12 more)
 
 ### Community 162 - "Q22 — No Vendor or Hotel Logins"
 Cohesion: 0.67
 Nodes (3): A-22 - no vendor or hotel logins, P-11 - no vendor principal, Q22 - no vendor or hotel logins
 
 ### Community 164 - "app.module.ts"
-Cohesion: 0.03
-Nodes (34): PlatformModule, DbModule, JobsModule, AdminModule, ClientLoginsModule, NotificationModule, PartitionsModule, RolesModule (+26 more)
-
-### Community 172 - "api-client/src/index.ts"
 Cohesion: 0.04
-Nodes (107): useStaffUserActions(), MediaThumbSize, SIZE_CLASS, AUDIT_EVENTS_QUERY_KEY, auditEventsPath(), useAuditEvents(), auditExportPath(), useAuditExport() (+99 more)
+Nodes (41): DbModule, JobsModule, ClientLoginsModule, ConfigModule, PartitionsModule, PermissionSetsModule, RolesModule, StaffUsersModule (+33 more)
+
+### Community 172 - "core/src/index.ts"
+Cohesion: 0.02
+Nodes (225): CapabilityPicker(), draftFromRole(), RoleDraft, RoleEditSheet(), useRoleForm(), Confirm, useStaffUserActions(), RolesBody() (+217 more)
 
 ### Community 216 - "media.format.ts"
-Cohesion: 0.11
-Nodes (38): MediaList(), MediaChips(), MediaDetailsFields(), MediaDraft, RightsHint(), draftFrom(), MediaEditSheet(), useMediaEditForm() (+30 more)
+Cohesion: 0.15
+Nodes (24): MediaChips(), MediaDraft, consentOwedLabel(), isClientFacing(), KIND_PLURAL, mediaRightsSummary(), mediaSummary(), RIGHTS_LABEL (+16 more)
 
 ### Community 217 - "SectionHeading"
-Cohesion: 0.09
-Nodes (45): GlassCard(), GlassCardTone, SectionHeading(), Stage, ComparisonSection(), COLUMN_HEADER, ComparisonBodyRow(), ComparisonHead() (+37 more)
+Cohesion: 0.06
+Nodes (79): NextSteps(), ReachLine(), ReceivedActions(), RequestReceived(), ButtonLink(), Eyebrow(), GlassCard(), GlassCardTone (+71 more)
 
-### Community 218 - "AuditService"
-Cohesion: 0.02
-Nodes (68): requestContext, ActivationService, build(), Config, IDENTITY_ADAPTER, IdentityAdapter, VerifiedIdentity, ConfigModule (+60 more)
+### Community 218 - "ConfigService"
+Cohesion: 0.04
+Nodes (25): ConfigRecord, ConfigRepository, PrismaConfigRepository, ConfigService, build(), FakeAudit, FakeConfigRepository, reapSessionsJob (+17 more)
 
-### Community 219 - "use-accounts.ts"
-Cohesion: 0.07
-Nodes (33): useSolePendingSubscription(), accountQueryKey(), ACCOUNTS_QUERY_KEY, accountsPath(), useAccount(), useAccounts(), CLIENT_SAVED_HOTELS_QUERY_KEY, clientSavedHotelsPath() (+25 more)
+### Community 219 - "client-code-step.tsx"
+Cohesion: 0.19
+Nodes (18): ClientCodeStepProps, CodeActionsProps, CodeHeaderProps, Destination(), expiryLabel(), ResendButton(), shownCodeCaption(), ShownCodeProps (+10 more)
 
 ### Community 220 - "memory_hook.sh"
-Cohesion: 0.08
-Nodes (41): ampm-platform repository, Automatic checkpoint, vault sync and journal hooks, CLAUDE.md, .claude/settings.json, graphify 0.9, graphify knowledge graph (graphify-out/), graphify-out/ (knowledge graph), /graphify skill (.claude/skills/graphify/) (+33 more)
+Cohesion: 0.07
+Nodes (49): AMPM (client), AMPM's answers of 25 October 2026 (reference_docs/answers/), AMPM Platform Design Package, ampm-platform repository, BIZ: business explanation, CLAUDE.md, .claude/settings.json, decisions.json (+41 more)
 
 ### Community 221 - "_matches"
 Cohesion: 0.09
 Nodes (11): _clean_start(), _env_line_word(), _flag_word(), _generated(), _matches(), accept(), _named_secret_value(), Prefiltered (+3 more)
 
 ### Community 222 - "clamav-scanner.ts"
-Cohesion: 0.15
-Nodes (11): ClamAvOptions, ClamAvScanner, frames(), instream(), ScanLogger, SCANNER_UNAVAILABLE, EICAR, FakeClamd (+3 more)
+Cohesion: 0.11
+Nodes (16): AV_SCANNER, AvScanner, EICAR_SIGNATURE, StubAvScanner, ClamAvOptions, ClamAvScanner, frames(), instream() (+8 more)
 
 ### Community 223 - "hotels.service.ts"
-Cohesion: 0.08
-Nodes (19): hotelParam, HotelsController, HotelsRepository, audienceFor(), HotelsService, ON_REQUEST_SUMMARY, toDestinationBrowseItem(), toSavedHotelView() (+11 more)
+Cohesion: 0.05
+Nodes (56): HotelsController, DestinationBrowseRow, DETAIL_HOTEL_SELECT, HOTEL_SELECT, HotelDetailRow, HotelRow, HotelsRepository, HotelSummaryRow (+48 more)
 
 ### Community 224 - "next"
-Cohesion: 0.06
-Nodes (33): nextConfig, dynamic, metadata, Page(), dynamic, metadata, Page(), dynamic (+25 more)
+Cohesion: 0.07
+Nodes (29): nextConfig, devanagari, display, fontVariables, sans, dynamic, metadata, Page() (+21 more)
 
 ### Community 225 - "api-client/tsconfig.json"
 Cohesion: 0.33
@@ -1278,20 +1254,20 @@ Cohesion: 0.50
 Nodes (4): scripts, lint, test, typecheck
 
 ### Community 228 - "PrismaPermissionSetsRepository"
-Cohesion: 0.11
-Nodes (5): PrismaPermissionSetsRepository, SetWithGrants, repo(), toRow(), WITH_GRANTS
+Cohesion: 0.09
+Nodes (11): PermissionSetRow, PrismaPermissionSetsRepository, SetWithGrants, repo(), toRow(), WITH_GRANTS, customSet, FakeRepository (+3 more)
 
 ### Community 229 - "nativewind"
 Cohesion: 0.67
 Nodes (3): nativewind@catalog:, nativewind, nativewind@^4.2.7
 
-### Community 230 - "use-hotel-rates.ts"
-Cohesion: 0.12
-Nodes (25): useHotelImport(), deletedResponse, rateCardList, rateCardsQueryKey(), useAddRateItem(), useCreateRateCard(), useDeleteRateCard(), useDeleteRateItem() (+17 more)
+### Community 230 - "text-field.tsx"
+Cohesion: 0.19
+Nodes (18): DateBound, DateInput(), DateRangeField(), DateRangeFieldProps, fieldAria(), FieldMessage(), FieldMessageOptions, FieldShell() (+10 more)
 
 ### Community 231 - "web.tsx"
 Cohesion: 0.09
-Nodes (27): RootLayout(), Providers(), Harness(), AREAS, button(), Harness(), OPTIONS, tab() (+19 more)
+Nodes (25): Providers(), Harness(), AREAS, button(), Harness(), OPTIONS, tab(), ENQUIRY (+17 more)
 
 ### Community 232 - "3. Horizon 1 — Close the gap (frontend for backend we already have)"
 Cohesion: 0.11
@@ -1307,7 +1283,7 @@ Nodes (12): fail(), record(), run_hook(), memory_hook_test.sh script, test_appen
 
 ### Community 235 - "renderWithApi"
 Cohesion: 0.04
-Nodes (80): auditEventFixture(), capabilityViewFixture(), configurationsList(), FetchFn, meFixture(), notificationFixture(), notificationTemplatesConfig(), rolesCatalogue() (+72 more)
+Nodes (82): renderDetail(), auditEventFixture(), capabilityViewFixture(), configurationsList(), FetchFn, meFixture(), notificationFixture(), notificationTemplatesConfig() (+74 more)
 
 ### Community 236 - "setup_memory_test.sh"
 Cohesion: 0.46
@@ -1318,7 +1294,7 @@ Cohesion: 0.07
 Nodes (39): author, description, devDependencies, @nestjs/cli@^12.0.0, @nestjs/schematics@^12.0.0, @nestjs/testing@^12.0.1, prisma@7.10.1, source-map-support@^0.5.21 (+31 more)
 
 ### Community 238 - "audit-log.service.ts"
-Cohesion: 0.08
+Cohesion: 0.09
 Nodes (24): AuditLogController, AuditLogModule, AuditEventRecord, AuditEventRow, AuditLogRepository, AuditProjectScope, buildWhere(), PrismaAuditLogRepository (+16 more)
 
 ### Community 239 - "Build verification, 27 October 2026"
@@ -1326,19 +1302,19 @@ Cohesion: 0.20
 Nodes (9): Audit scores, Build verification, 27 October 2026, Confirmed high findings (3), Confirmed low findings (91), Confirmed medium findings (61), Defects from the fresh clone, Fix before the next phase, Fold into the rest of sprint 2 (+1 more)
 
 ### Community 240 - "golden/transitions.ts"
-Cohesion: 0.06
-Nodes (60): outcome(), summary(), 10.1 Enquiry intake + the ten-status lifecycle + events + the C→D entry *(the root; AC-05.1/.2/.3/.4, AC-26, AC-31.1, AC-03.4)*, 10.2 Service agreements — the chargeable-services gate *(Module B, first used here; AC-05.7)*, 10.3 Site visits *(AC-05.5)*, 10.4 Hotel proposals + lines + the version/decision machine *(the commercial heart; AC-05.2 totals, the proposal status-machine AC, AC-09 version lock)*, 10.5 Booking milestones + the confirmed guard *(AC-05.6)*, 5. The features, in order (+52 more)
+Cohesion: 0.05
+Nodes (73): outcome(), summary(), 10.1 Enquiry intake + the ten-status lifecycle + events + the C→D entry *(the root; AC-05.1/.2/.3/.4, AC-26, AC-31.1, AC-03.4)*, 10.2 Service agreements — the chargeable-services gate *(Module B, first used here; AC-05.7)*, 10.3 Site visits *(AC-05.5)*, 10.4 Hotel proposals + lines + the version/decision machine *(the commercial heart; AC-05.2 totals, the proposal status-machine AC, AC-09 version lock)*, 10.5 Booking milestones + the confirmed guard *(AC-05.6)*, 5. The features, in order (+65 more)
 
-### Community 241 - "media-upload.service.ts"
-Cohesion: 0.12
-Nodes (12): sharp@^0.35.5, IMAGE_PROCESSOR, ImageProcessor, SharpImageProcessor, JPEG, AV_SCANNER, AvScanner, EICAR_SIGNATURE (+4 more)
+### Community 241 - "media.module.ts"
+Cohesion: 0.17
+Nodes (6): IMAGE_PROCESSOR, ImageProcessor, SharpImageProcessor, MediaModule, JPEG, sharp
 
 ### Community 242 - "route"
 Cohesion: 0.10
 Nodes (19): inhibit_rules, equal, source_matchers, target_matchers, receivers, name, webhook_configs, route (+11 more)
 
 ### Community 243 - "commercial.fixtures.tsx"
-Cohesion: 0.10
+Cohesion: 0.09
 Nodes (29): renderAgreement(), CATALOGUE, renderForm(), ACCOUNT_ID, AGREEMENT_ID, agreementFixture(), CLIENT_LINE, ENQUIRY_ID (+21 more)
 
 ### Community 244 - "checkpoint_test.sh"
@@ -1358,12 +1334,12 @@ Cohesion: 0.08
 Nodes (33): ampm-vault repository, app-ampm GitHub account, launchd agent com.ampm.vault-sync, post-commit hook, git-credential-ampm.sh script, main(), findings_in(), is_scanned() (+25 more)
 
 ### Community 248 - "Permission assumptions P-1 to P-11"
-Cohesion: 0.12
-Nodes (15): Key flow 7.3: approval of a vendor proposal version, Approval status transitions, Permission-matrix changes from AMPM decisions of 25 October 2026, RESTRICTED-FINANCE class, Client, guest and demo permission matrix (§6), Function status and readiness transitions, Guest link rules, Permission-matrix open questions for review (§11) (+7 more)
+Cohesion: 0.19
+Nodes (7): Permission-matrix changes from AMPM decisions of 25 October 2026, Client, guest and demo permission matrix (§6), Guest link rules, Permission assumptions P-1 to P-11, CR — Client representative (one per side), DP — Demo Prospect, GU — Guest (token principal)
 
-### Community 249 - "use-hotel-enquiries.ts"
-Cohesion: 0.14
-Nodes (19): useAcceptServiceAgreement(), useDecideHotelProposal(), HOTEL_ENQUIRIES_QUERY_KEY, hotelEnquiriesPath(), HotelEnquiriesQuery, hotelEnquiryQueryKey(), useHotelEnquiry(), hotelProposalQueryKey() (+11 more)
+### Community 249 - "apps/api - NestJS 12 + Prisma 7 on PostgreSQL 16"
+Cohesion: 0.10
+Nodes (20): apps/api - NestJS 12 + Prisma 7 on PostgreSQL 16, pnpm --filter api db:migrate (new migration from schema), src/modules - one folder per data-model module (A to Q), src/common - request context, logger, error filter, envelope interceptor, Zod decorators, src/db - Prisma service & repository scoping helpers, src/policy - AuthGuard, PermissionGuard, principal resolution, entitlement cache, audit, test/ - supertest e2e suite against DATABASE_URL_TEST, src/app - Expo Router routes (index gallery, account shows /me) (+12 more)
 
 ### Community 250 - "Client portal: engaged wedding CP-20 to CP-42 (Phases 2 to 4)"
 Cohesion: 0.18
@@ -1371,7 +1347,7 @@ Nodes (29): CP-10 Hotel proposal detail and decision, CP-21 Wedding overview and
 
 ### Community 251 - "dependencies"
 Cohesion: 0.09
-Nodes (23): dependencies, @ampm/core@workspace:*, @ampm/policy@workspace:*, bullmq@^6.4.2, jose@^6.2.13, @nestjs/common@^12.0.1, @nestjs/core@^12.0.1, @nestjs/platform-express@^12.0.1 (+15 more)
+Nodes (23): dependencies, @ampm/core@workspace:*, @ampm/policy@workspace:*, bullmq@^6.4.2, ioredis@^6.0.0, jose@^6.2.13, @nestjs/common@^12.0.1, @nestjs/core@^12.0.1 (+15 more)
 
 ### Community 252 - "site_build.mjs"
 Cohesion: 0.09
@@ -1379,55 +1355,55 @@ Nodes (29): Columns, Hotel import — the spreadsheet template and how it loads,
 
 ### Community 253 - "uiCopy"
 Cohesion: 0.04
-Nodes (108): HotelRoute(), compareApi(), HAVELI, mockBack, mockWindow, PAVILION, HAVELI, mockBack (+100 more)
+Nodes (104): compareApi(), HAVELI, mockBack, mockWindow, PAVILION, DestinationFilterProps, HAVELI, mockBack (+96 more)
 
 ### Community 254 - "scan_secrets.py"
 Cohesion: 0.23
 Nodes (9): _basename(), is_corpus_exempt(), is_forbidden_file(), _is_placeholder(), _is_sops_ciphertext(), _load_allowlist(), scan(), self_test() (+1 more)
 
-### Community 255 - "hotels.view.ts"
-Cohesion: 0.09
-Nodes (35): DestinationBrowseRow, DETAIL_HOTEL_SELECT, HOTEL_SELECT, HotelDetailRow, HotelRow, HotelSummaryRow, SAVED_SELECT, SavedHotelRow (+27 more)
+### Community 255 - "health.controller.ts"
+Cohesion: 0.13
+Nodes (7): RateLimitExempt(), HealthController, HealthModule, HealthService, startedAt, { version }, HealthResponse
 
-### Community 256 - "configuration.format.ts"
-Cohesion: 0.34
-Nodes (12): CONFIG_KEY_WITH_OWN_SCREEN, CONFIG_META, configArea(), ConfigField, configFields(), configLabel(), ConfigMeta, configRowSummary() (+4 more)
+### Community 256 - "use-field-notes.ts"
+Cohesion: 0.17
+Nodes (13): createOfflineStore(), OfflineStore, draftNote(), INITIAL_STATE, notesPath(), NotesState, Patch, replayQueue() (+5 more)
 
 ### Community 257 - "AMPM User-Flow Diagrams (DRAFT v0.2)"
-Cohesion: 0.12
-Nodes (29): Job: incident escalation timer, Job: material-change impact flags, Client request status transitions, Project closure checklist transitions, Hotel enquiry status transitions, Incident status transitions, SYS — System principal (jobs, webhooks, automation), Retention jobs propose deletions; Super Admin approves (+21 more)
+Cohesion: 0.11
+Nodes (30): Job: incident escalation timer, Job: material-change impact flags, Client entitlement resolution by account state (§3), Client request status transitions, Project closure checklist transitions, Hotel enquiry status transitions, Incident status transitions, SYS — System principal (jobs, webhooks, automation) (+22 more)
 
-### Community 258 - "callout.tsx"
+### Community 258 - "IconName"
 Cohesion: 0.10
-Nodes (29): EntryPanelProps, BusyIndicator(), ButtonProps, ContentProps, INDICATOR_COLOR, ButtonVariant, CalloutAction, CalloutBodyProps (+21 more)
+Nodes (33): RateChip, EntryPanelProps, DemoStage, StaffArea, ButtonLinkProps, Chip(), ChipProps, ButtonContent() (+25 more)
 
-### Community 259 - "hotels.format.ts"
-Cohesion: 0.09
-Nodes (34): SaveButtonProps, CardSummary(), HotelCard(), HotelCardPhoto(), HotelCardProps, HotelResultCardProps, activeFilterCount(), capacityRangeLabel() (+26 more)
+### Community 259 - "crm.module.ts"
+Cohesion: 0.15
+Nodes (9): CrmModule, BOT_CHECK_ADAPTER, BotCheckAdapter, BotCheckLogger, SiteverifyBotCheckAdapter, adapter(), logger, StubBotCheckAdapter (+1 more)
 
-### Community 260 - "transitions.test.ts"
-Cohesion: 0.06
-Nodes (59): DocumentRow, documentRows(), documentTableRows(), isSeparator(), lineOf(), LINES, transitionRows(), factsFor() (+51 more)
+### Community 260 - "StaffRole"
+Cohesion: 0.05
+Nodes (73): StaffAuthority, D. The policy and core packages (11 findings; the reviewer ran the generator and probed the engine), 5.3 Client-login administration (`admin.client_logins.*`), factsFor(), FOREIGN_PROJECT, ME, member(), MEMBER_PROJECT (+65 more)
 
 ### Community 261 - "app-chrome.test.tsx"
 Cohesion: 0.06
-Nodes (34): activationApi(), CLIENT_INVITE, CODE_SENT, mockReplace, mockSetAccessToken, openInvitation(), Routes, sendActivationCode() (+26 more)
+Nodes (38): activationApi(), CLIENT_INVITE, CODE_SENT, mockReplace, mockSetAccessToken, openInvitation(), Routes, sendActivationCode() (+30 more)
 
 ### Community 262 - "WHY: Why AMPM App"
 Cohesion: 0.21
 Nodes (18): Added requirement: platform for AMPM's internal business use, not for licensing to other wedding planners, Decision Q20: tracked requests with conversation history and live chat both required, AM-14 Tenancy: AMPM only or future licensing, AM-8 Demo data separation, AMPM Platform Requirements Audit (23 Oct 2026), CF-2 Client-portal flowchart omits hotel discovery, CF-3 Team flowchart hides Hotels and Guests, CF-4 Team flowchart shows one linear path with no subscription or consultancy branch (+10 more)
 
 ### Community 263 - "seed.ts"
-Cohesion: 0.12
-Nodes (22): Account, AccountOptions, assignRole(), DESTINATIONS, HOTELS, seedDestinations(), seedHotels(), joinProject() (+14 more)
+Cohesion: 0.16
+Nodes (18): Account, AccountOptions, assignRole(), DESTINATIONS, HOTELS, seedDestinations(), seedHotels(), joinProject() (+10 more)
 
-### Community 264 - "config.service.ts"
-Cohesion: 0.09
-Nodes (17): ConfigCache, VALUE, ConfigController, CONFIG_REGISTRY, ConfigKey, ConfigListView, ConfigValue, ConfigView (+9 more)
+### Community 264 - "Audit — free & low-cost SMS services for client login (OTP)"
+Cohesion: 0.11
+Nodes (17): 10. Built and waiting on DLT (20 Nov 2026, D-147), 1. The headline: there is no free *production* SMS-OTP in India, 2. The genuinely-free path for the build (recommended now), 3. Provider comparison (India, DLT-capable), 4. The cheaper channel: WhatsApp-auth first, SMS fallback, 5. What this costs us in practice, 6. DLT registration — the actual launch dependency, 7. Recommendation (+9 more)
 
 ### Community 265 - "tokens/src/index.ts"
 Cohesion: 0.04
-Nodes (79): channels(), contrast(), luminance(), checkContrast(), colorVariables(), contrastFailures(), cssFontList(), cssSource() (+71 more)
+Nodes (87): HotelCardPhoto(), navigationTheme(), source, dist, { preset, webPreset, types, css }, channels(), contrast(), luminance() (+79 more)
 
 ### Community 266 - "services"
 Cohesion: 0.15
@@ -1443,15 +1419,15 @@ Nodes (9): volumes, alertmanager-data, caddy-config, caddy-data, clamav-db, node
 
 ### Community 269 - "hotels-admin.controller.ts"
 Cohesion: 0.03
-Nodes (89): facilitiesInput(), BOOLEAN_COLUMNS, buildCandidate(), coerceBoolean(), HOTEL_IMPORT_COLUMNS, isBlankRow(), KNOWN_COLUMNS, NUMERIC_COLUMNS (+81 more)
+Nodes (85): facilitiesInput(), BOOLEAN_COLUMNS, buildCandidate(), coerceBoolean(), HOTEL_IMPORT_COLUMNS, isBlankRow(), KNOWN_COLUMNS, NUMERIC_COLUMNS (+77 more)
 
 ### Community 270 - "services"
 Cohesion: 0.18
 Nodes (10): name, services, volumes, alertmanager-data, caddy-config, caddy-data, node-metrics, pg-run (+2 more)
 
 ### Community 272 - "api.tsx"
-Cohesion: 0.10
-Nodes (32): API_BASE, CLOSED_ENQUIRY, CLOSED_ENQUIRY_ID, DECISION_ROUTE, ENQUIRY, ENQUIRY_DETAIL, ENQUIRY_ID, enquiryDetailApi() (+24 more)
+Cohesion: 0.11
+Nodes (31): API_BASE, CLOSED_ENQUIRY, CLOSED_ENQUIRY_ID, DECISION_ROUTE, ENQUIRY, ENQUIRY_DETAIL, ENQUIRY_ID, enquiryDetailApi() (+23 more)
 
 ### Community 273 - "api"
 Cohesion: 0.20
@@ -1538,12 +1514,12 @@ Cohesion: 0.22
 Nodes (9): command, deploy, image, networks, read_only, restart, security_opt, volumes (+1 more)
 
 ### Community 294 - "visibility.ts"
-Cohesion: 0.20
-Nodes (17): BASE_CLASSES, CONTACT_AND_FINANCE, CONTACT_ROWS, CONTACTS_BY_ROW, GRANT_ORDER, IDENTITY_ROW, isContactRow(), principalReadableClasses() (+9 more)
+Cohesion: 0.07
+Nodes (41): Reading, A, ClassGolden, EVERY_FACT, on(), ROWS, BANK_CONTEXTS, CLASS_GOLDEN (+33 more)
 
-### Community 295 - "roles-screen.tsx"
-Cohesion: 0.11
-Nodes (36): RolesRoute(), CapabilityRow(), ModuleGroup(), RoleDetailPanel(), RoleDetailPanelProps, RoleDetail(), RoleManageActions(), RoleManageActionsProps (+28 more)
+### Community 295 - "capability-picker.tsx"
+Cohesion: 0.27
+Nodes (13): CapabilityPickerProps, ModuleSectionProps, RoleDetail(), RoleManageActions(), RoleDetailSheet(), byLabel(), CapabilityGroup, capabilityGroups() (+5 more)
 
 ### Community 296 - "postgres"
 Cohesion: 0.22
@@ -1554,8 +1530,8 @@ Cohesion: 0.27
 Nodes (16): BarParts(), BarPartsProps, clampProgress(), ProgressBar(), ProgressBarProps, ProgressReading, readProgress(), segmentCount() (+8 more)
 
 ### Community 298 - "use-ampm-sign-in.ts"
-Cohesion: 0.09
-Nodes (29): StaffSignInScreenProps, Phase, StaffSignIn, ActivationPhase, AmpmActivation, messageOf(), useAmpmActivation(), messageOf() (+21 more)
+Cohesion: 0.10
+Nodes (25): StaffSignInScreenProps, Phase, StaffSignIn, ActivationPhase, messageOf(), useAmpmActivation(), messageOf(), GRANT (+17 more)
 
 ### Community 299 - "postgres"
 Cohesion: 0.25
@@ -1565,17 +1541,17 @@ Nodes (9): depends_on, depends_on, postgres, redis, depends_on, depends_on, cond
 Cohesion: 0.20
 Nodes (10): command, deploy, image, init, networks, restart, security_opt, shm_size (+2 more)
 
-### Community 301 - "otp-input.tsx"
-Cohesion: 0.15
-Nodes (25): useFocused(), CellsProps, cellState(), FieldProps, OtpCells(), OtpField(), OtpInput(), OtpInputProps (+17 more)
+### Community 301 - "PrismaStaffUsersRepository"
+Cohesion: 0.14
+Nodes (4): PrismaStaffUsersRepository, repoWith(), UserRow, toRow()
 
 ### Community 302 - "restore"
 Cohesion: 0.20
 Nodes (10): command, networks, profiles, read_only, restart, security_opt, tmpfs, user (+2 more)
 
 ### Community 303 - "Monitoring and alerts runbook (feature 6.7, D-054)"
-Cohesion: 0.11
-Nodes (19): App alerts, CertificateExpiringSoon, Edge alerts, EdgeProbeDown, External services (wired per environment), Host alerts, HostCPUSaturated, HostDiskFillingUp (+11 more)
+Cohesion: 0.14
+Nodes (14): App alerts, CertificateExpiringSoon, Edge alerts, EdgeProbeDown, External services (wired per environment), JobFailuresHigh, Monitoring and alerts runbook (feature 6.7, D-054), Paging webhook (Alertmanager) (+6 more)
 
 ### Community 304 - "http"
 Cohesion: 0.15
@@ -1586,8 +1562,8 @@ Cohesion: 0.15
 Nodes (12): description, runbook, summary, groups, name, rules, severity, alert (+4 more)
 
 ### Community 306 - "apps/mobile - Expo SDK 58 + Expo Router, NativeWind"
-Cohesion: 0.09
-Nodes (31): expo install for native deps (never plain pnpm add), apps/mobile - Expo SDK 58 + Expo Router, NativeWind, NativeWind on the tokens preset, src/features - screens, components and hooks by feature, src/lib - public env (EXPO_PUBLIC_*) & session, src/navigation - container with web variant, Before a feature (read rules, find design package, search packages, give plan), Before a merge (review diff vs rules, check invariants) (+23 more)
+Cohesion: 0.10
+Nodes (29): expo install for native deps (never plain pnpm add), apps/mobile - Expo SDK 58 + Expo Router, NativeWind, NativeWind on the tokens preset, src/features - screens, components and hooks by feature, src/lib - public env (EXPO_PUBLIC_*) & session, src/navigation - container with web variant, Before a feature (read rules, find design package, search packages, give plan), Before a merge (review diff vs rules, check invariants) (+21 more)
 
 ### Community 307 - "api"
 Cohesion: 0.17
@@ -1619,7 +1595,7 @@ Nodes (12): condition, db-metrics, command, depends_on, deploy, image, networks,
 
 ### Community 314 - "consultancy-admin.test-utils.tsx"
 Cohesion: 0.06
-Nodes (61): CLIENT_NAME, detailFixture(), ENQUIRY_ID, EnquiryEvent, enquiryFixture(), eventFixture(), FetchFn, HOTEL_ID (+53 more)
+Nodes (57): mockPush, mockWindow, CLIENT_NAME, detailFixture(), ENQUIRY_ID, EnquiryEvent, enquiryFixture(), eventFixture() (+49 more)
 
 ### Community 315 - "expo-router"
 Cohesion: 0.67
@@ -1650,8 +1626,8 @@ Cohesion: 0.18
 Nodes (11): command, image, networks, profiles, read_only, restart, security_opt, tmpfs (+3 more)
 
 ### Community 322 - "leads-list-screen.test.tsx"
-Cohesion: 0.08
-Nodes (36): LeadRoute(), mockWindow, OWNED, renderDetail(), LeadDetailScreen(), mockBack, mockReplace, mockWindow (+28 more)
+Cohesion: 0.09
+Nodes (33): mockWindow, OWNED, mockBack, mockReplace, mockWindow, renderDetail(), Routes, funnelFetch() (+25 more)
 
 ### Community 323 - "resources"
 Cohesion: 0.11
@@ -1685,13 +1661,13 @@ Nodes (15): environment, JOB_WORKER, NODE_ENV, command, environment, image, netw
 Cohesion: 0.20
 Nodes (10): command, deploy, image, networks, ports, read_only, restart, security_opt (+2 more)
 
-### Community 331 - "use-field-notes.ts"
-Cohesion: 0.06
-Nodes (40): version(), createOfflineStore(), createOfflineStore(), FieldNotesSideProps, MemoryStore, LocalNote, NoteDraft, OfflineStore (+32 more)
+### Community 331 - "FieldNoteView"
+Cohesion: 0.19
+Nodes (11): LocalNote, NoteDraft, SyncResolution, NoteRow, QueueRow, SqliteStore, toLocalNote(), toQueuedMutation() (+3 more)
 
-### Community 332 - "Button"
-Cohesion: 0.04
-Nodes (89): NoteEditorSheet(), NoteEditorSheetProps, SaveNoteButton(), useNoteDraft(), copyText, CopyButton(), DevInviteLink(), DevInviteLinkProps (+81 more)
+### Community 332 - "useToast"
+Cohesion: 0.03
+Nodes (154): NewRequestRoute(), NoteEditorSheet(), NoteEditorSheetProps, SaveNoteButton(), useNoteDraft(), StaffUserConfirmSheets(), Agreement, AgreementActions() (+146 more)
 
 ### Community 333 - "deploy.yml"
 Cohesion: 0.22
@@ -1721,13 +1697,13 @@ Nodes (9): command, image, networks, profiles, read_only, restart, security_opt,
 Cohesion: 0.22
 Nodes (8): Configuration (environment variables), Host bootstrap runbook (feature 6.5, D-052), Known limitations, Re-running, Reproducible rebuilds (Docker version), Run it, ⚠️ Verify before you disconnect, What it does
 
-### Community 340 - "app-error.filter.ts"
-Cohesion: 0.08
-Nodes (26): AppModule, openTcpHandles(), openTcpHandlesWhenSettled(), answerParserRefusal(), AppErrorFilter, clientErrorStatus(), errorType(), fromStatus() (+18 more)
+### Community 340 - "AppLogger"
+Cohesion: 0.03
+Nodes (67): AppModule, openTcpHandles(), openTcpHandlesWhenSettled(), answerParserRefusal(), AppErrorFilter, clientErrorStatus(), errorType(), fromStatus() (+59 more)
 
 ### Community 341 - "Avatar"
-Cohesion: 0.22
-Nodes (19): GroupProps, Avatar(), AvatarProps, AvatarGroup(), AvatarGroupProps, OverflowCount(), OverflowCountProps, avatarGroupStyles (+11 more)
+Cohesion: 0.24
+Nodes (18): GroupProps, AvatarProps, AvatarGroup(), AvatarGroupProps, OverflowCount(), OverflowCountProps, avatarGroupStyles, avatarGroupTone() (+10 more)
 
 ### Community 342 - "with"
 Cohesion: 0.25
@@ -1738,12 +1714,12 @@ Cohesion: 0.43
 Nodes (8): build, context, dockerfile, build, build, build, build, build
 
 ### Community 344 - "accounts.test-utils.tsx"
-Cohesion: 0.06
-Nodes (66): detailFetch, mockWindow, renderDetail(), AccountDetailScreen(), Captured, detailFetch(), ledgerFetch(), paginatedLedgerFetch() (+58 more)
+Cohesion: 0.08
+Nodes (45): detailFetch, mockWindow, Captured, detailFetch(), ledgerFetch(), paginatedLedgerFetch(), renderSettled(), Roles (+37 more)
 
-### Community 345 - "hotel-actions.tsx"
-Cohesion: 0.25
-Nodes (16): CheckAvailabilityButton(), CompareButton(), HotelPagePermissions, SaveButton(), savedLabel(), SaveHeartButton(), useShortlistToggle(), HeadlinePrice() (+8 more)
+### Community 345 - "saved-hotels-staff.controller.ts"
+Cohesion: 0.18
+Nodes (6): SavedHotelsStaffController, SavedHotelsStaffService, toSavedHotelStaffView(), SavedHotelStaffListQuery, SavedHotelStaffPage, ROW
 
 ### Community 346 - "env"
 Cohesion: 0.15
@@ -1778,12 +1754,12 @@ Cohesion: 0.33
 Nodes (6): branches, paths, types, True, push, release
 
 ### Community 354 - "runbooks/README.md"
-Cohesion: 0.18
-Nodes (9): AMPM VPS runbooks (feature 6.8, D-056), Recovery objectives (D-015, vps-setup §4), Rehearsal (AC-22), Notes, Rebuild from nothing (feature 6.8, D-056), Steps, Notes, Restore the database only (feature 6.8, D-056) (+1 more)
+Cohesion: 0.24
+Nodes (6): Notes, Rebuild from nothing (feature 6.8, D-056), Steps, Notes, Restore the database only (feature 6.8, D-056), Steps (on the host, in the environment's compose directory)
 
 ### Community 355 - "destinations-section.tsx"
-Cohesion: 0.10
-Nodes (30): dynamic, metadata, Page(), SectionIntro(), Destination, DestinationsSection(), DestinationTileProps, HOME_DESTINATIONS (+22 more)
+Cohesion: 0.09
+Nodes (30): dynamic, metadata, Page(), IntroAction(), IntroActionProps, SectionIntro(), SectionIntroAction, SectionIntroProps (+22 more)
 
 ### Community 356 - "deploy.sh"
 Cohesion: 0.73
@@ -1793,21 +1769,21 @@ Nodes (5): die(), log(), rollback(), run(), deploy.sh script
 Cohesion: 0.37
 Nodes (13): bad(), commit(), exits(), g(), has(), holds(), lacks(), ok() (+5 more)
 
-### Community 358 - "T-6 Authentication inside the API"
-Cohesion: 0.83
-Nodes (3): Identity and sessions module (A), Server-side sessions in Redis with secure HttpOnly SameSite cookies, Flow 11 — Sign-in, activation, recovery and guest access
+### Community 358 - "Integration plan (§10): one adapter per provider"
+Cohesion: 0.13
+Nodes (20): Architecture risks and mitigations (§14), Monthly partitioning of audit_events and notifications, Video delivery: Cloudflare Stream or Mux with signed playback, Integration: ICS calendar feed (Google Calendar sync later), Integration: Amazon SES email, Integration: external hotel systems (none in v1, GP-39), Integration plan (§10): one adapter per provider, Integration: Indian SMS provider with DLT registration (+12 more)
 
 ### Community 359 - "devDependencies"
 Cohesion: 0.11
 Nodes (19): devDependencies, babel-preset-expo@~58.0.20, jest@~30.5.2, jest-expo@~58.0.15, tailwindcss@catalog:, test-renderer@^1.0.0, @testing-library/react-native@^14.1.0, @types/jest@30.0.0 (+11 more)
 
-### Community 360 - "subscription-report.repository.ts"
-Cohesion: 0.10
-Nodes (15): SubscriptionReportController, REPORT_FIELDS, reportQuery(), SelectedSubscription, SubscriptionReportDbRow, SubscriptionReportPaymentRow, SubscriptionReportRepository, toRow() (+7 more)
+### Community 360 - "subscription-report.controller.ts"
+Cohesion: 0.20
+Nodes (7): SubscriptionReportController, SubscriptionReportService, SubscriptionReportExport, SubscriptionReportExportQuery, SubscriptionReportPage, SubscriptionReportQuery, row
 
-### Community 361 - "RolesService"
-Cohesion: 0.11
-Nodes (7): RoleRow, RolesRepository, RolesService, customRole, FakeRepository, service(), systemRole
+### Community 361 - "AMPM App — Compiled Questions & Answers (Q1-Q25 + hotel discovery demo requirements)"
+Cohesion: 0.17
+Nodes (16): Notifications and Automation (payment activates only the purchased entitlement; stale pricing flagged after configurable age; approval notifications; material-change flags on budgets/contracts/tasks/run-of-show; RSVP changes recalculate attendance; logistics alerts; dashboard exceptions; incident escalation; notification log), AMPM App — Compiled Questions & Answers (Q1-Q25 + hotel discovery demo requirements), Q2 — Subscription payment: AMPM creates the account or sends an invitation link; client enters basic wedding details; online card and UPI, Q3 — Hotel Discovery subscription: INR 50,000 for one month, one-time payment; saved hotel names and read-only enquiries retained after expiry; no deletion; renewal restores data, Q4 — Revenue model: INR 50,000/month discovery fee; wedding management fee decided separately outside the module; vendor profiles visible only after booking full management; no internal costs, margins or vendor rates in the app, Q6 — AMPM manages the system and permissions; staff access restricted by assigned responsibilities and work profiles; costs and margins hidden, Q12 — Public website editing is not allowed through the app, Q15 — Scale: about 200 hotels initially; multiple weddings and departmental staff; final capacity to be confirmed (+8 more)
 
 ### Community 362 - "x-prod-env"
 Cohesion: 0.08
@@ -1822,8 +1798,8 @@ Cohesion: 0.50
 Nodes (3): COMPOSE_PROJECT_NAME, pg(), smoke-restore.sh script
 
 ### Community 365 - "glow-backdrop.tsx"
-Cohesion: 0.15
-Nodes (25): glow, GlowTone, GlowBackdrop(), GlowBackdropProps, GlowGradient(), Orbs(), OrbsProps, Size (+17 more)
+Cohesion: 0.07
+Nodes (50): glow, GlowTone, GlowBackdrop(), GlowBackdropProps, GlowGradient(), Orbs(), OrbsProps, Size (+42 more)
 
 ### Community 366 - "collect-metrics.sh"
 Cohesion: 0.83
@@ -1833,9 +1809,9 @@ Nodes (3): collect(), psql_q(), collect-metrics.sh script
 Cohesion: 0.83
 Nodes (3): finish_run(), backup.sh script, start_run()
 
-### Community 368 - "proposal-draft.ts"
-Cohesion: 0.14
-Nodes (22): INTERNAL_LINE, FormCard(), ProposalCreateForm(), clientLinesTotalMinor(), draftFromProposal(), EMPTY_TOTALS, emptyLine(), parseQuantity() (+14 more)
+### Community 368 - "leads.form.ts"
+Cohesion: 0.19
+Nodes (13): buildActivityBody(), buildLeadEmail(), emptyActivityDraft(), FOLLOW_UP_CHOICES, FOLLOW_UP_DAYS, FOLLOW_UP_LABEL, followUpAt(), FollowUpChoice (+5 more)
 
 ### Community 369 - "creation_rules"
 Cohesion: 0.50
@@ -1846,40 +1822,40 @@ Cohesion: 0.21
 Nodes (26): environment, AV_PROVIDER, BOT_CHECK_PROVIDER, BOT_CHECK_URL, CLAMAV_HOST, CLIENT_OTP_SCREEN_ECHO, CORS_ORIGINS, DYNAMIC_ROLES (+18 more)
 
 ### Community 372 - "video.tsx"
-Cohesion: 0.14
-Nodes (8): Variant, VARIANTS, config, RADIUS, stories, StyledVideoView, Video(), VideoProps
-
-### Community 373 - "mobile/package.json"
 Cohesion: 0.11
-Nodes (17): @ampm/tokens@workspace:*, expo-dev-client@~58.0.21, expo-linking@~58.0.17, react-native-screens@~4.30.1, react-native-web@~0.21.4, @tanstack/react-query@catalog:, description, @ampm/tokens (+9 more)
+Nodes (10): Variant, VARIANTS, config, GlassPanel(), RADIUS, stories, StyledVideoView, Video() (+2 more)
 
-### Community 376 - "core/src/index.ts"
-Cohesion: 0.06
-Nodes (36): EnvelopeInterceptor, createApiClient(), authHeaders(), request(), run(), upload(), RequestOptions, schema (+28 more)
+### Community 373 - "data-table.tsx"
+Cohesion: 0.25
+Nodes (12): cellLayout(), ColumnTable(), DataRow(), DataRowProps, DataTableProps, HeaderRow(), DataTableRowFrame(), DataTableRowFrameProps (+4 more)
+
+### Community 376 - "dates.ts"
+Cohesion: 0.18
+Nodes (12): CalendarDay, DateFormatOptions, DateStyle, dayAndMonth(), DayReading, daysInMonth(), fullDay(), localDay() (+4 more)
 
 ### Community 377 - "AMPM Technical Architecture and Integration Plan (DRAFT v0.2)"
 Cohesion: 0.09
-Nodes (24): Architecture principles (§1), Backups and disaster recovery table, Capacity and indicative running cost (USD 450 to 900 per month), Architecture changes from AMPM decisions of 25 October 2026, Client app: React Native iOS and Android (web build open), Team app: React Native iOS and Android, offline-first, department-scoped, Decisions for AMPM that this plan depends on (§15), Delivery: trunk-based development, staging auto-deploy, tagged production releases (+16 more)
+Nodes (23): Architecture principles (§1), Backups and disaster recovery table, Capacity and indicative running cost (USD 450 to 900 per month), Architecture changes from AMPM decisions of 25 October 2026, Client app: React Native iOS and Android (web build open), Team app: React Native iOS and Android, offline-first, department-scoped, Decisions for AMPM that this plan depends on (§15), Delivery: trunk-based development, staging auto-deploy, tagged production releases (+15 more)
 
 ### Community 378 - "styles.ts"
 Cohesion: 0.05
-Nodes (69): DevAccountsProps, SectionCardLook, CheckboxField(), CheckboxFieldProps, ConsentFields(), NavLinkStyleOptions, buttonIconSize(), ButtonLabelStyleProps (+61 more)
+Nodes (80): SectionCardLook, ButtonLabelStyleProps, ButtonStyleProps, LABEL_SIZE, CardProps, CardRoot, CardSurface(), RootProps (+72 more)
 
-### Community 379 - "media.repository.ts"
-Cohesion: 0.10
-Nodes (13): COVER_SELECT, GALLERY_SELECT, MEDIA_SELECT, MediaCoverRow, MediaGalleryRow, MediaRepository, MediaVideoRow, VIDEO_SELECT (+5 more)
+### Community 379 - "What was built"
+Cohesion: 0.35
+Nodes (7): Verified in the simulator (the "done" criterion), What was built, uuidv7(), dedupeByIdempotency(), idempotencyKey(), orderForReplay(), toUpsertBody()
 
-### Community 380 - "dependencies"
-Cohesion: 0.09
-Nodes (23): dependencies, @ampm/api-client@workspace:*, @ampm/policy@workspace:*, @ampm/ui@workspace:*, expo-constants@~58.0.16, @expo-google-fonts/gilda-display@^0.4.2, @expo-google-fonts/manrope@^0.4.3, expo-image@~58.0.18 (+15 more)
+### Community 380 - "mobile/package.json"
+Cohesion: 0.04
+Nodes (78): dependencies, @ampm/api-client@workspace:*, @ampm/policy@workspace:*, @ampm/tokens@workspace:*, @ampm/ui@workspace:*, expo@~58.0.26, expo-blur@~58.0.6, expo-constants@~58.0.16 (+70 more)
 
 ### Community 381 - "SpikeModule"
-Cohesion: 0.18
-Nodes (8): SpikeModule, Fold into sprints 8 to 10, 1. Decided (20 November 2026), 2. Done, 3. Before production runs (operator actions), 4. Before pitching clients (go-live blockers), 5. The server itself (needs the server owner: AMPM's SSH user has no root), Production readiness: the shared VPS
+Cohesion: 0.25
+Nodes (7): SpikeModule, 1. Decided (20 November 2026), 2. Done, 3. Before production runs (operator actions), 4. Before pitching clients (go-live blockers), 5. The server itself (needs the server owner: AMPM's SSH user has no root), Production readiness: the shared VPS
 
 ### Community 382 - "session.ts"
-Cohesion: 0.05
-Nodes (51): FONTS, CREATIVE, DEMO_CLIENT, FetchFn, Instance, mockPush, mockReplace, mockWindow (+43 more)
+Cohesion: 0.08
+Nodes (37): CREATIVE, DEMO_CLIENT, FetchFn, Instance, mockPush, mockReplace, mockWindow, renderScreen() (+29 more)
 
 ### Community 383 - "styles.test.ts"
 Cohesion: 0.25
@@ -1889,17 +1865,13 @@ Nodes (9): ALLOWED_PACKAGES, BARREL, importGraph(), isRecipeFunction(), NOT_RECI
 Cohesion: 0.39
 Nodes (5): box(), parent_dirs(), ship-source.sh script, sums(), unpack()
 
-### Community 385 - "media.service.ts"
-Cohesion: 0.11
-Nodes (19): CLIENT_VISIBILITIES, DEMO_VISIBILITIES, DERIVABLE_IMAGE_MIMES, isDerivableImage(), MAX_UPLOAD_BYTES, mimeForRef(), PNG, PUBLISHABLE_RIGHTS (+11 more)
-
 ### Community 386 - "matrix-load.ts"
-Cohesion: 0.13
-Nodes (36): Check, CHECKS, CONDITION_KINDS, conditionMet(), FIELD_GROUPS, SIDES, Subject, SUBJECTS (+28 more)
+Cohesion: 0.09
+Nodes (47): Check, CHECKS, CONDITION_KINDS, FIELD_GROUPS, SIDES, SUBJECTS, View, VIEWS (+39 more)
 
-### Community 387 - "Principal"
-Cohesion: 0.03
-Nodes (60): Access, body, params, ProbeController, query, silentLogger, ZodBody(), ZodParams() (+52 more)
+### Community 387 - "RequirePermission"
+Cohesion: 0.02
+Nodes (83): RateLimit(), CLIENT_READS, CLIENT_WRITES, UPLOADS, ProbeController, ZodBody(), ZodParams(), ZodQuery() (+75 more)
 
 ### Community 388 - "screen-header.tsx"
 Cohesion: 0.23
@@ -1913,25 +1885,29 @@ Nodes (5): GlowOrbsProps, glowLayerStyles, glowOrbPlacements, glowOrbStyles, Glo
 Cohesion: 0.13
 Nodes (30): CP-11 Subscription, plans and agreements, CP-20 Wedding dashboard, CP-24 Budget, CP-25 Invoice detail and payment, CP-40 Feedback, CP-41 Closed project state, PUB-07 Demo and subscription, T2 Record detail with tabs template (+22 more)
 
-### Community 391 - "engine.ts"
-Cohesion: 0.08
-Nodes (36): StaffAuthority, ClientInterestPermissions, clientInterestPermissionsFor(), NONE, D. The policy and core packages (11 findings; the reviewer ran the generator and probed the engine), DOCUMENT_RESOURCES, documentResource(), allowedRoles() (+28 more)
+### Community 391 - "main"
+Cohesion: 0.22
+Nodes (7): postcss@^8.5.31, generatedSet(), main(), nativewindPreset(), require, sourceFiles(), postcss
+
+### Community 392 - "media-acceptance.e2e-spec.ts"
+Cohesion: 0.11
+Nodes (6): LocalStorageAdapter, SignedUrl, STORAGE_ADAPTER, StorageAdapter, JPEG_HEADER, MP4
 
 ### Community 393 - "notification-templates-screen.tsx"
-Cohesion: 0.17
-Nodes (24): channelFields(), ChannelSection(), Field(), NotificationTemplateDetailSheet(), NotificationTemplateDetailSheetProps, NotificationTemplateEditSheetProps, channelTexts(), definedChannels() (+16 more)
+Cohesion: 0.27
+Nodes (14): channelFields(), ChannelSection(), Field(), NotificationTemplateDetailSheetProps, channelTexts(), definedChannels(), templateChannelLabel(), templateChannelsSummary() (+6 more)
 
 ### Community 394 - "MediaUploadService"
-Cohesion: 0.24
-Nodes (8): DerivativeKeys, DetectedMedia, detectMedia(), Renditions, thumbnailKeyOf(), webKeyOf(), MediaAssetRow, MediaUploadService
+Cohesion: 0.15
+Nodes (17): DEMO_VISIBILITIES, DERIVABLE_IMAGE_MIMES, DerivativeKeys, DetectedMedia, detectMedia(), isDerivableImage(), MAX_UPLOAD_BYTES, PNG (+9 more)
 
 ### Community 395 - "Team workspace (TW screens)"
 Cohesion: 0.19
 Nodes (10): Team workspace (TW screens), TW-01 Team dashboard, TW-02 Calendar, TW-11 Lead detail, TW-90 Users and roles, TW-91 Roles and permissions viewer, TW-93 Reference data, TW-97 Public content (dropped by AMPM, Q12) (+2 more)
 
 ### Community 397 - "use-plan-purchase.ts"
-Cohesion: 0.13
-Nodes (21): isRazorpayCheckoutAvailable, openRazorpayCheckout(), RazorpayCheckoutDismissedError, RazorpayCheckoutFailedError, RazorpayCheckoutOptions, RazorpayCheckoutResult, isRazorpayCheckoutAvailable, loadCheckoutScript() (+13 more)
+Cohesion: 0.22
+Nodes (12): isRazorpayCheckoutAvailable, RazorpayCheckoutDismissedError, RazorpayCheckoutFailedError, RazorpayCheckoutOptions, RazorpayCheckoutResult, isRazorpayCheckoutAvailable, loadCheckoutScript(), openRazorpayCheckout() (+4 more)
 
 ### Community 399 - "./styles"
 Cohesion: 0.50
@@ -1939,14 +1915,14 @@ Nodes (4): exports, ./styles, default, types
 
 ### Community 400 - "mobile/src/test/render.tsx"
 Cohesion: 0.04
-Nodes (51): okFetch, setup(), mockPush, mockWindow, mockPush, mockWindow, MINTED, mockActivate (+43 more)
+Nodes (43): okFetch, setup(), MINTED, mockActivate, mockClear, mockExchange, mockReplace, mockSetAccessToken (+35 more)
 
 ### Community 401 - "path"
 Cohesion: 0.12
 Nodes (22): env_file, path, required, env_file, pull_policy, env_file, pull_policy, volumes (+14 more)
 
 ### Community 402 - "seed-consultancy.ts"
-Cohesion: 0.14
+Cohesion: 0.13
 Nodes (29): BASE, EVENTS, HOTEL_SLUG, HOTEL_SLUG_2, HOTEL_SLUG_3, HOTEL_SLUG_4, ID, LINES (+21 more)
 
 ### Community 403 - "dependencies"
@@ -1958,20 +1934,20 @@ Cohesion: 0.38
 Nodes (9): PUB-01 Home, PUB-02 How it works, PUB-03 Services, PUB-04 Destinations and selected work, PUB-05 About, PUB-06 Contact, enquiry and demo request, PUB-08 Privacy notice and terms, PUB-09 Enquiry submitted (+1 more)
 
 ### Community 405 - ".record"
-Cohesion: 0.06
-Nodes (21): AccountContactsService, assertInvitable(), detectDocument(), DetectedDocument, downloadFileName(), MAX_DOCUMENT_BYTES, PNG, SIGNATURES (+13 more)
+Cohesion: 0.08
+Nodes (19): detectDocument(), DetectedDocument, downloadFileName(), MAX_DOCUMENT_BYTES, PNG, SIGNATURES, DOCUMENT_SELECT, DocumentBlobRow (+11 more)
 
 ### Community 406 - "rate-limit-coverage.spec.ts"
-Cohesion: 0.11
-Nodes (22): reflect-metadata@^0.2.2, RATE_LIMIT, RATE_LIMIT_EXEMPT, MUTATING, reflector, IS_PUBLIC, PERMISSION, COSTLY (+14 more)
+Cohesion: 0.13
+Nodes (20): reflect-metadata@^0.2.2, RATE_LIMIT, RATE_LIMIT_EXEMPT, IS_PUBLIC, PERMISSION, COSTLY, isPublic(), isSignIn() (+12 more)
 
 ### Community 407 - "Technology choices as short ADRs (§4)"
 Cohesion: 0.12
-Nodes (33): Architecture risks and mitigations (§14), Monthly partitioning of audit_events and notifications, api container: NestJS modular monolith (REST, OpenAPI, WebSocket), Edge: CloudFront CDN with signed URLs, WAF, load balancer with TLS termination, Object storage: three S3 buckets by sensitivity, PostgreSQL 16 on RDS Multi-AZ with PITR, Redis (ElastiCache): queues, sessions, rate limits, caches, chat bus, Video delivery: Cloudflare Stream or Mux with signed playback (+25 more)
+Nodes (31): Background jobs (§9): idempotent and outcome-recorded, api container: NestJS modular monolith (REST, OpenAPI, WebSocket), Edge: CloudFront CDN with signed URLs, WAF, load balancer with TLS termination, Object storage: three S3 buckets by sensitivity, PostgreSQL 16 on RDS Multi-AZ with PITR, Redis (ElastiCache): queues, sessions, rate limits, caches, chat bus, web-app container: Next.js client portal, demo mode and team workspace, web-public container: Next.js static pages and guest RSVP portal (+23 more)
 
 ### Community 408 - "class-audit.mjs"
-Cohesion: 0.16
-Nodes (15): addLiteral(), addWords(), CLASS_CALLS, classesIn(), collectClassExpr(), collectRecipeStrings(), collectVariantsConfig(), generatedSet() (+7 more)
+Cohesion: 0.26
+Nodes (10): addLiteral(), addWords(), CLASS_CALLS, classesIn(), collectClassExpr(), collectRecipeStrings(), collectVariantsConfig(), MARKERS (+2 more)
 
 ### Community 409 - "deploy"
 Cohesion: 0.33
@@ -1990,8 +1966,12 @@ Cohesion: 0.18
 Nodes (10): Box API run-config (so sign-in works), Checks, Deploy the API at latest main, Deploy the UI, Deploy the website, Media object store (local files), One-time host setup, Shape (+2 more)
 
 ### Community 413 - "use-ampm-client-activation.ts"
-Cohesion: 0.10
-Nodes (29): ClientCodeStepProps, CodeActionsProps, ResendButton(), ShownCodeProps, CodeDelivery, CodeStep, SentCode, refusalText() (+21 more)
+Cohesion: 0.19
+Nodes (16): refusalText(), AmpmClientActivation, FINAL_REFUSALS, isFinal(), useActivationExchange(), useAmpmClientActivation(), useAmpmClientSignIn(), useCodeExchange() (+8 more)
+
+### Community 414 - "PlansResponse"
+Cohesion: 0.24
+Nodes (3): PlansController, PlansService, PlansResponse
 
 ### Community 415 - "The Open Points (R1 to R19)"
 Cohesion: 0.18
@@ -2005,17 +1985,25 @@ Nodes (6): Backup alerts, BackupMetricsMissing, BackupTooOld, MetricsCollectorSt
 Cohesion: 0.40
 Nodes (5): After, First, if a wedding is live, Incident response (feature 6.8, D-056), Route, Triage (SSH to the box, `cd /opt/ampm`)
 
+### Community 420 - "Key flow 7.3: approval of a vendor proposal version"
+Cohesion: 0.52
+Nodes (5): Key flow 7.3: approval of a vendor proposal version, Approval status transitions, required_decisions multi-approver rule, Vendor assignment status transitions, Flow 4 — Vendor options, proposals and selection
+
 ### Community 421 - "apps/api - NestJS 12 + Prisma 7 on PostgreSQL 16"
-Cohesion: 0.11
-Nodes (20): apps/api - NestJS 12 + Prisma 7 on PostgreSQL 16, pnpm --filter api db:migrate (new migration from schema), src/modules - one folder per data-model module (A to Q), src/common - request context, logger, error filter, envelope interceptor, Zod decorators, src/db - Prisma service & repository scoping helpers, src/identity - Cognito & local adapters behind one interface, src/policy - AuthGuard, PermissionGuard, principal resolution, entitlement cache, audit, test/ - supertest e2e suite against DATABASE_URL_TEST (+12 more)
+Cohesion: 0.20
+Nodes (11): src/identity - Cognito & local adapters behind one interface, Managed identity - Amazon Cognito Mumbai (changed from self-managed auth), Amazon Cognito (Mumbai) - real sign-in, pnpm db:seed (synthetic roles, permissions, four accounts), pnpm dev:token (development token for a seeded account), Setting up a new machine, Node 24 via nvm (.nvmrc), pnpm 12 via corepack (hoisted linker) (+3 more)
+
+### Community 422 - "i18n/index.ts"
+Cohesion: 0.47
+Nodes (3): en, createI18n(), Locale
 
 ### Community 423 - "api"
 Cohesion: 0.22
 Nodes (10): deploy, ports, volumes, resources, services, api, worker, deploy (+2 more)
 
 ### Community 426 - "toast-viewport.tsx"
-Cohesion: 0.14
-Nodes (22): DEFAULT_TOAST_DURATION_MS, ToastContext, ToastProviderProps, BEHAVIOURS, Demo, stories, TONES, toastFrameStyles (+14 more)
+Cohesion: 0.13
+Nodes (24): DEFAULT_TOAST_DURATION_MS, ToastContext, ToastProvider(), ToastProviderProps, BEHAVIOURS, Demo, stories, TONES (+16 more)
 
 ### Community 427 - "5. The features, in order"
 Cohesion: 0.22
@@ -2033,6 +2021,10 @@ Nodes (8): The First Session's Brief, Locking the Plan (short), Sprint 0 Lock Li
 Cohesion: 0.50
 Nodes (3): Major upgrade (logical dump + load), Notes, Upgrade PostgreSQL to a new major version (feature 6.8, D-056)
 
+### Community 431 - "Offline spike: the team app's local store and sync library"
+Cohesion: 0.40
+Nodes (4): Consequences, Offline spike: the team app's local store and sync library, The candidates, on the criteria that matter here, Why `expo-sqlite`
+
 ### Community 432 - "scripts"
 Cohesion: 0.29
 Nodes (7): scripts, build, dev, lint, start, test, typecheck
@@ -2047,47 +2039,43 @@ Nodes (6): Commercial Privacy (rule 8), The Permission Pipeline (eight steps), R
 
 ### Community 435 - "Input"
 Cohesion: 0.03
-Nodes (145): EMPTY_DRAFT, InviteDraft, inviteErrorTitle(), InviteFields(), InviteFieldsProps, InviteStaffSheet(), InviteStaffSheetProps, useInviteForm() (+137 more)
+Nodes (141): ConfigurationDetailSheet(), ConfigurationDetailSheetProps, Field(), AddFlagInput(), ConfigFieldControl(), ConfigurationEditSheet(), ConfigurationEditSheetProps, EnumSetField() (+133 more)
 
-### Community 437 - "SiteContainer"
-Cohesion: 0.15
-Nodes (16): dynamic, metadata, Page(), SiteContainer(), ENQUIRY_HREF, ServicePanel(), ServicePanelProps, ServiceText() (+8 more)
+### Community 437 - "GlowOrbs"
+Cohesion: 0.08
+Nodes (30): ContactPage(), dynamic, metadata, dynamic, metadata, Page(), dynamic, metadata (+22 more)
 
-### Community 438 - "staff.ts"
-Cohesion: 0.16
-Nodes (21): 5.3 Notification seam (interface + console stub + service + in-app), 5.3 Client-login administration (`admin.client_logins.*`), actionsOf(), all(), ALL_ACTIONS, assigned(), expectGrant(), expectRow() (+13 more)
+### Community 438 - "Host alerts"
+Cohesion: 0.40
+Nodes (5): Host alerts, HostCPUSaturated, HostDiskFillingUp, HostMemoryHigh, NodeExporterDown
 
 ### Community 439 - "notification-template-edit-sheet.tsx"
-Cohesion: 0.19
-Nodes (22): CHANNEL_FIELDS, ChannelDraft, emailDraft(), ChannelEditor(), ChannelEditorProps, clearFieldError(), NotificationTemplateEditSheet(), SetEnabled (+14 more)
+Cohesion: 0.15
+Nodes (26): CHANNEL_FIELDS, ChannelDraft, emailDraft(), ChannelEditor(), ChannelEditorProps, clearFieldError(), NotificationTemplateEditSheet(), NotificationTemplateEditSheetProps (+18 more)
 
-### Community 440 - "proposal-lines-editor.tsx"
-Cohesion: 0.24
-Nodes (17): AmountInput(), LineDraft, LinePatch, TotalsDraft, InternalTotalField(), ProposalDraftState, TermsFields(), fieldId() (+9 more)
+### Community 440 - "AMPM VPS runbooks (feature 6.8, D-056)"
+Cohesion: 0.67
+Nodes (3): AMPM VPS runbooks (feature 6.8, D-056), Recovery objectives (D-015, vps-setup §4), Rehearsal (AC-22)
 
 ### Community 442 - "Amazon Cognito — setup guide (retired)"
-Cohesion: 0.12
-Nodes (15): 0. What already exists vs what this adds, 12. Operations — observability, cost, residency, 13. Reproducibility — the `infra/aws/` module, 14. Open items and build backlog, 1. Decisions to lock before you touch AWS, 2. Provision the user pool and app client, 3. Close the verified‑email/phone gap — the Pre‑Token‑Generation V2 Lambda  ([[D-041]] / [[D-043]]), 4. Staff sign‑in — password + authenticator app (TOTP) (+7 more)
+Cohesion: 0.07
+Nodes (28): B. Administration modules, sprints 3 to 5 (20 findings; B1, B2, B3, B7, B8 and B9 re-checked by the lead), Build verification, 31 October 2026, C. Lead capture, the public enquiry form and the schema (16 findings; C1, C2, C3, C4, C5, C7, C8, C9, C11 and C12 re-checked by the lead, C2 to C4 and C7 live), Environment and gates, F. Infrastructure as code, workflows and repository tooling (22 findings; F1, F3, F4, F7, F9 and F10 re-read by the lead), Findings by area, Fix before 8.2 and 8.3, Fold into sprints 8 to 10 (+20 more)
 
 ### Community 444 - "Data layer (§8)"
-Cohesion: 0.23
-Nodes (10): Data layer (§8), Demo isolation by is_demo scoping and nightly seed restore, Digital Personal Data Protection Act 2023 controls, Job: retention (identity documents, guest data, leads, demo reset), Money as numeric(14,2) with a currency column, UTC storage, Repository-layer scoping by membership, is_demo, visibility and soft delete, Prisma soft-delete client extension, Prisma ORM and migrations (+2 more)
+Cohesion: 0.21
+Nodes (11): Data layer (§8), Demo isolation by is_demo scoping and nightly seed restore, Digital Personal Data Protection Act 2023 controls, Expand-and-contract migrations, Job: retention (identity documents, guest data, leads, demo reset), Money as numeric(14,2) with a currency column, UTC storage, Repository-layer scoping by membership, is_demo, visibility and soft delete, Prisma soft-delete client extension (+3 more)
 
 ### Community 445 - "TW-35 Function workspace"
 Cohesion: 0.42
 Nodes (10): T8 Live console template, TW-35 Function workspace, TW-56 Travel and transport, TW-70 Tasks, TW-72 Staffing roster, TW-73 Run-of-show editor and live view, TW-74 Readiness board, TW-75 Incidents (+2 more)
 
-### Community 446 - "enquiry-next-step.ts"
-Cohesion: 0.18
-Nodes (16): Enquiry, EnquiryTab, initialTab(), nextStep, PIPELINE_STEPS, pipelineIndex(), PROPOSAL_STEPS, ProposalStatus (+8 more)
+### Community 446 - "consultancy.ts"
+Cohesion: 0.04
+Nodes (52): EnquiriesClientController, EnquiriesClientService, isOpenEnquiryConflict(), dateOnly(), iso(), toEnquiryClientDetailView(), toEnquiryClientView(), toEnquiryEventClientView() (+44 more)
 
 ### Community 447 - "expo-blur"
 Cohesion: 0.67
 Nodes (3): expo-blur@~58.0.6, expo-blur, expo-blur@*
-
-### Community 448 - "PrismaRolesRepository"
-Cohesion: 0.13
-Nodes (4): PrismaRolesRepository, RoleWithGrants, toRow(), WITH_GRANTS
 
 ### Community 449 - "services"
 Cohesion: 0.14
@@ -2122,32 +2110,20 @@ Cohesion: 0.15
 Nodes (13): interval, retries, start_period, test, timeout, web, healthcheck, networks (+5 more)
 
 ### Community 461 - "notifications.format.ts"
-Cohesion: 0.28
-Nodes (14): formatMoment(), entityValue(), Field(), moment(), NotificationDetailSheet(), NotificationDetailSheetProps, CHANNEL_LABEL, notificationChannelLabel() (+6 more)
+Cohesion: 0.31
+Nodes (13): formatMoment(), entityValue(), Field(), moment(), NotificationDetailSheet(), CHANNEL_LABEL, notificationChannelLabel(), notificationStatusLabel() (+5 more)
 
 ### Community 462 - "seed-reference.ts"
-Cohesion: 0.22
-Nodes (12): bootstrapSuperAdmin(), args, main(), prisma, roleIdFor(), seedConfigurations(), seedGrantableCapabilities(), seedLeadSources() (+4 more)
-
-### Community 463 - "consultancy-admin.form-widgets.tsx"
-Cohesion: 0.22
-Nodes (13): ChoiceOption, CheckedInputProps, ChoiceProps, ChoiceSegmentsProps, DateInput(), FormActions(), FormActionsProps, FormCardProps (+5 more)
+Cohesion: 0.18
+Nodes (14): @prisma/adapter-pg@7.10.1, bootstrapSuperAdmin(), args, main(), prisma, roleIdFor(), seedConfigurations(), seedGrantableCapabilities() (+6 more)
 
 ### Community 464 - "record-rows.ts"
-Cohesion: 0.19
-Nodes (9): isNamed(), isRead(), OWN_TABLE_ROWS, parentRow(), RECORD_ROWS, RecordRow, recordRowOf(), RowName (+1 more)
+Cohesion: 0.17
+Nodes (11): DOCUMENT_RESOURCES, MATRIX, isNamed(), isRead(), OWN_TABLE_ROWS, parentRow(), RECORD_ROWS, RecordRow (+3 more)
 
-### Community 466 - "agreement-create-form.tsx"
-Cohesion: 0.24
-Nodes (13): AgreementCreateForm(), AgreementDraft, AgreementFieldsProps, agreementRequest(), EMPTY_DRAFT, ScopeAndFeeFields(), ServiceTypePicker(), StructureAndTermsFields() (+5 more)
-
-### Community 467 - "roles.service.ts"
-Cohesion: 0.33
-Nodes (10): assertAssignable(), assignableCapabilityViews(), capabilityViewsForKeys(), capabilityViewsForRole(), isSuperAdmin(), toCapabilityView(), PickerBodyProps, CapabilityView (+2 more)
-
-### Community 468 - "permission-sets.controller.ts"
-Cohesion: 0.21
-Nodes (7): idParam, PermissionSetsController, roleParam, roleSetParam, PermissionSetsModule, PermissionSetCreateRequest, PermissionSetUpdateRequest
+### Community 467 - "catalog.ts"
+Cohesion: 0.10
+Nodes (29): assignableCapabilityViews(), capabilityViewsForKeys(), capabilityViewsForRole(), isSuperAdmin(), toCapabilityView(), capabilities, doc, here (+21 more)
 
 ### Community 469 - "render.ts"
 Cohesion: 0.33
@@ -2166,7 +2142,7 @@ Cohesion: 0.28
 Nodes (9): build, NEXT_PUBLIC_API_URL, NEXT_PUBLIC_PORTAL_URL, NEXT_PUBLIC_TURNSTILE_SITE_KEY, args, context, dockerfile, build (+1 more)
 
 ### Community 473 - "AMPM production on the shared Plesk VPS: setup and operation"
-Cohesion: 0.22
+Cohesion: 0.18
 Nodes (9): 1. What runs where, 2. Secrets (D-140), 3. First build (done once, recorded here), 4. Deploying a change, 5. Backups and restore (D-139), 6. Going live (when AMPM starts pitching clients), AMPM production on the shared Plesk VPS: setup and operation, Antivirus (+1 more)
 
 ### Community 474 - "resources"
@@ -2213,21 +2189,13 @@ Nodes (9): Stat(), StatProps, StatAlign, StatDetailTone, StatSize, StatStyleProp
 Cohesion: 0.67
 Nodes (3): cpus, memory, limits
 
+### Community 488 - "session.ts"
+Cohesion: 0.10
+Nodes (24): @expo-google-fonts/manrope@^0.4.3, expo-splash-screen@~58.0.14, expo-status-bar@~58.0.5, FONTS, RootLayout(), env, schema, emit() (+16 more)
+
 ### Community 499 - "seed-hotel-subresources.ts"
 Cohesion: 0.26
 Nodes (10): clearChildren(), createProfile(), createRateCard(), HotelSubresources, RateItemSeed, RATES_VERIFIED_AT, RoomSeed, SUBRESOURCES (+2 more)
-
-### Community 500 - "use-new-request.ts"
-Cohesion: 0.38
-Nodes (9): dateErrors, EMPTY_REQUEST_DRAFT, FieldsProps, formErrors, NewRequestDraft, roomsError(), toCreateRequest(), NewRequestForm (+1 more)
-
-### Community 501 - "Build verification, 31 October 2026"
-Cohesion: 0.18
-Nodes (9): Build verification, 31 October 2026, Environment and gates, Fix before 8.2 and 8.3, How this was run, Live smoke results (curl + the browser pane), Process findings, Reviewer findings re-verified by the lead (independently, after the reports), The lead's own checks (+1 more)
-
-### Community 503 - "formatAmount"
-Cohesion: 0.40
-Nodes (4): Amount, audience, Currency, formatAmount()
 
 ## Ambiguous Edges - Review These
 - `Principle: vendor contact details stay internal even after a vendor is selected` → `BIZ: AMPM Website and App Business Explanation for Developer`  [AMBIGUOUS]
@@ -2247,22 +2215,22 @@ Nodes (4): Amount, audience, Currency, formatAmount()
 
 ## Knowledge Gaps
 - **276 isolated node(s):** `RFC-6238`, `RFC-6238`, `RFC-4648`, `RFC-4226`, `RFC-4180` (+271 more)
-  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 4119 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
-- **91 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 4121 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+- **69 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `AMPM Platform Data Model and ER Diagrams` connect `AMPM Platform Data Model and ER Diagrams` to `User flows`, `AMPM User-Flow Diagrams (DRAFT v0.2)`, `Round-Two Open Questions (R1 to R19)`, `wedding projects`, `AMPM Developer Technical Specification v1.0 (SPEC)`, `Decision Brief Open Areas`, `Part B: developer drafts`, `AMPM Role and Permission Matrix (DRAFT v0.2)`, `AMPM Platform Wireframe Specifications (wireframes.md v0.2)`, `AMPM Technical Architecture and Integration Plan (DRAFT v0.2)`, `AMPM Developer Technical Specification v1.0 (20 October 2026)`?**
-  _High betweenness centrality (0.057) - this node is a cross-community bridge._
+- **Why does `AMPM Platform Data Model and ER Diagrams` connect `AMPM Platform Data Model and ER Diagrams` to `User flows`, `AMPM User-Flow Diagrams (DRAFT v0.2)`, `Round-Two Open Questions (R1 to R19)`, `guests`, `AMPM Developer Technical Specification v1.0 (SPEC)`, `Decision Brief Open Areas`, `Part B: developer drafts`, `AMPM Platform Wireframe Specifications (wireframes.md v0.2)`, `AMPM Developer Technical Specification v1.0 (20 October 2026)`?**
+  _High betweenness centrality (0.055) - this node is a cross-community bridge._
 - **What connects `RFC-6238`, `RFC-6238`, `RFC-4648` to the rest of the system?**
   _276 weakly-connected nodes found - possible documentation gaps or missing edges._
-- **Should `enquiries.service.ts` be split into smaller, more focused modules?**
-  _Cohesion score 0.027280242491044365 - nodes in this community are weakly interconnected._
-- **Why does `Sprint 8 feature brief — Phase 1 CRM: lead capture, conversion and subscription` connect `apps_api_src_generated_prisma_client` to `AuthTokenService`, `AppLogger`, `AMPM Platform Data Model and ER Diagrams`, `Principal`?**
+- **Should `apps_api_src_generated_prisma_client` be split into smaller, more focused modules?**
+  _Cohesion score 0.02054919076195672 - nodes in this community are weakly interconnected._
+- **Why does `Sprint 8 feature brief — Phase 1 CRM: lead capture, conversion and subscription` connect `JobQueue` to `AuthTokenService`, `AMPM Platform Data Model and ER Diagrams`, `AppLogger`?**
   _High betweenness centrality (0.041) - this node is a cross-community bridge._
 - **Should `User flows` be split into smaller, more focused modules?**
-  _Cohesion score 0.03446680545917187 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.02939735423811857 - nodes in this community are weakly interconnected._
 
 ### Low-confidence Hints
 _AMBIGUOUS edges — the extractor was unsure. Verify before acting on these._

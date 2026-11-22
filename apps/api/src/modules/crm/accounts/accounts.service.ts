@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import {
+  coupleTitle,
   errors,
   type AccountDetailView,
   type AccountListQuery,
@@ -29,6 +30,8 @@ interface ConvertPlan {
   readonly previousStatus: LeadStatus;
   readonly accountName: string;
   readonly coupleNames: string | null;
+  readonly brideName: string | null;
+  readonly groomName: string | null;
   readonly preferredLocations: string | null;
   readonly contact: {
     readonly name: string;
@@ -193,6 +196,8 @@ function toAccountData(plan: ConvertPlan, userId: string): AccountWriteData {
   return {
     name: plan.accountName,
     coupleNames: plan.coupleNames,
+    brideName: plan.brideName,
+    groomName: plan.groomName,
     preferredLocations: plan.preferredLocations,
     status: "prospect",
     isDemo: false,
@@ -219,18 +224,26 @@ function toContactData(
   };
 }
 
-/** Build the convert plan: every field defaults from the lead, so the request may carry only the email. */
+/**
+ * Build the convert plan: every field defaults from the lead, so the request may carry only the email.
+ * A bride and groom given together name the account after the couple (D-158).
+ */
 function buildConvertPlan(
   leadId: string,
   lead: NonNullable<Awaited<ReturnType<LeadsRepository["findById"]>>>,
   request: LeadConvertRequest,
   actorId: string,
 ): ConvertPlan {
+  const brideName = request.brideName || null;
+  const groomName = request.groomName || null;
+  const couple = coupleTitle({ brideName, groomName });
   return {
     leadId,
     previousStatus: lead.status,
-    accountName: request.accountName ?? lead.name,
-    coupleNames: request.coupleNames ?? null,
+    accountName: couple ?? request.accountName ?? lead.name,
+    coupleNames: couple ?? request.coupleNames ?? null,
+    brideName,
+    groomName,
     preferredLocations: request.preferredLocations ?? null,
     contact: {
       name: request.primaryContact.name ?? lead.name,

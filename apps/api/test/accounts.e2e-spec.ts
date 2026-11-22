@@ -120,6 +120,41 @@ describe("Lead conversion (e2e)", () => {
     expect(lead.convertedAt).not.toBeNull();
   });
 
+  it("names the new client after the couple when Sales gives the bride and groom (D-158)", async () => {
+    const coupleLead = await createLead("Couple", "9876511005");
+    const res = await http()
+      .post(`/crm/leads/${coupleLead}/convert`)
+      .set("authorization", await sm())
+      .send({
+        accountName: `${TAG} Mehta`,
+        brideName: "Riya",
+        groomName: "Kabir",
+        primaryContact: { email: `${EMAIL_PREFIX}-couple@example.com` },
+      })
+      .expect(201);
+    expect(res.body.data.account).toMatchObject({
+      name: "Riya & Kabir",
+      coupleNames: "Riya & Kabir",
+      brideName: "Riya",
+      groomName: "Kabir",
+      brideFatherName: null,
+    });
+
+    // One name alone keeps the lead's name (or the one Sales typed) and records that name.
+    const brideLead = await createLead("Bride only", "9876511006");
+    const brideOnly = await http()
+      .post(`/crm/leads/${brideLead}/convert`)
+      .set("authorization", await sm())
+      .send({ brideName: "Meera", primaryContact: { email: `${EMAIL_PREFIX}-bride@example.com` } })
+      .expect(201);
+    expect(brideOnly.body.data.account).toMatchObject({
+      name: `${TAG} Bride only`,
+      coupleNames: null,
+      brideName: "Meera",
+      groomName: null,
+    });
+  });
+
   it("makes the converted lead read-only and refuses a second conversion (AC-01.8)", async () => {
     const leadId = await createLead("ReadOnly", "9876511002");
     await http()

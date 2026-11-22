@@ -41,6 +41,12 @@ export const leadConvertRequest = z.object({
   /** Couple or family name for the account; defaults to the lead's name when omitted. */
   accountName: accountName.optional(),
   coupleNames: coupleNames.optional(),
+  /**
+   * The couple, when Sales knows them at conversion. With both names the account is named after them
+   * ("Priya & Arjun") whatever `accountName` and `coupleNames` say, as an edit in the hub would (D-158).
+   */
+  brideName: partnerName.optional(),
+  groomName: partnerName.optional(),
   preferredLocations: preferredLocations.optional(),
   primaryContact: z.object({
     name: contactName.optional(),
