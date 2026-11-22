@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { COUPLE_PERSON_NAME_MAX } from "../couple.js";
 import { cursorQuery, isoDateTime, page, uuid } from "./common.js";
 import { indianPhone } from "./leads.js";
 
@@ -17,6 +18,8 @@ export type ClientAccountStatus = z.infer<typeof clientAccountStatus>;
 
 const accountName = z.string().trim().min(1).max(255);
 const coupleNames = z.string().trim().max(255);
+const partnerName = z.string().trim().max(COUPLE_PERSON_NAME_MAX);
+const fatherName = z.string().trim().max(255);
 const preferredLocations = z.string().trim().max(10_000);
 const contactName = z.string().trim().min(1).max(255);
 const relation = z.string().trim().min(1).max(255);
@@ -72,6 +75,11 @@ export const accountView = z.object({
   id: uuid,
   name: z.string(),
   coupleNames: z.string().nullable(),
+  /** The couple (CLIENT-class): once both the bride's and groom's names are given they name the client. */
+  brideName: z.string().nullable(),
+  brideFatherName: z.string().nullable(),
+  groomName: z.string().nullable(),
+  groomFatherName: z.string().nullable(),
   preferredLocations: z.string().nullable(),
   status: clientAccountStatus,
   isDemo: z.boolean(),
@@ -139,11 +147,19 @@ export type AccountPage = z.infer<typeof accountPage>;
  * flag, the lead link and the billing fields are not here: status changes carry sign-in effects
  * (suspended refuses sign-in) and billing is Finance's own path. A nullable field is cleared with null;
  * an empty string clears it too (an emptied text box).
+ *
+ * The couple: the bride and groom with each one's father. An edit that leaves both the bride's and the
+ * groom's names given renames the client after them ("Priya & Arjun": its name and couple names, which
+ * then follow the couple rather than any `name` or `coupleNames` the same edit sends).
  */
 export const accountUpdateRequest = z
   .object({
     name: accountName.optional(),
     coupleNames: clearable(coupleNames),
+    brideName: clearable(partnerName),
+    brideFatherName: clearable(fatherName),
+    groomName: clearable(partnerName),
+    groomFatherName: clearable(fatherName),
     preferredLocations: clearable(preferredLocations),
     internalNotes: clearable(internalNotes),
   })

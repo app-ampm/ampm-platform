@@ -13,6 +13,7 @@ import { AccountContactSheet, type ContactTarget } from "./account-contact-sheet
 import { AccountContacts } from "./account-contacts";
 import { AccountDetailsSheet } from "./account-details-sheet";
 import { AccountEnquiries } from "./account-enquiries";
+import { AccountCouple } from "./account-couple";
 import { AccountFacts } from "./account-facts";
 import { AccountHeader } from "./account-header";
 import { AccountPayments } from "./account-payments";
@@ -49,9 +50,10 @@ interface ContentProps {
 
 /**
  * The loaded account in T3's `1.3 : 1` columns from 1024. Main: the people and what they bought, saved
- * and asked for (contacts, subscriptions, saved hotels, hotel enquiries, service agreements). Side: the facts with the
- * originating lead, the Finance ledger and the internal notes, the reference panels a record keeps
- * beside its working ones. Stacked, that is the phone's order.
+ * and asked for (contacts, subscriptions, saved hotels, hotel enquiries, service agreements). Side: the
+ * couple (bride and groom with their fathers), the facts with the originating lead, the Finance ledger
+ * and the internal notes, the reference panels a record keeps beside its working ones. Stacked, that is
+ * the phone's order.
  */
 function AccountDetailContent({ accountId, account, permissions, actions }: ContentProps) {
   return (
@@ -68,6 +70,7 @@ function AccountDetailContent({ accountId, account, permissions, actions }: Cont
         <AccountAgreements accountId={accountId} canRead={permissions.canReadAgreements} />
       </Stack>
       <Stack key="side" gap={6}>
+        <AccountCouple account={account} />
         <AccountFacts account={account} canOpenLead={permissions.canReadLeads} />
         <AccountPayments accountId={accountId} />
         {account.internalNotes ? (

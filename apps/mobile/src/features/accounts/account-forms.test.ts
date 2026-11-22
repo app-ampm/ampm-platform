@@ -1,5 +1,10 @@
 import { buildContactCreate, buildContactUpdate, contactDraftOf } from "./account-contact.form";
-import { buildDetailsUpdate, detailsDraftOf, validateDetails } from "./account-details.form";
+import {
+  buildDetailsUpdate,
+  detailsDraftOf,
+  draftCoupleTitle,
+  validateDetails,
+} from "./account-details.form";
 import { accountContactViewFixture, accountDetailViewFixture } from "./accounts.test-utils";
 import { accountPermissionsFor } from "./use-account-permissions";
 
@@ -75,12 +80,30 @@ describe("account details form", () => {
   });
 
   it("sends only the changed fields, an emptied optional one as null", () => {
-    const draft = { ...detailsDraftOf(account), coupleNames: "Priya & Rohan", internalNotes: "" };
+    const draft = {
+      ...detailsDraftOf(account),
+      brideFatherName: "Rahul Sharma",
+      internalNotes: "",
+    };
     expect(buildDetailsUpdate(draft, account)).toEqual({
-      coupleNames: "Priya & Rohan",
+      brideFatherName: "Rahul Sharma",
       internalNotes: null,
     });
     expect(buildDetailsUpdate(detailsDraftOf(account), account)).toBeNull();
+  });
+
+  it("names the client after the couple once both are given, so the name is not sent", () => {
+    const draft = { ...detailsDraftOf(account), name: "", brideName: "Priya ", groomName: "Arjun" };
+    expect(draftCoupleTitle(draft)).toBe("Priya & Arjun");
+    // An emptied name box is fine then: the couple names the client.
+    expect(validateDetails(draft).name).toBeUndefined();
+    expect(buildDetailsUpdate(draft, account)).toEqual({ brideName: "Priya", groomName: "Arjun" });
+  });
+
+  it("keeps the name required while only one of the couple is given", () => {
+    const draft = { ...detailsDraftOf(account), name: " ", brideName: "Priya" };
+    expect(draftCoupleTitle(draft)).toBeNull();
+    expect(validateDetails(draft).name).toBe("Enter the client's name");
   });
 });
 

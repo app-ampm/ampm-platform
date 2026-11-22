@@ -129,14 +129,36 @@ describe("the client hub (TW-13)", () => {
     const sent: Sent[] = [];
     await renderHub(sent);
     await fireEvent.press(await screen.findByTestId("account-edit-details"));
-    await fireEvent.changeText(await screen.findByTestId("account-couple"), "Priya & Rohan");
+    await fireEvent.changeText(await screen.findByTestId("account-locations"), "Goa");
+    await fireEvent.press(screen.getByTestId("account-details-save"));
+    expect(await screen.findByText("Details saved")).toBeOnTheScreen();
+    expect(sent).toEqual([
+      { method: "PATCH", path: `/crm/accounts/${ACCOUNT_ID}`, body: { preferredLocations: "Goa" } },
+    ]);
+  });
+
+  it("adds the couple with their fathers, and the client name follows the couple", async () => {
+    const sent: Sent[] = [];
+    await renderHub(sent);
+    await fireEvent.press(await screen.findByTestId("account-edit-details"));
+    await fireEvent.changeText(await screen.findByTestId("account-bride-name"), "Priya");
+    await fireEvent.changeText(screen.getByTestId("account-bride-father"), "Rahul Sharma");
+    await fireEvent.changeText(screen.getByTestId("account-groom-name"), "Rohan");
+    await fireEvent.changeText(screen.getByTestId("account-groom-father"), "Vikram Mehta");
+    // The name box shows the name the client will take, and is no longer typed in.
+    expect(screen.getByTestId("account-name")).toHaveDisplayValue("Priya & Rohan");
     await fireEvent.press(screen.getByTestId("account-details-save"));
     expect(await screen.findByText("Details saved")).toBeOnTheScreen();
     expect(sent).toEqual([
       {
         method: "PATCH",
         path: `/crm/accounts/${ACCOUNT_ID}`,
-        body: { coupleNames: "Priya & Rohan" },
+        body: {
+          brideName: "Priya",
+          brideFatherName: "Rahul Sharma",
+          groomName: "Rohan",
+          groomFatherName: "Vikram Mehta",
+        },
       },
     ]);
   });

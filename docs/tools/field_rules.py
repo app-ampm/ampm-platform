@@ -163,6 +163,12 @@ TABLES["client_accounts"] = T(
     primary_contact_user_id=F(editor="SM; SA", required="Before subscription activation"),
     lead_id=F(editor=SYS),
     status=F(automation="suspended refuses sign-in for every user of the account"),
+    bride_name=F(editor="SM; SA", validation="string, up to 120 characters",
+                 automation="With groom_name given, renames name and couple_names to \"Bride & Groom\" (D-158)"),
+    groom_name=F(editor="SM; SA", validation="string, up to 120 characters",
+                 automation="With bride_name given, renames name and couple_names to \"Bride & Groom\" (D-158)"),
+    bride_father_name=F(editor="SM; SA"),
+    groom_father_name=F(editor="SM; SA"),
 )
 TABLES["account_contacts"] = T(
     "Conversion / project setup", "SM; SA; PM (a); CO", "CLIENT", required=["account_id", "name", "relation"],

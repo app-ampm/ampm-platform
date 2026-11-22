@@ -1,4 +1,4 @@
-import type { AccountView } from "@ampm/core";
+import { coupleSubtitle, type AccountView } from "@ampm/core";
 import { Card, DataTable, Stack, StatusChip, Text, type DataTableColumn } from "@ampm/ui";
 
 import {
@@ -8,6 +8,23 @@ import {
   accountStatusTone,
 } from "./accounts.format";
 
+/** The client's name, and the couple under it unless the account is already named after them. */
+function ClientCell({ account }: { readonly account: AccountView }) {
+  const couple = coupleSubtitle(account);
+  return (
+    <Stack gap={1}>
+      <Text variant="body" weight="semibold" numberOfLines={1}>
+        {account.name}
+      </Text>
+      {couple ? (
+        <Text variant="bodySmall" tone="muted" numberOfLines={1}>
+          {couple}
+        </Text>
+      ) : null}
+    </Stack>
+  );
+}
+
 // The widths add up to 580, inside the card's 591 at 768 beside the collapsed rail, so a tablet shows
 // the whole table without scrolling it sideways; from 1024 the Client column takes the spare width.
 const COLUMNS: DataTableColumn<AccountView>[] = [
@@ -16,18 +33,7 @@ const COLUMNS: DataTableColumn<AccountView>[] = [
     header: "Client",
     width: 200,
     grow: true,
-    render: (account) => (
-      <Stack gap={1}>
-        <Text variant="body" weight="semibold" numberOfLines={1}>
-          {account.name}
-        </Text>
-        {account.coupleNames ? (
-          <Text variant="bodySmall" tone="muted" numberOfLines={1}>
-            {account.coupleNames}
-          </Text>
-        ) : null}
-      </Stack>
-    ),
+    render: (account) => <ClientCell account={account} />,
   },
   {
     key: "locations",

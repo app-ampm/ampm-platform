@@ -829,6 +829,11 @@ model ClientAccount {
   id                   String              @id @default(uuid(7)) @db.Uuid
   name                 String              @db.VarChar(255)
   coupleNames          String?             @map("couple_names") @db.VarChar(255)
+  /// The couple (CLIENT-class); once both the bride's and groom's names are given they name the account.
+  brideName            String?             @map("bride_name") @db.VarChar(120)
+  brideFatherName      String?             @map("bride_father_name") @db.VarChar(255)
+  groomName            String?             @map("groom_name") @db.VarChar(120)
+  groomFatherName      String?             @map("groom_father_name") @db.VarChar(255)
   preferredLocations   String?             @map("preferred_locations") @db.Text
   isDemo               Boolean             @default(false) @map("is_demo")
   status               ClientAccountStatus @default(prospect)
