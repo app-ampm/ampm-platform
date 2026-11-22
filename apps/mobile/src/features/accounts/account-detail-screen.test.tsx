@@ -121,8 +121,9 @@ describe("AccountDetailScreen", () => {
       "/me": () => ok(staffMeFixture(["SM"])),
     });
     await renderWithApi(<AccountDetailScreen accountId={ACCOUNT_ID} />, fetchFn);
+    // The header renders "Client" while the account loads: wait for the loaded title.
     const header = await screen.findByTestId("account-header");
-    expect(within(header).getByText("Priya & Arjun")).toBeOnTheScreen();
+    expect(await within(header).findByText("Priya & Arjun")).toBeOnTheScreen();
     // The facts line does not repeat the couple the title already names.
     expect(within(header).getByText(/^Client account · Added/)).toBeOnTheScreen();
     const bride = screen.getByTestId("account-bride");
