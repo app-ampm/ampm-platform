@@ -255,10 +255,14 @@ export class HotelRatesRepository {
     });
   }
 
-  findVerificationInHotel(hotelId: string, verificationId: string): Promise<{ id: string } | null> {
+  /** The verification's group, status and date (what may back a verified card), if it is this hotel's. */
+  findVerificationInHotel(
+    hotelId: string,
+    verificationId: string,
+  ): Promise<Pick<VerificationRow, "id" | "fieldGroup" | "status" | "verifiedAt"> | null> {
     return this.prisma.hotelVerification.findFirst({
       where: { id: verificationId, hotelId, deletedAt: null },
-      select: { id: true },
+      select: { id: true, fieldGroup: true, status: true, verifiedAt: true },
     });
   }
 

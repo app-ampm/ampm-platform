@@ -4020,15 +4020,15 @@
     "semantic_hash": ""
   },
   "apps/api/src/modules/hotels/hotel-rates.repository.ts": {
-    "mtime": 1795426097.931798,
-    "seen": 1795427563.698619,
-    "ast_hash": "9c826966f731562ef14047b2b89d0b0a",
+    "mtime": 1795428573.982356,
+    "seen": 1795428937.693258,
+    "ast_hash": "b72dee39b4c7d1a737d5214f63e87e47",
     "semantic_hash": ""
   },
   "apps/api/src/modules/hotels/hotel-rates.service.ts": {
-    "mtime": 1795395449.899964,
-    "seen": 1795424066.961317,
-    "ast_hash": "d2867485b7195d45a55d91fd83e51602",
+    "mtime": 1795428594.627329,
+    "seen": 1795428937.693259,
+    "ast_hash": "8555a70b0b4de53527401e6514c67b57",
     "semantic_hash": ""
   },
   "apps/api/src/modules/hotels/hotel-rates.view.ts": {
@@ -4206,9 +4206,9 @@
     "semantic_hash": ""
   },
   "apps/api/test/hotel-rates.e2e-spec.ts": {
-    "mtime": 1795395449.951595,
-    "seen": 1795424066.9613812,
-    "ast_hash": "828999dbd996cfb45c1d2e736319327d",
+    "mtime": 1795428539.3660276,
+    "seen": 1795428937.694932,
+    "ast_hash": "fd6a73c91e8ff2db61b1a68d143de340",
     "semantic_hash": ""
   },
   "apps/api/test/hotel-references-client.e2e-spec.ts": {
@@ -7956,9 +7956,9 @@
     "semantic_hash": ""
   },
   "apps/mobile/src/features/hotels-admin/hotel-rates-screen.test.tsx": {
-    "mtime": 1795395449.9254825,
-    "seen": 1795424066.9616451,
-    "ast_hash": "f6c50596d98ce06381a0aad0de7d03ad",
+    "mtime": 1795428664.6408296,
+    "seen": 1795428937.7021718,
+    "ast_hash": "1304004c4c976777ca10179cdb37961b",
     "semantic_hash": ""
   },
   "apps/mobile/src/features/hotels-admin/hotel-rates-screen.tsx": {
@@ -8058,15 +8058,15 @@
     "semantic_hash": ""
   },
   "apps/mobile/src/features/hotels-admin/rate-cards.form.test.ts": {
-    "mtime": 1795395449.9411783,
-    "seen": 1795424066.9616692,
-    "ast_hash": "5db52a423d7c714ba816dc567f8acb40",
+    "mtime": 1795428650.3988523,
+    "seen": 1795428937.702755,
+    "ast_hash": "fb24149b4a49eeb92cf3e1a31d66f5e1",
     "semantic_hash": ""
   },
   "apps/mobile/src/features/hotels-admin/rate-cards.form.ts": {
-    "mtime": 1795395449.9412687,
-    "seen": 1795424066.96167,
-    "ast_hash": "4139d8313ec1c38b5f2f74e3a164f246",
+    "mtime": 1795428632.7364855,
+    "seen": 1795428937.702755,
+    "ast_hash": "1a3b902a436e72f20517358f57cad4a1",
     "semantic_hash": ""
   },
   "apps/mobile/src/features/hotels-admin/rate-item-edit-sheet.test.tsx": {
@@ -8130,9 +8130,9 @@
     "semantic_hash": ""
   },
   "apps/mobile/src/features/hotels-admin/verify-card-sheet.tsx": {
-    "mtime": 1795395449.9472747,
-    "seen": 1795424066.961685,
-    "ast_hash": "e02243da1a81aeeda6168e59b7ab7dbf",
+    "mtime": 1795428638.6199973,
+    "seen": 1795428937.703181,
+    "ast_hash": "145f73eab3788a3e9013ec2a12885f32",
     "semantic_hash": ""
   },
   "apps/mobile/src/features/sales/lead-activity-sheet.tsx": {
@@ -11511,6 +11511,18 @@
     "mtime": 1795426097.93871,
     "seen": 1795427563.713855,
     "ast_hash": "3746b277ad2441dfdab2f375e1e86715",
+    "semantic_hash": ""
+  },
+  "apps/api/src/modules/hotels/rate-card-verification.spec.ts": {
+    "mtime": 1795428567.983974,
+    "seen": 1795428937.693582,
+    "ast_hash": "43640720291ecd20625fcae5ef1e1f52",
+    "semantic_hash": ""
+  },
+  "apps/api/src/modules/hotels/rate-card-verification.ts": {
+    "mtime": 1795428560.6219232,
+    "seen": 1795428937.693583,
+    "ast_hash": "08d984de098755b8433f46e6a4766637",
     "semantic_hash": ""
   }
 }

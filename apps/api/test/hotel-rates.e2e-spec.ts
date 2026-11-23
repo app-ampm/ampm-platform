@@ -130,6 +130,88 @@ describe("Hotel rates (e2e)", () => {
       .expect(409);
   });
 
+  /** A verification written straight to the database: another group's, a stale, an old or a future one. */
+  async function verificationRow(
+    data: {
+      fieldGroup?: "rates" | "profile";
+      status?: "verified" | "stale" | "unverified";
+      verifiedAt?: Date | null;
+    } = {},
+  ): Promise<string> {
+    const row = await prisma.hotelVerification.create({
+      data: {
+        hotelId,
+        fieldGroup: data.fieldGroup ?? "rates",
+        status: data.status ?? "verified",
+        source: "phone",
+        verifiedAt: data.verifiedAt === undefined ? new Date() : data.verifiedAt,
+      },
+      select: { id: true },
+    });
+    return row.id;
+  }
+
+  it("verifies a card only against a current rates verification (AC-04.1, AC-04.3, AC-04.4)", async () => {
+    const DAY = 24 * 60 * 60 * 1000;
+    const card = await http()
+      .post(`/hotels-admin/hotels/${hotelId}/rate-cards`)
+      .set("Authorization", auth)
+      .send({ name: "Guarded card" })
+      .expect(201);
+    const cardId: string = card.body.data.id;
+    const verify = (verificationId: string) =>
+      http()
+        .post(`/hotels-admin/hotels/${hotelId}/rate-cards/${cardId}/verify`)
+        .set("Authorization", auth)
+        .send({ verificationId });
+    // Each would leave a "verified" card the nightly sweep never stales on time: it only revisits
+    // verifications still `verified`, by their date.
+    const refused: [string, RegExp][] = [
+      [await verificationRow({ fieldGroup: "profile" }), /only be verified against a rates/],
+      [
+        await verificationRow({ status: "stale", verifiedAt: new Date(Date.now() - 200 * DAY) }),
+        /stale or unverified/,
+      ],
+      [await verificationRow({ status: "unverified", verifiedAt: null }), /stale or unverified/],
+      // Still `verified` only because the sweep has not run since it aged past the 90-day window.
+      [
+        await verificationRow({ verifiedAt: new Date(Date.now() - 200 * DAY) }),
+        /older than 90 days/,
+      ],
+      [
+        await verificationRow({ verifiedAt: new Date(Date.now() + 30 * DAY) }),
+        /dated in the future/,
+      ],
+    ];
+    for (const [verificationId, message] of refused) {
+      const res = await verify(verificationId).expect(409);
+      expect(res.body.error.message).toMatch(message);
+    }
+    const unchanged = await http()
+      .get(`/hotels-admin/hotels/${hotelId}/rate-cards/${cardId}`)
+      .set("Authorization", auth)
+      .expect(200);
+    expect(unchanged.body.data).toMatchObject({ status: "draft", verificationId: null });
+    const current = await verificationRow({ verifiedAt: new Date(Date.now() - 10 * DAY) });
+    const verified = await verify(current).expect(200);
+    expect(verified.body.data).toMatchObject({ status: "verified", verificationId: current });
+  });
+
+  it("refuses to record a verification dated in the future", async () => {
+    const res = await http()
+      .post(`/hotels-admin/hotels/${hotelId}/verifications`)
+      .set("Authorization", auth)
+      .send({
+        fieldGroup: "rates",
+        source: "email",
+        verifiedAt: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
+      })
+      .expect(400);
+    expect(res.body.error.details).toEqual([
+      { path: "verifiedAt", message: "A verification cannot be dated in the future" },
+    ]);
+  });
+
   it("updates and removes a rate item", async () => {
     const card = await http()
       .post(`/hotels-admin/hotels/${hotelId}/rate-cards`)

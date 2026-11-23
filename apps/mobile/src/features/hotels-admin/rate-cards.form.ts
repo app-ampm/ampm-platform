@@ -11,6 +11,7 @@ import {
   type RateItemCreateRequest,
   type RateItemView,
   type VerificationCreateRequest,
+  type VerificationView,
 } from "@ampm/core";
 
 import { intOrNull, numberToText, textOrNull, wholeNumberError } from "./hotel-form-fields";
@@ -173,4 +174,19 @@ export function emptyVerificationDraft(): VerificationDraft {
 
 export function buildVerificationBody(draft: VerificationDraft): VerificationCreateRequest {
   return { fieldGroup: "rates", source: draft.source, notes: textOrNull(draft.notes) };
+}
+
+/**
+ * Whether a recorded verification can be offered to publish a card against: a rates one, still verified
+ * and dated. The server also refuses one older than the freshness window (AC-04.4), which only it knows.
+ *
+ * @example
+ * verifications.filter(canBackRateCard); // what the verify sheet offers to reuse
+ */
+export function canBackRateCard(verification: VerificationView): boolean {
+  return (
+    verification.fieldGroup === "rates" &&
+    verification.status === "verified" &&
+    verification.verifiedAt !== null
+  );
 }
