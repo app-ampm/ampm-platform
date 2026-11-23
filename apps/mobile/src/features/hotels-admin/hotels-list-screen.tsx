@@ -1,14 +1,14 @@
 import { useState, type ReactNode } from "react";
 import { useRouter } from "expo-router";
-import type { UseQueryResult } from "@tanstack/react-query";
 
-import { useStaffHotels } from "@ampm/api-client";
-import type { HotelStaffPage, HotelStaffView } from "@ampm/core";
+import { useStaffHotels, type CursorListResult } from "@ampm/api-client";
+import type { HotelStaffView } from "@ampm/core";
 import {
   Button,
   Card,
   DataTable,
   EmptyState,
+  LoadMore,
   QueryErrorState,
   Screen,
   ScreenHeader,
@@ -23,6 +23,14 @@ import { hotelRowSummary } from "./hotels-admin.format";
 import { useHotelColumns } from "./hotels-table.columns";
 import { useClientInterestPermissions } from "./use-client-interest-permissions";
 import { useDestinationPermissions } from "./use-destination-permissions";
+
+type Hotels = CursorListResult<HotelStaffView>;
+
+/** "Hotels · 12", with a "+" while more pages wait beyond the loaded ones. */
+function hotelsEyebrow(hotels: Hotels): string {
+  if (hotels.isPending || hotels.isError) return "Hotels";
+  return `Hotels · ${hotels.items.length}${hotels.hasMore ? "+" : ""}`;
+}
 
 function HotelsLoading() {
   return (
@@ -56,20 +64,35 @@ function HotelsTable({ hotels, onOpen }: TableProps) {
   );
 }
 
-function HotelsBody({
-  hotels,
-  onOpen,
-}: {
-  readonly hotels: UseQueryResult<HotelStaffPage>;
+interface BodyProps {
+  readonly hotels: Hotels;
   readonly onOpen: (hotel: HotelStaffView) => void;
-}) {
+}
+
+/** The loaded hotels and, while more wait, the next-page footer (50 a page). */
+function HotelsLoaded({ hotels, onOpen }: BodyProps) {
+  return (
+    <Stack gap={4}>
+      <HotelsTable hotels={hotels.items} onOpen={onOpen} />
+      <LoadMore
+        hasMore={hotels.hasMore}
+        loading={hotels.isLoadingMore}
+        failed={hotels.loadMoreError}
+        onLoadMore={hotels.loadMore}
+        testID="hotels-load-more"
+      />
+    </Stack>
+  );
+}
+
+function HotelsBody({ hotels, onOpen }: BodyProps) {
   const goToSignIn = useGoToSignIn();
   if (hotels.isPending) return <HotelsLoading />;
   if (hotels.isError) {
     return (
       <QueryErrorState
         error={hotels.error}
-        onRetry={() => void hotels.refetch()}
+        onRetry={hotels.refetch}
         onSignIn={goToSignIn}
         signIn={{
           title: "Sign in to view the hotel catalogue",
@@ -78,7 +101,7 @@ function HotelsBody({
       />
     );
   }
-  if (hotels.data.items.length === 0) {
+  if (hotels.items.length === 0) {
     return (
       <EmptyState
         icon="map"
@@ -87,7 +110,7 @@ function HotelsBody({
       />
     );
   }
-  return <HotelsTable hotels={hotels.data.items} onOpen={onOpen} />;
+  return <HotelsLoaded hotels={hotels} onOpen={onOpen} />;
 }
 
 /** The way to every client's saved hotels, for a role that may read them (glass, before the rest). */
@@ -144,12 +167,18 @@ function HotelsActions({
 }
 
 /** The page's header (T4): eyebrow and title, with the actions beside them from 768. */
-function HotelsHeader({ onCreate }: { readonly onCreate: () => void }) {
+function HotelsHeader({
+  eyebrow,
+  onCreate,
+}: {
+  readonly eyebrow: string;
+  readonly onCreate: () => void;
+}) {
   const router = useRouter();
   const { canReadSavedHotels } = useClientInterestPermissions();
   return (
     <ScreenHeader
-      eyebrow="Hotels"
+      eyebrow={eyebrow}
       title="Hotel catalogue"
       actions={
         <HotelsActions
@@ -169,10 +198,11 @@ export interface HotelsListScreenProps {
 
 /**
  * The staff hotel catalogue (H1.1, T4): the private hotel database. Add a hotel with "New hotel", bulk-load
- * many from a CSV with "Import", or tap one to manage it (edit its profile, add photos, rate cards). From
- * 1024 the table carries T4's verification and visibility columns. "Saved by clients" opens every
- * client's saved hotels, for a role that may read them. Hotel team and Super Admin only, gated
- * server-side.
+ * many from a CSV with "Import", or tap one to manage it (edit its profile, add photos, rate cards). The
+ * list loads 50 hotels a page, name-ordered, with "Load more" under the table while more wait; the eyebrow
+ * counts the loaded ones ("Hotels · 50+"). From 1024 the table carries T4's verification and visibility
+ * columns. "Saved by clients" opens every client's saved hotels, for a role that may read them. Hotel team
+ * and Super Admin only, gated server-side.
  *
  *   <HotelsListScreen tabBar={<AppTabBar />} />
  */
@@ -192,7 +222,7 @@ export function HotelsListScreen({ tabBar }: HotelsListScreenProps) {
     <Screen
       width="wide"
       tabBar={tabBar}
-      header={<HotelsHeader onCreate={() => setCreating(true)} />}
+      header={<HotelsHeader eyebrow={hotelsEyebrow(hotels)} onCreate={() => setCreating(true)} />}
     >
       <HotelsBody hotels={hotels} onOpen={open} />
       <HotelProfileEditSheet

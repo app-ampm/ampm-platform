@@ -33,6 +33,21 @@ const hotelsFetch = (items = [hotelStaffViewFixture()], roles: Roles = ["HT"]): 
     "/me": () => ok(staffMeFixture(roles)),
   });
 
+const SECOND_HOTEL_ID = "018f0000-0000-7000-8000-0000000c0003";
+
+/** Page 1 (one hotel, more waiting) then page 2 (one more, the end) by cursor; the rest as usual. */
+const pagedHotelsFetch = (): FetchFn => (input, init) => {
+  const url = new URL(String(input));
+  if (!url.pathname.endsWith("/hotels-admin/hotels")) return hotelsFetch()(input, init);
+  const page = url.searchParams.get("cursor")
+    ? {
+        items: [hotelStaffViewFixture({ id: SECOND_HOTEL_ID, name: "The Desert Fort" })],
+        nextCursor: null,
+      }
+    : { items: [hotelStaffViewFixture()], nextCursor: HOTEL_ID };
+  return Promise.resolve(ok(page));
+};
+
 beforeEach(() => {
   mockPush.mockClear();
 });
@@ -45,6 +60,23 @@ describe("HotelsListScreen", () => {
       pathname: "/hotels-admin/[hotelId]",
       params: { hotelId: HOTEL_ID },
     });
+  });
+
+  it("loads the next page from the footer, appends it, and hides the footer at the end", async () => {
+    await renderWithApi(<HotelsListScreen />, pagedHotelsFetch());
+    expect(await screen.findByLabelText(/The Lakeside Palace, active/)).toBeOnTheScreen();
+    expect(screen.getByText("Hotels · 1+")).toBeOnTheScreen();
+    await fireEvent.press(await screen.findByTestId("hotels-load-more"));
+    expect(await screen.findByLabelText(/The Desert Fort, active/)).toBeOnTheScreen();
+    expect(screen.getByLabelText(/The Lakeside Palace, active/)).toBeOnTheScreen();
+    expect(screen.getByText("Hotels · 2")).toBeOnTheScreen();
+    expect(screen.queryByTestId("hotels-load-more")).toBeNull();
+  });
+
+  it("offers no next page when the catalogue fits in one", async () => {
+    await renderWithApi(<HotelsListScreen />, hotelsFetch());
+    expect(await screen.findByText("Hotels · 1")).toBeOnTheScreen();
+    expect(screen.queryByTestId("hotels-load-more")).toBeNull();
   });
 
   it("says when there are no hotels", async () => {

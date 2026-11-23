@@ -11,11 +11,12 @@ import {
   type HotelCreateRequest,
   type HotelStaffDetailView,
   type HotelStaffListQuery,
-  type HotelStaffPage,
+  type HotelStaffView,
   type HotelUpdateRequest,
 } from "@ampm/core";
 
 import { useApiClient } from "../provider";
+import { useCursorList } from "./use-cursor-list";
 
 export const STAFF_HOTELS_QUERY_KEY = ["hotels-admin", "hotels"] as const;
 export const STAFF_DESTINATIONS_QUERY_KEY = ["hotels-admin", "destinations"] as const;
@@ -38,16 +39,22 @@ function toQueryString(query: Partial<HotelStaffListQuery>): string {
 
 /**
  * The staff hotel catalogue (`GET /hotels-admin/hotels`, `hotels.hotel_profiles_client_fields.read`):
- * the private database the Hotel team and Super Admin manage, cursor-paginated. Staff-only, gated
+ * the private database the Hotel team and Super Admin manage, name-ordered and cursor-paginated, 50 a
+ * page: `items` grow with `loadMore` while `hasMore` ({@link useCursorList}). Staff-only, gated
  * server-side; separate from the entitlement-gated client discovery list ({@link useHotels}).
+ *
+ *   const hotels = useStaffHotels();
+ *   hotels.items; // the loaded pages, flattened
  */
-export function useStaffHotels(query: Partial<HotelStaffListQuery> = {}) {
+export function useStaffHotels(query: Partial<Omit<HotelStaffListQuery, "cursor">> = {}) {
   const api = useApiClient();
-  return useQuery<HotelStaffPage>({
-    queryKey: [...STAFF_HOTELS_QUERY_KEY, query],
-    queryFn: ({ signal }) =>
-      api.get(`/hotels-admin/hotels${toQueryString(query)}`, hotelStaffPage, signal),
-  });
+  return useCursorList<HotelStaffView>([...STAFF_HOTELS_QUERY_KEY, query], (cursor, signal) =>
+    api.get(
+      `/hotels-admin/hotels${toQueryString({ ...query, ...(cursor ? { cursor } : {}) })}`,
+      hotelStaffPage,
+      signal,
+    ),
+  );
 }
 
 /**

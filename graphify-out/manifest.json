@@ -4236,9 +4236,9 @@
     "semantic_hash": ""
   },
   "apps/api/test/hotels-admin.e2e-spec.ts": {
-    "mtime": 1795426385.0032687,
-    "seen": 1795427563.700201,
-    "ast_hash": "08aa02619e38bc3f2f9307649d6dbef0",
+    "mtime": 1795430303.0200477,
+    "seen": 1795430594.666821,
+    "ast_hash": "399bc14a7a0cf640306ba9befc6713d2",
     "semantic_hash": ""
   },
   "apps/api/test/media-acceptance.e2e-spec.ts": {
@@ -7986,15 +7986,15 @@
     "semantic_hash": ""
   },
   "apps/mobile/src/features/hotels-admin/hotels-list-screen.test.tsx": {
-    "mtime": 1795426962.5299337,
-    "seen": 1795427563.7070389,
-    "ast_hash": "d6bc84032f4777a03904743c2fd2bed2",
+    "mtime": 1795430284.7496376,
+    "seen": 1795430594.674551,
+    "ast_hash": "ad2e2d213cdac5291cecfab5d27f4f8d",
     "semantic_hash": ""
   },
   "apps/mobile/src/features/hotels-admin/hotels-list-screen.tsx": {
-    "mtime": 1795426859.6610467,
-    "seen": 1795427563.70704,
-    "ast_hash": "df55326a1d1a51ce49ec0d4a105849aa",
+    "mtime": 1795430276.6480207,
+    "seen": 1795430594.674552,
+    "ast_hash": "46ed1fd16fb6084337bd929b8993b557",
     "semantic_hash": ""
   },
   "apps/mobile/src/features/hotels-admin/managed-subresource-section.tsx": {
@@ -8274,9 +8274,9 @@
     "semantic_hash": ""
   },
   "packages/api-client/src/hooks/use-staff-hotels.ts": {
-    "mtime": 1795426408.5358582,
-    "seen": 1795427563.7151191,
-    "ast_hash": "acff169d1c97d010361b6aab05ed5684",
+    "mtime": 1795430223.3097925,
+    "seen": 1795430594.683069,
+    "ast_hash": "1d648d47c96ad8524d3f680b66ed7a85",
     "semantic_hash": ""
   },
   "packages/api-client/src/hooks/use-staff-roles.ts": {
