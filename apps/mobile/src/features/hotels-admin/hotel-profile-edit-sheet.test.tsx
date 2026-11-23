@@ -1,14 +1,11 @@
-import type { MeResponse } from "@ampm/core";
-
 import { fireEvent, screen, waitFor } from "../../test/render";
 import { staffMeFixture } from "../accounts/accounts.test-utils";
 import { HotelProfileEditSheet } from "./hotel-profile-edit-sheet";
+import { profileEditorFetch, type CapturedSave } from "./hotel-profile.test-utils";
 import {
   DESTINATION_ID,
   destinationListItemFixture,
   failure,
-  HOTEL_ID,
-  hotelStaffDetailViewFixture,
   hotelStaffViewFixture,
   ok,
   renderWithApi,
@@ -20,27 +17,6 @@ jest.mock("react-native/Libraries/Utilities/useWindowDimensions", () => ({
   __esModule: true,
   default: () => ({ width: 1280, height: 900, scale: 2, fontScale: 1 }),
 }));
-
-interface Captured {
-  created?: unknown;
-  updated?: unknown;
-}
-
-/** The editor's routes; with a `/me`, the person whose grants decide the internal fields (D-171). */
-function editorFetch(captured: Captured, me?: MeResponse): FetchFn {
-  return routedFetch({
-    ...(me ? { "/me": () => ok(me) } : {}),
-    "/hotels-admin/destinations": () => ok({ items: [destinationListItemFixture()] }),
-    "/hotels-admin/hotels": (init) => {
-      captured.created = JSON.parse(String(init?.body));
-      return ok(hotelStaffDetailViewFixture());
-    },
-    [`/hotels-admin/hotels/${HOTEL_ID}`]: (init) => {
-      captured.updated = JSON.parse(String(init?.body));
-      return ok(hotelStaffDetailViewFixture());
-    },
-  });
-}
 
 const noop = (): void => {};
 const NOTES = "Synthetic internal note";
@@ -61,10 +37,10 @@ async function saveRoomsChange(): Promise<void> {
 
 describe("HotelProfileEditSheet", () => {
   it("adds a hotel: fills the name, picks a destination and posts the profile", async () => {
-    const captured: Captured = {};
+    const captured: CapturedSave = {};
     await renderWithApi(
       <HotelProfileEditSheet open hotel={null} onClose={noop} />,
-      editorFetch(captured),
+      profileEditorFetch(captured),
     );
     await fireEvent.changeText(await screen.findByTestId("hotel-name"), "Cliff House");
     await fireEvent.press(await screen.findByTestId("hotel-destination"));
@@ -79,27 +55,84 @@ describe("HotelProfileEditSheet", () => {
   });
 
   it("blocks submit and names a missing required field", async () => {
-    const captured: Captured = {};
+    const captured: CapturedSave = {};
     await renderWithApi(
       <HotelProfileEditSheet open hotel={null} onClose={noop} />,
-      editorFetch(captured),
+      profileEditorFetch(captured),
     );
     await fireEvent.press(await screen.findByTestId("hotel-profile-submit"));
     expect(await screen.findByText("Give the hotel a name")).toBeOnTheScreen();
+    expect(screen.getByText("Check the highlighted fields")).toBeOnTheScreen();
     expect(captured.created).toBeUndefined();
   });
 
-  it("edits a hotel: seeds from its profile and patches the change", async () => {
-    const captured: Captured = {};
+  it("names an error in a lower panel when it blocks the save, and sends nothing", async () => {
+    const captured: CapturedSave = {};
     await renderWithApi(
       <HotelProfileEditSheet open hotel={hotelStaffViewFixture()} onClose={noop} />,
-      editorFetch(captured),
+      profileEditorFetch(captured),
+    );
+    await fireEvent.changeText(await screen.findByTestId("hotel-maps-url"), "https://example.com");
+    await fireEvent.changeText(screen.getByTestId("hotel-min-nights"), "0");
+    await fireEvent.press(screen.getByTestId("hotel-profile-submit"));
+    // The toast is announced and names the highest field to fix, wherever it sits on the sheet.
+    expect(await screen.findByText("Check the highlighted fields")).toBeOnTheScreen();
+    expect(
+      screen.getByText(
+        "Google Maps link: Use an https Google Maps link (google.com/maps or maps.app.goo.gl)",
+      ),
+    ).toBeOnTheScreen();
+    expect(
+      screen.getByText("Use an https Google Maps link (google.com/maps or maps.app.goo.gl)"),
+    ).toBeOnTheScreen();
+    expect(screen.getByText("Minimum nights is a whole number, from 1 to 60")).toBeOnTheScreen();
+    expect(captured.updated).toBeUndefined();
+  });
+
+  it("checks a PIN against the destination's country, India here", async () => {
+    const captured: CapturedSave = {};
+    await renderWithApi(
+      <HotelProfileEditSheet open hotel={hotelStaffViewFixture()} onClose={noop} />,
+      profileEditorFetch(captured),
+    );
+    await screen.findByTestId("hotel-destination");
+    await fireEvent.changeText(screen.getByTestId("hotel-postal-code"), "013001");
+    await fireEvent.press(screen.getByTestId("hotel-profile-submit"));
+    expect(
+      await screen.findByText("A PIN code is 6 digits and does not start with 0"),
+    ).toBeOnTheScreen();
+    expect(captured.updated).toBeUndefined();
+    await fireEvent.changeText(screen.getByTestId("hotel-postal-code"), "313 001");
+    await fireEvent.press(screen.getByTestId("hotel-profile-submit"));
+    expect(await screen.findByText("Hotel updated")).toBeOnTheScreen();
+    expect(captured.updated).toEqual({ postalCode: "313 001" });
+  });
+
+  it("edits a hotel: seeds from its profile and patches only what changed", async () => {
+    const captured: CapturedSave = {};
+    await renderWithApi(
+      <HotelProfileEditSheet open hotel={hotelStaffViewFixture()} onClose={noop} />,
+      profileEditorFetch(captured),
     );
     await screen.findByDisplayValue("The Lakeside Palace");
     await fireEvent.changeText(screen.getByTestId("hotel-rooms"), "150");
     await fireEvent.press(screen.getByTestId("hotel-profile-submit"));
     expect(await screen.findByText("Hotel updated")).toBeOnTheScreen();
-    expect(captured.updated).toMatchObject({ name: "The Lakeside Palace", totalRooms: 150 });
+    // An untouched field is left out, so the save cannot write back a value an import set meanwhile.
+    expect(captured.updated).toEqual({ totalRooms: 150 });
+  });
+
+  it("closes without a request when nothing changed", async () => {
+    const captured: CapturedSave = {};
+    const onClose = jest.fn();
+    await renderWithApi(
+      <HotelProfileEditSheet open hotel={hotelStaffViewFixture()} onClose={onClose} />,
+      profileEditorFetch(captured),
+    );
+    await screen.findByDisplayValue("The Lakeside Palace");
+    await fireEvent.press(screen.getByTestId("hotel-profile-submit"));
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(captured.updated).toBeUndefined();
   });
 
   it("lets staff retry when the destinations fail to load", async () => {
@@ -145,23 +178,23 @@ describe("HotelProfileEditSheet", () => {
 
   describe("the internal rating and notes (D-171)", () => {
     it("shows them to the Hotel team, seeded, and sends what they change", async () => {
-      const captured: Captured = {};
+      const captured: CapturedSave = {};
       await renderWithApi(
         <HotelProfileEditSheet open hotel={withNotes()} onClose={noop} />,
-        editorFetch(captured, staffMeFixture(["HT"])),
+        profileEditorFetch(captured, { me: staffMeFixture(["HT"]) }),
       );
       expect(await screen.findByTestId("hotel-internal")).toBeOnTheScreen();
       expect(screen.getByDisplayValue(NOTES)).toBeOnTheScreen();
       await fireEvent.changeText(screen.getByTestId("hotel-internal-rating"), "5");
       await saveRoomsChange();
-      expect(captured.updated).toMatchObject({ internalRating: 5, internalNotes: NOTES });
+      expect(captured.updated).toEqual({ totalRooms: 150, internalRating: 5 });
     });
 
     it("leaves them out of the form and the body for Sales, who reads but may not change them", async () => {
-      const captured: Captured = {};
+      const captured: CapturedSave = {};
       await renderWithApi(
         <HotelProfileEditSheet open hotel={withNotes()} onClose={noop} />,
-        editorFetch(captured, staffMeFixture(["SM"])),
+        profileEditorFetch(captured, { me: staffMeFixture(["SM"]) }),
       );
       await screen.findByDisplayValue("The Lakeside Palace");
       await saveRoomsChange();
@@ -172,7 +205,7 @@ describe("HotelProfileEditSheet", () => {
     });
 
     it("never wipes notes a custom profile editor cannot read, even holding the notes key", async () => {
-      const captured: Captured = {};
+      const captured: CapturedSave = {};
       const me = staffMeFixture(
         [],
         [
@@ -183,7 +216,7 @@ describe("HotelProfileEditSheet", () => {
       let askedMe = false;
       const fetch: FetchFn = (input, init) => {
         if (String(input).endsWith("/me")) askedMe = true;
-        return editorFetch(captured, me)(input, init);
+        return profileEditorFetch(captured, { me })(input, init);
       };
       await renderWithApi(
         <HotelProfileEditSheet open hotel={withoutNotes()} onClose={noop} />,

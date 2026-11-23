@@ -295,7 +295,7 @@ erDiagram
     }
     configurations {
         uuid id PK
-        string config_key UK "e.g. hotel_verification_max_age_days, material_change_threshold_pct"
+        string config_key UK "e.g. hotel.verification_policy, material_change_threshold_pct"
         json value_json
         string scope "enum global / project"
         uuid scope_id
@@ -603,12 +603,28 @@ erDiagram
         uuid id PK
         uuid destination_id FK
         string name
+        json name_aliases_json "INTERNAL, name variants, up to 20 (D-178)"
         string slug UK
         string brand
+        string parent_group "the owning group, besides the brand (D-178)"
         string star_category
         text address
-        decimal latitude
-        decimal longitude
+        string locality
+        string city
+        string state
+        string postal_code "PIN when the destination is in India"
+        decimal latitude "INTERNAL, staff-only coordinates"
+        decimal longitude "INTERNAL, staff-only coordinates"
+        string maps_url "Google Maps link, never fetched by the server (D-178)"
+        string airport_name
+        decimal airport_distance_km "km, one decimal place"
+        int airport_drive_minutes
+        string railway_station_name
+        decimal railway_distance_km "km, one decimal place"
+        int railway_drive_minutes
+        decimal city_centre_distance_km "km, one decimal place"
+        int city_centre_drive_minutes
+        text access_notes "highways and landmarks"
         text description_client "CLIENT"
         string website
         string status "enum draft / active / inactive"
@@ -617,6 +633,17 @@ erDiagram
         int internal_rating "RESTRICTED"
         text internal_notes "RESTRICTED"
         int total_rooms
+        int total_event_space_sqm
+        int total_event_space_sqft "as the hotel published it"
+        string wedding_buyout_policy "enum not_required / required / depends, INTERNAL booking term (D-178)"
+        int min_rooms_without_buyout "INTERNAL booking term"
+        int min_nights "INTERNAL booking term"
+        string parallel_functions "enum allowed / not_allowed / depends, INTERNAL booking term"
+        text booking_notes "INTERNAL booking terms"
+        json cuisines_json "labels from configuration hotel.cuisine_options, or Other"
+        bool is_pure_vegetarian "empty when the hotel has not said"
+        bool has_separate_veg_kitchen "empty when the hotel has not said"
+        bool serves_alcohol "empty when the hotel has not said"
         string street_view_ref "map or street view reference (Q9)"
         json facilities_json
         datetime last_verified_at "denormalised from hotel_verifications"
@@ -682,12 +709,12 @@ erDiagram
     hotel_verifications {
         uuid id PK
         uuid hotel_id FK
-        string field_group "enum profile / rooms / venues / rates / availability / media / contacts"
+        string field_group "enum profile / rooms / venues / rates / availability / media / contacts / policies"
         datetime verified_at
         uuid verified_by FK
         string source "enum phone / email / site_visit / website / contract"
         string status "enum verified / unverified / stale"
-        datetime next_due_at "verified_at plus configurable age"
+        datetime next_due_at "set by the server when recorded, verified_at plus the configured age"
         text notes
     }
     hotel_wedding_references {
@@ -712,10 +739,11 @@ erDiagram
 
 Notes:
 
-- **Freshness.** `hotel_verifications` is the source of truth; `hotels.last_verified_at` and `hotel_rate_cards.status = stale` are maintained by a scheduled job using `configurations.hotel_verification_max_age_days` (SPEC §8). A rate card whose verification is older than the configured age is shown with a stale label and its items are never presented as confirmed (SPEC §12).
+- **Freshness.** `hotel_verifications` is the source of truth. Recording a verification (`POST /hotels-admin/hotels/:hotelId/verifications`) sets its `next_due_at` to `verified_at` plus `maxAgeDays` from configuration `hotel.verification_policy`, and recomputes `hotels.last_verified_at` as the newest `verified_at` among the hotel's verifications, in the same transaction. So the date moves as soon as the record is saved, a backdated record never lowers it, and a failed recompute stores no verification. The request cannot set `next_due_at`, and the value is set once: a later change to `maxAgeDays` does not move stored values. A scheduled job marks verifications older than the configured age `stale`, with the rate cards they verify (`hotel_rate_cards.status = stale`), and recomputes `last_verified_at` again (SPEC §8). A rate card whose verification is older than the configured age is shown with a stale label and its items are never presented as confirmed (SPEC §12).
 - **Availability** (GP-9, A-9) is not stored as a calendar. "Availability" in `hotel_verifications.field_group` records when AMPM last confirmed general availability for a season; date-specific availability is answered inside a `hotel_enquiries` row.
 - **Compare hotels** is a view over `saved_hotels`; no table is needed. `saved_hotels` is unique on (`account_id`, `hotel_id`).
 - **Previous wedding media** (GP-20) are `media_assets` with `owner_type = hotel`, `rights_status = consent_obtained` and `consent_source_project_id` set; the publishing rule in the permission matrix refuses client or public visibility without it.
+- **Catalogue fields (24 November 2026, D-178).** `hotels` gains a home for every recurring answer on the hotel information form and every recurring fact on the hotels' fact sheets: `locality`, `city`, `state` and `postal_code`; `maps_url`; the airport, railway-station and city-centre names, distances in km (numeric(4,1)) and drive minutes, with `access_notes`; `parent_group` and `name_aliases_json`; the total event space in m² and in sq ft; `cuisines_json` and three food facts; and five booking terms. Every one is nullable, and a null food fact means the hotel has not said. The booking terms (`wedding_buyout_policy`, `min_rooms_without_buyout`, `min_nights`, `parallel_functions`, `booking_notes`) and the name variants in `name_aliases_json` are INTERNAL: every staff reader of the hotel profile gets them and no client view does (AMPM keeps the booking terms internal for now; showing them later is an additive change). `latitude` and `longitude` are INTERNAL too: staff-only coordinates. The other new fields are CLIENT class, but they reach clients only when the client views add them, in Slice 12 of the hotel information form plan; until then the client selects leave them out and only staff read them. `maps_url` is stored as given and never fetched by the server: only its scheme, host and path are checked (`isGoogleMapsUrl` in `packages/core`), so a short link is never resolved. When the destination's country is India, `postal_code` must be a PIN: 6 digits, not starting with 0, spaces ignored (`postalCodeProblem`); a hotel has no country of its own, so the check reads the destination's. Cuisine labels come from configuration `hotel.cuisine_options`, or `Other`. The `policies` field group of `hotel_verifications` records a check of the booking terms. Implemented in migration `20261124000000_hotel_catalogue_fields`.
 
 ---
 

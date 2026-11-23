@@ -1,8 +1,9 @@
 import type { NestExpressApplication } from "@nestjs/platform-express";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { PrismaService } from "../src/db/prisma.service.js";
 import { HotelFreshnessService } from "../src/modules/hotels/hotel-freshness.service.js";
+import { HotelRatesRepository } from "../src/modules/hotels/hotel-rates.repository.js";
 import { startApi } from "./start-api.js";
 
 const PREFIX = "e2e-fresh-";
@@ -155,5 +156,38 @@ describe("Hotel rate freshness (e2e)", () => {
       where: { recipientId: htUserId, templateKey: "hotels.rates_stale" },
     });
     expect(notices).toBe(1);
+  });
+
+  /**
+   * A verification recorded while the sweep recomputes the hotel's date must not be overwritten by the
+   * sweep's older maximum: the sweep locks the hotel's row first, as recording one does.
+   */
+  it("locks the hotel's row before it recomputes the hotel's last verification, in one transaction", async () => {
+    await prisma.hotelVerification.create({
+      data: {
+        hotelId,
+        fieldGroup: "media",
+        source: "email",
+        status: "verified",
+        verifiedAt: new Date(Date.now() - 300 * DAY),
+      },
+    });
+    const repo = app.get(HotelRatesRepository);
+    const lock = vi.spyOn(repo, "lockHotel");
+    const recompute = vi.spyOn(repo, "recomputeLastVerifiedAt");
+    try {
+      await freshness.runSweep();
+      const locked = lock.mock.calls.findIndex(([id]) => id === hotelId);
+      const recomputed = recompute.mock.calls.findIndex(([id]) => id === hotelId);
+      expect(locked).toBeGreaterThanOrEqual(0);
+      expect(recomputed).toBeGreaterThanOrEqual(0);
+      expect(lock.mock.calls[locked]?.[1]).toBe(recompute.mock.calls[recomputed]?.[1]);
+      expect(lock.mock.invocationCallOrder[locked]).toBeLessThan(
+        recompute.mock.invocationCallOrder[recomputed] ?? 0,
+      );
+    } finally {
+      lock.mockRestore();
+      recompute.mockRestore();
+    }
   });
 });

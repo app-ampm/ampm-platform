@@ -1,6 +1,7 @@
 import type {
   DestinationListItemView,
   DestinationView,
+  HotelCatalogueKey,
   HotelContactView,
   HotelStaffDetail,
   HotelStaffDetailView,
@@ -13,6 +14,7 @@ import type {
 
 import type { Prisma } from "../../generated/prisma/client.js";
 import type { HotelAudience } from "./hotel-audience.js";
+import { toStringList } from "./hotel-string-lists.js";
 import type {
   DestinationListRow,
   DestinationRow,
@@ -24,17 +26,12 @@ import type {
  * Staff response models, one per audience (D-171). The return types are the @ampm/core staff views, so
  * TypeScript rejects any extra field: the profile serialiser cannot carry the internal rating, notes or
  * contacts, and each restricted group is added only for an audience whose grants read it
- * (hotel-audience.ts). A Prisma Decimal becomes a number and a JSON facilities value is narrowed to a
- * string list without an `as` cast.
+ * (hotel-audience.ts). A Prisma Decimal becomes a number and a JSON list column (facilities, name
+ * variants, cuisines) is narrowed to a string list without an `as` cast.
  */
 
 function toNumber(value: Prisma.Decimal | null): number | null {
   return value === null ? null : value.toNumber();
-}
-
-function toFacilities(value: Prisma.JsonValue | null): string[] | null {
-  if (!Array.isArray(value)) return null;
-  return value.filter((item): item is string => typeof item === "string");
 }
 
 export function toDestinationView(row: DestinationRow): DestinationView {
@@ -68,7 +65,7 @@ export function toRoomCategoryView(row: RoomRow): RoomCategoryView {
     roomCount: row.roomCount,
     maxOccupancy: row.maxOccupancy,
     sizeSqm: row.sizeSqm,
-    facilities: toFacilities(row.facilities),
+    facilities: toStringList(row.facilities),
     description: row.description,
   };
 }
@@ -84,7 +81,7 @@ export function toVenueView(row: VenueRow): VenueView {
     capacityBanquet: row.capacityBanquet,
     capacityTheatre: row.capacityTheatre,
     capacityReception: row.capacityReception,
-    facilities: toFacilities(row.facilities),
+    facilities: toStringList(row.facilities),
     description: row.description,
   };
 }
@@ -98,6 +95,42 @@ export function toHotelContactView(row: ContactRow): HotelContactView {
     phone: row.phone,
     email: row.email,
     isPrimary: row.isPrimary,
+  };
+}
+
+/**
+ * The D-178 columns as every staff profile reader gets them (D-171): the INTERNAL name variants and
+ * booking terms included, since every staff role reads INTERNAL; never RESTRICTED-NOTES.
+ */
+function catalogueViewOf(row: StaffHotelRow): Pick<HotelStaffView, HotelCatalogueKey> {
+  return {
+    parentGroup: row.parentGroup,
+    nameAliases: toStringList(row.nameAliases),
+    locality: row.locality,
+    city: row.city,
+    state: row.state,
+    postalCode: row.postalCode,
+    mapsUrl: row.mapsUrl,
+    airportName: row.airportName,
+    airportDistanceKm: toNumber(row.airportDistanceKm),
+    airportDriveMinutes: row.airportDriveMinutes,
+    railwayStationName: row.railwayStationName,
+    railwayDistanceKm: toNumber(row.railwayDistanceKm),
+    railwayDriveMinutes: row.railwayDriveMinutes,
+    cityCentreDistanceKm: toNumber(row.cityCentreDistanceKm),
+    cityCentreDriveMinutes: row.cityCentreDriveMinutes,
+    accessNotes: row.accessNotes,
+    totalEventSpaceSqm: row.totalEventSpaceSqm,
+    totalEventSpaceSqft: row.totalEventSpaceSqft,
+    weddingBuyoutPolicy: row.weddingBuyoutPolicy,
+    minRoomsWithoutBuyout: row.minRoomsWithoutBuyout,
+    minNights: row.minNights,
+    parallelFunctions: row.parallelFunctions,
+    bookingNotes: row.bookingNotes,
+    cuisines: toStringList(row.cuisines),
+    isPureVegetarian: row.isPureVegetarian,
+    hasSeparateVegKitchen: row.hasSeparateVegKitchen,
+    servesAlcohol: row.servesAlcohol,
   };
 }
 
@@ -121,7 +154,8 @@ export function toHotelStaffView(row: StaffHotelRow): HotelStaffView {
     totalRooms: row.totalRooms,
     streetViewRef: row.streetViewRef,
     lastVerifiedAt: row.lastVerifiedAt ? row.lastVerifiedAt.toISOString() : null,
-    facilities: toFacilities(row.facilities),
+    facilities: toStringList(row.facilities),
+    ...catalogueViewOf(row),
   };
 }
 

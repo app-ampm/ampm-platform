@@ -65,12 +65,14 @@ const RESULT: HotelImportResult = {
   totalRows: 1,
   created: 0,
   updated: 0,
+  unchanged: 1,
   destinationsCreated: 0,
   mediaRegistered: 0,
   rejected: [],
+  rows: [{ line: 2, slug: "synthetic-lake-hotel", outcome: "unchanged", changedFields: [] }],
 };
-const importFetch: FetchFn = routedFetch({ "/hotels-admin/imports": () => ok(RESULT) });
-const CSV = "destinationSlug,name\nudaipur,Taj Lake Palace";
+const importFetch: FetchFn = routedFetch({ "/hotels-admin/imports/hotels": () => ok(RESULT) });
+const CSV = "destinationSlug,name\nudaipur,Synthetic Lake Hotel";
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -109,12 +111,12 @@ describe("HotelsListScreen across 1024 (T4)", () => {
     mockWindow.width = 390;
     await renderWithApi(<HotelsListScreen />, hotelsFetch);
     await fireEvent.press(await screen.findByTestId("hotel-new"));
-    await fireEvent.changeText(await screen.findByTestId("hotel-brand"), "Taj Hotels");
+    await fireEvent.changeText(await screen.findByTestId("hotel-brand"), "Synthetic Hotels");
     await resizeTo(1440);
     expect(await screen.findByText("Last verified")).toBeOnTheScreen();
-    expect(screen.getByTestId("hotel-brand")).toHaveDisplayValue("Taj Hotels");
+    expect(screen.getByTestId("hotel-brand")).toHaveDisplayValue("Synthetic Hotels");
     await resizeTo(390);
-    expect(screen.getByTestId("hotel-brand")).toHaveDisplayValue("Taj Hotels");
+    expect(screen.getByTestId("hotel-brand")).toHaveDisplayValue("Synthetic Hotels");
   });
 });
 

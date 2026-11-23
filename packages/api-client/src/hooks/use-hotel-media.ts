@@ -17,9 +17,12 @@ import {
 
 import { useApiClient } from "../provider";
 
+/** The prefix of every hotel's media list, to refresh them all after a write that touched many hotels. */
+export const HOTEL_MEDIA_QUERY_KEY = ["media", "hotel"] as const;
+
 /** The query key for one hotel's media list. */
 export function hotelMediaQueryKey(hotelId: string) {
-  return ["media", "hotel", hotelId] as const;
+  return [...HOTEL_MEDIA_QUERY_KEY, hotelId] as const;
 }
 
 /**

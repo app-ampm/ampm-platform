@@ -1,13 +1,27 @@
-import type { HotelImportResult } from "@ampm/core";
+import {
+  HOTEL_IMPORT_COLUMNS,
+  HOTEL_IMPORT_MAX_BYTES,
+  HOTEL_IMPORT_REQUIRED_COLUMNS,
+  type HotelImportResult,
+  type HotelImportRowReport,
+} from "@ampm/core";
 
 import {
+  changingHeadline,
+  changingRows,
   hasRejections,
-  importSummary,
-  IMPORT_COLUMNS,
+  IMPORT_COLUMNS_HINT,
+  IMPORT_RULES,
   IMPORT_TEMPLATE_HEADER,
+  importInputProblem,
+  importReportCsv,
+  importSummary,
+  importTemplateCsv,
+  moreRowsText,
   rejectedHeadline,
   rejectedRowText,
-  REQUIRED_COLUMNS,
+  rowOutcomeText,
+  utf8Length,
 } from "./hotel-import.format";
 
 function result(overrides: Partial<HotelImportResult> = {}): HotelImportResult {
@@ -18,38 +32,94 @@ function result(overrides: Partial<HotelImportResult> = {}): HotelImportResult {
     totalRows: 50,
     created: 48,
     updated: 0,
+    unchanged: 0,
     destinationsCreated: 3,
     mediaRegistered: 0,
     rejected: [],
+    rows: [],
+    ...overrides,
+  };
+}
+
+function row(overrides: Partial<HotelImportRowReport> = {}): HotelImportRowReport {
+  return {
+    line: 2,
+    slug: "synthetic-lake-hotel",
+    outcome: "update",
+    changedFields: [],
     ...overrides,
   };
 }
 
 describe("hotel-import.format", () => {
-  it("lists the columns in order and marks the required ones", () => {
-    expect(IMPORT_COLUMNS[0]).toBe("destinationSlug");
-    expect(IMPORT_COLUMNS).toContain("name");
-    expect(REQUIRED_COLUMNS).toEqual(["destinationSlug", "name"]);
+  it("takes the template's columns from core, required ones first", () => {
+    expect(IMPORT_TEMPLATE_HEADER).toBe(HOTEL_IMPORT_COLUMNS.join(","));
+    expect(IMPORT_COLUMNS_HINT.split(", ")).toEqual([...HOTEL_IMPORT_COLUMNS]);
     expect(IMPORT_TEMPLATE_HEADER.startsWith("destinationSlug,destinationName,slug,name,")).toBe(
       true,
     );
+    expect(HOTEL_IMPORT_REQUIRED_COLUMNS).toEqual(["destinationSlug", "name"]);
+    expect(IMPORT_RULES).toContain("Required: destinationSlug, name.");
+  });
+
+  it("says a blank cell leaves a value unchanged, flags change only when filled, lists split on |", () => {
+    expect(IMPORT_RULES).toContain("a blank cell leaves its value unchanged");
+    expect(IMPORT_RULES).toContain("change only when filled");
+    expect(IMPORT_RULES).toContain(
+      'Separate the entries of a list cell with "|" or a line break; a comma stays inside an entry.',
+    );
+    expect(IMPORT_RULES).toContain("Yes-or-no columns take true or false");
+    expect(IMPORT_RULES).toContain("Up to 5 MB and 2,000 rows.");
+    expect(IMPORT_RULES).toContain("Save the file as CSV UTF-8");
+  });
+
+  it("builds the template as the header row alone, marked UTF-8 so Excel keeps ₹ and Indic names", () => {
+    const template = importTemplateCsv();
+    expect(template).toBe(`\uFEFF${IMPORT_TEMPLATE_HEADER}`);
+    expect(template.split("\r\n")).toHaveLength(1);
+    expect(template.split(",")).toHaveLength(HOTEL_IMPORT_COLUMNS.length);
   });
 
   describe("importSummary", () => {
-    it("reports a dry run as checked-not-saved, with the valid/rejected split", () => {
+    it("reports a dry run as checked-not-saved, with each outcome counted", () => {
       const r = result({
         dryRun: true,
         applied: false,
         totalRows: 50,
-        created: 0,
-        updated: 0,
+        created: 40,
+        updated: 5,
+        unchanged: 3,
         destinationsCreated: 0,
         rejected: [
           { line: 5, errors: [] },
           { line: 9, errors: [] },
         ],
       });
-      expect(importSummary(r)).toBe("Checked 50 rows: 48 valid, 2 rejected — nothing saved yet.");
+      expect(importSummary(r)).toBe(
+        "Checked 50 rows: 40 to add, 5 to update, 3 unchanged, 2 rejected — nothing saved yet.",
+      );
+    });
+
+    it("says how many new destinations a dry run would add", () => {
+      const r = result({
+        dryRun: true,
+        applied: false,
+        totalRows: 1,
+        created: 1,
+        updated: 0,
+        destinationsCreated: 1,
+      });
+      expect(importSummary(r)).toBe(
+        "Checked 1 row: 1 to add, 0 to update, 0 unchanged, 0 rejected — would add 1 new destination; nothing saved yet.",
+      );
+    });
+
+    it("names one destination and one image in the singular", () => {
+      expect(
+        importSummary(
+          result({ created: 1, updated: 0, destinationsCreated: 1, mediaRegistered: 1 }),
+        ),
+      ).toBe("Imported 1 created · 0 updated · 1 new destination · 1 image.");
     });
 
     it("summarises an applied import with its counts", () => {
@@ -60,12 +130,15 @@ describe("hotel-import.format", () => {
       ).toBe("Imported 48 created · 2 updated · 3 new destinations · 4 images.");
     });
 
-    it("omits zero destinations and images", () => {
+    it("omits zero unchanged rows, destinations and images, and counts unchanged rows when some are", () => {
       expect(
         importSummary(
           result({ created: 10, updated: 0, destinationsCreated: 0, mediaRegistered: 0 }),
         ),
       ).toBe("Imported 10 created · 0 updated.");
+      expect(
+        importSummary(result({ created: 1, updated: 1, unchanged: 8, destinationsCreated: 0 })),
+      ).toBe("Imported 1 created · 1 updated · 8 unchanged.");
     });
 
     it("says nothing imported when a real run applied nothing (all rows rejected)", () => {
@@ -80,6 +153,33 @@ describe("hotel-import.format", () => {
           }),
         ),
       ).toBe("Nothing imported — all 1 row was rejected.");
+    });
+
+    it("counts the images a run registered on hotels that otherwise matched", () => {
+      expect(
+        importSummary(
+          result({
+            created: 0,
+            updated: 0,
+            unchanged: 3,
+            destinationsCreated: 0,
+            mediaRegistered: 3,
+          }),
+        ),
+      ).toBe("Imported 0 created · 0 updated · 3 unchanged · 3 images.");
+    });
+
+    // The API answers `applied: false` when a real run wrote nothing (core hotelImportResult).
+    it("says nothing imported when every row already matches, naming any rejected", () => {
+      const unchanged = { applied: false, created: 0, updated: 0, destinationsCreated: 0 };
+      expect(importSummary(result({ ...unchanged, totalRows: 4, unchanged: 4 }))).toBe(
+        "Nothing imported — 4 unchanged.",
+      );
+      expect(
+        importSummary(
+          result({ ...unchanged, totalRows: 3, unchanged: 2, rejected: [{ line: 3, errors: [] }] }),
+        ),
+      ).toBe("Nothing imported — 2 unchanged, 1 rejected.");
     });
   });
 
@@ -103,5 +203,66 @@ describe("hotel-import.format", () => {
     );
     expect(hasRejections(result())).toBe(false);
     expect(rejectedHeadline(result())).toBeNull();
+  });
+
+  describe("the per-row report", () => {
+    const report = result({
+      dryRun: true,
+      applied: false,
+      rows: [
+        row({ line: 4, slug: "synthetic-hill-resort", outcome: "create", changedFields: ["name"] }),
+        row({ line: 2, changedFields: ["city", "mapsUrl"] }),
+        row({ line: 3, slug: "synthetic-fort-hotel", outcome: "unchanged" }),
+        row({ line: 5, slug: null, outcome: "error" }),
+      ],
+      rejected: [{ line: 5, errors: [{ field: "name", message: "required" }] }],
+    });
+
+    it("lists the rows that add or update a hotel, in file order, with the columns they change", () => {
+      expect(changingRows(report).map((r) => r.line)).toEqual([2, 4]);
+      expect(changingHeadline(report)).toBe("2 hotels to add or update");
+      expect(changingHeadline(result({ rows: [row()] }))).toBe("1 hotel added or updated");
+      expect(changingHeadline(result())).toBeNull();
+      expect(rowOutcomeText(row({ changedFields: ["city", "mapsUrl"] }))).toBe(
+        "Line 2 · synthetic-lake-hotel · Update: city, mapsUrl",
+      );
+      expect(rowOutcomeText(row({ line: 4, slug: null, outcome: "create" }))).toBe(
+        "Line 4 · New hotel",
+      );
+    });
+
+    it("caps the lists on screen and points at the report for the rest", () => {
+      expect(moreRowsText(20)).toBeNull();
+      expect(moreRowsText(23)).toBe("3 more in the downloaded report.");
+    });
+
+    it("downloads every row with its outcome, changes and errors, in line order", () => {
+      const lines = importReportCsv(report).split("\r\n");
+      expect(lines).toEqual([
+        "line,slug,outcome,changedFields,errors",
+        '2,synthetic-lake-hotel,update,"city, mapsUrl",',
+        "3,synthetic-fort-hotel,unchanged,,",
+        "4,synthetic-hill-resort,create,name,",
+        "5,,error,,name: required",
+      ]);
+    });
+
+    it("keeps a rejected row the report does not list, quoting what a spreadsheet would split", () => {
+      const unlisted = result({
+        rejected: [{ line: 7, errors: [{ field: "name", message: 'is "short", at most 255' }] }],
+      });
+      expect(importReportCsv(unlisted).split("\r\n")[1]).toBe(
+        '7,,error,,"name: is ""short"", at most 255"',
+      );
+    });
+  });
+
+  it("refuses an empty CSV and one over the 5 MB cap before it is sent", () => {
+    expect(importInputProblem("  \n ")).toBe("Paste or choose a CSV first");
+    expect(importInputProblem("destinationSlug,name")).toBeNull();
+    expect(importInputProblem("a".repeat(HOTEL_IMPORT_MAX_BYTES + 1))).toBe(
+      "The CSV is over 5 MB: split it into smaller files",
+    );
+    expect(utf8Length("aé€😀")).toBe(1 + 2 + 3 + 4);
   });
 });

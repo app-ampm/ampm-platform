@@ -25,6 +25,8 @@ export * from "./subscription-report"; // §5.16 report, every name `subscriptio
 // whose hotel is one model per audience (hotel-staff-views.ts, D-171).
 export * from "./hotels";
 export * from "./hotels-admin";
+export * from "./hotel-catalogue"; // the D-178 hotel fields (location, access, booking terms, food)
+export * from "./hotel-import"; // the staff spreadsheet import (D-181)
 export * from "./hotel-staff-views";
 export * from "./saved-hotels-staff"; // staff read of clients' saved hotels, every name `savedHotelStaff`-prefixed
 export * from "./hotel-rates";

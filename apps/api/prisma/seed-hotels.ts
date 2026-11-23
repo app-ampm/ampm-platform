@@ -4,9 +4,10 @@ import type { PrismaClient } from "../src/generated/prisma/client.js";
  * Module C seed (data.md: synthetic only). The three demo destinations (real places) and four fictitious
  * hotels at them — three demo-visible, one (the second Udaipur property) not — so an entitled client sees
  * four and a demo principal sees three (A-28 isolation). internal_rating / internal_notes are set to prove
- * the client path never serialises them (RESTRICTED-NOTES). last_verified_at drives the freshness label
- * (seeded directly until the hotel-verification workflow lands). Kept out of seed.ts to keep it under the
- * 300-line cap.
+ * the client path never serialises them (RESTRICTED-NOTES). Each hotel also carries the city, state and
+ * PIN of its address (D-178 columns). last_verified_at is not seeded here: seed-hotel-subresources.ts
+ * records each hotel's verification and sets it from that, as recording one through the API does. Kept
+ * out of seed.ts to keep it under the 300-line cap.
  */
 
 const DESTINATIONS = [
@@ -25,6 +26,9 @@ const HOTELS = [
     demoVisible: true,
     totalRooms: 84,
     address: "Lake Pichola Road, Udaipur, Rajasthan 313001",
+    city: "Udaipur",
+    state: "Rajasthan",
+    postalCode: "313001",
     website: "https://example.com/lake-pavilion",
     descriptionClient:
       "A heritage-style lakeside palace with courtyard lawns for destination weddings.",
@@ -39,6 +43,9 @@ const HOTELS = [
     demoVisible: false,
     totalRooms: 52,
     address: "Sajjangarh Road, Udaipur, Rajasthan 313001",
+    city: "Udaipur",
+    state: "Rajasthan",
+    postalCode: "313001",
     website: null,
     descriptionClient: "A quiet boutique hill resort on the edge of the city.",
   },
@@ -51,6 +58,9 @@ const HOTELS = [
     demoVisible: true,
     totalRooms: 120,
     address: "Amer Road, Jaipur, Rajasthan 302002",
+    city: "Jaipur",
+    state: "Rajasthan",
+    postalCode: "302002",
     website: "https://example.com/rose-fort",
     descriptionClient: "A fort-palace with expansive courtyard lawns for large functions.",
     facilities: ["Fort courtyard", "Palace spa", "Valet parking", "In-house decor"],
@@ -64,6 +74,9 @@ const HOTELS = [
     demoVisible: true,
     totalRooms: 160,
     address: "Candolim Beach Road, North Goa 403515",
+    city: "Candolim",
+    state: "Goa",
+    postalCode: "403515",
     website: "https://example.com/candolim-sands",
     descriptionClient: "A beachfront resort for seaside wedding events and sundown receptions.",
     facilities: ["Private beach", "Beachfront lawn", "Poolside bar", "Spa", "Valet parking"],
@@ -88,7 +101,6 @@ async function seedDestinations(prisma: PrismaClient): Promise<ReadonlyMap<strin
 /** Upserts the destinations then the hotels (idempotent, keyed on slug). */
 export async function seedHotels(prisma: PrismaClient): Promise<void> {
   const destinations = await seedDestinations(prisma);
-  const lastVerifiedAt = new Date("2026-10-15T00:00:00.000Z");
   for (const { slug, destination, ...rest } of HOTELS) {
     const destinationId = destinations.get(destination);
     if (!destinationId) throw new Error(`destination ${destination} was not seeded`);
@@ -96,7 +108,6 @@ export async function seedHotels(prisma: PrismaClient): Promise<void> {
       ...rest,
       destinationId,
       status: "active" as const,
-      lastVerifiedAt,
       internalRating: 4,
       internalNotes: "Synthetic internal note — never shown to a client.",
     };

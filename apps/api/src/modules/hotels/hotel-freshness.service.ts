@@ -75,9 +75,7 @@ export class HotelFreshnessService implements OnModuleInit {
         });
         hotels.add(verification.hotelId);
       }
-      for (const hotelId of hotels) {
-        await this.repo.transaction((tx) => this.repo.recomputeLastVerifiedAt(hotelId, tx));
-      }
+      await this.refreshLastVerifiedAt(hotels);
       await this.notifyHotelTeam();
       this.logger.info("hotels.rates.freshness", {
         staledVerifications: stale.length,
@@ -86,6 +84,20 @@ export class HotelFreshnessService implements OnModuleInit {
       });
       return { staledVerifications: stale.length, staledCards };
     });
+  }
+
+  /**
+   * Recomputes each hotel's last_verified_at with its row locked, as recording a verification locks it:
+   * without the lock, a verification recorded between the recompute's read and its write would be
+   * overwritten by this sweep's older maximum.
+   */
+  private async refreshLastVerifiedAt(hotelIds: ReadonlySet<string>): Promise<void> {
+    for (const hotelId of hotelIds) {
+      await this.repo.transaction(async (tx) => {
+        await this.repo.lockHotel(hotelId, tx);
+        await this.repo.recomputeLastVerifiedAt(hotelId, tx);
+      });
+    }
   }
 
   /** One in-app notice to each active hotel-team member (AC-04.3 "notified once"; the early return on a

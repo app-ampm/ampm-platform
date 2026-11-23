@@ -22,7 +22,10 @@ interface CustomFixture {
   readonly capabilities: readonly string[];
 }
 
-/** A custom role that edits profiles and reads contacts, but holds no key on the internal notes. */
+/**
+ * A custom role that edits profiles and reads contacts, but holds no key on the internal notes, the
+ * destinations or the hotel media.
+ */
 const CONTACTS_EDITOR: CustomFixture = {
   role: "custom_hotel_contacts_e2e",
   email: "custom-hotel-contacts-e2e@example.com",
@@ -249,6 +252,50 @@ describe("Staff hotel audiences (e2e)", () => {
     expect(res.body.data).toMatchObject({ slug: `${PREFIX}second`, contacts: [] });
     expect(res.body.data).not.toHaveProperty("internalNotes");
     expect(await prisma.hotel.count({ where: { slug: `${PREFIX}refused` } })).toBe(0);
+  });
+
+  it("refuses an import row's notes cell without the notes key, applying the other rows (D-171)", async () => {
+    const csv = [
+      "destinationSlug,name,slug,internalNotes",
+      `${PREFIX}dest,E2E Audience Imported,${PREFIX}imported,`,
+      `${PREFIX}dest,E2E Audience Noted,${PREFIX}noted,Not theirs to write`,
+    ].join("\n");
+    const res = await http()
+      .post("/hotels-admin/imports/hotels")
+      .set("Authorization", await bearer(CONTACTS_EDITOR.subject))
+      .set("Content-Type", "text/csv")
+      .send(csv)
+      .expect(200);
+    expect(res.body.data).toMatchObject({
+      created: 1,
+      rejected: [{ line: 3, errors: [{ field: "internalNotes" }] }],
+    });
+    expect(await prisma.hotel.count({ where: { slug: `${PREFIX}noted` } })).toBe(0);
+  });
+
+  it("refuses an import row that creates a destination or adds an image without those keys (D-181)", async () => {
+    const csv = [
+      "destinationSlug,name,slug,imageRef",
+      `${PREFIX}elsewhere,E2E Audience Elsewhere,${PREFIX}elsewhere,`,
+      `${PREFIX}dest,E2E Audience Pictured,${PREFIX}pictured,https://img.example/pictured.jpg`,
+    ].join("\n");
+    const res = await http()
+      .post("/hotels-admin/imports/hotels")
+      .set("Authorization", await bearer(CONTACTS_EDITOR.subject))
+      .set("Content-Type", "text/csv")
+      .send(csv)
+      .expect(200);
+    expect(res.body.data).toMatchObject({
+      applied: false,
+      created: 0,
+      rejected: [
+        { line: 2, errors: [{ field: "destinationSlug" }] },
+        { line: 3, errors: [{ field: "imageRef" }] },
+      ],
+    });
+    expect(await prisma.destination.count({ where: { slug: `${PREFIX}elsewhere` } })).toBe(0);
+    const slugs = [`${PREFIX}elsewhere`, `${PREFIX}pictured`];
+    expect(await prisma.hotel.count({ where: { slug: { in: slugs } } })).toBe(0);
   });
 
   it("lets the Hotel team write the notes", async () => {

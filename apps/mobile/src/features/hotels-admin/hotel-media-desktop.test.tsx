@@ -120,11 +120,11 @@ describe("HotelMediaScreen across 768 and 1024", () => {
     mockWindow.width = 390;
     await renderManager();
     await fireEvent.press(await screen.findByTestId("hotel-edit-profile"));
-    await fireEvent.changeText(await screen.findByTestId("hotel-brand"), "Taj Hotels");
+    await fireEvent.changeText(await screen.findByTestId("hotel-brand"), "Example Collection");
     await resizeTo(1440);
     expect(screen.getByTestId("media-grid")).toBeOnTheScreen();
-    expect(screen.getByTestId("hotel-brand")).toHaveDisplayValue("Taj Hotels");
+    expect(screen.getByTestId("hotel-brand")).toHaveDisplayValue("Example Collection");
     await resizeTo(390);
-    expect(screen.getByTestId("hotel-brand")).toHaveDisplayValue("Taj Hotels");
+    expect(screen.getByTestId("hotel-brand")).toHaveDisplayValue("Example Collection");
   });
 });

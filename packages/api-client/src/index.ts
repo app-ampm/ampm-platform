@@ -135,7 +135,11 @@ export {
   useUpdateDestination,
   useUpdateHotel,
 } from "./hooks/use-staff-hotels";
-export { useHotelImport } from "./hooks/use-hotel-import";
+export { hotelImportPath, useHotelImport, type HotelImportInput } from "./hooks/use-hotel-import";
+export {
+  HOTEL_CUISINE_OPTIONS_QUERY_KEY,
+  useHotelCuisineOptions,
+} from "./hooks/use-hotel-cuisine-options";
 export {
   useCreateContact,
   useCreateRoom,

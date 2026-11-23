@@ -16,7 +16,11 @@ import { AuditService } from "../../policy/audit.service.js";
 import { ConfigService } from "../admin/config/config.service.js";
 import { HotelRatesRepository } from "./hotel-rates.repository.js";
 import { toRateCardView, toRateItemView, toVerificationView } from "./hotel-rates.view.js";
-import { isFutureDated, rateCardVerificationProblem } from "./rate-card-verification.js";
+import {
+  isFutureDated,
+  rateCardVerificationProblem,
+  verificationNextDueAt,
+} from "./rate-card-verification.js";
 
 /**
  * Verified pricing for a hotel (HT/SA; feature 9.2). Rate cards hold indicative rate items; a card is
@@ -140,7 +144,9 @@ export class HotelRatesService {
 
   /**
    * Record that AMPM verified a field group, now or on a past date: never a future one, which would keep
-   * the verification (and any card it backs) fresh long after its real age (AC-04.3).
+   * the verification (and any card it backs) fresh long after its real age (AC-04.3). The server sets its
+   * next_due_at (its date plus `hotel.verification_policy.maxAgeDays`) and, in the same transaction with
+   * the hotel's row locked, recomputes the hotel's last_verified_at from its newest verification.
    */
   async recordVerification(
     hotelId: string,
@@ -148,12 +154,27 @@ export class HotelRatesService {
     actorId: string,
   ): Promise<VerificationView> {
     await this.requireHotel(hotelId);
-    if (request.verifiedAt && isFutureDated(new Date(request.verifiedAt), new Date())) {
+    const verifiedAt = request.verifiedAt ? new Date(request.verifiedAt) : new Date();
+    if (isFutureDated(verifiedAt, new Date())) {
       throw errors.validation([
         { path: "verifiedAt", message: "A verification cannot be dated in the future" },
       ]);
     }
-    return toVerificationView(await this.repo.createVerification(hotelId, request, actorId));
+    const { maxAgeDays } = await this.config.get("hotel.verification_policy");
+    const data = {
+      fieldGroup: request.fieldGroup,
+      source: request.source,
+      verifiedAt,
+      nextDueAt: verificationNextDueAt(verifiedAt, maxAgeDays),
+      notes: request.notes ?? null,
+    };
+    const row = await this.repo.transaction(async (tx) => {
+      if (!(await this.repo.lockHotel(hotelId, tx))) throw errors.notFound("No such hotel");
+      const created = await this.repo.createVerification(hotelId, data, actorId, tx);
+      await this.repo.recomputeLastVerifiedAt(hotelId, tx);
+      return created;
+    });
+    return toVerificationView(row);
   }
 
   async listVerifications(hotelId: string): Promise<{ items: VerificationView[] }> {

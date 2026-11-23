@@ -36,8 +36,9 @@ export const CLIENT_WRITES: RateLimitOptions = {
 };
 
 /**
- * File uploads (gallery media, a signed contract, a signed agreement copy): each buffers up to 25 MiB,
- * is typed, scanned and stored, so they share one bucket per member of staff and fail closed.
+ * File uploads (gallery media, a signed contract, a signed agreement copy, a hotel spreadsheet import):
+ * each reads up to 25 MiB (the import 5 MiB, D-181), is checked and stored or applied, so they share one
+ * bucket per member of staff and fail closed.
  */
 export const UPLOADS: RateLimitOptions = {
   name: "uploads",

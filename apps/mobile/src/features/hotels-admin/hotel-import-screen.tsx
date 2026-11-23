@@ -5,7 +5,6 @@ import { useHotelImport } from "@ampm/api-client";
 import { isAppError, type HotelImportResult } from "@ampm/core";
 import {
   Button,
-  Callout,
   Card,
   Input,
   Row,
@@ -19,55 +18,67 @@ import {
   type ToastOptions,
 } from "@ampm/ui";
 
-import { pickCsvFile } from "./pick-csv-file";
+import { ImportResultPanel } from "./hotel-import-result";
 import {
+  dryRunDestinationsNote,
   hasRejections,
-  importSummary,
-  IMPORT_TEMPLATE_HEADER,
-  rejectedHeadline,
-  rejectedRowText,
-  REQUIRED_COLUMNS,
+  IMPORT_COLUMNS_HINT,
+  IMPORT_RULES,
+  IMPORT_TEMPLATE_FILE,
+  importInputProblem,
+  importTemplateCsv,
+  oversizeFileNotice,
 } from "./hotel-import.format";
+import { pickCsvFile } from "./pick-csv-file";
+import { useCsvDownload } from "./use-csv-download";
 
 /**
- * The toast for a completed run: a validate (dry run) announces whether any rows were rejected; a real
- * import announces whether anything was saved. The toast carries its own live region, so a screen-reader
- * user hears the outcome of Validate — the step the screen tells staff to do first — not only the import.
+ * The toast for a completed run: a validate (dry run) announces whether any rows were rejected, and any
+ * destinations importing would create; a real import announces whether anything was saved. The toast
+ * carries its own live region, so a screen-reader user hears the outcome of Validate — the step the
+ * screen asks for first — not only the import.
  */
 function runToast(result: HotelImportResult): ToastOptions {
   if (result.dryRun) {
+    const note = dryRunDestinationsNote(result);
     return {
       title: hasRejections(result)
         ? "Validated — some rows rejected"
         : "Validated — all rows valid",
       tone: hasRejections(result) ? "warning" : "success",
+      ...(note ? { description: note } : {}),
     };
   }
-  return {
-    title: result.applied ? "Hotels imported" : "Nothing imported",
-    tone: result.applied ? "success" : "danger",
-  };
+  if (result.applied) return { title: "Hotels imported", tone: "success" };
+  return { title: "Nothing imported", tone: hasRejections(result) ? "danger" : "info" };
 }
 
-/** The import form: the CSV content, the validate/import run, and the result it keeps on screen. */
+/**
+ * The import form: the CSV, the validate and import runs, and the result kept on screen. Validate sends
+ * the CSV as a dry run; Import applies it and unlocks only while the CSV is the one just validated, so
+ * staff always see what a file would change before it changes anything. The result stays on screen
+ * while staff fix the CSV, marked stale once the CSV is no longer the one it reports on.
+ */
 function useHotelImportForm() {
   const toast = useToast();
   const importHotels = useHotelImport();
   const [content, setContent] = useState("");
   const [result, setResult] = useState<HotelImportResult | null>(null);
+  const [resultCsv, setResultCsv] = useState<string | null>(null);
+  const [checkedCsv, setCheckedCsv] = useState<string | null>(null);
   const run = (dryRun: boolean): void => {
     if (importHotels.isPending) return;
-    const text = content.trim();
-    if (text.length === 0) {
-      toast.show({ title: "Paste or choose a CSV first", tone: "danger" });
-      return;
-    }
+    const csv = content.trim();
+    const problem = importInputProblem(csv);
+    if (problem) return void toast.show({ title: problem, tone: "danger" });
     setResult(null);
     importHotels.mutate(
-      { content: text, dryRun },
+      { csv, dryRun },
       {
         onSuccess: (res) => {
           setResult(res);
+          setResultCsv(csv);
+          setCheckedCsv(dryRun ? csv : null);
           toast.show(runToast(res));
         },
         onError: (error) =>
@@ -78,11 +89,14 @@ function useHotelImportForm() {
       },
     );
   };
-  return { content, setContent, result, run, pending: importHotels.isPending };
+  const canImport = checkedCsv !== null && checkedCsv === content.trim();
+  const isStale = result !== null && resultCsv !== content.trim();
+  return { content, setContent, result, isStale, run, canImport, pending: importHotels.isPending };
 }
 
-/** The template help: the column header and which columns are required. */
+/** The template help: the columns, the rules of a file, and the template to download. */
 function ImportColumnsHint() {
+  const download = useCsvDownload();
   return (
     <Card padding="sm" testID="hotel-import-columns">
       <Stack gap={2}>
@@ -90,11 +104,22 @@ function ImportColumnsHint() {
           CSV columns
         </Text>
         <Text variant="bodySmall" tone="primary">
-          {IMPORT_TEMPLATE_HEADER}
+          {IMPORT_COLUMNS_HINT}
         </Text>
         <Text variant="bodySmall" tone="muted">
-          {`Required: ${REQUIRED_COLUMNS.join(", ")}. Blank cells are left unset. Validate first to check the file without saving.`}
+          {IMPORT_RULES}
         </Text>
+        <Row gap={2} wrap>
+          <Button
+            variant="secondary"
+            size="sm"
+            icon="download"
+            onPress={() => download(IMPORT_TEMPLATE_FILE, importTemplateCsv())}
+            testID="hotel-import-template"
+          >
+            Download template
+          </Button>
+        </Row>
       </Stack>
     </Card>
   );
@@ -138,12 +163,16 @@ function ChooseCsv({
 /** Choose a `.csv` on the web, or paste the CSV directly (works on every platform). */
 function ImportContentInput({ content, setContent, tall }: ContentInputProps) {
   const [fileName, setFileName] = useState<string | null>(null);
+  const toast = useToast();
   const choose = (): void => {
     void pickCsvFile().then((picked) => {
-      if (picked) {
-        setContent(picked.content);
-        setFileName(picked.name);
+      if (!picked) return;
+      if (picked.content === null) {
+        toast.show({ title: oversizeFileNotice(picked.name), tone: "danger" });
+        return;
       }
+      setContent(picked.content);
+      setFileName(picked.name);
     });
   };
   return (
@@ -165,65 +194,41 @@ function ImportContentInput({ content, setContent, tall }: ContentInputProps) {
   );
 }
 
-/** The outcome: a summary callout and, when rows were rejected, each one named by line and field. */
-function ImportResultPanel({ result }: { readonly result: HotelImportResult }) {
-  const headline = rejectedHeadline(result);
-  return (
-    <Card testID="hotel-import-result">
-      <Stack gap={3}>
-        <Callout
-          kind={hasRejections(result) ? "warning" : "success"}
-          title={importSummary(result)}
-          blur={false}
-        />
-        {headline ? (
-          <Stack gap={1}>
-            <Text variant="label" tone="muted">
-              {headline}
-            </Text>
-            {result.rejected.map((row) => (
-              <Text
-                key={row.line}
-                variant="bodySmall"
-                tone="primary"
-                testID={`hotel-import-rejected-${row.line}`}
-              >
-                {rejectedRowText(row)}
-              </Text>
-            ))}
-          </Stack>
-        ) : null}
-      </Stack>
-    </Card>
-  );
-}
-
 interface ImportActionsProps {
   readonly pending: boolean;
+  readonly canImport: boolean;
   readonly run: (dryRun: boolean) => void;
 }
 
 /** Validate first (a dry run that saves nothing), then Import, the screen's gold action. */
-function ImportActions({ pending, run }: ImportActionsProps) {
+function ImportActions({ pending, canImport, run }: ImportActionsProps) {
   return (
-    <Row gap={2} wrap>
-      <Button
-        variant="secondary"
-        loading={pending}
-        onPress={() => run(true)}
-        testID="hotel-import-validate"
-      >
-        Validate
-      </Button>
-      <Button
-        variant="primary"
-        loading={pending}
-        onPress={() => run(false)}
-        testID="hotel-import-run"
-      >
-        Import
-      </Button>
-    </Row>
+    <Stack gap={2}>
+      <Row gap={2} wrap>
+        <Button
+          variant="secondary"
+          loading={pending}
+          onPress={() => run(true)}
+          testID="hotel-import-validate"
+        >
+          Validate
+        </Button>
+        <Button
+          variant="primary"
+          loading={pending}
+          disabled={!canImport}
+          onPress={() => run(false)}
+          testID="hotel-import-run"
+        >
+          Import
+        </Button>
+      </Row>
+      {canImport ? null : (
+        <Text variant="bodySmall" tone="muted" testID="hotel-import-locked">
+          Validate the CSV first: Import applies the file you checked.
+        </Text>
+      )}
+    </Stack>
   );
 }
 
@@ -232,23 +237,25 @@ export interface HotelImportScreenProps {
 }
 
 /**
- * Bulk-import the hotel catalogue from a CSV (H1.1, TW-25; Hotel team and Super Admin). Paste the CSV or
- * choose a `.csv` file, **Validate** to check it without saving (reports rejected rows by line and field),
- * then **Import** to upsert the valid rows — invalid rows are reported, never applied, and the catalogue
- * refreshes. The server is the gate. From 1024 the CSV and its actions sit beside a column with the
- * template help and the result; the column hint moves between two fixed slots (it holds no state), and
- * the CSV stays in its slot, so a resize never loses what was pasted.
+ * Bulk-import the hotel catalogue from a CSV (H1.1, TW-25, D-181; Hotel team and Super Admin). Download
+ * the template, then paste the CSV or choose a `.csv` file. **Validate** sends it as a dry run and
+ * reports each row: the hotels it would add or update with the columns that change, and the rejected
+ * rows by line and field, downloadable as a report. **Import** then applies the valid rows of that same
+ * CSV; on a hotel already in the catalogue a blank cell leaves the value unchanged. The server is the
+ * gate. From 1024 the CSV and its actions sit beside a column with the template help and the result; the
+ * column hint moves between two fixed slots (it holds no state), and the CSV stays in its slot, so a
+ * resize never loses what was pasted.
  *
  *   <HotelImportScreen tabBar={<AppTabBar />} />
  */
 export function HotelImportScreen({ tabBar }: HotelImportScreenProps) {
   const router = useRouter();
-  const { content, setContent, result, run, pending } = useHotelImportForm();
+  const { content, setContent, result, isStale, run, canImport, pending } = useHotelImportForm();
   const isDesktop = useLayoutAt("lg");
   const side = (
     <Stack gap={4} testID="hotel-import-side">
       {isDesktop ? <ImportColumnsHint /> : null}
-      {result ? <ImportResultPanel result={result} /> : null}
+      {result ? <ImportResultPanel result={result} isStale={isStale} /> : null}
     </Stack>
   );
   return (
@@ -261,7 +268,7 @@ export function HotelImportScreen({ tabBar }: HotelImportScreenProps) {
         <Stack gap={4} testID="hotel-import-main">
           {isDesktop ? null : <ImportColumnsHint />}
           <ImportContentInput content={content} setContent={setContent} tall={isDesktop} />
-          <ImportActions pending={pending} run={run} />
+          <ImportActions pending={pending} canImport={canImport} run={run} />
         </Stack>
       </SplitPane>
     </Screen>

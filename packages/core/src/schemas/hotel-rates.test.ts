@@ -66,4 +66,20 @@ describe("verificationCreateRequest", () => {
       verificationCreateRequest.safeParse({ fieldGroup: "rates", source: "email" }).success,
     ).toBe(true);
   });
+
+  it("accepts the booking-terms group (policies, D-178)", () => {
+    expect(
+      verificationCreateRequest.safeParse({ fieldGroup: "policies", source: "phone" }).success,
+    ).toBe(true);
+  });
+
+  it("refuses a next due date: the server computes it", () => {
+    expect(
+      verificationCreateRequest.safeParse({
+        fieldGroup: "rates",
+        source: "email",
+        nextDueAt: "2027-01-01T00:00:00.000Z",
+      }).success,
+    ).toBe(false);
+  });
 });

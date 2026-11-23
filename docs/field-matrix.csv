@@ -101,7 +101,7 @@ A,audit_events,System,after_json,json,,,valid JSON; restricted and secret fields
 A,audit_events,System,ip_address,string,,,"string, up to 255 characters",SYS (append-only; never updated or deleted),INTERNAL,Optional,—,
 A,audit_events,System,occurred_at,datetime,,,timestamp (UTC),SYS,INTERNAL,System,—,
 A,configurations,Configuration,id,uuid,PK,,"UUID v7, generated",SYS,INTERNAL,System,—,
-A,configurations,Configuration,config_key,string,UK,,"lowercase snake_case; unique; e.g. hotel_verification_max_age_days, material_change_threshold_pct",SA,INTERNAL,At creation,—,
+A,configurations,Configuration,config_key,string,UK,,"lowercase snake_case; unique; e.g. hotel.verification_policy, material_change_threshold_pct",SA,INTERNAL,At creation,—,
 A,configurations,Configuration,value_json,json,,,valid JSON matching the schema registered for config_key,SA,INTERNAL,At creation,Takes effect on the next job run or request; change audited,
 A,configurations,Configuration,scope,string,,"global, project",one of the listed options,SA,INTERNAL,At creation,—,
 A,configurations,Configuration,scope_id,uuid,,,references wedding_projects when scope is project,SA,INTERNAL,Optional,—,
@@ -280,26 +280,53 @@ C,destinations,Hotel data entry,description,text,,,"text, up to 10,000 character
 C,destinations,Hotel data entry,status,string,,"draft, active, inactive",one of the listed options,HT; SA,CLIENT,At creation,Transitions per permission-matrix §7; each transition audited; notifications per §8,A-12 (Q12)
 C,destinations,Hotel data entry,public_visible,bool,,,true or false; shown on the public website,HT; SA,CLIENT,Optional,Publishes the destination page on the website; audited,A-12 (Q12)
 C,destinations,Hotel data entry,hero_media_id,uuid,FK,,references media_assets,HT; SA,CLIENT; PUBLIC when public_visible,Optional,—,A-12 (Q12)
-C,hotels,Hotel data entry,id,uuid,PK,,"UUID v7, generated",SYS,CLIENT,System,—,"A-9 (Q9), A-28 (AM-8), RK-1"
-C,hotels,Hotel data entry,destination_id,uuid,FK,,references destinations,HT; SA,CLIENT,At creation,—,"A-9 (Q9), A-28 (AM-8), RK-1"
-C,hotels,Hotel data entry,name,string,,,"string, up to 255 characters",HT; SA,CLIENT; PUBLIC when public_showcase,At creation,—,"A-9 (Q9), A-28 (AM-8), RK-1"
-C,hotels,Hotel data entry,slug,string,UK,,"lowercase letters, digits and hyphens; unique",HT; SA,CLIENT,At creation,—,"A-9 (Q9), A-28 (AM-8), RK-1"
-C,hotels,Hotel data entry,brand,string,,,"string, up to 255 characters",HT; SA,CLIENT,Optional,—,"A-9 (Q9), A-28 (AM-8), RK-1"
-C,hotels,Hotel data entry,star_category,string,,,"string, up to 255 characters",HT; SA,CLIENT,Optional,—,"A-9 (Q9), A-28 (AM-8), RK-1"
-C,hotels,Hotel data entry,address,text,,,"text, up to 10,000 characters",HT; SA,CLIENT,Optional,—,"A-9 (Q9), A-28 (AM-8), RK-1"
-C,hotels,Hotel data entry,latitude,decimal,,,decimal between -90 and 90,HT; SA,CLIENT,Optional,—,"A-9 (Q9), A-28 (AM-8), RK-1"
-C,hotels,Hotel data entry,longitude,decimal,,,decimal between -180 and 180,HT; SA,CLIENT,Optional,—,"A-9 (Q9), A-28 (AM-8), RK-1"
-C,hotels,Hotel data entry,description_client,text,,,"text, up to 10,000 characters",HT; SA,CLIENT,Before status active,—,"A-9 (Q9), A-28 (AM-8), RK-1"
-C,hotels,Hotel data entry,website,string,,,"string, up to 255 characters",HT; SA,CLIENT,Optional,—,"A-9 (Q9), A-28 (AM-8), RK-1"
-C,hotels,Hotel data entry,status,string,,"draft, active, inactive",one of the listed options,HT; SA,CLIENT,At creation,inactive hotels leave search results but stay on existing enquiries and projects,"A-9 (Q9), A-28 (AM-8), RK-1"
-C,hotels,Hotel data entry,demo_visible,bool,,,true or false; A-28,HT; SA,CLIENT,Optional,Scopes demo search (A-28),"A-9 (Q9), A-28 (AM-8), RK-1"
-C,hotels,Hotel data entry,public_showcase,bool,,,true or false; approved for the public website,HT; SA,CLIENT,Optional,"Exposes name, destination and hero media on the website only","A-9 (Q9), A-28 (AM-8), RK-1"
-C,hotels,Hotel data entry,internal_rating,int,,,integer 1 to 5,HT; SA,RESTRICTED-NOTES,Optional,—,"A-9 (Q9), A-28 (AM-8), RK-1"
-C,hotels,Hotel data entry,internal_notes,text,,,"text, up to 10,000 characters",HT; SA,RESTRICTED-NOTES,Optional,"Never serialised to client, guest or demo principals","A-9 (Q9), A-28 (AM-8), RK-1"
-C,hotels,Hotel data entry,total_rooms,int,,,"integer, 0 or more",HT; SA,CLIENT,Optional,—,"A-9 (Q9), A-28 (AM-8), RK-1"
-C,hotels,Hotel data entry,street_view_ref,string,,,"string, up to 255 characters; map or street view reference (Q9)",HT; SA,CLIENT,Optional,—,"A-9 (Q9), A-28 (AM-8), RK-1"
-C,hotels,Hotel data entry,facilities_json,json,,,valid JSON matching the registered schema,HT; SA,CLIENT,Optional,—,"A-9 (Q9), A-28 (AM-8), RK-1"
-C,hotels,Hotel data entry,last_verified_at,datetime,,,timestamp (UTC); denormalised from hotel_verifications,SYS,CLIENT,System,Denormalised by the verification job; drives the freshness label,"A-9 (Q9), A-28 (AM-8), RK-1"
+C,hotels,Hotel data entry,id,uuid,PK,,"UUID v7, generated",SYS,CLIENT,System,—,"A-9 (Q9), A-28 (AM-8), RK-1, D-178"
+C,hotels,Hotel data entry,destination_id,uuid,FK,,references destinations,HT; SA,CLIENT,At creation,—,"A-9 (Q9), A-28 (AM-8), RK-1, D-178"
+C,hotels,Hotel data entry,name,string,,,"string, up to 255 characters",HT; SA,CLIENT; PUBLIC when public_showcase,At creation,—,"A-9 (Q9), A-28 (AM-8), RK-1, D-178"
+C,hotels,Hotel data entry,name_aliases_json,json,,,"JSON array of up to 20 names, each up to 255 characters, none repeated ignoring case",HT; SA,"INTERNAL (name variants, D-178)",Optional,—,"A-9 (Q9), A-28 (AM-8), RK-1, D-178"
+C,hotels,Hotel data entry,slug,string,UK,,"lowercase letters, digits and hyphens; unique",HT; SA,CLIENT,At creation,—,"A-9 (Q9), A-28 (AM-8), RK-1, D-178"
+C,hotels,Hotel data entry,brand,string,,,"string, up to 255 characters",HT; SA,CLIENT,Optional,—,"A-9 (Q9), A-28 (AM-8), RK-1, D-178"
+C,hotels,Hotel data entry,parent_group,string,,,"string, up to 255 characters; the owning group, besides the brand (D-178)",HT; SA,CLIENT,Optional,—,"A-9 (Q9), A-28 (AM-8), RK-1, D-178"
+C,hotels,Hotel data entry,star_category,string,,,"string, up to 255 characters",HT; SA,CLIENT,Optional,—,"A-9 (Q9), A-28 (AM-8), RK-1, D-178"
+C,hotels,Hotel data entry,address,text,,,"text, up to 10,000 characters",HT; SA,CLIENT,Optional,—,"A-9 (Q9), A-28 (AM-8), RK-1, D-178"
+C,hotels,Hotel data entry,locality,string,,,"string, up to 255 characters",HT; SA,CLIENT,Optional,—,"A-9 (Q9), A-28 (AM-8), RK-1, D-178"
+C,hotels,Hotel data entry,city,string,,,"string, up to 255 characters",HT; SA,CLIENT,Optional,—,"A-9 (Q9), A-28 (AM-8), RK-1, D-178"
+C,hotels,Hotel data entry,state,string,,,"string, up to 255 characters",HT; SA,CLIENT,Optional,—,"A-9 (Q9), A-28 (AM-8), RK-1, D-178"
+C,hotels,Hotel data entry,postal_code,string,,,"up to 16 characters; when the destination's country is India, a PIN: 6 digits, not starting with 0, spaces ignored",HT; SA,CLIENT,Optional,—,"A-9 (Q9), A-28 (AM-8), RK-1, D-178"
+C,hotels,Hotel data entry,latitude,decimal,,,"decimal between -90 and 90, stored to 6 decimal places",HT; SA,"INTERNAL (staff-only coordinates, D-178)",Optional,—,"A-9 (Q9), A-28 (AM-8), RK-1, D-178"
+C,hotels,Hotel data entry,longitude,decimal,,,"decimal between -180 and 180, stored to 6 decimal places",HT; SA,"INTERNAL (staff-only coordinates, D-178)",Optional,—,"A-9 (Q9), A-28 (AM-8), RK-1, D-178"
+C,hotels,Hotel data entry,maps_url,string,,,"https Google Maps link (google.com/maps or google.co.in/maps, with or without www; maps.google.com or maps.google.co.in, at the root or under /maps; maps.app.goo.gl; goo.gl/maps), up to 2,048 characters; no '..' path segment or backslash",HT; SA,CLIENT,Optional,Stored as given; never fetched or resolved by the server,"A-9 (Q9), A-28 (AM-8), RK-1, D-178"
+C,hotels,Hotel data entry,airport_name,string,,,"string, up to 255 characters",HT; SA,CLIENT,Optional,—,"A-9 (Q9), A-28 (AM-8), RK-1, D-178"
+C,hotels,Hotel data entry,airport_distance_km,decimal,,,"numeric(4,1), 0 to 999.9 km, at most one decimal place",HT; SA,CLIENT,Optional,—,"A-9 (Q9), A-28 (AM-8), RK-1, D-178"
+C,hotels,Hotel data entry,airport_drive_minutes,int,,,"integer, 0 to 600",HT; SA,CLIENT,Optional,—,"A-9 (Q9), A-28 (AM-8), RK-1, D-178"
+C,hotels,Hotel data entry,railway_station_name,string,,,"string, up to 255 characters",HT; SA,CLIENT,Optional,—,"A-9 (Q9), A-28 (AM-8), RK-1, D-178"
+C,hotels,Hotel data entry,railway_distance_km,decimal,,,"numeric(4,1), 0 to 999.9 km, at most one decimal place",HT; SA,CLIENT,Optional,—,"A-9 (Q9), A-28 (AM-8), RK-1, D-178"
+C,hotels,Hotel data entry,railway_drive_minutes,int,,,"integer, 0 to 600",HT; SA,CLIENT,Optional,—,"A-9 (Q9), A-28 (AM-8), RK-1, D-178"
+C,hotels,Hotel data entry,city_centre_distance_km,decimal,,,"numeric(4,1), 0 to 999.9 km, at most one decimal place",HT; SA,CLIENT,Optional,—,"A-9 (Q9), A-28 (AM-8), RK-1, D-178"
+C,hotels,Hotel data entry,city_centre_drive_minutes,int,,,"integer, 0 to 600",HT; SA,CLIENT,Optional,—,"A-9 (Q9), A-28 (AM-8), RK-1, D-178"
+C,hotels,Hotel data entry,access_notes,text,,,"text, up to 10,000 characters; highways and landmarks",HT; SA,CLIENT,Optional,—,"A-9 (Q9), A-28 (AM-8), RK-1, D-178"
+C,hotels,Hotel data entry,description_client,text,,,"text, up to 10,000 characters",HT; SA,CLIENT,Before status active,—,"A-9 (Q9), A-28 (AM-8), RK-1, D-178"
+C,hotels,Hotel data entry,website,string,,,"string, up to 255 characters",HT; SA,CLIENT,Optional,—,"A-9 (Q9), A-28 (AM-8), RK-1, D-178"
+C,hotels,Hotel data entry,status,string,,"draft, active, inactive",one of the listed options,HT; SA,CLIENT,At creation,inactive hotels leave search results but stay on existing enquiries and projects,"A-9 (Q9), A-28 (AM-8), RK-1, D-178"
+C,hotels,Hotel data entry,demo_visible,bool,,,true or false; A-28,HT; SA,CLIENT,Optional,Scopes demo search (A-28),"A-9 (Q9), A-28 (AM-8), RK-1, D-178"
+C,hotels,Hotel data entry,public_showcase,bool,,,true or false; approved for the public website,HT; SA,CLIENT,Optional,"Exposes name, destination and hero media on the website only","A-9 (Q9), A-28 (AM-8), RK-1, D-178"
+C,hotels,Hotel data entry,internal_rating,int,,,integer 1 to 5,HT; SA,RESTRICTED-NOTES,Optional,—,"A-9 (Q9), A-28 (AM-8), RK-1, D-178"
+C,hotels,Hotel data entry,internal_notes,text,,,"text, up to 10,000 characters",HT; SA,RESTRICTED-NOTES,Optional,"Never serialised to client, guest or demo principals","A-9 (Q9), A-28 (AM-8), RK-1, D-178"
+C,hotels,Hotel data entry,total_rooms,int,,,"integer, 0 to 100,000",HT; SA,CLIENT,Optional,—,"A-9 (Q9), A-28 (AM-8), RK-1, D-178"
+C,hotels,Hotel data entry,total_event_space_sqm,int,,,"integer, 0 to 1,000,000",HT; SA,CLIENT,Optional,—,"A-9 (Q9), A-28 (AM-8), RK-1, D-178"
+C,hotels,Hotel data entry,total_event_space_sqft,int,,,"integer, 0 to 10,000,000; as the hotel published it",HT; SA,CLIENT,Optional,—,"A-9 (Q9), A-28 (AM-8), RK-1, D-178"
+C,hotels,Hotel data entry,wedding_buyout_policy,string,,"not_required, required, depends",one of the listed options,HT; SA,"INTERNAL (booking terms, D-178)",Optional,—,"A-9 (Q9), A-28 (AM-8), RK-1, D-178"
+C,hotels,Hotel data entry,min_rooms_without_buyout,int,,,"integer, 0 to 10,000",HT; SA,"INTERNAL (booking terms, D-178)",Optional,—,"A-9 (Q9), A-28 (AM-8), RK-1, D-178"
+C,hotels,Hotel data entry,min_nights,int,,,"integer, 1 to 60",HT; SA,"INTERNAL (booking terms, D-178)",Optional,—,"A-9 (Q9), A-28 (AM-8), RK-1, D-178"
+C,hotels,Hotel data entry,parallel_functions,string,,"allowed, not_allowed, depends",one of the listed options,HT; SA,"INTERNAL (booking terms, D-178)",Optional,—,"A-9 (Q9), A-28 (AM-8), RK-1, D-178"
+C,hotels,Hotel data entry,booking_notes,text,,,"text, up to 10,000 characters",HT; SA,"INTERNAL (booking terms, D-178)",Optional,—,"A-9 (Q9), A-28 (AM-8), RK-1, D-178"
+C,hotels,Hotel data entry,cuisines_json,json,,,"JSON array of up to 30 labels, each up to 60 characters, none repeated: options from configurations hotel.cuisine_options, or Other",HT; SA,CLIENT,Optional,—,"A-9 (Q9), A-28 (AM-8), RK-1, D-178"
+C,hotels,Hotel data entry,is_pure_vegetarian,bool,,,true or false; empty when the hotel has not said,HT; SA,CLIENT,Optional,—,"A-9 (Q9), A-28 (AM-8), RK-1, D-178"
+C,hotels,Hotel data entry,has_separate_veg_kitchen,bool,,,true or false; empty when the hotel has not said,HT; SA,CLIENT,Optional,—,"A-9 (Q9), A-28 (AM-8), RK-1, D-178"
+C,hotels,Hotel data entry,serves_alcohol,bool,,,true or false; empty when the hotel has not said,HT; SA,CLIENT,Optional,—,"A-9 (Q9), A-28 (AM-8), RK-1, D-178"
+C,hotels,Hotel data entry,street_view_ref,string,,,"string, up to 255 characters; map or street view reference (Q9)",HT; SA,CLIENT,Optional,—,"A-9 (Q9), A-28 (AM-8), RK-1, D-178"
+C,hotels,Hotel data entry,facilities_json,json,,,valid JSON matching the registered schema,HT; SA,CLIENT,Optional,—,"A-9 (Q9), A-28 (AM-8), RK-1, D-178"
+C,hotels,Hotel data entry,last_verified_at,datetime,,,timestamp (UTC); denormalised from hotel_verifications,SYS,CLIENT,System,"Recomputed when a verification is recorded, in the same transaction, and by the daily freshness job; drives the freshness label","A-9 (Q9), A-28 (AM-8), RK-1, D-178"
 C,hotel_contacts,Hotel data entry,id,uuid,PK,,"UUID v7, generated",SYS,RESTRICTED-CONTACT,System,—,P-3 contact tier
 C,hotel_contacts,Hotel data entry,hotel_id,uuid,FK,,references hotels,HT; SA,RESTRICTED-CONTACT,At creation,—,P-3 contact tier
 C,hotel_contacts,Hotel data entry,name,string,,,"string, up to 255 characters; whole table, clients contact hotels through AMPM",HT; SA,RESTRICTED-CONTACT,At creation,—,P-3 contact tier
@@ -348,15 +375,15 @@ C,hotel_rate_items,Hotel data entry,unit,string,,"per_night, per_plate, per_even
 C,hotel_rate_items,Hotel data entry,min_quantity,int,,,"integer, 0 or more; for example minimum plates",HT; SA,CLIENT when client_visible and the card is verified,Optional,—,"A-9 (Q9), GP-8"
 C,hotel_rate_items,Hotel data entry,inclusions_text,text,,,"text, up to 10,000 characters",HT; SA,CLIENT when client_visible and the card is verified,Optional,—,"A-9 (Q9), GP-8"
 C,hotel_rate_items,Hotel data entry,client_visible,bool,,,true or false; when true and card is verified,HT; SA,CLIENT,Optional,Hidden items are internal references only,"A-9 (Q9), GP-8"
-C,hotel_verifications,Verification,id,uuid,PK,,"UUID v7, generated",SYS,INTERNAL,System,—,SPEC §8 stale rule
-C,hotel_verifications,Verification,hotel_id,uuid,FK,,references hotels,HT; SA,INTERNAL,At creation,—,SPEC §8 stale rule
-C,hotel_verifications,Verification,field_group,string,,"profile, rooms, venues, rates, availability, media, contacts",one of the listed options,HT; SA,CLIENT (freshness label),At creation,—,SPEC §8 stale rule
-C,hotel_verifications,Verification,verified_at,datetime,,,timestamp (UTC),SYS when recorded; HT may backdate with a note,CLIENT (freshness label),At creation,Stale job compares with the configured age and sets the freshness label,SPEC §8 stale rule
-C,hotel_verifications,Verification,verified_by,uuid,FK,,references users,SYS (acting user),INTERNAL,At creation,—,SPEC §8 stale rule
-C,hotel_verifications,Verification,source,string,,"phone, email, site_visit, website, contract",one of the listed options,HT; SA,INTERNAL,At creation,—,SPEC §8 stale rule
-C,hotel_verifications,Verification,status,string,,"verified, unverified, stale",one of the listed options,HT; SA,CLIENT (freshness label),At creation,stale set by the daily job; shown as a label,SPEC §8 stale rule
-C,hotel_verifications,Verification,next_due_at,datetime,,,timestamp (UTC); verified_at plus configurable age,SYS,INTERNAL,System,Set to verified_at plus the configured age,SPEC §8 stale rule
-C,hotel_verifications,Verification,notes,text,,,"text, up to 10,000 characters",HT; SA,INTERNAL,Optional,—,SPEC §8 stale rule
+C,hotel_verifications,Verification,id,uuid,PK,,"UUID v7, generated",SYS,INTERNAL,System,—,"SPEC §8 stale rule, D-178"
+C,hotel_verifications,Verification,hotel_id,uuid,FK,,references hotels,HT; SA,INTERNAL,At creation,—,"SPEC §8 stale rule, D-178"
+C,hotel_verifications,Verification,field_group,string,,"profile, rooms, venues, rates, availability, media, contacts, policies",one of the listed options,HT; SA,CLIENT (freshness label),At creation,—,"SPEC §8 stale rule, D-178"
+C,hotel_verifications,Verification,verified_at,datetime,,,timestamp (UTC),SYS when recorded; HT may backdate with a note,CLIENT (freshness label),At creation,Recording one recomputes hotels.last_verified_at in the same transaction; the daily job compares it with the configured age and sets the freshness label,"SPEC §8 stale rule, D-178"
+C,hotel_verifications,Verification,verified_by,uuid,FK,,references users,SYS (acting user),INTERNAL,At creation,—,"SPEC §8 stale rule, D-178"
+C,hotel_verifications,Verification,source,string,,"phone, email, site_visit, website, contract",one of the listed options,HT; SA,INTERNAL,At creation,—,"SPEC §8 stale rule, D-178"
+C,hotel_verifications,Verification,status,string,,"verified, unverified, stale",one of the listed options,HT; SA,CLIENT (freshness label),At creation,stale set by the daily job; shown as a label,"SPEC §8 stale rule, D-178"
+C,hotel_verifications,Verification,next_due_at,datetime,,,"timestamp (UTC); set by the server when recorded, verified_at plus the configured age",SYS,INTERNAL,System,Set by the server when the verification is recorded: verified_at plus configurations hotel.verification_policy maxAgeDays; a request cannot set it,"SPEC §8 stale rule, D-178"
+C,hotel_verifications,Verification,notes,text,,,"text, up to 10,000 characters",HT; SA,INTERNAL,Optional,—,"SPEC §8 stale rule, D-178"
 C,hotel_wedding_references,Hotel data entry,id,uuid,PK,,"UUID v7, generated",SYS,CLIENT when client_visible,System,—,GP-20 (Q9)
 C,hotel_wedding_references,Hotel data entry,hotel_id,uuid,FK,,references hotels,HT; SA,CLIENT when client_visible,At creation,—,GP-20 (Q9)
 C,hotel_wedding_references,Hotel data entry,project_id,uuid,FK,,"references wedding_projects; nullable, the AMPM wedding it refers to",HT; SA,CLIENT when client_visible,Optional,—,GP-20 (Q9)

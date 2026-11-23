@@ -1,14 +1,20 @@
+import { TRI_STATES } from "./hotel-form-fields";
 import {
+  BUYOUT_CHOICES,
+  buyoutChoiceLabel,
   contactSummary,
   hotelRowSummary,
   latestVerification,
   hotelStatusLabel,
+  PARALLEL_CHOICES,
+  parallelChoiceLabel,
   hotelStatusTone,
   rateCardStatusLabel,
   rateCardStatusTone,
   rateItemTypeLabel,
   rateUnitLabel,
   roomSummary,
+  triStateLabel,
   venueSummary,
   venueTypeLabel,
   verificationSourceLabel,
@@ -31,9 +37,25 @@ describe("hotels-admin.format", () => {
   });
 
   it("summarises a hotel row for screen readers", () => {
-    expect(hotelRowSummary(hotelStaffViewFixture({ name: "Taj", status: "active" }))).toBe(
-      "Taj, active",
-    );
+    expect(
+      hotelRowSummary(hotelStaffViewFixture({ name: "Synthetic Lake Hotel", status: "active" })),
+    ).toBe("Synthetic Lake Hotel, active");
+  });
+
+  it("labels the profile's yes / no answers and booking terms, Not known and Not set first", () => {
+    expect(TRI_STATES.map(triStateLabel)).toEqual(["Not known", "Yes", "No"]);
+    expect(BUYOUT_CHOICES.map(buyoutChoiceLabel)).toEqual([
+      "Not set",
+      "Not required",
+      "Required",
+      "Depends",
+    ]);
+    expect(PARALLEL_CHOICES.map(parallelChoiceLabel)).toEqual([
+      "Not set",
+      "Allowed",
+      "Not allowed",
+      "Depends",
+    ]);
   });
 
   it("labels every venue type", () => {

@@ -1,11 +1,14 @@
 import { Injectable } from "@nestjs/common";
 import {
   errors,
+  HOTEL_CUISINE_OTHER,
   type DestinationCreateRequest,
   type DestinationList,
   type DestinationUpdateRequest,
   type DestinationView,
+  type ErrorDetail,
   type HotelCreateRequest,
+  type HotelCuisineOptionsView,
   type HotelStaffDetail,
   type HotelStaffListQuery,
   type HotelStaffPage,
@@ -14,13 +17,24 @@ import {
 
 import { AuditService } from "../../policy/audit.service.js";
 import { type Principal, staffId } from "../../policy/principal.types.js";
+import { ConfigService } from "../admin/config/config.service.js";
 import { hotelAudienceOf, requireNotesWrite } from "./hotel-audience.js";
+import { changedRequestFields, type StoredHotelValues } from "./hotel-changes.js";
+import { auditImageOf } from "./hotel-import.audit.js";
 import { slugify } from "./hotel-import.js";
 import {
+  allowedCuisines,
+  checkPostalCode,
+  CUISINE_REFUSED,
+  keptPostalCodeProblem,
+  resolveCuisines,
+} from "./hotel-profile-rules.js";
+import { toStringList } from "./hotel-string-lists.js";
+import { toHotelUpdatePatch, toHotelWriteData } from "./hotel-write.js";
+import {
   HotelsAdminRepository,
+  type DestinationRow,
   type DestinationUpdatePatch,
-  type HotelUpdatePatch,
-  type HotelWriteData,
   type StaffHotelRow,
 } from "./hotels-admin.repository.js";
 import {
@@ -28,13 +42,15 @@ import {
   toDestinationView,
   toHotelStaffDetail,
   toHotelStaffListItem,
+  toHotelStaffView,
 } from "./hotels-admin.view.js";
 
 /**
  * The staff hotel catalogue (feature 9.1). Reads are gated by the `hotels.*` read keys and writes by the
  * matching create/update/delete keys on the controller; this layer holds the rules — slug resolution and
  * uniqueness, the destination must exist, the internal rating and notes are written only on their own
- * key — answers every hotel in the model of the caller's audience (D-171), and records the update/delete
+ * key, a postal code fits its destination's country and a cuisine is one the configuration offers (D-178)
+ * — answers every hotel in the model of the caller's audience (D-171), and records the update/delete
  * audit (create is audited by the interceptor through `@Audited`). The import is `HotelImportService`.
  */
 @Injectable()
@@ -42,6 +58,7 @@ export class HotelsAdminService {
   constructor(
     private readonly repo: HotelsAdminRepository,
     private readonly audit: AuditService,
+    private readonly config: ConfigService,
   ) {}
 
   async list(query: HotelStaffListQuery, principal: Principal): Promise<HotelStaffPage> {
@@ -63,19 +80,25 @@ export class HotelsAdminService {
   /** A create sets the internal rating or notes when it gives either a value (null is the default). */
   async create(request: HotelCreateRequest, principal: Principal): Promise<HotelStaffDetail> {
     requireNotesWrite(principal, request.internalRating != null || request.internalNotes != null);
-    await this.requireDestination(request.destinationId);
+    const destination = await this.requireDestination(request.destinationId);
+    const fields = await this.checkProfile(request, async () => destination.country, NEW_HOTEL);
     const slug = request.slug ?? slugify(request.name);
     if (await this.repo.slugExists(slug)) {
       throw errors.conflict(`A hotel with the slug "${slug}" already exists`);
     }
     const hotelId = await this.repo.createHotel(
-      toHotelWriteData(request, request.destinationId, slug),
+      toHotelWriteData(fields, request.destinationId, slug),
       staffId(principal),
     );
     return this.getDetail(hotelId, principal);
   }
 
-  /** An update sets the internal rating or notes when it names either, a null clearing it. */
+  /**
+   * An update sets the internal rating or notes when it names either, a null clearing it. Its audit event
+   * keeps the hotel's name, status and demo and website flags before and after, and names the fields the
+   * update changes (a field sent with the value it already has is no change), never their values, as the
+   * import's event does; so the image holds no personal data and is recorded unmasked.
+   */
   async update(
     hotelId: string,
     request: HotelUpdateRequest,
@@ -87,20 +110,21 @@ export class HotelsAdminService {
       principal,
       request.internalRating !== undefined || request.internalNotes !== undefined,
     );
-    if (request.destinationId !== undefined) await this.requireDestination(request.destinationId);
-    const patch = toHotelUpdatePatch(request);
+    const checked = await this.checkUpdate(request, current);
     await this.repo.transaction(async (tx) => {
-      await this.repo.updateHotel(hotelId, patch, actorId, tx);
+      await this.repo.updateHotel(hotelId, toHotelUpdatePatch(checked), actorId, tx);
       await this.audit.record(
         {
           action: "update",
           entityType: "hotel",
           entityId: hotelId,
-          before: { name: current.name, status: current.status, demoVisible: current.demoVisible },
+          before: auditImageOf(current),
           after: {
-            name: request.name ?? current.name,
-            status: request.status ?? current.status,
-            demoVisible: request.demoVisible ?? current.demoVisible,
+            name: checked.name ?? current.name,
+            status: checked.status ?? current.status,
+            demoVisible: checked.demoVisible ?? current.demoVisible,
+            publicShowcase: checked.publicShowcase ?? current.publicShowcase,
+            changedFields: changedRequestFields(checked, storedValuesOf(current)),
           },
           maskImages: false,
         },
@@ -127,6 +151,12 @@ export class HotelsAdminService {
       );
     });
     return { id: hotelId };
+  }
+
+  /** The cuisine choices for the staff editor (configuration `hotel.cuisine_options`) and "Other". */
+  async cuisineOptions(): Promise<HotelCuisineOptionsView> {
+    const { options } = await this.config.get("hotel.cuisine_options");
+    return { options, other: HOTEL_CUISINE_OTHER };
   }
 
   /** Every destination with the count of its hotels (TW-20): the whole reference set, name-ordered. */
@@ -196,63 +226,93 @@ export class HotelsAdminService {
     return row;
   }
 
-  private async requireDestination(destinationId: string): Promise<void> {
-    if (!(await this.repo.findDestinationById(destinationId))) {
+  /**
+   * An update's fields once the profile rules pass, read against where the hotel will be: a destination
+   * the request moves it to must exist, and a move without a new postal code checks the one it keeps.
+   */
+  private async checkUpdate(
+    request: HotelUpdateRequest,
+    current: StaffHotelRow,
+  ): Promise<HotelUpdateRequest> {
+    const moved =
+      request.destinationId === undefined
+        ? null
+        : await this.requireDestination(request.destinationId);
+    const country = async () =>
+      (moved ?? (await this.repo.findDestinationById(current.destinationId)))?.country ?? null;
+    const movesAway = moved !== null && moved.id !== current.destinationId;
+    return this.checkProfile(request, country, {
+      cuisines: toStringList(current.cuisines),
+      keptPostalCode: movesAway ? current.postalCode : null,
+    });
+  }
+
+  private async requireDestination(destinationId: string): Promise<DestinationRow> {
+    const destination = await this.repo.findDestinationById(destinationId);
+    if (!destination) {
       throw errors.validation([{ path: "destinationId", message: "Unknown destination" }]);
     }
+    return destination;
+  }
+
+  /**
+   * The request's fields as written, once the rules the schema cannot hold pass (D-178): a postal code,
+   * spaces removed, fits its destination's country (looked up only when one is sent, or when a move
+   * keeps the stored one), and each cuisine is configured, "Other" or already the hotel's, stored in its
+   * configured spelling. Otherwise a 400 naming every refused field.
+   */
+  private async checkProfile<T extends ProfileRuleFields>(
+    fields: T,
+    country: () => Promise<string | null>,
+    stored: StoredProfile,
+  ): Promise<T> {
+    const problems: ErrorDetail[] = [];
+    let checked = fields;
+    if (typeof fields.postalCode === "string") {
+      const { postalCode, problem } = checkPostalCode(fields.postalCode, await country());
+      if (problem) problems.push({ path: "postalCode", message: problem });
+      checked = { ...checked, postalCode };
+    } else if (fields.postalCode === undefined && stored.keptPostalCode !== null) {
+      const problem = keptPostalCodeProblem(stored.keptPostalCode, await country());
+      if (problem) problems.push({ path: "postalCode", message: problem });
+    }
+    if (fields.cuisines) {
+      const { options } = await this.config.get("hotel.cuisine_options");
+      const allowed = allowedCuisines(options, stored.cuisines);
+      const { labels, unknown } = resolveCuisines(fields.cuisines, allowed);
+      for (const index of unknown)
+        problems.push({ path: `cuisines.${index}`, message: CUISINE_REFUSED });
+      checked = { ...checked, cuisines: labels };
+    }
+    if (problems.length > 0) throw errors.validation(problems);
+    return checked;
   }
 }
 
-/** A create request plus its resolved destination and slug, as the row the repository writes. */
-function toHotelWriteData(
-  request: HotelCreateRequest,
-  destinationId: string,
-  slug: string,
-): HotelWriteData {
-  return {
-    destinationId,
-    slug,
-    name: request.name,
-    brand: request.brand ?? null,
-    starCategory: request.starCategory ?? null,
-    address: request.address ?? null,
-    latitude: request.latitude ?? null,
-    longitude: request.longitude ?? null,
-    descriptionClient: request.descriptionClient ?? null,
-    website: request.website ?? null,
-    status: request.status,
-    demoVisible: request.demoVisible,
-    publicShowcase: request.publicShowcase,
-    internalRating: request.internalRating ?? null,
-    internalNotes: request.internalNotes ?? null,
-    totalRooms: request.totalRooms ?? null,
-    streetViewRef: request.streetViewRef ?? null,
-    facilities: request.facilities ?? null,
-  };
+/** The request fields the profile rules read. */
+interface ProfileRuleFields {
+  readonly postalCode?: string | null;
+  readonly cuisines?: string[] | null;
 }
 
-/** Only the fields the patch actually set, so an update never overwrites an unmentioned column. */
-function toHotelUpdatePatch(request: HotelUpdateRequest): HotelUpdatePatch {
-  const patch: HotelUpdatePatch = {};
-  if (request.destinationId !== undefined) patch.destinationId = request.destinationId;
-  if (request.name !== undefined) patch.name = request.name;
-  if (request.brand !== undefined) patch.brand = request.brand ?? null;
-  if (request.starCategory !== undefined) patch.starCategory = request.starCategory ?? null;
-  if (request.address !== undefined) patch.address = request.address ?? null;
-  if (request.latitude !== undefined) patch.latitude = request.latitude ?? null;
-  if (request.longitude !== undefined) patch.longitude = request.longitude ?? null;
-  if (request.descriptionClient !== undefined)
-    patch.descriptionClient = request.descriptionClient ?? null;
-  if (request.website !== undefined) patch.website = request.website ?? null;
-  if (request.status !== undefined) patch.status = request.status;
-  if (request.demoVisible !== undefined) patch.demoVisible = request.demoVisible;
-  if (request.publicShowcase !== undefined) patch.publicShowcase = request.publicShowcase;
-  if (request.internalRating !== undefined) patch.internalRating = request.internalRating ?? null;
-  if (request.internalNotes !== undefined) patch.internalNotes = request.internalNotes ?? null;
-  if (request.totalRooms !== undefined) patch.totalRooms = request.totalRooms ?? null;
-  if (request.streetViewRef !== undefined) patch.streetViewRef = request.streetViewRef ?? null;
-  if (request.facilities !== undefined) patch.facilities = request.facilities ?? null;
-  return patch;
+/** What the profile rules read from the hotel as stored. */
+interface StoredProfile {
+  /** Its cuisine labels, which stay allowed after AMPM drops them from the options. */
+  readonly cuisines: readonly string[] | null;
+  /** Its postal code when the write moves it to another destination without a new one. */
+  readonly keptPostalCode: string | null;
+}
+
+/** A create has nothing stored. */
+const NEW_HOTEL: StoredProfile = { cuisines: null, keptPostalCode: null };
+
+/** What the hotel stores, as the staff models read it, its internal rating and notes included. */
+function storedValuesOf(row: StaffHotelRow): StoredHotelValues {
+  return {
+    ...toHotelStaffView(row),
+    internalRating: row.internalRating,
+    internalNotes: row.internalNotes,
+  };
 }
 
 /** The destination fields a patch set (the slug is immutable, so it is never part of an update). */

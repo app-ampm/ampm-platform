@@ -1,10 +1,11 @@
 import { Injectable } from "@nestjs/common";
 import type {
+  HotelVerificationFieldGroup,
+  HotelVerificationSource,
   RateCardCreateRequest,
   RateCardUpdateRequest,
   RateItemCreateRequest,
   RateItemUpdateRequest,
-  VerificationCreateRequest,
 } from "@ampm/core";
 
 import { PrismaService } from "../../db/prisma.service.js";
@@ -64,6 +65,15 @@ export type RateItemRow = Prisma.HotelRateItemGetPayload<{ select: typeof RATE_I
 export type VerificationRow = Prisma.HotelVerificationGetPayload<{
   select: typeof VERIFICATION_SELECT;
 }>;
+
+/** A verification as the service resolved it: its date, and its due date computed from that (D-178). */
+export interface VerificationWriteData {
+  readonly fieldGroup: HotelVerificationFieldGroup;
+  readonly source: HotelVerificationSource;
+  readonly verifiedAt: Date;
+  readonly nextDueAt: Date;
+  readonly notes: string | null;
+}
 
 function toDate(value: string | null | undefined): Date | null | undefined {
   if (value === undefined) return undefined;
@@ -233,26 +243,34 @@ export class HotelRatesRepository {
     });
   }
 
+  /** Records a verification inside the caller's transaction, beside its hotel's last_verified_at. */
   createVerification(
     hotelId: string,
-    request: VerificationCreateRequest,
+    data: VerificationWriteData,
     actorId: string,
+    tx: Prisma.TransactionClient,
   ): Promise<VerificationRow> {
-    return this.prisma.hotelVerification.create({
+    return tx.hotelVerification.create({
       data: {
+        ...data,
         hotelId,
-        fieldGroup: request.fieldGroup,
-        source: request.source,
         status: "verified",
-        verifiedAt: request.verifiedAt ? new Date(request.verifiedAt) : new Date(),
         verifiedBy: actorId,
-        nextDueAt: request.nextDueAt ? new Date(request.nextDueAt) : null,
-        notes: request.notes ?? null,
         createdBy: actorId,
         updatedBy: actorId,
       },
       select: VERIFICATION_SELECT,
     });
+  }
+
+  /**
+   * Locks a live hotel's row until the transaction ends, so two verifications recorded at once cannot
+   * each recompute last_verified_at without the other's row. False when there is no such hotel.
+   */
+  async lockHotel(hotelId: string, tx: Prisma.TransactionClient): Promise<boolean> {
+    const rows = await tx.$queryRaw<{ id: string }[]>`
+      SELECT id FROM hotels WHERE id = ${hotelId}::uuid AND deleted_at IS NULL FOR UPDATE`;
+    return rows.length > 0;
   }
 
   /** The verification's group, status and date (what may back a verified card), if it is this hotel's. */
@@ -292,7 +310,11 @@ export class HotelRatesRepository {
     return result.count;
   }
 
-  /** Denormalise `hotels.last_verified_at` to the newest verification the hotel has (AC-04.3). */
+  /**
+   * Denormalise `hotels.last_verified_at` to the newest verification the hotel has (AC-04.3). It reads,
+   * then writes, so call it with the hotel's row locked ({@link lockHotel}) in the same transaction: a
+   * concurrent write could otherwise be overwritten with an older maximum.
+   */
   async recomputeLastVerifiedAt(hotelId: string, tx: Prisma.TransactionClient): Promise<void> {
     const newest = await tx.hotelVerification.aggregate({
       where: { hotelId, deletedAt: null },

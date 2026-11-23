@@ -1,7 +1,9 @@
 import type {
   DestinationListItemView,
   DestinationView,
+  HotelCatalogueKey,
   HotelContactView,
+  HotelCuisineOptionsView,
   HotelStaffDetailFullView,
   HotelStaffDetailView,
   HotelStaffNotesView,
@@ -15,6 +17,9 @@ import type {
 } from "@ampm/core";
 
 export { failure, ok, renderWithApi, routedFetch, type FetchFn } from "../../test/api";
+
+/** The D-178 fields of a staff hotel view. */
+type HotelCatalogueFields = Pick<HotelStaffNotesView, HotelCatalogueKey>;
 
 /*
  * Test helpers for the staff hotel catalogue + photo manager: a hotel and a media asset in the shapes
@@ -61,8 +66,49 @@ export function hotelStaffViewFixture(
     streetViewRef: null,
     lastVerifiedAt: null,
     facilities: null,
+    ...hotelCatalogueFieldsFixture(),
     ...overrides,
   };
+}
+
+/** The D-178 catalogue fields as a hotel nobody has filled in yet carries them: every one null. */
+export function hotelCatalogueFieldsFixture(): HotelCatalogueFields {
+  return {
+    parentGroup: null,
+    nameAliases: null,
+    locality: null,
+    city: null,
+    state: null,
+    postalCode: null,
+    mapsUrl: null,
+    airportName: null,
+    airportDistanceKm: null,
+    airportDriveMinutes: null,
+    railwayStationName: null,
+    railwayDistanceKm: null,
+    railwayDriveMinutes: null,
+    cityCentreDistanceKm: null,
+    cityCentreDriveMinutes: null,
+    accessNotes: null,
+    totalEventSpaceSqm: null,
+    totalEventSpaceSqft: null,
+    weddingBuyoutPolicy: null,
+    minRoomsWithoutBuyout: null,
+    minNights: null,
+    parallelFunctions: null,
+    bookingNotes: null,
+    cuisines: null,
+    isPureVegetarian: null,
+    hasSeparateVegKitchen: null,
+    servesAlcohol: null,
+  };
+}
+
+/** The cuisine choices as `GET /hotels-admin/cuisine-options` returns them. */
+export function hotelCuisineOptionsFixture(
+  overrides: Partial<HotelCuisineOptionsView> = {},
+): HotelCuisineOptionsView {
+  return { options: ["Indian", "Continental", "Asian"], other: "Other", ...overrides };
 }
 
 /** A destination as a hotel's detail and the destination writes return it. */

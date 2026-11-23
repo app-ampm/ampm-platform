@@ -335,6 +335,7 @@ Design details that matter:
 - **Serialisers per class.** Each resource has one response model per visibility set (for example `BudgetLineClientView`, `BudgetLineInternalView`, `BudgetLineFinanceView`). The pipeline picks the model; fields outside it do not exist in the response, so "hiding in the interface" (SPEC §6.1) cannot happen by accident.
 - **Denial equals absence.** A record the principal cannot see returns the same 404 as a record that does not exist.
 - **Files** are never public paths. The API checks the owning record, mints a `document_access_links` row, and returns a signed storage URL valid for 15 minutes. Identity-document reads additionally write an audit event and alert.
+- **Upload bodies are read after the guards** (D-176). A route that takes a file reads the body itself, through the shared bounded reader in `apps/api/src/common/bounded-body.ts`, as the first step of its handler. By then authentication, the rate limit and the permission guard have run, so an anonymous or unauthorised caller costs the API no buffering. The reader accepts only the route's media type (415 otherwise), answers 413 to a declared length over the route's cap before reading a byte, and stops with 413 as soon as the bytes it counts pass the cap. The pre-guard binary gate lets these paths through, and the global raw parser leaves their bodies unread; JSON bodies stay capped at 100 KB. Slice 2 of the [hotel information form plan](planning/hotel-information-form-plan.md) introduces the reader for the hotel CSV import (`POST /hotels-admin/imports/hotels`, 5 MiB). Slice 6 moves every upload route onto it and removes the global raw parser, which until then buffers up to 26 MB on the four existing upload paths before any guard runs.
 - **Exports** run in the worker through the same guard and serialiser, then strip SENSITIVE, IDENTITY, BANK and SECRET classes regardless of role (P-10), and write an audit event with filters and row count.
 - **Tests are generated from the matrix.** The CSV form of permission-matrix.md §5 and §6 drives a test suite that, for every resource and principal, asserts allowed and denied actions, including URL and identifier tampering (SPEC §12).
 
@@ -429,7 +430,7 @@ sequenceDiagram
 
 ### 7.5 Daily hotel freshness job (SPEC §8)
 
-The worker runs once a day: for each `hotel_verifications` row older than `hotel_verification_max_age_days`, set the verification and dependent rate cards to `stale`, refresh `hotels.last_verified_at`, rebuild the hotel search view, and notify the Hotel team of what needs re-verification. Stale rate items render with the stale label and are never presented as confirmed.
+The worker runs once a day: for each `hotel_verifications` row older than `maxAgeDays` in configuration `hotel.verification_policy`, set the verification and dependent rate cards to `stale`, refresh `hotels.last_verified_at`, rebuild the hotel search view, and notify the Hotel team of what needs re-verification. Stale rate items render with the stale label and are never presented as confirmed. Recording a verification sets its `next_due_at` (the verified date plus `maxAgeDays`) and refreshes `hotels.last_verified_at` in the same transaction, so the hotel's date never waits for the job.
 
 ---
 

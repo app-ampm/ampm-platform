@@ -495,7 +495,7 @@ Mapped from SPEC §8. The system acts without a user but every change is still w
 | Trigger | Action |
 |---|---|
 | Payment webhook succeeded for a subscription | Set the subscription active and grant exactly its plan's modules |
-| Daily, for hotel verifications older than `hotel_verification_max_age_days` | Mark the verification and dependent rate cards stale; show the stale label; never present stale rates as confirmed |
+| Daily, for hotel verifications older than `maxAgeDays` in configuration `hotel.verification_policy` | Mark the verification and dependent rate cards stale; show the stale label; never present stale rates as confirmed |
 | Approval submitted | Notify the client approvers of that wedding and the requesting staff member |
 | Material client request accepted, or a budget line, date or venue changes beyond the configured threshold | Set `impact_flags_json`; create review tasks on affected budget lines, contracts, tasks and run-of-show items |
 | Attendance changes | Recalculate function totals and `menu_headcounts`; flag room allocations and transfers for the affected guests |

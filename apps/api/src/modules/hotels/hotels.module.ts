@@ -4,6 +4,8 @@ import { NotificationModule } from "../admin/notification/notification.module.js
 import { DocumentsModule } from "../documents/documents.module.js";
 import { MediaModule } from "../media/media.module.js";
 import { HotelFreshnessService } from "./hotel-freshness.service.js";
+import { HotelImportController } from "./hotel-import.controller.js";
+import { HotelImportRepository } from "./hotel-import.repository.js";
 import { HotelImportService } from "./hotel-import.service.js";
 import { HotelRatesController } from "./hotel-rates.controller.js";
 import { HotelRatesRepository } from "./hotel-rates.repository.js";
@@ -43,6 +45,7 @@ import { SavedHotelsStaffService } from "./saved-hotels-staff.service.js";
   controllers: [
     HotelsController,
     HotelsAdminController,
+    HotelImportController,
     HotelRatesController,
     HotelReferencesController,
     SavedHotelsStaffController,
@@ -53,6 +56,7 @@ import { SavedHotelsStaffService } from "./saved-hotels-staff.service.js";
     HotelsAdminService,
     HotelsAdminRepository,
     HotelImportService,
+    HotelImportRepository,
     HotelSubresourcesService,
     HotelSubresourcesRepository,
     HotelRatesService,

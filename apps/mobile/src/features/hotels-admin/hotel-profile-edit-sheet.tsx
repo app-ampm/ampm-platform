@@ -1,185 +1,21 @@
-import { useEffect, useState } from "react";
+import type { HotelStaffListItem } from "@ampm/core";
+import { Button, Input, InternalPanel, Sheet, Stack, Toggle } from "@ampm/ui";
 
-import { useCreateHotel, useUpdateHotel } from "@ampm/api-client";
-import { isAppError, type HotelStaffListItem } from "@ampm/core";
-import { Button, Input, InternalPanel, Sheet, Stack, Toggle, useToast } from "@ampm/ui";
-
+import { HotelBookingTermsFields } from "./hotel-booking-terms-fields";
 import { DestinationField } from "./hotel-destination-field";
-import {
-  buildHotelBody,
-  draftFromHotel,
-  hasErrors,
-  hasInternalNotes,
-  internalNotesBody,
-  validateDraft,
-  type HotelProfileDraft,
-  type HotelProfileErrors,
-} from "./hotel-profile.form";
-import { HOTEL_STATUSES, hotelStatusLabel } from "./hotels-admin.format";
-import { MediaOptionPicker } from "./media-option-picker";
-import { useHotelProfilePermissions } from "./use-hotel-profile-permissions";
+import { HotelDetailFields } from "./hotel-detail-fields";
+import { HotelEventSpaceFields } from "./hotel-event-space-fields";
+import { HotelFoodFields } from "./hotel-food-fields";
+import { LONG_TEXT_MAX } from "./hotel-form-fields";
+import { HotelIdentityFields } from "./hotel-identity-fields";
+import { HotelLocationFields } from "./hotel-location-fields";
+import { checkedField, type ProfileFieldsProps } from "./hotel-profile.bindings";
+import { useHotelProfileForm } from "./use-hotel-profile-form";
 
-const NO_ERRORS: HotelProfileErrors = {
-  name: undefined,
-  destinationId: undefined,
-  totalRooms: undefined,
-  internalRating: undefined,
-};
+/** The longest hotel name the contract takes. */
+const NAME_MAX = 255;
 
-type Patch = (next: Partial<HotelProfileDraft>) => void;
-
-interface FieldsProps {
-  readonly draft: HotelProfileDraft;
-  readonly patch: Patch;
-  readonly errors: HotelProfileErrors;
-}
-
-/**
- * Whether this person edits the internal rating and notes here: they may set them, and, editing, the
- * hotel carries them (only a reader of them gets them). Otherwise the fields stay out of the form and
- * of the body, so a save leaves them as they are (D-171).
- */
-function useNotesEditable(hotel: HotelStaffListItem | null): boolean {
-  const { canEditNotes } = useHotelProfilePermissions();
-  return canEditNotes && (hotel === null || hasInternalNotes(hotel));
-}
-
-/** The create/edit form's state, validation and submission; kept out of the view so each stays small. */
-function useHotelProfileForm(open: boolean, hotel: HotelStaffListItem | null, onClose: () => void) {
-  const toast = useToast();
-  const create = useCreateHotel();
-  const update = useUpdateHotel();
-  const notesEditable = useNotesEditable(hotel);
-  const [draft, setDraft] = useState<HotelProfileDraft>(() => draftFromHotel(hotel));
-  const [showErrors, setShowErrors] = useState(false);
-  // Re-seed each time the sheet opens, so "New hotel" starts clean and editing shows current values.
-  useEffect(() => {
-    if (open) {
-      setDraft(draftFromHotel(hotel));
-      setShowErrors(false);
-    }
-  }, [open, hotel]);
-  const pending = create.isPending || update.isPending;
-  const onError = (error: unknown): void =>
-    void toast.show({
-      title: isAppError(error) ? error.message : "Could not save the hotel",
-      tone: "danger",
-    });
-  const onSuccess = (): void => {
-    toast.show({ title: hotel ? "Hotel updated" : "Hotel added", tone: "success" });
-    onClose();
-  };
-  const patch: Patch = (next) => setDraft((prev) => ({ ...prev, ...next }));
-  const submit = (): void => {
-    if (pending) return;
-    if (hasErrors(validateDraft(draft))) return setShowErrors(true);
-    const profile = buildHotelBody(draft);
-    const body = notesEditable ? { ...profile, ...internalNotesBody(draft) } : profile;
-    if (hotel) update.mutate({ hotelId: hotel.id, body }, { onSuccess, onError });
-    else create.mutate(body, { onSuccess, onError });
-  };
-  const errors = showErrors ? validateDraft(draft) : NO_ERRORS;
-  return { draft, patch, errors, pending, submit, notesEditable };
-}
-
-function IdentityFields({
-  draft,
-  patch,
-}: {
-  readonly draft: HotelProfileDraft;
-  readonly patch: Patch;
-}) {
-  return (
-    <>
-      <Input
-        label="Brand"
-        value={draft.brand}
-        onChangeText={(brand) => patch({ brand })}
-        placeholder="e.g. Taj Hotels"
-        testID="hotel-brand"
-      />
-      <Input
-        label="Star category"
-        value={draft.starCategory}
-        onChangeText={(starCategory) => patch({ starCategory })}
-        placeholder="e.g. 5"
-        testID="hotel-star"
-      />
-      <MediaOptionPicker
-        label="Status"
-        value={draft.status}
-        options={HOTEL_STATUSES}
-        optionLabel={hotelStatusLabel}
-        onChange={(status) => patch({ status })}
-        testID="hotel-status"
-      />
-    </>
-  );
-}
-
-function DetailFields({ draft, patch, errors }: FieldsProps) {
-  return (
-    <>
-      <Input
-        label="Total rooms"
-        value={draft.totalRooms}
-        onChangeText={(totalRooms) => patch({ totalRooms })}
-        keyboardType="number-pad"
-        errorText={errors.totalRooms}
-        placeholder="e.g. 120"
-        testID="hotel-rooms"
-      />
-      <Input
-        label="Website"
-        value={draft.website}
-        onChangeText={(website) => patch({ website })}
-        keyboardType="url"
-        autoCapitalize="none"
-        placeholder="https://…"
-        testID="hotel-website"
-      />
-      <Input
-        label="Address"
-        value={draft.address}
-        onChangeText={(address) => patch({ address })}
-        multiline
-        testID="hotel-address"
-      />
-      <ContentFields draft={draft} patch={patch} />
-    </>
-  );
-}
-
-/** The client-facing free text a hotel shows in discovery: its description and its amenities. */
-function ContentFields({ draft, patch }: Pick<FieldsProps, "draft" | "patch">) {
-  return (
-    <>
-      <Input
-        label="Client description"
-        helpText="Shown to clients in discovery."
-        value={draft.descriptionClient}
-        onChangeText={(descriptionClient) => patch({ descriptionClient })}
-        multiline
-        testID="hotel-description"
-      />
-      <Input
-        label="Facilities"
-        helpText="Comma-separated, e.g. spa, valet parking, pool."
-        value={draft.facilities}
-        onChangeText={(facilities) => patch({ facilities })}
-        testID="hotel-facilities"
-      />
-    </>
-  );
-}
-
-function FlagFields({
-  draft,
-  patch,
-}: {
-  readonly draft: HotelProfileDraft;
-  readonly patch: Patch;
-}) {
+function FlagFields({ draft, patch }: Pick<ProfileFieldsProps, "draft" | "patch">) {
   return (
     <Stack gap={3}>
       <Toggle
@@ -202,23 +38,21 @@ function FlagFields({
  * Staff-only fields (RESTRICTED-NOTES) inside the shared InternalPanel, whose dashed-gold frame and
  * "INTERNAL · NEVER SENT TO CLIENTS" header keep them unmistakable from the client-facing fields above.
  */
-function InternalFields({ draft, patch, errors }: FieldsProps) {
+function InternalFields(props: ProfileFieldsProps) {
   return (
     <InternalPanel testID="hotel-internal">
       <Stack gap={3}>
         <Input
           label="Internal rating (1–5)"
-          value={draft.internalRating}
-          onChangeText={(internalRating) => patch({ internalRating })}
+          {...checkedField(props, "internalRating")}
           keyboardType="number-pad"
-          errorText={errors.internalRating}
           testID="hotel-internal-rating"
         />
         <Input
           label="Internal notes"
-          value={draft.internalNotes}
-          onChangeText={(internalNotes) => patch({ internalNotes })}
+          {...checkedField(props, "internalNotes")}
           multiline
+          maxLength={LONG_TEXT_MAX}
           testID="hotel-internal-notes"
         />
       </Stack>
@@ -226,31 +60,35 @@ function InternalFields({ draft, patch, errors }: FieldsProps) {
   );
 }
 
+interface HotelProfileFieldsProps extends ProfileFieldsProps {
+  readonly open: boolean;
+  readonly onAddDestination: (() => void) | undefined;
+  readonly notesEditable: boolean;
+  readonly savedCuisines: readonly string[];
+}
+
 /**
- * The name and destination first, then the rest, and the internal fields last for someone who edits
- * them. The destination picker mounts only while the sheet is open (its query runs then), and offers
- * the way to Destinations when there is none yet.
+ * The name and destination first, then who the hotel is and its details, its location and access, its
+ * event space, its food and beverage, its flags and its booking terms, and the internal rating and notes
+ * last for someone who edits them (the order of TW-22's Profile tab). The destination picker mounts only
+ * while the sheet is open (its query runs then), and offers the way to Destinations when there is none.
  */
 function HotelProfileFields({
   open,
   onAddDestination,
   notesEditable,
-  ...props
-}: FieldsProps & {
-  readonly open: boolean;
-  readonly onAddDestination: (() => void) | undefined;
-  readonly notesEditable: boolean;
-}) {
-  const { draft, patch, errors } = props;
+  savedCuisines,
+  ...fields
+}: HotelProfileFieldsProps) {
+  const { draft, patch, errors } = fields;
   return (
     <Stack gap={4}>
       <Input
         label="Hotel name"
         required
-        value={draft.name}
-        onChangeText={(name) => patch({ name })}
-        errorText={errors.name}
+        {...checkedField(fields, "name")}
         autoCapitalize="words"
+        maxLength={NAME_MAX}
         testID="hotel-name"
       />
       {open ? (
@@ -261,10 +99,14 @@ function HotelProfileFields({
           onAddDestination={onAddDestination}
         />
       ) : null}
-      <IdentityFields draft={draft} patch={patch} />
-      <DetailFields {...props} />
+      <HotelIdentityFields {...fields} />
+      <HotelDetailFields {...fields} />
+      <HotelLocationFields {...fields} />
+      <HotelEventSpaceFields {...fields} />
+      <HotelFoodFields open={open} savedCuisines={savedCuisines} {...fields} />
       <FlagFields draft={draft} patch={patch} />
-      {notesEditable ? <InternalFields {...props} /> : null}
+      <HotelBookingTermsFields {...fields} />
+      {notesEditable ? <InternalFields {...fields} /> : null}
     </Stack>
   );
 }
@@ -279,10 +121,13 @@ export interface HotelProfileEditSheetProps {
 }
 
 /**
- * Add a hotel to the catalogue, or edit one's profile (H1.1b): the client-facing fields and, for someone
- * who may set them, the staff-only internal rating/notes, filed under a destination. The server derives
- * the slug from the name on create (immutable after) and re-validates every field. Rooms, venues,
- * contacts and photos are managed separately. Hotel team and Super Admin only, gated server-side.
+ * Add a hotel to the catalogue, or edit one's profile (H1.1b, D-178): who it is, its details, its
+ * location and access, its event space, its food and beverage, its booking terms (internal, every
+ * profile editor) and, for someone who may set them, the staff-only internal rating and notes, filed
+ * under a destination.
+ * The server derives the slug from the name on create (immutable after) and re-validates every field.
+ * Rooms, venues, contacts and photos are managed separately. Hotel team and Super Admin only, gated
+ * server-side.
  *
  *   <HotelProfileEditSheet open={open} hotel={editing} onClose={close} />
  */
@@ -292,11 +137,7 @@ export function HotelProfileEditSheet({
   onClose,
   onAddDestination,
 }: HotelProfileEditSheetProps) {
-  const { draft, patch, errors, pending, submit, notesEditable } = useHotelProfileForm(
-    open,
-    hotel,
-    onClose,
-  );
+  const { pending, submit, ...form } = useHotelProfileForm(open, hotel, onClose);
   return (
     <Sheet
       open={open}
@@ -313,10 +154,8 @@ export function HotelProfileEditSheet({
       <HotelProfileFields
         open={open}
         onAddDestination={onAddDestination}
-        notesEditable={notesEditable}
-        draft={draft}
-        patch={patch}
-        errors={errors}
+        savedCuisines={hotel?.cuisines ?? []}
+        {...form}
       />
     </Sheet>
   );

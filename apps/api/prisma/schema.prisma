@@ -285,6 +285,22 @@ enum HotelStatus {
   inactive
 }
 
+/// Whether a wedding needs the whole hotel: a booking term, INTERNAL (D-178, decision 12). Keep in step with
+/// core `hotelWeddingBuyoutPolicy`.
+enum HotelWeddingBuyoutPolicy {
+  not_required
+  required
+  depends
+}
+
+/// Whether several functions can run at once or on one day: a booking term, INTERNAL (D-178, decision 12).
+/// Keep in step with core `hotelParallelFunctions`.
+enum HotelParallelFunctions {
+  allowed
+  not_allowed
+  depends
+}
+
 /// Staff, client and demo accounts. Since D-142 the API is the identity service: staff credentials (an
 /// Argon2id password hash and an encrypted authenticator secret) live on this row, and the identity
 /// subject (`ampm:<id>`) maps a token the API minted back to it. The credential columns are SECRET and
@@ -1153,6 +1169,9 @@ model Destination {
 /// description_client, …) build the client view; `internal_rating` and `internal_notes` are
 /// RESTRICTED-NOTES and never enter a client response (the repository select omits them — security.md).
 /// `demo_visible` is the demo-isolation flag the repository filters on for a demo principal (data.md).
+/// The D-178 block (location, access, event space, booking terms, food) is nullable throughout; its name
+/// variants and booking terms are INTERNAL, and the client selects never read the block (Slice 12 adds the
+/// CLIENT ones). A Maps link is stored as given and never fetched.
 model Hotel {
   id                String      @id @default(uuid(7)) @db.Uuid
   destinationId     String      @map("destination_id") @db.Uuid
@@ -1174,6 +1193,35 @@ model Hotel {
   streetViewRef     String?     @map("street_view_ref") @db.VarChar(255)
   facilities        Json?       @map("facilities_json")
   lastVerifiedAt    DateTime?   @map("last_verified_at") @db.Timestamptz(6)
+
+  // D-178: homes for the hotel information form's answers and recurring fact-sheet facts.
+  parentGroup            String?                   @map("parent_group") @db.VarChar(255)
+  nameAliases            Json?                     @map("name_aliases_json") // INTERNAL
+  locality               String?                   @db.VarChar(255)
+  city                   String?                   @db.VarChar(255)
+  state                  String?                   @db.VarChar(255)
+  postalCode             String?                   @map("postal_code") @db.VarChar(16)
+  mapsUrl                String?                   @map("maps_url") @db.VarChar(2048)
+  airportName            String?                   @map("airport_name") @db.VarChar(255)
+  airportDistanceKm      Decimal?                  @map("airport_distance_km") @db.Decimal(4, 1)
+  airportDriveMinutes    Int?                      @map("airport_drive_minutes")
+  railwayStationName     String?                   @map("railway_station_name") @db.VarChar(255)
+  railwayDistanceKm      Decimal?                  @map("railway_distance_km") @db.Decimal(4, 1)
+  railwayDriveMinutes    Int?                      @map("railway_drive_minutes")
+  cityCentreDistanceKm   Decimal?                  @map("city_centre_distance_km") @db.Decimal(4, 1)
+  cityCentreDriveMinutes Int?                      @map("city_centre_drive_minutes")
+  accessNotes            String?                   @map("access_notes") @db.Text
+  totalEventSpaceSqm     Int?                      @map("total_event_space_sqm")
+  totalEventSpaceSqft    Int?                      @map("total_event_space_sqft")
+  weddingBuyoutPolicy    HotelWeddingBuyoutPolicy? @map("wedding_buyout_policy") // INTERNAL
+  minRoomsWithoutBuyout  Int?                      @map("min_rooms_without_buyout") // INTERNAL
+  minNights              Int?                      @map("min_nights") // INTERNAL
+  parallelFunctions      HotelParallelFunctions?   @map("parallel_functions") // INTERNAL
+  bookingNotes           String?                   @map("booking_notes") @db.Text // INTERNAL
+  cuisines               Json?                     @map("cuisines_json")
+  isPureVegetarian       Boolean?                  @map("is_pure_vegetarian") // null: not stated
+  hasSeparateVegKitchen  Boolean?                  @map("has_separate_veg_kitchen")
+  servesAlcohol          Boolean?                  @map("serves_alcohol")
 
   createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   createdBy String?   @map("created_by") @db.Uuid
@@ -1320,6 +1368,7 @@ enum HotelVerificationFieldGroup {
   availability
   media
   contacts
+  policies // booking terms (D-178)
 }
 
 enum HotelVerificationSource {
@@ -1338,7 +1387,9 @@ enum HotelVerificationStatus {
 
 /// A record that AMPM verified one field group of a hotel at a point in time (data-model.md §5). A rate
 /// card points at the verification backing it; the freshness job marks a verification (and its cards)
-/// stale once `verified_at` is older than `configurations.hotel_verification_max_age_days` (AC-04). Feature 9.2.
+/// stale once `verified_at` is older than configuration `hotel.verification_policy.maxAgeDays` (AC-04).
+/// Recording one sets `next_due_at` (verified_at plus that age) and recomputes the hotel's
+/// `last_verified_at` in the same transaction. Feature 9.2.
 model HotelVerification {
   id         String                      @id @default(uuid(7)) @db.Uuid
   hotelId    String                      @map("hotel_id") @db.Uuid

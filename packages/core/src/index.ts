@@ -14,6 +14,13 @@ export {
 export { RATE_ITEM_TYPES, rateItemTypeLabel } from "./labels";
 export { COUPLE_PERSON_NAME_MAX, coupleSubtitle, coupleTitle } from "./couple";
 export type { CoupleNames } from "./couple";
+export {
+  INDIA_POSTAL_CODE,
+  isGoogleMapsUrl,
+  MAPS_URL_MAX_LENGTH,
+  normalisePostalCode,
+  postalCodeProblem,
+} from "./hotel-location";
 
 export { formatDay, formatDayRange, formatMoment } from "./dates";
 export type { DateFormatOptions, DateStyle, DayReading } from "./dates";

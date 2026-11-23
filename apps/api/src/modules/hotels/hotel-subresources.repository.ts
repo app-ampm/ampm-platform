@@ -10,7 +10,7 @@ import type {
 
 import { PrismaService } from "../../db/prisma.service.js";
 import { Prisma } from "../../generated/prisma/client.js";
-import { facilitiesInput } from "./hotel-facilities.js";
+import { stringListInput } from "./hotel-string-lists.js";
 
 /*
  * Writes for a hotel's room categories, venues and contacts (feature 9.1, staff). The selects are the
@@ -80,7 +80,7 @@ export class HotelSubresourcesRepository {
     return this.prisma.hotelRoomCategory.create({
       data: {
         ...request,
-        facilities: facilitiesInput(request.facilities),
+        facilities: stringListInput(request.facilities),
         hotelId,
         createdBy: actorId,
         updatedBy: actorId,
@@ -92,7 +92,7 @@ export class HotelSubresourcesRepository {
   updateRoom(id: string, patch: RoomCategoryUpdateRequest, actorId: string): Promise<RoomRow> {
     return this.prisma.hotelRoomCategory.update({
       where: { id },
-      data: { ...patch, facilities: facilitiesInput(patch.facilities), updatedBy: actorId },
+      data: { ...patch, facilities: stringListInput(patch.facilities), updatedBy: actorId },
       select: ROOM_SELECT,
     });
   }
@@ -117,7 +117,7 @@ export class HotelSubresourcesRepository {
     return this.prisma.hotelVenue.create({
       data: {
         ...request,
-        facilities: facilitiesInput(request.facilities),
+        facilities: stringListInput(request.facilities),
         hotelId,
         createdBy: actorId,
         updatedBy: actorId,
@@ -129,7 +129,7 @@ export class HotelSubresourcesRepository {
   updateVenue(id: string, patch: VenueUpdateRequest, actorId: string): Promise<VenueRow> {
     return this.prisma.hotelVenue.update({
       where: { id },
-      data: { ...patch, facilities: facilitiesInput(patch.facilities), updatedBy: actorId },
+      data: { ...patch, facilities: stringListInput(patch.facilities), updatedBy: actorId },
       select: VENUE_SELECT,
     });
   }

@@ -16,6 +16,14 @@ export const HOTEL_NOTES_READ = "hotels.hotel_internal_rating_notes.read";
 export const HOTEL_NOTES_UPDATE = "hotels.hotel_internal_rating_notes.update";
 /** RESTRICTED-CONTACT: the "Hotel contacts" row (§10 also names it `…read_contacts`). */
 export const HOTEL_CONTACTS_READ = "hotels.hotel_contacts.read";
+/** Reading a hotel's profile, the INTERNAL name variants and booking terms included. */
+export const HOTEL_PROFILE_READ = "hotels.hotel_profiles_client_fields.read";
+/** Changing an existing hotel's profile: what an import row that updates a hotel needs (D-181). */
+export const HOTEL_PROFILE_UPDATE = "hotels.hotel_profiles_client_fields.update";
+/** Creating a destination, as `POST /hotels-admin/destinations` asks. */
+export const DESTINATION_CREATE = "hotels.destinations.create";
+/** Adding a hotel image, as the media routes ask. */
+export const HOTEL_MEDIA_CREATE = "hotels.hotel_media_rights_status.create";
 
 /**
  * The restricted parts of a staff hotel a principal reads, beyond the profile every reader of
@@ -46,15 +54,59 @@ export function hotelAudienceOf(principal: Principal): HotelAudience {
 }
 
 /**
+ * Whether the principal may change a hotel's internal rating and notes: the profile keys a custom role
+ * may hold do not carry the notes row, so it is decided on its own key.
+ *
+ * @example
+ * canWriteNotes(staffPrincipal(["HT"])); // true
+ */
+export function canWriteNotes(principal: Principal): boolean {
+  return can(toPolicyPrincipal(principal), HOTEL_NOTES_UPDATE);
+}
+
+/**
+ * What a hotel import's uploader may do and read beyond the create key the route asks for (D-181). Each
+ * is its own key, as the dedicated routes ask it, so a custom role's rows are held to the same keys:
+ * change an existing hotel, set the internal rating or notes, create a destination, add an image; and
+ * read a stored hotel's profile and notes, so a dry run never compares a cell with a value its uploader
+ * may not read.
+ */
+export interface ImportGrants {
+  readonly canUpdate: boolean;
+  readonly canWriteNotes: boolean;
+  readonly canCreateDestinations: boolean;
+  readonly canAddMedia: boolean;
+  readonly readsProfiles: boolean;
+  readonly readsNotes: boolean;
+}
+
+/**
+ * The import grants of a principal, decided from its grants alone (D-164).
+ *
+ * @example
+ * importGrantsOf(staffPrincipal([], ["hotels.hotel_profiles_client_fields.create:all"])); // all false
+ */
+export function importGrantsOf(principal: Principal): ImportGrants {
+  const caller = toPolicyPrincipal(principal);
+  return {
+    canUpdate: can(caller, HOTEL_PROFILE_UPDATE),
+    canWriteNotes: can(caller, HOTEL_NOTES_UPDATE),
+    canCreateDestinations: can(caller, DESTINATION_CREATE),
+    canAddMedia: can(caller, HOTEL_MEDIA_CREATE),
+    readsProfiles: can(caller, HOTEL_PROFILE_READ),
+    readsNotes: can(caller, HOTEL_NOTES_READ),
+  };
+}
+
+/**
  * Refuses a write that sets a hotel's internal rating or notes for a principal who may not change them
- * (403: the hotel itself is theirs to see). The profile keys a custom role may hold do not carry the
- * notes row, so this is checked on its own key.
+ * (403: the hotel itself is theirs to see).
  *
  * @example
  * requireNotesWrite(principal, request.internalNotes !== undefined);
  */
 export function requireNotesWrite(principal: Principal, setsNotes: boolean): void {
-  if (setsNotes && !can(toPolicyPrincipal(principal), HOTEL_NOTES_UPDATE)) {
+  if (setsNotes && !canWriteNotes(principal)) {
     throw errors.forbidden("You cannot change a hotel's internal rating or notes");
   }
 }

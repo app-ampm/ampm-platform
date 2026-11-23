@@ -1,49 +1,18 @@
 import { randomUUID } from "node:crypto";
 
-import type { HotelReach, MediaVisibility } from "@ampm/core";
-import type { Entitlements } from "@ampm/policy";
+import type { MediaVisibility } from "@ampm/core";
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { PrismaService } from "../src/db/prisma.service.js";
 import { HotelsService } from "../src/modules/hotels/hotels.service.js";
-import type { Principal } from "../src/policy/principal.types.js";
+import { fakeEntitlements, fakePrincipal } from "./discovery-principals.js";
 import { startApi } from "./start-api.js";
 
 const TAG = "E2E-Hotels";
 const PREFIX = "e2e-hotels";
 const GALLERY_ACTOR = "00000000-0000-7000-8000-0000000000aa"; // a plain Uuid; uploaded_by has no FK
-
-/** A fabricated client/demo principal for service-level reach tests (no HTTP round-trip needed). */
-function fakeEntitlements(reach: HotelReach, readOnly: boolean): Entitlements {
-  return {
-    modules: ["hotel_discovery", "saved_hotels"],
-    readOnlyModules: readOnly ? ["saved_hotels"] : [],
-    hotelReach: [reach],
-    financeReach: [],
-    requestTypes: { wedding: [], account: [] },
-    signInRefused: false,
-  };
-}
-
-function fakePrincipal(
-  type: "client" | "demo",
-  ent: Entitlements,
-  userId = "00000000-0000-7000-8000-000000000000",
-): Principal {
-  return {
-    type,
-    userId,
-    name: "T",
-    email: null,
-    phone: null,
-    status: "active",
-    lastLoginAt: null,
-    memberships: [],
-    entitlements: ent,
-  };
-}
 
 /**
  * Hotel discovery end to end (Module C, CP-11). A client with no subscription is locked out (404 —

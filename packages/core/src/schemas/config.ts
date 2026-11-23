@@ -69,6 +69,18 @@ export const hotelVerificationPolicy = z.object({
 export type HotelVerificationPolicy = z.infer<typeof hotelVerificationPolicy>;
 
 /**
+ * The cuisine choices offered for a hotel (D-178): the staff editor's chips, and the labels an import may
+ * use. A hotel may also carry {@link HOTEL_CUISINE_OTHER}.
+ */
+export const hotelCuisineOptions = z.object({
+  options: z.array(z.string().trim().min(1).max(60)).min(1).max(50),
+});
+export type HotelCuisineOptions = z.infer<typeof hotelCuisineOptions>;
+
+/** The cuisine label for anything outside the configured options. */
+export const HOTEL_CUISINE_OTHER = "Other";
+
+/**
  * Which hotel-consultancy services AMPM charges for (R8, feature 10.2, AC-05.7). A hotel enquiry can
  * progress through availability checking for free; moving it into a chargeable stage (negotiation)
  * requires an active service agreement. The set is configuration, not code — AMPM can make a service
@@ -117,6 +129,20 @@ export const CONFIG_REGISTRY = {
   "feature.flags": entry(featureFlags, {}),
   "subscription.policy": entry(subscriptionPolicy, { expiryNoticeDays: 7 }),
   "hotel.verification_policy": entry(hotelVerificationPolicy, { maxAgeDays: 90 }),
+  "hotel.cuisine_options": entry(hotelCuisineOptions, {
+    options: [
+      "Indian",
+      "North Indian",
+      "South Indian",
+      "Rajasthani",
+      "Continental",
+      "Asian",
+      "Chinese",
+      "Italian",
+      "Mediterranean",
+      "Jain food on request",
+    ],
+  }),
   "consultancy.chargeable_services": entry(consultancyChargeablePolicy, {
     // R8 baseline: availability checking is free; the rest of the hotel-assistance pipeline is paid.
     chargeableServiceKeys: ["negotiation", "site_visit", "contract_review", "booking_assistance"],
