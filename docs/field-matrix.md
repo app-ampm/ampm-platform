@@ -265,7 +265,7 @@ Created at stage: **Configuration** · Default editor: SA · Default visibility:
 | Field | Type and validation | Options | Edited by | Visibility | Required | Automation and report impact |
 |---|---|---|---|---|---|---|
 | `id` (PK) | UUID v7, generated |  | SYS | INTERNAL | System | — |
-| `config_key` (unique) | lowercase snake_case; unique; e.g. hotel_verification_max_age_days, material_change_threshold_pct |  | SA | INTERNAL | At creation | — |
+| `config_key` (unique) | lowercase snake_case; unique; e.g. hotel.verification_policy, material_change_threshold_pct |  | SA | INTERNAL | At creation | — |
 | `value_json` | valid JSON matching the schema registered for config_key |  | SA | INTERNAL | At creation | Takes effect on the next job run or request; change audited |
 | `scope` | one of the listed options | global, project | SA | INTERNAL | At creation | — |
 | `scope_id` | references wedding_projects when scope is project |  | SA | INTERNAL | Optional | — |

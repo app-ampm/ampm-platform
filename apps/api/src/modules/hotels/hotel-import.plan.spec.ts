@@ -109,6 +109,25 @@ describe("planImport: refused rows", () => {
     });
   });
 
+  it("refuses a row with no slug cell when the web address made from its name is a deleted hotel's", () => {
+    const deleted = { ...STORED, deletedAt: new Date("2026-11-20T00:00:00.000Z") };
+    const [plan] = planImport(
+      [{ line: 2, row: { destinationSlug: "synthetic-coast", name: "Synthetic Bay" } }],
+      context({ hotels: new Map([["synthetic-bay", deleted]]) }),
+    );
+    expect(plan).toEqual({
+      outcome: "error",
+      line: 2,
+      slug: "synthetic-bay",
+      errors: [
+        {
+          field: "slug",
+          message: "A deleted hotel used this web address; give this hotel another one",
+        },
+      ],
+    });
+  });
+
   it("refuses a web address an earlier line already used", () => {
     const plans = planImport(
       [

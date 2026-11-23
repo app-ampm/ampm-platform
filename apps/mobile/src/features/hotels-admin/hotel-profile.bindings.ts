@@ -1,7 +1,7 @@
 import type { RefCallback } from "react";
 
-import type { ProfileFieldKey } from "./hotel-profile.errors";
-import type { HotelProfileDraft, HotelProfileErrors } from "./hotel-profile.form";
+import type { ProfileFieldErrors, ProfileFieldKey } from "./hotel-profile.errors";
+import type { HotelProfileDraft } from "./hotel-profile.form";
 import type { FieldNode } from "./use-field-focus";
 
 /*
@@ -16,9 +16,9 @@ export type ProfilePatch = (next: Partial<HotelProfileDraft>) => void;
 export interface ProfileFieldsProps {
   readonly draft: HotelProfileDraft;
   readonly patch: ProfilePatch;
-  /** The errors on show: none until a save has been blocked once. */
-  readonly errors: Partial<HotelProfileErrors>;
-  /** The ref to give a checked field's Input, so a blocked save can focus it. */
+  /** The errors on show: none until a save has been blocked by the checks or refused by the server. */
+  readonly errors: ProfileFieldErrors;
+  /** The ref to give a checked field's Input, so a blocked or refused save can focus it. */
   readonly fieldRef: (key: ProfileFieldKey) => RefCallback<FieldNode>;
 }
 

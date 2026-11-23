@@ -471,7 +471,7 @@ All automated suites run against synthetic data from the seed in §7 (V-15). Job
 #### AC-04.1 Verified and stale cards carry the right label and never say confirmed
 - **Type and priority.** End to end, P1, Phase 1, automated.
 - **Principal.** HT; SYS; CO.
-- **Steps.** Verify a rate card on TW-23 dated today; set `hotel_verification_max_age_days` to 30; advance the clock 31 days; run the freshness job; open CP-05 as CO.
+- **Steps.** Verify a rate card on TW-23 dated today; set `maxAgeDays` in configuration `hotel.verification_policy` to 30; advance the clock 31 days; run the freshness job; open CP-05 as CO.
 - **Expected.** Before the job: "Verified on <date> by AMPM". After: card status `stale`, label "Stale, last checked <date>", amounts still shown; the rendered page and the API response contain no occurrence of the word "confirmed" in rate context (asserted by text search).
 - **References.** Flow 2; CP-05, TW-23, TW-24; SPEC §8, §12; A-9 (Q9).
 

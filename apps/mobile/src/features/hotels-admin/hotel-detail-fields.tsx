@@ -1,11 +1,12 @@
 import { Input } from "@ampm/ui";
 
-import { checkedField, textField, type ProfileFieldsProps } from "./hotel-profile.bindings";
+import { checkedField, type ProfileFieldsProps } from "./hotel-profile.bindings";
 
 /**
  * The hotel's details under its identity: its room count, its website, and the client-facing free text
  * it shows in discovery (its description and its amenities, one per line as the import's list rule
- * reads them).
+ * reads them). Only the server checks the website, description and amenities; what it refuses shows
+ * under the field.
  *
  *   <HotelDetailFields draft={draft} patch={patch} errors={errors} fieldRef={fieldRef} />
  */
@@ -21,7 +22,7 @@ export function HotelDetailFields(props: ProfileFieldsProps) {
       />
       <Input
         label="Website"
-        {...textField(props, "website")}
+        {...checkedField(props, "website")}
         keyboardType="url"
         autoCapitalize="none"
         placeholder="https://…"
@@ -30,14 +31,14 @@ export function HotelDetailFields(props: ProfileFieldsProps) {
       <Input
         label="Client description"
         helpText="Shown to clients in discovery."
-        {...textField(props, "descriptionClient")}
+        {...checkedField(props, "descriptionClient")}
         multiline
         testID="hotel-description"
       />
       <Input
         label="Facilities"
         helpText="One per line; a | also separates two."
-        {...textField(props, "facilities")}
+        {...checkedField(props, "facilities")}
         multiline
         testID="hotel-facilities"
       />

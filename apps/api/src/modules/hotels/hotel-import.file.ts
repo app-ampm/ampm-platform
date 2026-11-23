@@ -18,8 +18,9 @@ import {
 
 /*
  * Reads an uploaded hotels file into rows (D-181). Pure. A problem with the file as a whole (not UTF-8,
- * empty, a runaway cell or record, the headers not the template's, too many rows) refuses it with a 400
- * naming the file; a row that fails the schema is reported by line and field, and the other rows go on.
+ * empty, a runaway cell or record, the headers not the template's, no hotel rows or too many) refuses it
+ * with a 400 naming the file; a row that fails the schema is reported by line and field, and the other
+ * rows go on.
  */
 
 /** A row that passed the schema, with its line in the file (the header is line 1). */
@@ -85,6 +86,7 @@ export function readHotelImportFile(bytes: Uint8Array): ImportFile {
   const lines = records.flatMap((cells, index) =>
     isBlankRow(cells) ? [] : [{ cells, line: index + 2 }],
   );
+  if (lines.length === 0) throw fileError(["The file has no hotel rows."]);
   if (lines.length > HOTEL_IMPORT_MAX_ROWS) {
     throw fileError([
       `The file has ${lines.length} rows; one import takes at most ${HOTEL_IMPORT_MAX_ROWS}.`,

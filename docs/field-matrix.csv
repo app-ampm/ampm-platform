@@ -101,7 +101,7 @@ A,audit_events,System,after_json,json,,,valid JSON; restricted and secret fields
 A,audit_events,System,ip_address,string,,,"string, up to 255 characters",SYS (append-only; never updated or deleted),INTERNAL,Optional,—,
 A,audit_events,System,occurred_at,datetime,,,timestamp (UTC),SYS,INTERNAL,System,—,
 A,configurations,Configuration,id,uuid,PK,,"UUID v7, generated",SYS,INTERNAL,System,—,
-A,configurations,Configuration,config_key,string,UK,,"lowercase snake_case; unique; e.g. hotel_verification_max_age_days, material_change_threshold_pct",SA,INTERNAL,At creation,—,
+A,configurations,Configuration,config_key,string,UK,,"lowercase snake_case; unique; e.g. hotel.verification_policy, material_change_threshold_pct",SA,INTERNAL,At creation,—,
 A,configurations,Configuration,value_json,json,,,valid JSON matching the schema registered for config_key,SA,INTERNAL,At creation,Takes effect on the next job run or request; change audited,
 A,configurations,Configuration,scope,string,,"global, project",one of the listed options,SA,INTERNAL,At creation,—,
 A,configurations,Configuration,scope_id,uuid,,,references wedding_projects when scope is project,SA,INTERNAL,Optional,—,

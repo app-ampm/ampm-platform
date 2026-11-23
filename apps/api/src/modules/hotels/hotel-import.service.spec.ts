@@ -122,6 +122,21 @@ describe("HotelImportService", () => {
     );
   });
 
+  it("writes a created row's list cells as lists, each cuisine in its configured spelling", async () => {
+    const { service, hotels } = build();
+    const lists = encode([
+      "destinationSlug,name,slug,facilities,cuisines",
+      "synthetic-destination,Synthetic Cove,synthetic-cove,Pool|Spa,indian|Other",
+    ]);
+    const result = await service.import(lists, { dryRun: false }, HT);
+    expect(result).toMatchObject({ applied: true, created: 1, rejected: [] });
+    expect(hotels.createHotel).toHaveBeenCalledWith(
+      expect.objectContaining({ facilities: ["Pool", "Spa"], cuisines: ["Indian", "Other"] }),
+      expect.any(String),
+      expect.anything(),
+    );
+  });
+
   it("writes and audits nothing for an unchanged row: applied false, though the job is recorded applied", async () => {
     const { service, hotels, audit, imports } = build();
     const result = await service.import(CSV(UNCHANGED), { dryRun: false }, HT);

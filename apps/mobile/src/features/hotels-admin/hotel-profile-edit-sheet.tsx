@@ -8,7 +8,7 @@ import { HotelEventSpaceFields } from "./hotel-event-space-fields";
 import { HotelFoodFields } from "./hotel-food-fields";
 import { HotelIdentityFields } from "./hotel-identity-fields";
 import { HotelLocationFields } from "./hotel-location-fields";
-import { checkedField, textField, type ProfileFieldsProps } from "./hotel-profile.bindings";
+import { checkedField, type ProfileFieldsProps } from "./hotel-profile.bindings";
 import { useHotelProfileForm } from "./use-hotel-profile-form";
 
 /** The longest hotel name the contract takes. */
@@ -49,7 +49,7 @@ function InternalFields(props: ProfileFieldsProps) {
         />
         <Input
           label="Internal notes"
-          {...textField(props, "internalNotes")}
+          {...checkedField(props, "internalNotes")}
           multiline
           testID="hotel-internal-notes"
         />

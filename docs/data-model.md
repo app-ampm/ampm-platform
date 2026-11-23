@@ -295,7 +295,7 @@ erDiagram
     }
     configurations {
         uuid id PK
-        string config_key UK "e.g. hotel_verification_max_age_days, material_change_threshold_pct"
+        string config_key UK "e.g. hotel.verification_policy, material_change_threshold_pct"
         json value_json
         string scope "enum global / project"
         uuid scope_id

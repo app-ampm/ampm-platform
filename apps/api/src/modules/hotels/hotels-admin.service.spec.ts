@@ -96,6 +96,35 @@ describe("HotelsAdminService writes the internal notes only on their own key", (
   });
 });
 
+describe("HotelsAdminService audits an update by field name", () => {
+  it("names each field the request sent, a cleared one included, and none of their values", async () => {
+    const { service, audit } = build();
+    const request = {
+      minNights: 2,
+      bookingNotes: null,
+      internalNotes: "Synthetic changed note",
+      city: undefined,
+    };
+    await service.update(HOTEL, request, staffPrincipal(["HT"]));
+    expect(audit.record).toHaveBeenCalledOnce();
+    expect(audit.record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: "update",
+        entityType: "hotel",
+        entityId: HOTEL,
+        after: {
+          name: "Synthetic Lake Hotel",
+          status: "active",
+          demoVisible: false,
+          changedFields: ["minNights", "bookingNotes", "internalNotes"],
+        },
+        maskImages: false,
+      }),
+      expect.anything(),
+    );
+  });
+});
+
 describe("HotelsAdminService reads the D-178 fields into every profile model", () => {
   const catalogue: Partial<StaffHotelRow> = {
     nameAliases: ["Synthetic Lake Hotel Annexe"],

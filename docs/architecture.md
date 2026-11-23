@@ -430,7 +430,7 @@ sequenceDiagram
 
 ### 7.5 Daily hotel freshness job (SPEC §8)
 
-The worker runs once a day: for each `hotel_verifications` row older than `hotel_verification_max_age_days`, set the verification and dependent rate cards to `stale`, refresh `hotels.last_verified_at`, rebuild the hotel search view, and notify the Hotel team of what needs re-verification. Stale rate items render with the stale label and are never presented as confirmed.
+The worker runs once a day: for each `hotel_verifications` row older than `maxAgeDays` in configuration `hotel.verification_policy`, set the verification and dependent rate cards to `stale`, refresh `hotels.last_verified_at`, rebuild the hotel search view, and notify the Hotel team of what needs re-verification. Stale rate items render with the stale label and are never presented as confirmed. Recording a verification sets its `next_due_at` (the verified date plus `maxAgeDays`) and refreshes `hotels.last_verified_at` in the same transaction, so the hotel's date never waits for the job.
 
 ---
 

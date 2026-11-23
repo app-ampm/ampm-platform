@@ -19,11 +19,13 @@ interface Read {
   readonly schema: unknown;
 }
 
+interface Seen {
+  options: QueryOptions | null;
+  readonly reads: Read[];
+}
+
 /** What the hook handed to useQuery, and every read its query made. */
-const seen = vi.hoisted(() => ({
-  options: null as QueryOptions | null,
-  reads: [] as Read[],
-}));
+const seen = vi.hoisted((): Seen => ({ options: null, reads: [] }));
 
 vi.mock("@tanstack/react-query", () => ({
   useQuery: (options: QueryOptions) => {

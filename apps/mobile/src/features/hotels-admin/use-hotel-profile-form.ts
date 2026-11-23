@@ -2,10 +2,18 @@ import { useEffect, useState } from "react";
 
 import { useCreateHotel, useStaffDestinations, useUpdateHotel } from "@ampm/api-client";
 import { isAppError, type HotelStaffListItem } from "@ampm/core";
-import { useToast } from "@ampm/ui";
+import { useToast, type ToastOptions } from "@ampm/ui";
 
 import type { ProfileFieldsProps, ProfilePatch } from "./hotel-profile.bindings";
-import { blockedSaveToast, firstInvalidField, type ProfileFieldKey } from "./hotel-profile.errors";
+import {
+  blockedSaveToast,
+  errorsOnShow,
+  firstInvalidField,
+  placeServerErrors,
+  withoutEdited,
+  type ProfileFieldErrors,
+  type ProfileFieldKey,
+} from "./hotel-profile.errors";
 import {
   buildHotelBody,
   draftFromHotel,
@@ -36,20 +44,67 @@ function useDestinationCountry(open: boolean, destinationId: string): string | n
   return destinations.data?.find((item) => item.id === destinationId)?.country ?? null;
 }
 
-/** What a save does once it lands or fails: a toast, and the sheet closes on success. */
-function useSaveOutcome(isEdit: boolean, onClose: () => void) {
+/** The toast for a save that failed for any other reason than fields the editor can show. */
+function failedSaveToast(error: unknown): ToastOptions {
+  return { title: isAppError(error) ? error.message : "Could not save the hotel", tone: "danger" };
+}
+
+/** Where a refused save's field errors go: on show under their fields, and focus to the first. */
+interface RefusedFields {
+  readonly show: (errors: ProfileFieldErrors) => void;
+  readonly focus: (key: ProfileFieldKey) => void;
+}
+
+/**
+ * What a save does once it lands or fails: a toast, and the sheet closes on success. A save the server
+ * refuses as invalid puts each error under the field its path names, focuses the first and names it in
+ * the toast, as a blocked save does; a refusal naming anything the editor has no field for, and any
+ * other failure, keeps the plain toast.
+ */
+function useSaveOutcome(isEdit: boolean, onClose: () => void, refused: RefusedFields) {
   const toast = useToast();
   return {
     onSuccess: (): void => {
       toast.show({ title: isEdit ? "Hotel updated" : "Hotel added", tone: "success" });
       onClose();
     },
-    onError: (error: unknown): void =>
-      void toast.show({
-        title: isAppError(error) ? error.message : "Could not save the hotel",
-        tone: "danger",
-      }),
+    onError: (error: unknown): void => {
+      if (!isAppError(error) || error.code !== "validation_failed") {
+        toast.show(failedSaveToast(error));
+        return;
+      }
+      const { fields, unplaced } = placeServerErrors(error.details ?? []);
+      const first = firstInvalidField(fields);
+      refused.show(fields);
+      toast.show(
+        first && !unplaced ? blockedSaveToast(first, fields[first] ?? "") : failedSaveToast(error),
+      );
+      if (first) refused.focus(first);
+    },
   };
+}
+
+/**
+ * The draft and the errors a save left on it: whether the checks' errors are on show, and the fields the
+ * server refused. Editing a field drops its refusal until the next save; opening the sheet starts clean.
+ */
+function useProfileDraft(open: boolean, hotel: HotelStaffListItem | null) {
+  const [draft, setDraft] = useState<HotelProfileDraft>(() => draftFromHotel(hotel));
+  const [showErrors, setShowErrors] = useState(false);
+  const [refused, setRefused] = useState<ProfileFieldErrors>({});
+  // Re-seed each time the sheet opens, so "New hotel" starts clean and editing shows current values.
+  useEffect(() => {
+    if (open) {
+      setDraft(draftFromHotel(hotel));
+      setShowErrors(false);
+      setRefused({});
+    }
+  }, [open, hotel]);
+  const patch: ProfilePatch = (next) => {
+    setDraft((prev) => ({ ...prev, ...next }));
+    setRefused((prev) => withoutEdited(prev, Object.keys(next)));
+  };
+  return { draft, patch, showErrors, setShowErrors, refused, setRefused };
 }
 
 export interface HotelProfileForm extends ProfileFieldsProps {
@@ -61,7 +116,8 @@ export interface HotelProfileForm extends ProfileFieldsProps {
 /**
  * The profile editor's state, checks and save, kept out of the view so each stays small. The draft
  * re-seeds each time the sheet opens. A blocked save shows every error, names the first in a toast
- * (announced) and focuses it, since it may sit in a panel far below Save.
+ * (announced) and focuses it, since it may sit in a panel far below Save; a save the server refuses on
+ * the editor's fields does the same with the server's errors.
  *
  *   const form = useHotelProfileForm(open, hotel, onClose);
  */
@@ -74,23 +130,20 @@ export function useHotelProfileForm(
   const create = useCreateHotel();
   const update = useUpdateHotel();
   const notesEditable = useNotesEditable(hotel);
-  const outcome = useSaveOutcome(hotel !== null, onClose);
   const focus = useFieldFocus<ProfileFieldKey>();
-  const [draft, setDraft] = useState<HotelProfileDraft>(() => draftFromHotel(hotel));
-  const [showErrors, setShowErrors] = useState(false);
+  const { draft, patch, showErrors, setShowErrors, refused, setRefused } = useProfileDraft(
+    open,
+    hotel,
+  );
+  const outcome = useSaveOutcome(hotel !== null, onClose, {
+    show: setRefused,
+    focus: focus.focusField,
+  });
   const country = useDestinationCountry(open, draft.destinationId);
-  // Re-seed each time the sheet opens, so "New hotel" starts clean and editing shows current values.
-  useEffect(() => {
-    if (open) {
-      setDraft(draftFromHotel(hotel));
-      setShowErrors(false);
-    }
-  }, [open, hotel]);
   const pending = create.isPending || update.isPending;
-  const patch: ProfilePatch = (next) => setDraft((prev) => ({ ...prev, ...next }));
   const submit = (): void => {
     if (pending) return;
-    const checked = validateDraft(draft, country);
+    const checked: ProfileFieldErrors = validateDraft(draft, country);
     const first = firstInvalidField(checked);
     if (first) {
       setShowErrors(true);
@@ -102,6 +155,6 @@ export function useHotelProfileForm(
     if (hotel) update.mutate({ hotelId: hotel.id, body }, outcome);
     else create.mutate(body, outcome);
   };
-  const errors = showErrors ? validateDraft(draft, country) : {};
+  const errors = errorsOnShow(showErrors ? validateDraft(draft, country) : {}, refused);
   return { draft, patch, errors, fieldRef: focus.fieldRef, pending, submit, notesEditable };
 }

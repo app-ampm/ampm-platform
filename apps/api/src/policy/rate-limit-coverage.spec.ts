@@ -29,6 +29,7 @@ const COSTLY = [
   "MediaController.upload", // buffers, scans and stores up to 25 MiB
   "BookingMilestonesController.attachContract",
   "ServiceAgreementsController.markSignedOffline",
+  "HotelImportController.importHotels", // reads up to 5 MiB and writes up to 2,000 rows
 ];
 
 /** Metadata on the handler, else on its controller: the order the guards read it in. */

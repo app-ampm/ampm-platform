@@ -90,7 +90,12 @@ export class HotelsAdminService {
     return this.getDetail(hotelId, principal);
   }
 
-  /** An update sets the internal rating or notes when it names either, a null clearing it. */
+  /**
+   * An update sets the internal rating or notes when it names either, a null clearing it. Its audit event
+   * keeps the hotel's name, status and demo flag, and lists every field the request sent by name only,
+   * never its value (as the import's does), so the image holds no personal data and is recorded
+   * unmasked.
+   */
   async update(
     hotelId: string,
     request: HotelUpdateRequest,
@@ -115,6 +120,7 @@ export class HotelsAdminService {
             name: request.name ?? current.name,
             status: request.status ?? current.status,
             demoVisible: request.demoVisible ?? current.demoVisible,
+            changedFields: namedFields(request),
           },
           maskImages: false,
         },
@@ -295,6 +301,13 @@ interface StoredProfile {
 
 /** A create has nothing stored. */
 const NEW_HOTEL: StoredProfile = { cuisines: null, keptPostalCode: null };
+
+/** The fields an update request names (a null among them, since it clears one), by name only. */
+function namedFields(request: HotelUpdateRequest): string[] {
+  return Object.entries(request)
+    .filter(([, value]) => value !== undefined)
+    .map(([key]) => key);
+}
 
 /** The destination fields a patch set (the slug is immutable, so it is never part of an update). */
 function toDestinationPatch(request: DestinationUpdateRequest): DestinationUpdatePatch {

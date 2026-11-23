@@ -1,3 +1,4 @@
+import { HOTEL_CATALOGUE_KEYS } from "@ampm/core";
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -31,12 +32,15 @@ const LOCATION = {
   servesAlcohol: true,
 } as const;
 const RESTRICTED = ["internalRating", "internalNotes", "contacts"] as const;
+/** What no client or demo hotel view carries: every D-178 field (until Slice 12) and the coordinates. */
+const CLIENT_HIDDEN = [...HOTEL_CATALOGUE_KEYS, "latitude", "longitude"];
 
 /**
  * The D-178 hotel fields end to end (Module C; plan §6.2). Staff write and read them round trip, decimals
  * as numbers and lists as lists; a PIN must fit an Indian destination and a cuisine must be configured;
  * Creative and Finance read the INTERNAL name variants and booking terms with the rest of the profile, never
- * the RESTRICTED notes; and the client hotel detail carries none of the new fields yet (Slice 12).
+ * the RESTRICTED notes; and neither the client nor the demo hotel list or detail carries any of the new
+ * fields yet (Slice 12), nor the coordinates.
  */
 describe("Hotel catalogue fields (e2e)", () => {
   let app: NestExpressApplication;
@@ -180,19 +184,21 @@ describe("Hotel catalogue fields (e2e)", () => {
     });
   });
 
-  it("keeps every new field off the client hotel detail", async () => {
-    const client = fakePrincipal("client", fakeEntitlements("all_hotels", false));
-    const hotel = await app.get(HotelsService).get(client, hotelId);
-    expect(hotel.name).toBe("E2E Catalogue Hotel");
-    for (const field of [
-      "nameAliases",
-      "bookingNotes",
-      "mapsUrl",
-      "postalCode",
-      "minNights",
-      "cuisines",
-    ]) {
-      expect(hotel).not.toHaveProperty(field);
+  it("keeps every new field and the coordinates off the client hotel list and detail, a demo's too", async () => {
+    await patch({ demoVisible: true }).expect(200);
+    const hotels = app.get(HotelsService);
+    const principals = [
+      fakePrincipal("client", fakeEntitlements("all_hotels", false)),
+      fakePrincipal("demo", fakeEntitlements("demo_hotels", true)),
+    ];
+    for (const principal of principals) {
+      const detail = await hotels.get(principal, hotelId);
+      const { items } = await hotels.list(principal, { destinationId, limit: 50 });
+      expect(detail.name).toBe("E2E Catalogue Hotel");
+      expect(items.map((item) => item.id)).toEqual([hotelId]);
+      for (const view of [detail, ...items]) {
+        for (const field of CLIENT_HIDDEN) expect(view).not.toHaveProperty(field);
+      }
     }
   });
 });

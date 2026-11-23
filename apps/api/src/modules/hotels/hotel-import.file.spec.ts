@@ -67,6 +67,21 @@ describe("readHotelImportFile", () => {
     );
   });
 
+  it("refuses a file with the header but no hotel rows, blank lines not counting as one", () => {
+    for (const bytes of [
+      file("destinationSlug,name"),
+      file("destinationSlug,name", ",", " , ", ""),
+    ]) {
+      expect(() => readHotelImportFile(bytes)).toThrow(
+        expect.objectContaining({
+          code: "validation_failed",
+          status: 400,
+          details: [{ path: "file", message: "The file has no hotel rows." }],
+        }),
+      );
+    }
+  });
+
   it("refuses a file of more lines than any import needs before splitting it into rows", () => {
     const lines = new TextEncoder().encode(`destinationSlug,name${"\n".repeat(200_000)}`);
     expect(() => readHotelImportFile(lines)).toThrow(/more than 100000 lines/);

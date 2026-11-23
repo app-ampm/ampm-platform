@@ -10,16 +10,17 @@ const PREFIX = "e2e-verify-";
 const DAY = 24 * 60 * 60 * 1000;
 
 /**
- * Recording a verification through the staff route (Module C; AC-04.3; plan §6.2): the server sets its
- * next_due_at from configuration `hotel.verification_policy` (90 days by default), the hotel's
- * last_verified_at follows its newest verification in the same transaction, a backdated record never moves
- * it back, the booking terms' `policies` group is accepted, and a caller cannot set the due date. Every
- * date stays inside the freshness window, so the freshness sweep's suite is unaffected.
+ * Recording a verification through the staff route (Module C; AC-04.3; plan §6.2), as the Hotel team: the
+ * server sets its next_due_at from configuration `hotel.verification_policy` (90 days by default), the
+ * hotel's last_verified_at follows its newest verification in the same transaction, a backdated record
+ * never moves it back, the booking terms' `policies` group is accepted, and a caller cannot set the due
+ * date. Every date stays inside the freshness window, so the freshness sweep's suite is unaffected.
  */
 describe("Hotel verification dates (e2e)", () => {
   let app: NestExpressApplication;
   let prisma: PrismaService;
   let admin = "";
+  let hotelTeam = "";
   let hotelId = "";
 
   async function removeFixtures(): Promise<void> {
@@ -42,7 +43,7 @@ describe("Hotel verification dates (e2e)", () => {
   const record = (body: object) =>
     http()
       .post(`/hotels-admin/hotels/${hotelId}/verifications`)
-      .set("Authorization", admin)
+      .set("Authorization", hotelTeam)
       .send(body);
   const lastVerifiedAt = async () =>
     (
@@ -55,6 +56,7 @@ describe("Hotel verification dates (e2e)", () => {
     prisma = app.get(PrismaService);
     await removeFixtures();
     admin = `Bearer ${await mint("local:admin")}`;
+    hotelTeam = `Bearer ${await mint("local:ht")}`;
     const destination = await http()
       .post("/hotels-admin/destinations")
       .set("Authorization", admin)
