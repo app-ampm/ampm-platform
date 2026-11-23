@@ -1,33 +1,44 @@
 import { coupleTitle, type LeadConvertRequest } from "@ampm/core";
 
+import type { CoupleDraft } from "@/components/couple-fields";
+
 /*
  * Pure form logic for the Convert card (TW-11): the lead's email becomes the primary contact, and the
- * couple's names, when Sales knows them, go with it so the new client is named after the couple (D-158).
+ * couple (bride and groom with their fathers), when Sales knows them, goes with it; both names name the
+ * new client after the couple (D-158).
  */
 
-export interface ConvertCoupleDraft {
-  readonly brideName: string;
-  readonly groomName: string;
-}
+export type ConvertCoupleDraft = CoupleDraft;
 
-export const EMPTY_COUPLE: ConvertCoupleDraft = { brideName: "", groomName: "" };
+export const EMPTY_COUPLE: ConvertCoupleDraft = {
+  brideName: "",
+  brideFatherName: "",
+  groomName: "",
+  groomFatherName: "",
+};
+
+const COUPLE_FIELDS: readonly (keyof ConvertCoupleDraft)[] = [
+  "brideName",
+  "brideFatherName",
+  "groomName",
+  "groomFatherName",
+];
 
 /**
  * The convert body: the contact's email (a decision maker), plus each of the couple's names that was
- * typed; an empty box is left out.
+ * typed, trimmed; an empty box is left out.
  *
  * @example
- * buildConvertRequest("a@example.com", { brideName: "Priya", groomName: "" });
+ * buildConvertRequest("a@example.com", { ...EMPTY_COUPLE, brideName: "Priya" });
  * // { primaryContact: { email: "a@example.com", isDecisionMaker: true }, brideName: "Priya" }
  */
 export function buildConvertRequest(email: string, couple: ConvertCoupleDraft): LeadConvertRequest {
-  const brideName = couple.brideName.trim();
-  const groomName = couple.groomName.trim();
-  return {
-    primaryContact: { email, isDecisionMaker: true },
-    ...(brideName === "" ? {} : { brideName }),
-    ...(groomName === "" ? {} : { groomName }),
-  };
+  const body: LeadConvertRequest = { primaryContact: { email, isDecisionMaker: true } };
+  for (const field of COUPLE_FIELDS) {
+    const value = couple[field].trim();
+    if (value !== "") body[field] = value;
+  }
+  return body;
 }
 
 /** What the card says under the names: the name the client will take, or why the names help. */

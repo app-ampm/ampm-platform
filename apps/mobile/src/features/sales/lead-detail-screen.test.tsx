@@ -4,6 +4,8 @@ import { fireEvent, screen, within } from "../../test/render";
 import { LeadDetailScreen } from "./lead-detail-screen";
 import {
   ACCOUNT_ID,
+  CONVERTED_AT,
+  convertResultFixture,
   LEAD_ID,
   STAFF_USER_ID,
   activityFixture,
@@ -30,40 +32,6 @@ jest.mock("react-native/Libraries/Utilities/useWindowDimensions", () => ({
 }));
 
 const LEAD_PATH = `/crm/leads/${LEAD_ID}`;
-const CONVERTED_AT = "2026-11-03T10:00:00Z";
-
-/** What `POST /crm/leads/:id/convert` returns: the account, its primary contact, the invite flag. */
-function convertResult(inviteQueued: boolean) {
-  const account = {
-    id: ACCOUNT_ID,
-    name: "Rohit Malhotra",
-    coupleNames: null,
-    brideName: null,
-    brideFatherName: null,
-    groomName: null,
-    groomFatherName: null,
-    preferredLocations: null,
-    status: "prospect",
-    isDemo: false,
-    leadId: LEAD_ID,
-    primaryContactUserId: null,
-    internalNotes: null,
-    createdAt: CONVERTED_AT,
-    updatedAt: CONVERTED_AT,
-  };
-  const primaryContact = {
-    id: "018f0000-0000-7000-8000-0000000002cc",
-    accountId: ACCOUNT_ID,
-    name: "Rohit Malhotra",
-    relation: "self",
-    phone: null,
-    email: "rohit@example.com",
-    isDecisionMaker: true,
-    userId: null,
-    createdAt: CONVERTED_AT,
-  };
-  return { account, primaryContact, inviteQueued };
-}
 
 type Routes = Parameters<typeof routedFetch>[0];
 
@@ -144,7 +112,7 @@ describe("LeadDetailScreen", () => {
     const routes: Routes = {
       [`${LEAD_PATH}/convert`]: (init) => {
         bodies.push(JSON.parse(String(init?.body)));
-        return ok(convertResult(true));
+        return ok(convertResultFixture(true));
       },
     };
     await renderDetail(detailFetch(leadFixture(), routes));
@@ -154,30 +122,34 @@ describe("LeadDetailScreen", () => {
     ]);
   });
 
-  it("converts with the couple's names, saying the client will be named after them", async () => {
+  it("converts with the couple and their fathers, saying the client will be named after them", async () => {
     const bodies: unknown[] = [];
     const routes: Routes = {
       [`${LEAD_PATH}/convert`]: (init) => {
         bodies.push(JSON.parse(String(init?.body)));
-        return ok(convertResult(true));
+        return ok(convertResultFixture(true));
       },
     };
     await renderDetail(detailFetch(leadFixture(), routes));
     await fireEvent.changeText(await screen.findByTestId("convert-bride-name"), "Priya");
+    await fireEvent.changeText(screen.getByTestId("convert-bride-father"), "Rahul Sharma");
     await fireEvent.changeText(screen.getByTestId("convert-groom-name"), "Rohan");
+    await fireEvent.changeText(screen.getByTestId("convert-groom-father"), "Vikram Malhotra");
     expect(screen.getByText("The client will be named Priya & Rohan.")).toBeOnTheScreen();
     await convertAndReadToast("Converted — invite sent");
     expect(bodies).toEqual([
       {
         primaryContact: { email: "rohit@example.com", isDecisionMaker: true },
         brideName: "Priya",
+        brideFatherName: "Rahul Sharma",
         groomName: "Rohan",
+        groomFatherName: "Vikram Malhotra",
       },
     ]);
   });
 
   it("says when the invite is still pending after the account exists", async () => {
-    const routes: Routes = { [`${LEAD_PATH}/convert`]: () => ok(convertResult(false)) };
+    const routes: Routes = { [`${LEAD_PATH}/convert`]: () => ok(convertResultFixture(false)) };
     await renderDetail(detailFetch(leadFixture(), routes));
     await convertAndReadToast("Converted — invite pending");
   });
@@ -235,8 +207,9 @@ describe("LeadDetailScreen", () => {
     await renderDetail(
       detailFetch(leadFixture(), { [`${LEAD_PATH}/activities`]: () => ok({ items }) }),
     );
+    // The panel renders before its activities load: wait for the first one.
     const timeline = within(await screen.findByTestId("lead-activity"));
-    expect(timeline.getByText("Call")).toBeOnTheScreen();
+    expect(await timeline.findByText("Call")).toBeOnTheScreen();
     expect(timeline.getByText("2 NOV 2026 · 11:30")).toBeOnTheScreen();
     expect(timeline.getByText("Wedding in December 2027, about 250 guests.")).toBeOnTheScreen();
     expect(timeline.getByText("Note")).toBeOnTheScreen();

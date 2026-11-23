@@ -4,7 +4,8 @@ import { useUpdateAccount } from "@ampm/api-client";
 import { isAppError, type AccountDetailView } from "@ampm/core";
 import { Button, Input, Sheet, Stack, useToast } from "@ampm/ui";
 
-import { AccountCoupleFields } from "./account-couple-fields";
+import { CoupleFields } from "@/components/couple-fields";
+
 import {
   buildDetailsUpdate,
   detailsDraftOf,
@@ -133,7 +134,13 @@ export function AccountDetailsSheet({ account, open, onClose }: AccountDetailsSh
     >
       <Stack gap={4}>
         <NameField draft={draft} patch={patch} errors={errors} />
-        <AccountCoupleFields draft={draft} patch={patch} />
+        <CoupleFields
+          couple={draft}
+          onChange={patch}
+          heading="Couple"
+          hint="Once the bride and the groom are both named, the client takes their names."
+          testIDPrefix="account"
+        />
         <NoteFields draft={draft} patch={patch} />
       </Stack>
     </Sheet>

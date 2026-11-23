@@ -9,14 +9,26 @@ describe("buildConvertRequest", () => {
   });
 
   it("sends each typed name trimmed, and leaves a blank one out", () => {
-    expect(buildConvertRequest(EMAIL, { brideName: " Priya ", groomName: "  " })).toEqual({
+    const brideOnly = { ...EMPTY_COUPLE, brideName: " Priya ", groomName: "  " };
+    expect(buildConvertRequest(EMAIL, brideOnly)).toEqual({
       primaryContact: CONTACT,
       brideName: "Priya",
     });
-    expect(buildConvertRequest(EMAIL, { brideName: "Priya", groomName: "Arjun" })).toEqual({
+  });
+
+  it("sends the fathers with the couple", () => {
+    const couple = {
+      brideName: "Priya",
+      brideFatherName: " Rahul Sharma ",
+      groomName: "Arjun",
+      groomFatherName: "Vikram Mehta",
+    };
+    expect(buildConvertRequest(EMAIL, couple)).toEqual({
       primaryContact: CONTACT,
       brideName: "Priya",
+      brideFatherName: "Rahul Sharma",
       groomName: "Arjun",
+      groomFatherName: "Vikram Mehta",
     });
   });
 });
@@ -24,11 +36,11 @@ describe("buildConvertRequest", () => {
 describe("convertCoupleHint", () => {
   it("says the names are optional until both are typed", () => {
     expect(convertCoupleHint(EMPTY_COUPLE)).toMatch(/^Optional/);
-    expect(convertCoupleHint({ brideName: "Priya", groomName: "" })).toMatch(/^Optional/);
+    expect(convertCoupleHint({ ...EMPTY_COUPLE, brideName: "Priya" })).toMatch(/^Optional/);
   });
 
   it("names the client the couple will name", () => {
-    expect(convertCoupleHint({ brideName: "Priya", groomName: "Arjun" })).toBe(
+    expect(convertCoupleHint({ ...EMPTY_COUPLE, brideName: "Priya", groomName: "Arjun" })).toBe(
       "The client will be named Priya & Arjun.",
     );
   });

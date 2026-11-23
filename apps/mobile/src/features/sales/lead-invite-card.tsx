@@ -4,8 +4,14 @@ import { useConvertLead } from "@ampm/api-client";
 import { isAppError, type LeadConvertRequest, type LeadView } from "@ampm/core";
 import { Button, Callout, Card, Stack, Text, useToast } from "@ampm/ui";
 
-import { LeadConvertCouple } from "./lead-convert-couple";
-import { buildConvertRequest, EMPTY_COUPLE, type ConvertCoupleDraft } from "./lead-convert.form";
+import { CoupleFields } from "@/components/couple-fields";
+
+import {
+  buildConvertRequest,
+  convertCoupleHint,
+  EMPTY_COUPLE,
+  type ConvertCoupleDraft,
+} from "./lead-convert.form";
 import { LeadInviteEmail } from "./lead-invite-email";
 import { useCanUpdateLead } from "./use-can-update-lead";
 
@@ -43,7 +49,8 @@ function useConvertWithToast(leadId: string) {
 
 /**
  * The screen's one gold action: convert creates the client account and queues the portal invite to
- * the lead's email. The couple's names, when Sales knows them, name the new client after the couple.
+ * the lead's email. The couple (bride and groom with their fathers), when Sales knows them, goes with
+ * it, and both names name the new client after the couple.
  */
 function ConvertAction({ leadId, email, onChangeEmail }: ConvertProps) {
   const [couple, setCouple] = useState<ConvertCoupleDraft>(EMPTY_COUPLE);
@@ -51,7 +58,13 @@ function ConvertAction({ leadId, email, onChangeEmail }: ConvertProps) {
   return (
     <Stack gap={3.5}>
       <Text variant="bodySmall">{`Creates the client account and invites ${email} to the client portal.`}</Text>
-      <LeadConvertCouple couple={couple} onChange={setCouple} disabled={convert.isPending} />
+      <CoupleFields
+        couple={couple}
+        onChange={(next) => setCouple((prev) => ({ ...prev, ...next }))}
+        hint={convertCoupleHint(couple)}
+        disabled={convert.isPending}
+        testIDPrefix="convert"
+      />
       <Button
         fullWidth
         loading={convert.isPending}

@@ -120,7 +120,7 @@ describe("Lead conversion (e2e)", () => {
     expect(lead.convertedAt).not.toBeNull();
   });
 
-  it("names the new client after the couple when Sales gives the bride and groom (D-158)", async () => {
+  it("names the new client after the couple when Sales gives the bride and groom, fathers kept (D-158)", async () => {
     const coupleLead = await createLead("Couple", "9876511005");
     const res = await http()
       .post(`/crm/leads/${coupleLead}/convert`)
@@ -128,7 +128,9 @@ describe("Lead conversion (e2e)", () => {
       .send({
         accountName: `${TAG} Mehta`,
         brideName: "Riya",
+        brideFatherName: "Anil Sharma",
         groomName: "Kabir",
+        groomFatherName: "Vikram Mehta",
         primaryContact: { email: `${EMAIL_PREFIX}-couple@example.com` },
       })
       .expect(201);
@@ -136,8 +138,9 @@ describe("Lead conversion (e2e)", () => {
       name: "Riya & Kabir",
       coupleNames: "Riya & Kabir",
       brideName: "Riya",
+      brideFatherName: "Anil Sharma",
       groomName: "Kabir",
-      brideFatherName: null,
+      groomFatherName: "Vikram Mehta",
     });
 
     // One name alone keeps the lead's name (or the one Sales typed) and records that name.
@@ -151,7 +154,9 @@ describe("Lead conversion (e2e)", () => {
       name: `${TAG} Bride only`,
       coupleNames: null,
       brideName: "Meera",
+      brideFatherName: null,
       groomName: null,
+      groomFatherName: null,
     });
   });
 
