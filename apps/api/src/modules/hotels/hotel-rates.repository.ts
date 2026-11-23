@@ -9,7 +9,7 @@ import type {
 
 import { PrismaService } from "../../db/prisma.service.js";
 import { Prisma } from "../../generated/prisma/client.js";
-import { moneyToDecimalString } from "./hotel-rates.money.js";
+import { moneyToDecimalString } from "../../common/money.js";
 
 /*
  * Writes and reads for a hotel's verified pricing (feature 9.2). Owns the money<->Decimal mapping and the

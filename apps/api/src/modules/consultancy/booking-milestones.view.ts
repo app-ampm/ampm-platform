@@ -1,6 +1,6 @@
 import type { BookingMilestoneClientView, BookingMilestoneStaffView } from "@ampm/core";
 
-import { toClientMoney } from "./booking-milestones.money.js";
+import { toClientMoney } from "../../common/money.js";
 import type { BookingMilestoneRow } from "./booking-milestones.repository.js";
 
 /**

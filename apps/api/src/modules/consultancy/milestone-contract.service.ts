@@ -4,7 +4,7 @@ import { errors, type BookingMilestoneStaffView, type DocumentLinkView } from "@
 import type { Access } from "../../common/request-context.js";
 import type { Prisma } from "../../generated/prisma/client.js";
 import { AuditService } from "../../policy/audit.service.js";
-import type { Principal } from "../../policy/principal.types.js";
+import { type Principal, staffId } from "../../policy/principal.types.js";
 import type { DocumentOwner } from "../documents/documents.repository.js";
 import { DocumentsService } from "../documents/documents.service.js";
 import { assertMilestoneChanged, milestoneScope } from "./booking-milestones.helpers.js";
@@ -14,7 +14,6 @@ import {
 } from "./booking-milestones.repository.js";
 import { toBookingMilestoneStaffView } from "./booking-milestones.view.js";
 import { EnquiriesRepository } from "./enquiries.repository.js";
-import { staffId } from "./enquiries.helpers.js";
 
 /** The owner a milestone's documents are filed under (polymorphic documents.owner_type/owner_id). */
 const OWNER_TYPE = "booking_milestone";

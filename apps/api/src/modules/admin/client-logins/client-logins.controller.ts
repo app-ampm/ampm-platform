@@ -12,16 +12,11 @@ import { z } from "zod";
 
 import { ZodBody, ZodParams } from "../../../common/zod.js";
 import { CurrentPrincipal, RequirePermission, SelfAudited } from "../../../policy/decorators.js";
-import type { Principal } from "../../../policy/principal.types.js";
+import { type Principal, staffId } from "../../../policy/principal.types.js";
 import { ClientLoginsService } from "./client-logins.service.js";
 
 const projectParam = z.object({ projectId: uuid });
 const projectUserParam = z.object({ projectId: uuid, userId: uuid });
-
-function staffId(principal: Principal): string {
-  if (principal.type !== "staff") throw new Error("a staff principal is required");
-  return principal.userId;
-}
 
 /**
  * Client-login administration (Module A, feature 5.3). Scoped to one wedding by the projectParam:

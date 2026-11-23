@@ -1,12 +1,12 @@
 import type { SubscriptionReportRow } from "@ampm/core";
 
-import { toClientMoney } from "./money.js";
+import { toClientMoney } from "../../../common/money.js";
 import type { SubscriptionReportDbRow } from "./subscription-report.repository.js";
 
 /**
  * A subscription as the §5.16 report shows it to SA, SM and FA (D-127). Built field by field from the
  * report's own row, so nothing outside the strict `subscriptionReportRow` contract can reach Sales. The
- * amount is the plan's price, through the one numeric→paise serialiser (money.ts).
+ * amount is the plan's price, through the one numeric→paise serialiser (common/money.ts).
  */
 export function toSubscriptionReportRow(row: SubscriptionReportDbRow): SubscriptionReportRow {
   return {

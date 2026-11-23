@@ -14,17 +14,12 @@ import { z } from "zod";
 
 import { ZodBody, ZodParams } from "../../../common/zod.js";
 import { CurrentPrincipal, RequirePermission, SelfAudited } from "../../../policy/decorators.js";
-import type { Principal } from "../../../policy/principal.types.js";
+import { type Principal, staffId } from "../../../policy/principal.types.js";
 import { RolesService } from "./roles.service.js";
 
 const idParam = z.object({ id: uuid });
 const userParam = z.object({ userId: uuid });
 const userRoleParam = z.object({ userId: uuid, roleId: uuid });
-
-function staffId(principal: Principal): string {
-  if (principal.type !== "staff") throw new Error("a staff principal is required");
-  return principal.userId;
-}
 
 /**
  * Super-Admin role administration (D-036, permission-matrix §5.1). All of it is SA-only

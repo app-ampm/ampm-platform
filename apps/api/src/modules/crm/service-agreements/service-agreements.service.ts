@@ -15,7 +15,7 @@ import type { Access } from "../../../common/request-context.js";
 import { PrismaService } from "../../../db/prisma.service.js";
 import { recordScope } from "../../../db/scoping.js";
 import { AuditService } from "../../../policy/audit.service.js";
-import { type Principal } from "../../../policy/principal.types.js";
+import { type Principal, staffId } from "../../../policy/principal.types.js";
 import { PrincipalService } from "../../../policy/principal.service.js";
 import { moneyToDecimal } from "./service-agreements.money.js";
 import {
@@ -292,10 +292,4 @@ function buildTermsPatch(request: ServiceAgreementUpdateRequest): AgreementTerms
   if (request.feeStructure !== undefined) patch.feeStructure = request.feeStructure;
   if (request.termsVersion !== undefined) patch.termsVersion = request.termsVersion;
   return patch;
-}
-
-/** The acting staff user's id; a non-staff principal never reaches these guarded routes. */
-function staffId(principal: Principal): string {
-  if (principal.type !== "staff") throw new Error("a staff principal is required");
-  return principal.userId;
 }

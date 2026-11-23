@@ -10,6 +10,7 @@ import {
 } from "@ampm/core";
 
 import { requestContext, type RequestContext } from "../../../common/request-context.js";
+import { findAccountIdForUser } from "../../../db/account-lookup.js";
 import { PrismaService } from "../../../db/prisma.service.js";
 import { ENV, type Env } from "../../../env.js";
 import { AuditService } from "../../../policy/audit.service.js";
@@ -138,12 +139,8 @@ export class PortalService {
 
   /** The client's own account, derived from their contact row — never trusted from the request. */
   private async accountIdForUser(userId: string): Promise<string> {
-    const contact = await this.prisma.accountContact.findFirst({
-      where: { userId, deletedAt: null },
-      orderBy: { createdAt: "asc" },
-      select: { accountId: true },
-    });
-    if (!contact) throw errors.notFound(); // no account for this client → denial equals absence
-    return contact.accountId;
+    const accountId = await findAccountIdForUser(this.prisma, userId);
+    if (accountId === null) throw errors.notFound(); // no account for this client → denial equals absence
+    return accountId;
   }
 }

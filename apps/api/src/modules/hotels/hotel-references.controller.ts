@@ -22,7 +22,7 @@ import {
   RequirePermission,
   SelfAudited,
 } from "../../policy/decorators.js";
-import type { Principal } from "../../policy/principal.types.js";
+import { type Principal, staffId } from "../../policy/principal.types.js";
 import { HotelReferenceConsentService } from "./hotel-reference-consent.service.js";
 import { HotelReferencesService } from "./hotel-references.service.js";
 
@@ -30,11 +30,6 @@ const hotelParam = z.object({ hotelId: uuid });
 type HotelParam = z.infer<typeof hotelParam>;
 const referenceParam = z.object({ hotelId: uuid, referenceId: uuid });
 type ReferenceParam = z.infer<typeof referenceParam>;
-
-function staffId(principal: Principal): string {
-  if (principal.type !== "staff") throw new Error("a staff principal is required");
-  return principal.userId;
-}
 
 /**
  * Previous-wedding references for a hotel (HT/SA; feature 9.3), under the `hotels-admin` prefix alongside

@@ -14,9 +14,8 @@ import { z } from "zod";
 
 import { ZodBody, ZodParams } from "../../../common/zod.js";
 import { CurrentPrincipal, RequirePermission, SelfAudited } from "../../../policy/decorators.js";
-import type { Principal } from "../../../policy/principal.types.js";
+import { type Principal, staffId } from "../../../policy/principal.types.js";
 import { AccountContactsService } from "./account-contacts.service.js";
-import { staffId } from "./accounts.controller.js";
 
 const accountParams = z.object({ accountId: uuid });
 const contactParams = z.object({ accountId: uuid, contactId: uuid });

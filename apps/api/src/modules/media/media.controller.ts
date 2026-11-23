@@ -28,7 +28,7 @@ import {
   RequirePermission,
   SelfAudited,
 } from "../../policy/decorators.js";
-import type { Principal } from "../../policy/principal.types.js";
+import { type Principal, staffId } from "../../policy/principal.types.js";
 import { MediaService } from "./media.service.js";
 
 const mediaParam = z.object({ mediaId: uuid });
@@ -41,11 +41,6 @@ const blobQuery = z.object({
   sig: z.string().min(1),
 });
 type BlobQuery = z.infer<typeof blobQuery>;
-
-function staffId(principal: Principal): string {
-  if (principal.type !== "staff") throw new Error("a staff principal is required");
-  return principal.userId;
-}
 
 /**
  * Gallery media (Module N, feature 9.3). Staff CRUD + upload + a minted download link are

@@ -4,6 +4,7 @@ import type { HotelStatus } from "@ampm/core";
 import { PrismaService } from "../../db/prisma.service.js";
 import { Prisma } from "../../generated/prisma/client.js";
 import { facilitiesInput } from "./hotel-facilities.js";
+import { CONTACT_SELECT, ROOM_SELECT, VENUE_SELECT } from "./hotel-subresources.repository.js";
 
 /*
  * The STAFF hotel catalogue repository (HT/SA; feature 9.1). Unlike the client discovery repository,
@@ -47,41 +48,6 @@ const DESTINATION_SELECT = {
   description: true,
   status: true,
   publicVisible: true,
-} as const;
-
-const ROOM_SELECT = {
-  id: true,
-  hotelId: true,
-  name: true,
-  roomCount: true,
-  maxOccupancy: true,
-  sizeSqm: true,
-  facilities: true,
-  description: true,
-} as const;
-
-const VENUE_SELECT = {
-  id: true,
-  hotelId: true,
-  name: true,
-  venueType: true,
-  isIndoor: true,
-  areaSqm: true,
-  capacityBanquet: true,
-  capacityTheatre: true,
-  capacityReception: true,
-  facilities: true,
-  description: true,
-} as const;
-
-const CONTACT_SELECT = {
-  id: true,
-  hotelId: true,
-  name: true,
-  roleTitle: true,
-  phone: true,
-  email: true,
-  isPrimary: true,
 } as const;
 
 const STAFF_HOTEL_DETAIL_SELECT = {

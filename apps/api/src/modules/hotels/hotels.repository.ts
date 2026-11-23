@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import type { HotelListQuery, HotelReach, SavedHotelListQuery } from "@ampm/core";
 
+import { findAccountIdForUser } from "../../db/account-lookup.js";
 import { PrismaService } from "../../db/prisma.service.js";
 import { Prisma } from "../../generated/prisma/client.js";
 
@@ -247,16 +248,11 @@ export class HotelsRepository {
 
   /**
    * The caller's own account from their contact row — never from the request (security.md). This reads a
-   * CRM table (account_contacts) from Module C: a deliberate, recorded cross-module shortcut (D-063). The
-   * same lookup lives in PortalService; both are to move onto the principal when consolidated.
+   * CRM table (account_contacts) from Module C: a deliberate, recorded cross-module shortcut (D-063),
+   * through the one shared lookup (db/account-lookup.ts).
    */
   async accountIdForUser(userId: string): Promise<string | null> {
-    const contact = await this.prisma.accountContact.findFirst({
-      where: { userId, deletedAt: null },
-      orderBy: { createdAt: "asc" },
-      select: { accountId: true },
-    });
-    return contact ? contact.accountId : null;
+    return findAccountIdForUser(this.prisma, userId);
   }
 
   /** Upsert the shortlist row (unique on account_id + hotel_id); a re-save clears a prior soft-delete. */

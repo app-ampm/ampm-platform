@@ -9,13 +9,6 @@ import type { HotelProposalStatus } from "@ampm/core";
  * rule lives in the service's draft-only edit guard, separate from these transition rules.
  */
 
-/** A decided or superseded proposal is terminal: no further status moves. */
-export const TERMINAL_PROPOSAL_STATUSES: readonly HotelProposalStatus[] = [
-  "accepted",
-  "declined",
-  "superseded",
-];
-
 const PROPOSAL_TRANSITIONS: Record<HotelProposalStatus, readonly HotelProposalStatus[]> = {
   draft: ["shared"],
   shared: ["revision_requested", "accepted", "declined", "superseded"],
@@ -24,11 +17,6 @@ const PROPOSAL_TRANSITIONS: Record<HotelProposalStatus, readonly HotelProposalSt
   declined: [],
   superseded: [],
 };
-
-/** True when a proposal in `status` is terminal and so admits no further status move. */
-export function isTerminalProposal(status: HotelProposalStatus): boolean {
-  return TERMINAL_PROPOSAL_STATUSES.includes(status);
-}
 
 /** True when moving a proposal from `from` to `to` is a defined move (never a same-status no-op). */
 export function isProposalTransitionAllowed(

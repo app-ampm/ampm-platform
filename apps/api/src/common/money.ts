@@ -6,24 +6,24 @@ import {
   type Money,
 } from "@ampm/core";
 
-import { Prisma } from "../../generated/prisma/client.js";
+import { Prisma } from "../generated/prisma/client.js";
 
-/**
- * Two money columns, two audiences (A-4, security.md). `client_total_amount` is CLIENT money;
- * `internal_total_amount` is RESTRICTED-FINANCE. Each numeric(14,2) rupee column converts through its
- * OWN branded helper, so an internal amount is built as an InternalAmount and can never satisfy a
- * ClientAmount slot (e.g. MoneyText at the UI). Decimal → number, scale, one round: no float dust on the
- * money path (data.md §1). The derived margin is computed in integer paise so the subtraction is exact.
+/*
+ * The one place a `numeric(14,2)` rupee column meets the wire's money shape (`{ minor, currency }`, in
+ * whole paise). Two audiences, two brands (A-4, security.md): client-facing columns convert through
+ * `toClientMoney` and internal ones (RESTRICTED-FINANCE) through `toInternalMoney`, so an internal
+ * amount is built as an InternalAmount and can never satisfy a ClientAmount slot (MoneyText at the UI).
+ * Decimal → number, scale, one round: no floating-point dust on the money path (data.md §1).
  */
 
 const paise = (amount: Prisma.Decimal): number => Math.round(amount.toNumber() * 100);
 
-/** client_total_amount / a client-visible line amount → CLIENT money (paise). */
+/** A client-facing rupee column → CLIENT money in paise (Rs 25,000.00 → 2,500,000). */
 export function toClientMoney(amount: Prisma.Decimal): ClientAmount {
   return clientAmount(paise(amount));
 }
 
-/** internal_total_amount → INTERNAL money (paise). Never reaches a client view. */
+/** An internal rupee column → INTERNAL money in paise. Never reaches a client view. */
 export function toInternalMoney(amount: Prisma.Decimal): InternalAmount {
   return internalAmount(paise(amount));
 }

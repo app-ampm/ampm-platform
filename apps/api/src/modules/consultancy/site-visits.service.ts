@@ -15,11 +15,10 @@ import type { Access } from "../../common/request-context.js";
 import { PrismaService } from "../../db/prisma.service.js";
 import { recordScope } from "../../db/scoping.js";
 import { AuditService } from "../../policy/audit.service.js";
-import { type Principal, toPolicyPrincipal } from "../../policy/principal.types.js";
+import { type Principal, staffId, toPolicyPrincipal } from "../../policy/principal.types.js";
 import { Prisma } from "../../generated/prisma/client.js";
 import { EnquiriesRepository, type EnquiryRow } from "./enquiries.repository.js";
 import { EnquiriesService } from "./enquiries.service.js";
-import { staffId } from "./enquiries.helpers.js";
 import { isEnquiryTransitionDefined } from "./enquiry-status.js";
 import {
   type SiteVisitEditPatch,

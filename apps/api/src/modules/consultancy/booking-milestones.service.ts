@@ -15,7 +15,7 @@ import { PrismaService } from "../../db/prisma.service.js";
 import { recordScope } from "../../db/scoping.js";
 import { EventBus } from "../../jobs/event-bus.js";
 import { AuditService } from "../../policy/audit.service.js";
-import type { Principal } from "../../policy/principal.types.js";
+import { type Principal, staffId } from "../../policy/principal.types.js";
 import { milestonePaid } from "./booking-milestones.events.js";
 import {
   assertContractAttached,
@@ -34,7 +34,6 @@ import {
 import { toBookingMilestoneStaffView } from "./booking-milestones.view.js";
 import { isMilestoneTransitionAllowed, isTerminalMilestone } from "./booking-milestone-status.js";
 import { EnquiriesRepository, type EnquiryRow } from "./enquiries.repository.js";
-import { staffId } from "./enquiries.helpers.js";
 
 type Tx = Parameters<Parameters<PrismaService["$transaction"]>[0]>[0];
 

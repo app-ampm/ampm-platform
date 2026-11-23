@@ -43,7 +43,7 @@ import {
   RequirePermission,
   SelfAudited,
 } from "../../policy/decorators.js";
-import type { Principal } from "../../policy/principal.types.js";
+import { type Principal, staffId } from "../../policy/principal.types.js";
 import { HotelImportService } from "./hotel-import.service.js";
 import { HotelSubresourcesService } from "./hotel-subresources.service.js";
 import { HotelsAdminService } from "./hotels-admin.service.js";
@@ -58,11 +58,6 @@ const contactParam = z.object({ hotelId: uuid, contactId: uuid });
 type ContactParam = z.infer<typeof contactParam>;
 const destinationParam = z.object({ destinationId: uuid });
 type DestinationParam = z.infer<typeof destinationParam>;
-
-function staffId(principal: Principal): string {
-  if (principal.type !== "staff") throw new Error("a staff principal is required");
-  return principal.userId;
-}
 
 /**
  * The staff hotel catalogue (HT/SA; feature 9.1). A separate prefix from the client discovery controller

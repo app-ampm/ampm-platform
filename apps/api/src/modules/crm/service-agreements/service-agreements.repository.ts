@@ -1,6 +1,11 @@
 import { Injectable } from "@nestjs/common";
 import type { ServiceAgreementListQuery } from "@ampm/core";
 
+import {
+  clientAccountExists,
+  findAccountClientUserIds,
+  findAccountIdForUser,
+} from "../../../db/account-lookup.js";
 import { PrismaService } from "../../../db/prisma.service.js";
 import {
   Prisma,
@@ -80,34 +85,21 @@ export class ServiceAgreementsRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   /** The caller's own account from their contact row — never from the request (security.md); the D-063
-   *  cross-table shortcut the CRM/consultancy services share until a shared account accessor lands. */
+   *  cross-table shortcut, through the lookup the CRM/consultancy repositories share (db/account-lookup.ts). */
   async accountIdForUser(userId: string): Promise<string | null> {
-    const contact = await this.prisma.accountContact.findFirst({
-      where: { userId, deletedAt: null },
-      orderBy: { createdAt: "asc" },
-      select: { accountId: true },
-    });
-    return contact ? contact.accountId : null;
+    return findAccountIdForUser(this.prisma, userId);
   }
 
   /** The client users (portal logins) on an account, for the entitlement-cache bust + a status notice. */
   async accountClientUserIds(accountId: string): Promise<string[]> {
-    const contacts = await this.prisma.accountContact.findMany({
-      where: { accountId, userId: { not: null }, deletedAt: null },
-      select: { userId: true },
-    });
-    return contacts.flatMap((contact) => (contact.userId ? [contact.userId] : []));
+    return findAccountClientUserIds(this.prisma, accountId);
   }
 
   /** Whether a live (non-soft-deleted) client account exists, so a create with a bad `account_id` is a
    *  validation error at the edge rather than a dangling-FK 500. A sibling CRM read, like
-   *  `accountIdForUser` above (both retire when account resolution moves onto a shared accessor). */
+   *  `accountIdForUser` above, through the same shared lookup. */
   async accountExists(accountId: string): Promise<boolean> {
-    const row = await this.prisma.clientAccount.findFirst({
-      where: { id: accountId, deletedAt: null },
-      select: { id: true },
-    });
-    return row !== null;
+    return clientAccountExists(this.prisma, accountId);
   }
 
   /** The service_type's category (and existence), to set the agreement's subject and reject a bad id. */

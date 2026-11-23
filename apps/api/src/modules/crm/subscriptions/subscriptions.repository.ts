@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common";
 
+import { clientAccountExists, findAccountClientUserIds } from "../../../db/account-lookup.js";
 import { PrismaService } from "../../../db/prisma.service.js";
 import {
   Prisma,
@@ -174,20 +175,12 @@ export class SubscriptionsRepository {
 
   /** The client user ids attached to an account, so the activation can invalidate their entitlements. */
   async accountClientUserIds(accountId: string): Promise<string[]> {
-    const contacts = await this.prisma.accountContact.findMany({
-      where: { accountId, deletedAt: null, userId: { not: null } },
-      select: { userId: true },
-    });
-    return contacts.map((contact) => contact.userId).filter((id): id is string => id !== null);
+    return findAccountClientUserIds(this.prisma, accountId);
   }
 
   /** Does a live client account exist? Guards a purchase against a bad or deleted account id. */
   async accountExists(accountId: string): Promise<boolean> {
-    const account = await this.prisma.clientAccount.findFirst({
-      where: { id: accountId, deletedAt: null },
-      select: { id: true },
-    });
-    return account !== null;
+    return clientAccountExists(this.prisma, accountId);
   }
 
   /** Write the basic wedding details a purchase captured (§0a) onto the account (same CRM module). */
