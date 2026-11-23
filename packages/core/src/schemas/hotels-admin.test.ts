@@ -5,7 +5,10 @@ import {
   hotelContactCreateRequest,
   hotelCreateRequest,
   hotelUpdateRequest,
+  roomCategoryCreateRequest,
+  roomCategoryUpdateRequest,
   venueCreateRequest,
+  venueUpdateRequest,
 } from "./hotels-admin.js";
 
 const UUID = "0192f1a0-0000-7000-8000-000000000000";
@@ -63,16 +66,74 @@ describe("hotelUpdateRequest", () => {
   });
 });
 
-describe("venueCreateRequest", () => {
-  it("requires a known venueType and an isIndoor flag", () => {
-    expect(venueCreateRequest.safeParse({ name: "Lawn A", isIndoor: false }).success).toBe(false);
+describe("roomCategoryCreateRequest and roomCategoryUpdateRequest", () => {
+  const room = { name: "Synthetic Lake View Suite" };
+
+  it("takes the D-178 room fields", () => {
+    const parsed = roomCategoryCreateRequest.parse({
+      ...room,
+      unitType: "suite",
+      viewLabel: "Lake",
+      bedConfiguration: "One king bed",
+      sizeSqft: 650,
+    });
+    expect(parsed.unitType).toBe("suite");
+  });
+
+  it("holds the occupancy to 1..100 when stated, and the size to its bounds", () => {
+    expect(roomCategoryCreateRequest.safeParse({ ...room, maxOccupancy: 0 }).success).toBe(false);
+    expect(roomCategoryCreateRequest.safeParse({ ...room, maxOccupancy: 1 }).success).toBe(true);
+    expect(roomCategoryCreateRequest.safeParse({ ...room, maxOccupancy: 101 }).success).toBe(false);
+    expect(roomCategoryCreateRequest.safeParse({ ...room, maxOccupancy: null }).success).toBe(true);
+    expect(roomCategoryCreateRequest.safeParse({ ...room, sizeSqm: 100_001 }).success).toBe(false);
+  });
+
+  it("holds the room count to a hotel's total rooms, so no write overflows the integer column", () => {
+    expect(roomCategoryCreateRequest.safeParse({ ...room, roomCount: 100_000 }).success).toBe(true);
+    expect(roomCategoryCreateRequest.safeParse({ ...room, roomCount: 100_001 }).success).toBe(
+      false,
+    );
+    expect(roomCategoryUpdateRequest.safeParse({ roomCount: 3_000_000_000 }).success).toBe(false);
+  });
+
+  it("patches one field at a time and refuses an empty patch", () => {
+    expect(roomCategoryUpdateRequest.safeParse({ sizeSqft: 700 }).success).toBe(true);
+    expect(roomCategoryUpdateRequest.safeParse({}).success).toBe(false);
+  });
+});
+
+describe("venueCreateRequest and venueUpdateRequest", () => {
+  const venue = { name: "Synthetic Lawn", venueType: "lawn", setting: "outdoor" };
+
+  it("requires a known venueType and a setting, and no longer takes isIndoor", () => {
+    expect(venueCreateRequest.safeParse(venue).success).toBe(true);
+    expect(venueCreateRequest.safeParse({ ...venue, venueType: "meadow" }).success).toBe(false);
     expect(
-      venueCreateRequest.safeParse({ name: "Lawn A", venueType: "meadow", isIndoor: false })
-        .success,
+      venueCreateRequest.safeParse({ name: "Synthetic Lawn", venueType: "lawn" }).success,
     ).toBe(false);
-    expect(
-      venueCreateRequest.safeParse({ name: "Lawn A", venueType: "lawn", isIndoor: false }).success,
-    ).toBe(true);
+    expect(venueCreateRequest.safeParse({ ...venue, isIndoor: false }).success).toBe(false);
+  });
+
+  it.each(["terrace", "garden", "amphitheatre", "meeting_room", "lounge"])(
+    "accepts the new venue type %s",
+    (venueType) => {
+      expect(venueCreateRequest.safeParse({ ...venue, venueType }).success).toBe(true);
+    },
+  );
+
+  it("takes a covered, semi-open setting and holds capacities to 100,000", () => {
+    expect(venueCreateRequest.safeParse({ ...venue, setting: "semi_open" }).success).toBe(true);
+    expect(venueCreateRequest.safeParse({ ...venue, capacityBanquet: 100_000 }).success).toBe(true);
+    expect(venueCreateRequest.safeParse({ ...venue, capacityReception: 100_001 }).success).toBe(
+      false,
+    );
+  });
+
+  it("patches the setting but never clears it, and refuses isIndoor", () => {
+    expect(venueUpdateRequest.safeParse({ setting: "indoor" }).success).toBe(true);
+    expect(venueUpdateRequest.safeParse({ setting: null }).success).toBe(false);
+    expect(venueUpdateRequest.safeParse({ isIndoor: true }).success).toBe(false);
+    expect(venueUpdateRequest.safeParse({}).success).toBe(false);
   });
 });
 

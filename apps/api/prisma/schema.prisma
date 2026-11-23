@@ -92,10 +92,14 @@ enum ConfigurationScope {
   project
 }
 
+/// What an import job brings in. The staff hotel imports map core `hotelImportKind` onto it (D-181):
+/// hotels to `hotels`, rooms to `hotel_rooms`, venues to `hotel_venues`; keep the three in step.
 enum ImportType {
   hotels
   guests
   vendors
+  hotel_rooms
+  hotel_venues
 }
 
 enum ImportStatus {
@@ -689,7 +693,11 @@ model Configuration {
   @@map("configurations")
 }
 
-/// `file_document_id` gains its relation when module N (documents) lands.
+/// `file_document_id` gains its relation when module N (documents) lands. A staff hotel import's preview
+/// (D-181) is a `validating` job: `error_report_json` keeps its value-free report, and `plan_json` its
+/// planned rows with their values and version tokens until the preview is applied by its id (`applied`)
+/// or superseded; both clear it. `plan_json` is RESTRICTED-NOTES (a hotels row can carry internal
+/// notes), set by the System, and never selected or returned outside the apply path.
 model ImportJob {
   id              String       @id @default(uuid(7)) @db.Uuid
   importType      ImportType   @map("import_type")
@@ -698,6 +706,7 @@ model ImportJob {
   status          ImportStatus @default(uploaded)
   rowCount        Int?         @map("row_count")
   errorReportJson Json?        @map("error_report_json")
+  planJson        Json?        @map("plan_json") // RESTRICTED-NOTES, System; cleared on apply
 
   createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   createdBy String?   @map("created_by") @db.Uuid
@@ -1211,7 +1220,7 @@ model Hotel {
   cityCentreDistanceKm   Decimal?                  @map("city_centre_distance_km") @db.Decimal(4, 1)
   cityCentreDriveMinutes Int?                      @map("city_centre_drive_minutes")
   accessNotes            String?                   @map("access_notes") @db.Text
-  totalEventSpaceSqm     Int?                      @map("total_event_space_sqm")
+  totalEventSpaceSqm     Int?                      @map("total_event_space_sqm") // derived from sq ft when set (core areaWrite)
   totalEventSpaceSqft    Int?                      @map("total_event_space_sqft")
   weddingBuyoutPolicy    HotelWeddingBuyoutPolicy? @map("wedding_buyout_policy") // INTERNAL
   minRoomsWithoutBuyout  Int?                      @map("min_rooms_without_buyout") // INTERNAL
@@ -1272,7 +1281,10 @@ model SavedHotel {
 }
 
 /// A hotel's internal contacts (data-model.md §5). RESTRICTED-CONTACT: the whole table is staff-only —
-/// clients reach a hotel through AMPM, never directly (permission-matrix §5.3, §7). Feature 9.1.
+/// clients reach a hotel through AMPM, never directly (permission-matrix §5.3, §7). Feature 9.1. Since
+/// Slice 3 (D-178) a hotel has at most one live primary contact, the service demoting the previous one in
+/// the same transaction and the partial unique index `hotel_contacts_hotel_live_primary_key` (raw SQL in
+/// 20261125000000) backing it; the service stores phones in E.164 (core `normaliseHotelPhone`).
 model HotelContact {
   id        String  @id @default(uuid(7)) @db.Uuid
   hotelId   String  @map("hotel_id") @db.Uuid
@@ -1295,17 +1307,39 @@ model HotelContact {
   @@map("hotel_contacts")
 }
 
+/// What a room category is (D-178). Keep in step with core `hotelRoomUnitType`; a null unit type means not
+/// stated.
+enum HotelRoomUnitType {
+  room
+  suite
+  villa
+  cottage
+  tent
+  tent_suite
+  apartment
+  other
+}
+
 /// A category of room a hotel offers, with inventory and occupancy (A-27; data-model.md §5). CLIENT-
 /// visible profile data; a hotel_rate_item prices a category (Module C rate tables, feature 9.2). Feature 9.1.
+/// The field names equal core `roomCategoryRequestFields` (the repository spreads a request into the write;
+/// keep the two in step). The D-178 columns (unit type, view, bed configuration, size in sq ft) reach only
+/// the staff views until Slice 12. `size_sqm` stays canonical, derived from `size_sqft` when that is set
+/// (core `areaWrite`); `max_occupancy` is 1 or more when stated, which a CHECK (raw SQL in 20261125000000)
+/// enforces.
 model HotelRoomCategory {
-  id           String  @id @default(uuid(7)) @db.Uuid
-  hotelId      String  @map("hotel_id") @db.Uuid
-  name         String  @db.VarChar(255)
-  roomCount    Int?    @map("room_count")
-  maxOccupancy Int?    @map("max_occupancy")
-  sizeSqm      Int?    @map("size_sqm")
-  facilities   Json?   @map("facilities_json")
-  description  String? @db.Text
+  id               String             @id @default(uuid(7)) @db.Uuid
+  hotelId          String             @map("hotel_id") @db.Uuid
+  name             String             @db.VarChar(255)
+  roomCount        Int?               @map("room_count")
+  maxOccupancy     Int?               @map("max_occupancy")
+  sizeSqm          Int?               @map("size_sqm")
+  facilities       Json?              @map("facilities_json")
+  description      String?            @db.Text
+  unitType         HotelRoomUnitType? @map("unit_type")
+  viewLabel        String?            @map("view_label") @db.VarChar(255)
+  bedConfiguration String?            @map("bed_configuration") @db.VarChar(255)
+  sizeSqft         Int?               @map("size_sqft")
 
   createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   createdBy String?   @map("created_by") @db.Uuid
@@ -1321,6 +1355,9 @@ model HotelRoomCategory {
   @@map("hotel_room_categories")
 }
 
+/// What kind of space a venue is. Keep in step with core `hotelVenueType`, a client contract enum: a new
+/// value ships the API and the web bundle back to back. Added values are appended, as PostgreSQL's ADD VALUE
+/// places them, so the pickers order the kinds themselves (Other last).
 enum HotelVenueType {
   ballroom
   lawn
@@ -1329,22 +1366,52 @@ enum HotelVenueType {
   courtyard
   beach
   other
+  terrace
+  garden
+  amphitheatre
+  meeting_room
+  lounge
+}
+
+/// Where a venue is (D-178): indoor, outdoor, or covered and semi-open. Keep in step with core
+/// `hotelVenueSetting`.
+enum HotelVenueSetting {
+  indoor
+  outdoor
+  semi_open
 }
 
 /// A function/event venue a hotel offers, with capacities by layout (data-model.md §5). CLIENT-visible
-/// profile data; a hotel_rate_item prices a venue (venue_rental, feature 9.2). Feature 9.1.
+/// profile data; a hotel_rate_item prices a venue (venue_rental, feature 9.2). Feature 9.1. The field
+/// names equal core `venueRequestFields` (the repository spreads a request into the write; keep the two in
+/// step), except `is_indoor`, which no request carries: the service keeps it in step with `setting`, true
+/// only for indoor. `setting` stays nullable with no CHECK against `is_indoor`, because the previous image
+/// and direct inserts write `is_indoor` alone; the staff view reads a null setting from `is_indoor`. The
+/// capacities mean (decision 11): banquet seated at round tables, reception floating, theatre rows of
+/// chairs; a range keeps its maximum in the column and the range in `capacity_notes`. `area_sqm` and
+/// `prefunction_area_sqm` stay canonical, derived from their sq ft when set (core `areaWrite`). The D-178
+/// columns reach only the staff views until Slice 12.
 model HotelVenue {
-  id                String         @id @default(uuid(7)) @db.Uuid
-  hotelId           String         @map("hotel_id") @db.Uuid
-  name              String         @db.VarChar(255)
-  venueType         HotelVenueType @map("venue_type")
-  isIndoor          Boolean        @map("is_indoor")
-  areaSqm           Int?           @map("area_sqm")
-  capacityBanquet   Int?           @map("capacity_banquet")
-  capacityTheatre   Int?           @map("capacity_theatre")
-  capacityReception Int?           @map("capacity_reception")
-  facilities        Json?          @map("facilities_json")
-  description       String?        @db.Text
+  id                  String             @id @default(uuid(7)) @db.Uuid
+  hotelId             String             @map("hotel_id") @db.Uuid
+  name                String             @db.VarChar(255)
+  venueType           HotelVenueType     @map("venue_type")
+  isIndoor            Boolean            @map("is_indoor")
+  areaSqm             Int?               @map("area_sqm")
+  capacityBanquet     Int?               @map("capacity_banquet")
+  capacityTheatre     Int?               @map("capacity_theatre")
+  capacityReception   Int?               @map("capacity_reception")
+  facilities          Json?              @map("facilities_json")
+  description         String?            @db.Text
+  setting             HotelVenueSetting?
+  areaSqft            Int?               @map("area_sqft")
+  lengthM             Decimal?           @map("length_m") @db.Decimal(6, 2)
+  widthM              Decimal?           @map("width_m") @db.Decimal(6, 2)
+  ceilingHeightM      Decimal?           @map("ceiling_height_m") @db.Decimal(6, 2)
+  prefunctionAreaSqm  Int?               @map("prefunction_area_sqm")
+  prefunctionAreaSqft Int?               @map("prefunction_area_sqft")
+  otherLayouts        Json?              @map("other_layouts_json") // core venueOtherLayouts
+  capacityNotes       String?            @map("capacity_notes") @db.Text
 
   createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   createdBy String?   @map("created_by") @db.Uuid

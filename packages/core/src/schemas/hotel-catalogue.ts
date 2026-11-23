@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { isGoogleMapsUrl, MAPS_URL_MAX_LENGTH } from "../hotel-location.js";
+import { hasAtMostDecimals } from "../hotel-units.js";
 
 /*
  * The catalogue's homes for every hotel information form answer and recurring fact-sheet fact (D-178;
@@ -26,9 +27,6 @@ export const HOTEL_CUISINES_MAX = 30;
 
 const distinctIgnoringCase = (values: readonly string[]): boolean =>
   new Set(values.map((value) => value.toLowerCase())).size === values.length;
-
-const atMostOneDecimal = (value: number): boolean =>
-  Math.abs(Math.round(value * 10) - value * 10) < 1e-6;
 
 /**
  * A hotel's other names, as fact sheets and staff spell it (INTERNAL; duplicate hints and imports use them).
@@ -65,13 +63,14 @@ const distanceKm = z
   .number()
   .min(0)
   .max(999.9)
-  .refine(atMostOneDecimal, "At most one decimal place");
+  .refine((value) => hasAtMostDecimals(value, 1), "At most one decimal place");
 const driveMinutes = z.number().int().min(0).max(600);
 
 /**
  * The D-178 fields as a request writes them, each `.nullish()`: absent leaves a value, null clears it. The
  * staff create and update requests and the import row spread them. The postal code's India rule needs the
- * destination's country, so the API checks it (`postalCodeProblem`).
+ * destination's country, so the API checks it (`postalCodeProblem`). A filled `totalEventSpaceSqft` gives
+ * the `totalEventSpaceSqm` at write (core `areaWrite`, Slice 3).
  */
 export const hotelCatalogueRequestFields = {
   parentGroup: shortText.nullish(),

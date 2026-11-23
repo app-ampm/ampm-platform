@@ -438,9 +438,9 @@
     "semantic_hash": "e9f794876d725a7d044d809b6f470d76"
   },
   "packages/core/src/index.ts": {
-    "mtime": 1795466200.6696787,
-    "seen": 1795471715.87392,
-    "ast_hash": "2a1f07566eea684e6841312c27d175a1",
+    "mtime": 1795473740.7195053,
+    "seen": 1795474444.954386,
+    "ast_hash": "264a7b9b4c8f5965f15867aa845c5032",
     "semantic_hash": ""
   },
   "packages/core/tsconfig.json": {
@@ -1740,9 +1740,9 @@
     "semantic_hash": ""
   },
   "packages/core/src/schemas/index.ts": {
-    "mtime": 1795466200.6709397,
-    "seen": 1795471715.8739462,
-    "ast_hash": "e83b2747f5dcb68c63b0ace3d3ea1355",
+    "mtime": 1795473735.585582,
+    "seen": 1795474444.955032,
+    "ast_hash": "dadf812aa371d86ea4448b820843b0c9",
     "semantic_hash": ""
   },
   "packages/core/tsup.config.ts": {
@@ -3966,9 +3966,9 @@
     "semantic_hash": ""
   },
   "packages/core/src/schemas/hotels.ts": {
-    "mtime": 1795395449.8625739,
-    "seen": 1795471715.873944,
-    "ast_hash": "88408a0bfe44ab7ef2575304bbf21395",
+    "mtime": 1795473591.92237,
+    "seen": 1795474444.954999,
+    "ast_hash": "a1087231df99dfd9c42977a0a30094f0",
     "semantic_hash": ""
   },
   "docs/engineering/build-verification-2026-11-01.md": {
@@ -4308,15 +4308,15 @@
     "semantic_hash": ""
   },
   "packages/core/src/schemas/hotels-admin.test.ts": {
-    "mtime": 1795466200.6706705,
-    "seen": 1795471715.873943,
-    "ast_hash": "a14d9363adaae814028a5d853b212ca9",
+    "mtime": 1795475411.6801312,
+    "seen": 1795475620.6962502,
+    "ast_hash": "d92fd91b00336ae267f2d5ac27416d37",
     "semantic_hash": ""
   },
   "packages/core/src/schemas/hotels-admin.ts": {
-    "mtime": 1795466200.6708136,
-    "seen": 1795471715.873943,
-    "ast_hash": "3f0353590a0c1c4fc4dae41630704bcb",
+    "mtime": 1795475361.2818582,
+    "seen": 1795475620.696251,
+    "ast_hash": "8f7aba25d427d6775d434db6d1607ec5",
     "semantic_hash": ""
   },
   "packages/core/src/schemas/media.ts": {
@@ -11562,9 +11562,9 @@
     "semantic_hash": ""
   },
   "packages/core/src/schemas/hotel-staff-views.test.ts": {
-    "mtime": 1795466200.6704526,
-    "seen": 1795471715.873942,
-    "ast_hash": "377092607c9c10e86ce263121a55b160",
+    "mtime": 1795473908.0126102,
+    "seen": 1795474444.954963,
+    "ast_hash": "9955ddd48068829f4be27508e64cef0b",
     "semantic_hash": ""
   },
   "packages/core/src/schemas/hotel-staff-views.ts": {
@@ -11988,21 +11988,21 @@
     "semantic_hash": ""
   },
   "packages/core/src/schemas/hotel-catalogue.ts": {
-    "mtime": 1795466200.6699672,
-    "seen": 1795471715.873937,
-    "ast_hash": "324e103464b339e0bbb7e56393cc0076",
+    "mtime": 1795473604.8153079,
+    "seen": 1795474444.954858,
+    "ast_hash": "086ee981cded706e574f1dade1409946",
     "semantic_hash": ""
   },
   "packages/core/src/schemas/hotel-import.test.ts": {
-    "mtime": 1795466200.6700342,
-    "seen": 1795471715.873937,
-    "ast_hash": "b195a940edef30ee21a0da247b4d6e76",
+    "mtime": 1795475439.421787,
+    "seen": 1795475620.696115,
+    "ast_hash": "d3e93782a5fbdac5ea9d85feeda77b38",
     "semantic_hash": ""
   },
   "packages/core/src/schemas/hotel-import.ts": {
-    "mtime": 1795466200.6701455,
-    "seen": 1795471715.8739378,
-    "ast_hash": "f2d8f52e09fbedca471db947745898cc",
+    "mtime": 1795475393.3154252,
+    "seen": 1795475620.696115,
+    "ast_hash": "16de5b86b066ab6267e066962d7c7c19",
     "semantic_hash": ""
   },
   "docs/planning/hotel-information-form-plan.md": {
@@ -12015,6 +12015,108 @@
     "mtime": 1795466200.63407,
     "seen": 1795471715.874203,
     "ast_hash": "811fabb5e058ceb64c41f2927034b6c5",
+    "semantic_hash": ""
+  },
+  "packages/core/src/hotel-change-set.test.ts": {
+    "mtime": 1795473803.7259285,
+    "seen": 1795474444.9542952,
+    "ast_hash": "1dd4dc587142b1026d8ee87508e53b0f",
+    "semantic_hash": ""
+  },
+  "packages/core/src/hotel-change-set.ts": {
+    "mtime": 1795474344.4851441,
+    "seen": 1795474444.954296,
+    "ast_hash": "10732c0303a84011deb9b1256c63664d",
+    "semantic_hash": ""
+  },
+  "packages/core/src/hotel-phone.test.ts": {
+    "mtime": 1795475447.9957159,
+    "seen": 1795475620.6953979,
+    "ast_hash": "312858d256d46e6826dcd0e112d41e65",
+    "semantic_hash": ""
+  },
+  "packages/core/src/hotel-phone.ts": {
+    "mtime": 1795475402.4015462,
+    "seen": 1795475620.6953988,
+    "ast_hash": "4ffdf8e7c88036b382fa31d4f9999036",
+    "semantic_hash": ""
+  },
+  "packages/core/src/hotel-row-match.test.ts": {
+    "mtime": 1795473851.3810675,
+    "seen": 1795474444.9543302,
+    "ast_hash": "2f9bedf1145411e54855d796da8993f8",
+    "semantic_hash": ""
+  },
+  "packages/core/src/hotel-row-match.ts": {
+    "mtime": 1795474358.9616427,
+    "seen": 1795474444.9543302,
+    "ast_hash": "2ff351d232ea75e1c3f671f8b5c88972",
+    "semantic_hash": ""
+  },
+  "packages/core/src/hotel-units.test.ts": {
+    "mtime": 1795473761.54486,
+    "seen": 1795474444.954331,
+    "ast_hash": "677274f6a3c6683c5f9300a6f290c8bc",
+    "semantic_hash": ""
+  },
+  "packages/core/src/hotel-units.ts": {
+    "mtime": 1795473392.9626951,
+    "seen": 1795474444.9543319,
+    "ast_hash": "5a128dcbf7e53ba606e696c8951afc67",
+    "semantic_hash": ""
+  },
+  "packages/core/src/schemas/hotel-import-cells.test.ts": {
+    "mtime": 1795473933.8757672,
+    "seen": 1795474444.954859,
+    "ast_hash": "bbd368e41c0d5e8e9b1caa9a37577f7d",
+    "semantic_hash": ""
+  },
+  "packages/core/src/schemas/hotel-import-cells.ts": {
+    "mtime": 1795473625.0159154,
+    "seen": 1795474444.954859,
+    "ast_hash": "9e3743e67fe3cc4e4a40f3db6aa97572",
+    "semantic_hash": ""
+  },
+  "packages/core/src/schemas/hotel-import-compare.test.ts": {
+    "mtime": 1795474471.691331,
+    "seen": 1795474501.583943,
+    "ast_hash": "dc49f0e2f2ce6ede3031a1dc0a6d2cc0",
+    "semantic_hash": ""
+  },
+  "packages/core/src/schemas/hotel-import-compare.ts": {
+    "mtime": 1795475376.4650688,
+    "seen": 1795475620.69608,
+    "ast_hash": "760232bcb6298b07c4027e55961c18bb",
+    "semantic_hash": ""
+  },
+  "packages/core/src/schemas/hotel-import-rooms-venues.test.ts": {
+    "mtime": 1795473954.9933088,
+    "seen": 1795474444.954862,
+    "ast_hash": "932c17035ce307a054d493eef51e1349",
+    "semantic_hash": ""
+  },
+  "packages/core/src/schemas/hotel-import-rooms-venues.ts": {
+    "mtime": 1795473648.993014,
+    "seen": 1795474444.954862,
+    "ast_hash": "0112338872bc20633f0f37eefdf51e01",
+    "semantic_hash": ""
+  },
+  "packages/core/src/schemas/hotel-rooms-venues.test.ts": {
+    "mtime": 1795475429.1577542,
+    "seen": 1795475620.6962152,
+    "ast_hash": "0a1f80f57f658b3708d48c167a715270",
+    "semantic_hash": ""
+  },
+  "packages/core/src/schemas/hotel-rooms-venues.ts": {
+    "mtime": 1795475372.3635733,
+    "seen": 1795475620.696216,
+    "ast_hash": "1cd2658de64a3a847cc3b4a0a7ab045f",
+    "semantic_hash": ""
+  },
+  "packages/core/src/schemas/hotels-rooms-venues-client.test.ts": {
+    "mtime": 1795473918.650004,
+    "seen": 1795474444.9549818,
+    "ast_hash": "8275323b656eaefe62e865562ed3f32f",
     "semantic_hash": ""
   }
 }
