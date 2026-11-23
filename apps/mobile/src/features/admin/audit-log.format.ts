@@ -1,5 +1,5 @@
 import {
-  formatDay,
+  formatMoment,
   type AuditActionName,
   type AuditActorType,
   type AuditEventView,
@@ -50,15 +50,9 @@ export function auditActorLabel(actorType: AuditActorType): string {
   return ACTOR_LABEL[actorType];
 }
 
-const twoDigits = (value: number): string => String(value).padStart(2, "0");
-
-/** A moment in the device's time, uppercase like the mocks: "5 NOV 2026 · 18:02". */
-export function formatMoment(iso: string): string {
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return iso;
-  const time = `${twoDigits(date.getHours())}:${twoDigits(date.getMinutes())}`;
-  return `${formatDay(iso, { style: "data" })} · ${time}`;
-}
+// A moment in the device's time, uppercase like the mocks ("5 NOV 2026 · 18:02"): the shared formatter,
+// re-exported so the audit screens import every one of their formatters from this one module.
+export { formatMoment };
 
 /** A screen-reader summary of one event row. */
 export function auditEventSummary(event: AuditEventView): string {

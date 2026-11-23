@@ -7,8 +7,8 @@ import { renderWithProviders } from "./render";
 
 /*
  * The API side of the screen tests, shared by every feature: the QueryClient, the render under an
- * `ApiProvider`, and responses in the API's envelope. Each feature keeps its own fixtures and fake
- * fetch (the routes it answers); test-only, never bundled.
+ * `ApiProvider`, responses in the API's envelope and the fetch that answers by path. Each feature keeps
+ * its own fixtures and the routes it answers; test-only, never bundled.
  */
 
 /** The base URL the screens under test call, and the fake fetches answer for. */
@@ -81,3 +81,22 @@ export const pendingFetch: typeof fetch = () => new Promise<Response>(() => {});
 
 /** A fetch that cannot reach the API: the screen goes offline. */
 export const offlineFetch: typeof fetch = () => Promise.reject(new Error("no network"));
+
+export type FetchFn = typeof fetch;
+
+/** One path's answer; it gets the request's `init`, so a route can branch on the method. */
+export type Route = (init: RequestInit | undefined) => Response;
+
+/**
+ * A fetch that answers by path (no base, no query), passing `init` so a route can branch on the
+ * method; every other path is a 404, as for a stranger.
+ *
+ *   routedFetch({ "/me": () => ok(me) });
+ */
+export function routedFetch(routes: Readonly<Record<string, Route>>): FetchFn {
+  return (input, init) => {
+    const path = String(input).replace(TEST_API_BASE, "").split("?")[0] ?? "";
+    const route = routes[path];
+    return Promise.resolve(route ? route(init) : failure("not_found", 404));
+  };
+}

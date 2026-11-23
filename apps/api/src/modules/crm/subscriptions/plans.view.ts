@@ -1,6 +1,6 @@
 import { entitlementModule, type PlanModuleView, type PlanPublicView } from "@ampm/core";
 
-import { toClientMoney } from "./money.js";
+import { toClientMoney } from "../../../common/money.js";
 import type { PlanModuleRow, PlanRow } from "./plans.repository.js";
 
 function toPlanModuleView(row: PlanModuleRow): PlanModuleView {

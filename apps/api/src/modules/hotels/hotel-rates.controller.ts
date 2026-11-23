@@ -26,7 +26,7 @@ import {
   RequirePermission,
   SelfAudited,
 } from "../../policy/decorators.js";
-import type { Principal } from "../../policy/principal.types.js";
+import { type Principal, staffId } from "../../policy/principal.types.js";
 import { HotelRatesService } from "./hotel-rates.service.js";
 
 const hotelParam = z.object({ hotelId: uuid });
@@ -35,11 +35,6 @@ const cardParam = z.object({ hotelId: uuid, cardId: uuid });
 type CardParam = z.infer<typeof cardParam>;
 const itemParam = z.object({ hotelId: uuid, cardId: uuid, itemId: uuid });
 type ItemParam = z.infer<typeof itemParam>;
-
-function staffId(principal: Principal): string {
-  if (principal.type !== "staff") throw new Error("a staff principal is required");
-  return principal.userId;
-}
 
 /**
  * Verified pricing for a hotel (HT/SA; feature 9.2), under the `hotels-admin` prefix alongside the other

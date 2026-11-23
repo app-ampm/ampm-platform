@@ -6,7 +6,6 @@ import type {
   ServiceKey,
 } from "@ampm/core";
 
-import type { Principal } from "../../policy/principal.types.js";
 import type { ConfigService } from "../admin/config/config.service.js";
 import type { ServiceAgreementsService } from "../crm/service-agreements/service-agreements.service.js";
 import type { BookingMilestonesRepository } from "./booking-milestones.repository.js";
@@ -100,10 +99,4 @@ export function buildStaffPatch(request: HotelEnquiryStaffUpdateRequest): {
   if (request.assignedUserId !== undefined) patch.assignedUserId = request.assignedUserId;
   if (request.notesInternal !== undefined) patch.notesInternal = request.notesInternal;
   return patch;
-}
-
-/** The acting staff user's id; a non-staff principal never reaches these guarded routes. */
-export function staffId(principal: Principal): string {
-  if (principal.type !== "staff") throw new Error("a staff principal is required");
-  return principal.userId;
 }

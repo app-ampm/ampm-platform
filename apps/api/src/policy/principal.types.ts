@@ -44,6 +44,17 @@ export interface SystemPrincipal {
 
 export type Principal = StaffPrincipal | ClientPrincipal | DemoPrincipal | SystemPrincipal;
 
+/**
+ * The acting staff user's id, for the writes that record who did them. Staff routes are guarded, so a
+ * non-staff principal never reaches a caller; reaching one is a programming error, not a refusal.
+ *
+ *   await this.service.update(id, body, staffId(principal));
+ */
+export function staffId(principal: Principal): string {
+  if (principal.type !== "staff") throw new Error("a staff principal is required");
+  return principal.userId;
+}
+
 /** The engine's view of a principal (policy step 4). */
 export function toPolicyPrincipal(principal: Principal): PolicyPrincipal {
   if (principal.type === "system") return { type: "system" };

@@ -1,22 +1,18 @@
-import { useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "expo-router";
 import { useState } from "react";
 
 import { useDemoSignIn, useDevLogin } from "@ampm/api-client";
 import { isAppError, type DevLoginResponse } from "@ampm/core";
 import { SignInLayout, Text } from "@ampm/ui";
 
-import { setAccessToken } from "@/lib/session";
-
 import { DevSignInShortcuts } from "./dev-sign-in-shortcuts";
 import { ClientAccessCard } from "./mobile-otp-sign-in";
 import { SignInHero } from "./sign-in-hero";
 import { useClientAccess } from "./use-client-access";
+import { useStartSession } from "./use-start-session";
 
 /** Signs in against the local dev endpoints, stores the token, and lets the entry gate route by role. */
 function useDevSignIn() {
-  const router = useRouter();
-  const queryClient = useQueryClient();
+  const startSession = useStartSession();
   const devLogin = useDevLogin();
   const demo = useDemoSignIn();
   // The typed work email (and whether its form is open) live here, above the layout, so they survive a
@@ -24,13 +20,7 @@ function useDevSignIn() {
   const [email, setEmail] = useState("");
   const [emailOpen, setEmailOpen] = useState(false);
 
-  // Clear (not just invalidate) so signing in as a different principal never shows the previous one's
-  // cached data; the "/" gate then routes by principal type (staff, client or demo).
-  const applySession = (result: DevLoginResponse): void => {
-    setAccessToken(result.accessToken);
-    queryClient.clear();
-    router.replace("/");
-  };
+  const applySession = (result: DevLoginResponse): void => startSession(result.accessToken);
 
   const signIn = (address: string): void => {
     const trimmed = address.trim();

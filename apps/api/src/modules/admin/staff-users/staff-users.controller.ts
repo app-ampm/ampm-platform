@@ -16,16 +16,11 @@ import { z } from "zod";
 
 import { ZodBody, ZodParams, ZodQuery } from "../../../common/zod.js";
 import { CurrentPrincipal, RequirePermission, SelfAudited } from "../../../policy/decorators.js";
-import type { Principal } from "../../../policy/principal.types.js";
+import { type Principal, staffId } from "../../../policy/principal.types.js";
 import { StaffAuthenticatorService } from "./staff-authenticator.service.js";
 import { StaffUsersService } from "./staff-users.service.js";
 
 const idParam = z.object({ id: uuid });
-
-function staffId(principal: Principal): string {
-  if (principal.type !== "staff") throw new Error("a staff principal is required");
-  return principal.userId;
-}
 
 /**
  * Staff-user administration (Module A, feature 5.1). Reads are open to every staff role

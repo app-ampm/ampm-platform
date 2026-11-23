@@ -13,13 +13,13 @@ import { Prisma } from "../../generated/prisma/client.js";
 import { facilitiesInput } from "./hotel-facilities.js";
 
 /*
- * Writes for a hotel's room categories, venues and contacts (feature 9.1, staff). The selects match the
- * nested shapes the staff detail reads (hotels-admin.view.ts maps them), so a created/updated row renders
- * through the same view mappers. `hotels.room_categories_venues.*` covers rooms and venues;
+ * Writes for a hotel's room categories, venues and contacts (feature 9.1, staff). The selects are the
+ * nested shapes the staff detail reads (HotelsAdminRepository imports them; hotels-admin.view.ts maps
+ * them), so a created/updated row renders through the same view mappers. `hotels.room_categories_venues.*` covers rooms and venues;
  * `hotels.hotel_contacts.*` covers contacts (contacts are RESTRICTED-CONTACT).
  */
 
-const ROOM_SELECT = {
+export const ROOM_SELECT = {
   id: true,
   hotelId: true,
   name: true,
@@ -30,7 +30,7 @@ const ROOM_SELECT = {
   description: true,
 } as const;
 
-const VENUE_SELECT = {
+export const VENUE_SELECT = {
   id: true,
   hotelId: true,
   name: true,
@@ -44,7 +44,7 @@ const VENUE_SELECT = {
   description: true,
 } as const;
 
-const CONTACT_SELECT = {
+export const CONTACT_SELECT = {
   id: true,
   hotelId: true,
   name: true,

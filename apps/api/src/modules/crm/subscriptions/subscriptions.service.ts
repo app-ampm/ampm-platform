@@ -12,7 +12,7 @@ import {
 import { PrismaService } from "../../../db/prisma.service.js";
 import { Prisma, type PaymentStatus } from "../../../generated/prisma/client.js";
 import { AuditService } from "../../../policy/audit.service.js";
-import { toClientMoney } from "./money.js";
+import { toClientMoney } from "../../../common/money.js";
 import { PAYMENT_ADAPTER, type PaymentAdapter } from "./payment.adapter.js";
 import { PaymentsRepository, type PaymentWriteData } from "./payments.repository.js";
 import { PlansRepository, type PlanRow } from "./plans.repository.js";

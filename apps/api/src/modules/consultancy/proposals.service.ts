@@ -17,11 +17,10 @@ import { PrismaService } from "../../db/prisma.service.js";
 import { recordScope } from "../../db/scoping.js";
 import { EventBus } from "../../jobs/event-bus.js";
 import { AuditService } from "../../policy/audit.service.js";
-import { type Principal, toPolicyPrincipal } from "../../policy/principal.types.js";
+import { type Principal, staffId, toPolicyPrincipal } from "../../policy/principal.types.js";
 import { EnquiriesRepository, type EnquiryRow } from "./enquiries.repository.js";
 import { EnquiryShareAdvance } from "./enquiry-share-advance.js";
-import { staffId } from "./enquiries.helpers.js";
-import { moneyToDecimalString } from "./proposals.money.js";
+import { moneyToDecimalString } from "../../common/money.js";
 import {
   assertProposalChanged,
   buildLineWrites,

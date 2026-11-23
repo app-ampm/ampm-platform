@@ -92,13 +92,6 @@ export function isClientFacing(visibility: MediaVisibility): boolean {
   return visibility !== "internal";
 }
 
-/** A screen-reader summary of one photo row. */
-export function mediaSummary(media: MediaAssetView): string {
-  return `${media.caption ?? "Untitled photo"}, ${scanStatusLabel(media.scanStatus)}, visible to ${visibilityLabel(
-    media.visibility,
-  ).toLowerCase()}`;
-}
-
 /** The name a photo or video goes by in the manager: its caption, or what it is. */
 export function mediaName(media: MediaAssetView): string {
   return media.caption ?? (media.kind === "video" ? "Untitled video" : "Untitled photo");

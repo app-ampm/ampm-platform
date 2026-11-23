@@ -1,10 +1,9 @@
-/**
+/*
  * @ampm/ui: universal components and UI-only hooks on React Native primitives, react-native-web
  * and NativeWind, styled with @ampm/tokens classes only (.claude/rules/ui.md). The components are the
  * Peacock Night kit (docs/design/peacock-night.md §6); the website takes the same class recipes,
  * without React Native, from `@ampm/ui/styles`.
  */
-export const UI_VERSION = "1.0.0";
 
 export { cn } from "./lib/cn";
 export type { ClassValue } from "./lib/cn";

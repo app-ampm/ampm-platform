@@ -11,7 +11,6 @@ import {
   roomSummary,
   venueSummary,
   venueTypeLabel,
-  verificationFieldGroupLabel,
   verificationSourceLabel,
   yesNo,
 } from "./hotels-admin.format";
@@ -98,7 +97,6 @@ describe("hotels-admin.format", () => {
     expect(rateItemTypeLabel("per_plate_veg")).toBe("Per plate (veg)");
     expect(rateUnitLabel("per_night")).toBe("per night");
     expect(verificationSourceLabel("site_visit")).toBe("Site visit");
-    expect(verificationFieldGroupLabel("rates")).toBe("Rates");
   });
 
   it("reads a flag as a word", () => {

@@ -145,19 +145,6 @@ export function verificationSourceLabel(source: HotelVerificationSource): string
   return VERIFICATION_SOURCE_LABEL[source];
 }
 
-const VERIFICATION_FIELD_GROUP_LABEL: Record<HotelVerificationFieldGroup, string> = {
-  profile: "Profile",
-  rooms: "Rooms",
-  venues: "Venues",
-  rates: "Rates",
-  availability: "Availability",
-  media: "Media",
-  contacts: "Contacts",
-};
-export function verificationFieldGroupLabel(group: HotelVerificationFieldGroup): string {
-  return VERIFICATION_FIELD_GROUP_LABEL[group];
-}
-
 /** A verification with the day it was made, which `latestVerification` guarantees. */
 export type DatedVerification = VerificationView & { readonly verifiedAt: string };
 

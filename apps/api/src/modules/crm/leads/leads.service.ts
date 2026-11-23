@@ -19,7 +19,7 @@ import { Prisma } from "../../../generated/prisma/client.js";
 import { AuditService } from "../../../policy/audit.service.js";
 import { LeadActivitiesRepository } from "./lead-activities.repository.js";
 import { LeadsRepository, type LeadRow, type LeadUpdatePatch } from "./leads.repository.js";
-import { CLOSED_LEAD_STATUSES, PRIVACY_NOTICE_VERSION } from "./lead-constants.js";
+import { PRIVACY_NOTICE_VERSION } from "./lead-constants.js";
 import { isLeadTransitionAllowed, isTerminalLead, OWNED_STATUSES } from "./lead-status.js";
 import { toActivityView, toLeadView } from "./leads.view.js";
 
@@ -294,9 +294,7 @@ export class LeadsService {
     const followUps = await this.activities.nextFollowUpByLead(rows.map((row) => row.id));
     return rows.map((row) => {
       // A closed or converted lead has no pending follow-up, even if an old activity still carries one.
-      const pending = CLOSED_LEAD_STATUSES.includes(row.status)
-        ? null
-        : (followUps.get(row.id) ?? null);
+      const pending = isTerminalLead(row.status) ? null : (followUps.get(row.id) ?? null);
       return toLeadView(row, pending);
     });
   }

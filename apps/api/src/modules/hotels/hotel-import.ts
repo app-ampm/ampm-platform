@@ -76,28 +76,6 @@ const KNOWN_COLUMNS = new Set([
   "imageRef",
 ]);
 
-/** The header labels of the frozen import template, in order — used to write the template and its docs. */
-export const HOTEL_IMPORT_COLUMNS: readonly string[] = [
-  "destinationSlug",
-  "destinationName",
-  "slug",
-  "name",
-  "brand",
-  "starCategory",
-  "address",
-  "latitude",
-  "longitude",
-  "descriptionClient",
-  "website",
-  "totalRooms",
-  "demoVisible",
-  "status",
-  "internalRating",
-  "internalNotes",
-  "streetViewRef",
-  "imageRef",
-];
-
 function coerceBoolean(raw: string): boolean | string {
   const s = raw.toLowerCase();
   if (s === "true" || s === "1" || s === "yes") return true;

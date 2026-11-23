@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { HOTEL_ENQUIRY_STAGE_STATUSES, type HotelEnquiryListQuery } from "@ampm/core";
 
+import { findAccountClientUserIds, findAccountIdForUser } from "../../db/account-lookup.js";
 import { PrismaService } from "../../db/prisma.service.js";
 import {
   Prisma,
@@ -73,16 +74,11 @@ export class EnquiriesRepository {
 
   /**
    * The caller's own account from their contact row — never from the request (security.md). Reads a CRM
-   * table (account_contacts) from Module D: the same recorded cross-module shortcut HotelsRepository and
-   * PortalService use (D-063); to move onto the principal when account resolution is consolidated.
+   * table (account_contacts) from Module D: the recorded cross-module shortcut of D-063, through the one
+   * shared lookup (db/account-lookup.ts).
    */
   async accountIdForUser(userId: string): Promise<string | null> {
-    const contact = await this.prisma.accountContact.findFirst({
-      where: { userId, deletedAt: null },
-      orderBy: { createdAt: "asc" },
-      select: { accountId: true },
-    });
-    return contact ? contact.accountId : null;
+    return findAccountIdForUser(this.prisma, userId);
   }
 
   async create(
@@ -139,14 +135,10 @@ export class EnquiriesRepository {
   /**
    * The client users on an account (its portal logins), for a status-change notice (AC-05.3). Reads the
    * CRM `account_contacts` table from Module D — the same recorded D-063 cross-module shortcut as
-   * `accountIdForUser`; both retire when account resolution moves onto the principal / a shared accessor.
+   * `accountIdForUser`, through the same shared lookup.
    */
   async accountClientUserIds(accountId: string): Promise<string[]> {
-    const contacts = await this.prisma.accountContact.findMany({
-      where: { accountId, userId: { not: null }, deletedAt: null },
-      select: { userId: true },
-    });
-    return contacts.flatMap((contact) => (contact.userId ? [contact.userId] : []));
+    return findAccountClientUserIds(this.prisma, accountId);
   }
 
   /** The caller's existing open (non-closed) enquiry for this hotel, so a re-submit is idempotent (AC-26). */

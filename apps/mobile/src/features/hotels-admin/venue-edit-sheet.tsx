@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { useCreateVenue, useUpdateVenue } from "@ampm/api-client";
-import { isAppError, type HotelVenueType, type VenueView } from "@ampm/core";
+import { hotelVenueType, isAppError, type HotelVenueType, type VenueView } from "@ampm/core";
 import { Button, Input, Sheet, Stack, Toggle, useToast } from "@ampm/ui";
 
 import { hasErrors } from "./hotel-form-fields";
@@ -15,15 +15,7 @@ import {
   type VenueErrors,
 } from "./subresources.form";
 
-const VENUE_TYPES: readonly HotelVenueType[] = [
-  "ballroom",
-  "lawn",
-  "poolside",
-  "rooftop",
-  "courtyard",
-  "beach",
-  "other",
-];
+const VENUE_TYPES: readonly HotelVenueType[] = hotelVenueType.options;
 const NO_ERRORS: VenueErrors = {
   name: undefined,
   areaSqm: undefined,

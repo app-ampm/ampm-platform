@@ -5,7 +5,7 @@ import type {
   HotelProposalLineView,
 } from "@ampm/core";
 
-import { deriveMargin, toClientMoney, toInternalMoney } from "./proposals.money.js";
+import { deriveMargin, toClientMoney, toInternalMoney } from "../../common/money.js";
 import type { ProposalLineRow, ProposalRow } from "./proposals.repository.js";
 
 /**

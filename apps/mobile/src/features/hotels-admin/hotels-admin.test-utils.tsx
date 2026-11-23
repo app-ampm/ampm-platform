@@ -12,9 +12,7 @@ import type {
   WeddingReferenceView,
 } from "@ampm/core";
 
-import { failure, TEST_API_BASE } from "../../test/api";
-
-export { failure, ok, renderWithApi } from "../../test/api";
+export { failure, ok, renderWithApi, routedFetch, type FetchFn } from "../../test/api";
 
 /*
  * Test helpers for the staff hotel catalogue + photo manager: a hotel and a media asset in the shapes
@@ -233,17 +231,5 @@ export function mediaAssetFixture(overrides: Partial<MediaAssetView> = {}): Medi
     uploadedBy: UPLOADER_ID,
     createdAt: "2026-11-01T09:00:00Z",
     ...overrides,
-  };
-}
-
-export type FetchFn = typeof fetch;
-type Route = (init: RequestInit | undefined) => Response;
-
-/** A fetch that answers by path (no base, no query), passing `init` so a route can branch on the method. */
-export function routedFetch(routes: Readonly<Record<string, Route>>): FetchFn {
-  return (input, init) => {
-    const path = String(input).replace(TEST_API_BASE, "").split("?")[0] ?? "";
-    const route = routes[path];
-    return Promise.resolve(route ? route(init) : failure("not_found", 404));
   };
 }

@@ -9,9 +9,7 @@ import type {
   StaffUserView,
 } from "@ampm/core";
 
-import { failure, TEST_API_BASE } from "../../test/api";
-
-export { failure, ok, renderWithApi } from "../../test/api";
+export { failure, ok, renderWithApi, routedFetch, type FetchFn } from "../../test/api";
 
 /*
  * Test helpers for the admin console screens: a staff user in the exact shape `GET /admin/staff-users`
@@ -192,17 +190,5 @@ export function meFixture(roles: MeResponse["roles"] = ["SA"]): MeResponse {
       requestTypes: { wedding: [], account: [] },
     },
     isDemo: false,
-  };
-}
-
-export type FetchFn = typeof fetch;
-type Route = (init: RequestInit | undefined) => Response;
-
-/** A fetch that answers by path (no base, no query); every other path is a 404, as for a stranger. */
-export function routedFetch(routes: Readonly<Record<string, Route>>): FetchFn {
-  return (input, init) => {
-    const path = String(input).replace(TEST_API_BASE, "").split("?")[0] ?? "";
-    const route = routes[path];
-    return Promise.resolve(route ? route(init) : failure("not_found", 404));
   };
 }

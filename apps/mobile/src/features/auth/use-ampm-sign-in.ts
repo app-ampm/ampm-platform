@@ -1,19 +1,11 @@
-import { useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "expo-router";
 import { useState } from "react";
 
 import { SIGN_IN_ERRORS } from "@ampm/core";
 import { useSignIn, useSignInCode } from "@ampm/api-client";
 
-import { setAccessToken } from "@/lib/session";
-
+import { messageOf } from "./refusal-text";
 import type { Phase, StaffSignIn } from "./staff-sign-in.types";
-
-function messageOf(error: unknown): string {
-  return error instanceof Error && error.message.length > 0
-    ? error.message
-    : "Something went wrong. Please try again.";
-}
+import { useStartSession } from "./use-start-session";
 
 /** Runs one step at a time, keeping its pending flag and error; a timed-out challenge restarts sign-in. */
 function useStepRunner(onExpired: () => void) {
@@ -34,18 +26,6 @@ function useStepRunner(onExpired: () => void) {
   return { pending, error, setError, run };
 }
 
-/** Starts the session with a granted token and opens the app. */
-function useCompleteSignIn(): (accessToken: string) => void {
-  const router = useRouter();
-  const queryClient = useQueryClient();
-  return (accessToken) => {
-    setAccessToken(accessToken);
-    // Clear (not just invalidate) so a new principal never sees the previous one's cached data.
-    queryClient.clear();
-    router.replace("/");
-  };
-}
-
 /**
  * Drives the staff sign-in screen through AMPM's own sign-in (D-142): the password, then the
  * authenticator code or one of the recovery codes. A timed-out challenge returns to the password step
@@ -57,7 +37,7 @@ function useCompleteSignIn(): (accessToken: string) => void {
 export function useAmpmSignIn(): StaffSignIn {
   const signIn = useSignIn();
   const signInCode = useSignInCode();
-  const complete = useCompleteSignIn();
+  const complete = useStartSession();
   const [phase, setPhase] = useState<Phase>({ kind: "credentials" });
   const [challenge, setChallenge] = useState("");
   const [email, setEmail] = useState("");

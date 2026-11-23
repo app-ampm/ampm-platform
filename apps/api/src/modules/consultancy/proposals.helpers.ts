@@ -5,7 +5,7 @@ import type { Access } from "../../common/request-context.js";
 import { Prisma } from "../../generated/prisma/client.js";
 import type { DomainEvent, EventBus } from "../../jobs/event-bus.js";
 import type { Principal } from "../../policy/principal.types.js";
-import { moneyToDecimalString } from "./proposals.money.js";
+import { moneyToDecimalString } from "../../common/money.js";
 import type { ProposalEvent } from "./proposals.events.js";
 import type {
   ProposalLineRow,

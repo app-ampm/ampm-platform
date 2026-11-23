@@ -9,9 +9,7 @@ import type {
   SubscriptionView,
 } from "@ampm/core";
 
-import { failure, TEST_API_BASE } from "../../test/api";
-
-export { failure, ok, renderWithApi } from "../../test/api";
+export { failure, ok, renderWithApi, routedFetch, type FetchFn } from "../../test/api";
 
 /*
  * Test helpers for the staff client-accounts workspace: an account, a contact, a subscription and a plan
@@ -178,17 +176,5 @@ export function planPublicViewFixture(overrides: Partial<PlanPublicView> = {}): 
     trialDays: null,
     modules: [],
     ...overrides,
-  };
-}
-
-export type FetchFn = typeof fetch;
-type Route = (init: RequestInit | undefined) => Response;
-
-/** A fetch that answers by path (no base, no query), passing `init` so a route can branch on the method. */
-export function routedFetch(routes: Readonly<Record<string, Route>>): FetchFn {
-  return (input, init) => {
-    const path = String(input).replace(TEST_API_BASE, "").split("?")[0] ?? "";
-    const route = routes[path];
-    return Promise.resolve(route ? route(init) : failure("not_found", 404));
   };
 }

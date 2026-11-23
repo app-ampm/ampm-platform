@@ -21,13 +21,8 @@ import {
   RequirePermission,
   SelfAudited,
 } from "../../../policy/decorators.js";
-import type { Principal } from "../../../policy/principal.types.js";
+import { type Principal, staffId } from "../../../policy/principal.types.js";
 import { SubscriptionsService } from "./subscriptions.service.js";
-
-function staffId(principal: Principal): string {
-  if (principal.type !== "staff") throw new Error("a staff principal is required");
-  return principal.userId;
-}
 
 /**
  * Subscriptions (Module B CRM, feature 8.3). The purchase and the Finance manual bank transfer are

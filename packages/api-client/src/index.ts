@@ -1,8 +1,7 @@
-/**
+/*
  * @ampm/api-client: the typed client and the TanStack Query hooks the apps use (api.md). Apps never
  * hand-write fetch calls.
  */
-export const API_CLIENT_VERSION = "0.1.0";
 
 export { createApiClient } from "./client";
 export type { ApiClient, ApiClientOptions, RequestOptions } from "./client";

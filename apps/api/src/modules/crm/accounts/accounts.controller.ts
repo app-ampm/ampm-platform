@@ -15,13 +15,8 @@ import { z } from "zod";
 
 import { ZodBody, ZodParams, ZodQuery } from "../../../common/zod.js";
 import { CurrentPrincipal, RequirePermission, SelfAudited } from "../../../policy/decorators.js";
-import type { Principal } from "../../../policy/principal.types.js";
+import { type Principal, staffId } from "../../../policy/principal.types.js";
 import { AccountsService } from "./accounts.service.js";
-
-export function staffId(principal: Principal): string {
-  if (principal.type !== "staff") throw new Error("a staff principal is required");
-  return principal.userId;
-}
 
 /**
  * Client accounts (Module B CRM, feature 8.2). Convert creates an account from a lead and is a

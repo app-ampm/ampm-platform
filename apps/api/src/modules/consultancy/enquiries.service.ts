@@ -18,7 +18,7 @@ import type { Access } from "../../common/request-context.js";
 import { PrismaService } from "../../db/prisma.service.js";
 import { recordScope } from "../../db/scoping.js";
 import { AuditService } from "../../policy/audit.service.js";
-import { type Principal, toPolicyPrincipal } from "../../policy/principal.types.js";
+import { type Principal, staffId, toPolicyPrincipal } from "../../policy/principal.types.js";
 import { ConfigService } from "../admin/config/config.service.js";
 import { ServiceAgreementsService } from "../crm/service-agreements/service-agreements.service.js";
 import { assigneeWhere, EnquiryAssignmentService } from "./enquiry-assignment.js";
@@ -33,7 +33,6 @@ import {
   guardChargeableStage,
   guardConfirmedReady,
   isInherentlyInternalEvent,
-  staffId,
 } from "./enquiries.helpers.js";
 import {
   toEnquiryClientDetailView,

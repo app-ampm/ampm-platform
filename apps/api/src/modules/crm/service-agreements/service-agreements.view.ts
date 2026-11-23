@@ -1,6 +1,6 @@
 import type { ServiceAgreementClientView, ServiceAgreementStaffView } from "@ampm/core";
 
-import { toClientMoney } from "./service-agreements.money.js";
+import { toClientMoney } from "../../../common/money.js";
 import type { AgreementRow } from "./service-agreements.repository.js";
 
 /**

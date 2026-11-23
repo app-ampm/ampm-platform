@@ -3,7 +3,6 @@ import {
   isClientFacing,
   mediaName,
   mediaRightsSummary,
-  mediaSummary,
   rightsClearedForClients,
   rightsLabel,
   rightsTone,
@@ -40,15 +39,6 @@ describe("media.format", () => {
     expect(isClientFacing("internal")).toBe(false);
     expect(isClientFacing("client")).toBe(true);
     expect(isClientFacing("demo")).toBe(true);
-  });
-
-  it("summarises a photo for screen readers", () => {
-    const photo = mediaAssetFixture({
-      caption: "Lobby",
-      scanStatus: "clean",
-      visibility: "client",
-    });
-    expect(mediaSummary(photo)).toBe("Lobby, Ready, visible to clients");
   });
 
   it("names a photo or video by its caption, or by what it is", () => {

@@ -12,7 +12,7 @@ import { Prisma } from "../../generated/prisma/client.js";
 import type { DomainEvent, EventBus } from "../../jobs/event-bus.js";
 import type { Principal } from "../../policy/principal.types.js";
 import type { MilestoneEvent } from "./booking-milestones.events.js";
-import { moneyToDecimalString } from "./booking-milestones.money.js";
+import { moneyToDecimalString } from "../../common/money.js";
 import type {
   BookingMilestoneEditPatch,
   BookingMilestoneRow,

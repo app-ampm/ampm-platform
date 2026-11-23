@@ -13,17 +13,12 @@ import { z } from "zod";
 
 import { ZodBody, ZodParams } from "../../../common/zod.js";
 import { CurrentPrincipal, RequirePermission, SelfAudited } from "../../../policy/decorators.js";
-import type { Principal } from "../../../policy/principal.types.js";
+import { type Principal, staffId } from "../../../policy/principal.types.js";
 import { PermissionSetsService } from "./permission-sets.service.js";
 
 const idParam = z.object({ id: uuid });
 const roleParam = z.object({ roleId: uuid });
 const roleSetParam = z.object({ roleId: uuid, setId: uuid });
-
-function staffId(principal: Principal): string {
-  if (principal.type !== "staff") throw new Error("a staff principal is required");
-  return principal.userId;
-}
 
 /**
  * Super-Admin permission-set administration (D-036, slice 6b). All of it is SA-only, reusing the

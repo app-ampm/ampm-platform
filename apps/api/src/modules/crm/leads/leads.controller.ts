@@ -36,16 +36,11 @@ import {
   RequirePermission,
   SelfAudited,
 } from "../../../policy/decorators.js";
-import type { Principal } from "../../../policy/principal.types.js";
+import { type Principal, staffId } from "../../../policy/principal.types.js";
 import { LeadEnquiryService } from "./lead-enquiry.service.js";
 import { LeadsService } from "./leads.service.js";
 
 const leadParam = z.object({ leadId: uuid });
-
-function staffId(principal: Principal): string {
-  if (principal.type !== "staff") throw new Error("a staff principal is required");
-  return principal.userId;
-}
 
 /**
  * Lead capture (Module B CRM, feature 8.1). The enquiry endpoint is public (a prospect has no

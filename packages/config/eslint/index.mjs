@@ -115,15 +115,6 @@ export const ampm = defineConfig([
     rules: { "import-x/no-default-export": "off" },
   },
   {
-    // Expo's template components, constants and hooks stay until the UI foundation (bootstrap step 4)
-    // replaces them with packages/ui; until then their default exports and template colours pass.
-    files: ["apps/mobile/src/{components,constants,hooks}/**/*.{ts,tsx}"],
-    rules: {
-      "import-x/no-default-export": "off",
-      "no-restricted-syntax": ["error", ...arbitraryValueSelectors],
-    },
-  },
-  {
     // The tokens package is where colours are written down, and its generator talks on stdout.
     files: ["packages/tokens/**/*.ts"],
     rules: { "no-restricted-syntax": ["error", ...arbitraryValueSelectors] },
