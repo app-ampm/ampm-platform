@@ -1,5 +1,4 @@
-import { useMe } from "@ampm/api-client";
-import { can, type StaffRole } from "@ampm/policy";
+import { useStaffAccess, type StaffAccess } from "@ampm/api-client";
 
 /** What the signed-in staff member may do with a hotel's previous-wedding references (TW-22). */
 export interface ReferencePermissions {
@@ -11,21 +10,19 @@ export interface ReferencePermissions {
   readonly canDelete: boolean;
 }
 
-const NONE: ReferencePermissions = { canCreate: false, canUpdate: false, canDelete: false };
-
 /**
- * The permissions for a set of staff roles, decided by @ampm/policy as the API's guard decides them. A
- * Sales Manager reaches the catalogue and reads references but changes none.
+ * The permissions for a staff member's access, decided by @ampm/policy as the API's guard decides them,
+ * a custom role's grants included (D-164). A Sales Manager reaches the catalogue and reads references
+ * but changes none.
  *
  * @example
- * referencePermissionsFor(["SM"]); // { canCreate: false, canUpdate: false, canDelete: false }
+ * referencePermissionsFor(staffAccessFor(me)); // SM: { canCreate: false, canUpdate: false, canDelete: false }
  */
-export function referencePermissionsFor(roles: readonly StaffRole[]): ReferencePermissions {
-  const allows = (key: string): boolean => can({ type: "staff", roles }, key);
+export function referencePermissionsFor(access: StaffAccess): ReferencePermissions {
   return {
-    canCreate: allows("hotels.wedding_references.create"),
-    canUpdate: allows("hotels.wedding_references.update"),
-    canDelete: allows("hotels.wedding_references.delete"),
+    canCreate: access.can("hotels.wedding_references.create"),
+    canUpdate: access.can("hotels.wedding_references.update"),
+    canDelete: access.can("hotels.wedding_references.delete"),
   };
 }
 
@@ -34,7 +31,5 @@ export function referencePermissionsFor(roles: readonly StaffRole[]): ReferenceP
  * may not do; the server stays the real gate.
  */
 export function useReferencePermissions(): ReferencePermissions {
-  const me = useMe();
-  if (!me.data || me.data.principal.type !== "staff") return NONE;
-  return referencePermissionsFor(me.data.roles);
+  return referencePermissionsFor(useStaffAccess());
 }
