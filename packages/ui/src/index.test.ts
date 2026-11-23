@@ -12,6 +12,11 @@ describe("@ampm/ui index", () => {
     expect(ui.isHiddenFromVoiceOver({ accessibilityElementsHidden: true })).toBe(true);
   });
 
+  it("exports the debounce a search field composes with its query", () => {
+    expect(ui.useDebouncedValue).toBeInstanceOf(Function);
+    expect(ui.SEARCH_DEBOUNCE_MS).toBe(300);
+  });
+
   it("exports every component folder", () => {
     const index = readFileSync(join(__dirname, "index.ts"), "utf8");
     const missing = readdirSync(join(__dirname, "components")).filter(

@@ -26,6 +26,7 @@ export { useReducedMotion } from "./hooks/use-reduced-motion";
 export { useGlassBlur } from "./hooks/use-glass-blur";
 export { useIsClient } from "./hooks/use-is-client";
 export { announcementText, politeLiveRegion, useAnnounce } from "./hooks/use-announce";
+export { SEARCH_DEBOUNCE_MS, useDebouncedValue } from "./hooks/use-debounced-value";
 export { uiCopy } from "./copy";
 
 // Foundations: type, glass, the glow behind a screen, icons, layout.

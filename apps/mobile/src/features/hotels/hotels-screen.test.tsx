@@ -1,9 +1,9 @@
 import { AccessibilityInfo, Text } from "react-native";
 
 import type { HotelView, MeResponse } from "@ampm/core";
-import { uiCopy } from "@ampm/ui";
+import { SEARCH_DEBOUNCE_MS, uiCopy } from "@ampm/ui";
 
-import { fireEvent, screen, waitFor } from "../../test/render";
+import { act, fireEvent, screen, waitFor } from "../../test/render";
 import { HotelsScreen } from "./hotels-screen";
 import {
   clientMe,
@@ -117,6 +117,24 @@ describe("HotelsScreen", () => {
     await screen.findByText("1 hotel");
     await fireEvent.changeText(screen.getByLabelText("Search hotels"), " Lake ");
     await waitFor(() => expect(api.calls).toContain("GET /hotels?q=Lake&limit=50"));
+  });
+
+  it("asks the server once the person pauses, not once per keystroke", async () => {
+    const api = catalogue([PAVILION]);
+    await renderWithApi(<HotelsScreen />, api.fetch);
+    await screen.findByText("1 hotel");
+    const searches = () => api.calls.filter((call) => call.includes("q="));
+    jest.useFakeTimers();
+    try {
+      const field = screen.getByLabelText("Search hotels");
+      for (const typed of ["L", "La", "Lak", "Lake"]) await fireEvent.changeText(field, typed);
+      await act(() => jest.advanceTimersByTime(SEARCH_DEBOUNCE_MS - 1));
+      expect(searches()).toEqual([]);
+      await act(() => jest.advanceTimersByTime(1));
+      await waitFor(() => expect(searches()).toEqual(["GET /hotels?q=Lake&limit=50"]));
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it("loads the next page of results from the footer (B10)", async () => {
