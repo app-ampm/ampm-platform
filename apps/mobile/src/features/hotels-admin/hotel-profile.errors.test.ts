@@ -51,26 +51,20 @@ describe("a save the server refuses", () => {
       { path: "internalNotes", message: "At most 10,000 characters" },
     ]);
     expect(placed).toEqual({
-      fields: {
-        cuisines: CUISINE_REFUSED,
-        postalCode: PIN_REFUSED,
-        internalNotes: "At most 10,000 characters",
-      },
-      unplaced: false,
+      cuisines: CUISINE_REFUSED,
+      postalCode: PIN_REFUSED,
+      internalNotes: "At most 10,000 characters",
     });
-    expect(firstInvalidField(placed.fields)).toBe("postalCode");
+    expect(firstInvalidField(placed)).toBe("postalCode");
   });
 
-  it("marks an error with no path, or a path the editor has no field for, as unplaced", () => {
-    expect(placeServerErrors([{ message: "Validation failed" }])).toEqual({
-      fields: {},
-      unplaced: true,
-    });
+  it("leaves out an error with no path, or a path the editor has no field for", () => {
+    expect(placeServerErrors([{ message: "Validation failed" }])).toEqual({});
     const mixed = placeServerErrors([
       { path: "slug", message: "Synthetic slug refusal" },
       { path: "website", message: "Invalid URL" },
     ]);
-    expect(mixed).toEqual({ fields: { website: "Invalid URL" }, unplaced: true });
+    expect(mixed).toEqual({ website: "Invalid URL" });
   });
 
   it("shows a field's failing check over the server's word, and the server's while the check passes", () => {

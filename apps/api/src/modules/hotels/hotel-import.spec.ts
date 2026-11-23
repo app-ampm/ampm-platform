@@ -68,8 +68,32 @@ describe("parseCsv", () => {
     expect(parseCsv("")).toEqual({ records: [] });
   });
 
-  it("keeps the lenient reading of a quote inside a cell and a stray carriage return", () => {
-    expect(parseCsv('ab"c,d"e,f\r\ng\rh')).toEqual({ records: [["abc,de", "f"], ["gh"]] });
+  it("opens quotes only at a cell's start, blanks aside: a quote inside a cell is text", () => {
+    expect(parseCsv('ab"c,55" TV|Pool,f\n32" TV')).toEqual({
+      records: [['ab"c', '55" TV|Pool', "f"], ['32" TV']],
+    });
+    expect(parseCsv('a, "1 Road, Old Town","x"y"z"')).toEqual({
+      records: [["a", " 1 Road, Old Town", 'xy"z"']],
+    });
+  });
+
+  it("refuses a quote that never closes, naming its line, before it swallows the rows after it", () => {
+    expect(parseCsv('name,note\nok,"Lake view,x\nnext,row')).toEqual({
+      problem:
+        "Line 2 opens a quote that never closes; close the quoted cell, or remove the quote.",
+    });
+    // A later quote closes it only after the rows between have run it past the longest cell.
+    const swallowed = `name,note\nok,"Lake view\n${"next,row\n".repeat(3_000)}last,"x"`;
+    expect(parseCsv(swallowed)).toEqual({
+      problem: expect.stringMatching(/^Line 2 has a cell longer .*check that its closing quote/),
+    });
+  });
+
+  it("ends a record at a line feed, a carriage return or the two together", () => {
+    expect(parseCsv("a,b\rc,d\r\ne,f\ng\r\r\nh")).toEqual({
+      records: [["a", "b"], ["c", "d"], ["e", "f"], ["g"], [""], ["h"]],
+    });
+    expect(parseCsv('"x\ry"\r')).toEqual({ records: [["x\ry"]] });
   });
 
   it("stops at a runaway cell or record, naming its line, before holding the rest", () => {

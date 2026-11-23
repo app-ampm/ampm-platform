@@ -19,6 +19,8 @@ import { AuditService } from "../../policy/audit.service.js";
 import { type Principal, staffId } from "../../policy/principal.types.js";
 import { ConfigService } from "../admin/config/config.service.js";
 import { hotelAudienceOf, requireNotesWrite } from "./hotel-audience.js";
+import { changedRequestFields, type StoredHotelValues } from "./hotel-changes.js";
+import { auditImageOf } from "./hotel-import.audit.js";
 import { slugify } from "./hotel-import.js";
 import {
   allowedCuisines,
@@ -40,6 +42,7 @@ import {
   toDestinationView,
   toHotelStaffDetail,
   toHotelStaffListItem,
+  toHotelStaffView,
 } from "./hotels-admin.view.js";
 
 /**
@@ -92,9 +95,9 @@ export class HotelsAdminService {
 
   /**
    * An update sets the internal rating or notes when it names either, a null clearing it. Its audit event
-   * keeps the hotel's name, status and demo flag, and lists every field the request sent by name only,
-   * never its value (as the import's does), so the image holds no personal data and is recorded
-   * unmasked.
+   * keeps the hotel's name, status and demo and website flags before and after, and names the fields the
+   * update changes (a field sent with the value it already has is no change), never their values, as the
+   * import's event does; so the image holds no personal data and is recorded unmasked.
    */
   async update(
     hotelId: string,
@@ -107,20 +110,21 @@ export class HotelsAdminService {
       principal,
       request.internalRating !== undefined || request.internalNotes !== undefined,
     );
-    const patch = toHotelUpdatePatch(await this.checkUpdate(request, current));
+    const checked = await this.checkUpdate(request, current);
     await this.repo.transaction(async (tx) => {
-      await this.repo.updateHotel(hotelId, patch, actorId, tx);
+      await this.repo.updateHotel(hotelId, toHotelUpdatePatch(checked), actorId, tx);
       await this.audit.record(
         {
           action: "update",
           entityType: "hotel",
           entityId: hotelId,
-          before: { name: current.name, status: current.status, demoVisible: current.demoVisible },
+          before: auditImageOf(current),
           after: {
-            name: request.name ?? current.name,
-            status: request.status ?? current.status,
-            demoVisible: request.demoVisible ?? current.demoVisible,
-            changedFields: namedFields(request),
+            name: checked.name ?? current.name,
+            status: checked.status ?? current.status,
+            demoVisible: checked.demoVisible ?? current.demoVisible,
+            publicShowcase: checked.publicShowcase ?? current.publicShowcase,
+            changedFields: changedRequestFields(checked, storedValuesOf(current)),
           },
           maskImages: false,
         },
@@ -302,11 +306,13 @@ interface StoredProfile {
 /** A create has nothing stored. */
 const NEW_HOTEL: StoredProfile = { cuisines: null, keptPostalCode: null };
 
-/** The fields an update request names (a null among them, since it clears one), by name only. */
-function namedFields(request: HotelUpdateRequest): string[] {
-  return Object.entries(request)
-    .filter(([, value]) => value !== undefined)
-    .map(([key]) => key);
+/** What the hotel stores, as the staff models read it, its internal rating and notes included. */
+function storedValuesOf(row: StaffHotelRow): StoredHotelValues {
+  return {
+    ...toHotelStaffView(row),
+    internalRating: row.internalRating,
+    internalNotes: row.internalNotes,
+  };
 }
 
 /** The destination fields a patch set (the slug is immutable, so it is never part of an update). */

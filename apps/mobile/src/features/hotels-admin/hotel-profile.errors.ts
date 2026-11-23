@@ -113,30 +113,23 @@ export function blockedSaveToast(key: ProfileFieldKey, message: string): ToastOp
   };
 }
 
-/** A refused save's errors, placed under the editor's fields. */
-export interface PlacedErrors {
-  readonly fields: ProfileFieldErrors;
-  /** Whether a detail names no field the editor shows (no path, or one it has no field for). */
-  readonly unplaced: boolean;
-}
-
 /**
  * The details of a save the server refused, each under the field the first part of its path names
- * ("cuisines.2" is the cuisines), a field keeping its first message.
+ * ("cuisines.2" is the cuisines), a field keeping its first message. A detail with no path, or one the
+ * editor has no field for, is left out: the toast names the first field placed, or, with none, says
+ * the save failed.
  *
  * @example
  * placeServerErrors([{ path: "cuisines.2", message: "Choose a cuisine from the list, or Other" }]);
- * // { fields: { cuisines: "Choose a cuisine from the list, or Other" }, unplaced: false }
+ * // { cuisines: "Choose a cuisine from the list, or Other" }
  */
-export function placeServerErrors(details: readonly ErrorDetail[]): PlacedErrors {
+export function placeServerErrors(details: readonly ErrorDetail[]): ProfileFieldErrors {
   const fields: ProfileFieldErrors = {};
-  let unplaced = false;
   for (const { path, message } of details) {
     const key = path?.split(".")[0] ?? "";
-    if (!isProfileFieldKey(key)) unplaced = true;
-    else if (fields[key] === undefined) fields[key] = message;
+    if (isProfileFieldKey(key) && fields[key] === undefined) fields[key] = message;
   }
-  return { fields, unplaced };
+  return fields;
 }
 
 /**

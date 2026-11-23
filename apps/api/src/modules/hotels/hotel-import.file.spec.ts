@@ -83,8 +83,75 @@ describe("readHotelImportFile", () => {
   });
 
   it("refuses a file of more lines than any import needs before splitting it into rows", () => {
-    const lines = new TextEncoder().encode(`destinationSlug,name${"\n".repeat(200_000)}`);
-    expect(() => readHotelImportFile(lines)).toThrow(/more than 100000 lines/);
+    for (const ending of ["\n", "\r", "\r\n"]) {
+      const lines = new TextEncoder().encode(`destinationSlug,name${ending.repeat(200_000)}`);
+      expect(() => readHotelImportFile(lines)).toThrow(/more than 100000 lines/);
+    }
+  });
+
+  it("refuses a quote that never closes, so it cannot swallow the rows below it", () => {
+    const bytes = file(
+      "destinationSlug,name,descriptionClient,internalNotes",
+      'synthetic-coast,Synthetic Bay Hotel,"Lake view,Synthetic note A',
+      "synthetic-coast,Synthetic Cove,Nice,Synthetic note B",
+    );
+    expect(() => readHotelImportFile(bytes)).toThrow(
+      expect.objectContaining({
+        status: 400,
+        details: [{ path: "file", message: expect.stringMatching(/^Line 2 opens a quote/) }],
+      }),
+    );
+  });
+
+  it("keeps a quote inside a cell as text, as an inch mark is written", () => {
+    const read = readHotelImportFile(
+      file(
+        "destinationSlug,name,facilities",
+        'synthetic-coast,Synthetic Bay Hotel,55" TV|Pool',
+        "synthetic-coast,Synthetic Cove,Spa",
+        'synthetic-coast,Synthetic Dunes,32" TV',
+      ),
+    );
+    expect(read.rejected).toEqual([]);
+    expect(read.rows.map(({ line, row }) => [line, row.name, row.facilities])).toEqual([
+      [2, "Synthetic Bay Hotel", ['55" TV', "Pool"]],
+      [3, "Synthetic Cove", ["Spa"]],
+      [4, "Synthetic Dunes", ['32" TV']],
+    ]);
+  });
+
+  it("reads rows ended by a carriage return alone, as Excel for Mac saves them, or mixed", () => {
+    for (const text of [
+      "destinationSlug,name\rsynthetic-coast,Synthetic Bay Hotel\rsynthetic-coast,Synthetic Cove\r",
+      "destinationSlug,name,city\r\nsynthetic-coast,Synthetic Bay Hotel\rsynthetic-coast,Synthetic Cove\r\n",
+    ]) {
+      const read = readHotelImportFile(new TextEncoder().encode(text));
+      expect(read.rows.map(({ line, row }) => [line, row.name, row.city])).toEqual([
+        [2, "Synthetic Bay Hotel", undefined],
+        [3, "Synthetic Cove", undefined],
+      ]);
+    }
+  });
+
+  it("refuses a file holding a null character, which no text column can store", () => {
+    const bytes = file("destinationSlug,name", "synthetic-coast,Synthetic\u0000Bay");
+    expect(() => readHotelImportFile(bytes)).toThrow(
+      expect.objectContaining({
+        status: 400,
+        details: [{ path: "file", message: expect.stringMatching(/null character/) }],
+      }),
+    );
+  });
+
+  it("takes the first row that is not blank as the header, counting lines from the file's top", () => {
+    for (const lead of [",,,", ""]) {
+      const read = readHotelImportFile(
+        file(lead, "destinationSlug,name,city,state", "synthetic-coast,Synthetic Bay Hotel,,"),
+      );
+      expect(read.rows).toEqual([
+        { line: 3, row: { destinationSlug: "synthetic-coast", name: "Synthetic Bay Hotel" } },
+      ]);
+    }
   });
 
   it(`refuses more than ${HOTEL_IMPORT_MAX_ROWS} rows`, () => {

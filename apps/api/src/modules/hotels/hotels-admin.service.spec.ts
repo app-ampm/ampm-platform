@@ -16,6 +16,7 @@ import {
   buildHotelsAdminService as build,
   DESTINATION_ID as DESTINATION,
   HOTEL_ID as HOTEL,
+  staffHotelRow,
 } from "./testing/staff-hotel-fixtures.js";
 
 const CUSTOM_CONTACTS = ["hotels.hotel_contacts.read:all"];
@@ -97,10 +98,20 @@ describe("HotelsAdminService writes the internal notes only on their own key", (
 });
 
 describe("HotelsAdminService audits an update by field name", () => {
-  it("names each field the request sent, a cleared one included, and none of their values", async () => {
-    const { service, audit } = build();
-    const request = {
+  it("names only the fields the request changes, a cleared one included, and none of their values", async () => {
+    const { service, audit } = build({
       minNights: 2,
+      bookingNotes: "Synthetic booking note",
+      latitude: new Prisma.Decimal("24.576"),
+      cuisines: ["Indian"],
+    });
+    // The editor sends its whole form: the name, rooms, latitude and cuisines it re-sends are not changes.
+    const request = {
+      name: "Synthetic Lake Hotel",
+      totalRooms: 40,
+      latitude: 24.5760001,
+      cuisines: ["indian"],
+      minNights: 3,
       bookingNotes: null,
       internalNotes: "Synthetic changed note",
       city: undefined,
@@ -112,13 +123,36 @@ describe("HotelsAdminService audits an update by field name", () => {
         action: "update",
         entityType: "hotel",
         entityId: HOTEL,
+        before: {
+          name: "Synthetic Lake Hotel",
+          status: "active",
+          demoVisible: false,
+          publicShowcase: false,
+        },
         after: {
           name: "Synthetic Lake Hotel",
           status: "active",
           demoVisible: false,
+          publicShowcase: false,
           changedFields: ["minNights", "bookingNotes", "internalNotes"],
         },
         maskImages: false,
+      }),
+      expect.anything(),
+    );
+  });
+
+  it("names a move to another destination", async () => {
+    const { service, audit, repo } = build();
+    const elsewhere = "0192f1a0-0000-7000-8000-0000000000c9";
+    repo.findDestinationById.mockImplementation(async (id: string) => ({
+      ...staffHotelRow().destination,
+      id,
+    }));
+    await service.update(HOTEL, { destinationId: elsewhere }, staffPrincipal(["HT"]));
+    expect(audit.record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        after: expect.objectContaining({ changedFields: ["destinationId"] }),
       }),
       expect.anything(),
     );

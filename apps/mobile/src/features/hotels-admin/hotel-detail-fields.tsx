@@ -1,5 +1,6 @@
 import { Input } from "@ampm/ui";
 
+import { LONG_TEXT_MAX } from "./hotel-form-fields";
 import { checkedField, type ProfileFieldsProps } from "./hotel-profile.bindings";
 
 /**
@@ -33,6 +34,7 @@ export function HotelDetailFields(props: ProfileFieldsProps) {
         helpText="Shown to clients in discovery."
         {...checkedField(props, "descriptionClient")}
         multiline
+        maxLength={LONG_TEXT_MAX}
         testID="hotel-description"
       />
       <Input

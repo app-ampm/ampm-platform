@@ -3,6 +3,7 @@ import {
   draftFromHotel,
   hasErrors,
   hasInternalNotes,
+  hotelUpdateBody,
   internalNotesBody,
   validateDraft,
 } from "./hotel-profile.form";
@@ -274,6 +275,26 @@ describe("hotel profile form", () => {
       expect(internalNotesBody(draft)).toEqual({ internalRating: 4, internalNotes: "Note" });
       const empty = draftFromHotel(null);
       expect(internalNotesBody(empty)).toEqual({ internalRating: null, internalNotes: null });
+    });
+  });
+
+  describe("hotelUpdateBody", () => {
+    it("sends only the fields the draft changes, so an untouched one is never written back", () => {
+      const draft = { ...draftFromHotel(FILLED), cuisines: ["Indian", "Coastal", "Asian"] };
+      expect(hotelUpdateBody(draft, FILLED, false)).toEqual({
+        cuisines: ["Indian", "Coastal", "Asian"],
+      });
+      const cleared = { ...draftFromHotel(FILLED), city: " ", latitude: "12.3456780" };
+      expect(hotelUpdateBody(cleared, FILLED, false)).toEqual({ city: null });
+    });
+
+    it("is empty when nothing changed, and carries the notes only for someone who edits them", () => {
+      expect(hotelUpdateBody(draftFromHotel(FILLED), FILLED, true)).toEqual({});
+      const noted = { ...draftFromHotel(FILLED), internalNotes: "Synthetic changed note" };
+      expect(hotelUpdateBody(noted, FILLED, true)).toEqual({
+        internalNotes: "Synthetic changed note",
+      });
+      expect(hotelUpdateBody(noted, FILLED, false)).toEqual({});
     });
   });
 });

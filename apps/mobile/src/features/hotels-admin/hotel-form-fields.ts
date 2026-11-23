@@ -8,6 +8,9 @@ import { hotelListEntries } from "@ampm/core";
  * rendering, no I/O — tested through the form modules that use them and in hotel-form-fields.test.ts.
  */
 
+/** The longest free text a hotel field takes (an address, a description, notes), as the contract caps it. */
+export const LONG_TEXT_MAX = 10_000;
+
 export function textOrNull(value: string): string | null {
   const trimmed = value.trim();
   return trimmed === "" ? null : trimmed;

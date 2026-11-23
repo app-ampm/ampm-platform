@@ -1,4 +1,4 @@
-import type { HotelImportRowError, HotelImportRowReport } from "@ampm/core";
+import type { HotelImportResult, HotelImportRowError, HotelImportRowReport } from "@ampm/core";
 
 import type { Prisma } from "../../generated/prisma/client.js";
 import type { ImportFile } from "./hotel-import.file.js";
@@ -97,6 +97,34 @@ export function reportJson(summary: ImportSummary, dryRun: boolean): Prisma.Inpu
     updated: summary.updated,
     unchanged: summary.unchanged,
     destinationsCreated: summary.newDestinations,
+    rejected: summary.rejected,
+    rows: summary.rows,
+  };
+}
+
+/**
+ * The response; `applied` is whether a real run wrote anything (core `hotelImportResult`), and a dry
+ * run's `destinationsCreated` is how many destinations applying the file would create.
+ *
+ * @example
+ * return importResult(importJobId, summary, { dryRun: true, mediaRegistered: 0 });
+ */
+export function importResult(
+  importJobId: string,
+  summary: ImportSummary,
+  outcome: { readonly dryRun: boolean; readonly mediaRegistered: number },
+): HotelImportResult {
+  const wrote = summary.created + summary.updated + outcome.mediaRegistered > 0;
+  return {
+    importJobId,
+    dryRun: outcome.dryRun,
+    applied: !outcome.dryRun && wrote,
+    totalRows: summary.totalRows,
+    created: summary.created,
+    updated: summary.updated,
+    unchanged: summary.unchanged,
+    destinationsCreated: summary.newDestinations,
+    mediaRegistered: outcome.mediaRegistered,
     rejected: summary.rejected,
     rows: summary.rows,
   };

@@ -51,7 +51,7 @@ describe("HotelImportScreen downloads", () => {
     expect(mockDownloadCsv).toHaveBeenCalledTimes(1);
     const [filename, csv] = mockDownloadCsv.mock.calls[0]!;
     expect(filename).toBe("hotels-import-template.csv");
-    expect(csv).toBe(HOTEL_IMPORT_COLUMNS.join(","));
+    expect(csv).toBe(`\uFEFF${HOTEL_IMPORT_COLUMNS.join(",")}`);
   });
 
   it("downloads the per-row report of a validate, the rejected rows with their reasons", async () => {

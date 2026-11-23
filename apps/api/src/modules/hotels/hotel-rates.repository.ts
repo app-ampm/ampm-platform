@@ -310,7 +310,11 @@ export class HotelRatesRepository {
     return result.count;
   }
 
-  /** Denormalise `hotels.last_verified_at` to the newest verification the hotel has (AC-04.3). */
+  /**
+   * Denormalise `hotels.last_verified_at` to the newest verification the hotel has (AC-04.3). It reads,
+   * then writes, so call it with the hotel's row locked ({@link lockHotel}) in the same transaction: a
+   * concurrent write could otherwise be overwritten with an older maximum.
+   */
   async recomputeLastVerifiedAt(hotelId: string, tx: Prisma.TransactionClient): Promise<void> {
     const newest = await tx.hotelVerification.aggregate({
       where: { hotelId, deletedAt: null },

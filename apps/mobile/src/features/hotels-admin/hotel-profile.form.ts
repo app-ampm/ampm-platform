@@ -4,6 +4,7 @@ import {
   type HotelStaffListItem,
   type HotelStaffNotesView,
   type HotelStatus,
+  type HotelUpdateRequest,
 } from "@ampm/core";
 
 import {
@@ -47,10 +48,12 @@ export { hasErrors } from "./hotel-form-fields";
  * plus the location and access, food and beverage, and booking terms parts, each in its own module. The
  * server re-validates every field (bounds, URL, the PIN rule, slug uniqueness, that the destination
  * exists) and is the authority. Latitude and longitude are edited here; streetViewRef stays untouched.
- * Every field the editor shows is seeded from the hotel and sent back, so a save never wipes one: the
- * INTERNAL name variants and booking terms ride the profile model every profile reader gets. The
- * internal rating and notes are RESTRICTED-NOTES: a hotel carries them only for a reader of them, and
- * they go in the body only from someone who may set them (D-171), so nobody else's save can wipe them.
+ * Every field the editor shows is seeded from the hotel; an update sends only the fields the draft
+ * changes, so a save never writes back a value it did not touch, which an import or another editor may
+ * have changed meanwhile. The INTERNAL name variants and booking terms ride the profile model every
+ * profile reader gets. The internal rating and notes are RESTRICTED-NOTES: a hotel carries them only for
+ * a reader of them, and they go in the body only from someone who may set them (D-171), so nobody
+ * else's save can wipe them.
  */
 
 export interface HotelProfileDraft extends LocationDraft, FoodDraft, BookingTermsDraft {
@@ -210,9 +213,9 @@ export function validateDraft(
 /**
  * The request body from a valid draft: trimmed text or null for empties, parsed numbers, "not known"
  * and "not set" as null. slug is omitted (the server derives it from the name on create, and it is
- * immutable after), and so is streetViewRef. The same shape serves create and the partial update —
- * every edited field is sent, and the server patches what changed. The internal rating and notes are
- * left out: {@link internalNotesBody} adds them for someone who may.
+ * immutable after), and so is streetViewRef. A create sends it whole; an update sends the part
+ * {@link hotelUpdateBody} picks. The internal rating and notes are left out: {@link internalNotesBody}
+ * adds them for someone who may.
  */
 export function buildHotelBody(draft: HotelProfileDraft): HotelCreateRequest {
   return {
@@ -252,4 +255,51 @@ export function internalNotesBody(
     internalRating: intOrNull(draft.internalRating),
     internalNotes: textOrNull(draft.internalNotes),
   };
+}
+
+/**
+ * A valid draft's whole body, its internal rating and notes included for someone who edits them.
+ *
+ * @example
+ * create.mutate(saveBody(draft, notesEditable));
+ */
+export function saveBody(draft: HotelProfileDraft, notesEditable: boolean): HotelCreateRequest {
+  const profile = buildHotelBody(draft);
+  return notesEditable ? { ...profile, ...internalNotesBody(draft) } : profile;
+}
+
+/** Whether two body values are the same: lists entry by entry, anything else as it is. */
+function sameBodyValue(a: unknown, b: unknown): boolean {
+  if (Array.isArray(a) && Array.isArray(b)) {
+    return a.length === b.length && a.every((item, i) => item === b[i]);
+  }
+  return a === b;
+}
+
+/** The entries of `next` whose value differs from `opened`'s. */
+function changedEntries<T extends object>(next: T, opened: T): Partial<T> {
+  const changed: Partial<T> = {};
+  for (const key in next) {
+    if (!sameBodyValue(next[key], opened[key])) changed[key] = next[key];
+  }
+  return changed;
+}
+
+/**
+ * An update's body: only the fields whose value the draft changes from the hotel as the sheet opened it,
+ * both built the same way, so formatting never counts as a change. Empty when nothing changed, which
+ * the server would refuse, so the editor then sends nothing.
+ *
+ * @example
+ * hotelUpdateBody(draft, hotel, false); // { cuisines: ["Indian", "Asian"] } after ticking one chip
+ */
+export function hotelUpdateBody(
+  draft: HotelProfileDraft,
+  hotel: HotelStaffListItem,
+  notesEditable: boolean,
+): HotelUpdateRequest {
+  return changedEntries(
+    saveBody(draft, notesEditable),
+    saveBody(draftFromHotel(hotel), notesEditable),
+  );
 }

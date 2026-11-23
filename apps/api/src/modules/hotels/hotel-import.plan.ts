@@ -1,10 +1,6 @@
-import {
-  HOTEL_IMPORT_COLUMNS,
-  normalisePostalCode,
-  type HotelImportColumn,
-  type HotelImportRow,
-} from "@ampm/core";
+import { HOTEL_IMPORT_COLUMNS, type HotelImportColumn, type HotelImportRow } from "@ampm/core";
 
+import { sameValue } from "./hotel-changes.js";
 import type { ImportRow } from "./hotel-import.file.js";
 import { slugify } from "./hotel-import.js";
 import {
@@ -27,7 +23,9 @@ import { HOTEL_PROFILE_KEYS, type HotelProfileKey } from "./hotel-write.js";
  * is refused when its web address belongs to a deleted hotel or appears earlier in the file, its
  * destination was deleted, its postal code (or, on a move, the one the hotel keeps) or cuisines break the
  * profile rules, or it does what the uploader's keys do not allow: change an existing hotel, set the
- * internal rating or notes, create a destination, add an image. The dry run and the apply share this plan.
+ * internal rating or notes, create a destination, add an image. A row naming a live hotel also needs the
+ * profile read: without it the row is refused with one reason, so nothing the plan answers tells the
+ * uploader where a hotel they cannot read is filed or what it holds. The dry run and the apply share this.
  */
 
 /** One field a row was refused on. */
@@ -36,18 +34,23 @@ export interface FieldError {
   readonly message: string;
 }
 
+/** Where a stored hotel is filed, and the postal code it keeps: what decides a move and its PIN check. */
+export interface ImportFiling {
+  readonly destinationSlug: string;
+  readonly postalCode: string | null;
+}
+
 /**
- * A hotel a row names, deleted ones included (a deleted hotel keeps its slug). `values` holds only what
- * the uploader may read (the profile for a profile reader, the internal rating and notes for a notes
- * reader); a column without a value is compared as different, so whether a filled cell is a change never
- * turns on a value they cannot read. The destination and the stored postal code decide a move and its PIN
- * check whatever the uploader reads.
+ * A hotel a row names, deleted ones included (a deleted hotel keeps its slug), holding only what the
+ * uploader may read. `filing` is there for a profile reader alone: for anyone else it is null, and a row
+ * naming the live hotel is refused. `values` holds the profile for a profile reader and the internal
+ * rating and notes for a notes reader; a column without a value is compared as different, so whether a
+ * filled cell is a change never turns on a value they cannot read.
  */
 export interface ImportTarget {
   readonly id: string;
   readonly deletedAt: Date | null;
-  readonly destinationSlug: string;
-  readonly postalCode: string | null;
+  readonly filing: ImportFiling | null;
   readonly values: Readonly<Partial<Record<HotelProfileKey, unknown>>>;
 }
 
@@ -112,6 +115,7 @@ const DELETED_DESTINATION = "This destination was deleted; use another one";
 const NOTES_REFUSED = "You cannot change a hotel's internal rating or notes";
 const UPDATE_REFUSED =
   "A hotel already has this web address, and you cannot change existing hotels";
+const READ_REFUSED = "A hotel already has this web address, and you cannot read existing hotels";
 const IMAGE_UPDATE_REFUSED =
   "A hotel already has this web address, and you cannot add images to existing hotels";
 const IMAGE_REFUSED = "You cannot add hotel images";
@@ -120,15 +124,6 @@ const DESTINATION_REFUSED =
 
 const movedByName = (destinationSlug: string): string =>
   `A hotel with this name is filed under ${destinationSlug}; give this row its own slug, or that hotel's slug to move it`;
-
-/** The decimal places each fixed-point column keeps (latitude and longitude 6, distances 1). */
-const SCALE: Partial<Record<HotelProfileKey, number>> = {
-  latitude: 6,
-  longitude: 6,
-  airportDistanceKm: 1,
-  railwayDistanceKm: 1,
-  cityCentreDistanceKm: 1,
-};
 
 /** The columns that do not fill a hotel column (the slug keys the row; the rest are not stored on it). */
 const NOT_STORED = new Set<HotelImportColumn>(["slug", "destinationName", "imageRef"]);
@@ -162,12 +157,30 @@ function planRow(
   context: ImportContext,
 ): RowPlan {
   const target = context.hotels.get(slug) ?? null;
-  const { row, errors } = checkRow(input, slug, earlierLine, target, context);
+  const filing = target?.deletedAt === null ? target.filing : null;
+  const { row, errors } = checkRow(input, slug, earlierLine, { target, filing }, context);
   if (errors.length > 0) return { outcome: "error", line, slug: slug || null, errors };
   if (target === null) {
     return { outcome: "create", line, slug, row, changedFields: filledColumns(row) };
   }
-  return planExisting(line, slug, row, target, context.canUpdate);
+  if (filing === null) {
+    return { outcome: "error", line, slug, errors: [{ field: "slug", message: READ_REFUSED }] };
+  }
+  return planExisting(line, slug, row, { target, filing }, context.canUpdate);
+}
+
+/**
+ * The hotel a row names as the plan may read it: none, a deleted one or a live one; `filing` only for a
+ * live hotel the uploader reads.
+ */
+interface Named {
+  readonly target: ImportTarget | null;
+  readonly filing: ImportFiling | null;
+}
+
+/** Where a live hotel the row moves is filed now, or null when the row moves none (or none it reads). */
+function movedFrom(row: HotelImportRow, filing: ImportFiling | null): ImportFiling | null {
+  return filing !== null && row.destinationSlug !== filing.destinationSlug ? filing : null;
 }
 
 /**
@@ -180,13 +193,13 @@ function planExisting(
   line: number,
   slug: string,
   row: HotelImportRow,
-  target: ImportTarget,
+  { target, filing }: { readonly target: ImportTarget; readonly filing: ImportFiling },
   canUpdate: boolean,
 ): RowPlan {
   const changed = HOTEL_PROFILE_KEYS.filter(
     (key) => row[key] !== undefined && !sameValue(key, row[key], target.values[key]),
   );
-  const movesDestination = row.destinationSlug !== target.destinationSlug;
+  const movesDestination = movedFrom(row, filing) !== null;
   const writes = changed.length > 0 || movesDestination;
   const refusal = canUpdate ? null : updateRefusal(writes, row.imageRef !== undefined);
   if (refusal) return { outcome: "error", line, slug, errors: [refusal] };
@@ -217,16 +230,16 @@ function checkRow(
   input: HotelImportRow,
   slug: string,
   earlierLine: number | undefined,
-  target: ImportTarget | null,
+  { target, filing }: Named,
   context: ImportContext,
 ): { readonly row: HotelImportRow; readonly errors: FieldError[] } {
   const destination = context.destinations.get(input.destinationSlug) ?? null;
   const errors = [
     ...identityErrors(slug, earlierLine, target, destination),
-    ...placeErrors(input, target, destination, context.canCreateDestinations),
+    ...placeErrors(input, { target, filing }, destination, context.canCreateDestinations),
     ...grantErrors(input, context),
   ];
-  const postal = postalCheck(input, destination, target);
+  const postal = postalCheck(input, destination, filing);
   const cuisines = cuisineCheck(input, target, context.cuisineOptions);
   const row = { ...input, ...postal.value, ...cuisines.value };
   return { row, errors: [...errors, ...postal.errors, ...cuisines.errors] };
@@ -256,16 +269,15 @@ function identityErrors(
  */
 function placeErrors(
   row: HotelImportRow,
-  target: ImportTarget | null,
+  { target, filing }: Named,
   destination: ImportDestination | null,
   canCreateDestinations: boolean,
 ): FieldError[] {
-  const live = target?.deletedAt === null ? target : null;
-  const moves = live !== null && row.destinationSlug !== live.destinationSlug;
-  if (live !== null && moves && row.slug === undefined) {
-    return [{ field: "slug", message: movedByName(live.destinationSlug) }];
+  const from = movedFrom(row, filing);
+  if (from !== null && row.slug === undefined) {
+    return [{ field: "slug", message: movedByName(from.destinationSlug) }];
   }
-  const creates = destination === null && (target === null || moves);
+  const creates = destination === null && (target === null || from !== null);
   return creates && !canCreateDestinations
     ? [{ field: "destinationSlug", message: DESTINATION_REFUSED }]
     : [];
@@ -293,7 +305,7 @@ function grantErrors(row: HotelImportRow, context: ImportContext): FieldError[] 
 function postalCheck(
   row: HotelImportRow,
   destination: ImportDestination | null,
-  target: ImportTarget | null,
+  filing: ImportFiling | null,
 ): { readonly value: { postalCode?: string }; readonly errors: FieldError[] } {
   const country = destination?.country ?? NEW_DESTINATION_COUNTRY;
   if (typeof row.postalCode === "string") {
@@ -303,9 +315,8 @@ function postalCheck(
       errors: problem ? [{ field: "postalCode", message: problem }] : [],
     };
   }
-  const live = target?.deletedAt === null ? target : null;
-  const moves = live !== null && row.destinationSlug !== live.destinationSlug;
-  const kept = live !== null && moves ? keptPostalCodeProblem(live.postalCode, country) : null;
+  const from = movedFrom(row, filing);
+  const kept = from === null ? null : keptPostalCodeProblem(from.postalCode, country);
   return { value: {}, errors: kept ? [{ field: "postalCode", message: kept }] : [] };
 }
 
@@ -334,30 +345,4 @@ function filledColumns(row: HotelImportRow): HotelImportColumn[] {
   return HOTEL_IMPORT_COLUMNS.filter(
     (column) => !NOT_STORED.has(column) && row[column] !== undefined,
   );
-}
-
-/**
- * Whether a filled cell holds what is stored, compared as the column keeps it: fixed-point numbers at
- * their scale (a latitude to 6 places, a distance to 1), lists entry by entry in order, text trimmed, a
- * postal code without spaces.
- *
- * @example
- * sameValue("latitude", 24.5760001, 24.576); // true: the column keeps 6 places
- */
-export function sameValue(key: HotelProfileKey, next: unknown, current: unknown): boolean {
-  if (Array.isArray(next)) {
-    return (
-      Array.isArray(current) &&
-      next.length === current.length &&
-      next.every((item, i) => item === current[i])
-    );
-  }
-  const scale = SCALE[key];
-  if (scale !== undefined && typeof next === "number" && typeof current === "number") {
-    return Math.round(next * 10 ** scale) === Math.round(current * 10 ** scale);
-  }
-  if (typeof next === "string" && typeof current === "string") {
-    return next === (key === "postalCode" ? normalisePostalCode(current) : current.trim());
-  }
-  return next === current;
 }

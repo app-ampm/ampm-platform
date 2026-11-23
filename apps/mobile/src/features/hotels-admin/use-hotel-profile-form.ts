@@ -15,10 +15,10 @@ import {
   type ProfileFieldKey,
 } from "./hotel-profile.errors";
 import {
-  buildHotelBody,
   draftFromHotel,
   hasInternalNotes,
-  internalNotesBody,
+  hotelUpdateBody,
+  saveBody,
   validateDraft,
   type HotelProfileDraft,
 } from "./hotel-profile.form";
@@ -58,8 +58,8 @@ interface RefusedFields {
 /**
  * What a save does once it lands or fails: a toast, and the sheet closes on success. A save the server
  * refuses as invalid puts each error under the field its path names, focuses the first and names it in
- * the toast, as a blocked save does; a refusal naming anything the editor has no field for, and any
- * other failure, keeps the plain toast.
+ * the toast, as a blocked save does, even when the refusal also names something the editor has no
+ * field for; a refusal that marks no field, and any other failure, keeps the plain toast.
  */
 function useSaveOutcome(isEdit: boolean, onClose: () => void, refused: RefusedFields) {
   const toast = useToast();
@@ -73,12 +73,10 @@ function useSaveOutcome(isEdit: boolean, onClose: () => void, refused: RefusedFi
         toast.show(failedSaveToast(error));
         return;
       }
-      const { fields, unplaced } = placeServerErrors(error.details ?? []);
+      const fields = placeServerErrors(error.details ?? []);
       const first = firstInvalidField(fields);
       refused.show(fields);
-      toast.show(
-        first && !unplaced ? blockedSaveToast(first, fields[first] ?? "") : failedSaveToast(error),
-      );
+      toast.show(first ? blockedSaveToast(first, fields[first] ?? "") : failedSaveToast(error));
       if (first) refused.focus(first);
     },
   };
@@ -117,7 +115,8 @@ export interface HotelProfileForm extends ProfileFieldsProps {
  * The profile editor's state, checks and save, kept out of the view so each stays small. The draft
  * re-seeds each time the sheet opens. A blocked save shows every error, names the first in a toast
  * (announced) and focuses it, since it may sit in a panel far below Save; a save the server refuses on
- * the editor's fields does the same with the server's errors.
+ * the editor's fields does the same with the server's errors. An edit sends only what it changed, and
+ * one that changed nothing closes the sheet without a request.
  *
  *   const form = useHotelProfileForm(open, hotel, onClose);
  */
@@ -150,10 +149,10 @@ export function useHotelProfileForm(
       toast.show(blockedSaveToast(first, checked[first] ?? ""));
       return focus.focusField(first);
     }
-    const profile = buildHotelBody(draft);
-    const body = notesEditable ? { ...profile, ...internalNotesBody(draft) } : profile;
-    if (hotel) update.mutate({ hotelId: hotel.id, body }, outcome);
-    else create.mutate(body, outcome);
+    if (!hotel) return create.mutate(saveBody(draft, notesEditable), outcome);
+    const body = hotelUpdateBody(draft, hotel, notesEditable);
+    if (Object.keys(body).length === 0) return onClose();
+    update.mutate({ hotelId: hotel.id, body }, outcome);
   };
   const errors = errorsOnShow(showErrors ? validateDraft(draft, country) : {}, refused);
   return { draft, patch, errors, fieldRef: focus.fieldRef, pending, submit, notesEditable };

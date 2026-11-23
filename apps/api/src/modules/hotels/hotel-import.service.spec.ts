@@ -122,6 +122,58 @@ describe("HotelImportService", () => {
     );
   });
 
+  it("audits an update with the hotel's name, status and flags before and after, other fields by name", async () => {
+    const { service, audit } = build();
+    const flags = encode([
+      "destinationSlug,name,slug,status,demoVisible,publicShowcase,minNights",
+      "synthetic-destination,Synthetic Lake Hotel,synthetic-lake-hotel,inactive,true,,3",
+    ]);
+    await service.import(flags, { dryRun: false }, HT);
+    expect(audit.record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: "update",
+        entityType: "hotel",
+        before: {
+          name: "Synthetic Lake Hotel",
+          status: "active",
+          demoVisible: false,
+          publicShowcase: false,
+        },
+        after: {
+          slug: "synthetic-lake-hotel",
+          name: "Synthetic Lake Hotel",
+          status: "inactive",
+          demoVisible: true,
+          publicShowcase: false,
+          source: "import",
+          importJobId: "0192f1a0-0000-7000-8000-0000000000e1",
+          changedFields: ["status", "demoVisible", "minNights"],
+        },
+      }),
+      expect.anything(),
+    );
+  });
+
+  it("audits a created hotel's status and flags as written, defaults included", async () => {
+    const { service, audit } = build();
+    await service.import(CSV(CREATED), { dryRun: false }, HT);
+    expect(audit.record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: "create",
+        entityType: "hotel",
+        before: null,
+        after: expect.objectContaining({
+          name: "Synthetic Cove",
+          status: "draft",
+          demoVisible: false,
+          publicShowcase: false,
+          changedFields: ["destinationSlug", "name"],
+        }),
+      }),
+      expect.anything(),
+    );
+  });
+
   it("writes a created row's list cells as lists, each cuisine in its configured spelling", async () => {
     const { service, hotels } = build();
     const lists = encode([
@@ -245,16 +297,21 @@ describe("HotelImportService: the uploader's own keys (D-181, D-164)", () => {
     expect(blind.rows[0]).toMatchObject({ outcome: "update", changedFields: ["internalRating"] });
   });
 
-  it("counts every filled cell as a change for a writer who cannot read the profile", async () => {
-    const { service } = build();
-    const result = await service.import(
-      CSV(UNCHANGED),
-      { dryRun: true },
-      staffPrincipal([], [CREATE, UPDATE]),
-    );
-    expect(result.rows[0]).toMatchObject({
-      outcome: "update",
-      changedFields: ["name", "minNights"],
-    });
+  it("refuses a writer who cannot read the profile any row naming an existing hotel, by one reason", async () => {
+    const { service, hotels } = build();
+    const blind = staffPrincipal([], [CREATE, UPDATE]);
+    const moved = "synthetic-elsewhere,Synthetic Lake Hotel,synthetic-lake-hotel,2,";
+    for (const row of [UNCHANGED, UPDATED, moved]) {
+      const result = await service.import(CSV(row), { dryRun: false }, blind);
+      expect(result.rejected).toEqual([
+        {
+          line: 2,
+          errors: [
+            { field: "slug", message: expect.stringMatching(/cannot read existing hotels/) },
+          ],
+        },
+      ]);
+    }
+    expect(hotels.updateHotel).not.toHaveBeenCalled();
   });
 });

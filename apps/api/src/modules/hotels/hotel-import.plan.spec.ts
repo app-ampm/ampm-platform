@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { planImport, sameValue, type ImportTarget } from "./hotel-import.plan.js";
+import { planImport, type ImportTarget } from "./hotel-import.plan.js";
 import {
   COAST,
   importContext as context,
@@ -32,6 +32,12 @@ describe("planImport: an existing hotel", () => {
     expect(planOne({ latitude: 15.5000001, airportDistanceKm: 12.5 }).outcome).toBe("unchanged");
     expect(planOne({ cuisines: ["goan", "Indian"] })).toMatchObject({ changed: ["cuisines"] });
     expect(planOne({ postalCode: "403 515" }).outcome).toBe("unchanged");
+  });
+
+  it("leaves a re-imported seven-decimal coordinate unchanged once the column has rounded it", () => {
+    const stored = { ...STORED, values: { ...STORED.values, latitude: 8.186449 } };
+    const ctx = context({ hotels: new Map([["synthetic-bay", stored]]) });
+    expect(planOne({ latitude: 8.1864485 }, ctx).outcome).toBe("unchanged");
   });
 
   it("moves the hotel when the destination cell names another one", () => {
@@ -168,8 +174,7 @@ describe("planImport: refused rows", () => {
   it("checks the PIN a moving hotel keeps when its postal code cell is blank", () => {
     const abroad: ImportTarget = {
       ...STORED,
-      destinationSlug: "synthetic-abroad",
-      postalCode: "1100-148",
+      filing: { destinationSlug: "synthetic-abroad", postalCode: "1100-148" },
     };
     const ctx = context({ hotels: new Map([["synthetic-bay", abroad]]) });
     expect(planOne({}, ctx)).toMatchObject({
@@ -192,14 +197,5 @@ describe("planImport: refused rows", () => {
       outcome: "update",
       row: { cuisines: ["Indian", "Goan", "Other", "Italian"] },
     });
-  });
-});
-
-describe("sameValue", () => {
-  it("keeps a latitude to 6 places and a distance to 1", () => {
-    expect(sameValue("latitude", 24.5760001, 24.576)).toBe(true);
-    expect(sameValue("latitude", 24.57601, 24.576)).toBe(false);
-    expect(sameValue("airportDistanceKm", 12.5, 12.5)).toBe(true);
-    expect(sameValue("totalRooms", 40, null)).toBe(false);
   });
 });

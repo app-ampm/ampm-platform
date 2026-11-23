@@ -70,11 +70,12 @@ describe("hotel-import.format", () => {
     );
     expect(IMPORT_RULES).toContain("Yes-or-no columns take true or false");
     expect(IMPORT_RULES).toContain("Up to 5 MB and 2,000 rows.");
+    expect(IMPORT_RULES).toContain("Save the file as CSV UTF-8");
   });
 
-  it("builds the template as the header row alone", () => {
+  it("builds the template as the header row alone, marked UTF-8 so Excel keeps ₹ and Indic names", () => {
     const template = importTemplateCsv();
-    expect(template).toBe(IMPORT_TEMPLATE_HEADER);
+    expect(template).toBe(`\uFEFF${IMPORT_TEMPLATE_HEADER}`);
     expect(template.split("\r\n")).toHaveLength(1);
     expect(template.split(",")).toHaveLength(HOTEL_IMPORT_COLUMNS.length);
   });
@@ -97,6 +98,28 @@ describe("hotel-import.format", () => {
       expect(importSummary(r)).toBe(
         "Checked 50 rows: 40 to add, 5 to update, 3 unchanged, 2 rejected — nothing saved yet.",
       );
+    });
+
+    it("says how many new destinations a dry run would add", () => {
+      const r = result({
+        dryRun: true,
+        applied: false,
+        totalRows: 1,
+        created: 1,
+        updated: 0,
+        destinationsCreated: 1,
+      });
+      expect(importSummary(r)).toBe(
+        "Checked 1 row: 1 to add, 0 to update, 0 unchanged, 0 rejected — would add 1 new destination; nothing saved yet.",
+      );
+    });
+
+    it("names one destination and one image in the singular", () => {
+      expect(
+        importSummary(
+          result({ created: 1, updated: 0, destinationsCreated: 1, mediaRegistered: 1 }),
+        ),
+      ).toBe("Imported 1 created · 0 updated · 1 new destination · 1 image.");
     });
 
     it("summarises an applied import with its counts", () => {

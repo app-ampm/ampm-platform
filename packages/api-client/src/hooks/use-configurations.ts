@@ -2,8 +2,17 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { configListView, configView, type ConfigView } from "@ampm/core";
 
 import { useApiClient } from "../provider";
+import { HOTEL_CUISINE_OPTIONS_QUERY_KEY } from "./use-hotel-cuisine-options";
 
 export const CONFIGURATIONS_QUERY_KEY = ["configurations"] as const;
+
+/**
+ * The queries that read a configuration value through a route of their own, by its key: a write to the
+ * key refreshes them too, so a Super Admin sees the change at once rather than when the query goes stale.
+ */
+const QUERIES_READING: Readonly<Record<string, readonly (readonly string[])[]>> = {
+  "hotel.cuisine_options": [HOTEL_CUISINE_OPTIONS_QUERY_KEY],
+};
 
 /** The body of a configuration write: the key to set and its new value (validated on the server). */
 export interface UpdateConfigurationInput {
@@ -33,7 +42,8 @@ export function useConfigurations() {
  * Set one configuration value (`PUT /admin/configurations/:key`, `admin.configurations.update` — Super
  * Admin only; Finance may read configuration but not write it). The value is validated against the
  * key's own schema on the server, so an invalid value comes back as `validation_failed`. On success the
- * inventory query is refreshed, so the new value shows the moment the sheet closes.
+ * inventory query is refreshed, so the new value shows the moment the sheet closes, and so is any query
+ * that reads the key through a route of its own (the hotel editor's cuisine choices).
  */
 export function useUpdateConfiguration() {
   const api = useApiClient();
@@ -45,8 +55,11 @@ export function useUpdateConfiguration() {
         body: { value },
         schema: configView,
       }),
-    onSuccess: () => {
+    onSuccess: (_view, { key }) => {
       void queryClient.invalidateQueries({ queryKey: CONFIGURATIONS_QUERY_KEY });
+      for (const queryKey of QUERIES_READING[key] ?? []) {
+        void queryClient.invalidateQueries({ queryKey });
+      }
     },
   });
 }

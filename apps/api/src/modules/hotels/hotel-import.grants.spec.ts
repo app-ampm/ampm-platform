@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { planImport } from "./hotel-import.plan.js";
 import {
   CREATE_ONLY,
   importContext as context,
@@ -79,30 +80,42 @@ describe("planImport: images", () => {
   });
 });
 
-describe("planImport: values the uploader cannot read", () => {
-  const unread = new Map([["synthetic-bay", { ...STORED, values: {} }]]);
+describe("planImport: an uploader who cannot read the hotels", () => {
+  /** The stored hotel as a non-reader's lookup holds it: none of its values, nor where it is filed. */
+  const unread = new Map([["synthetic-bay", { ...STORED, filing: null, values: {} }]]);
+  const refused = {
+    outcome: "error",
+    line: 2,
+    slug: "synthetic-bay",
+    errors: [
+      {
+        field: "slug",
+        message: "A hotel already has this web address, and you cannot read existing hotels",
+      },
+    ],
+  };
 
-  it("counts every filled cell as a change, so the outcome never tells a guess from a match", () => {
-    expect(planOne({ brand: "Synthetic Collection" }, context({ hotels: unread }))).toMatchObject({
-      outcome: "update",
-      changed: ["name", "brand"],
-    });
-    expect(
-      planOne({ brand: "Synthetic Collection" }, context({ ...CREATE_ONLY, hotels: unread })),
-    ).toMatchObject({
-      outcome: "error",
-      errors: [{ field: "slug" }],
-    });
+  it("refuses a row naming a live hotel with one reason, whatever destination or cell it guesses", () => {
+    // An equal cell, then the hotel's own destination, another and one that does not exist: nothing
+    // the plan answers may turn on what the uploader cannot read.
+    const guesses = [
+      { brand: "Synthetic Collection" },
+      { destinationSlug: "synthetic-coast" },
+      { destinationSlug: "synthetic-abroad" },
+      { destinationSlug: "synthetic-nowhere" },
+    ];
+    for (const ctx of [context({ hotels: unread }), context({ ...CREATE_ONLY, hotels: unread })]) {
+      for (const cells of guesses) expect(planOne(cells, ctx)).toEqual(refused);
+    }
   });
 
-  it("still checks the PIN a moving hotel keeps, though its profile is unread", () => {
-    const abroad = {
-      ...STORED,
-      values: {},
-      destinationSlug: "synthetic-abroad",
-      postalCode: "1100-148",
-    };
-    const ctx = context({ hotels: new Map([["synthetic-bay", abroad]]) });
-    expect(planOne({}, ctx)).toMatchObject({ outcome: "error", errors: [{ field: "postalCode" }] });
+  it("names no destination for a row whose web address its name makes", () => {
+    for (const destinationSlug of ["synthetic-coast", "synthetic-abroad", "synthetic-nowhere"]) {
+      const [plan] = planImport(
+        [{ line: 2, row: { destinationSlug, name: "Synthetic Bay" } }],
+        context({ ...CREATE_ONLY, hotels: unread }),
+      );
+      expect(plan).toEqual(refused);
+    }
   });
 });

@@ -19,7 +19,7 @@ async function save(): Promise<void> {
 
 describe("the profile editor's D-178 panels", () => {
   describe("location and access", () => {
-    it("seeds the hotel's place and sends what staff change, coordinates included", async () => {
+    it("seeds the hotel's place and sends only what staff change, coordinates included", async () => {
       const captured: CapturedSave = {};
       const hotel = hotelStaffViewFixture({ city: "Udaipur", airportDistanceKm: 22.5 });
       await renderWithApi(
@@ -37,20 +37,17 @@ describe("the profile editor's D-178 panels", () => {
       await fireEvent.changeText(screen.getByTestId("hotel-longitude"), "76.54321");
       await fireEvent.changeText(screen.getByTestId("hotel-railway-minutes"), "25");
       await save();
-      expect(captured.updated).toMatchObject({
-        city: "Udaipur",
-        airportDistanceKm: 22.5,
+      expect(captured.updated).toEqual({
         mapsUrl: "https://maps.app.goo.gl/SyntheticPin1",
         latitude: 12.345678,
         longitude: 76.54321,
         railwayDriveMinutes: 25,
-        accessNotes: null,
       });
     });
   });
 
   describe("food and beverage", () => {
-    it("starts every fact at Not known and saves null for it, never false", async () => {
+    it("starts every fact at Not known, and sends only the answer staff give", async () => {
       const captured: CapturedSave = {};
       await renderWithApi(
         <HotelProfileEditSheet open hotel={hotelStaffViewFixture()} onClose={noop} />,
@@ -62,14 +59,10 @@ describe("the profile editor's D-178 panels", () => {
       await fireEvent.press(screen.getByTestId("hotel-alcohol-yes"));
       expect(screen.getByTestId("hotel-alcohol-yes")).toBeChecked();
       await save();
-      expect(captured.updated).toMatchObject({
-        isPureVegetarian: null,
-        hasSeparateVegKitchen: null,
-        servesAlcohol: true,
-      });
+      expect(captured.updated).toEqual({ servesAlcohol: true });
     });
 
-    it("takes a known answer back to Not known", async () => {
+    it("takes a known answer back to Not known, as null, never false", async () => {
       const captured: CapturedSave = {};
       const hotel = hotelStaffViewFixture({ isPureVegetarian: false, servesAlcohol: true });
       await renderWithApi(
@@ -79,7 +72,7 @@ describe("the profile editor's D-178 panels", () => {
       expect(await screen.findByTestId("hotel-pure-veg-no")).toBeChecked();
       await fireEvent.press(screen.getByTestId("hotel-alcohol-unknown"));
       await save();
-      expect(captured.updated).toMatchObject({ isPureVegetarian: false, servesAlcohol: null });
+      expect(captured.updated).toEqual({ servesAlcohol: null });
     });
 
     it("offers the configured cuisines and Other, keeping a label the options no longer list", async () => {
@@ -95,7 +88,8 @@ describe("the profile editor's D-178 panels", () => {
       await fireEvent.press(screen.getByTestId("hotel-cuisine-other"));
       expect(screen.getByTestId("hotel-cuisine-asian")).toBeSelected();
       await save();
-      expect(captured.updated).toMatchObject({ cuisines: ["Coastal", "Asian", "Other"] });
+      // A cuisine-only save sends the cuisines alone.
+      expect(captured.updated).toEqual({ cuisines: ["Coastal", "Asian", "Other"] });
     });
 
     it("lets staff remove an unlisted label and take the removal back", async () => {
@@ -156,13 +150,11 @@ describe("the profile editor's D-178 panels", () => {
       await fireEvent.changeText(screen.getByTestId("hotel-min-nights"), "2");
       await fireEvent.press(screen.getByTestId("hotel-parallel-not_allowed"));
       await save();
-      expect(captured.updated).toMatchObject({
+      expect(captured.updated).toEqual({
         weddingBuyoutPolicy: "required",
         minNights: 2,
-        minRoomsWithoutBuyout: null,
         parallelFunctions: "not_allowed",
       });
-      expect(captured.updated).not.toHaveProperty("internalNotes");
     });
 
     it("sends Not set as null", async () => {
@@ -180,7 +172,7 @@ describe("the profile editor's D-178 panels", () => {
   });
 
   describe("identity and details", () => {
-    it("seeds the name variants one per line and the event space, and sends them back", async () => {
+    it("seeds the name variants one per line and the event space, sending only what changes", async () => {
       const captured: CapturedSave = {};
       const hotel = hotelStaffViewFixture({
         parentGroup: "Synthetic Group",
@@ -196,12 +188,8 @@ describe("the profile editor's D-178 panels", () => {
       );
       await fireEvent.changeText(screen.getByTestId("hotel-event-space-sqm"), "1200");
       await save();
-      expect(captured.updated).toMatchObject({
-        parentGroup: "Synthetic Group",
-        nameAliases: ["The Lakeside", "Lakeside Palace Hotel"],
-        totalEventSpaceSqm: 1200,
-        totalEventSpaceSqft: 12917,
-      });
+      // The INTERNAL values the sheet seeded are left out while unchanged, so a save cannot wipe them.
+      expect(captured.updated).toEqual({ totalEventSpaceSqm: 1200 });
     });
   });
 });

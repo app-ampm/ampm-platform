@@ -1,5 +1,6 @@
 import { Input, InternalPanel, Stack } from "@ampm/ui";
 
+import { LONG_TEXT_MAX } from "./hotel-form-fields";
 import { checkedField, textField, type ProfileFieldsProps } from "./hotel-profile.bindings";
 import {
   BUYOUT_CHOICES,
@@ -8,9 +9,6 @@ import {
   parallelChoiceLabel,
 } from "./hotels-admin.format";
 import { MediaOptionPicker } from "./media-option-picker";
-
-/** The longest booking notes the contract takes. */
-const LONG_TEXT_MAX = 10_000;
 
 /** The fewest rooms a wedding takes without a full buyout, and the fewest nights. */
 function StayMinimums(props: ProfileFieldsProps) {

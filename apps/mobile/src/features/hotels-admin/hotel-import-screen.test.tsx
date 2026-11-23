@@ -3,6 +3,7 @@ import { fireEvent, screen } from "../../test/render";
 import { HotelImportScreen } from "./hotel-import-screen";
 import {
   appliedResult,
+  dryRunResult,
   IMPORT_CSV,
   importFetch,
   type ImportRequest,
@@ -73,7 +74,7 @@ describe("HotelImportScreen", () => {
     await fireEvent.press(screen.getByTestId("hotel-import-run"));
     expect(await screen.findByText("Hotels imported")).toBeOnTheScreen();
     expect(
-      screen.getByText("Imported 1 created · 1 updated · 1 new destinations."),
+      screen.getByText("Imported 1 created · 1 updated · 1 new destination."),
     ).toBeOnTheScreen();
     expect(requests.map((request) => request.path)).toEqual([
       "/hotels-admin/imports/hotels?dryRun=true",
@@ -82,15 +83,30 @@ describe("HotelImportScreen", () => {
     expect(requests[1]?.body).toBe(IMPORT_CSV);
   });
 
-  it("locks Import again when the CSV changes after validating", async () => {
+  it("locks Import again when the CSV changes after validating, marking the report as the old CSV's", async () => {
     const requests: ImportRequest[] = [];
     await renderImport(importFetch(requests));
     await validate();
     await screen.findByText("Validated — some rows rejected");
+    expect(screen.queryByTestId("hotel-import-result-stale")).toBeNull();
     await fireEvent.changeText(screen.getByTestId("hotel-import-content"), `${IMPORT_CSV}\nx,y`);
     expect(screen.getByTestId("hotel-import-locked")).toBeOnTheScreen();
+    expect(screen.getByTestId("hotel-import-result-stale")).toHaveTextContent(
+      "This report is of the CSV as it was before your last change. Validate again to check it as it is now.",
+    );
     await fireEvent.press(screen.getByTestId("hotel-import-run"));
     expect(requests).toHaveLength(1);
+  });
+
+  it("says in the dry run's toast and summary when importing would add destinations", async () => {
+    await renderImport(importFetch([], { dry: dryRunResult({ destinationsCreated: 1 }) }));
+    await validate();
+    expect(await screen.findByText("Importing would add 1 new destination.")).toBeOnTheScreen();
+    expect(
+      screen.getByText(
+        "Checked 3 rows: 1 to add, 1 to update, 0 unchanged, 1 rejected — would add 1 new destination; nothing saved yet.",
+      ),
+    ).toBeOnTheScreen();
   });
 
   // A real run that wrote nothing answers `applied: false` (core hotelImportResult; the API's
@@ -144,6 +160,17 @@ describe("HotelImportScreen", () => {
     expect(await screen.findByDisplayValue(IMPORT_CSV)).toBeOnTheScreen();
     await fireEvent.changeText(screen.getByTestId("hotel-import-content"), `${IMPORT_CSV}\nx,y`);
     expect(screen.queryByText("hotels.csv")).not.toBeOnTheScreen();
+  });
+
+  it("says a chosen file over 5 MB was not read, leaving the paste box as it was", async () => {
+    jest.mocked(pickCsvFile).mockResolvedValue({ content: null, name: "big.csv" });
+    await renderImport(importFetch([]));
+    await fireEvent.press(await screen.findByTestId("hotel-import-choose"));
+    expect(
+      await screen.findByText("big.csv is over 5 MB: split it into smaller files"),
+    ).toBeOnTheScreen();
+    expect(screen.getByTestId("hotel-import-content").props.value).toBe("");
+    expect(screen.queryByText("big.csv")).not.toBeOnTheScreen();
   });
 
   it("leaves the form empty when the file picker returns nothing", async () => {

@@ -20,28 +20,33 @@ import {
 
 import { ImportResultPanel } from "./hotel-import-result";
 import {
+  dryRunDestinationsNote,
   hasRejections,
   IMPORT_COLUMNS_HINT,
   IMPORT_RULES,
   IMPORT_TEMPLATE_FILE,
   importInputProblem,
   importTemplateCsv,
+  oversizeFileNotice,
 } from "./hotel-import.format";
 import { pickCsvFile } from "./pick-csv-file";
 import { useCsvDownload } from "./use-csv-download";
 
 /**
- * The toast for a completed run: a validate (dry run) announces whether any rows were rejected; a real
- * import announces whether anything was saved. The toast carries its own live region, so a screen-reader
- * user hears the outcome of Validate — the step the screen asks for first — not only the import.
+ * The toast for a completed run: a validate (dry run) announces whether any rows were rejected, and any
+ * destinations importing would create; a real import announces whether anything was saved. The toast
+ * carries its own live region, so a screen-reader user hears the outcome of Validate — the step the
+ * screen asks for first — not only the import.
  */
 function runToast(result: HotelImportResult): ToastOptions {
   if (result.dryRun) {
+    const note = dryRunDestinationsNote(result);
     return {
       title: hasRejections(result)
         ? "Validated — some rows rejected"
         : "Validated — all rows valid",
       tone: hasRejections(result) ? "warning" : "success",
+      ...(note ? { description: note } : {}),
     };
   }
   if (result.applied) return { title: "Hotels imported", tone: "success" };
@@ -51,13 +56,15 @@ function runToast(result: HotelImportResult): ToastOptions {
 /**
  * The import form: the CSV, the validate and import runs, and the result kept on screen. Validate sends
  * the CSV as a dry run; Import applies it and unlocks only while the CSV is the one just validated, so
- * staff always see what a file would change before it changes anything.
+ * staff always see what a file would change before it changes anything. The result stays on screen
+ * while staff fix the CSV, marked stale once the CSV is no longer the one it reports on.
  */
 function useHotelImportForm() {
   const toast = useToast();
   const importHotels = useHotelImport();
   const [content, setContent] = useState("");
   const [result, setResult] = useState<HotelImportResult | null>(null);
+  const [resultCsv, setResultCsv] = useState<string | null>(null);
   const [checkedCsv, setCheckedCsv] = useState<string | null>(null);
   const run = (dryRun: boolean): void => {
     if (importHotels.isPending) return;
@@ -70,6 +77,7 @@ function useHotelImportForm() {
       {
         onSuccess: (res) => {
           setResult(res);
+          setResultCsv(csv);
           setCheckedCsv(dryRun ? csv : null);
           toast.show(runToast(res));
         },
@@ -82,7 +90,8 @@ function useHotelImportForm() {
     );
   };
   const canImport = checkedCsv !== null && checkedCsv === content.trim();
-  return { content, setContent, result, run, canImport, pending: importHotels.isPending };
+  const isStale = result !== null && resultCsv !== content.trim();
+  return { content, setContent, result, isStale, run, canImport, pending: importHotels.isPending };
 }
 
 /** The template help: the columns, the rules of a file, and the template to download. */
@@ -154,12 +163,16 @@ function ChooseCsv({
 /** Choose a `.csv` on the web, or paste the CSV directly (works on every platform). */
 function ImportContentInput({ content, setContent, tall }: ContentInputProps) {
   const [fileName, setFileName] = useState<string | null>(null);
+  const toast = useToast();
   const choose = (): void => {
     void pickCsvFile().then((picked) => {
-      if (picked) {
-        setContent(picked.content);
-        setFileName(picked.name);
+      if (!picked) return;
+      if (picked.content === null) {
+        toast.show({ title: oversizeFileNotice(picked.name), tone: "danger" });
+        return;
       }
+      setContent(picked.content);
+      setFileName(picked.name);
     });
   };
   return (
@@ -237,12 +250,12 @@ export interface HotelImportScreenProps {
  */
 export function HotelImportScreen({ tabBar }: HotelImportScreenProps) {
   const router = useRouter();
-  const { content, setContent, result, run, canImport, pending } = useHotelImportForm();
+  const { content, setContent, result, isStale, run, canImport, pending } = useHotelImportForm();
   const isDesktop = useLayoutAt("lg");
   const side = (
     <Stack gap={4} testID="hotel-import-side">
       {isDesktop ? <ImportColumnsHint /> : null}
-      {result ? <ImportResultPanel result={result} /> : null}
+      {result ? <ImportResultPanel result={result} isStale={isStale} /> : null}
     </Stack>
   );
   return (

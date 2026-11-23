@@ -35,7 +35,7 @@ const noop = (): void => {};
 // Worded apart from the editor's own PIN check, so a pass proves the server's refusal reached the field.
 const PIN_REFUSED = "Synthetic server refusal: this PIN does not fit the destination";
 const CUISINE_REFUSED = "Choose a cuisine from the list, or Other";
-const NOTES_REFUSED = "Too big: expected string to have <=10000 characters";
+const NOTES_REFUSED = "Synthetic server refusal of these notes";
 
 interface RefusingFetchOptions {
   /** The person whose grants decide the internal fields (D-171); no `/me` route when absent. */
@@ -102,7 +102,7 @@ describe("HotelProfileEditSheet: a save the server refuses", () => {
     expect(screen.queryByText(CUISINE_REFUSED)).toBeNull();
   });
 
-  it("puts internal notes over 10,000 characters under their field, and focuses it", async () => {
+  it("puts a refusal of the internal notes under their field, and focuses it", async () => {
     await renderWithApi(
       <HotelProfileEditSheet open hotel={hotelStaffViewFixture()} onClose={noop} />,
       refusingFetch([{ path: "internalNotes", message: NOTES_REFUSED }], {
@@ -110,11 +110,30 @@ describe("HotelProfileEditSheet: a save the server refuses", () => {
       }),
     );
     const notes = await screen.findByTestId("hotel-internal-notes");
-    await fireEvent.changeText(notes, "x".repeat(10_001));
+    await fireEvent.changeText(notes, "Synthetic changed note");
     await save();
     expect(await screen.findByText(`Internal notes: ${NOTES_REFUSED}`)).toBeOnTheScreen();
     expect(screen.getByText(NOTES_REFUSED)).toBeOnTheScreen();
     expect(mockFocused).toEqual(["internalNotes"]);
+  });
+
+  it("names the marked field even when the refusal also names one the editor has no field for", async () => {
+    await renderWithApi(
+      <HotelProfileEditSheet open hotel={hotelStaffViewFixture()} onClose={noop} />,
+      refusingFetch(
+        [
+          { path: "streetViewRef", message: "Synthetic refusal" },
+          { path: "postalCode", message: PIN_REFUSED },
+        ],
+        { destinationsLoading: true },
+      ),
+    );
+    await fireEvent.changeText(await screen.findByTestId("hotel-postal-code"), "013001");
+    await save();
+    expect(await screen.findByText(`PIN code: ${PIN_REFUSED}`)).toBeOnTheScreen();
+    expect(screen.getByText("Check the highlighted fields")).toBeOnTheScreen();
+    expect(screen.queryByText("Validation failed")).toBeNull();
+    expect(mockFocused).toEqual(["postalCode"]);
   });
 
   it("keeps the plain toast for a refusal naming no field the editor has, marking none", async () => {
@@ -122,11 +141,20 @@ describe("HotelProfileEditSheet: a save the server refuses", () => {
       <HotelProfileEditSheet open hotel={hotelStaffViewFixture()} onClose={noop} />,
       refusingFetch([{ path: "streetViewRef", message: "Synthetic refusal" }]),
     );
-    await screen.findByTestId("hotel-rooms");
+    await fireEvent.changeText(await screen.findByTestId("hotel-rooms"), "150");
     await save();
     expect(await screen.findByText("Validation failed")).toBeOnTheScreen();
     expect(screen.queryByText("Check the highlighted fields")).toBeNull();
     expect(screen.queryByText("Synthetic refusal")).toBeNull();
     expect(mockFocused).toEqual([]);
+  });
+
+  it("caps the client description and the internal notes at the 10,000 characters the server takes", async () => {
+    await renderWithApi(
+      <HotelProfileEditSheet open hotel={hotelStaffViewFixture()} onClose={noop} />,
+      refusingFetch([], { me: staffMeFixture(["HT"]) }),
+    );
+    expect(await screen.findByTestId("hotel-internal-notes")).toHaveProp("maxLength", 10_000);
+    expect(screen.getByTestId("hotel-description")).toHaveProp("maxLength", 10_000);
   });
 });

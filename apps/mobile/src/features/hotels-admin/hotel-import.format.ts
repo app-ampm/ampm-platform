@@ -43,17 +43,25 @@ export const IMPORT_RULES =
   "line break; a comma stays inside an entry. " +
   "Yes-or-no columns take true or false (yes and no, or 1 and 0, work too). Use the template's " +
   `column names: an unknown column is refused. Up to ${MAX_SIZE_TEXT} and ` +
-  `${HOTEL_IMPORT_MAX_ROWS.toLocaleString("en-IN")} rows. Validate first: it checks the file and ` +
-  "saves nothing.";
+  `${HOTEL_IMPORT_MAX_ROWS.toLocaleString("en-IN")} rows. Save the file as CSV UTF-8 (in Excel: ` +
+  "CSV UTF-8): plain CSV turns ₹ and Indic names into question marks. Validate first: it checks the " +
+  "file and saves nothing.";
 
 /**
- * The template: the header row alone, so no example row can be imported by mistake.
+ * The byte-order mark that tells Excel a CSV is UTF-8, so it opens the template, and saves it again, as
+ * CSV UTF-8 rather than in the system code page, which writes ₹ or an Indic name as "?". The server and
+ * a browser reading the file both drop it.
+ */
+const UTF8_BOM = "\uFEFF";
+
+/**
+ * The template: the header row alone, so no example row can be imported by mistake, marked as UTF-8.
  *
  * @example
- * importTemplateCsv(); // "destinationSlug,destinationName,slug,name,…"
+ * importTemplateCsv(); // "\uFEFFdestinationSlug,destinationName,slug,name,…"
  */
 export function importTemplateCsv(): string {
-  return csvText([HOTEL_IMPORT_COLUMNS]);
+  return `${UTF8_BOM}${csvText([HOTEL_IMPORT_COLUMNS])}`;
 }
 
 /** The size of the text as the upload sends it, UTF-8. */
@@ -74,6 +82,11 @@ export function isOverImportLimit(text: string): boolean {
   return utf8Length(text) > HOTEL_IMPORT_MAX_BYTES;
 }
 
+/** What the screen says when the chosen file is over the cap, so it was not read. */
+export function oversizeFileNotice(fileName: string): string {
+  return `${fileName} is over ${MAX_SIZE_TEXT}: split it into smaller files`;
+}
+
 /** Why the CSV cannot be sent as it is (nothing there, or over the cap), or null when it can. */
 export function importInputProblem(csv: string): string | null {
   if (csv.trim().length === 0) return "Paste or choose a CSV first";
@@ -83,8 +96,33 @@ export function importInputProblem(csv: string): string | null {
   return null;
 }
 
+/** A count with its noun, singular for one: "1 row", "3 new destinations". */
+function counted(count: number, noun: string): string {
+  return `${count} ${noun}${count === 1 ? "" : "s"}`;
+}
+
 function rows(count: number): string {
-  return count === 1 ? "1 row" : `${count} rows`;
+  return counted(count, "row");
+}
+
+/**
+ * What a dry run's destinations would become: "would add 1 new destination", or null when the file names
+ * none that is missing. Importing creates each one active, so a typo in a slug shows here first.
+ */
+function newDestinationsText(result: HotelImportResult): string | null {
+  const count = result.destinationsCreated;
+  return count > 0 ? `would add ${counted(count, "new destination")}` : null;
+}
+
+/**
+ * The note a validate's toast carries when importing would create destinations, or null.
+ *
+ * @example
+ * dryRunDestinationsNote(result); // "Importing would add 1 new destination."
+ */
+export function dryRunDestinationsNote(result: HotelImportResult): string | null {
+  const text = result.dryRun ? newDestinationsText(result) : null;
+  return text ? `Importing ${text}.` : null;
 }
 
 function dryRunSummary(result: HotelImportResult): string {
@@ -94,7 +132,9 @@ function dryRunSummary(result: HotelImportResult): string {
     `${result.unchanged} unchanged`,
     `${result.rejected.length} rejected`,
   ];
-  return `Checked ${rows(result.totalRows)}: ${counts.join(", ")} — nothing saved yet.`;
+  const destinations = newDestinationsText(result);
+  const tail = destinations ? `${destinations}; nothing saved yet` : "nothing saved yet";
+  return `Checked ${rows(result.totalRows)}: ${counts.join(", ")} — ${tail}.`;
 }
 
 function nothingImportedSummary(result: HotelImportResult): string {
@@ -117,8 +157,10 @@ export function importSummary(result: HotelImportResult): string {
   if (!result.applied) return nothingImportedSummary(result);
   const parts = [`${result.created} created`, `${result.updated} updated`];
   if (result.unchanged > 0) parts.push(`${result.unchanged} unchanged`);
-  if (result.destinationsCreated > 0) parts.push(`${result.destinationsCreated} new destinations`);
-  if (result.mediaRegistered > 0) parts.push(`${result.mediaRegistered} images`);
+  if (result.destinationsCreated > 0) {
+    parts.push(counted(result.destinationsCreated, "new destination"));
+  }
+  if (result.mediaRegistered > 0) parts.push(counted(result.mediaRegistered, "image"));
   return `Imported ${parts.join(" · ")}.`;
 }
 

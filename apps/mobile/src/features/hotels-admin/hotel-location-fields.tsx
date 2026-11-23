@@ -1,5 +1,6 @@
 import { Input } from "@ampm/ui";
 
+import { LONG_TEXT_MAX } from "./hotel-form-fields";
 import type { ProfileFieldKey } from "./hotel-profile.errors";
 import {
   checkedField,
@@ -9,9 +10,8 @@ import {
 } from "./hotel-profile.bindings";
 import { ProfileSection } from "./hotel-profile-section";
 
-/** The longest name or place the contract takes, and the longest notes. */
+/** The longest name or place the contract takes. */
 const SHORT_TEXT_MAX = 255;
-const LONG_TEXT_MAX = 10_000;
 /** The longest postal code and Maps link the contract takes. */
 const POSTAL_CODE_MAX = 16;
 const MAPS_URL_MAX = 2048;

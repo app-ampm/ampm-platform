@@ -102,6 +102,13 @@ function profileValues(fields: HotelProfileFields): HotelUpdatePatch {
   return { ...baseValues(fields), ...catalogueValues(fields) };
 }
 
+/** What a new hotel is when its fields do not say: a draft, out of the demo and off the website. */
+export const NEW_HOTEL_DEFAULTS = {
+  status: "draft",
+  demoVisible: false,
+  publicShowcase: false,
+} as const satisfies Pick<HotelWriteData, "status" | "demoVisible" | "publicShowcase">;
+
 /**
  * A new hotel's row (a staff create or an import's create row): what the fields give, at its resolved
  * destination and slug, a draft hidden from the demo and the showcase unless the fields say otherwise.
@@ -119,9 +126,9 @@ export function toHotelWriteData(
     destinationId,
     slug,
     name: fields.name,
-    status: fields.status ?? "draft",
-    demoVisible: fields.demoVisible ?? false,
-    publicShowcase: fields.publicShowcase ?? false,
+    status: fields.status ?? NEW_HOTEL_DEFAULTS.status,
+    demoVisible: fields.demoVisible ?? NEW_HOTEL_DEFAULTS.demoVisible,
+    publicShowcase: fields.publicShowcase ?? NEW_HOTEL_DEFAULTS.publicShowcase,
   };
 }
 

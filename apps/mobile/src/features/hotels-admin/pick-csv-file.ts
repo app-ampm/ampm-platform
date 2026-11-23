@@ -1,6 +1,10 @@
-/** A CSV the staff picked to import: its text and the file name (for the "chosen file" hint). */
+/**
+ * A CSV the staff picked to import: its text and the file name (for the "chosen file" hint). The text is
+ * null when the file is over the import cap: the picker checks the size before reading, so an oversized
+ * file never lands in the paste box.
+ */
 export interface PickedCsv {
-  readonly content: string;
+  readonly content: string | null;
   readonly name: string;
 }
 

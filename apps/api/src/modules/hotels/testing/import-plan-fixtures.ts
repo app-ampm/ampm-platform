@@ -28,12 +28,11 @@ export const ABROAD: ImportDestination = {
   deletedAt: null,
 };
 
-/** The synthetic hotel as stored: published, demo-visible, with booking terms and notes. */
+/** The synthetic hotel as a reader of it sees it: published, demo-visible, with booking terms and notes. */
 export const STORED: ImportTarget = {
   id: STORED_HOTEL_ID,
   deletedAt: null,
-  destinationSlug: "synthetic-coast",
-  postalCode: "403515",
+  filing: { destinationSlug: "synthetic-coast", postalCode: "403515" },
   values: {
     name: "Synthetic Bay Hotel",
     brand: "Synthetic Collection",

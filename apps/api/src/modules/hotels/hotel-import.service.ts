@@ -7,6 +7,7 @@ import { type Principal, staffId } from "../../policy/principal.types.js";
 import { ConfigService } from "../admin/config/config.service.js";
 import { MediaService } from "../media/media.service.js";
 import { importGrantsOf, type ImportGrants } from "./hotel-audience.js";
+import { auditImageOf, importAuditImages, type HotelAuditImage } from "./hotel-import.audit.js";
 import { readHotelImportFile, type ImportFile, type ImportRow } from "./hotel-import.file.js";
 import { titleCaseSlug } from "./hotel-import.js";
 import {
@@ -16,7 +17,7 @@ import {
   type ImportTarget,
   type RowPlan,
 } from "./hotel-import.plan.js";
-import { reportJson, summarise, type ImportSummary } from "./hotel-import.report.js";
+import { importResult, reportJson, summarise, type ImportSummary } from "./hotel-import.report.js";
 import { HotelImportRepository, type ImportTargetRow } from "./hotel-import.repository.js";
 import { NEW_DESTINATION_COUNTRY } from "./hotel-profile-rules.js";
 import { toHotelWriteData, toImportPatch } from "./hotel-write.js";
@@ -38,10 +39,17 @@ interface ImportSettings {
   readonly grants: ImportGrants;
 }
 
-/** The job a write belongs to and who is writing. */
+/** The job a write belongs to, who is writing, and the audit images of the hotels the file names. */
 interface ImportJob {
   readonly importJobId: string;
   readonly actorId: string;
+  readonly images: ReadonlyMap<string, HotelAuditImage>;
+}
+
+/** What the plan reads beside the rows, and each named hotel's audit image by its id. */
+interface ImportLookup {
+  readonly context: ImportContext;
+  readonly images: ReadonlyMap<string, HotelAuditImage>;
 }
 
 /** What one apply did inside its transaction. */
@@ -85,7 +93,7 @@ export class HotelImportService {
     // Media is registered through Module N AFTER the hotel transaction commits, so a rolled-back import
     // never leaves a pending asset pointing at a hotel that was not written (the C->N boundary, api.md).
     const mediaRegistered = await this.registerMedia(applied.imageRefs, actorId);
-    return toResult(applied.importJobId, applied.summary, { dryRun: false, mediaRegistered });
+    return importResult(applied.importJobId, applied.summary, { dryRun: false, mediaRegistered });
   }
 
   /** The dry run: the plan and its report, kept on a `validating` job; no hotel is touched. */
@@ -94,7 +102,7 @@ export class HotelImportService {
     settings: ImportSettings,
     actorId: string,
   ): Promise<HotelImportResult> {
-    const context = await this.contextFor(file.rows, settings);
+    const { context } = await this.lookUp(file.rows, settings);
     const summary = summarise(file, planImport(file.rows, context), context.destinations);
     const importJobId = await this.imports.createImportJob("hotels", actorId);
     await this.imports.finishImportJob(
@@ -106,7 +114,7 @@ export class HotelImportService {
       },
       actorId,
     );
-    return toResult(importJobId, summary, { dryRun: true, mediaRegistered: 0 });
+    return importResult(importJobId, summary, { dryRun: true, mediaRegistered: 0 });
   }
 
   /** The apply, all-or-nothing; a web address taken meanwhile by another write answers 409. */
@@ -137,12 +145,17 @@ export class HotelImportService {
     tx: Prisma.TransactionClient,
   ): Promise<Applied> {
     const importJobId = await this.imports.createImportJob("hotels", actorId, tx);
-    const context = await this.contextFor(file.rows, settings, tx);
+    const { context, images } = await this.lookUp(file.rows, settings, tx);
     const plans = planImport(file.rows, context);
     const destinationIds = liveDestinationIds(context);
     const imageRefs: RowImageRef[] = [];
     for (const plan of plans) {
-      const hotelId = await this.writeRow(plan, destinationIds, { importJobId, actorId }, tx);
+      const hotelId = await this.writeRow(
+        plan,
+        destinationIds,
+        { importJobId, actorId, images },
+        tx,
+      );
       const ref = plan.outcome === "error" ? undefined : plan.row.imageRef;
       if (hotelId !== null && ref) imageRefs.push({ hotelId, ref });
     }
@@ -171,7 +184,7 @@ export class HotelImportService {
       const destinationId = await this.destinationFor(plan.row, destinationIds, job, tx);
       const data = toHotelWriteData(plan.row, destinationId, plan.slug);
       const hotelId = await this.hotels.createHotel(data, job.actorId, tx);
-      await this.auditRow("create", hotelId, plan, job, tx);
+      await this.auditRow(hotelId, plan, job, tx);
       return hotelId;
     }
     const patch = toImportPatch(plan.row, new Set(plan.changed));
@@ -179,7 +192,7 @@ export class HotelImportService {
       patch.destinationId = await this.destinationFor(plan.row, destinationIds, job, tx);
     }
     await this.hotels.updateHotel(plan.hotelId, patch, job.actorId, tx);
-    await this.auditRow("update", plan.hotelId, plan, job, tx);
+    await this.auditRow(plan.hotelId, plan, job, tx);
     return plan.hotelId;
   }
 
@@ -226,39 +239,39 @@ export class HotelImportService {
     return id;
   }
 
-  /** The audit event of one applied row: which fields it changed, never their values. */
+  /**
+   * The audit event of one applied row: the hotel's name, status and flags before and after, and the
+   * other fields it changed by name, never their values (hotel-import.audit.ts).
+   */
   private auditRow(
-    action: "create" | "update",
     entityId: string,
     plan: Extract<RowPlan, { outcome: "create" | "update" }>,
     job: ImportJob,
     tx: Prisma.TransactionClient,
   ): Promise<void> {
-    const after = {
-      slug: plan.slug,
-      name: plan.row.name,
-      source: "import",
-      importJobId: job.importJobId,
-      changedFields: plan.changedFields,
-    };
+    const stored = plan.outcome === "update" ? (job.images.get(plan.hotelId) ?? null) : null;
+    const { before, after } = importAuditImages(plan, stored, job.importJobId);
     return this.audit.record(
-      { action, entityType: "hotel", entityId, before: null, after, maskImages: false },
+      { action: plan.outcome, entityType: "hotel", entityId, before, after, maskImages: false },
       tx,
     );
   }
 
-  /** What the plan reads beside the rows: the hotels and destinations they name, deleted ones included. */
-  private async contextFor(
+  /**
+   * What the plan reads beside the rows (the hotels and destinations they name, deleted ones included,
+   * each hotel as its uploader may read it) and the named hotels' audit images.
+   */
+  private async lookUp(
     rows: readonly ImportRow[],
     settings: ImportSettings,
     tx?: Prisma.TransactionClient,
-  ): Promise<ImportContext> {
+  ): Promise<ImportLookup> {
     const slugs = unique(rows.map(({ row }) => importSlug(row)).filter((slug) => slug !== ""));
     const hotels = await this.imports.findHotelsBySlugs(slugs, tx);
     const destinationSlugs = unique(rows.map(({ row }) => row.destinationSlug));
     const destinations = await this.imports.findDestinationsBySlugs(destinationSlugs, tx);
     const { grants } = settings;
-    return {
+    const context: ImportContext = {
       cuisineOptions: settings.cuisineOptions,
       canUpdate: grants.canUpdate,
       canWriteNotes: grants.canWriteNotes,
@@ -267,6 +280,7 @@ export class HotelImportService {
       hotels: new Map(hotels.map((hotel) => [hotel.slug, toImportTarget(hotel, grants)])),
       destinations: new Map(destinations.map(({ slug, ...destination }) => [slug, destination])),
     };
+    return { context, images: new Map(hotels.map((hotel) => [hotel.id, auditImageOf(hotel)])) };
   }
 
   private async settingsFor(principal: Principal): Promise<ImportSettings> {
@@ -292,20 +306,20 @@ export class HotelImportService {
 const unique = (values: readonly string[]): string[] => [...new Set(values)];
 
 /**
- * A stored hotel as the plan compares it: only the values the uploader reads (the profile the staff views
- * carry for a profile reader, the internal rating and notes for a notes reader), so a dry run's outcome
- * never tells them whether a guess matches a value they cannot read.
+ * A stored hotel as the plan reads it: only what the uploader reads (where it is filed and the profile
+ * the staff views carry, for a profile reader; the internal rating and notes, for a notes reader), so a
+ * dry run's outcome never tells them where it is filed or whether a guess matches a value they cannot read.
  */
 function toImportTarget(
   row: ImportTargetRow,
   reads: Pick<ImportGrants, "readsProfiles" | "readsNotes">,
 ): ImportTarget {
   const notes = { internalRating: row.internalRating, internalNotes: row.internalNotes };
+  const filing = { destinationSlug: row.destination.slug, postalCode: row.postalCode };
   return {
     id: row.id,
     deletedAt: row.deletedAt,
-    destinationSlug: row.destination.slug,
-    postalCode: row.postalCode,
+    filing: reads.readsProfiles ? filing : null,
     values: {
       ...(reads.readsProfiles ? toHotelStaffView(row) : {}),
       ...(reads.readsNotes ? notes : {}),
@@ -319,26 +333,4 @@ function liveDestinationIds(context: ImportContext): Map<string, string> {
     ([, destination]) => destination.deletedAt === null,
   );
   return new Map(live.map(([slug, destination]) => [slug, destination.id]));
-}
-
-/** The response; `applied` is whether a real run wrote anything (core `hotelImportResult`). */
-function toResult(
-  importJobId: string,
-  summary: ImportSummary,
-  outcome: { readonly dryRun: boolean; readonly mediaRegistered: number },
-): HotelImportResult {
-  const wrote = summary.created + summary.updated + outcome.mediaRegistered > 0;
-  return {
-    importJobId,
-    dryRun: outcome.dryRun,
-    applied: !outcome.dryRun && wrote,
-    totalRows: summary.totalRows,
-    created: summary.created,
-    updated: summary.updated,
-    unchanged: summary.unchanged,
-    destinationsCreated: summary.newDestinations,
-    mediaRegistered: outcome.mediaRegistered,
-    rejected: summary.rejected,
-    rows: summary.rows,
-  };
 }

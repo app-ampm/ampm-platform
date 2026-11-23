@@ -105,10 +105,10 @@ describe("HotelProfileEditSheet", () => {
     await fireEvent.changeText(screen.getByTestId("hotel-postal-code"), "313 001");
     await fireEvent.press(screen.getByTestId("hotel-profile-submit"));
     expect(await screen.findByText("Hotel updated")).toBeOnTheScreen();
-    expect(captured.updated).toMatchObject({ postalCode: "313 001" });
+    expect(captured.updated).toEqual({ postalCode: "313 001" });
   });
 
-  it("edits a hotel: seeds from its profile and patches the change", async () => {
+  it("edits a hotel: seeds from its profile and patches only what changed", async () => {
     const captured: CapturedSave = {};
     await renderWithApi(
       <HotelProfileEditSheet open hotel={hotelStaffViewFixture()} onClose={noop} />,
@@ -118,7 +118,21 @@ describe("HotelProfileEditSheet", () => {
     await fireEvent.changeText(screen.getByTestId("hotel-rooms"), "150");
     await fireEvent.press(screen.getByTestId("hotel-profile-submit"));
     expect(await screen.findByText("Hotel updated")).toBeOnTheScreen();
-    expect(captured.updated).toMatchObject({ name: "The Lakeside Palace", totalRooms: 150 });
+    // An untouched field is left out, so the save cannot write back a value an import set meanwhile.
+    expect(captured.updated).toEqual({ totalRooms: 150 });
+  });
+
+  it("closes without a request when nothing changed", async () => {
+    const captured: CapturedSave = {};
+    const onClose = jest.fn();
+    await renderWithApi(
+      <HotelProfileEditSheet open hotel={hotelStaffViewFixture()} onClose={onClose} />,
+      profileEditorFetch(captured),
+    );
+    await screen.findByDisplayValue("The Lakeside Palace");
+    await fireEvent.press(screen.getByTestId("hotel-profile-submit"));
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(captured.updated).toBeUndefined();
   });
 
   it("lets staff retry when the destinations fail to load", async () => {
@@ -173,7 +187,7 @@ describe("HotelProfileEditSheet", () => {
       expect(screen.getByDisplayValue(NOTES)).toBeOnTheScreen();
       await fireEvent.changeText(screen.getByTestId("hotel-internal-rating"), "5");
       await saveRoomsChange();
-      expect(captured.updated).toMatchObject({ internalRating: 5, internalNotes: NOTES });
+      expect(captured.updated).toEqual({ totalRooms: 150, internalRating: 5 });
     });
 
     it("leaves them out of the form and the body for Sales, who reads but may not change them", async () => {

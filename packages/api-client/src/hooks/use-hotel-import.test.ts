@@ -1,6 +1,7 @@
 import { hotelImportResult, type HotelImportResult } from "@ampm/core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { HOTEL_MEDIA_QUERY_KEY } from "./use-hotel-media";
 import { hotelImportPath, useHotelImport, type HotelImportInput } from "./use-hotel-import";
 import { STAFF_DESTINATIONS_QUERY_KEY, STAFF_HOTELS_QUERY_KEY } from "./use-staff-hotels";
 
@@ -108,6 +109,16 @@ describe("useHotelImport", () => {
     useHotelImport();
     seen.onSuccess?.(result({ dryRun: false, applied: true }));
     expect(seen.invalidated).toEqual([STAFF_HOTELS_QUERY_KEY, STAFF_DESTINATIONS_QUERY_KEY]);
+  });
+
+  it("refreshes every hotel's media too once an import has registered images", () => {
+    useHotelImport();
+    seen.onSuccess?.(result({ dryRun: false, applied: true, mediaRegistered: 2 }));
+    expect(seen.invalidated).toEqual([
+      STAFF_HOTELS_QUERY_KEY,
+      STAFF_DESTINATIONS_QUERY_KEY,
+      HOTEL_MEDIA_QUERY_KEY,
+    ]);
   });
 
   it("refreshes nothing after a dry run, which writes nothing", () => {

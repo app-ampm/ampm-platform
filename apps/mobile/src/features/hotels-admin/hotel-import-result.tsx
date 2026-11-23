@@ -65,19 +65,32 @@ function RejectedRows({ result }: { readonly result: HotelImportResult }) {
   return <RowBlock headline={headline} lines={lines} />;
 }
 
+export interface ImportResultPanelProps {
+  readonly result: HotelImportResult;
+  /** The CSV has changed since this run, so the report is of the CSV as it was before. */
+  readonly isStale: boolean;
+}
+
 /**
  * The outcome of a validate or an import (TW-25): a summary callout, the rows that add or update a
  * hotel with the columns each changes, the rejected rows with their reasons (each list capped on
  * screen), and the whole per-row report as a CSV to download, so staff fix the rejected rows in their
- * spreadsheet. Unchanged rows are counted, not listed.
+ * spreadsheet. Unchanged rows are counted, not listed. Once the CSV changes, it says the report is of
+ * the CSV as it was, and stays on screen while staff fix the rows it names.
  *
- *   {result ? <ImportResultPanel result={result} /> : null}
+ *   {result ? <ImportResultPanel result={result} isStale={isStale} /> : null}
  */
-export function ImportResultPanel({ result }: { readonly result: HotelImportResult }) {
+export function ImportResultPanel({ result, isStale }: ImportResultPanelProps) {
   const download = useCsvDownload();
   return (
     <Card testID="hotel-import-result">
       <Stack gap={3}>
+        {isStale ? (
+          <Text variant="bodySmall" tone="muted" testID="hotel-import-result-stale">
+            This report is of the CSV as it was before your last change. Validate again to check it
+            as it is now.
+          </Text>
+        ) : null}
         <Callout
           kind={hasRejections(result) ? "warning" : "success"}
           title={importSummary(result)}

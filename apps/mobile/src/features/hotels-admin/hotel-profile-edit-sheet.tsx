@@ -6,6 +6,7 @@ import { DestinationField } from "./hotel-destination-field";
 import { HotelDetailFields } from "./hotel-detail-fields";
 import { HotelEventSpaceFields } from "./hotel-event-space-fields";
 import { HotelFoodFields } from "./hotel-food-fields";
+import { LONG_TEXT_MAX } from "./hotel-form-fields";
 import { HotelIdentityFields } from "./hotel-identity-fields";
 import { HotelLocationFields } from "./hotel-location-fields";
 import { checkedField, type ProfileFieldsProps } from "./hotel-profile.bindings";
@@ -51,6 +52,7 @@ function InternalFields(props: ProfileFieldsProps) {
           label="Internal notes"
           {...checkedField(props, "internalNotes")}
           multiline
+          maxLength={LONG_TEXT_MAX}
           testID="hotel-internal-notes"
         />
       </Stack>

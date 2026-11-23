@@ -10,8 +10,10 @@ import {
 /*
  * Pure helpers for the hotel spreadsheet import (TW-25; AC-35.1; D-181). No Nest, no Prisma, so they test
  * in isolation. `decodeCsv` turns the uploaded bytes into text, refusing anything but UTF-8. `parseCsv` is
- * a small RFC-4180 state machine (quoted fields, escaped `""`, embedded commas and newlines, CRLF) that
- * holds memory near the file's size. `headerProblems` holds the file to the template's fixed headers.
+ * a small RFC-4180 state machine (quoted fields, escaped `""`, embedded commas and newlines; a record
+ * ends at LF, CR or CRLF) that holds memory near the file's size and reads a quote as spreadsheets do:
+ * one opens a quoted cell only at the cell's start, and a quoted cell that never closes refuses the file
+ * rather than swallow the rows below it. `headerProblems` holds the file to the template's fixed headers.
  * `buildCandidate` turns one row into a typed object ready for `hotelImportRow`: a blank cell is left out,
  * which on an update means "leave this unchanged"; number, true/false and list columns are converted; a
  * value that does not convert falls through as its string, so the schema reports a clear field error.
@@ -19,6 +21,13 @@ import {
 
 /** Why a file that is not UTF-8 text is refused. */
 export const NOT_UTF8 = "Save the file as UTF-8 CSV (in Excel: CSV UTF-8) and upload it again";
+
+/**
+ * Why a file holding the null character is refused: no database text column can store it. Text copied
+ * from a PDF can carry one, and a UTF-16 file read as UTF-8 is full of them.
+ */
+export const HAS_NUL =
+  "The file holds a null character, which text copied from a PDF or a UTF-16 file can carry; remove it, save the file as UTF-8 CSV and upload it again";
 
 /**
  * The uploaded bytes as text: UTF-8 only, its byte-order mark dropped. Null when the bytes are not valid
@@ -55,12 +64,16 @@ const QUOTE = 0x22;
 const COMMA = 0x2c;
 const LF = 0x0a;
 const CR = 0x0d;
+const SPACE = 0x20;
+const TAB = 0x09;
 
 /**
  * Reads CSV text into records. Each run of plain characters is taken with one slice, never a character
  * at a time (one string per character held about 170 MB for a 5 MiB cell), and a cell over
- * {@link CSV_MAX_CELL_LENGTH} characters or a record over {@link CSV_MAX_CELLS} cells stops the read.
- * Outside quotes a quote opens them and a carriage return is dropped; inside, `""` is one quote.
+ * {@link CSV_MAX_CELL_LENGTH} characters, a record over {@link CSV_MAX_CELLS} cells or a quote that never
+ * closes stops the read. A quote opens quotes only before anything but blanks in its cell, so `55" TV`
+ * is text, as Excel and Python's csv read it; inside quotes `""` is one quote. LF, CR and CRLF each end
+ * a record (Excel for Mac ends them with CR alone).
  *
  * @example
  * parseCsv('name,note\n"Lake, Palace",x'); // { records: [["name", "note"], ["Lake, Palace", "x"]] }
@@ -76,6 +89,8 @@ class CsvReader {
   private cellLength = 0;
   private start = 0;
   private inQuotes = false;
+  /** Whether the cell holds anything but blanks yet: after that a quote is text. */
+  private started = false;
 
   constructor(private readonly text: string) {}
 
@@ -101,16 +116,31 @@ class CsvReader {
     return this.start;
   }
 
-  /** Outside quotes a comma ends a cell, a line feed a record; a quote opens quotes; a CR is dropped. */
+  /**
+   * Outside quotes a comma ends a cell, and LF, CR or CRLF a record; a quote opens quotes when it starts
+   * the cell (blanks aside), and is text anywhere else.
+   */
   private plain(i: number): number | string {
     const c = this.text.charCodeAt(i);
-    if (c !== QUOTE && c !== COMMA && c !== LF && c !== CR) return i + 1;
-    const problem = this.take(i) ?? (c === COMMA || c === LF ? this.endCell() : null);
+    if (c === QUOTE && !this.started) return this.openQuotes(i);
+    if (c !== COMMA && c !== LF && c !== CR) {
+      if (c !== SPACE && c !== TAB) this.started = true;
+      return i + 1;
+    }
+    const problem = this.take(i) ?? this.endCell();
     if (problem !== null) return problem;
-    if (c === QUOTE) this.inQuotes = true;
-    if (c === LF) this.endRecord();
+    if (c !== COMMA) this.endRecord();
+    this.start = c === CR && this.text.charCodeAt(i + 1) === LF ? i + 2 : i + 1;
+    return this.start;
+  }
+
+  private openQuotes(i: number): number | string {
+    const problem = this.take(i);
+    if (problem !== null) return problem;
+    this.inQuotes = true;
+    this.started = true;
     this.start = i + 1;
-    return i + 1;
+    return this.start;
   }
 
   /** Adds the plain run that ends before `end` to the cell. */
@@ -122,15 +152,17 @@ class CsvReader {
     this.parts.push(piece);
     this.cellLength += piece.length;
     if (this.cellLength <= CSV_MAX_CELL_LENGTH) return null;
-    return `Line ${this.records.length + 1} has a cell longer than ${CSV_MAX_CELL_LENGTH.toLocaleString("en-IN")} characters; no column takes one that long.`;
+    const hint = this.inQuotes ? ", so check that its closing quote is there" : "";
+    return `Line ${this.line()} has a cell longer than ${CSV_MAX_CELL_LENGTH.toLocaleString("en-IN")} characters; no column takes one that long${hint}.`;
   }
 
   private endCell(): string | null {
     this.record.push(this.parts.join(""));
     this.parts = [];
     this.cellLength = 0;
+    this.started = false;
     if (this.record.length <= CSV_MAX_CELLS) return null;
-    return `Line ${this.records.length + 1} has more than ${CSV_MAX_CELLS} cells; the template has ${HOTEL_IMPORT_COLUMNS.length} columns.`;
+    return `Line ${this.line()} has more than ${CSV_MAX_CELLS} cells; the template has ${HOTEL_IMPORT_COLUMNS.length} columns.`;
   }
 
   private endRecord(): void {
@@ -138,8 +170,16 @@ class CsvReader {
     this.record = [];
   }
 
-  /** The last record, unless the text ended with its line feed. */
+  /** The record being read, counted from 1 (a record's cells may run over several lines). */
+  private line(): number {
+    return this.records.length + 1;
+  }
+
+  /** The last record, unless the text ended with its line break; refused while a quote is open. */
   private finish(): string | null {
+    if (this.inQuotes) {
+      return `Line ${this.line()} opens a quote that never closes; close the quoted cell, or remove the quote.`;
+    }
     const problem = this.take(this.text.length);
     if (problem !== null) return problem;
     if (this.parts.length === 0 && this.record.length === 0) return null;
