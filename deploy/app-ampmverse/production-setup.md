@@ -118,8 +118,6 @@ Done on 20 Nov 2026 (UTC): production built at 09:02. The API and worker started
 2. `bash deploy/redeploy-prod.sh` on the box. Its order: preflight (the tree as shipped, checked by `deploy/verify-shipped-source.sh`, so a tree shipped by hand is refused; override; secrets; disk), build, data tier and virus scanner, safety dump, **migrate before the new API**, recreate api/worker/web, health gate, then the scanner's health (reported, not gated). A failed gate puts api and worker back on the previous image. It never seeds demo data.
 3. If the change touched the portal: `AMPM_WEB_TARGET=production … deploy/deploy-web.sh` **after** the API (a contract change needs the new API first). Load a page and read the browser console.
 
-**Starter hotel catalogue (D-159), run once after the deploy that carries it:** `docker compose -f … -f … --profile migrate run --rm -T migrate node --import tsx prisma/load-catalogue.ts --dry-run` lists the destinations and hotels it would create; run it again without `--dry-run` to create them. It is create-only: a hotel whose slug exists, live or deleted, is left alone, so a later run never overwrites the Hotel team's corrections.
-
 The test stack deploys the same way, with `AMPM_SHIP_TARGET=test` for its source and `AMPM_WEB_TARGET=test` for its web bundle. Keep checking free disk (`df -h /`, `docker system df`) before a build; `redeploy-prod.sh` prunes dangling build cache itself below 15 GB free. Never prune volumes: other tenants' data lives in them.
 
 ## 5. Backups and restore (D-139)
