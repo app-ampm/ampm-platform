@@ -6,11 +6,11 @@ import type {
   SiteVisitStaffView,
 } from "@ampm/core";
 
-import { failure, ok, TEST_API_BASE } from "../../test/api";
+import { failure, ok, TEST_API_BASE, type FetchFn, type Route } from "../../test/api";
 import { accountViewFixture } from "../accounts/accounts.test-utils";
 import { hotelStaffDetailViewFixture } from "../hotels-admin/hotels-admin.test-utils";
 
-export { failure, jsonResponse, ok, renderWithApi } from "../../test/api";
+export { failure, jsonResponse, ok, renderWithApi, type FetchFn, type Route } from "../../test/api";
 
 /*
  * Test helpers for the staff enquiry screens: records in the exact (strict) shapes the
@@ -135,9 +135,6 @@ export function milestoneFixture(
     ...overrides,
   };
 }
-
-export type FetchFn = typeof fetch;
-export type Route = (init: RequestInit | undefined) => Response;
 
 export const page = (items: readonly unknown[], nextCursor: string | null = null): Response =>
   ok({ items, nextCursor });
