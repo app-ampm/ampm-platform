@@ -11,7 +11,7 @@
 #   build         web/api or deps     next build / nest build (affected, or both on a shared change)
 #   mobile        mobile or its deps  Expo bundle for web, iOS and Android (Metro resolves what lint/tsc cannot)
 #   matrix        policy or the doc   regenerate packages/policy/src/generated and fail on drift
-#   tools         docs/tools changed  the redactor, memory-hook and checkpoint self-tests
+#   tools         docs/tools, hooks   the redactor, memory-hook, checkpoint and Claude Code hook self-tests
 #   deploy        deploy changed      shellcheck the deploy scripts + the source-ship test against a stand-in box
 #   secrets-scan  always              refuse any committed plaintext secret (feature 6.4)
 #   infra         infra changed       shellcheck + Compose/Caddy/monitoring validation + three stack smokes (heavy)
@@ -128,6 +128,7 @@ jobs:
             tools:
               - *workflow
               - 'docs/tools/**'
+              - '.claude/hooks/**'
             deploy:
               - *workflow
               - 'deploy/**'
@@ -307,8 +308,8 @@ jobs:
       - name: Permission matrix drift (docs/permission-matrix.md vs packages/policy/src/generated)
         run: pnpm authz:generate && git diff --exit-code -- packages/policy/src/generated
 
-  # The docs/tools suite (transcript redactor and the memory + checkpoint hooks) is Python/Bash and
-  # does not touch the workspaces, so it runs only when those tools or the workflow change.
+  # The docs/tools suite (transcript redactor, the memory + checkpoint hooks and the Claude Code hooks) is
+  # Python/Bash and does not touch the workspaces, so it runs only when those tools or the workflow change.
   tools:
     needs: changes
     if: ${{ needs.changes.outputs.tools == 'true' }}
@@ -322,7 +323,7 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile --ignore-scripts
-      - name: docs/tools tests (redactor, memory + checkpoint hooks)
+      - name: docs/tools tests (redactor, memory, checkpoint and Claude Code hooks)
         run: pnpm run test:tools
 
   # The deploy scripts run by hand against production, so they are shellchecked, and the source ship is
