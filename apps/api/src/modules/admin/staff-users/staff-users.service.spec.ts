@@ -80,6 +80,7 @@ function row(id: string, status: StaffUserRow["status"]): StaffUserRow {
     lastLoginAt: null,
     createdAt: new Date("2026-10-28T10:00:00.000Z"),
     roleKeys: [],
+    roleNames: [],
   };
 }
 

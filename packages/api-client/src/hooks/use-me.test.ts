@@ -16,6 +16,8 @@ const ME: MeResponse = {
     lastLoginAt: null,
   },
   roles: ["SA"],
+  customRoles: [],
+  customCapabilities: [],
   memberships: [],
   entitlements: {
     modules: [],

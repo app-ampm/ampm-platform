@@ -1,5 +1,4 @@
-import { useMe } from "@ampm/api-client";
-import { can, type StaffRole } from "@ampm/policy";
+import { useStaffAccess, type StaffAccess } from "@ampm/api-client";
 
 /** What the signed-in staff member may do on the client hub (TW-13). */
 export interface AccountPermissions {
@@ -16,34 +15,23 @@ export interface AccountPermissions {
   readonly canReadLeads: boolean;
 }
 
-const NONE: AccountPermissions = {
-  canEdit: false,
-  canAddContact: false,
-  canRemoveContact: false,
-  canReadEnquiries: false,
-  canReadSavedHotels: false,
-  canReadAgreements: false,
-  canReadLeads: false,
-};
-
 /**
- * The hub's permissions for a set of staff roles, decided by @ampm/policy as the API's guard decides
- * them: a grant scoped to assigned projects does not reach an account route (no project on it), so a
- * Project Manager sees no edit actions the server would refuse.
+ * The hub's permissions for a staff member's access, decided by @ampm/policy as the API's guard decides
+ * them, a custom role's grants included (D-164): a grant scoped to assigned projects does not reach an
+ * account route (no project on it), so a Project Manager sees no edit actions the server would refuse.
  *
  * @example
- * accountPermissionsFor(["SM"]).canEdit; // true
+ * accountPermissionsFor(staffAccessFor(me)).canEdit; // true for Sales
  */
-export function accountPermissionsFor(roles: readonly StaffRole[]): AccountPermissions {
-  const allows = (key: string): boolean => can({ type: "staff", roles }, key);
+export function accountPermissionsFor(access: StaffAccess): AccountPermissions {
   return {
-    canEdit: allows("crm.accounts.update"),
-    canAddContact: allows("crm.accounts.create"),
-    canRemoveContact: allows("crm.accounts.delete"),
-    canReadEnquiries: allows("consultancy.enquiries.read"),
-    canReadSavedHotels: allows("hotels.saved_hotels.read"),
-    canReadAgreements: allows("crm.service_agreements.read"),
-    canReadLeads: allows("crm.leads.read"),
+    canEdit: access.can("crm.accounts.update"),
+    canAddContact: access.can("crm.accounts.create"),
+    canRemoveContact: access.can("crm.accounts.delete"),
+    canReadEnquiries: access.can("consultancy.enquiries.read"),
+    canReadSavedHotels: access.can("hotels.saved_hotels.read"),
+    canReadAgreements: access.can("crm.service_agreements.read"),
+    canReadLeads: access.can("crm.leads.read"),
   };
 }
 
@@ -54,7 +42,5 @@ export function accountPermissionsFor(roles: readonly StaffRole[]): AccountPermi
  *   const permissions = useAccountPermissions();
  */
 export function useAccountPermissions(): AccountPermissions {
-  const me = useMe();
-  if (!me.data || me.data.principal.type !== "staff") return NONE;
-  return accountPermissionsFor(me.data.roles);
+  return accountPermissionsFor(useStaffAccess());
 }

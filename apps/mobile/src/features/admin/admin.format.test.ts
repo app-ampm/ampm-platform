@@ -30,8 +30,18 @@ describe("admin.format", () => {
   });
 
   it("joins the roles, and says so when there are none", () => {
-    expect(roleSummary(["super_admin", "finance"])).toBe("Super Admin, Finance / Accounts");
-    expect(roleSummary([])).toBe("No roles");
+    expect(roleSummary({ roles: ["super_admin", "finance"], roleNames: [] })).toBe(
+      "Super Admin, Finance / Accounts",
+    );
+    expect(roleSummary({ roles: [], roleNames: [] })).toBe("No roles");
+  });
+
+  it("D-164: names a custom role as the API names it, never by its generated key", () => {
+    const user = {
+      roles: ["sales", "custom_17f1e5aa-c24b-4962-ac20-f9420801c79f"],
+      roleNames: ["Sales / Relationship Manager", "Sales assistant"],
+    };
+    expect(roleSummary(user)).toBe("Sales / Relationship Manager, Sales assistant");
   });
 
   it("shows the last sign-in, or 'Never' when they have not signed in", () => {

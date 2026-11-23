@@ -15,6 +15,8 @@ export interface StaffUserRow {
   readonly lastLoginAt: Date | null;
   readonly createdAt: Date;
   readonly roleKeys: readonly string[];
+  /** Each role's display name, in the order of `roleKeys` (D-164). */
+  readonly roleNames: readonly string[];
 }
 
 export abstract class StaffUsersRepository {
@@ -57,7 +59,7 @@ export abstract class StaffUsersRepository {
 }
 
 const WITH_ROLES = {
-  roles: { select: { role: { select: { roleKey: true } } } },
+  roles: { select: { role: { select: { roleKey: true, name: true } } } },
 } as const;
 
 type UserWithRoles = {
@@ -69,7 +71,7 @@ type UserWithRoles = {
   mfaEnabled: boolean;
   lastLoginAt: Date | null;
   createdAt: Date;
-  roles: { role: { roleKey: string } }[];
+  roles: { role: { roleKey: string; name: string } }[];
 };
 
 const SELECT = {
@@ -95,6 +97,7 @@ function toRow(user: UserWithRoles): StaffUserRow {
     lastLoginAt: user.lastLoginAt,
     createdAt: user.createdAt,
     roleKeys: user.roles.map((entry) => entry.role.roleKey),
+    roleNames: user.roles.map((entry) => entry.role.name),
   };
 }
 

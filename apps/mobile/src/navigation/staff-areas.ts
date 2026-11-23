@@ -1,5 +1,4 @@
-import type { MeResponse } from "@ampm/core";
-import { permissionKeysForRole, type StaffRole } from "@ampm/policy";
+import { staffAccessFor, type StaffAccessSource } from "@ampm/api-client";
 import type { IconName } from "@ampm/ui";
 
 import { isOnRoute } from "./routes";
@@ -97,33 +96,15 @@ export const STAFF_AREAS: readonly StaffArea[] = [
   },
 ];
 
-const keysByRole = new Map<StaffRole, readonly string[]>();
-
-/** A role's unconditional keys from the matrix, read once per role. */
-function keysOf(role: StaffRole): readonly string[] {
-  const known = keysByRole.get(role);
-  if (known) return known;
-  const keys = permissionKeysForRole(role);
-  keysByRole.set(role, keys);
-  return keys;
-}
-
-/** A key grants the needed one as written or narrowed to a scope: "…read" or "…read:assigned". */
-function keyGrants(key: string, needed: string): boolean {
-  return key === needed || key.startsWith(`${needed}:`);
-}
-
-/** Whether any of the roles grants the permission (@ampm/policy, permission-matrix §5). */
-export function rolesGrant(roles: readonly StaffRole[], permission: string): boolean {
-  return roles.some((role) => keysOf(role).some((key) => keyGrants(key, permission)));
-}
-
-/** The areas a signed-in principal sees: a staff member's granted areas; nothing for anyone else. */
-export function staffAreasFor(me: Pick<MeResponse, "principal" | "roles">): StaffArea[] {
+/**
+ * The areas a signed-in principal sees: a staff member's granted areas; nothing for anyone else. An area
+ * shows when the person holds its key in any scope (`holds`), from a system role or a custom role's
+ * capabilities (D-164): a project manager sees the enquiries of their own weddings.
+ */
+export function staffAreasFor(me: StaffAccessSource): StaffArea[] {
   if (me.principal.type !== "staff") return [];
-  return STAFF_AREAS.filter(
-    (area) => area.permission === null || rolesGrant(me.roles, area.permission),
-  );
+  const access = staffAccessFor(me);
+  return STAFF_AREAS.filter((area) => area.permission === null || access.holds(area.permission));
 }
 
 /** The area whose screen is showing, from the path: "/leads/123" is in Leads. */
@@ -132,10 +113,7 @@ export function activeStaffArea(pathname: string): StaffArea | undefined {
 }
 
 /** Whether the person's roles grant the area (`staffAreasFor`): the account screen's field-notes link. */
-export function hasStaffArea(
-  me: Pick<MeResponse, "principal" | "roles">,
-  key: StaffAreaKey,
-): boolean {
+export function hasStaffArea(me: StaffAccessSource, key: StaffAreaKey): boolean {
   return staffAreasFor(me).some((area) => area.key === key);
 }
 
@@ -158,7 +136,7 @@ const HOME_ORDER: readonly StaffAreaKey[] = [
  * Where a staff member lands after sign-in: the first of their areas in `HOME_ORDER`, or Settings (the
  * account screen, every staff member's) for one whose roles grant none of the others.
  */
-export function staffHomeHref(me: Pick<MeResponse, "principal" | "roles">): StaffAreaPath {
+export function staffHomeHref(me: StaffAccessSource): StaffAreaPath {
   const areas = staffAreasFor(me);
   const home = HOME_ORDER.map((key) => areas.find((area) => area.key === key)).find(Boolean);
   return home?.href ?? "/account";

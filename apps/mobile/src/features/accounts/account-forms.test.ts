@@ -1,3 +1,5 @@
+import { staffAccessFor } from "@ampm/api-client";
+
 import { buildContactCreate, buildContactUpdate, contactDraftOf } from "./account-contact.form";
 import {
   buildDetailsUpdate,
@@ -5,7 +7,11 @@ import {
   draftCoupleTitle,
   validateDetails,
 } from "./account-details.form";
-import { accountContactViewFixture, accountDetailViewFixture } from "./accounts.test-utils";
+import {
+  accountContactViewFixture,
+  accountDetailViewFixture,
+  staffMeFixture,
+} from "./accounts.test-utils";
 import { accountPermissionsFor } from "./use-account-permissions";
 
 const USER_ID = "018f0000-0000-7000-8000-0000000d00aa";
@@ -107,9 +113,22 @@ describe("account details form", () => {
   });
 });
 
+const access = (roles: Parameters<typeof staffMeFixture>[0], customCapabilities: string[] = []) =>
+  staffAccessFor(staffMeFixture(roles, customCapabilities));
+
 describe("accountPermissionsFor", () => {
+  it("D-164: lets a custom role with no system role edit the account, as the server allows", () => {
+    const permissions = accountPermissionsFor(
+      access([], ["crm.accounts.read:all", "crm.accounts.update:all", "crm.leads.read:all"]),
+    );
+    expect(permissions.canEdit).toBe(true);
+    expect(permissions.canReadLeads).toBe(true);
+    expect(permissions.canAddContact).toBe(false);
+    expect(permissions.canReadEnquiries).toBe(false);
+  });
+
   it("lets Sales keep the account and its contacts and open its saved hotels, enquiries, agreements and lead", () => {
-    expect(accountPermissionsFor(["SM"])).toEqual({
+    expect(accountPermissionsFor(access(["SM"]))).toEqual({
       canEdit: true,
       canAddContact: true,
       canRemoveContact: true,
@@ -121,7 +140,7 @@ describe("accountPermissionsFor", () => {
   });
 
   it("leaves the hotel team reading: enquiries and saved hotels yes, edits no", () => {
-    const permissions = accountPermissionsFor(["HT"]);
+    const permissions = accountPermissionsFor(access(["HT"]));
     expect(permissions.canReadEnquiries).toBe(true);
     expect(permissions.canReadSavedHotels).toBe(true);
     expect(permissions.canEdit).toBe(false);
@@ -130,10 +149,10 @@ describe("accountPermissionsFor", () => {
   });
 
   it("gives a Project Manager's assigned-only grant no edit on an account route", () => {
-    expect(accountPermissionsFor(["PM"]).canEdit).toBe(false);
+    expect(accountPermissionsFor(access(["PM"])).canEdit).toBe(false);
   });
 
   it("keeps clients' saved hotels from Finance, whose role has no read of them", () => {
-    expect(accountPermissionsFor(["FA"]).canReadSavedHotels).toBe(false);
+    expect(accountPermissionsFor(access(["FA"])).canReadSavedHotels).toBe(false);
   });
 });

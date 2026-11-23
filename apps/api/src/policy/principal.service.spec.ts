@@ -72,7 +72,7 @@ const record = (overrides: Partial<PrincipalRecord>): PrincipalRecord => ({
   phone: null,
   status: "active",
   lastLoginAt: null,
-  roles: [{ roleKey: "super_admin", roleId: "r-sa", isSystem: true }],
+  roles: [{ roleKey: "super_admin", roleId: "r-sa", name: "Super Admin", isSystem: true }],
   memberships: [],
   ...overrides,
 });
@@ -117,14 +117,20 @@ describe("PrincipalService", () => {
 
   const customRecord = record({
     email: "custom@example.com",
-    roles: [{ roleKey: "custom_cfg", roleId: "r-custom", isSystem: false }],
+    roles: [{ roleKey: "custom_cfg", roleId: "r-custom", name: "Config editor", isSystem: false }],
   });
   const caps = { "r-custom": ["admin.configurations.update:all"] };
 
   it("drops a custom role when DYNAMIC_ROLES is off (the pre-flag behaviour)", async () => {
     const repo = new FakeRepository([customRecord], caps);
     const principal = await service(repo, false).resolve(identity("custom"));
-    expect(principal).toMatchObject({ type: "staff", roles: [], resolvedGrants: undefined });
+    expect(principal).toMatchObject({
+      type: "staff",
+      roles: [],
+      resolvedGrants: undefined,
+      customRoles: [],
+      customCapabilities: [],
+    });
     expect(decide(toPolicyPrincipal(principal), "admin.configurations.update").allowed).toBe(false);
   });
 
@@ -140,12 +146,29 @@ describe("PrincipalService", () => {
     expect(decide(toPolicyPrincipal(principal), "admin.roles.update").allowed).toBe(false);
   });
 
+  it("names the custom roles in effect and lists the capabilities that resolved, for /me (D-164)", async () => {
+    // One stored id the catalogue does not know: it is dropped from the grants and from /me alike.
+    const withStray = { "r-custom": ["admin.configurations.update:all", "not.a.capability:all"] };
+    const repo = new FakeRepository([customRecord], withStray);
+    const principal = await service(repo, true).resolve(identity("custom"));
+    if (principal.type !== "staff") throw new Error("expected staff");
+    expect(principal.customRoles).toEqual([{ key: "custom_cfg", name: "Config editor" }]);
+    expect(principal.customCapabilities).toEqual(["admin.configurations.update:all"]);
+  });
+
+  it("gives a staff member with only system roles no custom roles or capabilities", async () => {
+    const principal = await service(new FakeRepository([record({})]), true).resolve(
+      identity("admin"),
+    );
+    expect(principal).toMatchObject({ customRoles: [], customCapabilities: [] });
+  });
+
   it("keeps the system roles while adding a custom role's grants", async () => {
     const mixed = record({
       email: "mixed@example.com",
       roles: [
-        { roleKey: "sales", roleId: "r-sm", isSystem: true },
-        { roleKey: "custom_cfg", roleId: "r-custom", isSystem: false },
+        { roleKey: "sales", roleId: "r-sm", name: "Sales", isSystem: true },
+        { roleKey: "custom_cfg", roleId: "r-custom", name: "Config editor", isSystem: false },
       ],
     });
     const principal = await service(new FakeRepository([mixed], caps), true).resolve(
@@ -160,7 +183,7 @@ describe("PrincipalService", () => {
     // isSystem=false, so even though the key matches a system code it resolves through its own grants.
     const impostor = record({
       email: "impostor@example.com",
-      roles: [{ roleKey: "super_admin", roleId: "r-impostor", isSystem: false }],
+      roles: [{ roleKey: "super_admin", roleId: "r-impostor", name: "Impostor", isSystem: false }],
     });
     const principal = await service(new FakeRepository([impostor], {}), true).resolve(
       identity("impostor"),
@@ -178,7 +201,7 @@ describe("PrincipalService.staffHolding", () => {
       id: `0192f3a0-7d3e-7b1a-9c2f-00000000010${n}`,
       name,
       email: `p${n}@example.com`,
-      roles: [{ roleKey, roleId: `r-${roleKey}`, isSystem }],
+      roles: [{ roleKey, roleId: `r-${roleKey}`, name: roleKey, isSystem }],
       ...extra,
     });
   const asha = person(1, "Asha Admin", "super_admin");

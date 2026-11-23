@@ -155,6 +155,8 @@ export function clientMe(modules: readonly EntitlementModule[]): MeResponse {
       lastLoginAt: null,
     },
     roles: [],
+    customRoles: [],
+    customCapabilities: [],
     memberships: [],
     entitlements: {
       modules: [...modules],
