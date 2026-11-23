@@ -214,6 +214,24 @@ describe("Hotel import (e2e)", () => {
       .expect(400);
   });
 
+  it("pages the staff catalogue by name with a cursor, no hotel twice and none missed", async () => {
+    const page = async (cursor?: string) => {
+      const res = await http()
+        .get("/hotels-admin/hotels")
+        .query({ q: "E2E Import Hotel", limit: 1, ...(cursor ? { cursor } : {}) })
+        .set("Authorization", await sa())
+        .expect(200);
+      const data: { items: { name: string }[]; nextCursor: string | null } = res.body.data;
+      return data;
+    };
+    const first = await page();
+    expect(first.items.map((hotel) => hotel.name)).toEqual(["E2E Import Hotel A"]);
+    expect(first.nextCursor).not.toBeNull();
+    const second = await page(first.nextCursor ?? undefined);
+    expect(second.items.map((hotel) => hotel.name)).toEqual(["E2E Import Hotel B"]);
+    expect(second.nextCursor).toBeNull();
+  });
+
   // Last in the file: it deletes imported hotel B, which the re-run above still expects to update.
   it("lists each destination with the count of its hotels, a deleted hotel left out (TW-20)", async () => {
     const created = await http()
