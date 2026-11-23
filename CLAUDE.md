@@ -34,7 +34,7 @@ The graph covers the design package, the generators and AMPM's source documents 
 
 ## Commits and the vault
 
-Every turn ends with `docs/tools/checkpoint.sh` (Stop hook): it commits and pushes the project if anything changed, syncs the Obsidian vault (`vault/`, its own repository), and files the docs into the memory wing. Write proper commit messages when you commit yourself; rebuild generated files with the generators listed in docs/README.md instead of editing them.
+Every turn ends with `docs/tools/checkpoint.sh` (Stop hook): it commits and pushes the main checkout if anything changed (never a worktree's branch: a worktree session commits its own work, D-163), syncs the Obsidian vault (`vault/`, its own repository), and files the docs into the memory wing. Write proper commit messages when you commit yourself; rebuild generated files with the generators listed in docs/README.md instead of editing them.
 
 ## monday.com progress board
 
