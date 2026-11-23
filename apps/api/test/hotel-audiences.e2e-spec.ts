@@ -15,7 +15,8 @@ const SEED_PROJECT_ID = "0192f3a0-7d3e-7b1a-9c2f-0000000000a1";
 const HL = { email: "hl-audience-e2e@example.com", subject: "local:hl-audience-e2e" };
 
 interface CustomFixture {
-  readonly roleKey: string;
+  /** The custom role's `role_key`. */
+  readonly role: string;
   readonly email: string;
   readonly subject: string;
   readonly capabilities: readonly string[];
@@ -23,7 +24,7 @@ interface CustomFixture {
 
 /** A custom role that edits profiles and reads contacts, but holds no key on the internal notes. */
 const CONTACTS_EDITOR: CustomFixture = {
-  roleKey: "custom_hotel_contacts_e2e",
+  role: "custom_hotel_contacts_e2e",
   email: "custom-hotel-contacts-e2e@example.com",
   subject: "local:custom-hotel-contacts-e2e",
   capabilities: [
@@ -35,7 +36,7 @@ const CONTACTS_EDITOR: CustomFixture = {
 };
 /** A custom role that reads the notes and may edit contacts, but cannot read the contacts. */
 const NOTES_READER: CustomFixture = {
-  roleKey: "custom_hotel_notes_e2e",
+  role: "custom_hotel_notes_e2e",
   email: "custom-hotel-notes-e2e@example.com",
   subject: "local:custom-hotel-notes-e2e",
   capabilities: [
@@ -91,8 +92,8 @@ describe("Staff hotel audiences (e2e)", () => {
     for (const email of [HL.email, CONTACTS_EDITOR.email, NOTES_READER.email]) {
       await removeUser(email);
     }
-    for (const { roleKey } of [CONTACTS_EDITOR, NOTES_READER]) {
-      const role = await prisma.role.findUnique({ where: { roleKey } });
+    for (const fixture of [CONTACTS_EDITOR, NOTES_READER]) {
+      const role = await prisma.role.findUnique({ where: { roleKey: fixture.role } });
       if (!role) continue;
       await prisma.roleGrant.deleteMany({ where: { roleId: role.id } });
       await prisma.role.delete({ where: { id: role.id } });
@@ -123,7 +124,7 @@ describe("Staff hotel audiences (e2e)", () => {
 
   async function customRole(fixture: CustomFixture): Promise<void> {
     const role = await prisma.role.create({
-      data: { roleKey: fixture.roleKey, name: `Custom ${fixture.roleKey}`, isSystem: false },
+      data: { roleKey: fixture.role, name: `Custom ${fixture.role}`, isSystem: false },
     });
     for (const capabilityKey of fixture.capabilities) {
       const capability = await prisma.grantableCapability.findUniqueOrThrow({
