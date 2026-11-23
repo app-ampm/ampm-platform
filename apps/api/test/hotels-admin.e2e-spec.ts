@@ -213,4 +213,31 @@ describe("Hotel import (e2e)", () => {
       .send({ slug: "renamed" })
       .expect(400);
   });
+
+  // Last in the file: it deletes imported hotel B, which the re-run above still expects to update.
+  it("lists each destination with the count of its hotels, a deleted hotel left out (TW-20)", async () => {
+    const created = await http()
+      .post("/hotels-admin/destinations")
+      .set("Authorization", await sa())
+      .send({ name: "E2E Import Empty", slug: `${PREFIX}empty` })
+      .expect(201);
+    expect(created.body.data).toMatchObject({ slug: `${PREFIX}empty`, status: "draft" });
+    expect(created.body.data).not.toHaveProperty("hotelCount"); // only the list carries the count
+    const countOf = async (slug: string): Promise<unknown> => {
+      const res = await http()
+        .get("/hotels-admin/destinations")
+        .set("Authorization", await sa())
+        .expect(200);
+      const items: { slug: string; hotelCount: number }[] = res.body.data.items;
+      return items.find((item) => item.slug === slug)?.hotelCount;
+    };
+    expect(await countOf(`${PREFIX}dest`)).toBe(2);
+    expect(await countOf(`${PREFIX}empty`)).toBe(0);
+    const hotelB = await prisma.hotel.findFirstOrThrow({ where: { slug: `${PREFIX}b` } });
+    await http()
+      .delete(`/hotels-admin/hotels/${hotelB.id}`)
+      .set("Authorization", await sa())
+      .expect(200);
+    expect(await countOf(`${PREFIX}dest`)).toBe(1);
+  });
 });

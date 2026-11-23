@@ -2,7 +2,7 @@ import { fireEvent, screen } from "../../test/render";
 import { HotelProfileEditSheet } from "./hotel-profile-edit-sheet";
 import {
   DESTINATION_ID,
-  destinationViewFixture,
+  destinationListItemFixture,
   failure,
   HOTEL_ID,
   hotelStaffDetailViewFixture,
@@ -25,7 +25,7 @@ interface Captured {
 
 function editorFetch(captured: Captured): FetchFn {
   return routedFetch({
-    "/hotels-admin/destinations": () => ok({ items: [destinationViewFixture()] }),
+    "/hotels-admin/destinations": () => ok({ items: [destinationListItemFixture()] }),
     "/hotels-admin/hotels": (init) => {
       captured.created = JSON.parse(String(init?.body));
       return ok(hotelStaffDetailViewFixture());
@@ -87,7 +87,9 @@ describe("HotelProfileEditSheet", () => {
     const fetch = routedFetch({
       "/hotels-admin/destinations": () => {
         calls += 1;
-        return calls === 1 ? failure("internal", 500) : ok({ items: [destinationViewFixture()] });
+        return calls === 1
+          ? failure("internal", 500)
+          : ok({ items: [destinationListItemFixture()] });
       },
     });
     await renderWithApi(<HotelProfileEditSheet open hotel={null} onClose={noop} />, fetch);
@@ -102,5 +104,22 @@ describe("HotelProfileEditSheet", () => {
     );
     expect(await screen.findByText("Add a destination before filing a hotel.")).toBeOnTheScreen();
     expect(screen.queryByTestId("hotel-destination")).toBeNull();
+    // No way to Destinations unless the screen hands one over (a role that may add destinations).
+    expect(screen.queryByTestId("hotel-destination-add")).toBeNull();
+  });
+
+  it("offers the way to Destinations when none exist and the role may add one", async () => {
+    const onAddDestination = jest.fn();
+    await renderWithApi(
+      <HotelProfileEditSheet
+        open
+        hotel={null}
+        onClose={noop}
+        onAddDestination={onAddDestination}
+      />,
+      routedFetch({ "/hotels-admin/destinations": () => ok({ items: [] }) }),
+    );
+    await fireEvent.press(await screen.findByTestId("hotel-destination-add"));
+    expect(onAddDestination).toHaveBeenCalledTimes(1);
   });
 });

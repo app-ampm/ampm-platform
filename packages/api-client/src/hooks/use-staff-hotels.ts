@@ -1,8 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  destinationList,
   destinationView,
   hotelStaffDetailView,
   hotelStaffPage,
+  type DestinationCreateRequest,
+  type DestinationListItemView,
+  type DestinationUpdateRequest,
   type DestinationView,
   type HotelCreateRequest,
   type HotelStaffDetailView,
@@ -10,7 +14,6 @@ import {
   type HotelStaffPage,
   type HotelUpdateRequest,
 } from "@ampm/core";
-import { z } from "zod";
 
 import { useApiClient } from "../provider";
 
@@ -60,21 +63,70 @@ export function useStaffHotel(hotelId: string) {
   });
 }
 
-/** The staff destination list wrapper (`{ items: DestinationView[] }`). */
-const staffDestinationList = z.object({ items: z.array(destinationView) }).strict();
-
 /**
  * Every destination a hotel can be filed under (`GET /hotels-admin/destinations`,
- * `hotels.destinations.read`): the whole reference set, name-ordered and not reach-scoped — the picker
- * source for the hotel profile editor, unlike the client browse which hides empty destinations.
- * Staff-only, gated server-side.
+ * `hotels.destinations.read`), each with the count of its hotels: the whole reference set, name-ordered
+ * and not reach-scoped — the Destinations screen (TW-20) and the hotel editor's picker, unlike the client
+ * browse which hides empty destinations. Staff-only, gated server-side.
  */
 export function useStaffDestinations() {
   const api = useApiClient();
-  return useQuery<DestinationView[]>({
+  return useQuery<DestinationListItemView[]>({
     queryKey: STAFF_DESTINATIONS_QUERY_KEY,
     queryFn: async ({ signal }) =>
-      (await api.get("/hotels-admin/destinations", staffDestinationList, signal)).items,
+      (await api.get("/hotels-admin/destinations", destinationList, signal)).items,
+  });
+}
+
+/**
+ * Refresh the destination list after a destination write, and the staff hotels too: each hotel's detail
+ * carries its destination's name and place.
+ */
+function useRefreshStaffDestinations(): () => void {
+  const queryClient = useQueryClient();
+  return () => {
+    void queryClient.invalidateQueries({ queryKey: STAFF_DESTINATIONS_QUERY_KEY });
+    void queryClient.invalidateQueries({ queryKey: STAFF_HOTELS_QUERY_KEY });
+  };
+}
+
+/**
+ * Add a destination (`POST /hotels-admin/destinations`, `hotels.destinations.create`; TW-20). The server
+ * makes the slug from the name when none is sent, and refuses a slug already in use with a 409.
+ *
+ *   const create = useCreateDestination();
+ *   create.mutate({ name: "Udaipur", state: "Rajasthan", status: "active" });
+ */
+export function useCreateDestination() {
+  const api = useApiClient();
+  const refresh = useRefreshStaffDestinations();
+  return useMutation<DestinationView, Error, DestinationCreateRequest>({
+    mutationFn: (body) =>
+      api.request("/hotels-admin/destinations", { method: "POST", body, schema: destinationView }),
+    onSuccess: () => refresh(),
+  });
+}
+
+/**
+ * Edit a destination (`PATCH /hotels-admin/destinations/:id`, `hotels.destinations.update`; TW-20): any
+ * field but the slug, which never changes. Publishing it to the website is its `publicVisible` flag,
+ * audited by the server.
+ */
+export function useUpdateDestination() {
+  const api = useApiClient();
+  const refresh = useRefreshStaffDestinations();
+  return useMutation<
+    DestinationView,
+    Error,
+    { readonly destinationId: string; readonly body: DestinationUpdateRequest }
+  >({
+    mutationFn: ({ destinationId, body }) =>
+      api.request(`/hotels-admin/destinations/${destinationId}`, {
+        method: "PATCH",
+        body,
+        schema: destinationView,
+      }),
+    onSuccess: () => refresh(),
   });
 }
 

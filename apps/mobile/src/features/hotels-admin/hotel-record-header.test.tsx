@@ -2,7 +2,7 @@ import { fireEvent, screen } from "../../test/render";
 import { HotelRecordHeader } from "./hotel-record-header";
 import type { HotelRecordSection } from "./hotel-record.format";
 import {
-  destinationViewFixture,
+  destinationListItemFixture,
   HOTEL_ID,
   hotelStaffDetailViewFixture,
   ok,
@@ -19,7 +19,7 @@ jest.mock("react-native/Libraries/Utilities/useWindowDimensions", () => ({
 }));
 
 const destinationsFetch = routedFetch({
-  "/hotels-admin/destinations": () => ok({ items: [destinationViewFixture()] }),
+  "/hotels-admin/destinations": () => ok({ items: [destinationListItemFixture()] }),
 });
 
 async function renderHeader(section: HotelRecordSection, loaded = true): Promise<void> {

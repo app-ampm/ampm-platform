@@ -7,7 +7,7 @@ import { HotelImportScreen } from "./hotel-import-screen";
 import { HotelsListScreen } from "./hotels-list-screen";
 import { pickCsvFile } from "./pick-csv-file";
 import {
-  destinationViewFixture,
+  destinationListItemFixture,
   hotelStaffViewFixture,
   ok,
   renderWithApi,
@@ -55,7 +55,7 @@ const hotelsFetch: FetchFn = routedFetch({
       ],
       nextCursor: null,
     }),
-  "/hotels-admin/destinations": () => ok({ items: [destinationViewFixture()] }),
+  "/hotels-admin/destinations": () => ok({ items: [destinationListItemFixture()] }),
 });
 
 const RESULT: HotelImportResult = {

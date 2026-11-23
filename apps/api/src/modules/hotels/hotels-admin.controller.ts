@@ -14,6 +14,7 @@ import {
   venueCreateRequest,
   venueUpdateRequest,
   type DestinationCreateRequest,
+  type DestinationList,
   type DestinationUpdateRequest,
   type DestinationView,
   type HotelContactCreateRequest,
@@ -119,7 +120,7 @@ export class HotelsAdminController {
 
   @Get("destinations")
   @RequirePermission("hotels.destinations.read")
-  listDestinations(): Promise<{ items: DestinationView[] }> {
+  listDestinations(): Promise<DestinationList> {
     return this.hotels.listDestinations();
   }
 

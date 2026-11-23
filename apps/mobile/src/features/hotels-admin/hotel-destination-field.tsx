@@ -36,19 +36,49 @@ function DestinationFetchError({ onRetry }: { readonly onRetry: () => void }) {
   );
 }
 
+/** No destination exists yet: say so, and offer the way to add one to a role that may. */
+function NoDestinations({ onAdd }: { readonly onAdd: (() => void) | undefined }) {
+  return (
+    <DestinationSlot>
+      <Text variant="bodySmall" tone="muted">
+        Add a destination before filing a hotel.
+      </Text>
+      {onAdd ? (
+        <Button
+          variant="secondary"
+          size="sm"
+          icon="map-pin"
+          onPress={onAdd}
+          testID="hotel-destination-add"
+        >
+          Go to Destinations
+        </Button>
+      ) : null}
+    </DestinationSlot>
+  );
+}
+
 export interface DestinationFieldProps {
   readonly value: string;
   readonly onChange: (id: string) => void;
   readonly error: string | undefined;
+  /** Shown when there is no destination yet: leaves the form for the Destinations screen. */
+  readonly onAddDestination?: (() => void) | undefined;
 }
 
 /**
  * The destination picker over the staff destination list; mount it only while its sheet is open. Each of
- * the four states is distinct: a labelled skeleton, a retryable error, the empty guidance, then the
- * Select. destinationId is a required FK, so a failed fetch must offer a retry rather than block create
- * silently; the required-field error is owned by the Select (announced like any other field's).
+ * the four states is distinct: a labelled skeleton, a retryable error, the empty guidance (with the way
+ * to Destinations for a role that may add one), then the Select. destinationId is a required FK, so a
+ * failed fetch must offer a retry rather than block create silently; the required-field error is owned
+ * by the Select (announced like any other field's).
  */
-export function DestinationField({ value, onChange, error }: DestinationFieldProps) {
+export function DestinationField({
+  value,
+  onChange,
+  error,
+  onAddDestination,
+}: DestinationFieldProps) {
   const destinations = useStaffDestinations();
   if (destinations.isPending) {
     return (
@@ -60,15 +90,7 @@ export function DestinationField({ value, onChange, error }: DestinationFieldPro
   if (destinations.isError) {
     return <DestinationFetchError onRetry={() => void destinations.refetch()} />;
   }
-  if (destinations.data.length === 0) {
-    return (
-      <DestinationSlot>
-        <Text variant="bodySmall" tone="muted">
-          Add a destination before filing a hotel.
-        </Text>
-      </DestinationSlot>
-    );
-  }
+  if (destinations.data.length === 0) return <NoDestinations onAdd={onAddDestination} />;
   return (
     <Select
       label="Destination"

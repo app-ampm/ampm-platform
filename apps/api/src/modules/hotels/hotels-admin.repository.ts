@@ -68,6 +68,16 @@ export type StaffHotelDetailRow = Prisma.HotelGetPayload<{
 }>;
 export type DestinationRow = Prisma.DestinationGetPayload<{ select: typeof DESTINATION_SELECT }>;
 
+/** The staff list's destination (TW-20): its columns plus a count of its hotels, deleted ones left out. */
+const DESTINATION_LIST_SELECT = {
+  ...DESTINATION_SELECT,
+  _count: { select: { hotels: { where: { deletedAt: null } } } },
+} as const satisfies Prisma.DestinationSelect;
+
+export type DestinationListRow = Prisma.DestinationGetPayload<{
+  select: typeof DESTINATION_LIST_SELECT;
+}>;
+
 /** The columns the import or a create writes to a hotel; `destinationId`/`slug`/`name` are always set. */
 export type HotelWriteData = Omit<
   Prisma.HotelUncheckedCreateInput,
@@ -165,11 +175,11 @@ export class HotelsAdminRepository {
 
   // --- Destinations ---
 
-  listDestinations(): Promise<DestinationRow[]> {
+  listDestinations(): Promise<DestinationListRow[]> {
     return this.prisma.destination.findMany({
       where: { deletedAt: null },
       orderBy: { name: "asc" },
-      select: DESTINATION_SELECT,
+      select: DESTINATION_LIST_SELECT,
     });
   }
 

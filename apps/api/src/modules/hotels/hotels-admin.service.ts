@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common";
 import {
   errors,
   type DestinationCreateRequest,
+  type DestinationList,
   type DestinationUpdateRequest,
   type DestinationView,
   type HotelCreateRequest,
@@ -21,6 +22,7 @@ import {
   type StaffHotelRow,
 } from "./hotels-admin.repository.js";
 import {
+  toDestinationListItem,
   toDestinationView,
   toHotelStaffDetailView,
   toHotelStaffView,
@@ -115,9 +117,10 @@ export class HotelsAdminService {
     return { id: hotelId };
   }
 
-  async listDestinations(): Promise<{ items: DestinationView[] }> {
+  /** Every destination with the count of its hotels (TW-20): the whole reference set, name-ordered. */
+  async listDestinations(): Promise<DestinationList> {
     const rows = await this.repo.listDestinations();
-    return { items: rows.map(toDestinationView) };
+    return { items: rows.map(toDestinationListItem) };
   }
 
   async createDestination(

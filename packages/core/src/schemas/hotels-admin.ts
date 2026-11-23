@@ -44,6 +44,23 @@ export const destinationView = z
   .strict();
 export type DestinationView = z.infer<typeof destinationView>;
 
+/**
+ * A destination as the staff Destinations screen lists it (TW-20): its fields plus how many hotels are
+ * filed under it (any status, deleted hotels left out). Only `GET /hotels-admin/destinations` returns it;
+ * a hotel's own `destination` stays the plain {@link destinationView}.
+ *
+ * @example
+ * destinationListItemView.parse({ ...udaipur, hotelCount: 12 });
+ */
+export const destinationListItemView = destinationView
+  .extend({ hotelCount: z.number().int().min(0) })
+  .strict();
+export type DestinationListItemView = z.infer<typeof destinationListItemView>;
+
+/** The staff destination list (`{ items }`, name-ordered; the whole reference set, not paginated). */
+export const destinationList = z.object({ items: z.array(destinationListItemView) }).strict();
+export type DestinationList = z.infer<typeof destinationList>;
+
 // Fields with NO create-time defaults, so the update (a `.partial()` of these) never leaks a default:
 // an absent field means "leave it unchanged", and an empty patch is genuinely empty.
 const destinationFields = {

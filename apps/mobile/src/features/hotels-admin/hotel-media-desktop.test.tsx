@@ -6,7 +6,7 @@ import type * as UiModule from "@ampm/ui";
 import { act, fireEvent, screen, within } from "../../test/render";
 import { HotelMediaScreen } from "./hotel-media-screen";
 import {
-  destinationViewFixture,
+  destinationListItemFixture,
   HOTEL_ID,
   hotelStaffDetailViewFixture,
   mediaAssetFixture,
@@ -57,7 +57,7 @@ const FOUR: MediaAssetView[] = [1, 2, 3, 4].map((n) =>
 async function renderManager(items: MediaAssetView[] = FOUR): Promise<void> {
   const fetchImpl = routedFetch({
     [`/hotels-admin/hotels/${HOTEL_ID}`]: () => ok(hotelStaffDetailViewFixture()),
-    "/hotels-admin/destinations": () => ok({ items: [destinationViewFixture()] }),
+    "/hotels-admin/destinations": () => ok({ items: [destinationListItemFixture()] }),
     "/media": () => ok({ items, nextCursor: null }),
   });
   await renderWithApi(<HotelMediaScreen hotelId={HOTEL_ID} />, fetchImpl);
