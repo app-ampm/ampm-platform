@@ -1,9 +1,15 @@
 import { hasErrors } from "./hotel-form-fields";
-import { rateCardViewFixture, rateItemViewFixture, ROOM_ID } from "./hotels-admin.test-utils";
+import {
+  rateCardViewFixture,
+  rateItemViewFixture,
+  ROOM_ID,
+  verificationViewFixture,
+} from "./hotels-admin.test-utils";
 import {
   buildRateCardBody,
   buildRateItemBody,
   buildVerificationBody,
+  canBackRateCard,
   draftFromRateCard,
   draftFromRateItem,
   emptyVerificationDraft,
@@ -115,5 +121,14 @@ describe("verification form", () => {
       source: "phone",
       notes: null,
     });
+  });
+
+  it("offers to reuse only a current rates verification (AC-04.4)", () => {
+    expect(canBackRateCard(verificationViewFixture())).toBe(true);
+    expect(canBackRateCard(verificationViewFixture({ fieldGroup: "profile" }))).toBe(false);
+    expect(canBackRateCard(verificationViewFixture({ status: "stale" }))).toBe(false);
+    expect(
+      canBackRateCard(verificationViewFixture({ status: "unverified", verifiedAt: null })),
+    ).toBe(false);
   });
 });

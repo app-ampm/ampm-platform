@@ -13,20 +13,24 @@ import {
 } from "@ampm/core";
 
 import { AuditService } from "../../policy/audit.service.js";
+import { ConfigService } from "../admin/config/config.service.js";
 import { HotelRatesRepository } from "./hotel-rates.repository.js";
 import { toRateCardView, toRateItemView, toVerificationView } from "./hotel-rates.view.js";
+import { isFutureDated, rateCardVerificationProblem } from "./rate-card-verification.js";
 
 /**
  * Verified pricing for a hotel (HT/SA; feature 9.2). Rate cards hold indicative rate items; a card is
- * verified against a verification of the same hotel (AC-04.4 — a card cannot be verified without one),
- * which the freshness job later turns stale (AC-04.3, a following slice). Every write confirms the hotel,
- * and every nested write confirms the child belongs to its parent (a mismatch is a 404).
+ * verified only against a current rates verification of the same hotel (AC-04.4 — never without one; a
+ * stale, unverified, out-of-window, future-dated or other group's one is refused too), which the
+ * freshness job later turns stale with its cards (AC-04.3). Every write confirms the hotel, and every
+ * nested write confirms the child belongs to its parent (a mismatch is a 404).
  */
 @Injectable()
 export class HotelRatesService {
   constructor(
     private readonly repo: HotelRatesRepository,
     private readonly audit: AuditService,
+    private readonly config: ConfigService,
   ) {}
 
   async listCards(hotelId: string): Promise<{ items: RateCardView[] }> {
@@ -71,7 +75,11 @@ export class HotelRatesService {
     return { id: cardId };
   }
 
-  /** Link a card to a verification of the same hotel and mark it verified (AC-04.4). */
+  /**
+   * Link a card to a current rates verification of the same hotel and mark it verified (AC-04.4). Any
+   * other verification is a 409 that names why, so the card never shows "verified" on one the freshness
+   * sweep would not stale on time.
+   */
   async verifyCard(
     hotelId: string,
     cardId: string,
@@ -82,9 +90,7 @@ export class HotelRatesService {
     if (card.status === "retired") {
       throw errors.conflict("A retired rate card cannot be verified");
     }
-    if (!(await this.repo.findVerificationInHotel(hotelId, request.verificationId))) {
-      throw errors.conflict("A rate card cannot be verified without a verification of this hotel");
-    }
+    await this.requireCurrentRatesVerification(hotelId, request.verificationId);
     await this.repo.setCardVerified(cardId, request.verificationId, actorId);
     await this.audit.record({
       action: "update",
@@ -132,12 +138,21 @@ export class HotelRatesService {
     return { id: itemId };
   }
 
+  /**
+   * Record that AMPM verified a field group, now or on a past date: never a future one, which would keep
+   * the verification (and any card it backs) fresh long after its real age (AC-04.3).
+   */
   async recordVerification(
     hotelId: string,
     request: VerificationCreateRequest,
     actorId: string,
   ): Promise<VerificationView> {
     await this.requireHotel(hotelId);
+    if (request.verifiedAt && isFutureDated(new Date(request.verifiedAt), new Date())) {
+      throw errors.validation([
+        { path: "verifiedAt", message: "A verification cannot be dated in the future" },
+      ]);
+    }
     return toVerificationView(await this.repo.createVerification(hotelId, request, actorId));
   }
 
@@ -165,6 +180,20 @@ export class HotelRatesService {
 
   private async requireHotel(hotelId: string): Promise<void> {
     if (!(await this.repo.hotelExists(hotelId))) throw errors.notFound("No such hotel");
+  }
+
+  /** The verification must be this hotel's and current for rates; otherwise a 409 naming why. */
+  private async requireCurrentRatesVerification(
+    hotelId: string,
+    verificationId: string,
+  ): Promise<void> {
+    const verification = await this.repo.findVerificationInHotel(hotelId, verificationId);
+    if (!verification) {
+      throw errors.conflict("A rate card cannot be verified without a verification of this hotel");
+    }
+    const { maxAgeDays } = await this.config.get("hotel.verification_policy");
+    const problem = rateCardVerificationProblem(verification, new Date(), maxAgeDays);
+    if (problem) throw errors.conflict(problem);
   }
 
   private async requireCard(

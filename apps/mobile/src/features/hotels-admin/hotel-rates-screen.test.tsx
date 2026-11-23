@@ -1,3 +1,5 @@
+import type { VerificationView } from "@ampm/core";
+
 import { pendingFetch } from "../../test/api";
 import { fireEvent, screen } from "../../test/render";
 import { HotelRatesScreen } from "./hotel-rates-screen";
@@ -33,7 +35,11 @@ interface Captured {
   deletedCardMethod?: string | undefined;
 }
 
-function ratesFetch(captured: Captured, cards = [rateCardViewFixture()]): FetchFn {
+function ratesFetch(
+  captured: Captured,
+  cards = [rateCardViewFixture()],
+  verifications: readonly VerificationView[] = [],
+): FetchFn {
   return routedFetch({
     [`/hotels-admin/hotels/${HOTEL_ID}`]: () => ok(hotelStaffDetailViewFixture()),
     [`/hotels-admin/hotels/${HOTEL_ID}/rate-cards`]: (init) => {
@@ -48,7 +54,7 @@ function ratesFetch(captured: Captured, cards = [rateCardViewFixture()]): FetchF
         captured.recordedVerification = JSON.parse(String(init.body));
         return ok(verificationViewFixture());
       }
-      return ok({ items: [] });
+      return ok({ items: verifications });
     },
     [`/hotels-admin/hotels/${HOTEL_ID}/rate-cards/${RATE_CARD_ID}`]: (init) => {
       captured.deletedCardMethod = init?.method;
@@ -118,6 +124,28 @@ describe("HotelRatesScreen", () => {
     expect(await screen.findByText("Rate card verified")).toBeOnTheScreen();
     expect(captured.recordedVerification).toMatchObject({ fieldGroup: "rates", source: "phone" });
     expect(captured.verifiedBody).toEqual({ verificationId: VERIFICATION_ID });
+  });
+
+  it("offers only a current rates verification to reuse, and verifies against it (AC-04.4)", async () => {
+    const captured: Captured = {};
+    const STALE_ID = "018f0000-0000-7000-8000-0000000c1203";
+    const ROOMS_ID = "018f0000-0000-7000-8000-0000000c1204";
+    const verifications = [
+      verificationViewFixture(),
+      verificationViewFixture({ id: STALE_ID, status: "stale" }),
+      verificationViewFixture({ id: ROOMS_ID, fieldGroup: "rooms" }),
+    ];
+    await renderWithApi(
+      <HotelRatesScreen hotelId={HOTEL_ID} />,
+      ratesFetch(captured, undefined, verifications),
+    );
+    await fireEvent.press(await screen.findByTestId(`rate-card-${RATE_CARD_ID}-verify`));
+    await fireEvent.press(await screen.findByTestId(`verify-use-${VERIFICATION_ID}`));
+    expect(screen.queryByTestId(`verify-use-${STALE_ID}`)).toBeNull();
+    expect(screen.queryByTestId(`verify-use-${ROOMS_ID}`)).toBeNull();
+    expect(await screen.findByText("Rate card verified")).toBeOnTheScreen();
+    expect(captured.verifiedBody).toEqual({ verificationId: VERIFICATION_ID });
+    expect(captured.recordedVerification).toBeUndefined(); // reused, not recorded again
   });
 
   it("removes a card after confirming", async () => {

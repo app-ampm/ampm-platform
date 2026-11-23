@@ -8,6 +8,7 @@ import { VERIFICATION_SOURCES, verificationSourceLabel } from "./hotels-admin.fo
 import { MediaOptionPicker } from "./media-option-picker";
 import {
   buildVerificationBody,
+  canBackRateCard,
   emptyVerificationDraft,
   type VerificationDraft,
 } from "./rate-cards.form";
@@ -46,11 +47,12 @@ function useVerifyCard(hotelId: string, cardId: string, onClose: () => void) {
       onError(error);
     }
   };
-  const rates = (verifications.data ?? []).filter((v) => v.fieldGroup === "rates");
+  // Only a current rates verification can back a verified card; the server refuses the rest (AC-04.4).
+  const rates = (verifications.data ?? []).filter(canBackRateCard);
   return { rates, pending, verifyWith, recordAndVerify };
 }
 
-/** Existing "rates" verifications the card can be published against, newest first by the API's order. */
+/** Current "rates" verifications the card can be published against, newest first by the API's order. */
 function ExistingVerifications({
   rates,
   onPick,
