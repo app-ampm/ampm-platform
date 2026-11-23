@@ -1,11 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
 
 import type { PrismaService } from "../db/prisma.service.js";
+import type { Env } from "../env.js";
 import type { AuditService } from "../policy/audit.service.js";
 import { ActivationService } from "./activation.service.js";
 import type { AuthTokenService } from "./auth-token.service.js";
 import type { IdentityAdapter, VerifiedIdentity } from "./identity.types.js";
-import { LocalIdentityAdapter } from "./local.adapter.js";
+import { AMPM_ISSUER, LocalIdentityAdapter } from "./local.adapter.js";
 
 const SECRET = "a-development-secret-that-is-long-enough-32";
 
@@ -16,6 +17,8 @@ interface Config {
   user?: { id: string; email: string; status: string } | null;
   linkedElsewhere?: { id: string } | null;
   claimed?: boolean;
+  /** The parts of the config the dev gate reads; the development provider unless a test says otherwise. */
+  env?: Partial<Env>;
 }
 
 function build(cfg: Config = {}) {
@@ -54,8 +57,16 @@ function build(cfg: Config = {}) {
   const identity = { verifyAccessToken } as unknown as IdentityAdapter;
   const tokens = { findValidInvite, markUsedIfLive } as unknown as AuthTokenService;
   const audit = { record } as unknown as AuditService;
+  const env = {
+    IDENTITY_PROVIDER: "local",
+    NODE_ENV: "development",
+    IDENTITY_LOCAL_SECRET: SECRET,
+    ...cfg.env,
+  } as unknown as Env;
   return {
-    service: new ActivationService(identity, tokens, prisma, audit),
+    service: new ActivationService(env, identity, tokens, prisma, audit),
+    verifyAccessToken,
+    findValidInvite,
     txUserUpdate,
     txMemberUpdateMany,
     markUsedIfLive,
@@ -147,5 +158,44 @@ describe("ActivationService", () => {
     const { service, markUsedIfLive } = build({ identity });
     await expect(service.activate("raw", "access")).rejects.toMatchObject({ code: "forbidden" });
     expect(markUsedIfLive).not.toHaveBeenCalled();
+  });
+
+  // D-162: AMPM's own sign-in activates through the password and authenticator routes. This route is
+  // public, so a token whose session an administrator's reset revoked still verifies here; under `ampm`
+  // it activated a reset account with no password and no authenticator.
+  it("is a 404 under AMPM's own sign-in, even for a valid token and invitation, and writes nothing", async () => {
+    const adapter = new LocalIdentityAdapter(SECRET, { issuer: AMPM_ISSUER, provider: "ampm" });
+    const identity = await adapter.verifyAccessToken(
+      await adapter.mint("ampm:u1", { email: "u@x.com" }),
+    );
+    const { service, verifyAccessToken, findValidInvite, markUsedIfLive, txUserUpdate, record } =
+      build({ identity, env: { IDENTITY_PROVIDER: "ampm" } });
+    await expect(service.activate("raw", "access")).rejects.toMatchObject({ code: "not_found" });
+    expect(verifyAccessToken).not.toHaveBeenCalled();
+    expect(findValidInvite).not.toHaveBeenCalled();
+    expect(markUsedIfLive).not.toHaveBeenCalled();
+    expect(txUserUpdate).not.toHaveBeenCalled();
+    expect(record).not.toHaveBeenCalled();
+  });
+
+  it("refuses a request without a token in a dev build, and is a 404 for one outside it", async () => {
+    const { service, findValidInvite } = build();
+    await expect(service.activate("raw", null)).rejects.toMatchObject({ code: "unauthenticated" });
+    expect(findValidInvite).not.toHaveBeenCalled();
+    const ampm = build({ env: { IDENTITY_PROVIDER: "ampm" } });
+    await expect(ampm.service.activate("raw", null)).rejects.toMatchObject({ code: "not_found" });
+  });
+
+  it("is a 404 in production and without the local secret", async () => {
+    const production = build({ env: { NODE_ENV: "production" } });
+    await expect(production.service.activate("raw", "access")).rejects.toMatchObject({
+      code: "not_found",
+    });
+    const unkeyed = build({ env: { IDENTITY_LOCAL_SECRET: undefined } });
+    await expect(unkeyed.service.activate("raw", "access")).rejects.toMatchObject({
+      code: "not_found",
+    });
+    expect(production.txUserUpdate).not.toHaveBeenCalled();
+    expect(unkeyed.txUserUpdate).not.toHaveBeenCalled();
   });
 });

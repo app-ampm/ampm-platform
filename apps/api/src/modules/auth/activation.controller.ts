@@ -5,7 +5,6 @@ import {
   devLoginRequest,
   devOtpSendRequest,
   devOtpVerifyRequest,
-  errors,
   type ActivateRequest,
   type ActivateResponse,
   type DevCreateClientRequest,
@@ -27,9 +26,12 @@ import { DevOtpService } from "../../identity/dev-otp.service.js";
 /**
  * The public auth flows the API owns. `activate` (Module A, feature 5.2) is public because the
  * activating user has no linked identity yet; it verifies the provider access token and the invite
- * token itself and self-audits. `dev-login` (feature TW-11 demo) is a dev-only local sign-in: it mints
- * a token for a seeded staff account so the Sales workspace can authenticate without a password, and is
- * refused outside a local, non-production config (DevLoginService). `dev-login/request-otp` and
+ * token itself and self-audits. It is the development provider's "link on activate" and, like the
+ * dev-login routes, a 404 outside a dev build (ActivationService, D-162): AMPM's own sign-in activates
+ * staff and clients through the `auth/activation/*` routes instead. `dev-login` (feature TW-11 demo) is
+ * a dev-only local sign-in: it mints a token for a seeded staff account so the Sales workspace can
+ * authenticate without a password, and is refused outside a local, non-production config
+ * (DevLoginService). `dev-login/request-otp` and
  * `dev-login/verify-otp` are the same dev-only path for mobile+OTP sign-in — the demo stand-in until the
  * SMS provider is wired; the request returns the one-time code for the screen to show, and both are
  * refused in production too (DevOtpService, SMS/OTP audit). `dev-login/invite` is the local stand-in
@@ -53,11 +55,11 @@ export class ActivationController {
     @ZodBody(activateRequest) body: ActivateRequest,
     @Headers("authorization") authorization: string | undefined,
   ): Promise<ActivateResponse> {
+    // The service refuses a missing token after its dev-build gate, so outside a dev build even a request
+    // without one is the 404 of an absent route.
     const [scheme, token] = (authorization ?? "").split(" ");
-    if (scheme?.toLowerCase() !== "bearer" || !token) {
-      throw errors.unauthenticated("A provider access token is required to activate");
-    }
-    return this.activation.activate(body.token, token);
+    const bearer = scheme?.toLowerCase() === "bearer" && token ? token : null;
+    return this.activation.activate(body.token, bearer);
   }
 
   @Post("dev-login")
