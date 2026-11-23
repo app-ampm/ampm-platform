@@ -2,9 +2,11 @@ import { Inject, Injectable } from "@nestjs/common";
 import { ACTIVATION_ERRORS, errors, type ActivateResponse } from "@ampm/core";
 
 import { PrismaService } from "../db/prisma.service.js";
+import { ENV, type Env } from "../env.js";
 import { Prisma } from "../generated/prisma/client.js";
 import { AuditService } from "../policy/audit.service.js";
 import { AuthTokenService } from "./auth-token.service.js";
+import { assertDevBuild } from "./dev-gate.js";
 import { IDENTITY_ADAPTER, type IdentityAdapter } from "./identity.types.js";
 
 /**
@@ -12,17 +14,28 @@ import { IDENTITY_ADAPTER, type IdentityAdapter } from "./identity.types.js";
  * token) and that they control a provider account (a verified access token); the API then binds
  * `identity_subject` and flips the account `invited → active`. No self-registration (A-13): without a
  * live invite there is nothing to activate.
+ *
+ * Development provider only (D-162): AMPM's own sign-in activates staff through the password and
+ * authenticator routes and clients through the mobile code. The route is public, so no session check
+ * runs, and a token whose session an administrator's reset revoked still verifies; outside a dev build
+ * that let it activate a reset account with no password and no authenticator. There it is a 404.
  */
 @Injectable()
 export class ActivationService {
   constructor(
+    @Inject(ENV) private readonly env: Env,
     @Inject(IDENTITY_ADAPTER) private readonly identity: IdentityAdapter,
     private readonly tokens: AuthTokenService,
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
   ) {}
 
-  async activate(inviteToken: string, accessToken: string): Promise<ActivateResponse> {
+  /** `accessToken` is the request's Bearer, or null when it carried none. */
+  async activate(inviteToken: string, accessToken: string | null): Promise<ActivateResponse> {
+    assertDevBuild(this.env); // a 404 before anything is read: denial equals absence (security.md)
+    if (!accessToken) {
+      throw errors.unauthenticated("A provider access token is required to activate");
+    }
     const verified = await this.identity.verifyAccessToken(accessToken); // throws unauthenticated
     const invite = await this.tokens.findValidInvite(inviteToken);
     if (!invite) throw errors.unauthenticated(ACTIVATION_ERRORS.invalidInvite);
