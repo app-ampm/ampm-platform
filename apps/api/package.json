@@ -23,7 +23,7 @@
     "worker": "node --env-file-if-exists=.env --import tsx src/worker.ts",
     "test": "vitest run && vitest run --config ./vitest.config.e2e.ts",
     "test:e2e": "vitest run --config ./vitest.config.e2e.ts",
-    "typecheck": "prisma generate && tsc --noEmit -p tsconfig.json"
+    "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
     "@ampm/core": "workspace:*",
