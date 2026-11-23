@@ -23,7 +23,7 @@ import {
   type HotelCreateRequest,
   type HotelImportRequest,
   type HotelImportResult,
-  type HotelStaffDetailView,
+  type HotelStaffDetail,
   type HotelStaffListQuery,
   type HotelStaffPage,
   type HotelUpdateRequest,
@@ -61,10 +61,11 @@ const destinationParam = z.object({ destinationId: uuid });
 type DestinationParam = z.infer<typeof destinationParam>;
 
 /**
- * The staff hotel catalogue (HT/SA; feature 9.1). A separate prefix from the client discovery controller
- * at `hotels` — its distinct first segment avoids any `/hotels/:id` route-ordering ambiguity — and every
- * route is `@RequirePermission("hotels.*")`, the 8-step guard, not the entitlement path. The import
- * records its own per-row audit, so its route is `@AuditExempt`.
+ * The staff hotel catalogue (feature 9.1). A separate prefix from the client discovery controller at
+ * `hotels` — its distinct first segment avoids any `/hotels/:id` route-ordering ambiguity — and every
+ * route is `@RequirePermission("hotels.*")`, the 8-step guard, not the entitlement path. A hotel answers
+ * in the model of the caller's audience: its internal rating, notes and contacts only for principals
+ * whose grants read them (D-171). The import records its own per-row audit, so it is `@AuditExempt`.
  */
 @Controller("hotels-admin")
 export class HotelsAdminController {
@@ -76,14 +77,20 @@ export class HotelsAdminController {
 
   @Get("hotels")
   @RequirePermission("hotels.hotel_profiles_client_fields.read")
-  list(@ZodQuery(hotelStaffListQuery) query: HotelStaffListQuery): Promise<HotelStaffPage> {
-    return this.hotels.list(query);
+  list(
+    @ZodQuery(hotelStaffListQuery) query: HotelStaffListQuery,
+    @CurrentPrincipal() principal: Principal,
+  ): Promise<HotelStaffPage> {
+    return this.hotels.list(query, principal);
   }
 
   @Get("hotels/:hotelId")
   @RequirePermission("hotels.hotel_profiles_client_fields.read")
-  get(@ZodParams(hotelParam) params: HotelParam): Promise<HotelStaffDetailView> {
-    return this.hotels.getDetail(params.hotelId);
+  get(
+    @ZodParams(hotelParam) params: HotelParam,
+    @CurrentPrincipal() principal: Principal,
+  ): Promise<HotelStaffDetail> {
+    return this.hotels.getDetail(params.hotelId, principal);
   }
 
   @Post("hotels")
@@ -93,8 +100,8 @@ export class HotelsAdminController {
   create(
     @ZodBody(hotelCreateRequest) body: HotelCreateRequest,
     @CurrentPrincipal() principal: Principal,
-  ): Promise<HotelStaffDetailView> {
-    return this.hotels.create(body, staffId(principal));
+  ): Promise<HotelStaffDetail> {
+    return this.hotels.create(body, principal);
   }
 
   @Patch("hotels/:hotelId")
@@ -104,8 +111,8 @@ export class HotelsAdminController {
     @ZodParams(hotelParam) params: HotelParam,
     @ZodBody(hotelUpdateRequest) body: HotelUpdateRequest,
     @CurrentPrincipal() principal: Principal,
-  ): Promise<HotelStaffDetailView> {
-    return this.hotels.update(params.hotelId, body, staffId(principal));
+  ): Promise<HotelStaffDetail> {
+    return this.hotels.update(params.hotelId, body, principal);
   }
 
   @Delete("hotels/:hotelId")
@@ -247,12 +254,7 @@ export class HotelsAdminController {
     @ZodBody(hotelContactUpdateRequest) body: HotelContactUpdateRequest,
     @CurrentPrincipal() principal: Principal,
   ): Promise<HotelContactView> {
-    return this.subresources.updateContact(
-      params.hotelId,
-      params.contactId,
-      body,
-      staffId(principal),
-    );
+    return this.subresources.updateContact(params.hotelId, params.contactId, body, principal);
   }
 
   @Delete("hotels/:hotelId/contacts/:contactId")

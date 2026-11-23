@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { useCreateHotel, useUpdateHotel } from "@ampm/api-client";
-import { isAppError, type HotelStaffView } from "@ampm/core";
+import { isAppError, type HotelStaffListItem } from "@ampm/core";
 import { Button, Input, InternalPanel, Sheet, Stack, Toggle, useToast } from "@ampm/ui";
 
 import { DestinationField } from "./hotel-destination-field";
@@ -9,12 +9,15 @@ import {
   buildHotelBody,
   draftFromHotel,
   hasErrors,
+  hasInternalNotes,
+  internalNotesBody,
   validateDraft,
   type HotelProfileDraft,
   type HotelProfileErrors,
 } from "./hotel-profile.form";
 import { HOTEL_STATUSES, hotelStatusLabel } from "./hotels-admin.format";
 import { MediaOptionPicker } from "./media-option-picker";
+import { useHotelProfilePermissions } from "./use-hotel-profile-permissions";
 
 const NO_ERRORS: HotelProfileErrors = {
   name: undefined,
@@ -31,11 +34,22 @@ interface FieldsProps {
   readonly errors: HotelProfileErrors;
 }
 
+/**
+ * Whether this person edits the internal rating and notes here: they may set them, and, editing, the
+ * hotel carries them (only a reader of them gets them). Otherwise the fields stay out of the form and
+ * of the body, so a save leaves them as they are (D-171).
+ */
+function useNotesEditable(hotel: HotelStaffListItem | null): boolean {
+  const { canEditNotes } = useHotelProfilePermissions();
+  return canEditNotes && (hotel === null || hasInternalNotes(hotel));
+}
+
 /** The create/edit form's state, validation and submission; kept out of the view so each stays small. */
-function useHotelProfileForm(open: boolean, hotel: HotelStaffView | null, onClose: () => void) {
+function useHotelProfileForm(open: boolean, hotel: HotelStaffListItem | null, onClose: () => void) {
   const toast = useToast();
   const create = useCreateHotel();
   const update = useUpdateHotel();
+  const notesEditable = useNotesEditable(hotel);
   const [draft, setDraft] = useState<HotelProfileDraft>(() => draftFromHotel(hotel));
   const [showErrors, setShowErrors] = useState(false);
   // Re-seed each time the sheet opens, so "New hotel" starts clean and editing shows current values.
@@ -59,11 +73,13 @@ function useHotelProfileForm(open: boolean, hotel: HotelStaffView | null, onClos
   const submit = (): void => {
     if (pending) return;
     if (hasErrors(validateDraft(draft))) return setShowErrors(true);
-    const body = buildHotelBody(draft);
+    const profile = buildHotelBody(draft);
+    const body = notesEditable ? { ...profile, ...internalNotesBody(draft) } : profile;
     if (hotel) update.mutate({ hotelId: hotel.id, body }, { onSuccess, onError });
     else create.mutate(body, { onSuccess, onError });
   };
-  return { draft, patch, errors: showErrors ? validateDraft(draft) : NO_ERRORS, pending, submit };
+  const errors = showErrors ? validateDraft(draft) : NO_ERRORS;
+  return { draft, patch, errors, pending, submit, notesEditable };
 }
 
 function IdentityFields({
@@ -211,16 +227,19 @@ function InternalFields({ draft, patch, errors }: FieldsProps) {
 }
 
 /**
- * The name and destination first, then the rest. The destination picker mounts only while the sheet is
- * open (its query runs then), and offers the way to Destinations when there is none yet.
+ * The name and destination first, then the rest, and the internal fields last for someone who edits
+ * them. The destination picker mounts only while the sheet is open (its query runs then), and offers
+ * the way to Destinations when there is none yet.
  */
 function HotelProfileFields({
   open,
   onAddDestination,
+  notesEditable,
   ...props
 }: FieldsProps & {
   readonly open: boolean;
   readonly onAddDestination: (() => void) | undefined;
+  readonly notesEditable: boolean;
 }) {
   const { draft, patch, errors } = props;
   return (
@@ -245,25 +264,25 @@ function HotelProfileFields({
       <IdentityFields draft={draft} patch={patch} />
       <DetailFields {...props} />
       <FlagFields draft={draft} patch={patch} />
-      <InternalFields {...props} />
+      {notesEditable ? <InternalFields {...props} /> : null}
     </Stack>
   );
 }
 
 export interface HotelProfileEditSheetProps {
   readonly open: boolean;
-  /** The hotel being edited, or null to add a new one. */
-  readonly hotel: HotelStaffView | null;
+  /** The hotel being edited, in the reader's model, or null to add a new one. */
+  readonly hotel: HotelStaffListItem | null;
   readonly onClose: () => void;
   /** When no destination exists yet, the destination field's way to the Destinations screen. */
   readonly onAddDestination?: (() => void) | undefined;
 }
 
 /**
- * Add a hotel to the catalogue, or edit one's profile (H1.1b): the client-facing fields and the
- * staff-only internal rating/notes, filed under a destination. The server derives the slug from the
- * name on create (immutable after) and re-validates every field. Rooms, venues, contacts and photos
- * are managed separately. Hotel team and Super Admin only, gated server-side.
+ * Add a hotel to the catalogue, or edit one's profile (H1.1b): the client-facing fields and, for someone
+ * who may set them, the staff-only internal rating/notes, filed under a destination. The server derives
+ * the slug from the name on create (immutable after) and re-validates every field. Rooms, venues,
+ * contacts and photos are managed separately. Hotel team and Super Admin only, gated server-side.
  *
  *   <HotelProfileEditSheet open={open} hotel={editing} onClose={close} />
  */
@@ -273,7 +292,11 @@ export function HotelProfileEditSheet({
   onClose,
   onAddDestination,
 }: HotelProfileEditSheetProps) {
-  const { draft, patch, errors, pending, submit } = useHotelProfileForm(open, hotel, onClose);
+  const { draft, patch, errors, pending, submit, notesEditable } = useHotelProfileForm(
+    open,
+    hotel,
+    onClose,
+  );
   return (
     <Sheet
       open={open}
@@ -290,6 +313,7 @@ export function HotelProfileEditSheet({
       <HotelProfileFields
         open={open}
         onAddDestination={onAddDestination}
+        notesEditable={notesEditable}
         draft={draft}
         patch={patch}
         errors={errors}

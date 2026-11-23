@@ -1,24 +1,29 @@
 import { z } from "zod";
 
-import { cursorQuery, isoDateTime, page, uuid } from "./common.js";
+import { cursorQuery, uuid } from "./common.js";
 import { hotelVenueType } from "./hotels.js";
 
 /*
  * Contracts for the STAFF hotel workspace (Module C "Hotel intelligence"; docs/data-model.md §5,
- * permission-matrix §5.3). Feature 9.1: hotel profiles with their internal fields, room categories,
- * venues and contacts, plus the spreadsheet import. These are the Hotel-team (HT) and Super-Admin (SA)
- * views — RESTRICTED-NOTES (internal rating/notes) and RESTRICTED-CONTACT (contacts) fields ARE present
- * here because the audience is staff with the `hotels.*` keys; the client discovery views in `hotels.ts`
- * are a separate, PUBLIC+CLIENT-only model (security.md: one response model per audience). Rate cards,
- * verifications, media and references are features 9.2/9.3 and are not modelled here yet.
+ * permission-matrix §5.3). Feature 9.1: destinations, room categories, venues and contacts, the hotel
+ * writes and the spreadsheet import. The staff hotel itself is one model per audience, in
+ * `hotel-staff-views.ts` (D-171): its RESTRICTED-NOTES (internal rating/notes) and RESTRICTED-CONTACT
+ * (contacts) parts reach only the principals whose grants read them; the client discovery views in
+ * `hotels.ts` are a separate, PUBLIC+CLIENT-only model (security.md: one response model per audience).
+ * Rate cards, verifications, media and references are features 9.2/9.3 and are not modelled here.
  */
 
 /** Hotel and destination lifecycle (HotelStatus / DestinationStatus in the Prisma schema). */
 export const hotelStatus = z.enum(["draft", "active", "inactive"]);
 export type HotelStatus = z.infer<typeof hotelStatus>;
 
-/** A list of free-text facility labels (facilities_json; e.g. ["wifi", "pool", "spa"]). */
-const facilities = z.array(z.string().trim().min(1).max(120)).max(100);
+/**
+ * A list of free-text facility labels (facilities_json): a hotel's, a room category's or a venue's.
+ *
+ * @example
+ * facilityLabels.parse(["wifi", "pool", "spa"]);
+ */
+export const facilityLabels = z.array(z.string().trim().min(1).max(120)).max(100);
 
 const slug = z
   .string()
@@ -102,7 +107,7 @@ export const roomCategoryView = z
     roomCount: z.number().int().nullable(),
     maxOccupancy: z.number().int().nullable(),
     sizeSqm: z.number().int().nullable(),
-    facilities: facilities.nullable(),
+    facilities: facilityLabels.nullable(),
     description: z.string().nullable(),
   })
   .strict();
@@ -114,7 +119,7 @@ export const roomCategoryCreateRequest = z
     roomCount: z.number().int().min(0).nullish(),
     maxOccupancy: z.number().int().min(0).nullish(),
     sizeSqm: z.number().int().min(0).nullish(),
-    facilities: facilities.nullish(),
+    facilities: facilityLabels.nullish(),
     description: z.string().trim().max(10_000).nullish(),
   })
   .strict();
@@ -139,7 +144,7 @@ export const venueView = z
     capacityBanquet: z.number().int().nullable(),
     capacityTheatre: z.number().int().nullable(),
     capacityReception: z.number().int().nullable(),
-    facilities: facilities.nullable(),
+    facilities: facilityLabels.nullable(),
     description: z.string().nullable(),
   })
   .strict();
@@ -154,7 +159,7 @@ export const venueCreateRequest = z
     capacityBanquet: z.number().int().min(0).nullish(),
     capacityTheatre: z.number().int().min(0).nullish(),
     capacityReception: z.number().int().min(0).nullish(),
-    facilities: facilities.nullish(),
+    facilities: facilityLabels.nullish(),
     description: z.string().trim().max(10_000).nullish(),
   })
   .strict();
@@ -201,45 +206,7 @@ export const hotelContactUpdateRequest = z
   .refine((v) => Object.keys(v).length > 0, "at least one field is required");
 export type HotelContactUpdateRequest = z.infer<typeof hotelContactUpdateRequest>;
 
-// --- Hotel (staff view with internal fields + nested rooms/venues/contacts on detail) ---
-
-const hotelStaffBase = z.object({
-  id: uuid,
-  destinationId: uuid,
-  name: z.string(),
-  slug: z.string(),
-  brand: z.string().nullable(),
-  starCategory: z.string().nullable(),
-  address: z.string().nullable(),
-  latitude: z.number().nullable(),
-  longitude: z.number().nullable(),
-  descriptionClient: z.string().nullable(),
-  website: z.string().nullable(),
-  status: hotelStatus,
-  demoVisible: z.boolean(),
-  publicShowcase: z.boolean(),
-  internalRating: z.number().int().nullable(), // RESTRICTED-NOTES
-  internalNotes: z.string().nullable(), // RESTRICTED-NOTES
-  totalRooms: z.number().int().nullable(),
-  streetViewRef: z.string().nullable(),
-  lastVerifiedAt: isoDateTime.nullable(),
-  facilities: facilities.nullable(),
-});
-
-/** A hotel in the staff list (HT/SA): the full profile, no nested collections. */
-export const hotelStaffView = hotelStaffBase.strict();
-export type HotelStaffView = z.infer<typeof hotelStaffView>;
-
-/** A hotel on the staff detail page: the profile plus its rooms, venues and contacts. */
-export const hotelStaffDetailView = hotelStaffBase
-  .extend({
-    destination: destinationView,
-    rooms: z.array(roomCategoryView),
-    venues: z.array(venueView),
-    contacts: z.array(hotelContactView),
-  })
-  .strict();
-export type HotelStaffDetailView = z.infer<typeof hotelStaffDetailView>;
+// --- Hotel writes and the staff list query (the staff hotel views are in hotel-staff-views.ts) ---
 
 const hotelProfileFields = {
   name: z.string().trim().min(1).max(255),
@@ -257,7 +224,7 @@ const hotelProfileFields = {
   internalNotes: z.string().trim().max(10_000).nullish(),
   totalRooms: z.number().int().min(0).nullish(),
   streetViewRef: z.string().trim().max(255).nullish(),
-  facilities: facilities.nullish(),
+  facilities: facilityLabels.nullish(),
 };
 
 export const hotelCreateRequest = z
@@ -286,9 +253,6 @@ export const hotelStaffListQuery = cursorQuery.extend({
   q: z.string().trim().max(255).optional(),
 });
 export type HotelStaffListQuery = z.infer<typeof hotelStaffListQuery>;
-
-export const hotelStaffPage = page(hotelStaffView);
-export type HotelStaffPage = z.infer<typeof hotelStaffPage>;
 
 // --- Spreadsheet import (TW-25; AC-35.1). One CSV row per hotel; a destination is resolved or created
 // by slug; a hotel is upserted by slug (idempotent). Rooms, venues and rate cards extend this in 9.2. ---

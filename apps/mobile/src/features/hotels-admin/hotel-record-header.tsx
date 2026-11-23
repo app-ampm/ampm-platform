@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { useRouter } from "expo-router";
 
-import type { HotelStaffDetailView } from "@ampm/core";
+import type { HotelStaffDetail } from "@ampm/core";
 import { Button, ScreenHeader, SegmentedControl, Stack } from "@ampm/ui";
 
 import { HotelProfileEditSheet } from "./hotel-profile-edit-sheet";
@@ -18,7 +18,7 @@ export interface HotelRecordHeaderProps {
   /** The section this page shows; its tab is the selected one. */
   readonly section: HotelRecordSection;
   /** The hotel once it has loaded; until then the header names no hotel and offers no profile edit. */
-  readonly hotel: HotelStaffDetailView | undefined;
+  readonly hotel: HotelStaffDetail | undefined;
   /** The page's own actions, after Edit profile: the media manager's gold Add media. */
   readonly actions?: ReactNode;
 }

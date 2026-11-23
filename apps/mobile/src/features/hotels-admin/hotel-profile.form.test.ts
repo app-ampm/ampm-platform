@@ -1,5 +1,25 @@
-import { buildHotelBody, draftFromHotel, hasErrors, validateDraft } from "./hotel-profile.form";
+import {
+  buildHotelBody,
+  draftFromHotel,
+  hasErrors,
+  hasInternalNotes,
+  internalNotesBody,
+  validateDraft,
+} from "./hotel-profile.form";
 import { hotelStaffViewFixture } from "./hotels-admin.test-utils";
+
+/** The hotel as someone who cannot read its internal rating and notes gets it (D-171). */
+function profileOnly() {
+  const {
+    internalRating: _rating,
+    internalNotes: _notes,
+    ...profile
+  } = hotelStaffViewFixture({
+    internalRating: 4,
+    internalNotes: "Synthetic note",
+  });
+  return profile;
+}
 
 describe("hotel profile form", () => {
   describe("draftFromHotel", () => {
@@ -80,12 +100,14 @@ describe("hotel profile form", () => {
         brand: null,
         totalRooms: 80,
         website: "https://x.test",
-        internalRating: null,
         status: "active",
         demoVisible: true,
       });
       expect("slug" in body).toBe(false);
       expect("latitude" in body).toBe(false);
+      // D-171: the internal rating and notes join the body only through internalNotesBody.
+      expect("internalRating" in body).toBe(false);
+      expect("internalNotes" in body).toBe(false);
     });
 
     it("parses the comma-separated facilities into a list, or null when blank", () => {
@@ -93,6 +115,29 @@ describe("hotel profile form", () => {
         buildHotelBody({ ...draftFromHotel(null), facilities: "Spa, Valet parking , " }).facilities,
       ).toEqual(["Spa", "Valet parking"]);
       expect(buildHotelBody({ ...draftFromHotel(null), facilities: "   " }).facilities).toBeNull();
+    });
+  });
+
+  describe("the internal rating and notes (D-171)", () => {
+    it("knows whether the hotel carries them", () => {
+      expect(hasInternalNotes(hotelStaffViewFixture())).toBe(true);
+      expect(hasInternalNotes(profileOnly())).toBe(false);
+    });
+
+    it("seeds them empty for a hotel that came without them", () => {
+      const draft = draftFromHotel(profileOnly());
+      expect(draft).toMatchObject({
+        name: "The Lakeside Palace",
+        internalRating: "",
+        internalNotes: "",
+      });
+    });
+
+    it("builds their part of the body: trimmed text or null, the rating parsed", () => {
+      const draft = { ...draftFromHotel(null), internalRating: "4", internalNotes: "  Note  " };
+      expect(internalNotesBody(draft)).toEqual({ internalRating: 4, internalNotes: "Note" });
+      const empty = draftFromHotel(null);
+      expect(internalNotesBody(empty)).toEqual({ internalRating: null, internalNotes: null });
     });
   });
 });
