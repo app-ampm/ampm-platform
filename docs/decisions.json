@@ -750,5 +750,18 @@
   "2": "Answered 26 October 2026: one hotel per location",
   "3": "Answered 26 October 2026: Razorpay; transaction handling as in the brief's section 3; no refunds",
   "4": "Working decision 26 October 2026: two individually authenticated accounts, to be countersigned"
+ },
+ "round_three": {
+  "decided_on": "2026-11-23",
+  "decided_by": "Decisions relayed by the developer on 23 November 2026 for the hotel information form (docs/planning/hotel-information-form-plan.md §3), to be countersigned by AMPM",
+  "answers": {
+   "hotel_login": "Hotel staff who supply information through a request link that AMPM's Hotel team starts, plus a one-time code, with no account, are not a hotel login (Q22, A-22, P-11)",
+   "capacity_meanings": "Seated at round tables is banquet capacity, floating (standing reception or cocktails) is reception capacity, and theatre stays theatre; a range keeps its maximum in the number and the range in the notes",
+   "booking_terms": "A hotel's booking terms (full buyout, minimum rooms, minimum nights, several functions on one day) stay internal for now",
+   "display_authorisation": "A No to the form's display authorisation (7.5) means AMPM uses the details internally only and shows no photos; a live hotel's client details change, or a hotel holding them goes live, only with a recorded reason; 7.5 is reworded to promise only what AMPM shows",
+   "verification_label": "Clients see \"Verified on <date> by AMPM\" for hotel-supplied details AMPM has reviewed, as for AMPM's own checks",
+   "question_set": "The form's changes to AMPM's PDF questions are approved (plan §5.3); every added question is optional",
+   "retention": "Hotel-form data: code records, IP addresses and user agents kept 12 months; people on requests that expired unsubmitted, 12 months after expiry; rejected or revoked requests and declined files, 12 months; contributors' personal details on merged requests masked after 24 months; every clean-up approved by the Super Admin, nothing automatic"
+  }
  }
 }

@@ -1564,9 +1564,17 @@ All automated suites run against synthetic data from the seed in §7 (V-15). Job
 
 #### AC-35.1 Hotel import
 - **Type and priority.** End to end, P1, Phase 1, automated.
-- **Steps.** Upload the template with 50 hotels, rooms, venues and rates including two invalid rows.
-- **Expected.** Validation report names the rows and fields; apply creates 48 hotels with unverified rate cards; audit events per row; the job record stores counts and the error report.
-- **References.** TW-25.
+- **Steps.**
+  1. Download the Hotels, Rooms, Venues and Rates templates.
+  2. Upload 50 hotels, then their rooms, venues and rates. Each file has two invalid rows.
+  3. Upload the hotels file again with blank cells in fields staff have since edited.
+- **Expected.**
+  - Each dry run reports every row (create; update, naming the fields that change; unchanged; or an error naming the row and field), and the report can be downloaded.
+  - Apply creates 48 hotels with their rooms and venues, and draft rate cards with hidden, unverified items.
+  - The second upload leaves blank-cell fields, status and flags unchanged.
+  - A deleted hotel's web address is a row error.
+  - Every applied row writes an audit event, and each job stores its counts and error report.
+- **References.** TW-25, D-181 (one template per kind replaced the single template with column mapping on 23 November 2026).
 
 #### AC-35.2 Guest import by the client
 - **Type and priority.** End to end, P1, Phase 3, automated.
