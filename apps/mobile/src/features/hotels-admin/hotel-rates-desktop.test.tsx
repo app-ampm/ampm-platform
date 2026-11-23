@@ -5,7 +5,7 @@ import type { MediaAssetView, VerificationView } from "@ampm/core";
 import { act, fireEvent, screen, within } from "../../test/render";
 import { HotelRatesScreen } from "./hotel-rates-screen";
 import {
-  destinationViewFixture,
+  destinationListItemFixture,
   HOTEL_ID,
   hotelStaffDetailViewFixture,
   mediaAssetFixture,
@@ -56,7 +56,7 @@ interface Data {
 async function renderRates({ verifications = [], media = [], nextCursor = null }: Data = {}) {
   const fetchImpl = routedFetch({
     [`/hotels-admin/hotels/${HOTEL_ID}`]: () => ok(hotelStaffDetailViewFixture()),
-    "/hotels-admin/destinations": () => ok({ items: [destinationViewFixture()] }),
+    "/hotels-admin/destinations": () => ok({ items: [destinationListItemFixture()] }),
     [`/hotels-admin/hotels/${HOTEL_ID}/rate-cards`]: () => ok({ items: [rateCardViewFixture()] }),
     [`/hotels-admin/hotels/${HOTEL_ID}/verifications`]: () => ok({ items: verifications }),
     "/media": () => ok({ items: media, nextCursor }),

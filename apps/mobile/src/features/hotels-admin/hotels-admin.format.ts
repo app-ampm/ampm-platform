@@ -19,6 +19,9 @@ export { RATE_ITEM_TYPES, rateItemTypeLabel } from "@ampm/core";
 
 /* Presentation helpers for the staff hotel catalogue (H1.1). No fetching, no rules. */
 
+/** A hotel's or a destination's lifecycle, in the order the editors offer it. */
+export const HOTEL_STATUSES: readonly HotelStatus[] = ["draft", "active", "inactive"];
+
 const STATUS_LABEL: Record<HotelStatus, string> = {
   draft: "Draft",
   active: "Active",

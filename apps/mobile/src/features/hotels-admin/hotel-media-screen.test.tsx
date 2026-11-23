@@ -5,7 +5,7 @@ import type * as UiModule from "@ampm/ui";
 import { fireEvent, screen, waitFor } from "../../test/render";
 import { HotelMediaScreen } from "./hotel-media-screen";
 import {
-  destinationViewFixture,
+  destinationListItemFixture,
   failure,
   HOTEL_ID,
   hotelStaffDetailViewFixture,
@@ -47,7 +47,7 @@ function mediaFetch(
 ): FetchFn {
   return routedFetch({
     [`/hotels-admin/hotels/${HOTEL_ID}`]: () => ok(hotelStaffDetailViewFixture()),
-    "/hotels-admin/destinations": () => ok({ items: [destinationViewFixture()] }),
+    "/hotels-admin/destinations": () => ok({ items: [destinationListItemFixture()] }),
     "/media": (init) => {
       if (init?.method === "POST") {
         captured.registered = JSON.parse(String(init.body));

@@ -1,4 +1,5 @@
 import type {
+  DestinationListItemView,
   DestinationView,
   HotelContactView,
   HotelStaffDetailView,
@@ -9,6 +10,7 @@ import type {
 
 import type { Prisma } from "../../generated/prisma/client.js";
 import type {
+  DestinationListRow,
   DestinationRow,
   StaffHotelDetailRow,
   StaffHotelRow,
@@ -42,6 +44,11 @@ export function toDestinationView(row: DestinationRow): DestinationView {
     status: row.status,
     publicVisible: row.publicVisible,
   };
+}
+
+/** A destination in the staff list (TW-20), with the count of its hotels the repository selected. */
+export function toDestinationListItem(row: DestinationListRow): DestinationListItemView {
+  return { ...toDestinationView(row), hotelCount: row._count.hotels };
 }
 
 type RoomRow = StaffHotelDetailRow["rooms"][number];

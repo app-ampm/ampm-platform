@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { useCreateHotel, useUpdateHotel } from "@ampm/api-client";
-import { isAppError, type HotelStaffView, type HotelStatus } from "@ampm/core";
+import { isAppError, type HotelStaffView } from "@ampm/core";
 import { Button, Input, InternalPanel, Sheet, Stack, Toggle, useToast } from "@ampm/ui";
 
 import { DestinationField } from "./hotel-destination-field";
@@ -13,10 +13,9 @@ import {
   type HotelProfileDraft,
   type HotelProfileErrors,
 } from "./hotel-profile.form";
-import { hotelStatusLabel } from "./hotels-admin.format";
+import { HOTEL_STATUSES, hotelStatusLabel } from "./hotels-admin.format";
 import { MediaOptionPicker } from "./media-option-picker";
 
-const HOTEL_STATUSES: readonly HotelStatus[] = ["draft", "active", "inactive"];
 const NO_ERRORS: HotelProfileErrors = {
   name: undefined,
   destinationId: undefined,
@@ -211,11 +210,53 @@ function InternalFields({ draft, patch, errors }: FieldsProps) {
   );
 }
 
+/**
+ * The name and destination first, then the rest. The destination picker mounts only while the sheet is
+ * open (its query runs then), and offers the way to Destinations when there is none yet.
+ */
+function HotelProfileFields({
+  open,
+  onAddDestination,
+  ...props
+}: FieldsProps & {
+  readonly open: boolean;
+  readonly onAddDestination: (() => void) | undefined;
+}) {
+  const { draft, patch, errors } = props;
+  return (
+    <Stack gap={4}>
+      <Input
+        label="Hotel name"
+        required
+        value={draft.name}
+        onChangeText={(name) => patch({ name })}
+        errorText={errors.name}
+        autoCapitalize="words"
+        testID="hotel-name"
+      />
+      {open ? (
+        <DestinationField
+          value={draft.destinationId}
+          onChange={(destinationId) => patch({ destinationId })}
+          error={errors.destinationId}
+          onAddDestination={onAddDestination}
+        />
+      ) : null}
+      <IdentityFields draft={draft} patch={patch} />
+      <DetailFields {...props} />
+      <FlagFields draft={draft} patch={patch} />
+      <InternalFields {...props} />
+    </Stack>
+  );
+}
+
 export interface HotelProfileEditSheetProps {
   readonly open: boolean;
   /** The hotel being edited, or null to add a new one. */
   readonly hotel: HotelStaffView | null;
   readonly onClose: () => void;
+  /** When no destination exists yet, the destination field's way to the Destinations screen. */
+  readonly onAddDestination?: (() => void) | undefined;
 }
 
 /**
@@ -226,7 +267,12 @@ export interface HotelProfileEditSheetProps {
  *
  *   <HotelProfileEditSheet open={open} hotel={editing} onClose={close} />
  */
-export function HotelProfileEditSheet({ open, hotel, onClose }: HotelProfileEditSheetProps) {
+export function HotelProfileEditSheet({
+  open,
+  hotel,
+  onClose,
+  onAddDestination,
+}: HotelProfileEditSheetProps) {
   const { draft, patch, errors, pending, submit } = useHotelProfileForm(open, hotel, onClose);
   return (
     <Sheet
@@ -241,28 +287,13 @@ export function HotelProfileEditSheet({ open, hotel, onClose }: HotelProfileEdit
         </Button>
       }
     >
-      <Stack gap={4}>
-        <Input
-          label="Hotel name"
-          required
-          value={draft.name}
-          onChangeText={(name) => patch({ name })}
-          errorText={errors.name}
-          autoCapitalize="words"
-          testID="hotel-name"
-        />
-        {open ? (
-          <DestinationField
-            value={draft.destinationId}
-            onChange={(destinationId) => patch({ destinationId })}
-            error={errors.destinationId}
-          />
-        ) : null}
-        <IdentityFields draft={draft} patch={patch} />
-        <DetailFields draft={draft} patch={patch} errors={errors} />
-        <FlagFields draft={draft} patch={patch} />
-        <InternalFields draft={draft} patch={patch} errors={errors} />
-      </Stack>
+      <HotelProfileFields
+        open={open}
+        onAddDestination={onAddDestination}
+        draft={draft}
+        patch={patch}
+        errors={errors}
+      />
     </Sheet>
   );
 }

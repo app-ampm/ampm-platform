@@ -22,6 +22,7 @@ import { HotelProfileEditSheet } from "./hotel-profile-edit-sheet";
 import { hotelRowSummary } from "./hotels-admin.format";
 import { useHotelColumns } from "./hotels-table.columns";
 import { useClientInterestPermissions } from "./use-client-interest-permissions";
+import { useDestinationPermissions } from "./use-destination-permissions";
 
 function HotelsLoading() {
   return (
@@ -89,32 +90,49 @@ function HotelsBody({
   return <HotelsTable hotels={hotels.data.items} onOpen={onOpen} />;
 }
 
+/** The way to every client's saved hotels, for a role that may read them (glass, before the rest). */
+function SavedByClientsLink({ onPress }: { readonly onPress: (() => void) | undefined }) {
+  if (!onPress) return null;
+  return (
+    <Button
+      variant="glass"
+      size="sm"
+      icon="heart"
+      onPress={onPress}
+      testID="hotels-saved-by-clients-link"
+    >
+      Saved by clients
+    </Button>
+  );
+}
+
 /**
- * The page's actions (T4): Import on glass, then the gold New hotel; before them, for a role that may
- * read clients' saved hotels, the way to every client's saves on glass too.
+ * The page's actions (T4): Destinations and Import on glass, then the gold New hotel; before them, for a
+ * role that may read clients' saved hotels, the way to every client's saves on glass too.
  */
 function HotelsActions({
   onOpenSaved,
+  onOpenDestinations,
   onImport,
   onCreate,
 }: {
   readonly onOpenSaved: (() => void) | undefined;
+  readonly onOpenDestinations: () => void;
   readonly onImport: () => void;
   readonly onCreate: () => void;
 }) {
   return (
     <>
-      {onOpenSaved ? (
-        <Button
-          variant="glass"
-          size="sm"
-          icon="heart"
-          onPress={onOpenSaved}
-          testID="hotels-saved-by-clients-link"
-        >
-          Saved by clients
-        </Button>
-      ) : null}
+      <SavedByClientsLink onPress={onOpenSaved} />
+      <Button
+        variant="glass"
+        size="sm"
+        icon="map-pin"
+        onPress={onOpenDestinations}
+        testID="hotel-destinations-link"
+      >
+        Destinations
+      </Button>
       <Button variant="glass" size="sm" icon="upload" onPress={onImport} testID="hotel-import-link">
         Import
       </Button>
@@ -122,6 +140,26 @@ function HotelsActions({
         New hotel
       </Button>
     </>
+  );
+}
+
+/** The page's header (T4): eyebrow and title, with the actions beside them from 768. */
+function HotelsHeader({ onCreate }: { readonly onCreate: () => void }) {
+  const router = useRouter();
+  const { canReadSavedHotels } = useClientInterestPermissions();
+  return (
+    <ScreenHeader
+      eyebrow="Hotels"
+      title="Hotel catalogue"
+      actions={
+        <HotelsActions
+          onOpenSaved={canReadSavedHotels ? () => router.push("/leads/saved-hotels") : undefined}
+          onOpenDestinations={() => router.push("/hotels-admin/destinations")}
+          onImport={() => router.push("/hotels-admin/import")}
+          onCreate={onCreate}
+        />
+      }
+    />
   );
 }
 
@@ -142,31 +180,27 @@ export function HotelsListScreen({ tabBar }: HotelsListScreenProps) {
   const router = useRouter();
   const hotels = useStaffHotels();
   const [creating, setCreating] = useState(false);
-  const { canReadSavedHotels } = useClientInterestPermissions();
+  const { canCreate: canAddDestination } = useDestinationPermissions();
   const open = (hotel: HotelStaffView): void =>
     router.push({ pathname: "/hotels-admin/[hotelId]", params: { hotelId: hotel.id } });
+  // From the New hotel form when no destination exists yet: close it, then add one on Destinations.
+  const addDestination = (): void => {
+    setCreating(false);
+    router.push("/hotels-admin/destinations");
+  };
   return (
     <Screen
       width="wide"
       tabBar={tabBar}
-      header={
-        <ScreenHeader
-          eyebrow="Hotels"
-          title="Hotel catalogue"
-          actions={
-            <HotelsActions
-              onOpenSaved={
-                canReadSavedHotels ? () => router.push("/leads/saved-hotels") : undefined
-              }
-              onImport={() => router.push("/hotels-admin/import")}
-              onCreate={() => setCreating(true)}
-            />
-          }
-        />
-      }
+      header={<HotelsHeader onCreate={() => setCreating(true)} />}
     >
       <HotelsBody hotels={hotels} onOpen={open} />
-      <HotelProfileEditSheet open={creating} hotel={null} onClose={() => setCreating(false)} />
+      <HotelProfileEditSheet
+        open={creating}
+        hotel={null}
+        onClose={() => setCreating(false)}
+        onAddDestination={canAddDestination ? addDestination : undefined}
+      />
     </Screen>
   );
 }

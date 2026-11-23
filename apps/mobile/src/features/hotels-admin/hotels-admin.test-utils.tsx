@@ -1,4 +1,5 @@
 import type {
+  DestinationListItemView,
   DestinationView,
   HotelContactView,
   HotelStaffDetailView,
@@ -58,7 +59,7 @@ export function hotelStaffViewFixture(overrides: Partial<HotelStaffView> = {}): 
   };
 }
 
-/** A destination as `GET /hotels-admin/destinations` returns it. */
+/** A destination as a hotel's detail and the destination writes return it. */
 export function destinationViewFixture(overrides: Partial<DestinationView> = {}): DestinationView {
   return {
     id: DESTINATION_ID,
@@ -72,6 +73,13 @@ export function destinationViewFixture(overrides: Partial<DestinationView> = {})
     publicVisible: true,
     ...overrides,
   };
+}
+
+/** A destination as `GET /hotels-admin/destinations` lists it: the destination plus its hotel count. */
+export function destinationListItemFixture(
+  overrides: Partial<DestinationListItemView> = {},
+): DestinationListItemView {
+  return { ...destinationViewFixture(), hotelCount: 3, ...overrides };
 }
 
 /** A hotel with its (empty) nested collections, as create / update / detail return it. */

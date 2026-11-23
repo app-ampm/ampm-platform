@@ -127,10 +127,12 @@ export {
   STAFF_DESTINATIONS_QUERY_KEY,
   STAFF_HOTELS_QUERY_KEY,
   staffHotelQueryKey,
+  useCreateDestination,
   useCreateHotel,
   useStaffDestinations,
   useStaffHotel,
   useStaffHotels,
+  useUpdateDestination,
   useUpdateHotel,
 } from "./hooks/use-staff-hotels";
 export { useHotelImport } from "./hooks/use-hotel-import";

@@ -4,7 +4,7 @@ import { act, fireEvent, screen, within } from "../../test/render";
 import { HotelDetailsScreen } from "./hotel-details-screen";
 import {
   CONTACT_ID,
-  destinationViewFixture,
+  destinationListItemFixture,
   HOTEL_ID,
   hotelContactViewFixture,
   hotelStaffDetailViewFixture,
@@ -53,7 +53,7 @@ async function renderDetails(): Promise<void> {
   });
   const fetchImpl = routedFetch({
     [`/hotels-admin/hotels/${HOTEL_ID}`]: () => ok(detail),
-    "/hotels-admin/destinations": () => ok({ items: [destinationViewFixture()] }),
+    "/hotels-admin/destinations": () => ok({ items: [destinationListItemFixture()] }),
   });
   await renderWithApi(<HotelDetailsScreen hotelId={HOTEL_ID} />, fetchImpl);
   await screen.findByTestId("details-split");

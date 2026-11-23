@@ -4,7 +4,7 @@ import { act, fireEvent, screen } from "../../test/render";
 import { staffMeFixture } from "../accounts/accounts.test-utils";
 import { HotelsListScreen } from "./hotels-list-screen";
 import {
-  destinationViewFixture,
+  destinationListItemFixture,
   failure,
   HOTEL_ID,
   hotelStaffViewFixture,
@@ -29,7 +29,7 @@ type Roles = ReturnType<typeof staffMeFixture>["roles"];
 const hotelsFetch = (items = [hotelStaffViewFixture()], roles: Roles = ["HT"]): FetchFn =>
   routedFetch({
     "/hotels-admin/hotels": () => ok({ items, nextCursor: null }),
-    "/hotels-admin/destinations": () => ok({ items: [destinationViewFixture()] }),
+    "/hotels-admin/destinations": () => ok({ items: [destinationListItemFixture()] }),
     "/me": () => ok(staffMeFixture(roles)),
   });
 
@@ -56,6 +56,25 @@ describe("HotelsListScreen", () => {
     await renderWithApi(<HotelsListScreen />, hotelsFetch());
     await fireEvent.press(await screen.findByTestId("hotel-new"));
     expect(await screen.findByTestId("hotel-profile-submit")).toBeOnTheScreen();
+  });
+
+  it("navigates to the destinations from the header", async () => {
+    await renderWithApi(<HotelsListScreen />, hotelsFetch());
+    await fireEvent.press(await screen.findByTestId("hotel-destinations-link"));
+    expect(mockPush).toHaveBeenCalledWith("/hotels-admin/destinations");
+  });
+
+  it("sends the Hotel team from an empty New hotel form to Destinations, closing the form", async () => {
+    const noDestinations = routedFetch({
+      "/hotels-admin/hotels": () => ok({ items: [], nextCursor: null }),
+      "/hotels-admin/destinations": () => ok({ items: [] }),
+      "/me": () => ok(staffMeFixture(["HT"])),
+    });
+    await renderWithApi(<HotelsListScreen />, noDestinations);
+    await fireEvent.press(await screen.findByTestId("hotel-new"));
+    await fireEvent.press(await screen.findByTestId("hotel-destination-add"));
+    expect(mockPush).toHaveBeenCalledWith("/hotels-admin/destinations");
+    expect(screen.queryByTestId("hotel-profile-submit")).toBeNull();
   });
 
   it("navigates to the bulk import from the header", async () => {
