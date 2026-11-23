@@ -708,8 +708,9 @@ The service checks every catalogue permission key it writes, because custom role
 **Dry run first**
 
 - The dry run gives a per-row report: create, update (listing the fields that change), unchanged, or error with the reason. It can be downloaded as an error report.
-- The job is stored and applied by its id.
-- At apply, a row whose target changed since the dry run is refused with "changed since preview".
+- In Slice 2, apply sends the same file again and the server plans it afresh. From Slice 3 the dry run stores its planned rows on the job, and apply runs by the job's id.
+- From Slice 3, a row whose target changed since the dry run is refused at apply with "changed since preview".
+- The template and the error report are built in the browser, from the core column list and the dry-run report; the API answers JSON only.
 
 **Semantics**
 
@@ -1171,7 +1172,8 @@ Hotel-driven moves are written as System movers, because the transitions generat
 | `PATCH /hotels-admin/hotels/:hotelId/media/:mediaId/subject` | `hotels.hotel_media_rights_status.update` | Sets a photo's purpose and room or venue (Slice 11) |
 | `POST /hotels-admin/hotels/:hotelId/{rooms, venues}/:id/retire` | `hotels.room_categories_venues.delete` | Soft-deletes the row after checking its rate items (Slice 11) |
 | `POST /hotels-admin/hotels/:hotelId/verifications` (changed) | `hotels.verifications.create` | Refuses `hotel_form`, computes `next_due_at` and recomputes `last_verified_at` (Slice 2) |
-| `GET /hotels-admin/imports/templates/:kind`; `POST /hotels-admin/imports/:kind`; `GET /hotels-admin/imports/:jobId[/report.csv]`; `POST /hotels-admin/imports/:jobId/apply` | Per-kind keys; the shared reader | Imports for hotels, rooms, venues and rates (Slices 2 to 4) |
+| `POST /hotels-admin/imports/:kind?dryRun=` (Slice 2); `POST /hotels-admin/imports/:jobId/apply` (Slice 3) | Per-kind keys; the shared reader | Imports for hotels, rooms, venues and rates (Slices 2 to 4). The template and error-report downloads are built in TW-25 from the core column list |
+| `GET /hotels-admin/cuisine-options` | `hotels.hotel_profiles_client_fields.read` | The cuisine choices from configuration `hotel.cuisine_options`, plus "Other", for the staff editor (Slice 2) |
 | `POST /hotels-admin/info-requests/bulk` | `info_requests.create` | Refresh requests for many hotels at once (Slice 14) |
 | `GET` and `POST /admin/hotel-intake/{contributors, retention-candidates}` | A Super-Admin-only key | Find, export, correct or mask a contributor; approve retention (Slice 14) |
 
@@ -1263,8 +1265,8 @@ The developer chose to build everything in one go (decision 3). The slices still
 | --- | --- | --- | --- | --- |
 | 0 Decisions and long-lead operations | D-records from the main checkout (D-172 onward). The answered questions in `docs/decisions.json`, including AMPM's confirmations. The notice, declaration and authorisation wording for counsel's review and AMPM's approval. Measure free disk. Confirm who applies the Plesk directives, and that the domain allows them. Record the AC-35.1 change and update the build plan | Docs only | 1 | — |
 | 1 Close the staff over-read | Done: PR #189 (`807cb2b`, D-171), live since 23 November 2026 | Done | 0 | — |
-| 2 Catalogue I: hotel fields and a safe profile import | The hotel columns of §6.2; staff contracts and profile panels. The shared post-guard body reader, introduced with the import route. The safe import (raw CSV; blank means unchanged; flags only when filled; deleted-web-address row errors; a per-field dry run; template and report downloads). Verifications compute `next_due_at` and recompute `last_verified_at` | API first, then `deploy-web.sh` | 3 | 0 |
-| 3 Catalogue II: rooms, venues, units, and their import | Room and venue columns and the new venue types (a client contract change, deployed back to back). The unit converter; one primary contact and E.164; staff room and venue sheets. `HotelChangeSet` in `packages/core`. The Rooms and Venues CSV import | API first, then `deploy-web.sh` straight after | 4 | 2 |
+| 2 Catalogue I: hotel fields and a safe profile import | The hotel columns of §6.2; staff contracts and profile panels. The shared post-guard body reader, introduced with the import route. The safe import (raw CSV; blank means unchanged; flags only when filled; deleted-web-address row errors; a per-field dry run; template and report downloads). The cuisine-options route. Facilities become an import column. Apply re-sends the file. Verifications compute `next_due_at` and recompute `last_verified_at` | API first, then `deploy-web.sh` | 3 | 0 |
+| 3 Catalogue II: rooms, venues, units, and their import | Room and venue columns and the new venue types (a client contract change, deployed back to back). The unit converter; one primary contact and E.164; staff room and venue sheets. `HotelChangeSet` in `packages/core`. The Rooms and Venues CSV import. Apply by the dry run's job id, refusing rows changed since the preview, for every kind | API first, then `deploy-web.sh` straight after | 4 | 2 |
 | 4 Rates import | Rates CSV into draft cards with hidden, unverified items; the same-hotel check on rate items; AC-35.1 updated | API first, then `deploy-web.sh` | 2 | 3 |
 | 5 Box prerequisites | Hard-link media snapshots and the off-box layer. Free space measured, with build caches cleared if short. nginx and Apache limits through Plesk, written back to `deploy/`. ClamAV settings. A check that `req.ip` gives one bucket per client. The worker's disk-check job | Box operations, plus a production redeploy (no migration) | 1.5 | 0 |
 | 6 Safe uploads everywhere, and the documents library | Every upload route on the shared post-guard reader; the global raw parser and its path bypass removed. New document types; `ooxml.ts`, the compound-file reader for the older .ppt and .xls, and the PDF checks, with fixtures. Images in documents re-encoded without metadata. sharp limits and one-at-a-time processing in the existing media pipeline. Restrictive serving headers. The hotel documents routes, the §5.3 row and the §5.14 amendment. The Documents tab; "Start draft F&B card" | API first, then `deploy-web.sh` | 6 | 5 |
