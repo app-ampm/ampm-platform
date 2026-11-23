@@ -46,9 +46,10 @@ export const weddingReferenceCreateRequest = z
     guestCount: z.number().int().min(0).nullish(),
     descriptionClient: z.string().trim().max(DESCRIPTION_MAX).nullish(),
     // Defaults false: a reference is internal until a staff member sets it client-visible with consent on
-    // file (GP-20). The service refuses `true` without a `consentDocumentId`, whatever the request order.
+    // file (GP-20). A new reference has no consent yet, so the service refuses `true` here.
     clientVisible: z.boolean().default(false),
-    consentDocumentId: uuid.nullish(),
+    // No `consentDocumentId`: consent arrives only by uploading the document (`POST …/:id/consent`), never
+    // as a client-supplied id (api.md), so the strict schema refuses one.
   })
   .strict();
 export type WeddingReferenceCreateRequest = z.infer<typeof weddingReferenceCreateRequest>;
@@ -60,7 +61,9 @@ const weddingReferenceFields = {
   guestCount: z.number().int().min(0).nullish(),
   descriptionClient: z.string().trim().max(DESCRIPTION_MAX).nullish(),
   clientVisible: z.boolean(),
-  consentDocumentId: uuid.nullish(),
+  // Only `null`, to clear the consent while the reference is internal. Attaching one is the upload route's
+  // job, which files the document on this reference; an id from the request is never trusted (api.md).
+  consentDocumentId: z.null(),
 };
 
 export const weddingReferenceUpdateRequest = z

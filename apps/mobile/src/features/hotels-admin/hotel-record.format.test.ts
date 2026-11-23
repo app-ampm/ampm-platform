@@ -2,11 +2,12 @@ import { HOTEL_RECORD_TABS, hotelRecordEyebrow, hotelRecordSection } from "./hot
 import { hotelStaffDetailViewFixture } from "./hotels-admin.test-utils";
 
 describe("hotel-record.format", () => {
-  it("offers the three sections that have a page, in T5's order", () => {
+  it("offers the four sections that have a page, in T5's order with TW-22's references last", () => {
     expect(HOTEL_RECORD_TABS.map((tab) => tab.label)).toEqual([
       "Rooms, venues & contacts",
       "Rate cards",
       "Media",
+      "References",
     ]);
   });
 

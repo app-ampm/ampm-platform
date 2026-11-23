@@ -55,7 +55,7 @@ export class HotelReferencesService {
     actorId: string,
   ): Promise<WeddingReferenceView> {
     await this.requireHotel(hotelId);
-    this.assertPublishable(request.clientVisible, request.consentDocumentId ?? null);
+    this.assertPublishable(request.clientVisible, null); // a new reference has no consent yet
     return toWeddingReferenceView(await this.repo.create(hotelId, request, actorId));
   }
 
@@ -67,8 +67,8 @@ export class HotelReferencesService {
   ): Promise<WeddingReferenceView> {
     const current = await this.requireReference(hotelId, referenceId);
     // Gate the RESULTING state, whatever the patch lands on (a visibility flip, a consent clear, both).
-    // `consentDocumentId` is nullable, so an explicit null must win over the current value — hence the
-    // `!== undefined` check rather than `??` (which would keep the old consent when the patch clears it).
+    // A patch may only clear `consentDocumentId` (null), so an explicit null must win over the current
+    // value — hence the `!== undefined` check rather than `??` (which would keep the old consent).
     const nextVisible = patch.clientVisible ?? current.clientVisible;
     const nextConsent =
       patch.consentDocumentId !== undefined ? patch.consentDocumentId : current.consentDocumentId;

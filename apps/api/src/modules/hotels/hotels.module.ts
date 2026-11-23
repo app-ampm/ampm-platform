@@ -1,12 +1,14 @@
 import { Module } from "@nestjs/common";
 
 import { NotificationModule } from "../admin/notification/notification.module.js";
+import { DocumentsModule } from "../documents/documents.module.js";
 import { MediaModule } from "../media/media.module.js";
 import { HotelFreshnessService } from "./hotel-freshness.service.js";
 import { HotelImportService } from "./hotel-import.service.js";
 import { HotelRatesController } from "./hotel-rates.controller.js";
 import { HotelRatesRepository } from "./hotel-rates.repository.js";
 import { HotelRatesService } from "./hotel-rates.service.js";
+import { HotelReferenceConsentService } from "./hotel-reference-consent.service.js";
 import { HotelReferencesController } from "./hotel-references.controller.js";
 import { HotelReferencesRepository } from "./hotel-references.repository.js";
 import { HotelReferencesService } from "./hotel-references.service.js";
@@ -28,7 +30,7 @@ import { SavedHotelsStaffService } from "./saved-hotels-staff.service.js";
  * client's `hotel_discovery` / `saved_hotels` entitlements and scoped by `hotelReach` (demo isolation,
  * A-28). PrismaService (DbModule), ENV/AppLogger (PlatformModule), JobQueue (JobsModule) and ConfigService
  * (ConfigModule) are @Global; NotificationModule is imported for the freshness job's hotel-team notice
- * (feature 9.2). The principal with its resolved entitlements arrives on the request context.
+ * (feature 9.2), and DocumentsModule (Module N) files a wedding reference's consent (GP-20). The principal with its resolved entitlements arrives on the request context.
  *
  * One deliberate deviation from api.md ("a module never queries another module's tables"): the repository
  * resolves the caller's own account by reading the CRM table `account_contacts` directly (shortlist
@@ -37,7 +39,7 @@ import { SavedHotelsStaffService } from "./saved-hotels-staff.service.js";
  * with PortalService.
  */
 @Module({
-  imports: [NotificationModule, MediaModule],
+  imports: [NotificationModule, MediaModule, DocumentsModule],
   controllers: [
     HotelsController,
     HotelsAdminController,
@@ -56,6 +58,7 @@ import { SavedHotelsStaffService } from "./saved-hotels-staff.service.js";
     HotelRatesService,
     HotelRatesRepository,
     HotelReferencesService,
+    HotelReferenceConsentService,
     HotelReferencesRepository,
     HotelFreshnessService,
     SavedHotelsStaffService,
