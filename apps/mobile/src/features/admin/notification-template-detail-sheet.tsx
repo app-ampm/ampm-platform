@@ -1,6 +1,7 @@
 import type { NotificationTemplate } from "@ampm/core";
 import { Button, Sheet, Stack, Text } from "@ampm/ui";
 
+import { Field } from "./detail-field";
 import {
   definedChannels,
   notificationTemplateLabel,
@@ -10,19 +11,6 @@ import {
   type TemplateChannel,
   type TemplateEntry,
 } from "./notification-templates.format";
-
-function Field({ label, value }: { readonly label: string; readonly value: string }) {
-  return (
-    <Stack gap={1} accessible accessibilityLabel={`${label}: ${value}`}>
-      <Text variant="eyebrow" tone="muted">
-        {label}
-      </Text>
-      <Text variant="bodySmall" tone="primary">
-        {value}
-      </Text>
-    </Stack>
-  );
-}
 
 /** The label/value fields for one channel's content blocks. */
 function channelFields(

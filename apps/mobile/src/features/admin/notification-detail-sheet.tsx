@@ -1,25 +1,13 @@
 import type { NotificationView } from "@ampm/core";
-import { Sheet, Stack, Text } from "@ampm/ui";
+import { Sheet, Stack } from "@ampm/ui";
 
+import { Field } from "./detail-field";
 import {
   formatMoment,
   notificationChannelLabel,
   notificationStatusLabel,
   notificationTemplateLabel,
 } from "./notifications.format";
-
-function Field({ label, value }: { readonly label: string; readonly value: string }) {
-  return (
-    <Stack gap={1} accessible accessibilityLabel={`${label}: ${value}`}>
-      <Text variant="eyebrow" tone="muted">
-        {label}
-      </Text>
-      <Text variant="bodySmall" tone="primary">
-        {value}
-      </Text>
-    </Stack>
-  );
-}
 
 function entityValue(notification: NotificationView): string {
   if (!notification.entityType) return "—";

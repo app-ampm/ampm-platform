@@ -6,19 +6,7 @@ import {
   configLabel,
   type ConfigEntry,
 } from "./configuration.format";
-
-function Field({ label, value }: { readonly label: string; readonly value: string }) {
-  return (
-    <Stack gap={1} accessible accessibilityLabel={`${label}: ${value}`}>
-      <Text variant="eyebrow" tone="muted">
-        {label}
-      </Text>
-      <Text variant="bodySmall" tone="primary">
-        {value}
-      </Text>
-    </Stack>
-  );
-}
+import { Field } from "./detail-field";
 
 export interface ConfigurationDetailSheetProps {
   readonly entry: ConfigEntry | null;

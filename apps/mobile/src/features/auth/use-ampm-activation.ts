@@ -1,10 +1,9 @@
-import { useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "expo-router";
 import { useState } from "react";
 
 import { useActivationConfirm, useActivationPassword } from "@ampm/api-client";
 
-import { setAccessToken } from "@/lib/session";
+import { messageOf } from "./refusal-text";
+import { useStartSession } from "./use-start-session";
 
 /** Where activation is: choosing the password, adding the authenticator, or saving the recovery codes. */
 export type ActivationPhase =
@@ -21,12 +20,6 @@ export interface AmpmActivation {
   readonly finish: () => void;
 }
 
-function messageOf(error: unknown): string {
-  return error instanceof Error && error.message.length > 0
-    ? error.message
-    : "Something went wrong. Please try again.";
-}
-
 /**
  * Activating an invitation with AMPM's own sign-in (D-142): the password, then the authenticator's first
  * code; the account turns active and its recovery codes are shown once, after which the session starts.
@@ -34,8 +27,7 @@ function messageOf(error: unknown): string {
  *   const activation = useAmpmActivation(token); // activation.setPassword(password)
  */
 export function useAmpmActivation(inviteToken: string): AmpmActivation {
-  const router = useRouter();
-  const queryClient = useQueryClient();
+  const startSession = useStartSession();
   const password = useActivationPassword();
   const confirm = useActivationConfirm();
   const [phase, setPhase] = useState<ActivationPhase>({ kind: "password" });
@@ -69,9 +61,7 @@ export function useAmpmActivation(inviteToken: string): AmpmActivation {
       }),
     finish: () => {
       if (!grantToken) return;
-      setAccessToken(grantToken);
-      queryClient.clear();
-      router.replace("/");
+      startSession(grantToken);
     },
   };
 }

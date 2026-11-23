@@ -1,6 +1,7 @@
 import {
   formatDay,
   formatDayRange,
+  formatMoment,
   leadStatus,
   type LeadActivityType,
   type LeadStatus,
@@ -125,15 +126,9 @@ export function formatStay(from: string | null, to: string | null): string | nul
   return single ? formatDay(single, { style: "data" }) : null;
 }
 
-const twoDigits = (value: number): string => String(value).padStart(2, "0");
-
-/** A moment on the timeline in the device's time: "5 NOV 2026 · 18:02". */
-export function formatMoment(iso: string): string {
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return iso;
-  const time = `${twoDigits(date.getHours())}:${twoDigits(date.getMinutes())}`;
-  return `${formatDay(iso, { style: "data" })} · ${time}`;
-}
+// A moment on the timeline in the device's time ("5 NOV 2026 · 18:02"): the shared formatter, re-exported
+// so the sales screens import every one of their formatters from this one module.
+export { formatMoment };
 
 /**
  * How long ago a lead arrived, as the board cards show it: "45m", "2h", "3d", "5w", then the date

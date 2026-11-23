@@ -4,6 +4,7 @@ import type { AuditEventView } from "@ampm/core";
 import { Sheet, Stack, Text } from "@ampm/ui";
 
 import { auditActionLabel, auditActorLabel, formatMoment } from "./audit-log.format";
+import { Field } from "./detail-field";
 
 function jsonText(value: unknown): string {
   if (value === null || value === undefined) return "—";
@@ -12,19 +13,6 @@ function jsonText(value: unknown): string {
   } catch {
     return String(value);
   }
-}
-
-function Field({ label, value }: { readonly label: string; readonly value: string }) {
-  return (
-    <Stack gap={1} accessible accessibilityLabel={`${label}: ${value}`}>
-      <Text variant="eyebrow" tone="muted">
-        {label}
-      </Text>
-      <Text variant="bodySmall" tone="primary">
-        {value}
-      </Text>
-    </Stack>
-  );
 }
 
 /** A recorded image (before/after), already masked at write time, in a flat well. */

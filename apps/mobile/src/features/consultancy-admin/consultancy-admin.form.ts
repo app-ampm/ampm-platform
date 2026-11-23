@@ -1,4 +1,5 @@
 import {
+  bookingMilestoneType,
   isIsoDate,
   RATE_ITEM_TYPES,
   rateItemTypeLabel,
@@ -65,17 +66,8 @@ export interface ChoiceOption<T extends string> {
 }
 
 /** The milestone kinds a staff member can create (labels reused from the client format map). */
-export const MILESTONE_TYPE_OPTIONS: ReadonlyArray<ChoiceOption<BookingMilestoneType>> = (
-  [
-    "hold_placed",
-    "contract_sent",
-    "contract_signed",
-    "advance_paid",
-    "rooming_list_due",
-    "balance_due",
-    "confirmed",
-  ] as const
-).map((value) => ({ value, label: milestoneTypeLabel(value) }));
+export const MILESTONE_TYPE_OPTIONS: ReadonlyArray<ChoiceOption<BookingMilestoneType>> =
+  bookingMilestoneType.options.map((value) => ({ value, label: milestoneTypeLabel(value) }));
 
 /** A proposal line's kind as staff read it ("Room rate"); the label + order are shared from @ampm/core. */
 export { rateItemTypeLabel as rateItemLabel };
