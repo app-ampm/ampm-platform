@@ -14,6 +14,9 @@ import type {
 } from "@ampm/core";
 import type { StatusTone } from "@ampm/ui";
 
+import type { BuyoutChoice, ParallelChoice } from "./hotel-booking-terms.form";
+import type { TriState } from "./hotel-form-fields";
+
 // The rate-item type label + order are shared (used by the consultancy proposal lines too).
 export { RATE_ITEM_TYPES, rateItemTypeLabel } from "@ampm/core";
 
@@ -67,6 +70,57 @@ const VENUE_TYPE_LABEL: Record<HotelVenueType, string> = {
 
 export function venueTypeLabel(type: HotelVenueType): string {
   return VENUE_TYPE_LABEL[type];
+}
+
+/* --- The profile's yes / no facts and booking terms (D-178): a fact the hotel has not given is said so. */
+
+const TRI_STATE_LABEL: Record<TriState, string> = {
+  unknown: "Not known",
+  yes: "Yes",
+  no: "No",
+};
+
+/** A yes / no fact the hotel may not have given: "Not known", "Yes" or "No". */
+export function triStateLabel(state: TriState): string {
+  return TRI_STATE_LABEL[state];
+}
+
+/** The buyout answers in the order the editor offers them, "Not set" first. */
+export const BUYOUT_CHOICES: readonly BuyoutChoice[] = [
+  "unset",
+  "not_required",
+  "required",
+  "depends",
+];
+
+const BUYOUT_LABEL: Record<BuyoutChoice, string> = {
+  unset: "Not set",
+  not_required: "Not required",
+  required: "Required",
+  depends: "Depends",
+};
+
+export function buyoutChoiceLabel(choice: BuyoutChoice): string {
+  return BUYOUT_LABEL[choice];
+}
+
+/** The parallel-functions answers in the order the editor offers them, "Not set" first. */
+export const PARALLEL_CHOICES: readonly ParallelChoice[] = [
+  "unset",
+  "allowed",
+  "not_allowed",
+  "depends",
+];
+
+const PARALLEL_LABEL: Record<ParallelChoice, string> = {
+  unset: "Not set",
+  allowed: "Allowed",
+  not_allowed: "Not allowed",
+  depends: "Depends",
+};
+
+export function parallelChoiceLabel(choice: ParallelChoice): string {
+  return PARALLEL_LABEL[choice];
 }
 
 /** A one-line summary of a room category for its list row (counts, occupancy, size). */

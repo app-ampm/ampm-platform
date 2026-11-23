@@ -915,27 +915,37 @@ Area numbering follows SPEC §2.4. Unless a screen says otherwise, "Who" means t
 ### TW-22 Hotel profile editor
 **Purpose.** Maintain everything about a hotel, with verification per field group (SPEC §2.4 "rooms, venues, media, verification").
 **Who.** HT, SA edit; PM, SM read; HL (a) read contacts. **Template.** T2.
-**Regions.** Header (name, destination, status, freshness summary per field group with next due, Preview as client). Tabs: Profile (client fields; flags demo_visible and public_showcase; Internal panel with rating and notes, RESTRICTED-NOTES); Contacts (RESTRICTED-CONTACT table); Rooms (categories: name, room count, max occupancy, size, facilities); Venues (name, type, indoor, area, capacities, facilities); Rate cards (list with status and validity → TW-23); Verification (log; Record verification per field group with source and notes); Media (upload, caption, order, visibility, rights status, consent source project and document; video processing status); References (past weddings with consent document and client visibility); Enquiries (→ TW-27); Projects (weddings using this hotel).
-**Fields.** `hotels`, `hotel_contacts`, `hotel_room_categories`, `hotel_venues`, `hotel_rate_cards`, `hotel_verifications`, `media_assets`, `hotel_wedding_references`, `hotel_enquiries`, `project_hotels`.
+**Regions.** Header (name, destination, status, freshness summary per field group with next due, Preview as client). Tabs: Profile (identity: name, destination, brand, parent group, name variants (INTERNAL), star category, status; client description, website, total rooms, facilities; Location and access panel: address, locality, city, state, PIN code, Google Maps link, latitude and longitude (staff only), then the airport, the railway station and the city centre, each with its name, distance in km and drive minutes, and access notes (highways and landmarks); Event space panel: the total in m² and in sq ft, as the hotel published it; Food and beverage panel: cuisine chips from configuration `hotel.cuisine_options` plus Other, and pure vegetarian, separate vegetarian kitchen and alcohol served, each Not known, Yes or No; flags demo_visible and public_showcase; Booking terms panel, seen only by AMPM (INTERNAL, D-178): full buyout for weddings (not required, required or depends), minimum rooms without a buyout, minimum nights, several functions at once (allowed, not allowed or depends) and booking notes; Internal panel with rating and notes, RESTRICTED-NOTES); Contacts (RESTRICTED-CONTACT table); Rooms (categories: name, room count, max occupancy, size, facilities); Venues (name, type, indoor, area, capacities, facilities); Rate cards (list with status and validity → TW-23); Verification (log; Record verification per field group, the booking terms as `policies`, with source and notes; the next due date is computed, never typed); Media (upload, caption, order, visibility, rights status, consent source project and document; video processing status); References (past weddings with consent document and client visibility); Enquiries (→ TW-27); Projects (weddings using this hotel).
+**Fields.** `hotels`, `hotel_contacts`, `hotel_room_categories`, `hotel_venues`, `hotel_rate_cards`, `hotel_verifications`, `media_assets`, `hotel_wedding_references`, `hotel_enquiries`, `project_hotels`, `configurations` (`hotel.cuisine_options`).
 **Actions.** Save; Record verification; Preview as client (renders CP-05 through the client serialiser); Set demo visible; Request public showcase (SM approves on TW-97).
-**States.** Field group stale: red label and a "Verify now" shortcut. Media without rights: cannot be set client or public (GP-20).
-**Rules.** The preview is the only way to see what clients see; it uses the real client response model (architecture §6).
-**Phase and references.** 1 · A-9, A-27, GP-20 (Q9).
+**States.** Field group stale: red label and a "Verify now" shortcut. Media without rights: cannot be set client or public (GP-20). A food fact left Not known is saved empty, never as No. A Maps link, PIN, distance or drive time that fails its check blocks Save, with the reason on the field.
+**Rules.** The preview is the only way to see what clients see; it uses the real client response model (architecture §6). The booking terms and name variants are INTERNAL: every staff reader of the profile sees them, with no extra grant, and no client view carries them; only the rating and notes need the restricted grant. The coordinates are staff-only too. The other new profile fields reach the client views only in Slice 12 of the hotel information form plan, so until then the preview does not show them. Recording a verification sets its next due date (the verified date plus `hotel.verification_policy.maxAgeDays`) and refreshes the hotel's last verified date at once. The Google Maps link must be https on a Google Maps host, and AMPM's server stores it as given and never opens it. When the destination is in India the PIN code is 6 digits, not starting with 0. Distances take one decimal place at most, from 0 to 999.9 km; drive times are 0 to 600 minutes.
+**Phase and references.** 1 · A-9, A-27, GP-20 (Q9), D-178.
 
 ```text
 +----------------------------------------------------------------------+
-| < Hotels   Rambagh Palace . Jaipur . Active        [Preview as client]|
-|   Profile verified 14 Oct . Rooms verified 14 Oct . Rates STALE 2 Jul |
-|   Media verified 1 Sep . Contacts verified 14 Oct      [Record verification]
+| < Hotels   The Lake Pavilion . Udaipur . Active   [Preview as client]|
+|  Profile 14 Oct, due 12 Jan . Policies 14 Oct, due 12 Jan            |
+|  Rooms 14 Oct . Rates STALE 2 Jul . Media 1 Sep [Record verification]|
 +----------------------------------------------------------------------+
-| [Profile] [Contacts] [Rooms] [Venues] [Rate cards] [Verification]     |
-| [Media] [References] [Enquiries] [Projects]                           |
+| [Profile] [Contacts] [Rooms] [Venues] [Rate cards] [Verification]    |
+| [Media] [References] [Enquiries] [Projects]                          |
 +------------------------------------------+---------------------------+
-|  Rate cards                              |  Internal (HT, SA)        |
-|  Wedding season 2027  1 Oct-31 Mar  STALE|  Rating  4 / 5            |
-|  Summer 2026          1 Apr-30 Sep  Retired  Notes  "Sales contact   |
-|  [+ New rate card]                       |  slow in Dec; insist on   |
-|                                          |  written confirmation."   |
+|  Location and access                     |  Booking terms            |
+|  Lake Road . Old City . Udaipur          |  Seen only by AMPM        |
+|  Rajasthan . PIN 313001                  |  Full buyout     Depends  |
+|  Maps link  https://maps.app.goo.gl/...  |  Min rooms, no buyout 60  |
+|  Lat 24.576000  Long 73.680000 (staff)   |  Min nights       2       |
+|  Airport      22.5 km   40 min           |  Functions at once        |
+|  Railway       4.0 km   15 min           |                   Allowed |
+|  City centre   1.5 km   10 min           |  Notes "Buyout above 300  |
+|  Event space  2,400 m2 . 25,833 sq ft    |  guests."                 |
+|                                          +---------------------------+
+|  Food and beverage                       |  Internal (HT, SA)        |
+|  [x] Indian [x] Continental [ ] Asian    |  Rating  4 / 5            |
+|  [x] Jain food on request   [ ] Other    |  Notes "Sales contact     |
+|  Pure veg  No . Veg kitchen  Yes         |  slow in Dec."            |
+|  Alcohol served  Not known               |                           |
 +------------------------------------------+---------------------------+
 ```
 
@@ -951,19 +961,21 @@ Area numbering follows SPEC §2.4. Unless a screen says otherwise, "Who" means t
 ### TW-24 Verification queue
 **Purpose.** What needs re-checking, by due date (SPEC §8 stale rule).
 **Who.** HT, SA. **Template.** T1.
-**Regions.** Rows per hotel and field group: last verified, by whom, due date, status; bulk "Record verification" for a hotel; filters by destination and field group.
+**Regions.** Rows per hotel and field group (profile, rooms, venues, rates, availability, media, contacts, and policies for the booking terms): last verified, by whom, due date, status; bulk "Record verification" for a hotel; filters by destination and field group.
 **Fields.** `hotel_verifications`.
 **Actions.** Record verification; open hotel.
-**Phase and references.** 1.
+**Rules.** The due date is `next_due_at`, which the server computes when the verification is recorded (the verified date plus `hotel.verification_policy.maxAgeDays`); staff never type it. Recording one also refreshes the hotel's last verified date at once, in the same transaction.
+**Phase and references.** 1 · AC-04.3, D-178.
 
 ### TW-25 Hotel import
-**Purpose.** Load hotels, rooms, venues and rates from spreadsheets (GP-22, RK-1).
-**Who.** HT, SA. **Template.** T3 wizard.
-**Regions.** Download template; upload; map columns to fields; validation report (errors by row); apply; job status.
-**Fields.** `import_jobs`, target hotel tables.
-**Actions.** Validate; Apply; Download error report.
-**Rules.** Imported rates are unverified until a verification row exists.
-**Phase and references.** 1 · A-9 (Q9).
+**Purpose.** Load hotels, rooms, venues and rates from spreadsheets, one CSV template per kind (GP-22, RK-1, D-181). Hotels come first; the Rooms and Venues templates follow with Slice 3 of the hotel information form plan, and Rates with Slice 4.
+**Who.** HT, SA, and any custom role holding the hotel profile create key, whose rows are checked against the keys they need (see Rules). **Template.** T3 wizard.
+**Regions.** Download template (the header row, built in the app from the core column list); choose a CSV UTF-8 file of up to 5 MB and 2,000 rows, uploaded as the raw file; a short guide (fixed headers, a blank cell keeps the value, list entries separated by `|`, yes-or-no cells); the dry-run report: the counts (to create, to update, unchanged, rejected), then the rows that would create or update a hotel (line number, web address and the columns that would change) and the rejected rows (line number, column and reason), up to 20 of each, the rest in the download; unchanged rows are only counted; Download error report (named Download report when no row is rejected: the whole report as a CSV, every row with its outcome); Import; job status.
+**Fields.** `import_jobs`, `hotels`, `destinations`, `media_assets` (pending images by reference).
+**Actions.** Download template; Validate (a dry run: no hotel changes, the run and its report are recorded); Download error report, or Download report; Import (uploads the same file again; the server checks it afresh).
+**States.** No file yet; checking; report with every row valid; report with rejected rows (Import still loads the valid ones); imported, with the counts and the per-row report; file refused whole (larger than 5 MB or 2,000 rows, a header the template does not have, `destinationSlug` or `name` missing), with the reason.
+**Rules.** Headers are fixed, with no column mapping: a header the template does not have refuses the file, and a file may carry any subset of the template's columns as long as it has `destinationSlug` and `name`. On an existing hotel a blank cell leaves the value unchanged, so a re-import never clears or resets anything; status and the demo and showcase flags change only when their cell is filled, or when the row creates the hotel (as a draft, out of the demo, not showcased). A row whose web address belongs to a deleted hotel is a row error, never a failed file. A row moves a hotel to another destination only when its slug cell names the hotel; a web address made from the name that belongs to a hotel elsewhere is a row error. Permissions are checked per row, each on the key its own screen asks: changing an existing hotel (its cells, destination or images) needs the profile update key, a destination the file creates needs the destinations create key, an image needs the media create key, and a filled internal rating or notes cell needs the internal rating and notes key, or the row is an error; the dry run compares a cell only with values the uploader may read. A row that changes nothing writes nothing, and a run that writes nothing says nothing was imported. The report names the columns that change, never their values, and the downloaded report keeps a cell that starts with `=`, `+`, `-` or `@` as text. Imported rates are unverified until a verification row exists.
+**Phase and references.** 1 · A-9 (Q9), D-181 · [engineering/hotel-import.md](engineering/hotel-import.md).
 
 ### TW-26 Enquiry queue
 **Purpose.** All hotel assistance requests by status (SPEC §2.4 "enquiries, visits and negotiations").

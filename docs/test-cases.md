@@ -481,11 +481,12 @@ All automated suites run against synthetic data from the seed in §7 (V-15). Job
 - **Expected.** Rates tab shows "Rates on request" and the assistance action; no amounts in the response.
 - **References.** CP-05; TW-23 rules.
 
-#### AC-04.3 Freshness job sets statuses and the denormalised date
-- **Type and priority.** Job test, P1, Phase 1, automated.
-- **Steps.** Seed verifications of different ages across field groups; run the job twice.
-- **Expected.** Each verification older than the configured age is `stale` and its dependent cards `stale`; `hotels.last_verified_at` equals the newest verification; Hotel team notified once; second run changes nothing.
-- **References.** Architecture §9; permission-matrix §8.
+#### AC-04.3 Recording a verification and the freshness job keep the dates current
+- **Type and priority.** API integration and job test, P1, Phase 1, automated.
+- **Principal.** HT; SYS.
+- **Steps.** 1. As HT, record verifications of one hotel through `POST /hotels-admin/hotels/:hotelId/verifications`: one dated now, one backdated 10 days, and one of the `policies` field group; send one more request that carries `nextDueAt`. 2. Make the recompute of `hotels.last_verified_at` fail once, then record another verification. 3. Seed verifications of different ages across field groups; run the job twice.
+- **Expected.** After step 1: each recorded verification's `next_due_at` equals its `verified_at` plus `maxAgeDays` from configuration `hotel.verification_policy`; `hotels.last_verified_at` equals the newest `verified_at` as soon as the request returns, written in the same transaction as the verification; the backdated record leaves the newer date in place; the `policies` record is accepted; the request carrying `nextDueAt` is refused with 400 and stores nothing. After step 2: the request fails and no verification row is stored. After step 3: each verification older than the configured age is `stale` and its dependent cards `stale`; `hotels.last_verified_at` equals the newest verification; Hotel team notified once; second run changes nothing.
+- **References.** Architecture §9; permission-matrix §8; TW-22, TW-24; D-178.
 
 #### AC-04.4 A card cannot be verified without a verification record
 - **Type and priority.** API integration, P1, Phase 1, automated.

@@ -252,17 +252,49 @@ TABLES["destinations"] = T(
     hero_media_id=F(visibility="CLIENT; PUBLIC when public_visible"),
     public_visible=F(automation="Publishes the destination page on the website; audited"),
 )
+# D-178: the hotel information form's fields. Booking terms and name variants are INTERNAL (every staff reader
+# of the profile, no client view); the CLIENT ones reach client views only when those views add them (Slice 12).
+BOOKING_TERMS = "INTERNAL (booking terms, D-178)"
+STAFF_COORDINATES = "INTERNAL (staff-only coordinates, D-178)"
+DISTANCE_KM = "numeric(4,1), 0 to 999.9 km, at most one decimal place"
+DRIVE_MINUTES = "integer, 0 to 600"
+NOT_STATED = "true or false; empty when the hotel has not said"
 TABLES["hotels"] = T(
     "Hotel data entry", "HT; SA", "CLIENT", required=["destination_id", "name", "slug", "status"],
-    assumptions="A-9 (Q9), A-28 (AM-8), RK-1",
+    assumptions="A-9 (Q9), A-28 (AM-8), RK-1, D-178",
     name=F(visibility="CLIENT; PUBLIC when public_showcase"),
+    name_aliases_json=F(visibility="INTERNAL (name variants, D-178)",
+                        validation="JSON array of up to 20 names, each up to 255 characters, none repeated ignoring case"),
+    postal_code=F(validation="up to 16 characters; when the destination's country is India, a PIN: 6 digits, "
+                             "not starting with 0, spaces ignored"),
     description_client=F(required="Before status active"),
-    latitude=F(validation="decimal between -90 and 90"), longitude=F(validation="decimal between -180 and 180"),
+    latitude=F(validation="decimal between -90 and 90, stored to 6 decimal places", visibility=STAFF_COORDINATES),
+    longitude=F(validation="decimal between -180 and 180, stored to 6 decimal places", visibility=STAFF_COORDINATES),
+    maps_url=F(validation="https Google Maps link (google.com/maps or google.co.in/maps, with or without www; "
+                          "maps.google.com or maps.google.co.in, at the root or under /maps; maps.app.goo.gl; "
+                          "goo.gl/maps), up to 2,048 characters; no '..' path segment or backslash",
+               automation="Stored as given; never fetched or resolved by the server"),
+    airport_distance_km=F(validation=DISTANCE_KM), airport_drive_minutes=F(validation=DRIVE_MINUTES),
+    railway_distance_km=F(validation=DISTANCE_KM), railway_drive_minutes=F(validation=DRIVE_MINUTES),
+    city_centre_distance_km=F(validation=DISTANCE_KM), city_centre_drive_minutes=F(validation=DRIVE_MINUTES),
     status=F(automation="inactive hotels leave search results but stay on existing enquiries and projects"),
     demo_visible=F(automation="Scopes demo search (A-28)"),
     public_showcase=F(automation="Exposes name, destination and hero media on the website only"),
     internal_rating=F(validation="integer 1 to 5"),
-    last_verified_at=F(editor=SYS, automation="Denormalised by the verification job; drives the freshness label"),
+    total_rooms=F(validation="integer, 0 to 100,000"),
+    total_event_space_sqm=F(validation="integer, 0 to 1,000,000"),
+    total_event_space_sqft=F(validation="integer, 0 to 10,000,000; as the hotel published it"),
+    wedding_buyout_policy=F(visibility=BOOKING_TERMS, validation="one of the listed options"),
+    min_rooms_without_buyout=F(visibility=BOOKING_TERMS, validation="integer, 0 to 10,000"),
+    min_nights=F(visibility=BOOKING_TERMS, validation="integer, 1 to 60"),
+    parallel_functions=F(visibility=BOOKING_TERMS, validation="one of the listed options"),
+    booking_notes=F(visibility=BOOKING_TERMS, validation="text, up to 10,000 characters"),
+    cuisines_json=F(validation="JSON array of up to 30 labels, each up to 60 characters, none repeated: options from "
+                               "configurations hotel.cuisine_options, or Other"),
+    is_pure_vegetarian=F(validation=NOT_STATED), has_separate_veg_kitchen=F(validation=NOT_STATED),
+    serves_alcohol=F(validation=NOT_STATED),
+    last_verified_at=F(editor=SYS, automation="Recomputed when a verification is recorded, in the same transaction, and "
+                                              "by the daily freshness job; drives the freshness label"),
 )
 TABLES["hotel_contacts"] = T("Hotel data entry", "HT; SA", table_class="RESTRICTED-CONTACT",
                              required=["hotel_id", "name"], assumptions="P-3 contact tier")
@@ -293,11 +325,16 @@ TABLES["hotel_rate_items"] = T(
 )
 TABLES["hotel_verifications"] = T(
     "Verification", "HT; SA", "INTERNAL",
-    required=["hotel_id", "field_group", "verified_at", "verified_by", "source", "status"], assumptions="SPEC §8 stale rule",
+    required=["hotel_id", "field_group", "verified_at", "verified_by", "source", "status"],
+    assumptions="SPEC §8 stale rule, D-178",
     field_group=F(visibility="CLIENT (freshness label)"),
-    verified_at=F(editor="SYS when recorded; HT may backdate with a note", visibility="CLIENT (freshness label)", required="At creation"),
+    verified_at=F(editor="SYS when recorded; HT may backdate with a note", visibility="CLIENT (freshness label)", required="At creation",
+                  automation="Recording one recomputes hotels.last_verified_at in the same transaction; the daily job "
+                             "compares it with the configured age and sets the freshness label"),
     status=F(visibility="CLIENT (freshness label)", automation="stale set by the daily job; shown as a label"),
-    next_due_at=F(editor=SYS, required="System"),
+    next_due_at=F(editor=SYS, required="System",
+                  automation="Set by the server when the verification is recorded: verified_at plus configurations "
+                             "hotel.verification_policy maxAgeDays; a request cannot set it"),
 )
 TABLES["hotel_wedding_references"] = T(
     "Hotel data entry", "HT; SA", "CLIENT when client_visible", required=["hotel_id", "event_year"], assumptions="GP-20 (Q9)",

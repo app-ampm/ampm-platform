@@ -5,7 +5,6 @@ import {
   hotelContactCreateRequest,
   hotelContactUpdateRequest,
   hotelCreateRequest,
-  hotelImportRequest,
   hotelStaffListQuery,
   hotelUpdateRequest,
   roomCategoryCreateRequest,
@@ -21,8 +20,7 @@ import {
   type HotelContactUpdateRequest,
   type HotelContactView,
   type HotelCreateRequest,
-  type HotelImportRequest,
-  type HotelImportResult,
+  type HotelCuisineOptionsView,
   type HotelStaffDetail,
   type HotelStaffListQuery,
   type HotelStaffPage,
@@ -38,14 +36,12 @@ import { z } from "zod";
 
 import { ZodBody, ZodParams, ZodQuery } from "../../common/zod.js";
 import {
-  AuditExempt,
   Audited,
   CurrentPrincipal,
   RequirePermission,
   SelfAudited,
 } from "../../policy/decorators.js";
 import { type Principal, staffId } from "../../policy/principal.types.js";
-import { HotelImportService } from "./hotel-import.service.js";
 import { HotelSubresourcesService } from "./hotel-subresources.service.js";
 import { HotelsAdminService } from "./hotels-admin.service.js";
 
@@ -65,13 +61,12 @@ type DestinationParam = z.infer<typeof destinationParam>;
  * `hotels` — its distinct first segment avoids any `/hotels/:id` route-ordering ambiguity — and every
  * route is `@RequirePermission("hotels.*")`, the 8-step guard, not the entitlement path. A hotel answers
  * in the model of the caller's audience: its internal rating, notes and contacts only for principals
- * whose grants read them (D-171). The import records its own per-row audit, so it is `@AuditExempt`.
+ * whose grants read them (D-171). The spreadsheet import has its own controller (hotel-import.controller.ts).
  */
 @Controller("hotels-admin")
 export class HotelsAdminController {
   constructor(
     private readonly hotels: HotelsAdminService,
-    private readonly imports: HotelImportService,
     private readonly subresources: HotelSubresourcesService,
   ) {}
 
@@ -153,17 +148,11 @@ export class HotelsAdminController {
     return this.hotels.updateDestination(params.destinationId, body, staffId(principal));
   }
 
-  @Post("imports")
-  @RequirePermission("hotels.hotel_profiles_client_fields.create")
-  @HttpCode(200)
-  @AuditExempt(
-    "the import records a per-row audit event and an import_jobs row in the service (AC-35.1)",
-  )
-  importHotels(
-    @ZodBody(hotelImportRequest) body: HotelImportRequest,
-    @CurrentPrincipal() principal: Principal,
-  ): Promise<HotelImportResult> {
-    return this.imports.import(body, staffId(principal));
+  // The staff editor's cuisine choices: every profile reader may see them, unlike /admin/configurations.
+  @Get("cuisine-options")
+  @RequirePermission("hotels.hotel_profiles_client_fields.read")
+  cuisineOptions(): Promise<HotelCuisineOptionsView> {
+    return this.hotels.cuisineOptions();
   }
 
   // --- Room categories, venues and contacts of a hotel (feature 9.1). ---

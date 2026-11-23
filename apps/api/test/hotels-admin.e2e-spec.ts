@@ -19,10 +19,12 @@ const CSV = [
 ].join("\n");
 
 /**
- * Hotel spreadsheet import end to end (Module C, feature 9.1; AC-35.1). A Super Admin uploads the CSV;
- * a dry run writes nothing; a real run creates the valid hotels (and their destination) with the invalid
- * row reported by line and field; a re-run of the same file is idempotent; the staff detail carries the
- * RESTRICTED internal fields the client view hides.
+ * Hotel spreadsheet import end to end (Module C, feature 9.1; AC-35.1; D-181). A Super Admin uploads the
+ * raw CSV to `POST /hotels-admin/imports/hotels`; a dry run writes nothing and reports what applying would
+ * do; a real run creates the valid hotels (and their destination) with the invalid row reported by line
+ * and field; a re-run of the same file changes nothing and says so; the staff detail carries the
+ * RESTRICTED internal fields the client view hides. The safe-import rules have their own suite
+ * (hotel-import.e2e-spec.ts).
  */
 describe("Hotel import (e2e)", () => {
   let app: NestExpressApplication;
@@ -51,6 +53,13 @@ describe("Hotel import (e2e)", () => {
       await prisma.mediaAsset.deleteMany({ where: { ownerType: "hotel", ownerId: { in: ids } } });
       await prisma.hotel.deleteMany({ where: { id: { in: ids } } });
     }
+    const destinations = await prisma.destination.findMany({
+      where: { slug: { startsWith: PREFIX } },
+      select: { id: true },
+    });
+    await prisma.auditEvent.deleteMany({
+      where: { entityType: "destination", entityId: { in: destinations.map(({ id }) => id) } },
+    });
     await prisma.destination.deleteMany({ where: { slug: { startsWith: PREFIX } } });
   }
 
@@ -68,21 +77,31 @@ describe("Hotel import (e2e)", () => {
   const http = () => request(app.getHttpServer());
   const sa = async () => `Bearer ${await mint("local:admin")}`;
   const countImported = () => prisma.hotel.count({ where: { slug: { startsWith: PREFIX } } });
+  const upload = (authorization: string, csv: string, dryRun = false) =>
+    http()
+      .post("/hotels-admin/imports/hotels")
+      .query({ dryRun: String(dryRun) })
+      .set("Authorization", authorization)
+      .set("Content-Type", "text/csv")
+      .send(csv);
 
-  it("dry-run validates and reports without writing anything", async () => {
-    const res = await http()
-      .post("/hotels-admin/imports")
-      .set("Authorization", await sa())
-      .send({ content: CSV, dryRun: true })
-      .expect(200);
+  it("dry-run validates and reports what applying would do, without writing anything", async () => {
+    const res = await upload(await sa(), CSV, true).expect(200);
     expect(res.body.data).toMatchObject({
       dryRun: true,
       applied: false,
       totalRows: 3,
-      created: 0,
+      created: 2,
       updated: 0,
+      unchanged: 0,
+      destinationsCreated: 1,
       mediaRegistered: 0, // a dry run writes nothing, media included
     });
+    expect(res.body.data.rows.map((row: { outcome: string }) => row.outcome)).toEqual([
+      "create",
+      "create",
+      "error",
+    ]);
     expect(res.body.data.rejected).toHaveLength(1);
     expect(res.body.data.rejected[0]).toMatchObject({ line: 4 });
     expect(res.body.data.rejected[0].errors[0].field).toBe("name");
@@ -99,11 +118,7 @@ describe("Hotel import (e2e)", () => {
   });
 
   it("applies the valid rows and reports the invalid one (AC-35.1)", async () => {
-    const res = await http()
-      .post("/hotels-admin/imports")
-      .set("Authorization", await sa())
-      .send({ content: CSV })
-      .expect(200);
+    const res = await upload(await sa(), CSV).expect(200);
     expect(res.body.data).toMatchObject({
       dryRun: false,
       applied: true,
@@ -174,25 +189,32 @@ describe("Hotel import (e2e)", () => {
     expect(res.body.data.venues).toEqual([]);
   });
 
-  it("is idempotent — re-running the same file updates and creates nothing", async () => {
-    const res = await http()
-      .post("/hotels-admin/imports")
-      .set("Authorization", await sa())
-      .send({ content: CSV })
-      .expect(200);
+  it("is idempotent — re-running the same file writes nothing (applied: false), and the job still applied", async () => {
+    const res = await upload(await sa(), CSV).expect(200);
     expect(res.body.data).toMatchObject({
+      applied: false,
       created: 0,
-      updated: 2,
+      updated: 0,
+      unchanged: 2,
       destinationsCreated: 0,
       mediaRegistered: 0, // the pending images already exist — a re-run registers none again (slice 5b)
     });
     expect(await countImported()).toBe(2);
+    const job = await prisma.importJob.findUniqueOrThrow({
+      where: { id: res.body.data.importJobId },
+    });
+    expect(job.status).toBe("applied");
     // The re-run did not duplicate hotel A's pending image (idempotent on the deterministic import key).
     const hotelA = await prisma.hotel.findFirstOrThrow({ where: { slug: `${PREFIX}a` } });
     const mediaCount = await prisma.mediaAsset.count({
       where: { ownerType: "hotel", ownerId: hotelA.id },
     });
     expect(mediaCount).toBe(1);
+    // An unchanged row is not written, so it leaves no audit event either.
+    const updates = await prisma.auditEvent.count({
+      where: { entityType: "hotel", entityId: hotelA.id, action: "update" },
+    });
+    expect(updates).toBe(0);
   });
 
   it("updates a destination and rejects a slug change (slug is immutable)", async () => {

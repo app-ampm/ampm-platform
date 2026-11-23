@@ -1,5 +1,7 @@
-import type { PrismaClient } from "../src/generated/prisma/client.js";
+import { CONFIG_REGISTRY } from "@ampm/core";
 
+import type { PrismaClient } from "../src/generated/prisma/client.js";
+import { verificationNextDueAt } from "../src/modules/hotels/rate-card-verification.js";
 import {
   RATES_VERIFIED_AT,
   SUBRESOURCES,
@@ -11,8 +13,10 @@ import {
  * visible rate card for each of the four seeded hotels, so the shipped discovery slices render real figures
  * on a demo box: B11 card price/capacity, B3 venues, B5 rooms and B7's capacity / verified-rates filters.
  * A verified card needs a verification (AC-04.4), so each hotel also gets a rates HotelVerification its card
- * cites. Runs after seedHotels (needs their ids) and before the consultancy demo. Data lives in the sibling
- * file; this is the (re-run safe) upsert logic — each hotel's children are cleared and rebuilt every run.
+ * cites, due again after the configured freshness window, and the hotel's last_verified_at is set from its
+ * newest verification, as recording one through the API does. Runs after seedHotels (needs their ids) and
+ * before the consultancy demo. Data lives in the sibling file; this is the (re-run safe) upsert logic —
+ * each hotel's children are cleared and rebuilt every run.
  */
 
 /** Clears a hotel's seeded children in FK order (items → cards → verifications → venues → rooms) so the seed re-runs clean. */
@@ -42,6 +46,7 @@ async function createRateCard(
   hotelId: string,
   sub: HotelSubresources,
 ): Promise<void> {
+  const { maxAgeDays } = CONFIG_REGISTRY["hotel.verification_policy"].default;
   const verification = await prisma.hotelVerification.create({
     data: {
       hotelId,
@@ -49,6 +54,7 @@ async function createRateCard(
       status: "verified",
       source: "contract",
       verifiedAt: RATES_VERIFIED_AT,
+      nextDueAt: verificationNextDueAt(RATES_VERIFIED_AT, maxAgeDays),
     },
     select: { id: true },
   });
@@ -76,6 +82,18 @@ async function createRateCard(
   });
 }
 
+/** Sets the hotel's last_verified_at to its newest verification (hotels.last_verified_at, AC-04.3). */
+async function refreshLastVerifiedAt(prisma: PrismaClient, hotelId: string): Promise<void> {
+  const newest = await prisma.hotelVerification.aggregate({
+    where: { hotelId, deletedAt: null },
+    _max: { verifiedAt: true },
+  });
+  await prisma.hotel.update({
+    where: { id: hotelId },
+    data: { lastVerifiedAt: newest._max.verifiedAt ?? null },
+  });
+}
+
 /**
  * Seeds venues, rooms and one verified client-visible rate card for each synthetic hotel. Idempotent: each
  * hotel's children are cleared and rebuilt, so the nightly demo restore and a re-run both land the same data.
@@ -93,5 +111,6 @@ export async function seedHotelSubresources(prisma: PrismaClient): Promise<void>
     await clearChildren(prisma, hotelId);
     await createProfile(prisma, hotelId, sub);
     await createRateCard(prisma, hotelId, sub);
+    await refreshLastVerifiedAt(prisma, hotelId);
   }
 }

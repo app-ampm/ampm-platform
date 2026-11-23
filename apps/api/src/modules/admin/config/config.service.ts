@@ -9,6 +9,7 @@ import {
   type ConsultancyChargeablePolicy,
   type ConsultancyMilestoneVisibilityPolicy,
   type FeatureFlags,
+  type HotelCuisineOptions,
   type HotelVerificationPolicy,
   type NotificationChannelDefaults,
   type NotificationTemplates,
@@ -46,6 +47,7 @@ export class ConfigService {
   get(key: "feature.flags"): Promise<FeatureFlags>;
   get(key: "subscription.policy"): Promise<SubscriptionPolicy>;
   get(key: "hotel.verification_policy"): Promise<HotelVerificationPolicy>;
+  get(key: "hotel.cuisine_options"): Promise<HotelCuisineOptions>;
   get(key: "consultancy.chargeable_services"): Promise<ConsultancyChargeablePolicy>;
   get(key: "consultancy.milestone_amounts_visible"): Promise<ConsultancyMilestoneVisibilityPolicy>;
   async get(key: ConfigKey): Promise<unknown> {

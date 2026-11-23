@@ -1,163 +1,277 @@
 import { Injectable } from "@nestjs/common";
-import {
-  errors,
-  hotelImportRow,
-  type HotelImportRequest,
-  type HotelImportResult,
-  type HotelImportRow,
-  type HotelImportRowError,
-} from "@ampm/core";
+import { errors, type HotelImportResult, type HotelImportRow } from "@ampm/core";
 
 import { Prisma } from "../../generated/prisma/client.js";
 import { AuditService } from "../../policy/audit.service.js";
+import { type Principal, staffId } from "../../policy/principal.types.js";
+import { ConfigService } from "../admin/config/config.service.js";
 import { MediaService } from "../media/media.service.js";
-import { buildCandidate, isBlankRow, parseCsv, slugify, titleCaseSlug } from "./hotel-import.js";
-import { HotelsAdminRepository, type HotelWriteData } from "./hotels-admin.repository.js";
+import { importGrantsOf, type ImportGrants } from "./hotel-audience.js";
+import { readHotelImportFile, type ImportFile, type ImportRow } from "./hotel-import.file.js";
+import { titleCaseSlug } from "./hotel-import.js";
+import {
+  importSlug,
+  planImport,
+  type ImportContext,
+  type ImportTarget,
+  type RowPlan,
+} from "./hotel-import.plan.js";
+import { reportJson, summarise, type ImportSummary } from "./hotel-import.report.js";
+import { HotelImportRepository, type ImportTargetRow } from "./hotel-import.repository.js";
+import { NEW_DESTINATION_COUNTRY } from "./hotel-profile-rules.js";
+import { toHotelWriteData, toImportPatch } from "./hotel-write.js";
+import { HotelsAdminRepository } from "./hotels-admin.repository.js";
+import { toHotelStaffView } from "./hotels-admin.view.js";
+
+/** How long one apply may hold its transaction: Prisma's default 5 s is too short for a 2,000-row file. */
+const APPLY_TIMEOUT_MS = 30_000;
+const APPLY_MAX_WAIT_MS = 5_000;
 
 interface RowImageRef {
   readonly hotelId: string;
   readonly ref: string;
 }
 
-interface ValidRow {
-  readonly line: number;
-  readonly data: HotelImportRow;
-}
-interface Validation {
-  readonly valid: ValidRow[];
-  readonly rejected: HotelImportRowError[];
-  readonly totalRows: number;
+/** The uploader's side of the plan: the configured cuisines and what their grants let them do and read. */
+interface ImportSettings {
+  readonly cuisineOptions: readonly string[];
+  readonly grants: ImportGrants;
 }
 
-const REQUIRED_HEADERS = ["destinationSlug", "name"];
+/** The job a write belongs to and who is writing. */
+interface ImportJob {
+  readonly importJobId: string;
+  readonly actorId: string;
+}
+
+/** What one apply did inside its transaction. */
+interface Applied {
+  readonly importJobId: string;
+  readonly summary: ImportSummary;
+  readonly imageRefs: RowImageRef[];
+}
 
 /**
- * The hotel spreadsheet import (TW-25; AC-35.1). Parse the CSV, validate every row against
- * `hotelImportRow`, and — unless this is a dry run — upsert the valid rows by slug inside one
- * transaction, resolving or creating their destination, writing a per-row audit event and an
- * `import_jobs` record with the counts and the error report. Invalid rows are reported, never applied;
- * the valid rows still land (48 of 50 in AC-35.1). Rooms, venues and rate cards extend this in 9.2.
+ * The hotel spreadsheet import (TW-25; AC-35.1; D-181). Reads the uploaded CSV, checks every row against
+ * the template, then plans each row against what is stored (hotel-import.plan.ts): create, update the
+ * filled cells that differ, leave unchanged, or refuse with a reason. A dry run stops there: it writes
+ * only an `import_jobs` row (status `validating`) holding the full report, and its counts say what
+ * applying would do. An apply re-plans inside one transaction, writes only the create and update rows,
+ * each with an audit event naming the fields it changed (and each destination it creates, audited too),
+ * and records the job: `applied` when any row was valid, even if all were unchanged, `failed` when none
+ * was. The result's `applied` says whether the run wrote anything. The refused rows never stop the valid
+ * ones. Each row is held to the uploader's own keys (hotel-audience.ts `importGrantsOf`).
  */
 @Injectable()
 export class HotelImportService {
   constructor(
-    private readonly repo: HotelsAdminRepository,
+    private readonly hotels: HotelsAdminRepository,
+    private readonly imports: HotelImportRepository,
     private readonly audit: AuditService,
     private readonly media: MediaService,
+    private readonly config: ConfigService,
   ) {}
 
-  async import(request: HotelImportRequest, actorId: string): Promise<HotelImportResult> {
-    const { valid, rejected, totalRows } = this.validate(request.content);
-    const errorReportJson = toErrorReport(rejected);
-    if (request.dryRun) {
-      const importJobId = await this.repo.createImportJob("hotels", actorId);
-      await this.repo.finishImportJob(
-        importJobId,
-        { status: "validating", rowCount: totalRows, errorReportJson },
-        actorId,
-      );
-      return {
-        importJobId,
-        dryRun: true,
-        applied: false,
-        totalRows,
-        created: 0,
-        updated: 0,
-        destinationsCreated: 0,
-        mediaRegistered: 0,
-        rejected,
-      };
-    }
-    const { imageRefs, ...outcome } = await this.applyValidRows(
-      valid,
-      totalRows,
-      errorReportJson,
-      actorId,
-    );
+  async import(
+    bytes: Uint8Array,
+    options: { readonly dryRun: boolean },
+    principal: Principal,
+  ): Promise<HotelImportResult> {
+    const file = readHotelImportFile(bytes);
+    const actorId = staffId(principal);
+    const settings = await this.settingsFor(principal);
+    if (options.dryRun) return this.preview(file, settings, actorId);
+    const applied = await this.apply(file, settings, actorId);
     // Media is registered through Module N AFTER the hotel transaction commits, so a rolled-back import
     // never leaves a pending asset pointing at a hotel that was not written (the C->N boundary, api.md).
-    const mediaRegistered = await this.registerMedia(imageRefs, actorId);
-    return {
-      ...outcome,
-      dryRun: false,
-      applied: outcome.created + outcome.updated > 0,
-      totalRows,
-      mediaRegistered,
-      rejected,
-    };
+    const mediaRegistered = await this.registerMedia(applied.imageRefs, actorId);
+    return toResult(applied.importJobId, applied.summary, { dryRun: false, mediaRegistered });
   }
 
-  /** Upsert the valid rows in one transaction, each with a per-row audit, then write the import_jobs row. */
-  private applyValidRows(
-    valid: ValidRow[],
-    totalRows: number,
-    errorReportJson: Prisma.InputJsonValue,
+  /** The dry run: the plan and its report, kept on a `validating` job; no hotel is touched. */
+  private async preview(
+    file: ImportFile,
+    settings: ImportSettings,
     actorId: string,
-  ): Promise<{
-    importJobId: string;
-    created: number;
-    updated: number;
-    destinationsCreated: number;
-    imageRefs: RowImageRef[];
-  }> {
-    return this.repo.transaction(async (tx) => {
-      const importJobId = await this.repo.createImportJob("hotels", actorId, tx);
-      const destinations = new Map<string, string>();
-      const imageRefs: RowImageRef[] = [];
-      let created = 0;
-      let updated = 0;
-      let destinationsCreated = 0;
-      for (const { data } of valid) {
-        const row = await this.upsertRow(data, destinations, actorId, tx);
-        if (row.created) created++;
-        if (row.updated) updated++;
-        if (row.destinationCreated) destinationsCreated++;
-        if (data.imageRef) imageRefs.push({ hotelId: row.hotelId, ref: data.imageRef });
-      }
-      const status = created + updated > 0 ? "applied" : "failed";
-      await this.repo.finishImportJob(
-        importJobId,
-        { status, rowCount: totalRows, errorReportJson },
-        actorId,
-        tx,
-      );
-      return { importJobId, created, updated, destinationsCreated, imageRefs };
-    });
+  ): Promise<HotelImportResult> {
+    const context = await this.contextFor(file.rows, settings);
+    const summary = summarise(file, planImport(file.rows, context), context.destinations);
+    const importJobId = await this.imports.createImportJob("hotels", actorId);
+    await this.imports.finishImportJob(
+      importJobId,
+      {
+        status: "validating",
+        rowCount: file.totalRows,
+        errorReportJson: reportJson(summary, true),
+      },
+      actorId,
+    );
+    return toResult(importJobId, summary, { dryRun: true, mediaRegistered: 0 });
   }
 
-  /** Upsert one row's hotel (by slug) with its destination and per-row audit; reports what it did. */
-  private async upsertRow(
-    data: HotelImportRow,
-    destinations: Map<string, string>,
+  /** The apply, all-or-nothing; a web address taken meanwhile by another write answers 409. */
+  private async apply(
+    file: ImportFile,
+    settings: ImportSettings,
+    actorId: string,
+  ): Promise<Applied> {
+    try {
+      return await this.hotels.transaction((tx) => this.applyIn(file, settings, actorId, tx), {
+        timeout: APPLY_TIMEOUT_MS,
+        maxWait: APPLY_MAX_WAIT_MS,
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+        throw errors.conflict(
+          "Another change took one of these web addresses while the import ran; run it again",
+        );
+      }
+      throw error;
+    }
+  }
+
+  private async applyIn(
+    file: ImportFile,
+    settings: ImportSettings,
     actorId: string,
     tx: Prisma.TransactionClient,
-  ): Promise<{ hotelId: string; created: boolean; updated: boolean; destinationCreated: boolean }> {
-    const destination = await this.resolveDestination(data, destinations, actorId, tx);
-    const destinationId = destination.id;
-    const slug = data.slug ?? slugify(data.name);
-    const existingId = await this.repo.hotelIdBySlug(slug, tx);
-    if (existingId) {
-      await this.repo.updateHotel(
-        existingId,
-        { destinationId, ...toProfileData(data) },
-        actorId,
-        tx,
-      );
-      await this.auditRow("update", existingId, slug, data.name, tx);
-      return {
-        hotelId: existingId,
-        created: false,
-        updated: true,
-        destinationCreated: destination.created,
-      };
+  ): Promise<Applied> {
+    const importJobId = await this.imports.createImportJob("hotels", actorId, tx);
+    const context = await this.contextFor(file.rows, settings, tx);
+    const plans = planImport(file.rows, context);
+    const destinationIds = liveDestinationIds(context);
+    const imageRefs: RowImageRef[] = [];
+    for (const plan of plans) {
+      const hotelId = await this.writeRow(plan, destinationIds, { importJobId, actorId }, tx);
+      const ref = plan.outcome === "error" ? undefined : plan.row.imageRef;
+      if (hotelId !== null && ref) imageRefs.push({ hotelId, ref });
     }
-    const id = await this.repo.insertHotel(
-      { destinationId, slug, ...toProfileData(data) },
+    const summary = summarise(file, plans, context.destinations);
+    const status = summary.valid > 0 ? "applied" : "failed";
+    const errorReportJson = reportJson(summary, false);
+    await this.imports.finishImportJob(
+      importJobId,
+      { status, rowCount: file.totalRows, errorReportJson },
       actorId,
       tx,
     );
-    await this.auditRow("create", id, slug, data.name, tx);
-    return { hotelId: id, created: true, updated: false, destinationCreated: destination.created };
+    return { importJobId, summary, imageRefs };
+  }
+
+  /** Writes one row's plan with its audit event; returns the row's hotel, or null for a refused row. */
+  private async writeRow(
+    plan: RowPlan,
+    destinationIds: Map<string, string>,
+    job: ImportJob,
+    tx: Prisma.TransactionClient,
+  ): Promise<string | null> {
+    if (plan.outcome === "error") return null;
+    if (plan.outcome === "unchanged") return plan.hotelId;
+    if (plan.outcome === "create") {
+      const destinationId = await this.destinationFor(plan.row, destinationIds, job, tx);
+      const data = toHotelWriteData(plan.row, destinationId, plan.slug);
+      const hotelId = await this.hotels.createHotel(data, job.actorId, tx);
+      await this.auditRow("create", hotelId, plan, job, tx);
+      return hotelId;
+    }
+    const patch = toImportPatch(plan.row, new Set(plan.changed));
+    if (plan.movesDestination) {
+      patch.destinationId = await this.destinationFor(plan.row, destinationIds, job, tx);
+    }
+    await this.hotels.updateHotel(plan.hotelId, patch, job.actorId, tx);
+    await this.auditRow("update", plan.hotelId, plan, job, tx);
+    return plan.hotelId;
+  }
+
+  /**
+   * The row's destination, created (active, unlisted, in India) the first time the file names it, with
+   * the audit event `POST /hotels-admin/destinations` would record. The plan has refused such a row for
+   * an uploader without the destinations key.
+   */
+  private async destinationFor(
+    row: HotelImportRow,
+    ids: Map<string, string>,
+    job: ImportJob,
+    tx: Prisma.TransactionClient,
+  ): Promise<string> {
+    const known = ids.get(row.destinationSlug);
+    if (known) return known;
+    const id = await this.hotels.createDestination(
+      {
+        name: row.destinationName ?? titleCaseSlug(row.destinationSlug),
+        slug: row.destinationSlug,
+        region: null,
+        state: null,
+        country: NEW_DESTINATION_COUNTRY,
+        description: null,
+        status: "active",
+        publicVisible: false,
+      },
+      job.actorId,
+      tx,
+    );
+    const after = { slug: row.destinationSlug, source: "import", importJobId: job.importJobId };
+    await this.audit.record(
+      {
+        action: "create",
+        entityType: "destination",
+        entityId: id,
+        before: null,
+        after,
+        maskImages: false,
+      },
+      tx,
+    );
+    ids.set(row.destinationSlug, id);
+    return id;
+  }
+
+  /** The audit event of one applied row: which fields it changed, never their values. */
+  private auditRow(
+    action: "create" | "update",
+    entityId: string,
+    plan: Extract<RowPlan, { outcome: "create" | "update" }>,
+    job: ImportJob,
+    tx: Prisma.TransactionClient,
+  ): Promise<void> {
+    const after = {
+      slug: plan.slug,
+      name: plan.row.name,
+      source: "import",
+      importJobId: job.importJobId,
+      changedFields: plan.changedFields,
+    };
+    return this.audit.record(
+      { action, entityType: "hotel", entityId, before: null, after, maskImages: false },
+      tx,
+    );
+  }
+
+  /** What the plan reads beside the rows: the hotels and destinations they name, deleted ones included. */
+  private async contextFor(
+    rows: readonly ImportRow[],
+    settings: ImportSettings,
+    tx?: Prisma.TransactionClient,
+  ): Promise<ImportContext> {
+    const slugs = unique(rows.map(({ row }) => importSlug(row)).filter((slug) => slug !== ""));
+    const hotels = await this.imports.findHotelsBySlugs(slugs, tx);
+    const destinationSlugs = unique(rows.map(({ row }) => row.destinationSlug));
+    const destinations = await this.imports.findDestinationsBySlugs(destinationSlugs, tx);
+    const { grants } = settings;
+    return {
+      cuisineOptions: settings.cuisineOptions,
+      canUpdate: grants.canUpdate,
+      canWriteNotes: grants.canWriteNotes,
+      canCreateDestinations: grants.canCreateDestinations,
+      canAddMedia: grants.canAddMedia,
+      hotels: new Map(hotels.map((hotel) => [hotel.slug, toImportTarget(hotel, grants)])),
+      destinations: new Map(destinations.map(({ slug, ...destination }) => [slug, destination])),
+    };
+  }
+
+  private async settingsFor(principal: Principal): Promise<ImportSettings> {
+    const { options } = await this.config.get("hotel.cuisine_options");
+    return { cuisineOptions: options, grants: importGrantsOf(principal) };
   }
 
   /**
@@ -173,125 +287,58 @@ export class HotelImportService {
     }
     return mediaRegistered;
   }
-
-  private validate(content: string): Validation {
-    const rows = parseCsv(content);
-    if (rows.length === 0) {
-      throw errors.validation([{ path: "content", message: "The file is empty" }]);
-    }
-    const headers = rows[0]!.map((header) => header.trim());
-    const missing = REQUIRED_HEADERS.filter((header) => !headers.includes(header));
-    if (missing.length > 0) {
-      throw errors.validation([
-        { path: "content", message: `Missing column(s): ${missing.join(", ")}` },
-      ]);
-    }
-    const valid: ValidRow[] = [];
-    const rejected: HotelImportRowError[] = [];
-    let totalRows = 0;
-    for (let i = 1; i < rows.length; i++) {
-      const cells = rows[i]!;
-      if (isBlankRow(cells)) continue;
-      totalRows++;
-      const line = i + 1; // 1-based; the header is line 1
-      const parsed = hotelImportRow.safeParse(buildCandidate(headers, cells));
-      if (parsed.success) {
-        valid.push({ line, data: parsed.data });
-      } else {
-        rejected.push({
-          line,
-          errors: parsed.error.issues.map((issue) => ({
-            field: issue.path.join("."),
-            message: issue.message,
-          })),
-        });
-      }
-    }
-    return { valid, rejected, totalRows };
-  }
-
-  /**
-   * The row's destination id, resolving by slug and creating it (active) on first sight within the file.
-   * `created` is true only when this call inserted the destination, so the caller counts each new one once
-   * (a cache hit or an existing row is a resolve, not a create — the idempotency the re-run relies on).
-   */
-  private async resolveDestination(
-    data: HotelImportRow,
-    cache: Map<string, string>,
-    actorId: string,
-    tx: Prisma.TransactionClient,
-  ): Promise<{ id: string; created: boolean }> {
-    const slug = data.destinationSlug;
-    const cached = cache.get(slug);
-    if (cached) return { id: cached, created: false };
-    const existing = await this.repo.findDestinationBySlug(slug, tx);
-    if (existing) {
-      cache.set(slug, existing.id);
-      return { id: existing.id, created: false };
-    }
-    const id = await this.repo.createDestination(
-      {
-        name: data.destinationName ?? titleCaseSlug(slug),
-        slug,
-        region: null,
-        state: null,
-        country: "India",
-        description: null,
-        status: "active",
-        publicVisible: false,
-      },
-      actorId,
-      tx,
-    );
-    cache.set(slug, id);
-    return { id, created: true };
-  }
-
-  private auditRow(
-    action: "create" | "update",
-    entityId: string,
-    slug: string,
-    name: string,
-    tx: Prisma.TransactionClient,
-  ): Promise<void> {
-    return this.audit.record(
-      {
-        action,
-        entityType: "hotel",
-        entityId,
-        before: null,
-        after: { slug, name, source: "import" },
-        maskImages: false,
-      },
-      tx,
-    );
-  }
 }
 
-/** The hotel profile columns an import writes, without the `destinationId`/`slug` that key the upsert. */
-function toProfileData(data: HotelImportRow): Omit<HotelWriteData, "destinationId" | "slug"> {
+const unique = (values: readonly string[]): string[] => [...new Set(values)];
+
+/**
+ * A stored hotel as the plan compares it: only the values the uploader reads (the profile the staff views
+ * carry for a profile reader, the internal rating and notes for a notes reader), so a dry run's outcome
+ * never tells them whether a guess matches a value they cannot read.
+ */
+function toImportTarget(
+  row: ImportTargetRow,
+  reads: Pick<ImportGrants, "readsProfiles" | "readsNotes">,
+): ImportTarget {
+  const notes = { internalRating: row.internalRating, internalNotes: row.internalNotes };
   return {
-    name: data.name,
-    brand: data.brand ?? null,
-    starCategory: data.starCategory ?? null,
-    address: data.address ?? null,
-    latitude: data.latitude ?? null,
-    longitude: data.longitude ?? null,
-    descriptionClient: data.descriptionClient ?? null,
-    website: data.website ?? null,
-    status: data.status ?? "draft",
-    demoVisible: data.demoVisible ?? false,
-    publicShowcase: false,
-    internalRating: data.internalRating ?? null,
-    internalNotes: data.internalNotes ?? null,
-    totalRooms: data.totalRooms ?? null,
-    streetViewRef: data.streetViewRef ?? null,
+    id: row.id,
+    deletedAt: row.deletedAt,
+    destinationSlug: row.destination.slug,
+    postalCode: row.postalCode,
+    values: {
+      ...(reads.readsProfiles ? toHotelStaffView(row) : {}),
+      ...(reads.readsNotes ? notes : {}),
+    },
   };
 }
 
-function toErrorReport(rejected: HotelImportRowError[]): Prisma.InputJsonValue {
-  return rejected.map((row): Prisma.InputJsonValue => ({
-    line: row.line,
-    errors: row.errors.map((e): Prisma.InputJsonValue => ({ field: e.field, message: e.message })),
-  }));
+/** The ids of the named destinations that are not deleted (a deleted one's rows were refused). */
+function liveDestinationIds(context: ImportContext): Map<string, string> {
+  const live = [...context.destinations].filter(
+    ([, destination]) => destination.deletedAt === null,
+  );
+  return new Map(live.map(([slug, destination]) => [slug, destination.id]));
+}
+
+/** The response; `applied` is whether a real run wrote anything (core `hotelImportResult`). */
+function toResult(
+  importJobId: string,
+  summary: ImportSummary,
+  outcome: { readonly dryRun: boolean; readonly mediaRegistered: number },
+): HotelImportResult {
+  const wrote = summary.created + summary.updated + outcome.mediaRegistered > 0;
+  return {
+    importJobId,
+    dryRun: outcome.dryRun,
+    applied: !outcome.dryRun && wrote,
+    totalRows: summary.totalRows,
+    created: summary.created,
+    updated: summary.updated,
+    unchanged: summary.unchanged,
+    destinationsCreated: summary.newDestinations,
+    mediaRegistered: outcome.mediaRegistered,
+    rejected: summary.rejected,
+    rows: summary.rows,
+  };
 }

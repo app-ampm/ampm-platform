@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import { staffPrincipal } from "../../policy/testing/staff-principal.js";
-import { hotelAudienceOf, requireContactsRead, requireNotesWrite } from "./hotel-audience.js";
+import {
+  hotelAudienceOf,
+  importGrantsOf,
+  requireContactsRead,
+  requireNotesWrite,
+} from "./hotel-audience.js";
 
 const WEDDING = "0192f3a0-7d3e-7b1a-9c2f-0000000000a1";
 const BOTH = { notes: true, contacts: true };
@@ -57,6 +62,48 @@ describe("requireNotesWrite", () => {
       expect.objectContaining({ code: "forbidden" }),
     );
     expect(() => requireNotesWrite(editor, false)).not.toThrow();
+  });
+});
+
+describe("importGrantsOf (D-181)", () => {
+  const ALL = {
+    canUpdate: true,
+    canWriteNotes: true,
+    canCreateDestinations: true,
+    canAddMedia: true,
+    readsProfiles: true,
+    readsNotes: true,
+  };
+
+  it("gives the Hotel team and the Super Admin every key the import's rows ask", () => {
+    for (const role of ["HT", "SA"] as const) {
+      expect(importGrantsOf(staffPrincipal([role]))).toEqual(ALL);
+    }
+  });
+
+  it("gives a custom role with only the create key none of them, and reads only what it holds", () => {
+    const createOnly = staffPrincipal([], ["hotels.hotel_profiles_client_fields.create:all"]);
+    expect(importGrantsOf(createOnly)).toEqual({
+      canUpdate: false,
+      canWriteNotes: false,
+      canCreateDestinations: false,
+      canAddMedia: false,
+      readsProfiles: false,
+      readsNotes: false,
+    });
+    const reader = staffPrincipal(
+      [],
+      [
+        "hotels.hotel_profiles_client_fields.create:all",
+        "hotels.hotel_profiles_client_fields.read:all",
+      ],
+    );
+    expect(importGrantsOf(reader)).toMatchObject({ canUpdate: false, readsProfiles: true });
+  });
+
+  it("decides each key on its own: a notes writer need not read the notes", () => {
+    const writer = staffPrincipal([], ["hotels.hotel_internal_rating_notes.update:all"]);
+    expect(importGrantsOf(writer)).toMatchObject({ canWriteNotes: true, readsNotes: false });
   });
 });
 

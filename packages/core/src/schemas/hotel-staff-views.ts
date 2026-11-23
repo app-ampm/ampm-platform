@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { isoDateTime, page, uuid } from "./common.js";
+import { hotelCatalogueViewFields } from "./hotel-catalogue.js";
 import {
   destinationView,
   facilityLabels,
@@ -21,7 +22,11 @@ import {
  * views in `hotels.ts` are a separate, PUBLIC+CLIENT-only model.
  */
 
-/** PUBLIC, CLIENT and INTERNAL profile columns: every holder of `hotels.hotel_profiles_client_fields.read`. */
+/**
+ * PUBLIC, CLIENT and INTERNAL profile columns: every holder of `hotels.hotel_profiles_client_fields.read`.
+ * The D-178 fields ride here too; their INTERNAL ones (name variants, booking terms) are never
+ * RESTRICTED-NOTES and never reach `hotels.ts`.
+ */
 const hotelProfileFields = {
   id: uuid,
   destinationId: uuid,
@@ -41,6 +46,7 @@ const hotelProfileFields = {
   streetViewRef: z.string().nullable(),
   lastVerifiedAt: isoDateTime.nullable(),
   facilities: facilityLabels.nullable(),
+  ...hotelCatalogueViewFields,
 };
 
 /** RESTRICTED-NOTES, the "Hotel internal rating and notes" row: `hotels.hotel_internal_rating_notes.read`. */

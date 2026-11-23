@@ -1,12 +1,14 @@
 import { type ArgumentsHost, Catch, type ExceptionFilter, HttpException } from "@nestjs/common";
 import { AppError, errors, isAppError, type ApiFailure, type ErrorCode } from "@ampm/core";
 import type { NextFunction, Request, Response } from "express";
+import type { IncomingMessage } from "node:http";
 
 import { AppLogger } from "./logger.service.js";
 
-// The only routes that accept a binary (application/octet-stream) body: the media upload (feature 9.3b),
-// a booking milestone's signed contract (D-132), a service agreement's signed copy (D-135) and a wedding
-// reference's consent (GP-20).
+// The routes whose binary (application/octet-stream) body the global raw parser buffers before the
+// guards: the media upload (feature 9.3b), a booking milestone's signed contract (D-132), a service
+// agreement's signed copy (D-135) and a wedding reference's consent (GP-20). Slice 6 moves them onto the
+// post-guard reader (D-176) and retires this list.
 const UPLOAD_PATHS: readonly RegExp[] = [
   /^\/media\/[^/]+\/upload\/?$/,
   /^\/consultancy-admin\/booking-milestones\/[^/]+\/contract\/?$/,
@@ -14,17 +16,40 @@ const UPLOAD_PATHS: readonly RegExp[] = [
   /^\/hotels-admin\/hotels\/[^/]+\/wedding-references\/[^/]+\/consent\/?$/,
 ];
 
+// The routes that read their own body inside the handler, after the guards, through readBoundedBody
+// (common/bounded-body.ts; D-176): the staff spreadsheet import (D-181). A binary body may reach them, and
+// no parser ever buffers it. Never list one of them in UPLOAD_PATHS too.
+const POST_GUARD_PATHS: readonly RegExp[] = [/^\/hotels-admin\/imports\/[^/]+\/?$/];
+
+/**
+ * Whether a request is a POST to a route that reads its own body after the guards (POST_GUARD_PATHS).
+ * Takes the bare Node request, as a body parser's `type` predicate receives it; the path is the URL's,
+ * before any query.
+ *
+ * @example
+ * app.useBodyParser("raw", { type: (req) => isOctetStream(req) && !isPostGuardUpload(req) });
+ */
+export function isPostGuardUpload(req: Pick<IncomingMessage, "method" | "url">): boolean {
+  const path = (req.url ?? "").split("?")[0] ?? "";
+  return req.method === "POST" && POST_GUARD_PATHS.some((pattern) => pattern.test(path));
+}
+
+/** Whether a request declares a binary (application/octet-stream) body. */
+export function isOctetStream(req: Pick<IncomingMessage, "headers">): boolean {
+  return (req.headers["content-type"] ?? "").toLowerCase().startsWith("application/octet-stream");
+}
+
 /**
  * Refuse a binary body on any route but the upload routes, BEFORE the raw parser buffers it — so a large
  * octet-stream body cannot amplify memory use pre-auth on a record endpoint (security). Registered right
- * after the JSON parser and before the raw one, so only the upload route ever buffers a large body.
+ * after the JSON parser and before the raw one, so only an upload route ever buffers a large body, and a
+ * post-guard route (POST_GUARD_PATHS) reads its own only once the guards have passed.
  */
 export function refuseBinaryOutsideUpload(req: Request, res: Response, next: NextFunction): void {
-  const isOctetStream = (req.headers["content-type"] ?? "")
-    .toLowerCase()
-    .startsWith("application/octet-stream");
-  const isUpload = req.method === "POST" && UPLOAD_PATHS.some((path) => path.test(req.path));
-  if (isOctetStream && !isUpload) {
+  const isUpload =
+    (req.method === "POST" && UPLOAD_PATHS.some((path) => path.test(req.path))) ||
+    isPostGuardUpload(req);
+  if (isOctetStream(req) && !isUpload) {
     const error = new AppError(
       "unsupported_media_type",
       "This route does not accept a binary body",

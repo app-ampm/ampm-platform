@@ -16,7 +16,7 @@ import {
 import { z } from "zod";
 
 import { useApiClient } from "../provider";
-import { staffHotelQueryKey } from "./use-staff-hotels";
+import { STAFF_HOTELS_QUERY_KEY, staffHotelQueryKey } from "./use-staff-hotels";
 
 /*
  * Staff hotel pricing (Module C, feature 9.2; AC-04): a hotel's rate cards, their rate items and the
@@ -190,7 +190,11 @@ export function useDeleteRateItem(hotelId: string) {
   });
 }
 
-/** Record a verification for a hotel (`POST …/verifications`); a card is verified against one. */
+/**
+ * Record a verification for a hotel (`POST …/verifications`); a card is verified against one. The server
+ * sets its next due date and refreshes the hotel's `lastVerifiedAt` in the same write, so the hotel's
+ * detail and the catalogue list (T4's "Last verified") refresh with the verifications.
+ */
 export function useRecordVerification(hotelId: string) {
   const api = useApiClient();
   const queryClient = useQueryClient();
@@ -201,7 +205,10 @@ export function useRecordVerification(hotelId: string) {
         body,
         schema: verificationView,
       }),
-    onSuccess: () =>
-      void queryClient.invalidateQueries({ queryKey: verificationsQueryKey(hotelId) }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: verificationsQueryKey(hotelId) });
+      // The prefix of every staff hotel query: the lists (any filter) and this hotel's detail.
+      void queryClient.invalidateQueries({ queryKey: STAFF_HOTELS_QUERY_KEY });
+    },
   });
 }

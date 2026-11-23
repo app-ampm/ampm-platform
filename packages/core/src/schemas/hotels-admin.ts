@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { cursorQuery, uuid } from "./common.js";
+import { hotelCatalogueRequestFields } from "./hotel-catalogue.js";
 import { hotelVenueType } from "./hotels.js";
 
 /*
@@ -31,6 +32,9 @@ const slug = z
   .min(1)
   .max(255)
   .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "slug must be lowercase words joined by single hyphens");
+
+/** A web address (slug): lowercase words joined by single hyphens. Shared with the import (hotel-import.ts). */
+export const catalogueSlug = slug;
 
 // --- Destinations (data-model.md §5; permission-matrix hotels.destinations) ---
 
@@ -222,9 +226,10 @@ const hotelProfileFields = {
   publicShowcase: z.boolean(),
   internalRating: z.number().int().min(1).max(5).nullish(),
   internalNotes: z.string().trim().max(10_000).nullish(),
-  totalRooms: z.number().int().min(0).nullish(),
+  totalRooms: z.number().int().min(0).max(100_000).nullish(),
   streetViewRef: z.string().trim().max(255).nullish(),
   facilities: facilityLabels.nullish(),
+  ...hotelCatalogueRequestFields, // location, access, event space, booking terms, food (D-178)
 };
 
 export const hotelCreateRequest = z
@@ -254,75 +259,4 @@ export const hotelStaffListQuery = cursorQuery.extend({
 });
 export type HotelStaffListQuery = z.infer<typeof hotelStaffListQuery>;
 
-// --- Spreadsheet import (TW-25; AC-35.1). One CSV row per hotel; a destination is resolved or created
-// by slug; a hotel is upserted by slug (idempotent). Rooms, venues and rate cards extend this in 9.2. ---
-
-/**
- * One parsed row of the hotel import template. Every cell arrives as a string (CSV), so numeric and
- * boolean columns coerce. `destinationSlug` must resolve to, or create, a destination; `slug` is derived
- * from `name` when the column is blank.
- */
-export const hotelImportRow = z
-  .object({
-    destinationSlug: slug,
-    destinationName: z.string().trim().max(255).optional(),
-    slug: slug.optional(),
-    name: z.string().trim().min(1).max(255),
-    brand: z.string().trim().max(255).optional(),
-    starCategory: z.string().trim().max(255).optional(),
-    address: z.string().trim().max(10_000).optional(),
-    latitude: z.number().min(-90).max(90).optional(),
-    longitude: z.number().min(-180).max(180).optional(),
-    descriptionClient: z.string().trim().max(10_000).optional(),
-    website: z.string().trim().url().max(255).optional(),
-    totalRooms: z.number().int().min(0).optional(),
-    demoVisible: z.boolean().optional(),
-    status: hotelStatus.optional(),
-    internalRating: z.number().int().min(1).max(5).optional(),
-    internalNotes: z.string().trim().max(10_000).optional(),
-    streetViewRef: z.string().trim().max(255).optional(),
-    // slice 5b: an optional reference (URL/filename) to the hotel's lead image. The importer registers a
-    // PENDING gallery media_asset by reference (bytes uploaded later); the reference is kept as the caption.
-    imageRef: z.string().trim().max(255).optional(),
-  })
-  .strict(); // the API's CSV parser coerces string cells to these types (and blanks to undefined) first
-export type HotelImportRow = z.infer<typeof hotelImportRow>;
-
-export const hotelImportRequest = z
-  .object({
-    content: z.string().min(1).max(5_000_000), // the CSV text of the filled template
-    dryRun: z.boolean().default(false), // validate and report only; make no changes
-  })
-  .strict();
-export type HotelImportRequest = z.infer<typeof hotelImportRequest>;
-
-/** One rejected row of an import: its 1-based line and the field errors found on it. */
-export const hotelImportRowError = z
-  .object({
-    line: z.number().int().min(1),
-    errors: z.array(z.object({ field: z.string(), message: z.string() }).strict()),
-  })
-  .strict();
-export type HotelImportRowError = z.infer<typeof hotelImportRowError>;
-
-/**
- * The outcome of an import. On a dry run `applied` is false and nothing was written. `created`/`updated`
- * count the hotels upserted; `destinationsCreated` the destinations made on the way; `mediaRegistered` the
- * pending gallery images registered by reference (slice 5b, idempotent — a re-run registers none again);
- * `rejected` are the rows that failed validation (named by line and field). `importJobId` is the
- * `import_jobs` record.
- */
-export const hotelImportResult = z
-  .object({
-    importJobId: uuid,
-    dryRun: z.boolean(),
-    applied: z.boolean(),
-    totalRows: z.number().int().min(0),
-    created: z.number().int().min(0),
-    updated: z.number().int().min(0),
-    destinationsCreated: z.number().int().min(0),
-    mediaRegistered: z.number().int().min(0),
-    rejected: z.array(hotelImportRowError),
-  })
-  .strict();
-export type HotelImportResult = z.infer<typeof hotelImportResult>;
+// The spreadsheet import (TW-25; D-181) is in hotel-import.ts.

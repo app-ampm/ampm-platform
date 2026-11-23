@@ -4,7 +4,6 @@ import {
   destinationCreateRequest,
   hotelContactCreateRequest,
   hotelCreateRequest,
-  hotelImportRow,
   hotelUpdateRequest,
   venueCreateRequest,
 } from "./hotels-admin.js";
@@ -82,26 +81,5 @@ describe("hotelContactCreateRequest", () => {
     const c = hotelContactCreateRequest.parse({ name: "Sales desk", email: "SALES@Example.com" });
     expect(c.email).toBe("sales@example.com");
     expect(c.isPrimary).toBe(false);
-  });
-});
-
-describe("hotelImportRow", () => {
-  const row = { destinationSlug: "udaipur", name: "The Lake Pavilion" };
-
-  it("accepts a minimal row (destination slug + name)", () => {
-    expect(hotelImportRow.parse(row)).toMatchObject(row);
-  });
-
-  it("validates already-typed values — a string where a number belongs is rejected", () => {
-    // The API's CSV parser coerces cells before this runs; a non-coercible value is a field error.
-    expect(hotelImportRow.safeParse({ ...row, totalRooms: "many" }).success).toBe(false);
-    expect(hotelImportRow.safeParse({ ...row, totalRooms: 84 }).success).toBe(true);
-  });
-
-  it("rejects an unknown column and a bad destination slug", () => {
-    expect(hotelImportRow.safeParse({ ...row, mystery: "x" }).success).toBe(false);
-    expect(hotelImportRow.safeParse({ destinationSlug: "Not Kebab", name: "x" }).success).toBe(
-      false,
-    );
   });
 });

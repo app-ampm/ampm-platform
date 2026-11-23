@@ -1,9 +1,9 @@
 import type { HotelVerificationFieldGroup, HotelVerificationStatus } from "@ampm/core";
 
 /*
- * Which verification may back a verified rate card (AC-04.1, AC-04.3, AC-04.4). Pure, so it tests in
- * isolation; the service applies it, with the freshness window the nightly sweep uses
- * (`configurations.hotel.verification_policy.maxAgeDays`).
+ * Which verification may back a verified rate card (AC-04.1, AC-04.3, AC-04.4), and when a verification
+ * falls due again. Pure, so it tests in isolation; the service applies it, with the freshness window the
+ * nightly sweep uses (`configurations.hotel.verification_policy.maxAgeDays`).
  */
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -15,6 +15,18 @@ export interface VerificationFacts {
   readonly fieldGroup: HotelVerificationFieldGroup;
   readonly status: HotelVerificationStatus;
   readonly verifiedAt: Date | null;
+}
+
+/**
+ * When a verification falls due again: its date plus the freshness window, the moment the nightly sweep
+ * starts treating it as stale (the sweep stales what is older than `now - maxAgeDays`). Stored as
+ * `next_due_at` when the verification is recorded, so a backdated one is due sooner (AC-04.3).
+ *
+ * @example
+ * verificationNextDueAt(new Date("2026-11-24T00:00:00.000Z"), 90); // 2027-02-22T00:00:00.000Z
+ */
+export function verificationNextDueAt(verifiedAt: Date, maxAgeDays: number): Date {
+  return new Date(verifiedAt.getTime() + maxAgeDays * DAY_MS);
 }
 
 /** Whether a verification's date lies ahead of the server's clock, beyond a few minutes of drift. */

@@ -76,14 +76,18 @@ export function useStaffHotel(hotelId: string) {
  * Every destination a hotel can be filed under (`GET /hotels-admin/destinations`,
  * `hotels.destinations.read`), each with the count of its hotels: the whole reference set, name-ordered
  * and not reach-scoped — the Destinations screen (TW-20) and the hotel editor's picker, unlike the client
- * browse which hides empty destinations. Staff-only, gated server-side.
+ * browse which hides empty destinations. Staff-only, gated server-side. Pass `enabled: false` where the
+ * list is wanted only later (the hotel editor reads a destination's country only while it is open).
+ *
+ *   const destinations = useStaffDestinations({ enabled: open });
  */
-export function useStaffDestinations() {
+export function useStaffDestinations({ enabled = true }: { readonly enabled?: boolean } = {}) {
   const api = useApiClient();
   return useQuery<DestinationListItemView[]>({
     queryKey: STAFF_DESTINATIONS_QUERY_KEY,
     queryFn: async ({ signal }) =>
       (await api.get("/hotels-admin/destinations", destinationList, signal)).items,
+    enabled,
   });
 }
 

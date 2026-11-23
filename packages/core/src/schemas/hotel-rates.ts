@@ -39,6 +39,7 @@ export const hotelVerificationFieldGroup = z.enum([
   "availability",
   "media",
   "contacts",
+  "policies", // booking terms (D-178); keep in step with the Prisma enum
 ]);
 export type HotelVerificationFieldGroup = z.infer<typeof hotelVerificationFieldGroup>;
 
@@ -73,13 +74,16 @@ export const verificationView = z
   .strict();
 export type VerificationView = z.infer<typeof verificationView>;
 
-/** Record that AMPM verified a field group now (status becomes `verified`, verified_at defaults to now). */
+/**
+ * Record that AMPM verified a field group (status becomes `verified`, verified_at defaults to now). The
+ * server sets next_due_at from configuration `hotel.verification_policy` and refreshes the hotel's
+ * last_verified_at in the same transaction, so a request cannot set either.
+ */
 export const verificationCreateRequest = z
   .object({
     fieldGroup: hotelVerificationFieldGroup,
     source: hotelVerificationSource,
     verifiedAt: isoDateTime.optional(),
-    nextDueAt: isoDateTime.optional(),
     notes: z.string().trim().max(10_000).nullish(),
   })
   .strict();

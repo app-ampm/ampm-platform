@@ -3,7 +3,8 @@ import type { HotelStatus } from "@ampm/core";
 
 import { PrismaService } from "../../db/prisma.service.js";
 import { Prisma } from "../../generated/prisma/client.js";
-import { facilitiesInput } from "./hotel-facilities.js";
+import { HOTEL_CATALOGUE_SELECT } from "./hotel-catalogue.select.js";
+import { stringListInput } from "./hotel-string-lists.js";
 import { CONTACT_SELECT, ROOM_SELECT, VENUE_SELECT } from "./hotel-subresources.repository.js";
 
 /*
@@ -11,11 +12,12 @@ import { CONTACT_SELECT, ROOM_SELECT, VENUE_SELECT } from "./hotel-subresources.
  * this selects the RESTRICTED-NOTES internal fields (internal_rating/notes) and joins contacts, because
  * the audience is staff with the `hotels.*` keys. No entitlement scope here — authorisation is the
  * controller's `@RequirePermission` plus the soft-delete filter. Writes take an optional transaction so
- * the import can upsert many rows atomically. Rooms/venues/contacts are read on the detail; their write
- * paths are a follow-up within 9.1.
+ * the import can write many rows atomically (its own lookups are in hotel-import.repository.ts). Rooms,
+ * venues and contacts are read on the detail.
  */
 
-const STAFF_HOTEL_SELECT = {
+/** Every staff hotel column: the profile, the D-178 block and the RESTRICTED-NOTES pair. */
+export const STAFF_HOTEL_SELECT = {
   id: true,
   destinationId: true,
   name: true,
@@ -36,7 +38,8 @@ const STAFF_HOTEL_SELECT = {
   streetViewRef: true,
   facilities: true,
   lastVerifiedAt: true,
-} as const;
+  ...HOTEL_CATALOGUE_SELECT,
+} as const satisfies Prisma.HotelSelect;
 
 const DESTINATION_SELECT = {
   id: true,
@@ -78,11 +81,18 @@ export type DestinationListRow = Prisma.DestinationGetPayload<{
   select: typeof DESTINATION_LIST_SELECT;
 }>;
 
-/** The columns the import or a create writes to a hotel; `destinationId`/`slug`/`name` are always set. */
+/** A hotel's JSON string-list columns, written as lists (stringListInput turns null into SQL NULL). */
+type HotelListColumns = "facilities" | "nameAliases" | "cuisines";
+
+/**
+ * The columns a create (staff or import) writes to a hotel; `destinationId`/`slug`/`name` are always set.
+ * A column left undefined is not written: Prisma skips it, so it keeps its default.
+ */
 export type HotelWriteData = Omit<
   Prisma.HotelUncheckedCreateInput,
-  "id" | "createdAt" | "updatedAt" | "createdBy" | "updatedBy" | "deletedAt" | "facilities"
-> & { facilities?: string[] | null };
+  "id" | "createdAt" | "updatedAt" | "createdBy" | "updatedBy" | "deletedAt" | HotelListColumns
+> & { [K in HotelListColumns]?: readonly string[] | null };
+/** A hotel update: a column left undefined keeps its value (Prisma skips it), a null clears it. */
 export type HotelUpdatePatch = Partial<Omit<HotelWriteData, "slug">>;
 export type DestinationWriteData = Omit<
   Prisma.DestinationUncheckedCreateInput,
@@ -137,14 +147,13 @@ export class HotelsAdminRepository {
     return row !== null;
   }
 
-  async createHotel(data: HotelWriteData, actorId: string): Promise<string> {
-    const row = await this.prisma.hotel.create({
-      data: {
-        ...data,
-        facilities: facilitiesInput(data.facilities),
-        createdBy: actorId,
-        updatedBy: actorId,
-      },
+  async createHotel(
+    data: HotelWriteData,
+    actorId: string,
+    tx?: Prisma.TransactionClient,
+  ): Promise<string> {
+    const row = await (tx ?? this.prisma).hotel.create({
+      data: { ...data, ...listColumns(data), createdBy: actorId, updatedBy: actorId },
       select: { id: true },
     });
     return row.id;
@@ -158,7 +167,7 @@ export class HotelsAdminRepository {
   ): Promise<void> {
     await (tx ?? this.prisma).hotel.update({
       where: { id: hotelId },
-      data: { ...patch, facilities: facilitiesInput(patch.facilities), updatedBy: actorId },
+      data: { ...patch, ...listColumns(patch), updatedBy: actorId },
     });
   }
 
@@ -220,64 +229,25 @@ export class HotelsAdminRepository {
     await this.prisma.destination.update({ where: { id }, data: { ...patch, updatedBy: actorId } });
   }
 
-  // --- Import support (feature 9.1 / AC-35.1). Upsert by slug so a re-run of the same file is a no-op. ---
-
-  /** The hotel's current id if the slug exists (not soft-deleted), else null — the import's create/update fork. */
-  async hotelIdBySlug(slug: string, tx: Prisma.TransactionClient): Promise<string | null> {
-    const row = await tx.hotel.findFirst({
-      where: { slug, deletedAt: null },
-      select: { id: true },
-    });
-    return row?.id ?? null;
+  /**
+   * Runs `work` inside one transaction, so a write and its audit, or the valid rows of an import, land
+   * all-or-nothing. Prisma's default timeout is 5 s; the import passes a longer one for a large file.
+   */
+  transaction<T>(
+    work: (tx: Prisma.TransactionClient) => Promise<T>,
+    options?: { readonly timeout?: number; readonly maxWait?: number },
+  ): Promise<T> {
+    return this.prisma.$transaction(work, options);
   }
+}
 
-  async insertHotel(
-    data: HotelWriteData,
-    actorId: string,
-    tx: Prisma.TransactionClient,
-  ): Promise<string> {
-    const row = await tx.hotel.create({
-      data: {
-        ...data,
-        facilities: facilitiesInput(data.facilities),
-        createdBy: actorId,
-        updatedBy: actorId,
-      },
-      select: { id: true },
-    });
-    return row.id;
-  }
-
-  async createImportJob(
-    importType: "hotels" | "guests" | "vendors",
-    actorId: string,
-    tx?: Prisma.TransactionClient,
-  ): Promise<string> {
-    const row = await (tx ?? this.prisma).importJob.create({
-      data: { importType, status: "validating", createdBy: actorId, updatedBy: actorId },
-      select: { id: true },
-    });
-    return row.id;
-  }
-
-  async finishImportJob(
-    id: string,
-    data: {
-      status: "validating" | "applied" | "failed";
-      rowCount: number;
-      errorReportJson: Prisma.InputJsonValue;
-    },
-    actorId: string,
-    tx?: Prisma.TransactionClient,
-  ): Promise<void> {
-    await (tx ?? this.prisma).importJob.update({
-      where: { id },
-      data: { ...data, updatedBy: actorId },
-    });
-  }
-
-  /** Runs `work` inside a single transaction so the valid rows of an import apply all-or-nothing. */
-  transaction<T>(work: (tx: Prisma.TransactionClient) => Promise<T>): Promise<T> {
-    return this.prisma.$transaction(work);
-  }
+/** The JSON list columns of a write, as Prisma takes them (undefined keeps a column, null clears it). */
+function listColumns(data: { [K in HotelListColumns]?: readonly string[] | null }): {
+  [K in HotelListColumns]: ReturnType<typeof stringListInput>;
+} {
+  return {
+    facilities: stringListInput(data.facilities),
+    nameAliases: stringListInput(data.nameAliases),
+    cuisines: stringListInput(data.cuisines),
+  };
 }

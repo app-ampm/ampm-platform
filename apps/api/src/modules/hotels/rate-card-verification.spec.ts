@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { isFutureDated, rateCardVerificationProblem } from "./rate-card-verification.js";
+import {
+  isFutureDated,
+  rateCardVerificationProblem,
+  verificationNextDueAt,
+} from "./rate-card-verification.js";
 
 const NOW = new Date("2026-11-23T10:00:00.000Z");
 const DAY = 24 * 60 * 60 * 1000;
@@ -52,5 +56,23 @@ describe("isFutureDated", () => {
     expect(isFutureDated(new Date(NOW.getTime() + 60 * 1000), NOW)).toBe(false);
     expect(isFutureDated(new Date(NOW.getTime() + 10 * 60 * 1000), NOW)).toBe(true);
     expect(isFutureDated(daysAgo(1), NOW)).toBe(false);
+  });
+});
+
+describe("verificationNextDueAt", () => {
+  it("falls due one freshness window after the verification's own date", () => {
+    expect(verificationNextDueAt(NOW, 90)).toEqual(new Date(NOW.getTime() + 90 * DAY));
+    expect(verificationNextDueAt(daysAgo(10), 90)).toEqual(new Date(NOW.getTime() + 80 * DAY));
+    expect(verificationNextDueAt(NOW, 30).toISOString()).toBe("2026-12-23T10:00:00.000Z");
+  });
+
+  it("is the moment the sweep starts refusing the verification for a rate card", () => {
+    const verifiedAt = daysAgo(90);
+    const due = verificationNextDueAt(verifiedAt, 90);
+    const verification = { ...current, verifiedAt };
+    expect(rateCardVerificationProblem(verification, due, 90)).toBeNull();
+    expect(rateCardVerificationProblem(verification, new Date(due.getTime() + 1), 90)).toMatch(
+      /older than 90 days/,
+    );
   });
 });

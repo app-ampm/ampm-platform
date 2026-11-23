@@ -1,6 +1,6 @@
 # AMPM Platform — Field Matrix
 
-**Status:** DRAFT v0.1, generated 2026-11-22 from [data-model.md](data-model.md) by `docs/tools/field_matrix_build.py`. Do not edit by hand; change the data model or `docs/tools/field_rules.py` and rebuild.
+**Status:** DRAFT v0.1, generated 2026-11-24 from [data-model.md](data-model.md) by `docs/tools/field_matrix_build.py`. Do not edit by hand; change the data model or `docs/tools/field_rules.py` and rebuild.
 **Companions:** [requirements-audit.md](requirements-audit.md) (Q numbers), [data-model.md](data-model.md) (assumptions A-1 to A-30), [permission-matrix.md](permission-matrix.md) (role codes, visibility classes, assumptions P-1 to P-11).
 **Spreadsheet version:** [field-matrix.csv](field-matrix.csv) has the same rows for filtering.
 
@@ -22,7 +22,7 @@ Global conventions that apply to every row: money is `numeric(14,2)` with a sibl
 |---|---|---|---|---|---|
 | A — Identity, access and administration | 20 | 128 | 61 | 10 | 5 |
 | B — CRM, subscriptions and commercial agreements | 13 | 143 | 55 | 94 | 4 |
-| C — Hotel intelligence | 10 | 101 | 38 | 83 | 11 |
+| C — Hotel intelligence | 10 | 128 | 38 | 102 | 11 |
 | D — Hotel consultancy | 6 | 70 | 28 | 65 | 3 |
 | E — Wedding project | 3 | 36 | 13 | 29 | 3 |
 | F — Functions, programme and run-of-show | 4 | 43 | 17 | 27 | 1 |
@@ -37,9 +37,9 @@ Global conventions that apply to every row: money is `numeric(14,2)` with a sibl
 | O — Checklists, closure and feedback | 4 | 30 | 17 | 7 | 0 |
 | P — Public website content (dormant) | 2 | 17 | 8 | 17 | 0 |
 | Q — Live chat | 2 | 16 | 6 | 16 | 0 |
-| **Total** | **117** | **1171** | **502** | **651** | **108** |
+| **Total** | **117** | **1198** | **502** | **670** | **108** |
 
-Fields by visibility class: CLIENT 618, INTERNAL 355, Other (per record, recipient or parent) 57, RESTRICTED-NOTES 34, PUBLIC 33, RESTRICTED-FINANCE 31, RESTRICTED-CONTACT 13, RESTRICTED-IDENTITY 13, SECRET 11, RESTRICTED-BANK 4, SENSITIVE-GUEST 2.
+Fields by visibility class: CLIENT 637, INTERNAL 363, Other (per record, recipient or parent) 57, RESTRICTED-NOTES 34, PUBLIC 33, RESTRICTED-FINANCE 31, RESTRICTED-CONTACT 13, RESTRICTED-IDENTITY 13, SECRET 11, RESTRICTED-BANK 4, SENSITIVE-GUEST 2.
 
 ---
 
@@ -574,19 +574,35 @@ Created at stage: **Hotel data entry** · Default editor: HT; SA · Default visi
 
 ### `hotels`
 
-Created at stage: **Hotel data entry** · Default editor: HT; SA · Default visibility: CLIENT · Assumptions: A-9 (Q9), A-28 (AM-8), RK-1
+Created at stage: **Hotel data entry** · Default editor: HT; SA · Default visibility: CLIENT · Assumptions: A-9 (Q9), A-28 (AM-8), RK-1, D-178
 
 | Field | Type and validation | Options | Edited by | Visibility | Required | Automation and report impact |
 |---|---|---|---|---|---|---|
 | `id` (PK) | UUID v7, generated |  | SYS | CLIENT | System | — |
 | `destination_id` (FK) | references destinations |  | HT; SA | CLIENT | At creation | — |
 | `name` | string, up to 255 characters |  | HT; SA | CLIENT; PUBLIC when public_showcase | At creation | — |
+| `name_aliases_json` | JSON array of up to 20 names, each up to 255 characters, none repeated ignoring case |  | HT; SA | INTERNAL (name variants, D-178) | Optional | — |
 | `slug` (unique) | lowercase letters, digits and hyphens; unique |  | HT; SA | CLIENT | At creation | — |
 | `brand` | string, up to 255 characters |  | HT; SA | CLIENT | Optional | — |
+| `parent_group` | string, up to 255 characters; the owning group, besides the brand (D-178) |  | HT; SA | CLIENT | Optional | — |
 | `star_category` | string, up to 255 characters |  | HT; SA | CLIENT | Optional | — |
 | `address` | text, up to 10,000 characters |  | HT; SA | CLIENT | Optional | — |
-| `latitude` | decimal between -90 and 90 |  | HT; SA | CLIENT | Optional | — |
-| `longitude` | decimal between -180 and 180 |  | HT; SA | CLIENT | Optional | — |
+| `locality` | string, up to 255 characters |  | HT; SA | CLIENT | Optional | — |
+| `city` | string, up to 255 characters |  | HT; SA | CLIENT | Optional | — |
+| `state` | string, up to 255 characters |  | HT; SA | CLIENT | Optional | — |
+| `postal_code` | up to 16 characters; when the destination's country is India, a PIN: 6 digits, not starting with 0, spaces ignored |  | HT; SA | CLIENT | Optional | — |
+| `latitude` | decimal between -90 and 90, stored to 6 decimal places |  | HT; SA | INTERNAL (staff-only coordinates, D-178) | Optional | — |
+| `longitude` | decimal between -180 and 180, stored to 6 decimal places |  | HT; SA | INTERNAL (staff-only coordinates, D-178) | Optional | — |
+| `maps_url` | https Google Maps link (google.com/maps or google.co.in/maps, with or without www; maps.google.com or maps.google.co.in, at the root or under /maps; maps.app.goo.gl; goo.gl/maps), up to 2,048 characters; no '..' path segment or backslash |  | HT; SA | CLIENT | Optional | Stored as given; never fetched or resolved by the server |
+| `airport_name` | string, up to 255 characters |  | HT; SA | CLIENT | Optional | — |
+| `airport_distance_km` | numeric(4,1), 0 to 999.9 km, at most one decimal place |  | HT; SA | CLIENT | Optional | — |
+| `airport_drive_minutes` | integer, 0 to 600 |  | HT; SA | CLIENT | Optional | — |
+| `railway_station_name` | string, up to 255 characters |  | HT; SA | CLIENT | Optional | — |
+| `railway_distance_km` | numeric(4,1), 0 to 999.9 km, at most one decimal place |  | HT; SA | CLIENT | Optional | — |
+| `railway_drive_minutes` | integer, 0 to 600 |  | HT; SA | CLIENT | Optional | — |
+| `city_centre_distance_km` | numeric(4,1), 0 to 999.9 km, at most one decimal place |  | HT; SA | CLIENT | Optional | — |
+| `city_centre_drive_minutes` | integer, 0 to 600 |  | HT; SA | CLIENT | Optional | — |
+| `access_notes` | text, up to 10,000 characters; highways and landmarks |  | HT; SA | CLIENT | Optional | — |
 | `description_client` | text, up to 10,000 characters |  | HT; SA | CLIENT | Before status active | — |
 | `website` | string, up to 255 characters |  | HT; SA | CLIENT | Optional | — |
 | `status` | one of the listed options | draft, active, inactive | HT; SA | CLIENT | At creation | inactive hotels leave search results but stay on existing enquiries and projects |
@@ -594,10 +610,21 @@ Created at stage: **Hotel data entry** · Default editor: HT; SA · Default visi
 | `public_showcase` | true or false; approved for the public website |  | HT; SA | CLIENT | Optional | Exposes name, destination and hero media on the website only |
 | `internal_rating` | integer 1 to 5 |  | HT; SA | RESTRICTED-NOTES | Optional | — |
 | `internal_notes` | text, up to 10,000 characters |  | HT; SA | RESTRICTED-NOTES | Optional | Never serialised to client, guest or demo principals |
-| `total_rooms` | integer, 0 or more |  | HT; SA | CLIENT | Optional | — |
+| `total_rooms` | integer, 0 to 100,000 |  | HT; SA | CLIENT | Optional | — |
+| `total_event_space_sqm` | integer, 0 to 1,000,000 |  | HT; SA | CLIENT | Optional | — |
+| `total_event_space_sqft` | integer, 0 to 10,000,000; as the hotel published it |  | HT; SA | CLIENT | Optional | — |
+| `wedding_buyout_policy` | one of the listed options | not_required, required, depends | HT; SA | INTERNAL (booking terms, D-178) | Optional | — |
+| `min_rooms_without_buyout` | integer, 0 to 10,000 |  | HT; SA | INTERNAL (booking terms, D-178) | Optional | — |
+| `min_nights` | integer, 1 to 60 |  | HT; SA | INTERNAL (booking terms, D-178) | Optional | — |
+| `parallel_functions` | one of the listed options | allowed, not_allowed, depends | HT; SA | INTERNAL (booking terms, D-178) | Optional | — |
+| `booking_notes` | text, up to 10,000 characters |  | HT; SA | INTERNAL (booking terms, D-178) | Optional | — |
+| `cuisines_json` | JSON array of up to 30 labels, each up to 60 characters, none repeated: options from configurations hotel.cuisine_options, or Other |  | HT; SA | CLIENT | Optional | — |
+| `is_pure_vegetarian` | true or false; empty when the hotel has not said |  | HT; SA | CLIENT | Optional | — |
+| `has_separate_veg_kitchen` | true or false; empty when the hotel has not said |  | HT; SA | CLIENT | Optional | — |
+| `serves_alcohol` | true or false; empty when the hotel has not said |  | HT; SA | CLIENT | Optional | — |
 | `street_view_ref` | string, up to 255 characters; map or street view reference (Q9) |  | HT; SA | CLIENT | Optional | — |
 | `facilities_json` | valid JSON matching the registered schema |  | HT; SA | CLIENT | Optional | — |
-| `last_verified_at` | timestamp (UTC); denormalised from hotel_verifications |  | SYS | CLIENT | System | Denormalised by the verification job; drives the freshness label |
+| `last_verified_at` | timestamp (UTC); denormalised from hotel_verifications |  | SYS | CLIENT | System | Recomputed when a verification is recorded, in the same transaction, and by the daily freshness job; drives the freshness label |
 
 ### `hotel_contacts`
 
@@ -684,18 +711,18 @@ Created at stage: **Hotel data entry** · Default editor: HT; SA · Default visi
 
 ### `hotel_verifications`
 
-Created at stage: **Verification** · Default editor: HT; SA · Default visibility: INTERNAL · Assumptions: SPEC §8 stale rule
+Created at stage: **Verification** · Default editor: HT; SA · Default visibility: INTERNAL · Assumptions: SPEC §8 stale rule, D-178
 
 | Field | Type and validation | Options | Edited by | Visibility | Required | Automation and report impact |
 |---|---|---|---|---|---|---|
 | `id` (PK) | UUID v7, generated |  | SYS | INTERNAL | System | — |
 | `hotel_id` (FK) | references hotels |  | HT; SA | INTERNAL | At creation | — |
-| `field_group` | one of the listed options | profile, rooms, venues, rates, availability, media, contacts | HT; SA | CLIENT (freshness label) | At creation | — |
-| `verified_at` | timestamp (UTC) |  | SYS when recorded; HT may backdate with a note | CLIENT (freshness label) | At creation | Stale job compares with the configured age and sets the freshness label |
+| `field_group` | one of the listed options | profile, rooms, venues, rates, availability, media, contacts, policies | HT; SA | CLIENT (freshness label) | At creation | — |
+| `verified_at` | timestamp (UTC) |  | SYS when recorded; HT may backdate with a note | CLIENT (freshness label) | At creation | Recording one recomputes hotels.last_verified_at in the same transaction; the daily job compares it with the configured age and sets the freshness label |
 | `verified_by` (FK) | references users |  | SYS (acting user) | INTERNAL | At creation | — |
 | `source` | one of the listed options | phone, email, site_visit, website, contract | HT; SA | INTERNAL | At creation | — |
 | `status` | one of the listed options | verified, unverified, stale | HT; SA | CLIENT (freshness label) | At creation | stale set by the daily job; shown as a label |
-| `next_due_at` | timestamp (UTC); verified_at plus configurable age |  | SYS | INTERNAL | System | Set to verified_at plus the configured age |
+| `next_due_at` | timestamp (UTC); set by the server when recorded, verified_at plus the configured age |  | SYS | INTERNAL | System | Set by the server when the verification is recorded: verified_at plus configurations hotel.verification_policy maxAgeDays; a request cannot set it |
 | `notes` | text, up to 10,000 characters |  | HT; SA | INTERNAL | Optional | — |
 
 ### `hotel_wedding_references`

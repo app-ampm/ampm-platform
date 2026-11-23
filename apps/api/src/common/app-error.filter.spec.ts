@@ -3,7 +3,12 @@ import { errors, isAppError } from "@ampm/core";
 import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
-import { AppErrorFilter, answerParserRefusal } from "./app-error.filter.js";
+import {
+  AppErrorFilter,
+  answerParserRefusal,
+  isPostGuardUpload,
+  refuseBinaryOutsideUpload,
+} from "./app-error.filter.js";
 import type { AppLogger } from "./logger.service.js";
 
 function run(exception: unknown) {
@@ -109,5 +114,35 @@ describe("AppErrorFilter", () => {
     expect(unexpected.logger.error).toHaveBeenCalled();
     // A status outside 4xx on a non-framework error is never trusted.
     expect(run(Object.assign(new Error("upstream"), { status: 503 })).status).toBe(500);
+  });
+});
+
+describe("the binary-body gate (D-176)", () => {
+  /** Runs the gate on an octet-stream request; true when it lets the request through. */
+  function passes(method: string, url: string): boolean {
+    const path = url.split("?")[0] ?? "";
+    const req = { method, url, path, headers: { "content-type": "application/octet-stream" } };
+    const res = { status: vi.fn().mockReturnThis(), json: vi.fn() };
+    const next = vi.fn();
+    refuseBinaryOutsideUpload(req as never, res as never, next);
+    return next.mock.calls.length === 1;
+  }
+
+  it("lets a binary body through to the import, which reads it after the guards", () => {
+    expect(passes("POST", "/hotels-admin/imports/hotels?dryRun=true")).toBe(true);
+    expect(
+      isPostGuardUpload({ method: "POST", url: "/hotels-admin/imports/hotels?dryRun=true" }),
+    ).toBe(true);
+  });
+
+  it("keeps the buffered upload routes off the post-guard list", () => {
+    expect(passes("POST", "/media/0192f1a0-0000-7000-8000-0000000000a1/upload")).toBe(true);
+    expect(isPostGuardUpload({ method: "POST", url: "/media/x/upload" })).toBe(false);
+  });
+
+  it("still refuses a binary body on a record route, or on the import with another method", () => {
+    expect(passes("POST", "/hotels-admin/hotels")).toBe(false);
+    expect(passes("PATCH", "/hotels-admin/imports/hotels")).toBe(false);
+    expect(isPostGuardUpload({ method: "PUT", url: "/hotels-admin/imports/hotels" })).toBe(false);
   });
 });

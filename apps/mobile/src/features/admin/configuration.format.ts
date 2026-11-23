@@ -61,6 +61,11 @@ const CONFIG_META: Record<string, ConfigMeta> = {
     area: "Hotels",
     description: "How many days a hotel verification stays fresh before it is stale.",
   },
+  "hotel.cuisine_options": {
+    label: "Hotel cuisine options",
+    area: "Hotels",
+    description: 'The cuisines the hotel editor offers; a hotel may also be marked "Other".',
+  },
   "consultancy.chargeable_services": {
     label: "Chargeable consultancy services",
     area: "Consultancy",

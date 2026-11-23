@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import {
   hotelStaffDetailContactsView,
@@ -9,88 +9,14 @@ import {
   hotelStaffView,
 } from "@ampm/core";
 
-import { AuditService } from "../../policy/audit.service.js";
+import { Prisma } from "../../generated/prisma/client.js";
 import { staffPrincipal } from "../../policy/testing/staff-principal.js";
+import type { StaffHotelRow } from "./hotels-admin.repository.js";
 import {
-  HotelsAdminRepository,
-  type StaffHotelDetailRow,
-  type StaffHotelRow,
-} from "./hotels-admin.repository.js";
-import { HotelsAdminService } from "./hotels-admin.service.js";
-
-const HOTEL = "0192f1a0-0000-7000-8000-0000000000a1";
-const DESTINATION = "0192f1a0-0000-7000-8000-0000000000a2";
-
-/** A synthetic catalogue hotel as the repository reads it, with internal notes and one contact. */
-function hotelRow(): StaffHotelDetailRow {
-  return {
-    id: HOTEL,
-    destinationId: DESTINATION,
-    name: "Synthetic Lake Hotel",
-    slug: "synthetic-lake-hotel",
-    brand: null,
-    starCategory: "5",
-    address: null,
-    latitude: null,
-    longitude: null,
-    descriptionClient: null,
-    website: null,
-    status: "active",
-    demoVisible: false,
-    publicShowcase: false,
-    internalRating: 4,
-    internalNotes: "Synthetic note",
-    totalRooms: 40,
-    streetViewRef: null,
-    facilities: null,
-    lastVerifiedAt: null,
-    destination: {
-      id: DESTINATION,
-      name: "Synthetic Destination",
-      slug: "synthetic-destination",
-      region: null,
-      state: null,
-      country: "India",
-      description: null,
-      status: "active",
-      publicVisible: false,
-    },
-    rooms: [],
-    venues: [],
-    contacts: [
-      {
-        id: "0192f1a0-0000-7000-8000-0000000000a3",
-        hotelId: HOTEL,
-        name: "Test Contact",
-        roleTitle: null,
-        phone: null,
-        email: "contact@example.com",
-        isPrimary: true,
-      },
-    ],
-  };
-}
-
-function build() {
-  const row = hotelRow();
-  const profile: StaffHotelRow = { ...row };
-  const repo = {
-    findDetail: vi.fn(async () => row),
-    findById: vi.fn(async () => profile),
-    list: vi.fn(async () => ({ rows: [profile], nextCursor: null })),
-    findDestinationById: vi.fn(async () => row.destination),
-    slugExists: vi.fn(async () => false),
-    createHotel: vi.fn(async () => HOTEL),
-    updateHotel: vi.fn(async () => undefined),
-    transaction: <T>(fn: (tx: unknown) => Promise<T>): Promise<T> => fn({}),
-  };
-  const audit = { record: vi.fn(async () => undefined) };
-  const service = new HotelsAdminService(
-    repo as unknown as HotelsAdminRepository,
-    audit as unknown as AuditService,
-  );
-  return { service, repo };
-}
+  buildHotelsAdminService as build,
+  DESTINATION_ID as DESTINATION,
+  HOTEL_ID as HOTEL,
+} from "./testing/staff-hotel-fixtures.js";
 
 const CUSTOM_CONTACTS = ["hotels.hotel_contacts.read:all"];
 const CUSTOM_NOTES = ["hotels.hotel_internal_rating_notes.read:all"];
@@ -167,5 +93,40 @@ describe("HotelsAdminService writes the internal notes only on their own key", (
     const { service, repo } = build();
     await service.update(HOTEL, { internalRating: 3 }, staffPrincipal(["HT"]));
     expect(repo.updateHotel).toHaveBeenCalledOnce();
+  });
+});
+
+describe("HotelsAdminService reads the D-178 fields into every profile model", () => {
+  const catalogue: Partial<StaffHotelRow> = {
+    nameAliases: ["Synthetic Lake Hotel Annexe"],
+    bookingNotes: "Synthetic booking note",
+    weddingBuyoutPolicy: "depends",
+    minNights: 2,
+    airportDistanceKm: new Prisma.Decimal("24.5"),
+    cuisines: ["Indian", "Other"],
+  };
+
+  it("gives Creative and Finance the INTERNAL name variants and booking terms, never the notes", async () => {
+    const { service } = build(catalogue);
+    for (const role of ["CD", "FA"] as const) {
+      const hotel = await service.getDetail(HOTEL, staffPrincipal([role]));
+      expect(hotelStaffDetailView.safeParse(hotel).success).toBe(true);
+      expect(hotel).toMatchObject({
+        nameAliases: ["Synthetic Lake Hotel Annexe"],
+        bookingNotes: "Synthetic booking note",
+        weddingBuyoutPolicy: "depends",
+        minNights: 2,
+        airportDistanceKm: 24.5,
+        cuisines: ["Indian", "Other"],
+      });
+      expect(hotel).not.toHaveProperty("internalNotes");
+    }
+  });
+
+  it("lists every D-178 key, empty ones as null", async () => {
+    const { service } = build();
+    const [item] = (await service.list({ limit: 50 }, staffPrincipal(["FA"]))).items;
+    expect(hotelStaffView.safeParse(item).success).toBe(true);
+    expect(item).toMatchObject({ mapsUrl: null, nameAliases: null, servesAlcohol: null });
   });
 });
