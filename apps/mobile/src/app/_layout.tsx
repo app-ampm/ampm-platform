@@ -26,6 +26,10 @@ import { DemoBanner } from "@/navigation/demo-banner";
 
 SplashScreen.preventAutoHideAsync();
 
+// A crash outside every screen (providers, chrome, demo banner) replaces this layout with AppCrash;
+// a crash inside one screen stays in that screen (AppStack's per-screen boundary, D-160).
+export { AppCrash as ErrorBoundary } from "@/navigation/app-crash";
+
 /** Peacock Night's faces as the tokens name them (packages/tokens/src/typography.ts), loaded under exactly those names. */
 const FONTS = {
   [fontFaces.display]: GildaDisplay_400Regular,
