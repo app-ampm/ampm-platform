@@ -1,8 +1,9 @@
 #!/bin/bash
 # Tests for docs/tools/checkpoint.sh: a push the remote refuses is reported to the session, not only logged; commits
 # left unpushed by an earlier turn are pushed by the next checkpoint (on 27 October 2026 the main checkout's main had
-# split from origin/main and six hours of refused pushes went unnoticed); and a branch that is only behind its upstream
-# catches up by rebasing and pushes (by 20 November 2026 the main checkout had 107 local-only commits).
+# split from origin/main and six hours of refused pushes went unnoticed); a branch that is only behind its upstream
+# catches up by rebasing and pushes (by 20 November 2026 the main checkout had 107 local-only commits); and a vault that
+# its secret scan held back is reported on every turn until the note is fixed (D-167).
 #
 #   bash docs/tools/checkpoint_test.sh   # prints "checkpoint tests passed", exit 0
 #
@@ -89,10 +90,25 @@ test_ordinary_checkpoint_is_unchanged() {
   out=$(hook "$d"); [ -z "$out" ] || fail "a turn with nothing to do printed: $out"
 }
 
+test_a_held_back_vault_is_reported() {  # the vault's secret scan refused a note (D-167): the session hears it every turn
+  local d out; d=$(setup held)
+  printf 'print("vault: blocked, the secret scan flagged 1 value(s); nothing committed or pushed:")\n' \
+    > "$d/work/docs/tools/vault_sync.py"
+  out=$(hook "$d")
+  printf '%s' "$out" | python3 -c 'import json,sys; json.loads(sys.stdin.read())' 2>/dev/null \
+    || fail "the hook output is not one JSON object: $out"
+  printf '%s' "$out" | grep -q "vault not committed" || fail "a held-back vault was not reported: $out"
+  printf '%s' "$out" | grep -q "vault synced" && fail "a held-back vault was reported as synced: $out"
+  out=$(hook "$d")  # nothing left to commit in the project, and the vault is still held back
+  printf '%s' "$out" | grep -q "vault not committed" || fail "a held-back vault went unreported on a quiet turn: '$out'"
+  return 0
+}
+
 test_refused_push_is_reported
 test_unpushed_commits_are_reported_on_a_quiet_turn
 test_unpushed_commits_are_pushed_once_the_remote_accepts
 test_a_branch_behind_its_upstream_catches_up_and_pushes
 test_ordinary_checkpoint_is_unchanged
+test_a_held_back_vault_is_reported
 [ "$FAILURES" -eq 0 ] && echo "checkpoint tests passed" || echo "checkpoint tests: $FAILURES failure(s)"
 [ "$FAILURES" -eq 0 ]

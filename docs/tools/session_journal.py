@@ -7,7 +7,8 @@ SessionStart hook:   python3 docs/tools/session_journal.py --start     (Claude C
 Stop hook:           checkpoint.sh --hook exports the hook JSON as AMPM_SESSION_JSON and vault_sync.py calls update_facts(),
     which refreshes the automatic sections (Requests, Commits, Changed files) and never touches the Narrative.
 The Requests section holds the first line of each of the user's messages (headlines, 160 characters at most), read from the
-session transcript; tool results, system reminders and pasted blocks are skipped.
+session transcript; tool results, system reminders and pasted blocks are skipped. Every credential the transcript redactor
+(redact_secrets.py) detects is masked first, as it masks transcripts, because the vault quotes these lines (D-167).
 """
 from __future__ import annotations
 
@@ -18,6 +19,9 @@ import re
 import subprocess
 import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import redact_secrets  # noqa: E402  — the transcript redactor; the journal masks what it quotes by the same rules
 
 PROJECT = Path(__file__).resolve().parents[2]
 VAULT = Path(os.environ.get("AMPM_VAULT", PROJECT / "vault"))
@@ -105,6 +109,18 @@ tags: [ampm, session]
     return path
 
 
+def masked(text):
+    """The text with every credential redact_secrets detects masked as in a transcript (its first characters kept,
+    the rest '*'), so the Requests section never quotes a key the user pasted into the chat (D-167).
+
+    masked("the new key is " + key)  # -> "the new key is " + key[:4] + "*" * (len(key) - 4)
+    """
+    data = bytearray(text.encode("utf8"))
+    for start, replacement in redact_secrets.find(bytes(data)):
+        data[start : start + len(replacement)] = replacement
+    return data.decode("utf8", errors="replace")
+
+
 def requests_from(transcript):
     out, last = [], None
     try:
@@ -133,7 +149,8 @@ def requests_from(transcript):
             text = text.strip()
             if not text or text.startswith(SKIP_PREFIXES):
                 continue
-            line1 = next((l.strip() for l in text.splitlines() if l.strip()), "")
+            text = masked(text)  # before the headline is cut, so a key that runs past 160 characters is still found
+            line1 =next((l.strip() for l in text.splitlines() if l.strip()), "")
             line1 = re.sub(r"\s+", " ", line1)
             if len(line1) > 160:
                 line1 = line1[:157].rstrip() + "..."

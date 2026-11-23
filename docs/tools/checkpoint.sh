@@ -4,8 +4,9 @@
 #   bash docs/tools/checkpoint.sh ["commit message"]
 # In hook mode the hook JSON on stdin is passed on (AMPM_SESSION_JSON) so vault_sync.py can refresh the session journal,
 # all output goes to ~/Library/Logs/ampm-vault-sync.log, and a one-line JSON systemMessage is printed only when a commit
-# was made or a push failed, so Claude Code can show it. Commits an earlier run left unpushed are pushed again on every
-# run, and while the remote refuses them every turn says so (a branch that has split from its upstream stays visible).
+# was made, a push failed or the vault's secret scan held the vault back (D-167), so Claude Code can show it. Commits an
+# earlier run left unpushed are pushed again on every run, and while the remote refuses them every turn says so (a branch
+# that has split from its upstream stays visible).
 set -u
 cd "$(dirname "$0")/../.." || exit 0
 export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
@@ -13,7 +14,7 @@ export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
 # node on PATH, and their file-list subjects exceed commitlint's header limit. CI and the Claude hooks are their gate.
 export LEFTHOOK=0
 LOG="$HOME/Library/Logs/ampm-vault-sync.log"
-HOOK=0; MSG=""; COMMITTED=""; PUSH_FAILED=""
+HOOK=0; MSG=""; COMMITTED=""; PUSH_FAILED=""; VAULT_BLOCKED=""
 for a in "$@"; do case "$a" in --hook) HOOK=1 ;; *) MSG="$a" ;; esac; done
 if [ "$HOOK" = 1 ] && [ ! -t 0 ]; then
   AMPM_SESSION_JSON=$(cat 2>/dev/null || true); export AMPM_SESSION_JSON
@@ -76,7 +77,9 @@ run() {
       fi
     fi
   fi
-  python3 docs/tools/vault_sync.py
+  # vault_sync.py prints "vault: blocked" when its secret scan holds a note back (D-167); hook mode reports it below
+  VAULT_OUT=$(python3 docs/tools/vault_sync.py 2>&1); [ -n "$VAULT_OUT" ] && printf '%s\n' "$VAULT_OUT"
+  case "$VAULT_OUT" in *"vault: blocked"*) VAULT_BLOCKED=1 ;; esac
   if [ -n "$COMMITTED" ] && command -v mempalace >/dev/null 2>&1; then
     # file new or changed design docs into the project's memory wing (MemPalace skips files already filed)
     ( mempalace mine docs --mode projects --wing ampm >> "$HOME/Library/Logs/ampm-memory-hooks.log" 2>&1 & ) >/dev/null 2>&1
@@ -87,15 +90,20 @@ run() {
 if [ "$HOOK" = 1 ]; then
   mkdir -p "$(dirname "$LOG")"
   { echo "== $(date '+%Y-%m-%d %H:%M:%S') checkpoint (Claude Code Stop hook)"; run; } >> "$LOG" 2>&1
+  note=""
   if [ -n "$PUSH_FAILED" ]; then
     note="push to origin failed, $PUSH_FAILED commit(s) not pushed (the branch may have split from its upstream;"
     note="$note see ~/Library/Logs/ampm-vault-sync.log)"
     [ -n "$COMMITTED" ] && note="$COMMITTED; $note"
+  elif [ -n "$COMMITTED" ]; then
+    note="$COMMITTED"; [ -z "$VAULT_BLOCKED" ] && note="$note; vault synced"
+  fi
+  if [ -n "$VAULT_BLOCKED" ]; then
+    note="${note:+$note; }vault not committed: its secret scan flagged a value in a note (see ~/Library/Logs/ampm-vault-sync.log)"
+  fi
+  if [ -n "$note" ]; then
     esc=$(printf '%s' "$note" | sed 's/\\/\\\\/g; s/"/\\"/g')
     printf '{"systemMessage": "AMPM checkpoint: %s"}\n' "$esc"
-  elif [ -n "$COMMITTED" ]; then
-    esc=$(printf '%s' "$COMMITTED" | sed 's/\\/\\\\/g; s/"/\\"/g')
-    printf '{"systemMessage": "AMPM checkpoint: %s; vault synced"}\n' "$esc"
   fi
   exit 0
 fi
