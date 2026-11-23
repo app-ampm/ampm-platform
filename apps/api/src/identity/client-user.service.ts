@@ -16,8 +16,8 @@ export interface ProvisionInvitedClientInput {
  * Kernel identity service for provisioning client logins. The kernel owns the `users` table, so business
  * modules (CRM conversion, feature 8.2) call this rather than writing `users` directly — the downward
  * module boundary holds (architecture §5, api.md). The user is created `invited`/`client` and activates
- * later through the existing `/auth/activate` flow (feature 5.2, AUTH-02); there is no self-registration
- * (security.md).
+ * later from its invitation by a mobile code (D-147), or through `/auth/activate` in a dev build (feature
+ * 5.2, D-162); there is no self-registration (security.md).
  */
 @Injectable()
 export class ClientUserService {

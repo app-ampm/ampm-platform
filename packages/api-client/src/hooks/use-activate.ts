@@ -14,7 +14,8 @@ export interface ActivateVariables extends ActivateRequest {
 
 /**
  * First-run identity activation under the development provider (`POST /auth/activate`); AMPM's own
- * sign-in activates through its own routes (D-142). Exchanges the one-time invite token, presented with
+ * sign-in activates through its own routes (D-142), and outside a dev build this route is a 404 (D-162).
+ * Exchanges the one-time invite token, presented with
  * the provider access token, for the linked account: the API verifies the token, matches its verified email to the
  * invited user, binds `identity_subject` and flips the account and its memberships active (D-041). The
  * API refuses it unless the bearer is a valid access token and the invite is still pending; the refusals
