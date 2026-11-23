@@ -42,8 +42,8 @@ function staffId(principal: Principal): string {
  * delete to SA/HT). Create is audited by the interceptor; update/delete self-audit the consent/sharing
  * change in a transaction. The GP-20 publishing gate is the service's (a 409 on client visibility
  * without recorded consent); the consent itself arrives only by upload (`…/consent`, the raw bytes) and
- * is viewed through a minted link (`…/consent/link`). The client-facing references are served on the
- * hotel detail, not here.
+ * is viewed through a minted link (`…/consent/link`, SA/HT only: readers see that consent is on file,
+ * never the file). The client-facing references are served on the hotel detail, not here.
  */
 @Controller("hotels-admin")
 export class HotelReferencesController {
@@ -117,9 +117,10 @@ export class HotelReferencesController {
     return this.consent.attach(params.hotelId, params.referenceId, req.body, staffId(principal));
   }
 
+  // The consent names the couple: only a role that manages references (SA/HT) opens it, not every reader.
   @Post("hotels/:hotelId/wedding-references/:referenceId/consent/link")
   @HttpCode(201)
-  @RequirePermission("hotels.wedding_references.read")
+  @RequirePermission("hotels.wedding_references.update")
   @SelfAudited()
   consentLink(
     @ZodParams(referenceParam) params: ReferenceParam,

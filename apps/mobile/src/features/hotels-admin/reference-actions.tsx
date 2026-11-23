@@ -138,23 +138,20 @@ function VisibilityButton({
 export interface ReferenceActionsProps {
   readonly hotelId: string;
   readonly reference: WeddingReferenceView;
-  /** The role may attach consent and show or hide the reference (`hotels.wedding_references.update`). */
+  /**
+   * The role may view, attach or replace the consent and show or hide the reference
+   * (`hotels.wedding_references.update`: SA, HT). A role that only reads sees the chips, no actions.
+   */
   readonly canUpdate: boolean;
 }
 
-/**
- * A reference's consent and client-visibility actions (GP-20). Anyone who reads references may view the
- * consent on file through a short-lived link; a role that may update them attaches or replaces it, and
- * shows the reference to clients only once it is on file. Without consent the row says what unlocks
- * showing it rather than offering a button the server would refuse.
- */
-export function ReferenceActions({ hotelId, reference, canUpdate }: ReferenceActionsProps) {
+/** The actions themselves, for a role that may update references. */
+function ManageActions({ hotelId, reference }: Omit<ReferenceActionsProps, "canUpdate">) {
   const view = useViewConsent(hotelId, reference.id);
   const hasConsent = reference.consentDocumentId !== null;
-  if (!hasConsent && !canUpdate) return null;
   return (
     <>
-      {canUpdate && !hasConsent ? (
+      {!hasConsent ? (
         <Text variant="bodySmall" tone="body">
           Attach the couple's consent (PDF, JPEG or PNG) before showing this to clients.
         </Text>
@@ -172,11 +169,22 @@ export function ReferenceActions({ hotelId, reference, canUpdate }: ReferenceAct
             View consent
           </Button>
         ) : null}
-        {canUpdate ? <AttachConsentButton hotelId={hotelId} reference={reference} /> : null}
-        {canUpdate && (hasConsent || reference.clientVisible) ? (
+        <AttachConsentButton hotelId={hotelId} reference={reference} />
+        {hasConsent || reference.clientVisible ? (
           <VisibilityButton hotelId={hotelId} reference={reference} />
         ) : null}
       </Row>
     </>
   );
+}
+
+/**
+ * A reference's consent and client-visibility actions (GP-20), only for a role that manages references:
+ * the consent names the couple, so it opens (through a short-lived link) only for SA and HT, as the API
+ * gates it. They attach or replace it, and show the reference to clients only once it is on file;
+ * without consent the row says what unlocks showing it rather than offering a button the server would
+ * refuse. A role that only reads (SM, PM) gets no actions.
+ */
+export function ReferenceActions({ canUpdate, ...props }: ReferenceActionsProps) {
+  return canUpdate ? <ManageActions {...props} /> : null;
 }

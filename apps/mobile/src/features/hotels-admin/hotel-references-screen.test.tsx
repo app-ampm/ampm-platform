@@ -213,23 +213,30 @@ describe("HotelReferencesScreen: the Hotel team manages references", () => {
     await fireEvent.press(await screen.findByTestId(`reference-${REFERENCE_ID}-edit`));
     expect(await screen.findByDisplayValue("A three-day lakeside celebration")).toBeOnTheScreen();
   });
+
+  it("opens the consent on file through a minted link", async () => {
+    const open = jest.spyOn(Linking, "openURL").mockResolvedValue(undefined);
+    await renderTab(referencesFetch([consented()], ["HT"]));
+    const row = await screen.findByTestId(`reference-${REFERENCE_ID}`);
+    await fireEvent.press(await within(row).findByRole("button", { name: "View consent" }));
+    // The root-relative link is opened from the API base, not the app's own origin.
+    await waitFor(() => expect(open).toHaveBeenCalledWith(`http://api.test${LINK_PATH}`));
+    open.mockRestore();
+  });
 });
 
 describe("HotelReferencesScreen: a Sales Manager reads references", () => {
-  it("views the consent through a minted link but changes nothing", async () => {
-    const open = jest.spyOn(Linking, "openURL").mockResolvedValue(undefined);
+  it("sees what clients see and whether consent is on file, but never opens it or changes anything", async () => {
     await renderTab(referencesFetch([consented({ clientVisible: true })], ["SM"]));
     const row = await screen.findByTestId(`reference-${REFERENCE_ID}`);
     expect(within(row).getByText("Shown to clients")).toBeOnTheScreen();
     expect(within(row).getByText("Consent on file")).toBeOnTheScreen();
-    await fireEvent.press(await within(row).findByRole("button", { name: "View consent" }));
-    // The root-relative link is opened from the API base, not the app's own origin.
-    await waitFor(() => expect(open).toHaveBeenCalledWith(`http://api.test${LINK_PATH}`));
+    // The consent names the couple: the API refuses SM the link, so the row offers none.
+    expect(within(row).queryByRole("button", { name: "View consent" })).toBeNull();
     expect(screen.queryByTestId("reference-section-add")).toBeNull();
     expect(within(row).queryByTestId(`reference-${REFERENCE_ID}-edit`)).toBeNull();
     expect(within(row).queryByTestId(`reference-${REFERENCE_ID}-delete`)).toBeNull();
     expect(within(row).queryByRole("button", { name: "Replace consent" })).toBeNull();
     expect(within(row).queryByRole("button", { name: "Hide from clients" })).toBeNull();
-    open.mockRestore();
   });
 });

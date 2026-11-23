@@ -128,7 +128,8 @@ export function useAttachReferenceConsent(hotelId: string, referenceId: string) 
 
 /**
  * Mint a 15-minute link to a reference's consent document (`POST …/:id/consent/link`). A mutation, not a
- * query: every mint writes a `document_access_links` row, so it runs once per "View consent" press. The
+ * query: every mint writes a `document_access_links` row, so it runs once per "View consent" press. Only
+ * a role that may update references (SA/HT) mints one; SM and PM read references but answer 403 here. The
  * link comes back resolved against the API base, ready to open.
  *
  * @example

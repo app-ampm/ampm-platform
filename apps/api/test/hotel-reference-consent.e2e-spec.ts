@@ -18,8 +18,9 @@ const PDF_V2 = Buffer.from("%PDF-1.7\n% E2E couple's consent, re-signed\n%%EOF\n
  * A previous-wedding reference's consent end to end (GP-20, AC-24.3): the couple's consent is uploaded as
  * a Module N `consent` document filed on the reference (typed by content, scanned, versioned), which is
  * what lets the reference be shown to clients; uploading never publishes by itself. The file is reached
- * only through a minted link, by a role that may read references, and a reference outside the hotel in
- * the path answers 404 (denial equals absence).
+ * only through a minted link, by a role that may update references (SM and PM read references but never
+ * open the couple's consent), and a reference outside the hotel in the path answers 404 (denial equals
+ * absence).
  */
 describe("Hotel wedding reference consent (e2e)", () => {
   let app: NestExpressApplication;
@@ -70,11 +71,10 @@ describe("Hotel wedding reference consent (e2e)", () => {
       .set("content-type", OCTET)
       .send(bytes);
 
-  // SM mints the link: viewing the consent needs only read on references.
-  const mintLink = (refId: string, hotel = hotelId) =>
+  const mintLink = (refId: string, as: keyof typeof bearer = "ht", hotel = hotelId) =>
     http()
       .post(`${base(hotel)}/${refId}/consent/link`)
-      .set("Authorization", bearer.sm);
+      .set("Authorization", bearer[as]);
 
   async function newHotel(suffix: string, destinationId: string): Promise<string> {
     const hotel = await http()
@@ -160,10 +160,11 @@ describe("Hotel wedding reference consent (e2e)", () => {
     await attach(refId, PDF, "ht").expect(200);
   });
 
-  it("serves the consent only through a minted link, to a role that may read references", async () => {
+  it("serves the consent only through a minted link, to a role that may update references", async () => {
     const refId = await newReference();
     await mintLink(refId).expect(404); // nothing attached yet
     await attach(refId, PDF).expect(200);
+    await mintLink(refId, "sm").expect(403); // SM reads references, never the couple's consent
     const minted = await mintLink(refId).expect(201);
     const url = minted.body.data.url as string;
     expect(url).toMatch(/^\/documents\/links\/[^/]+\/[^/]+$/);
@@ -177,7 +178,7 @@ describe("Hotel wedding reference consent (e2e)", () => {
     const refId = await newReference();
     await attach(refId, PDF, "ht", otherHotelId).expect(404);
     await attach(refId, PDF).expect(200);
-    await mintLink(refId, otherHotelId).expect(404);
+    await mintLink(refId, "ht", otherHotelId).expect(404);
   });
 
   it("refuses a binary body on any other reference route (415)", async () => {
