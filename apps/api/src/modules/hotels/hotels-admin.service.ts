@@ -6,13 +6,15 @@ import {
   type DestinationUpdateRequest,
   type DestinationView,
   type HotelCreateRequest,
-  type HotelStaffDetailView,
+  type HotelStaffDetail,
   type HotelStaffListQuery,
   type HotelStaffPage,
   type HotelUpdateRequest,
 } from "@ampm/core";
 
 import { AuditService } from "../../policy/audit.service.js";
+import { type Principal, staffId } from "../../policy/principal.types.js";
+import { hotelAudienceOf, requireNotesWrite } from "./hotel-audience.js";
 import { slugify } from "./hotel-import.js";
 import {
   HotelsAdminRepository,
@@ -24,15 +26,16 @@ import {
 import {
   toDestinationListItem,
   toDestinationView,
-  toHotelStaffDetailView,
-  toHotelStaffView,
+  toHotelStaffDetail,
+  toHotelStaffListItem,
 } from "./hotels-admin.view.js";
 
 /**
- * The staff hotel catalogue (HT/SA; feature 9.1). Reads are gated by the `hotels.*` read keys and writes
- * by the matching create/update/delete keys on the controller; this layer holds the rules — slug
- * resolution and uniqueness, the destination must exist — and records the update/delete audit (create is
- * audited by the interceptor through `@Audited`). The spreadsheet import is `HotelImportService`.
+ * The staff hotel catalogue (feature 9.1). Reads are gated by the `hotels.*` read keys and writes by the
+ * matching create/update/delete keys on the controller; this layer holds the rules — slug resolution and
+ * uniqueness, the destination must exist, the internal rating and notes are written only on their own
+ * key — answers every hotel in the model of the caller's audience (D-171), and records the update/delete
+ * audit (create is audited by the interceptor through `@Audited`). The import is `HotelImportService`.
  */
 @Injectable()
 export class HotelsAdminService {
@@ -41,22 +44,25 @@ export class HotelsAdminService {
     private readonly audit: AuditService,
   ) {}
 
-  async list(query: HotelStaffListQuery): Promise<HotelStaffPage> {
+  async list(query: HotelStaffListQuery, principal: Principal): Promise<HotelStaffPage> {
+    const audience = hotelAudienceOf(principal);
     const { rows, nextCursor } = await this.repo.list(
       { destinationId: query.destinationId, status: query.status, q: query.q },
       query.limit,
       query.cursor,
     );
-    return { items: rows.map(toHotelStaffView), nextCursor };
+    return { items: rows.map((row) => toHotelStaffListItem(row, audience)), nextCursor };
   }
 
-  async getDetail(hotelId: string): Promise<HotelStaffDetailView> {
+  async getDetail(hotelId: string, principal: Principal): Promise<HotelStaffDetail> {
     const row = await this.repo.findDetail(hotelId);
     if (!row) throw errors.notFound("No such hotel");
-    return toHotelStaffDetailView(row);
+    return toHotelStaffDetail(row, hotelAudienceOf(principal));
   }
 
-  async create(request: HotelCreateRequest, actorId: string): Promise<HotelStaffDetailView> {
+  /** A create sets the internal rating or notes when it gives either a value (null is the default). */
+  async create(request: HotelCreateRequest, principal: Principal): Promise<HotelStaffDetail> {
+    requireNotesWrite(principal, request.internalRating != null || request.internalNotes != null);
     await this.requireDestination(request.destinationId);
     const slug = request.slug ?? slugify(request.name);
     if (await this.repo.slugExists(slug)) {
@@ -64,17 +70,23 @@ export class HotelsAdminService {
     }
     const hotelId = await this.repo.createHotel(
       toHotelWriteData(request, request.destinationId, slug),
-      actorId,
+      staffId(principal),
     );
-    return this.getDetail(hotelId);
+    return this.getDetail(hotelId, principal);
   }
 
+  /** An update sets the internal rating or notes when it names either, a null clearing it. */
   async update(
     hotelId: string,
     request: HotelUpdateRequest,
-    actorId: string,
-  ): Promise<HotelStaffDetailView> {
+    principal: Principal,
+  ): Promise<HotelStaffDetail> {
+    const actorId = staffId(principal);
     const current = await this.require(hotelId);
+    requireNotesWrite(
+      principal,
+      request.internalRating !== undefined || request.internalNotes !== undefined,
+    );
     if (request.destinationId !== undefined) await this.requireDestination(request.destinationId);
     const patch = toHotelUpdatePatch(request);
     await this.repo.transaction(async (tx) => {
@@ -95,7 +107,7 @@ export class HotelsAdminService {
         tx,
       );
     });
-    return this.getDetail(hotelId);
+    return this.getDetail(hotelId, principal);
   }
 
   async remove(hotelId: string, actorId: string): Promise<{ id: string }> {

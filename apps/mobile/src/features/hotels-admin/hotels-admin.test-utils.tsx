@@ -2,8 +2,9 @@ import type {
   DestinationListItemView,
   DestinationView,
   HotelContactView,
+  HotelStaffDetailFullView,
   HotelStaffDetailView,
-  HotelStaffView,
+  HotelStaffNotesView,
   MediaAssetView,
   RateCardView,
   RateItemView,
@@ -32,8 +33,13 @@ export const REFERENCE_ID = "018f0000-0000-7000-8000-0000000c1301";
 export const CONSENT_DOCUMENT_ID = "018f0000-0000-7000-8000-0000000c1302";
 const UPLOADER_ID = "018f0000-0000-7000-8000-0000000c00aa";
 
-/** A hotel as `GET /hotels-admin/hotels` returns it; override for the other states. */
-export function hotelStaffViewFixture(overrides: Partial<HotelStaffView> = {}): HotelStaffView {
+/**
+ * A hotel as `GET /hotels-admin/hotels` returns it to a reader of the internal notes (the Hotel team,
+ * the Super Admin); override for the other states.
+ */
+export function hotelStaffViewFixture(
+  overrides: Partial<HotelStaffNotesView> = {},
+): HotelStaffNotesView {
   return {
     id: HOTEL_ID,
     destinationId: DESTINATION_ID,
@@ -82,10 +88,13 @@ export function destinationListItemFixture(
   return { ...destinationViewFixture(), hotelCount: 3, ...overrides };
 }
 
-/** A hotel with its (empty) nested collections, as create / update / detail return it. */
+/**
+ * A hotel with its (empty) nested collections, as create / update / detail return it to a reader of
+ * both restricted groups (the Hotel team, the Super Admin): the internal notes and the contacts.
+ */
 export function hotelStaffDetailViewFixture(
-  overrides: Partial<HotelStaffDetailView> = {},
-): HotelStaffDetailView {
+  overrides: Partial<HotelStaffDetailFullView> = {},
+): HotelStaffDetailFullView {
   return {
     ...hotelStaffViewFixture(),
     destination: destinationViewFixture(),
@@ -94,6 +103,22 @@ export function hotelStaffDetailViewFixture(
     contacts: [],
     ...overrides,
   };
+}
+
+/**
+ * The same hotel as a reader of neither restricted group gets it (Finance, Creative; D-171): no internal
+ * rating, notes or contacts at all, not even as null.
+ */
+export function hotelProfileDetailFixture(
+  overrides: Partial<HotelStaffDetailView> = {},
+): HotelStaffDetailView {
+  const {
+    internalRating: _rating,
+    internalNotes: _notes,
+    contacts: _contacts,
+    ...profile
+  } = hotelStaffDetailViewFixture();
+  return { ...profile, ...overrides };
 }
 
 /** A room category as the staff hotel detail nests it. */

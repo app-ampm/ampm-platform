@@ -1,4 +1,9 @@
-import type { HotelCreateRequest, HotelStaffView, HotelStatus } from "@ampm/core";
+import type {
+  HotelCreateRequest,
+  HotelStaffListItem,
+  HotelStaffNotesView,
+  HotelStatus,
+} from "@ampm/core";
 
 import {
   facilitiesToText,
@@ -16,7 +21,9 @@ export { hasErrors } from "./hotel-form-fields";
  * draft the form holds (text as strings), the client-side checks that must pass before submit, and the
  * create/update body built from a valid draft. The server re-validates every field (bounds, URL,
  * slug uniqueness, that the destination exists) and is the authority. Latitude/longitude/streetViewRef
- * are deferred to a later slice, so they are left unchanged by this editor.
+ * are deferred to a later slice, so they are left unchanged by this editor. The internal rating and
+ * notes are RESTRICTED-NOTES: a hotel carries them only for a reader of them, and they go in the body
+ * only from someone who may set them (D-171), so nobody else's save can wipe them.
  */
 
 export interface HotelProfileDraft {
@@ -36,8 +43,19 @@ export interface HotelProfileDraft {
   readonly internalNotes: string;
 }
 
+/**
+ * Whether the hotel carries its internal rating and notes: only a reader of them gets them (D-171).
+ *
+ * @example
+ * hasInternalNotes(hotel) ? hotel.internalNotes : undefined;
+ */
+export function hasInternalNotes(hotel: HotelStaffListItem): hotel is HotelStaffNotesView {
+  return "internalRating" in hotel;
+}
+
 /** Edit seeds from the hotel's current profile; create starts empty with the draft status. */
-export function draftFromHotel(hotel: HotelStaffView | null): HotelProfileDraft {
+export function draftFromHotel(hotel: HotelStaffListItem | null): HotelProfileDraft {
+  const notes = hotel && hasInternalNotes(hotel) ? hotel : null;
   return {
     destinationId: hotel?.destinationId ?? "",
     name: hotel?.name ?? "",
@@ -51,8 +69,8 @@ export function draftFromHotel(hotel: HotelStaffView | null): HotelProfileDraft 
     status: hotel?.status ?? "draft",
     demoVisible: hotel?.demoVisible ?? false,
     publicShowcase: hotel?.publicShowcase ?? false,
-    internalRating: numberToText(hotel?.internalRating ?? null),
-    internalNotes: hotel?.internalNotes ?? "",
+    internalRating: numberToText(notes?.internalRating ?? null),
+    internalNotes: notes?.internalNotes ?? "",
   };
 }
 
@@ -87,6 +105,7 @@ export function validateDraft(draft: HotelProfileDraft): HotelProfileErrors {
  * The request body from a valid draft: trimmed text or null for empties, parsed numbers. slug is
  * omitted (the server derives it from the name on create, and it is immutable after). The same shape
  * serves create and the partial update — every edited field is sent, and the server patches what changed.
+ * The internal rating and notes are left out: {@link internalNotesBody} adds them for someone who may.
  */
 export function buildHotelBody(draft: HotelProfileDraft): HotelCreateRequest {
   return {
@@ -102,6 +121,21 @@ export function buildHotelBody(draft: HotelProfileDraft): HotelCreateRequest {
     status: draft.status,
     demoVisible: draft.demoVisible,
     publicShowcase: draft.publicShowcase,
+  };
+}
+
+/**
+ * The internal rating and notes of a valid draft, for a body from someone who may set them and, when
+ * editing, read them. A body without them leaves them as they are; one with them from anyone else is
+ * refused by the server (D-171).
+ *
+ * @example
+ * const body = notesEditable ? { ...buildHotelBody(draft), ...internalNotesBody(draft) } : buildHotelBody(draft);
+ */
+export function internalNotesBody(
+  draft: HotelProfileDraft,
+): Pick<HotelCreateRequest, "internalRating" | "internalNotes"> {
+  return {
     internalRating: intOrNull(draft.internalRating),
     internalNotes: textOrNull(draft.internalNotes),
   };

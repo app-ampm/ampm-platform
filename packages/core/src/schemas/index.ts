@@ -21,9 +21,11 @@ export * from "./subscriptions";
 // the manual-payment request.
 export * from "./payments";
 export * from "./subscription-report"; // §5.16 report, every name `subscriptionReport`-prefixed (D-127)
-// Module C hotels: client discovery (hotels.ts) and the staff workspace (hotels-admin.ts, feature 9.1).
+// Module C hotels: client discovery (hotels.ts) and the staff workspace (hotels-admin.ts, feature 9.1),
+// whose hotel is one model per audience (hotel-staff-views.ts, D-171).
 export * from "./hotels";
 export * from "./hotels-admin";
+export * from "./hotel-staff-views";
 export * from "./saved-hotels-staff"; // staff read of clients' saved hotels, every name `savedHotelStaff`-prefixed
 export * from "./hotel-rates";
 export * from "./hotel-references";

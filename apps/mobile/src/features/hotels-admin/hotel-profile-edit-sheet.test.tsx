@@ -1,4 +1,7 @@
-import { fireEvent, screen } from "../../test/render";
+import type { MeResponse } from "@ampm/core";
+
+import { fireEvent, screen, waitFor } from "../../test/render";
+import { staffMeFixture } from "../accounts/accounts.test-utils";
 import { HotelProfileEditSheet } from "./hotel-profile-edit-sheet";
 import {
   DESTINATION_ID,
@@ -23,8 +26,10 @@ interface Captured {
   updated?: unknown;
 }
 
-function editorFetch(captured: Captured): FetchFn {
+/** The editor's routes; with a `/me`, the person whose grants decide the internal fields (D-171). */
+function editorFetch(captured: Captured, me?: MeResponse): FetchFn {
   return routedFetch({
+    ...(me ? { "/me": () => ok(me) } : {}),
     "/hotels-admin/destinations": () => ok({ items: [destinationListItemFixture()] }),
     "/hotels-admin/hotels": (init) => {
       captured.created = JSON.parse(String(init?.body));
@@ -38,6 +43,21 @@ function editorFetch(captured: Captured): FetchFn {
 }
 
 const noop = (): void => {};
+const NOTES = "Synthetic internal note";
+
+/** The hotel as a reader of its notes gets it, and as someone who cannot read them does. */
+const withNotes = () => hotelStaffViewFixture({ internalRating: 4, internalNotes: NOTES });
+function withoutNotes() {
+  const { internalRating: _rating, internalNotes: _notes, ...profile } = withNotes();
+  return profile;
+}
+
+/** Changes the rooms, saves, and waits for the update to land. */
+async function saveRoomsChange(): Promise<void> {
+  await fireEvent.changeText(await screen.findByTestId("hotel-rooms"), "150");
+  await fireEvent.press(screen.getByTestId("hotel-profile-submit"));
+  expect(await screen.findByText("Hotel updated")).toBeOnTheScreen();
+}
 
 describe("HotelProfileEditSheet", () => {
   it("adds a hotel: fills the name, picks a destination and posts the profile", async () => {
@@ -121,5 +141,59 @@ describe("HotelProfileEditSheet", () => {
     );
     await fireEvent.press(await screen.findByTestId("hotel-destination-add"));
     expect(onAddDestination).toHaveBeenCalledTimes(1);
+  });
+
+  describe("the internal rating and notes (D-171)", () => {
+    it("shows them to the Hotel team, seeded, and sends what they change", async () => {
+      const captured: Captured = {};
+      await renderWithApi(
+        <HotelProfileEditSheet open hotel={withNotes()} onClose={noop} />,
+        editorFetch(captured, staffMeFixture(["HT"])),
+      );
+      expect(await screen.findByTestId("hotel-internal")).toBeOnTheScreen();
+      expect(screen.getByDisplayValue(NOTES)).toBeOnTheScreen();
+      await fireEvent.changeText(screen.getByTestId("hotel-internal-rating"), "5");
+      await saveRoomsChange();
+      expect(captured.updated).toMatchObject({ internalRating: 5, internalNotes: NOTES });
+    });
+
+    it("leaves them out of the form and the body for Sales, who reads but may not change them", async () => {
+      const captured: Captured = {};
+      await renderWithApi(
+        <HotelProfileEditSheet open hotel={withNotes()} onClose={noop} />,
+        editorFetch(captured, staffMeFixture(["SM"])),
+      );
+      await screen.findByDisplayValue("The Lakeside Palace");
+      await saveRoomsChange();
+      expect(screen.queryByTestId("hotel-internal")).toBeNull();
+      expect(captured.updated).toMatchObject({ totalRooms: 150 });
+      expect(captured.updated).not.toHaveProperty("internalNotes");
+      expect(captured.updated).not.toHaveProperty("internalRating");
+    });
+
+    it("never wipes notes a custom profile editor cannot read, even holding the notes key", async () => {
+      const captured: Captured = {};
+      const me = staffMeFixture(
+        [],
+        [
+          "hotels.hotel_profiles_client_fields.update:all",
+          "hotels.hotel_internal_rating_notes.update:all",
+        ],
+      );
+      let askedMe = false;
+      const fetch: FetchFn = (input, init) => {
+        if (String(input).endsWith("/me")) askedMe = true;
+        return editorFetch(captured, me)(input, init);
+      };
+      await renderWithApi(
+        <HotelProfileEditSheet open hotel={withoutNotes()} onClose={noop} />,
+        fetch,
+      );
+      await waitFor(() => expect(askedMe).toBe(true));
+      await saveRoomsChange();
+      expect(screen.queryByTestId("hotel-internal")).toBeNull();
+      expect(captured.updated).not.toHaveProperty("internalNotes");
+      expect(captured.updated).not.toHaveProperty("internalRating");
+    });
   });
 });

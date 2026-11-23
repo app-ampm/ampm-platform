@@ -13,6 +13,8 @@ import {
 } from "@ampm/core";
 
 import { AuditService } from "../../policy/audit.service.js";
+import { type Principal, staffId } from "../../policy/principal.types.js";
+import { requireContactsRead } from "./hotel-audience.js";
 import { HotelSubresourcesRepository } from "./hotel-subresources.repository.js";
 import { toHotelContactView, toRoomCategoryView, toVenueView } from "./hotels-admin.view.js";
 
@@ -94,14 +96,16 @@ export class HotelSubresourcesService {
     return toHotelContactView(await this.repo.createContact(hotelId, request, actorId));
   }
 
+  /** The edit answers with the whole contact, so it needs the contacts read too (D-171). */
   async updateContact(
     hotelId: string,
     contactId: string,
     patch: HotelContactUpdateRequest,
-    actorId: string,
+    principal: Principal,
   ): Promise<HotelContactView> {
+    requireContactsRead(principal);
     await this.requireContact(hotelId, contactId);
-    const row = await this.repo.updateContact(contactId, patch, actorId);
+    const row = await this.repo.updateContact(contactId, patch, staffId(principal));
     await this.auditMutation("update", "hotel_contact", contactId, { name: row.name });
     return toHotelContactView(row);
   }

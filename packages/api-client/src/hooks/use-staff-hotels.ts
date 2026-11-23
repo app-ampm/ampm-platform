@@ -2,16 +2,16 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   destinationList,
   destinationView,
-  hotelStaffDetailView,
+  hotelStaffDetail,
   hotelStaffPage,
   type DestinationCreateRequest,
   type DestinationListItemView,
   type DestinationUpdateRequest,
   type DestinationView,
   type HotelCreateRequest,
-  type HotelStaffDetailView,
+  type HotelStaffDetail,
+  type HotelStaffListItem,
   type HotelStaffListQuery,
-  type HotelStaffView,
   type HotelUpdateRequest,
 } from "@ampm/core";
 
@@ -40,15 +40,16 @@ function toQueryString(query: Partial<HotelStaffListQuery>): string {
 /**
  * The staff hotel catalogue (`GET /hotels-admin/hotels`, `hotels.hotel_profiles_client_fields.read`):
  * the private database the Hotel team and Super Admin manage, name-ordered and cursor-paginated, 50 a
- * page: `items` grow with `loadMore` while `hasMore` ({@link useCursorList}). Staff-only, gated
- * server-side; separate from the entitlement-gated client discovery list ({@link useHotels}).
+ * page: `items` grow with `loadMore` while `hasMore` ({@link useCursorList}). Each item is the model of
+ * the reader's audience: the internal rating and notes only for a reader of them (D-171). Staff-only,
+ * gated server-side; separate from the entitlement-gated client discovery list ({@link useHotels}).
  *
  *   const hotels = useStaffHotels();
  *   hotels.items; // the loaded pages, flattened
  */
 export function useStaffHotels(query: Partial<Omit<HotelStaffListQuery, "cursor">> = {}) {
   const api = useApiClient();
-  return useCursorList<HotelStaffView>([...STAFF_HOTELS_QUERY_KEY, query], (cursor, signal) =>
+  return useCursorList<HotelStaffListItem>([...STAFF_HOTELS_QUERY_KEY, query], (cursor, signal) =>
     api.get(
       `/hotels-admin/hotels${toQueryString({ ...query, ...(cursor ? { cursor } : {}) })}`,
       hotelStaffPage,
@@ -58,15 +59,16 @@ export function useStaffHotels(query: Partial<Omit<HotelStaffListQuery, "cursor"
 }
 
 /**
- * One staff hotel with its rooms, venues and contacts (`GET /hotels-admin/hotels/:id`). The staff
- * detail view; the hotel's media, rate cards and references are separate surfaces (Module N / 9.2/9.3).
+ * One staff hotel with its rooms and venues (`GET /hotels-admin/hotels/:id`), in the model of the
+ * reader's audience (D-171): its contacts and its internal rating and notes are there only for a reader
+ * of them, so narrow with `"contacts" in hotel`. The hotel's media, rate cards and references are
+ * separate surfaces (Module N / 9.2/9.3).
  */
 export function useStaffHotel(hotelId: string) {
   const api = useApiClient();
-  return useQuery<HotelStaffDetailView>({
+  return useQuery<HotelStaffDetail>({
     queryKey: staffHotelQueryKey(hotelId),
-    queryFn: ({ signal }) =>
-      api.get(`/hotels-admin/hotels/${hotelId}`, hotelStaffDetailView, signal),
+    queryFn: ({ signal }) => api.get(`/hotels-admin/hotels/${hotelId}`, hotelStaffDetail, signal),
   });
 }
 
@@ -148,27 +150,30 @@ function useRefreshStaffHotels(): (hotelId?: string) => void {
 
 /**
  * Add a hotel to the staff catalogue (`POST /hotels-admin/hotels`,
- * `hotels.hotel_profiles_client_fields.create`). Returns the new profile and refreshes the list.
+ * `hotels.hotel_profiles_client_fields.create`). Returns the new hotel in the reader's model and
+ * refreshes the list. Setting the internal rating or notes also needs their own key, or the server
+ * answers 403.
  */
 export function useCreateHotel() {
   const api = useApiClient();
   const refresh = useRefreshStaffHotels();
-  return useMutation<HotelStaffDetailView, Error, HotelCreateRequest>({
+  return useMutation<HotelStaffDetail, Error, HotelCreateRequest>({
     mutationFn: (body) =>
-      api.request("/hotels-admin/hotels", { method: "POST", body, schema: hotelStaffDetailView }),
+      api.request("/hotels-admin/hotels", { method: "POST", body, schema: hotelStaffDetail }),
     onSuccess: (hotel) => refresh(hotel.id),
   });
 }
 
 /**
  * Edit a hotel's profile (`PATCH /hotels-admin/hotels/:id`,
- * `hotels.hotel_profiles_client_fields.update`). Refreshes the catalogue and the hotel's detail.
+ * `hotels.hotel_profiles_client_fields.update`). Refreshes the catalogue and the hotel's detail. A body
+ * that names the internal rating or notes also needs `hotels.hotel_internal_rating_notes.update`.
  */
 export function useUpdateHotel() {
   const api = useApiClient();
   const refresh = useRefreshStaffHotels();
   return useMutation<
-    HotelStaffDetailView,
+    HotelStaffDetail,
     Error,
     { readonly hotelId: string; readonly body: HotelUpdateRequest }
   >({
@@ -176,7 +181,7 @@ export function useUpdateHotel() {
       api.request(`/hotels-admin/hotels/${hotelId}`, {
         method: "PATCH",
         body,
-        schema: hotelStaffDetailView,
+        schema: hotelStaffDetail,
       }),
     onSuccess: (hotel) => refresh(hotel.id),
   });

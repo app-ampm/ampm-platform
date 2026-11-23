@@ -7,6 +7,7 @@ import {
   failure,
   HOTEL_ID,
   hotelContactViewFixture,
+  hotelProfileDetailFixture,
   hotelStaffDetailViewFixture,
   ok,
   renderWithApi,
@@ -78,6 +79,17 @@ describe("HotelDetailsScreen", () => {
     expect(screen.getByText("Primary")).toBeOnTheScreen();
     // The RESTRICTED-CONTACT marker persists once contacts are populated, not only in the empty state.
     expect(screen.getByText("Never shown to clients")).toBeOnTheScreen();
+  });
+
+  it("leaves the contacts out, not empty, for a reader without the contacts grant (D-171)", async () => {
+    const detail = hotelProfileDetailFixture({ rooms: [roomCategoryViewFixture()] });
+    const fetch = routedFetch({ [`/hotels-admin/hotels/${HOTEL_ID}`]: () => ok(detail) });
+    await renderWithApi(<HotelDetailsScreen hotelId={HOTEL_ID} />, fetch);
+    expect(await screen.findByText("Deluxe Lake View")).toBeOnTheScreen();
+    expect(screen.getByText("Venues")).toBeOnTheScreen();
+    expect(screen.queryByTestId("hotel-contacts-column")).toBeNull();
+    expect(screen.queryByText("Hotel contacts")).toBeNull();
+    expect(screen.queryByText(/No contacts yet/)).toBeNull();
   });
 
   it("adds a room from the rooms section", async () => {
