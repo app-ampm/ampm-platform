@@ -31,12 +31,19 @@ describe("leadConvertRequest", () => {
   it("takes the couple's names, each capped so the couple's name fits the account name", () => {
     const parsed = leadConvertRequest.safeParse({
       brideName: " Priya ",
+      brideFatherName: "Rahul Sharma",
       groomName: "Arjun",
+      groomFatherName: " Vikram Mehta ",
       primaryContact: { email: "a@example.com" },
     });
     expect(parsed.success).toBe(true);
     if (!parsed.success) return;
-    expect(parsed.data).toMatchObject({ brideName: "Priya", groomName: "Arjun" });
+    expect(parsed.data).toMatchObject({
+      brideName: "Priya",
+      brideFatherName: "Rahul Sharma",
+      groomName: "Arjun",
+      groomFatherName: "Vikram Mehta",
+    });
     const tooLong = { brideName: "a".repeat(121), primaryContact: { email: "a@example.com" } };
     expect(leadConvertRequest.safeParse(tooLong).success).toBe(false);
   });

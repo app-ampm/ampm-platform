@@ -1,4 +1,10 @@
-import type { LeadActivityView, LeadFunnelView, LeadView, MeResponse } from "@ampm/core";
+import type {
+  LeadActivityView,
+  LeadConvertResponse,
+  LeadFunnelView,
+  LeadView,
+  MeResponse,
+} from "@ampm/core";
 
 import { failure, ok, TEST_API_BASE } from "../../test/api";
 
@@ -106,6 +112,41 @@ export function activityFixture(overrides: Partial<LeadActivityView> = {}): Lead
     createdAt: RECEIVED_AT,
     ...overrides,
   };
+}
+
+export const CONVERTED_AT = "2026-11-03T10:00:00Z";
+
+/** What `POST /crm/leads/:id/convert` returns: the account, its primary contact, the invite flag. */
+export function convertResultFixture(inviteQueued: boolean): LeadConvertResponse {
+  const account = {
+    id: ACCOUNT_ID,
+    name: "Rohit Malhotra",
+    coupleNames: null,
+    brideName: null,
+    brideFatherName: null,
+    groomName: null,
+    groomFatherName: null,
+    preferredLocations: null,
+    status: "prospect" as const,
+    isDemo: false,
+    leadId: LEAD_ID,
+    primaryContactUserId: null,
+    internalNotes: null,
+    createdAt: CONVERTED_AT,
+    updatedAt: CONVERTED_AT,
+  };
+  const primaryContact = {
+    id: "018f0000-0000-7000-8000-0000000002cc",
+    accountId: ACCOUNT_ID,
+    name: "Rohit Malhotra",
+    relation: "self",
+    phone: null,
+    email: "rohit@example.com",
+    isDecisionMaker: true,
+    userId: null,
+    createdAt: CONVERTED_AT,
+  };
+  return { account, primaryContact, inviteQueued };
 }
 
 export type FetchFn = typeof fetch;

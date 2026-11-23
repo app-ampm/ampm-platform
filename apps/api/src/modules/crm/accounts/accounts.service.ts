@@ -25,13 +25,19 @@ import {
 } from "./accounts.repository.js";
 import { toAccountContactView, toAccountDetailView, toAccountView } from "./accounts.view.js";
 
-interface ConvertPlan {
+/** The couple a convert names, each a name or null (an empty box is no name). */
+interface ConvertCouple {
+  readonly brideName: string | null;
+  readonly brideFatherName: string | null;
+  readonly groomName: string | null;
+  readonly groomFatherName: string | null;
+}
+
+interface ConvertPlan extends ConvertCouple {
   readonly leadId: string;
   readonly previousStatus: LeadStatus;
   readonly accountName: string;
   readonly coupleNames: string | null;
-  readonly brideName: string | null;
-  readonly groomName: string | null;
   readonly preferredLocations: string | null;
   readonly contact: {
     readonly name: string;
@@ -197,7 +203,9 @@ function toAccountData(plan: ConvertPlan, userId: string): AccountWriteData {
     name: plan.accountName,
     coupleNames: plan.coupleNames,
     brideName: plan.brideName,
+    brideFatherName: plan.brideFatherName,
     groomName: plan.groomName,
+    groomFatherName: plan.groomFatherName,
     preferredLocations: plan.preferredLocations,
     status: "prospect",
     isDemo: false,
@@ -224,6 +232,15 @@ function toContactData(
   };
 }
 
+function convertCoupleOf(request: LeadConvertRequest): ConvertCouple {
+  return {
+    brideName: request.brideName || null,
+    brideFatherName: request.brideFatherName || null,
+    groomName: request.groomName || null,
+    groomFatherName: request.groomFatherName || null,
+  };
+}
+
 /**
  * Build the convert plan: every field defaults from the lead, so the request may carry only the email.
  * A bride and groom given together name the account after the couple (D-158).
@@ -234,16 +251,14 @@ function buildConvertPlan(
   request: LeadConvertRequest,
   actorId: string,
 ): ConvertPlan {
-  const brideName = request.brideName || null;
-  const groomName = request.groomName || null;
-  const couple = coupleTitle({ brideName, groomName });
+  const couple = convertCoupleOf(request);
+  const title = coupleTitle(couple);
   return {
     leadId,
     previousStatus: lead.status,
-    accountName: couple ?? request.accountName ?? lead.name,
-    coupleNames: couple ?? request.coupleNames ?? null,
-    brideName,
-    groomName,
+    accountName: title ?? request.accountName ?? lead.name,
+    coupleNames: title ?? request.coupleNames ?? null,
+    ...couple,
     preferredLocations: request.preferredLocations ?? null,
     contact: {
       name: request.primaryContact.name ?? lead.name,

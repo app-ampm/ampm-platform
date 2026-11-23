@@ -46,7 +46,9 @@ export const leadConvertRequest = z.object({
    * ("Priya & Arjun") whatever `accountName` and `coupleNames` say, as an edit in the hub would (D-158).
    */
   brideName: partnerName.optional(),
+  brideFatherName: fatherName.optional(),
   groomName: partnerName.optional(),
+  groomFatherName: fatherName.optional(),
   preferredLocations: preferredLocations.optional(),
   primaryContact: z.object({
     name: contactName.optional(),

@@ -47,7 +47,9 @@ export interface AccountWriteData {
   readonly name: string;
   readonly coupleNames: string | null;
   readonly brideName: string | null;
+  readonly brideFatherName: string | null;
   readonly groomName: string | null;
+  readonly groomFatherName: string | null;
   readonly preferredLocations: string | null;
   readonly status: ClientAccountStatus;
   readonly isDemo: boolean;
