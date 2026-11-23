@@ -1,7 +1,8 @@
 /**
  * Synthetic seed (data.md) for development, the e2e tests and the test stack: on top of the reference
  * data (seed-reference.ts), a Super Admin, a project manager, a creative and a client representative
- * who are members of one project, plus demo hotels, leads and the consultancy demo. Example-domain
+ * who are members of one project, plus demo hotels, the starter catalogue of real hotels (D-159, its
+ * contacts placeholders), leads and the consultancy demo. Example-domain
  * emails, reserved phone range, local identity subjects. Never real people. Every write is an upsert,
  * so the seed runs again without duplicating anything. It refuses to run in production (D-141), where
  * prisma/bootstrap.ts seeds the reference data and invites the first Super Admin instead.
@@ -11,6 +12,7 @@ import { GRANTABLE_CAPABILITIES, type StaffRole } from "@ampm/policy";
 
 import { PrismaClient } from "../src/generated/prisma/client.js";
 import { upsertDemoAccount, upsertDemoUser } from "../src/modules/demo/demo-baseline.js";
+import { seedCatalogue } from "./seed-catalogue.js";
 import { seedConsultancyDemo } from "./seed-consultancy.js";
 import { seedHotels } from "./seed-hotels.js";
 import { seedHotelSubresources } from "./seed-hotel-subresources.js";
@@ -198,10 +200,13 @@ async function main(): Promise<void> {
   await seedHotels(prisma);
   // Venues, rooms and a verified client-visible rate card per hotel, so discovery renders with real figures.
   await seedHotelSubresources(prisma);
+  // The starter catalogue of real hotels (D-159), create-only, so development matches production.
+  await seedCatalogue(prisma);
   // Depends on the discovery plan, the negotiation service type and the Lake Pavilion hotel seeded above.
   await seedConsultancyDemo(prisma, clientUserId);
   console.log(
-    "seeded roles, permissions, eight synthetic accounts, four synthetic hotels, Rhea's hotel " +
+    "seeded roles, permissions, eight synthetic accounts, four synthetic hotels, the five-hotel " +
+      "starter catalogue, Rhea's hotel " +
       `consultancy demo, the baseline configuration and ${GRANTABLE_CAPABILITIES.length} grantable capabilities`,
   );
 }
