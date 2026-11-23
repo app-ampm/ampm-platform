@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { formatDay, formatDayRange, type DateFormatOptions } from "./dates";
+import { formatDay, formatDayRange, formatMoment, type DateFormatOptions } from "./dates";
 
 const DATA: DateFormatOptions = { style: "data" };
 const WRITTEN: DateFormatOptions = { day: "written" };
@@ -127,5 +127,16 @@ describe("time zones", () => {
         "31 Jan – 2 Feb 2027",
       );
     }
+  });
+});
+
+describe("formatMoment", () => {
+  it("writes the device's day and its time on the 24-hour clock", () => {
+    expect(formatMoment(new Date(2026, 10, 5, 18, 2).toISOString())).toBe("5 NOV 2026 · 18:02");
+    expect(formatMoment(new Date(2027, 0, 9, 7, 5).toISOString())).toBe("9 JAN 2027 · 07:05");
+  });
+
+  it("returns what it cannot read as given", () => {
+    expect(formatMoment("not-a-date")).toBe("not-a-date");
   });
 });

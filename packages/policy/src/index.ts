@@ -4,15 +4,6 @@
  * generated authorisation suite read it.
  */
 
-/**
- * The version of the rules this build carries. It changes when what a grant means changes (a new
- * condition kind, a changed engine rule), so logs and seeds can say which rules applied.
- *
- * @example
- * logger.info("policy.loaded", { version: POLICY_VERSION });
- */
-export const POLICY_VERSION = "0.4.0";
-
 export {
   ACTION_LETTERS,
   OTHER_PRINCIPALS,

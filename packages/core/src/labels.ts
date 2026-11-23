@@ -1,4 +1,4 @@
-import type { HotelRateItemType } from "./schemas/hotel-rates.js";
+import { hotelRateItemType, type HotelRateItemType } from "./schemas/hotel-rates.js";
 
 /*
  * Canonical display labels for enums shared across features (code.md reuse), framework-free so each app
@@ -19,17 +19,7 @@ const RATE_ITEM_TYPE_LABEL: Record<HotelRateItemType, string> = {
 };
 
 /** The rate-item types in their canonical order, for a picker. */
-export const RATE_ITEM_TYPES: readonly HotelRateItemType[] = [
-  "room_rate",
-  "venue_rental",
-  "per_plate_veg",
-  "per_plate_non_veg",
-  "wedding_package",
-  "beverage_package",
-  "service_charge",
-  "tax",
-  "other",
-];
+export const RATE_ITEM_TYPES: readonly HotelRateItemType[] = hotelRateItemType.options;
 
 /** A rate-item type as staff read it ("Room rate"). */
 export function rateItemTypeLabel(type: HotelRateItemType): string {

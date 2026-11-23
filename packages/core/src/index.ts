@@ -1,7 +1,6 @@
-/**
+/*
  * @ampm/core: pure TypeScript shared by the apps and the API; no React, no I/O (code.md).
  */
-export const CORE_VERSION = "0.2.0";
 
 export { clientAmount, formatAmount, internalAmount } from "./money";
 export type { ClientAmount, Currency, InternalAmount } from "./money";
@@ -16,7 +15,7 @@ export { RATE_ITEM_TYPES, rateItemTypeLabel } from "./labels";
 export { COUPLE_PERSON_NAME_MAX, coupleSubtitle, coupleTitle } from "./couple";
 export type { CoupleNames } from "./couple";
 
-export { formatDay, formatDayRange } from "./dates";
+export { formatDay, formatDayRange, formatMoment } from "./dates";
 export type { DateFormatOptions, DateStyle, DayReading } from "./dates";
 
 export { AppError, ERROR_CODES, errors, isApiFailure, isAppError } from "./errors";

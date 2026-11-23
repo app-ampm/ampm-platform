@@ -114,6 +114,21 @@ export function formatDay(iso: string, options: DateFormatOptions = {}): string 
   return day ? fullDay(day, options.style ?? "text") : iso;
 }
 
+const twoDigits = (value: number): string => String(value).padStart(2, "0");
+
+/**
+ * A moment in the device's time, the day as data and the time on the 24-hour clock: "5 NOV 2026 ·
+ * 18:02". Anything that is not a date-time comes back as given.
+ *
+ *   formatMoment(event.occurredAt) // "5 NOV 2026 · 18:02"
+ */
+export function formatMoment(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso;
+  const time = `${twoDigits(date.getHours())}:${twoDigits(date.getMinutes())}`;
+  return `${formatDay(iso, { style: "data" })} · ${time}`;
+}
+
 /**
  * A span of days with nothing repeated, joined by an en dash: "12–14 Feb 2027", "28 Feb – 2 Mar
  * 2027", "30 Dec 2026 – 2 Jan 2027", one day when both ends fall on it ("12 Feb 2027"), and the
