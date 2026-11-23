@@ -92,7 +92,7 @@ export class HotelReferencesRepository {
         guestCount: request.guestCount ?? null,
         descriptionClient: request.descriptionClient ?? null,
         clientVisible: request.clientVisible,
-        consentDocumentId: request.consentDocumentId ?? null,
+        consentDocumentId: null, // consent arrives later, by upload (`attachConsent`)
         createdBy: actorId,
         updatedBy: actorId,
       },
@@ -119,6 +119,25 @@ export class HotelReferencesRepository {
       },
       select: REFERENCE_SELECT,
     });
+  }
+
+  /**
+   * Point a reference at its uploaded consent document. Compare-and-swap on the current consent, so two
+   * concurrent uploads cannot both win (the loser's transaction rolls back and its bytes are removed) and
+   * an upload cannot land on a reference a delete just removed. Returns the number of rows changed.
+   */
+  async attachConsent(
+    referenceId: string,
+    expectedConsentId: string | null,
+    documentId: string,
+    actorId: string,
+    tx: Prisma.TransactionClient,
+  ): Promise<number> {
+    const result = await tx.hotelWeddingReference.updateMany({
+      where: { id: referenceId, consentDocumentId: expectedConsentId, deletedAt: null },
+      data: { consentDocumentId: documentId, updatedBy: actorId },
+    });
+    return result.count;
   }
 
   /** Soft-delete if present; idempotent (removing an already-removed reference is a no-op). */

@@ -43,6 +43,11 @@ describe("weddingReferenceCreateRequest", () => {
       false,
     );
   });
+
+  it("takes no consent document id: consent arrives only by upload", () => {
+    const withConsent = { eventYear: 2025, consentDocumentId: DOC };
+    expect(weddingReferenceCreateRequest.safeParse(withConsent).success).toBe(false);
+  });
 });
 
 describe("weddingReferenceUpdateRequest", () => {
@@ -51,8 +56,9 @@ describe("weddingReferenceUpdateRequest", () => {
     expect(weddingReferenceUpdateRequest.safeParse({ clientVisible: true }).success).toBe(true);
   });
 
-  it("lets a patch clear the consent document explicitly (nullable)", () => {
+  it("lets a patch clear the consent document, but never point it at a supplied id", () => {
     expect(weddingReferenceUpdateRequest.safeParse({ consentDocumentId: null }).success).toBe(true);
+    expect(weddingReferenceUpdateRequest.safeParse({ consentDocumentId: DOC }).success).toBe(false);
   });
 });
 

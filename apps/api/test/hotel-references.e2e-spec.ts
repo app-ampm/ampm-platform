@@ -1,3 +1,7 @@
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -6,14 +10,16 @@ import { PrismaService } from "../src/db/prisma.service.js";
 import { startApi } from "./start-api.js";
 
 const PREFIX = "e2e-refs-";
-const CONSENT_DOC = "0192f1a0-0000-7000-8000-00000000d0c1"; // a plain Uuid; consent_document_id has no FK
+// A plain Uuid for the DB CHECK test only: the API takes consent by upload, never as a supplied id.
+const CONSENT_DOC = "0192f1a0-0000-7000-8000-00000000d0c1";
+const CONSENT_PDF = Buffer.from("%PDF-1.4\n% E2E couple's consent\n%%EOF\n");
 const MISSING = "0192f1a0-0000-7000-8000-0000000000ee"; // a well-formed id that matches no reference
 
 /**
  * Previous-wedding references end to end (Module C, feature 9.3; GP-20, AC-24.3). A Super Admin creates a
  * reference, lists and reads it (the staff view carries the internal project/consent keys); the GP-20
  * publishing gate refuses client visibility without recorded consent (409) on both create and update, and
- * allows it once a consent document is on file — writing an audit event for the sharing change. A Sales
+ * allows it once a consent document is uploaded — writing an audit event for the sharing change. A Sales
  * Manager may read references but not create one (403): the matrix split (read SA/SM/HT/PM; CRUD SA/HT).
  */
 describe("Hotel wedding references (e2e)", () => {
@@ -23,6 +29,7 @@ describe("Hotel wedding references (e2e)", () => {
   let sa: string;
   let sm: string;
   let hotelId: string;
+  let storageDir: string;
 
   async function removeFixtures(): Promise<void> {
     const hotels = await prisma.hotel.findMany({
@@ -35,9 +42,13 @@ describe("Hotel wedding references (e2e)", () => {
         where: { hotelId: { in: ids } },
         select: { id: true },
       });
+      const refIds = refs.map((r) => r.id);
       await prisma.auditEvent.deleteMany({
-        where: { entityType: "hotel_wedding_reference", entityId: { in: refs.map((r) => r.id) } },
+        where: { entityType: "hotel_wedding_reference", entityId: { in: refIds } },
       });
+      const documentWhere = { ownerType: "hotel_wedding_reference", ownerId: { in: refIds } };
+      await prisma.documentAccessLink.deleteMany({ where: { document: documentWhere } });
+      await prisma.document.deleteMany({ where: documentWhere });
       await prisma.hotelWeddingReference.deleteMany({ where: { hotelId: { in: ids } } });
       await prisma.hotel.deleteMany({ where: { id: { in: ids } } });
     }
@@ -47,7 +58,35 @@ describe("Hotel wedding references (e2e)", () => {
   const http = () => request(app.getHttpServer());
   const base = () => `/hotels-admin/hotels/${hotelId}/wedding-references`;
 
+  /** Upload the couple's consent to a reference; returns the consent document's id. */
+  async function attachConsent(refId: string): Promise<string> {
+    const attached = await http()
+      .post(`${base()}/${refId}/consent`)
+      .set("Authorization", sa)
+      .set("content-type", "application/octet-stream")
+      .send(CONSENT_PDF)
+      .expect(200);
+    return attached.body.data.consentDocumentId as string;
+  }
+
+  /** A new reference with consent on file, set client-visible; returns its id and consent id. */
+  async function publishedReference(
+    eventYear: number,
+  ): Promise<{ refId: string; consent: string }> {
+    const ref = await http().post(base()).set("Authorization", sa).send({ eventYear }).expect(201);
+    const refId = ref.body.data.id as string;
+    const consent = await attachConsent(refId);
+    await http()
+      .patch(`${base()}/${refId}`)
+      .set("Authorization", sa)
+      .send({ clientVisible: true })
+      .expect(200);
+    return { refId, consent };
+  }
+
   beforeAll(async () => {
+    storageDir = await mkdtemp(join(tmpdir(), "ampm-refs-"));
+    process.env["STORAGE_LOCAL_DIR"] = storageDir;
     ({ app, mint } = await startApi());
     prisma = app.get(PrismaService);
     await removeFixtures();
@@ -69,6 +108,7 @@ describe("Hotel wedding references (e2e)", () => {
   afterAll(async () => {
     await removeFixtures();
     await app.close();
+    await rm(storageDir, { recursive: true, force: true });
   });
 
   it("creates, lists and reads a reference (the staff view carries the internal keys)", async () => {
@@ -117,32 +157,25 @@ describe("Hotel wedding references (e2e)", () => {
       .send({ clientVisible: true })
       .expect(409);
 
-    // Provide consent and publish: allowed, and the sharing change is audited (AC-21).
+    // Upload consent, then publish: allowed, and the sharing change is audited (AC-21).
+    const consent = await attachConsent(refId);
     const published = await http()
       .patch(`${base()}/${refId}`)
       .set("Authorization", sa)
-      .send({ clientVisible: true, consentDocumentId: CONSENT_DOC })
+      .send({ clientVisible: true })
       .expect(200);
-    expect(published.body.data).toMatchObject({
-      clientVisible: true,
-      consentDocumentId: CONSENT_DOC,
-    });
+    expect(published.body.data).toMatchObject({ clientVisible: true, consentDocumentId: consent });
     // AC-21: the sharing change is audited with its before/after governance image, not just a bare row.
     const audit = await prisma.auditEvent.findFirstOrThrow({
       where: { entityType: "hotel_wedding_reference", entityId: refId, action: "update" },
       orderBy: { occurredAt: "desc" },
     });
     expect(audit.beforeJson).toMatchObject({ clientVisible: false });
-    expect(audit.afterJson).toMatchObject({ clientVisible: true, consentDocumentId: CONSENT_DOC });
+    expect(audit.afterJson).toMatchObject({ clientVisible: true, consentDocumentId: consent });
   });
 
   it("refuses clearing consent while a reference stays client-visible (GP-20 → 409)", async () => {
-    const ref = await http()
-      .post(base())
-      .set("Authorization", sa)
-      .send({ eventYear: 2024, clientVisible: true, consentDocumentId: CONSENT_DOC })
-      .expect(201);
-    const refId = ref.body.data.id;
+    const { refId, consent } = await publishedReference(2024);
 
     // Clearing consent on a still-visible reference is exactly the state GP-20 forbids → refused.
     await http()
@@ -153,7 +186,7 @@ describe("Hotel wedding references (e2e)", () => {
 
     // The refusal left the row untouched: still visible, consent still on file.
     const read = await http().get(`${base()}/${refId}`).set("Authorization", sa).expect(200);
-    expect(read.body.data).toMatchObject({ clientVisible: true, consentDocumentId: CONSENT_DOC });
+    expect(read.body.data).toMatchObject({ clientVisible: true, consentDocumentId: consent });
 
     // Unpublishing AND clearing consent together is allowed (the resulting state is not visible).
     await http()
@@ -164,12 +197,7 @@ describe("Hotel wedding references (e2e)", () => {
   });
 
   it("soft-deletes a reference (gone from list and read) and audits the delete with a before-image", async () => {
-    const ref = await http()
-      .post(base())
-      .set("Authorization", sa)
-      .send({ eventYear: 2020, clientVisible: true, consentDocumentId: CONSENT_DOC })
-      .expect(201);
-    const refId = ref.body.data.id;
+    const { refId, consent } = await publishedReference(2020);
 
     const removed = await http().delete(`${base()}/${refId}`).set("Authorization", sa).expect(200);
     expect(removed.body.data.id).toBe(refId);
@@ -183,16 +211,27 @@ describe("Hotel wedding references (e2e)", () => {
     const audit = await prisma.auditEvent.findFirstOrThrow({
       where: { entityType: "hotel_wedding_reference", entityId: refId, action: "delete" },
     });
-    expect(audit.beforeJson).toMatchObject({ clientVisible: true, consentDocumentId: CONSENT_DOC });
+    expect(audit.beforeJson).toMatchObject({ clientVisible: true, consentDocumentId: consent });
     expect(audit.afterJson).toMatchObject({ deleted: true });
   });
 
-  it("creates a client-visible reference in one step when consent is supplied", async () => {
+  it("refuses a client-supplied consent id: consent arrives only by upload", async () => {
+    // A made-up id would otherwise satisfy GP-20 without any consent on file (api.md: never trust it).
     await http()
       .post(base())
       .set("Authorization", sa)
       .send({ eventYear: 2022, clientVisible: true, consentDocumentId: CONSENT_DOC })
+      .expect(400);
+    const ref = await http()
+      .post(base())
+      .set("Authorization", sa)
+      .send({ eventYear: 2022 })
       .expect(201);
+    await http()
+      .patch(`${base()}/${ref.body.data.id}`)
+      .set("Authorization", sa)
+      .send({ clientVisible: true, consentDocumentId: CONSENT_DOC })
+      .expect(400);
   });
 
   it("lets a Sales Manager read references but not create, update or delete one (matrix split)", async () => {
