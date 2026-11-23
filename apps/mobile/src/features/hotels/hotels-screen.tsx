@@ -3,7 +3,16 @@ import { useState, type ReactNode } from "react";
 
 import { useHotels, useMe } from "@ampm/api-client";
 import type { HotelDestinationView } from "@ampm/core";
-import { Button, EmptyState, Input, QueryErrorState, Row, Screen, ScreenHeader } from "@ampm/ui";
+import {
+  Button,
+  EmptyState,
+  Input,
+  QueryErrorState,
+  Row,
+  Screen,
+  ScreenHeader,
+  useDebouncedValue,
+} from "@ampm/ui";
 
 import { useGoToSignIn } from "@/navigation/sign-in";
 
@@ -93,13 +102,18 @@ function HotelsBody({ me, destination, onDestination }: HotelsBodyProps) {
   return <HotelSearch destination={destination} onDestination={onDestination} />;
 }
 
-/** The search itself, mounted only for an account that holds hotel discovery. */
+/**
+ * The search itself, mounted only for an account that holds hotel discovery. The field shows every
+ * keystroke; the query waits for the person to pause, so a typed name is one request, not one per
+ * letter (`keepPreviousData` holds the last results meanwhile).
+ */
 function HotelSearch({ destination, onDestination }: SearchProps) {
   const router = useRouter();
   const [query, setQuery] = useState("");
+  const settledQuery = useDebouncedValue(query.trim());
   const [filters, setFilters] = useState<HotelFilters>({});
   const hotels = useHotels({
-    q: query.trim() || undefined,
+    q: settledQuery || undefined,
     destinationId: destination?.id,
     ...filters,
   });

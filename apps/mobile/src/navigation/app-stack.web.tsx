@@ -2,6 +2,7 @@ import { Stack, ThemeProvider } from "expo-router";
 
 import { AppChrome } from "./app-chrome";
 import { navigationTheme } from "./navigation-theme";
+import { ScreenCrash } from "./screen-crash";
 
 /**
  * The navigator's own background stays transparent on the web, so nothing it draws can show through
@@ -15,7 +16,8 @@ const WEB_THEME = navigationTheme("dark", "transparent");
  * container and the navigator's background stay transparent and the page background comes from
  * global.css through the tokens' CSS variables, which switch with the `dark` class without a
  * hydration mismatch. The chrome around the stack (staff rail, client top navigation) is drawn with
- * classes only, after hydration.
+ * classes only, after hydration. A screen that throws while drawing shows `ScreenCrash` in its place,
+ * as on native (D-160).
  */
 export function AppStack() {
   return (
@@ -23,6 +25,7 @@ export function AppStack() {
       <AppChrome>
         <Stack
           screenOptions={{ headerShown: false, contentStyle: { backgroundColor: "transparent" } }}
+          unstable_screenErrorBoundary={ScreenCrash}
         />
       </AppChrome>
     </ThemeProvider>
