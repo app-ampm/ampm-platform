@@ -5,6 +5,8 @@ Default run: copy docs/ (without tools and site) and reference_docs/ into vault/
 refresh the session journal when AMPM_SESSION_JSON is set (checkpoint.sh --hook exports the Claude Code hook JSON),
 append a line to today's sync log when the project commit changed, then commit and push the vault if anything changed.
 --vault-only: skip the copy and rebuild; just commit and push edits made inside Obsidian (used by the timer).
+Every commit first runs the platform repo's secret scan over the staged vault (D-167): a flagged value leaves the vault
+uncommitted and unpushed, and prints "vault: blocked" with each finding, which checkpoint.sh reports to the session.
 Safe to run anywhere, including from a git hook of the project repository.
 """
 from __future__ import annotations
@@ -17,6 +19,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import scan_secrets  # noqa: E402
 import session_journal  # noqa: E402
 
 PROJECT = Path(__file__).resolve().parents[2]
@@ -56,6 +59,8 @@ def append_log(line):
     p = LOG_DIR / f"{today} Sync log.md"
     if not p.exists():
         p.write_text(f"---\ntype: log\ndate: {today}\ntags: [ampm, log, sync]\n---\n# Sync log {today}\n\n", encoding="utf8")
+    elif p.read_text(encoding="utf8").rstrip().endswith(line):
+        return  # an earlier run logged this sync, then the secret scan held its commit back
     with p.open("a", encoding="utf8") as fh:
         fh.write(f"- {datetime.datetime.now().strftime('%H:%M')} {line}\n")
 
@@ -64,6 +69,21 @@ def vault_dirty():
     if not (VAULT / ".git").exists():
         return True
     return bool(git(["status", "--porcelain"], VAULT).stdout.strip())
+
+
+def secret_findings(allowlist=None):
+    """The credential-shaped values in the files staged in the vault, one printable line each; empty when clean.
+
+    The vault quotes the user's messages and Claude's notes, so it gets the platform repo's secret scan before
+    every commit (D-167). A value the allowlist confirms as a non-secret under any path passes here too: the
+    vault mirrors docs/ and repeats values such as the public Turnstile site key. A value only the vault holds is
+    allowlisted as `vault/<path>:<fingerprint>` in docs/tools/scan_secrets_allowlist.txt.
+    """
+    entries = scan_secrets.load_allowlist() if allowlist is None else allowlist
+    safe = {entry.rsplit(":", 1)[-1] for entry in entries}
+    staged = [p for p in git(["ls-files", "-z"], VAULT).stdout.split("\0") if p]
+    forbidden, flagged, _ = scan_secrets.scan_paths(VAULT, staged, lambda _path, fingerprint: fingerprint in safe)
+    return forbidden + [f"  {f.path}:{f.line}  [vault/{f.path}:{f.fingerprint}]  ({f.length}-char value)" for f in flagged]
 
 
 def commit_vault(message, trailer):
@@ -77,7 +97,15 @@ def commit_vault(message, trailer):
     if not git(["status", "--porcelain"], VAULT).stdout.strip():
         print("vault: nothing to commit")
         return True
-    args = ["commit", "-q", "-m", message] + (["-m", TRAILER] if trailer else [])
+    flagged = secret_findings()
+    if flagged:
+        git(["reset", "-q"], VAULT)  # unstaged again: nothing flagged is committed, and the next run scans afresh
+        print(f"vault: blocked, the secret scan flagged {len(flagged)} value(s); nothing committed or pushed:")
+        print("\n".join(flagged))
+        print("vault: mask or remove each value, or allowlist a confirmed non-secret by its [fingerprint] in "
+              "docs/tools/scan_secrets_allowlist.txt")
+        return False
+    args =["commit", "-q", "-m", message] + (["-m", TRAILER] if trailer else [])
     r = git(args, VAULT)
     if r.returncode != 0:
         print("vault: commit failed:", r.stderr.strip()[:300])

@@ -13,7 +13,8 @@ mask in a session transcript also fails here — one set of rules, no drift. On 
 
 Only the redactor + its tests, this scanner, and the generated graph are fully exempt (they carry sample
 secrets by design). Confirmed synthetic/test values are allowlisted by the sha1 of their PLAINTEXT in
-scan_secrets_allowlist.txt. Usage: python3 docs/tools/scan_secrets.py [--self-test].
+scan_secrets_allowlist.txt. vault_sync.py runs the same checks (scan_paths) over the Obsidian vault before
+every vault commit (D-167). Usage: python3 docs/tools/scan_secrets.py [--self-test].
 """
 
 from __future__ import annotations
@@ -22,7 +23,9 @@ import hashlib
 import re
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
+from typing import Callable, NamedTuple
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
@@ -47,9 +50,10 @@ PRIVATE_KEY = re.compile(
 )
 
 
-def _load_allowlist() -> set[str]:
+def load_allowlist() -> set[str]:
     """Fingerprints (`path:sha1(plaintext)[:12]`) of confirmed non-secrets — synthetic test/dev values the
-    detector flags but which are safe. One per line in scan_secrets_allowlist.txt; `#` starts a comment."""
+    detector flags but which are safe. One per line in scan_secrets_allowlist.txt; `#` starts a comment.
+    A value only the vault's notes hold is listed under `vault/<path>` (vault_sync.py, D-167)."""
     if not ALLOWLIST_FILE.exists():
         return set()
     out: set[str] = set()
@@ -104,19 +108,32 @@ def _is_placeholder(value: bytes) -> bool:
     return b"change-me" in v or (len(v) >= 8 and v.strip(b"x") == b"")
 
 
-def scan() -> int:
-    tracked = _tracked_files()
-    allowlist = _load_allowlist()
+class Finding(NamedTuple):
+    """A flagged value: its file and line, and the sha1 of its plaintext (first 12 hex digits), never the value."""
+
+    path: str
+    line: int
+    fingerprint: str
+    length: int
+
+
+def scan_paths(
+    root: Path, paths: list[str], is_allowed: Callable[[str, str], bool]
+) -> tuple[list[str], list[Finding], list[str]]:
+    """Scans the files at `paths` (relative to `root`). Returns the files refused outright (a printable line
+    each, with the reason), the flagged values `is_allowed(path, fingerprint)` does not accept, and the files
+    too large to scan. scan() runs it over the tracked tree, vault_sync.py over the vault before every commit.
+
+    _, flagged, _ = scan_paths(ROOT, ["docs/README.md"], lambda path, fingerprint: False)
+    """
     forbidden: list[str] = []
-    findings: list[str] = []
+    flagged: list[Finding] = []
     skipped_large: list[str] = []
-    for path in tracked:
-        if is_corpus_exempt(path):
-            continue
+    for path in paths:
         if is_forbidden_file(path):
             forbidden.append(f"  {path}  (plaintext-secret file by name/location)")
             continue
-        abspath = ROOT / path
+        abspath = root / path
         try:
             if abspath.stat().st_size > MAX_BYTES:
                 skipped_large.append(path)
@@ -129,8 +146,7 @@ def scan() -> int:
         if PRIVATE_KEY.search(data):
             forbidden.append(f"  {path}  (contains a private key — age or PEM)")
             continue
-        name = _basename(path)
-        if name.endswith(".enc.yaml"):
+        if _basename(path).endswith(".enc.yaml"):
             if not _is_sops_ciphertext(data):
                 forbidden.append(f"  {path}  (named .enc.yaml but not sops-encrypted — plaintext?)")
             continue  # real sops ciphertext is exempt from the token scan
@@ -139,11 +155,22 @@ def scan() -> int:
             plaintext = data[start : start + len(replacement)]
             if _is_placeholder(plaintext):
                 continue  # a template stand-in (change-me…/xxxx), not a secret
-            fingerprint = f"{path}:{hashlib.sha1(plaintext).hexdigest()[:12]}"
-            if fingerprint in allowlist:
-                continue
-            line = data.count(b"\n", 0, start) + 1
-            findings.append(f"  {path}:{line}  [{fingerprint}]  ({len(plaintext)}-char value)")
+            fingerprint = hashlib.sha1(plaintext).hexdigest()[:12]
+            if not is_allowed(path, fingerprint):
+                line = data.count(b"\n", 0, start) + 1
+                flagged.append(Finding(path, line, fingerprint, len(plaintext)))
+    return forbidden, flagged, skipped_large
+
+
+def scan() -> int:
+    tracked = _tracked_files()
+    allowlist = load_allowlist()
+    forbidden, flagged, skipped_large = scan_paths(
+        ROOT,
+        [p for p in tracked if not is_corpus_exempt(p)],
+        lambda path, fingerprint: f"{path}:{fingerprint}" in allowlist,
+    )
+    findings = [f"  {f.path}:{f.line}  [{f.path}:{f.fingerprint}]  ({f.length}-char value)" for f in flagged]
 
     if skipped_large:
         print(f"scan_secrets: WARNING — {len(skipped_large)} file(s) over {MAX_BYTES} bytes not scanned:", file=sys.stderr)
@@ -186,6 +213,12 @@ def self_test() -> int:
     assert not _is_sops_ciphertext(b"POSTGRES_PASSWORD: realplaintextvalue\n")
     assert _is_placeholder(b"change-me-via-sops") and _is_placeholder(b"xxxxxxxxxx")
     assert not _is_placeholder(b"rzp_live_A1b2C3d4E5f6G7h8")
+    with tempfile.TemporaryDirectory() as tmp:  # scan_paths, as vault_sync.py runs it over the vault
+        Path(tmp, "note.md").write_bytes(b"A note.\nRAZORPAY_KEY_ID=rzp_live_A1b2C3d4E5f6G7h8\n")
+        _, flagged, _ = scan_paths(Path(tmp), ["note.md"], lambda path, fingerprint: False)
+        assert flagged and {f.line for f in flagged} == {2}, "scan_paths must flag the key on its line"
+        accepted = {f.fingerprint for f in flagged}
+        assert not scan_paths(Path(tmp), ["note.md"], lambda path, fp: fp in accepted)[1], "accepted values pass"
     print("scan_secrets self-test: ok")
     return 0
 
