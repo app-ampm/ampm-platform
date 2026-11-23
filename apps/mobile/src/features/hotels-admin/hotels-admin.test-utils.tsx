@@ -9,6 +9,7 @@ import type {
   RoomCategoryView,
   VenueView,
   VerificationView,
+  WeddingReferenceView,
 } from "@ampm/core";
 
 import { failure, TEST_API_BASE } from "../../test/api";
@@ -28,6 +29,8 @@ export const CONTACT_ID = "018f0000-0000-7000-8000-0000000c0f01";
 export const RATE_CARD_ID = "018f0000-0000-7000-8000-0000000c1001";
 export const RATE_ITEM_ID = "018f0000-0000-7000-8000-0000000c1101";
 export const VERIFICATION_ID = "018f0000-0000-7000-8000-0000000c1201";
+export const REFERENCE_ID = "018f0000-0000-7000-8000-0000000c1301";
+export const CONSENT_DOCUMENT_ID = "018f0000-0000-7000-8000-0000000c1302";
 const UPLOADER_ID = "018f0000-0000-7000-8000-0000000c00aa";
 
 /** A hotel as `GET /hotels-admin/hotels` returns it; override for the other states. */
@@ -189,6 +192,24 @@ export function verificationViewFixture(
     status: "verified",
     nextDueAt: null,
     notes: null,
+    ...overrides,
+  };
+}
+
+/** A previous-wedding reference as `GET …/wedding-references` returns it: internal, no consent yet. */
+export function weddingReferenceFixture(
+  overrides: Partial<WeddingReferenceView> = {},
+): WeddingReferenceView {
+  return {
+    id: REFERENCE_ID,
+    hotelId: HOTEL_ID,
+    projectId: null,
+    eventYear: 2024,
+    guestCount: 320,
+    descriptionClient: "A three-day lakeside celebration",
+    clientVisible: false,
+    consentDocumentId: null,
+    createdAt: "2026-11-01T09:00:00Z",
     ...overrides,
   };
 }

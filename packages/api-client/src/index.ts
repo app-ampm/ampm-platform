@@ -153,6 +153,15 @@ export {
   verificationsQueryKey,
 } from "./hooks/use-hotel-rates";
 export {
+  useAttachReferenceConsent,
+  useCreateHotelReference,
+  useDeleteHotelReference,
+  useHotelReferences,
+  useReferenceConsentLink,
+  useUpdateHotelReference,
+  weddingReferencesQueryKey,
+} from "./hooks/use-hotel-references";
+export {
   hotelMediaQueryKey,
   useAddHotelMedia,
   useDeleteMedia,

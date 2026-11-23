@@ -104,8 +104,9 @@ export function InternalHint({
 
 export interface SubresourceSectionProps {
   readonly title: string;
-  readonly addLabel: string;
-  readonly onAdd: () => void;
+  /** The Add action; leave both out for a role that may only read the collection. */
+  readonly addLabel?: string | undefined;
+  readonly onAdd?: (() => void) | undefined;
   readonly isEmpty: boolean;
   readonly emptyText: string;
   /** A persistent "never shown to clients" marker shown under the title for a RESTRICTED collection. */
@@ -116,7 +117,7 @@ export interface SubresourceSectionProps {
   readonly testID?: string | undefined;
 }
 
-/** The section's title beside its Add action; a side column's title is the smaller interface type. */
+/** The section's title beside its Add action (when offered); a side column's title is the smaller type. */
 function SectionHeading({
   title,
   addLabel,
@@ -135,15 +136,17 @@ function SectionHeading({
       >
         {title}
       </Text>
-      <Button
-        variant="secondary"
-        size="sm"
-        icon="plus"
-        onPress={onAdd}
-        testID={testID ? `${testID}-add` : undefined}
-      >
-        {addLabel}
-      </Button>
+      {addLabel && onAdd ? (
+        <Button
+          variant="secondary"
+          size="sm"
+          icon="plus"
+          onPress={onAdd}
+          testID={testID ? `${testID}-add` : undefined}
+        >
+          {addLabel}
+        </Button>
+      ) : null}
     </Row>
   );
 }
