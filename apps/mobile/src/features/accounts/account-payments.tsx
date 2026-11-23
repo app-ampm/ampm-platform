@@ -1,4 +1,4 @@
-import { useMe, usePayments } from "@ampm/api-client";
+import { usePayments, useStaffAccess } from "@ampm/api-client";
 import type { PaymentFinanceView } from "@ampm/core";
 import {
   InternalPanel,
@@ -10,8 +10,6 @@ import {
   StatusChip,
   Text,
 } from "@ampm/ui";
-
-import { rolesGrant } from "@/navigation/staff-areas";
 
 import {
   paymentAmountLabel,
@@ -72,8 +70,7 @@ export interface AccountPaymentsProps {
  * figures (`InternalPanel`), never a client-facing `MoneyText`.
  */
 export function AccountPayments({ accountId }: AccountPaymentsProps) {
-  const me = useMe();
-  const canRead = me.data ? rolesGrant(me.data.roles, PAYMENTS_PERMISSION) : false;
+  const canRead = useStaffAccess().holds(PAYMENTS_PERMISSION);
   const payments = usePayments({ accountId }, { enabled: canRead });
   if (!canRead) return null;
   if (payments.isError) {

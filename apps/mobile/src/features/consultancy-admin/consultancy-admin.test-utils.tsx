@@ -177,6 +177,8 @@ export function hotelTeamMeFixture(): MeResponse {
       lastLoginAt: null,
     },
     roles: ["HT"],
+    customRoles: [],
+    customCapabilities: [],
     memberships: [],
     entitlements: {
       modules: [],

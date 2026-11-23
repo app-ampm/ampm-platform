@@ -2,7 +2,7 @@ import { useMemo, useState, type ReactNode } from "react";
 import { useRouter } from "expo-router";
 import type { UseQueryResult } from "@tanstack/react-query";
 
-import { useLeadFunnel, useMe } from "@ampm/api-client";
+import { useLeadFunnel, useMe, useStaffAccess } from "@ampm/api-client";
 import type { LeadFunnelView, MeResponse } from "@ampm/core";
 import {
   Card,
@@ -22,7 +22,6 @@ import {
 } from "@ampm/ui";
 
 import { useGoToSignIn } from "@/navigation/sign-in";
-import { rolesGrant } from "@/navigation/staff-areas";
 
 import {
   FUNNEL_WINDOWS,
@@ -215,7 +214,7 @@ function WindowSwitch({
 export function LeadFunnelScreen({ tabBar }: { readonly tabBar?: ReactNode }) {
   const router = useRouter();
   const me = useMe();
-  const canRun = me.data ? rolesGrant(me.data.roles, FUNNEL_PERMISSION) : false;
+  const canRun = useStaffAccess().holds(FUNNEL_PERMISSION);
   const [window, setWindow] = useState<FunnelWindow>("all");
   const range = useMemo(() => funnelRange(window, Date.now()), [window]);
   const funnel = useLeadFunnel(range, { enabled: canRun });

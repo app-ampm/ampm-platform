@@ -19,7 +19,7 @@ export interface StaffUsersListProps {
 
 /** The roles and the last sign-in as one data line: "Sales Manager · Last sign-in 2 NOV 2026". */
 function rowMeta(user: StaffUserView): string {
-  return `${roleSummary(user.roles)} · Last sign-in ${lastSignInLabel(user.lastLoginAt)}`;
+  return `${roleSummary(user)} · Last sign-in ${lastSignInLabel(user.lastLoginAt)}`;
 }
 
 /** The account status and the authenticator state, stacked at the end of the row. */

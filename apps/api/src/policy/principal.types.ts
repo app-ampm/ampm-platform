@@ -1,5 +1,5 @@
 import type { Entitlements, PolicyPrincipal, RoleGrant, StaffRole } from "@ampm/policy";
-import type { Membership } from "@ampm/core";
+import type { CustomRoleRef, Membership } from "@ampm/core";
 
 /** Step 2 of the pipeline: who is calling, from the API's records (architecture §6). */
 interface UserPrincipalBase {
@@ -18,6 +18,13 @@ export interface StaffPrincipal extends UserPrincipalBase {
   readonly roles: readonly StaffRole[];
   /** Grants resolved from the user's custom roles (D-036), keyed by base key; set only when DYNAMIC_ROLES is on. */
   readonly resolvedGrants?: ReadonlyMap<string, readonly RoleGrant[]> | undefined;
+  /** The custom roles in effect (D-036): none while DYNAMIC_ROLES is off. For `/me` (D-164). */
+  readonly customRoles?: readonly CustomRoleRef[] | undefined;
+  /**
+   * The catalogue capability ids behind `resolvedGrants`, sorted, the ones the catalogue refused left
+   * out: `/me` hands them to the app, which compiles them as the server did (D-164).
+   */
+  readonly customCapabilities?: readonly string[] | undefined;
 }
 
 export interface ClientPrincipal extends UserPrincipalBase {

@@ -1,5 +1,5 @@
 import { Inject, Injectable } from "@nestjs/common";
-import { errors } from "@ampm/core";
+import { errors, type CustomRoleRef } from "@ampm/core";
 import {
   can,
   resolveClientEntitlements,
@@ -24,11 +24,23 @@ import type { Principal } from "./principal.types.js";
 
 type ResolvedGrants = ReadonlyMap<string, readonly RoleGrant[]>;
 
-/** What a staff user's roles authorise: the system roles by code, and their custom roles' grants. */
-interface StaffAuthority {
-  readonly roles: StaffRole[];
+/** What a staff user's custom roles contribute (D-036), and how `/me` names them (D-164). */
+interface CustomAuthority {
   readonly resolvedGrants: ResolvedGrants | undefined;
+  readonly customRoles: readonly CustomRoleRef[];
+  readonly customCapabilities: readonly string[];
 }
+
+/** What a staff user's roles authorise: the system roles by code, and their custom roles' grants. */
+interface StaffAuthority extends CustomAuthority {
+  readonly roles: StaffRole[];
+}
+
+const NO_CUSTOM: CustomAuthority = {
+  resolvedGrants: undefined,
+  customRoles: [],
+  customCapabilities: [],
+};
 
 /** A staff member as a picker shows them. */
 export interface StaffMember {
@@ -36,21 +48,21 @@ export interface StaffMember {
   readonly name: string;
 }
 
-/** Splits held roles into the nine system codes and the ids of the custom roles. */
+/** Splits held roles into the nine system codes and the custom roles. */
 function splitRoles(held: readonly PrincipalRole[]): {
   roles: StaffRole[];
-  customRoleIds: string[];
+  customRoles: PrincipalRole[];
 } {
   const roles: StaffRole[] = [];
-  const customRoleIds: string[] = [];
+  const customRoles: PrincipalRole[] = [];
   for (const role of held) {
     const code = roleFromKey(role.roleKey);
     // One of the nine only when it is both a known code AND flagged system; a non-system role that
     // reused a reserved key resolves fail-closed through its own grants, never the matrix role's.
     if (code !== undefined && role.isSystem) roles.push(code);
-    else customRoleIds.push(role.roleId);
+    else customRoles.push(role);
   }
-  return { roles, customRoleIds };
+  return { roles, customRoles };
 }
 
 /**
@@ -87,8 +99,7 @@ export class PrincipalService {
       memberships: record.memberships,
     };
     if (record.userType === "staff") {
-      const { roles, resolvedGrants } = await this.staffAuthority(record.id, record.roles);
-      return { type: "staff", roles, resolvedGrants, ...base };
+      return { type: "staff", ...(await this.staffAuthority(record.id, record.roles)), ...base };
     }
     const entitlements = await this.entitlementsFor(record);
     return { type: record.userType, entitlements, ...base };
@@ -125,34 +136,40 @@ export class PrincipalService {
     userId: string,
     held: readonly PrincipalRole[],
   ): Promise<StaffAuthority> {
-    const { roles, customRoleIds } = splitRoles(held);
-    return { roles, resolvedGrants: await this.customGrantsFor(userId, customRoleIds) };
+    const { roles, customRoles } = splitRoles(held);
+    return { roles, ...(await this.customAuthorityFor(userId, customRoles)) };
   }
 
   /**
    * The grants a staff user's custom roles contribute to `decide()` (D-036), resolved fresh each
-   * request from `role_grants` through the code catalog (fail-closed). Off unless DYNAMIC_ROLES is on,
-   * and a user with no custom roles costs no extra query. Resolving per request — rather than caching —
-   * keeps a demotion effective at once: a role change revokes the user's sessions, and their next
-   * request re-reads the grants, so there is nothing stale to invalidate.
+   * request from `role_grants` through the code catalog (fail-closed), with the roles' names and the
+   * capability ids that resolved, which `/me` hands to the app so it gates as the server does (D-164).
+   * Off unless DYNAMIC_ROLES is on, and a user with no custom roles costs no extra query. Resolving per
+   * request — rather than caching — keeps a demotion effective at once: a role change revokes the
+   * user's sessions, and their next request re-reads the grants, so there is nothing stale to invalidate.
    *
    * Phase 5 (D-037): these grants drive key-level authorization only, not field visibility, which is
    * still role-switch-based. So a custom role granted a classified-field read passes `decide()` but the
    * serialiser still strips the field (fail-safe); reading restricted classes through a custom role
    * awaits the capability-driven visibility step.
    */
-  private async customGrantsFor(
+  private async customAuthorityFor(
     userId: string,
-    customRoleIds: readonly string[],
-  ): Promise<ResolvedGrants | undefined> {
-    if (!this.env.DYNAMIC_ROLES || customRoleIds.length === 0) return undefined;
-    const keys = await this.repository.capabilityKeysForRoles(customRoleIds);
+    customRoles: readonly PrincipalRole[],
+  ): Promise<CustomAuthority> {
+    if (!this.env.DYNAMIC_ROLES || customRoles.length === 0) return NO_CUSTOM;
+    const keys = await this.repository.capabilityKeysForRoles(customRoles.map((r) => r.roleId));
     const { grants, rejected } = resolveCustomGrants(keys);
     if (rejected.length > 0) {
       // A stored grant outside the catalog is dropped, never enforced; surface it rather than hide it.
       this.logger.warn("principal.custom_grants.rejected", { userId, count: rejected.length });
     }
-    return grants.size > 0 ? grants : undefined;
+    const refused = new Set(rejected);
+    return {
+      resolvedGrants: grants.size > 0 ? grants : undefined,
+      customRoles: customRoles.map((role) => ({ key: role.roleKey, name: role.name })),
+      customCapabilities: keys.filter((key) => !refused.has(key)).sort(),
+    };
   }
 
   private async entitlementsFor(record: PrincipalRecord): Promise<Entitlements> {

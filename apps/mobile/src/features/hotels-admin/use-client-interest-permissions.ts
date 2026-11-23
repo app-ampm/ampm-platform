@@ -1,5 +1,4 @@
-import { useMe } from "@ampm/api-client";
-import { can, type StaffRole } from "@ampm/policy";
+import { useStaffAccess, type StaffAccess } from "@ampm/api-client";
 
 /** What the signed-in staff member may see, from the hotel catalogue, of clients' interest in hotels. */
 export interface ClientInterestPermissions {
@@ -12,23 +11,18 @@ export interface ClientInterestPermissions {
   readonly canOpenClient: boolean;
 }
 
-const NONE: ClientInterestPermissions = { canReadSavedHotels: false, canOpenClient: false };
-
 /**
- * The permissions for a set of staff roles, decided by @ampm/policy as the API's guard decides them: a
- * grant scoped to assigned weddings does not reach these project-less routes, so a Project Manager gets
- * neither.
+ * The permissions for a staff member's access, decided by @ampm/policy as the API's guard decides them,
+ * a custom role's grants included (D-164): a grant scoped to assigned weddings does not reach these
+ * project-less routes, so a Project Manager gets neither.
  *
  * @example
- * clientInterestPermissionsFor(["HT"]); // { canReadSavedHotels: true, canOpenClient: true }
+ * clientInterestPermissionsFor(staffAccessFor(me)); // { canReadSavedHotels: true, canOpenClient: true }
  */
-export function clientInterestPermissionsFor(
-  roles: readonly StaffRole[],
-): ClientInterestPermissions {
-  const allows = (key: string): boolean => can({ type: "staff", roles }, key);
+export function clientInterestPermissionsFor(access: StaffAccess): ClientInterestPermissions {
   return {
-    canReadSavedHotels: allows("hotels.saved_hotels.read"),
-    canOpenClient: allows("crm.accounts.read"),
+    canReadSavedHotels: access.can("hotels.saved_hotels.read"),
+    canOpenClient: access.can("crm.accounts.read"),
   };
 }
 
@@ -39,7 +33,5 @@ export function clientInterestPermissionsFor(
  *   const { canReadSavedHotels } = useClientInterestPermissions();
  */
 export function useClientInterestPermissions(): ClientInterestPermissions {
-  const me = useMe();
-  if (!me.data || me.data.principal.type !== "staff") return NONE;
-  return clientInterestPermissionsFor(me.data.roles);
+  return clientInterestPermissionsFor(useStaffAccess());
 }

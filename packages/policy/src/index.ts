@@ -61,6 +61,7 @@ export {
   decideBeforeRead,
   grantsForRole,
   holdsExplicitGrant,
+  holdsKey,
   permissionKeysForRole,
   readKeyFor,
 } from "./engine";

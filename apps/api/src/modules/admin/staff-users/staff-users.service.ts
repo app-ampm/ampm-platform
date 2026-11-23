@@ -47,6 +47,7 @@ function toView(row: StaffUserRow): StaffUserView {
     mfaEnabled: row.mfaEnabled,
     lastLoginAt: row.lastLoginAt ? row.lastLoginAt.toISOString() : null,
     roles: [...row.roleKeys],
+    roleNames: [...row.roleNames],
     createdAt: row.createdAt.toISOString(),
   };
 }

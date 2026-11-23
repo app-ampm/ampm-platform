@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from "react";
 import type { UseQueryResult } from "@tanstack/react-query";
 
-import { useConfigurations, useMe } from "@ampm/api-client";
+import { useConfigurations, useStaffAccess } from "@ampm/api-client";
 import type { ConfigView } from "@ampm/core";
 import {
   Card,
@@ -17,7 +17,6 @@ import {
 } from "@ampm/ui";
 
 import { useGoToSignIn } from "@/navigation/sign-in";
-import { rolesGrant } from "@/navigation/staff-areas";
 
 import { isEditableConfigKey } from "./configuration.edit";
 import { AdminSectionNav } from "./admin-section-nav";
@@ -139,8 +138,7 @@ export interface ConfigurationScreenProps {
  */
 export function ConfigurationScreen({ tabBar }: ConfigurationScreenProps) {
   const configurations = useConfigurations();
-  const me = useMe();
-  const canEdit = me.data ? rolesGrant(me.data.roles, CONFIG_UPDATE_PERMISSION) : false;
+  const canEdit = useStaffAccess().holds(CONFIG_UPDATE_PERMISSION);
   const [selected, setSelected] = useState<ConfigEntry | null>(null);
   const [editing, setEditing] = useState<ConfigEntry | null>(null);
   const canEditSelected = canEdit && selected !== null && isEditableConfigKey(selected.key);

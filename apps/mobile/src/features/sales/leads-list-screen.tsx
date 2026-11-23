@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { useRouter } from "expo-router";
 
-import { useLeads, useMe, type CursorListResult } from "@ampm/api-client";
+import { useLeads, useStaffAccess, type CursorListResult } from "@ampm/api-client";
 import type { LeadView } from "@ampm/core";
 import {
   EmptyState,
@@ -18,7 +18,6 @@ import {
 } from "@ampm/ui";
 
 import { useGoToSignIn } from "@/navigation/sign-in";
-import { rolesGrant } from "@/navigation/staff-areas";
 
 import { LeadsBoard } from "./leads-board";
 import { LeadsList } from "./leads-list";
@@ -180,11 +179,11 @@ function LeadsBody(props: BodyProps) {
 export function LeadsListScreen({ tabBar }: LeadsListScreenProps) {
   const router = useRouter();
   const leads = useLeads();
-  const me = useMe();
+  const access = useStaffAccess();
   const canSwitch = useLayoutAt("md");
   const [view, setView] = useState<PipelineView>("board");
   const [showClosed, setShowClosed] = useState(false);
-  const canRunFunnel = me.data ? rolesGrant(me.data.roles, FUNNEL_PERMISSION) : false;
+  const canRunFunnel = access.holds(FUNNEL_PERMISSION);
   const openLead = (id: string): void => router.push({ pathname: "/leads/[id]", params: { id } });
   const header = (
     <ScreenHeader

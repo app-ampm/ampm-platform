@@ -32,6 +32,8 @@ export function staffUserFixture(overrides: Partial<StaffUserView> = {}): StaffU
     mfaEnabled: true,
     lastLoginAt: "2026-11-02T08:30:00Z",
     roles: ["super_admin"],
+    // Empty, as from an API older than the field: the directory then names system roles from the codes.
+    roleNames: [],
     createdAt: CREATED_AT,
     ...overrides,
   };
@@ -177,6 +179,8 @@ export function meFixture(roles: MeResponse["roles"] = ["SA"]): MeResponse {
       lastLoginAt: null,
     },
     roles,
+    customRoles: [],
+    customCapabilities: [],
     memberships: [],
     entitlements: {
       modules: [],

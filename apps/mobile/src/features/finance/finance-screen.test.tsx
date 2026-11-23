@@ -106,6 +106,19 @@ describe("FinanceScreen (TW-80 on T11, D-128)", () => {
     expect(screen.getByTestId("finance-record-payment")).toBeDisabled();
   });
 
+  it("D-164: runs the report for a custom role granted it, with no system role, and offers no more", async () => {
+    const api = fakeFinanceApi({
+      roles: [],
+      customCapabilities: ["reports.subscription_status_payment_history.read:all"],
+    });
+    await renderWithApi(<FinanceScreen />, api.fetch);
+    expect(await screen.findByText("Prasad & Partner")).toBeOnTheScreen();
+    expect(screen.queryByTestId("finance-forbidden")).toBeNull();
+    // Neither the ledger nor recording was granted, so neither is offered.
+    expect(screen.queryByTestId("finance-payments")).toBeNull();
+    expect(screen.queryByTestId("finance-record-payment")).toBeNull();
+  });
+
   it("tells the hotel team the area is not theirs and never runs the report", async () => {
     const api = fakeFinanceApi({ roles: ["HT"] });
     await renderWithApi(<FinanceScreen />, api.fetch);

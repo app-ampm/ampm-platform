@@ -39,6 +39,8 @@ const STAFF: MeResponse = {
     lastLoginAt: null,
   },
   roles: ["SM"],
+  customRoles: [],
+  customCapabilities: [],
   memberships: [
     {
       projectId: "018f0000-0000-7000-8000-0000000000a1",
@@ -73,6 +75,8 @@ const DEMO_CLIENT: MeResponse = {
     lastLoginAt: null,
   },
   roles: [],
+  customRoles: [],
+  customCapabilities: [],
   memberships: [],
   entitlements: {
     modules: ["hotel_discovery", "saved_hotels"],

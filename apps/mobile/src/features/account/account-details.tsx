@@ -1,7 +1,7 @@
 import { useRouter, type Href } from "expo-router";
 
+import { staffRoleNames } from "@ampm/api-client";
 import type { MeResponse, PrincipalType } from "@ampm/core";
-import { STAFF_ROLES } from "@ampm/policy";
 import { Card, ListItem, Row, SplitPane, Stack, StatusChip, Text, useLayoutAt } from "@ampm/ui";
 
 import { SignOutButton } from "@/navigation/sign-out-button";
@@ -29,8 +29,8 @@ const PRINCIPAL_LABEL: Record<PrincipalType, string> = {
 /**
  * Who is signed in: name, contact details as data, then the kind of account and the roles as chips:
  * facts about the account, so peacock-glass highlights and pearl outlines, never a status treatment.
- * Roles carry the names the staff rail shows (STAFF_ROLES), not their codes; a demo account says so
- * once.
+ * Roles carry the names the staff rail shows (`staffRoleNames`: system roles, then custom roles, D-164),
+ * not their codes; a demo account says so once.
  */
 function ProfileCard({ me }: { readonly me: MeResponse }) {
   const { principal } = me;
@@ -50,8 +50,8 @@ function ProfileCard({ me }: { readonly me: MeResponse }) {
         </Stack>
         <Row gap={2} wrap>
           <StatusChip label={PRINCIPAL_LABEL[principal.type]} tone="brand" />
-          {me.roles.map((role) => (
-            <StatusChip key={role} label={STAFF_ROLES[role].name} tone="info" />
+          {staffRoleNames(me).map((role) => (
+            <StatusChip key={role.key} label={role.name} tone="info" />
           ))}
           {me.isDemo && principal.type !== "demo" ? (
             <StatusChip label={PRINCIPAL_LABEL.demo} tone="brand" />

@@ -41,7 +41,7 @@ const COLUMNS: DataTableColumn<StaffUserView>[] = [
     width: 230,
     render: (user) => (
       <Text variant="bodySmall" tone="body" numberOfLines={1}>
-        {roleSummary(user.roles)}
+        {roleSummary(user)}
       </Text>
     ),
   },

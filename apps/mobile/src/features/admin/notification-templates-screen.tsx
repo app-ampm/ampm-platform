@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from "react";
 import type { UseQueryResult } from "@tanstack/react-query";
 
-import { useMe, useNotificationTemplates } from "@ampm/api-client";
+import { useNotificationTemplates, useStaffAccess } from "@ampm/api-client";
 import type { NotificationTemplates } from "@ampm/core";
 import {
   Card,
@@ -17,7 +17,6 @@ import {
 } from "@ampm/ui";
 
 import { useGoToSignIn } from "@/navigation/sign-in";
-import { rolesGrant } from "@/navigation/staff-areas";
 
 import { AdminSectionNav } from "./admin-section-nav";
 import { NotificationTemplateDetailSheet } from "./notification-template-detail-sheet";
@@ -137,8 +136,7 @@ export interface NotificationTemplatesScreenProps {
  */
 export function NotificationTemplatesScreen({ tabBar }: NotificationTemplatesScreenProps) {
   const templates = useNotificationTemplates();
-  const me = useMe();
-  const canEdit = me.data ? rolesGrant(me.data.roles, CONFIG_UPDATE_PERMISSION) : false;
+  const canEdit = useStaffAccess().holds(CONFIG_UPDATE_PERMISSION);
   const [selected, setSelected] = useState<TemplateEntry | null>(null);
   const [editing, setEditing] = useState<TemplateEntry | null>(null);
   return (

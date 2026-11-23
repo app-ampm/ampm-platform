@@ -143,6 +143,14 @@ function reachOf(principal: PolicyPrincipal, target: PolicyTarget): Reach {
   };
 }
 
+/** A staff principal's grants of a base key: its system roles' (MATRIX) and its custom roles' (D-036). */
+function staffGrants(principal: PolicyPrincipal, base: string): RoleGrant[] {
+  return [
+    ...(principal.roles ?? []).flatMap((role) => grantsForRole(role).get(base) ?? []),
+    ...(principal.resolvedGrants?.get(base) ?? []),
+  ];
+}
+
 /**
  * Whether the principal holds an explicit grant of the key on the wedding (P-5). Both keys are
  * compared by the base key they decide on, so every §10 spelling of the key counts.
@@ -180,13 +188,30 @@ export function decide(
   if (principal.type !== "staff") return { allowed: false, reason: "not_staff" };
   const base = baseKey(key);
   if (base === null) return NO_GRANT;
-  const grants = [
-    ...(principal.roles ?? []).flatMap((role) => grantsForRole(role).get(base) ?? []),
-    ...(principal.resolvedGrants?.get(base) ?? []),
-  ];
+  const grants = staffGrants(principal, base);
   if (grants.length === 0) return NO_GRANT;
   const explicit = holdsExplicitGrant(principal, base, target.projectId);
   return decideGrants(grants, reachOf(principal, target), target, explicit);
+}
+
+/**
+ * Whether a staff principal holds the key outright, in any scope: one of its system roles' grants or
+ * one of its custom roles' resolved grants, with no conditions. Unlike decide(), it ignores the target
+ * and the scope, so a project manager "holds" `crm.accounts.update` (their weddings' accounts) though
+ * can() refuses it with no project; and it skips a conditioned grant, which only decide() can weigh
+ * against a target. For showing an area whose records the person can reach some of; an action on a
+ * record still asks can() (D-164). For system roles it answers exactly as the keys of
+ * permissionKeysForRole() do, whether written as the key or narrowed to a scope.
+ *
+ * @example
+ * holdsKey({ type: "staff", roles: ["PM"] }, "consultancy.enquiries.read"); // true (assigned only)
+ * holdsKey({ type: "staff", roles: [], resolvedGrants }, "crm.leads.read"); // from a custom role
+ */
+export function holdsKey(principal: PolicyPrincipal, key: string): boolean {
+  if (principal.type !== "staff") return false;
+  const base = baseKey(key);
+  if (base === null) return false;
+  return staffGrants(principal, base).some((grant) => grant.conditions.length === 0);
 }
 
 /**

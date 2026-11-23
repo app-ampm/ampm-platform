@@ -25,8 +25,14 @@ export const FINANCE_USER_ID = "018f0000-0000-7000-8000-0000000d00fe";
 export const SAVED_HOTEL_ID = "018f0000-0000-7000-8000-0000000d0006";
 export const SAVED_HOTEL_HOTEL_ID = "018f0000-0000-7000-8000-0000000d0007";
 
-/** A signed-in staff `/me` with the given roles — gates the Finance-only payment ledger. */
-export function staffMeFixture(roles: MeResponse["roles"]): MeResponse {
+/**
+ * A signed-in staff `/me` with the given roles — gates the Finance-only payment ledger — and, for a
+ * custom role (D-164), its catalogue capabilities.
+ */
+export function staffMeFixture(
+  roles: MeResponse["roles"],
+  customCapabilities: string[] = [],
+): MeResponse {
   return {
     principal: {
       type: "staff",
@@ -38,6 +44,8 @@ export function staffMeFixture(roles: MeResponse["roles"]): MeResponse {
       lastLoginAt: null,
     },
     roles,
+    customRoles: customCapabilities.length > 0 ? [{ key: "custom_e2e", name: "Custom role" }] : [],
+    customCapabilities,
     memberships: [],
     entitlements: {
       modules: [],

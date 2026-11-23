@@ -32,6 +32,8 @@ export const ME_LOCKED: MeResponse = {
     lastLoginAt: null,
   },
   roles: [],
+  customRoles: [],
+  customCapabilities: [],
   memberships: [],
   entitlements: NO_ENTITLEMENTS,
   isDemo: false,

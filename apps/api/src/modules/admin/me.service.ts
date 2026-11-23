@@ -37,6 +37,10 @@ export class MeService {
         lastLoginAt: principal.lastLoginAt ? principal.lastLoginAt.toISOString() : null,
       },
       roles: principal.type === "staff" ? principal.roles : [],
+      // A staff member's custom roles and the capability ids the server enforces for them, so the app
+      // shows what it allows (D-164); nothing for a client or demo user.
+      customRoles: principal.type === "staff" ? (principal.customRoles ?? []) : [],
+      customCapabilities: principal.type === "staff" ? (principal.customCapabilities ?? []) : [],
       memberships: principal.memberships,
       entitlements: principal.type === "staff" ? NO_ENTITLEMENTS : principal.entitlements,
       isDemo: principal.type === "demo",
