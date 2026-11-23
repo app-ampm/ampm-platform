@@ -78,6 +78,8 @@ export interface FakeFinanceApi {
 
 interface FakeOptions {
   readonly roles: MeResponse["roles"];
+  /** A custom role's catalogue capabilities, beside or instead of system roles (D-164). */
+  readonly customCapabilities?: string[] | undefined;
   readonly awaiting?: SubscriptionReportRow[] | undefined;
   readonly payments?: PaymentFinanceView[] | undefined;
 }
@@ -123,7 +125,12 @@ function recordPayment(server: FakeServer, subscriptionId: string): Response {
 }
 
 /** A fake API for the Finance screen, signed by the given roles. */
-export function fakeFinanceApi({ roles, awaiting, payments }: FakeOptions): FakeFinanceApi {
+export function fakeFinanceApi({
+  roles,
+  customCapabilities,
+  awaiting,
+  payments,
+}: FakeOptions): FakeFinanceApi {
   const server: FakeServer = {
     queue: [...(awaiting ?? awaitingRows())],
     ledger: [...(payments ?? [paymentFinanceViewFixture({ accountName: "Meera & Dev" })])],
@@ -131,7 +138,7 @@ export function fakeFinanceApi({ roles, awaiting, payments }: FakeOptions): Fake
   const asked: string[] = [];
   const recorded: { subscriptionId: string; body: unknown }[] = [];
   const answer = (path: string, query: URLSearchParams, init: RequestInit | undefined) => {
-    if (path === "/me") return ok(staffMeFixture(roles));
+    if (path === "/me") return ok(staffMeFixture(roles, customCapabilities));
     if (path === "/crm/reports/subscriptions") {
       return ok({ items: reportFor(server, query.get("status")), nextCursor: null });
     }

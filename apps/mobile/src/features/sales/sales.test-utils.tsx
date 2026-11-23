@@ -35,6 +35,8 @@ export function staffMeFixture(roles: MeResponse["roles"] = ["SM"]): MeResponse 
       lastLoginAt: null,
     },
     roles,
+    customRoles: [],
+    customCapabilities: [],
     memberships: [],
     entitlements: {
       modules: [],

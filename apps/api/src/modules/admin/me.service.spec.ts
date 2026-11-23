@@ -1,7 +1,7 @@
 import { resolveClientEntitlements } from "@ampm/policy";
 import { describe, expect, it } from "vitest";
 
-import type { ClientPrincipal } from "../../policy/principal.types.js";
+import type { ClientPrincipal, StaffPrincipal } from "../../policy/principal.types.js";
 import { MeService } from "./me.service.js";
 
 const onHold = resolveClientEntitlements({
@@ -24,7 +24,34 @@ const client: ClientPrincipal = {
   entitlements: onHold,
 };
 
+const staff: StaffPrincipal = {
+  type: "staff",
+  userId: "0192f3a0-7d3e-7b1a-9c2f-000000000003",
+  name: "Cyra",
+  email: "cyra@example.com",
+  phone: null,
+  status: "active",
+  lastLoginAt: null,
+  memberships: [],
+  roles: [],
+  customRoles: [{ key: "custom_sales_assistant", name: "Sales assistant" }],
+  customCapabilities: ["crm.leads.read:all", "crm.leads.update:all"],
+};
+
 describe("MeService", () => {
+  it("D-164: hands a staff member's custom roles and capabilities to the app, so it gates as the server does", () => {
+    const me = new MeService().view(staff);
+    expect(me.roles).toEqual([]);
+    expect(me.customRoles).toEqual([{ key: "custom_sales_assistant", name: "Sales assistant" }]);
+    expect(me.customCapabilities).toEqual(["crm.leads.read:all", "crm.leads.update:all"]);
+  });
+
+  it("D-164: gives a client no custom roles or capabilities", () => {
+    const me = new MeService().view(client);
+    expect(me.customRoles).toEqual([]);
+    expect(me.customCapabilities).toEqual([]);
+  });
+
   it("permission-matrix §3 line 100: /me tells an on-hold member what is read-only and how far it reaches", () => {
     const { entitlements } = new MeService().view(client);
     expect(entitlements.readOnlyModules).toContain("wedding_workspace");

@@ -1,6 +1,6 @@
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import request from "supertest";
-import { afterAll, beforeAll, describe, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { PrismaService } from "../src/db/prisma.service.js";
 import { startApi } from "./start-api.js";
@@ -87,5 +87,30 @@ describe("Dynamic roles (e2e)", () => {
       .get("/spike/projects/0192f3a0-7d3e-7b1a-9c2f-0000000000ff/field-notes")
       .set("authorization", bearer)
       .expect(404);
+  });
+
+  it("tells the app, through /me, the custom role and the capabilities the server enforces (D-164)", async () => {
+    const bearer = `Bearer ${await mint(SUBJECT)}`;
+    const res = await request(app.getHttpServer())
+      .get("/me")
+      .set("authorization", bearer)
+      .expect(200);
+    const me = res.body.data as Record<string, unknown>;
+    // No system role: without the two fields below the app could only show this person Settings.
+    expect(me.roles).toEqual([]);
+    expect(me.customRoles).toEqual([{ key: ROLE_KEY, name: "Custom config editor" }]);
+    expect(me.customCapabilities).toEqual([CAPABILITY_KEY]);
+  });
+
+  it("names a custom role in the staff directory instead of echoing its key (D-164)", async () => {
+    const admin = `Bearer ${await mint("local:admin")}`;
+    const user = await prisma.user.findFirstOrThrow({ where: { email: EMAIL } });
+    const res = await request(app.getHttpServer())
+      .get(`/admin/staff-users/${user.id}`)
+      .set("authorization", admin)
+      .expect(200);
+    const view = res.body.data as Record<string, unknown>;
+    expect(view.roles).toEqual([ROLE_KEY]);
+    expect(view.roleNames).toEqual(["Custom config editor"]);
   });
 });

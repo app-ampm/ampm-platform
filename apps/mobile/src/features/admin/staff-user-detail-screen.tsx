@@ -52,7 +52,7 @@ function StaffUserCard({ user }: { readonly user: StaffUserView }) {
         <Fact label="Email" value={user.email} />
         <Fact label="Phone" value={user.phone ?? "—"} />
         <Divider />
-        <Fact label="Roles" value={roleSummary(user.roles)} />
+        <Fact label="Roles" value={roleSummary(user)} />
         <Fact label="Status" value={userStatusLabel(user.status)} />
         <Fact label="Authenticator" value={authenticatorLabel(user.mfaEnabled)} />
         <Divider />
@@ -101,7 +101,7 @@ function DetailBody({ user }: { readonly user: UseQueryResult<StaffUserView> }) 
 
 /** "eva@example.com · Super Admin, Finance / Accounts": the record's facts line under the name. */
 function recordFacts(user: StaffUserView): string {
-  return `${user.email} · ${roleSummary(user.roles)}`;
+  return `${user.email} · ${roleSummary(user)}`;
 }
 
 /**

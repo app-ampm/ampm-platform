@@ -24,6 +24,7 @@
   },
   "dependencies": {
     "@ampm/core": "workspace:*",
+    "@ampm/policy": "workspace:*",
     "@tanstack/react-query": "catalog:",
     "zod": "catalog:"
   },

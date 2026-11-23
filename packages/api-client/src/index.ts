@@ -10,6 +10,14 @@ export { ApiProvider, createQueryClient, useApiClient } from "./provider";
 export type { ApiProviderProps } from "./provider";
 export { useMediaUrl } from "./hooks/use-media-url";
 export { ME_QUERY_KEY, meQueryOptions, useMe, type UseMeOptions } from "./hooks/use-me";
+export {
+  staffAccessFor,
+  staffPolicyPrincipal,
+  staffRoleNames,
+  useStaffAccess,
+  type StaffAccess,
+  type StaffAccessSource,
+} from "./staff-access";
 export { useSubmitEnquiry } from "./hooks/use-submit-enquiry";
 export { LEADS_QUERY_KEY, useLeads } from "./hooks/use-leads";
 export { ACCOUNTS_QUERY_KEY, accountQueryKey, useAccount, useAccounts } from "./hooks/use-accounts";

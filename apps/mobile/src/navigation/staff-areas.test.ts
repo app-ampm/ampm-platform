@@ -1,17 +1,15 @@
 import type { MeResponse, PrincipalType, StaffRoleCode } from "@ampm/core";
 import { STAFF_ROLE_CODES } from "@ampm/policy";
 
-import {
-  activeStaffArea,
-  hasStaffArea,
-  rolesGrant,
-  staffAreasFor,
-  staffHomeHref,
-} from "./staff-areas";
+import { activeStaffArea, hasStaffArea, staffAreasFor, staffHomeHref } from "./staff-areas";
 
-type Signed = Pick<MeResponse, "principal" | "roles">;
+type Signed = Pick<MeResponse, "principal" | "roles" | "customCapabilities">;
 
-function signedIn(type: PrincipalType, roles: StaffRoleCode[]): Signed {
+function signedIn(
+  type: PrincipalType,
+  roles: StaffRoleCode[],
+  customCapabilities: string[] = [],
+): Signed {
   return {
     principal: {
       type,
@@ -23,6 +21,7 @@ function signedIn(type: PrincipalType, roles: StaffRoleCode[]): Signed {
       lastLoginAt: null,
     },
     roles,
+    customCapabilities,
   };
 }
 
@@ -85,15 +84,44 @@ describe("staffAreasFor", () => {
   });
 });
 
-describe("rolesGrant", () => {
-  it("counts a key narrowed to a scope as the key", () => {
-    // The project manager reads enquiries of their own weddings only: consultancy.enquiries.read:assigned.
-    expect(rolesGrant(["PM"], "consultancy.enquiries.read")).toBe(true);
+describe("a staff member whose rights come from a custom role (D-164)", () => {
+  /** "Sales assistant": the reproduction's custom role, minus its writes. */
+  const SALES_ASSISTANT = [
+    "crm.leads.read:all",
+    "consultancy.enquiries.read:all",
+    "reports.subscription_status_payment_history.read:all",
+  ];
+
+  it("sees the areas the custom role grants, with no system role at all", () => {
+    expect(areaKeys(signedIn("staff", [], SALES_ASSISTANT))).toEqual([
+      "leads",
+      "enquiries",
+      "finance",
+      "settings",
+    ]);
   });
 
-  it("never takes a different key that starts the same way", () => {
-    expect(rolesGrant(["SM"], "crm.leads.rea")).toBe(false);
-    expect(rolesGrant([], "crm.leads.read")).toBe(false);
+  it("lands on the first of them", () => {
+    expect(staffHomeHref(signedIn("staff", [], SALES_ASSISTANT))).toBe("/leads");
+    expect(hasStaffArea(signedIn("staff", [], ["tasks.incidents.read:all"]), "tasks")).toBe(true);
+  });
+
+  it("adds the custom role's areas to a system role's", () => {
+    expect(areaKeys(signedIn("staff", ["CD"], ["crm.leads.read:all"]))).toEqual([
+      "leads",
+      "tasks",
+      "settings",
+    ]);
+  });
+
+  it("ignores a capability the catalogue does not know, as the API does (fail-closed)", () => {
+    expect(
+      areaKeys(signedIn("staff", [], ["crm.leads.read:everything", "nope.not.real:all"])),
+    ).toEqual(["settings"]);
+  });
+
+  it("gives a client none, whatever the response carries", () => {
+    expect(staffAreasFor(signedIn("client", [], SALES_ASSISTANT))).toEqual([]);
   });
 });
 

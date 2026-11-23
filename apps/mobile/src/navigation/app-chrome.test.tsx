@@ -39,6 +39,8 @@ function me(type: PrincipalType, roles: StaffRoleCode[], name: string): MeRespon
       lastLoginAt: null,
     },
     roles,
+    customRoles: [],
+    customCapabilities: [],
     memberships: [],
     entitlements: {
       modules: [],

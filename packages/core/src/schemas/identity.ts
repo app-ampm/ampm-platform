@@ -91,11 +91,26 @@ export const entitlements = z.object({
 });
 
 /**
+ * A custom staff role in effect for the signed-in user (D-036): its key and display name.
+ *
+ * @example
+ * const names = me.customRoles.map((role) => role.name); // ["Sales assistant"]
+ */
+export const customRoleRef = z.object({ key: z.string().min(1), name: z.string() });
+export type CustomRoleRef = z.infer<typeof customRoleRef>;
+
+/**
  * `GET /me`: what the signed-in principal is, from the API's own records. The identity service
  * only proves who is calling; roles, memberships and entitlements live here (T-6).
  *
+ * A staff member's rights are the system `roles` (decided from the bundled matrix) plus the custom
+ * roles' `customCapabilities`: catalogue ids the server resolved and enforces (D-164). The app compiles
+ * them with `resolveCustomGrants` from @ampm/policy, as the API does, so what it shows matches what the
+ * server allows. Both lists are empty for staff with only system roles, while DYNAMIC_ROLES is off,
+ * and for clients and demo users; they default to empty so a response without them still parses.
+ *
  * @example
- * return meResponse.parse({ principal, roles, memberships, entitlements, isDemo });
+ * return meResponse.parse({ principal, roles, customRoles, customCapabilities, ...rest });
  */
 export const meResponse = z.object({
   principal: z.object({
@@ -108,6 +123,9 @@ export const meResponse = z.object({
     lastLoginAt: isoDateTime.nullable(),
   }),
   roles: z.array(staffRoleCode),
+  customRoles: z.array(customRoleRef).default([]),
+  /** Catalogue capability ids, e.g. `crm.leads.read:all` (packages/policy capabilities.json). */
+  customCapabilities: z.array(z.string().min(1)).default([]),
   memberships: z.array(membership),
   entitlements,
   isDemo: z.boolean(),

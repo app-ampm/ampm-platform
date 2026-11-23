@@ -1,8 +1,8 @@
 import { View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { staffRoleNames } from "@ampm/api-client";
 import type { MeResponse } from "@ampm/core";
-import { STAFF_ROLES } from "@ampm/policy";
 import { Avatar, Button, NavRail, Row, Stack, Text } from "@ampm/ui";
 
 import { useSignOut } from "./sign-out";
@@ -34,7 +34,9 @@ function RailPerson({ me, collapsed }: PersonProps) {
       </Stack>
     );
   }
-  const roles = me.roles.map((role) => STAFF_ROLES[role].name).join(", ");
+  const roles = staffRoleNames(me)
+    .map((role) => role.name)
+    .join(", ");
   return (
     <Stack gap={2}>
       <Row gap={2.5}>

@@ -3,10 +3,14 @@ import { Injectable } from "@nestjs/common";
 import { PrismaService } from "../db/prisma.service.js";
 import type { SubscriptionStatus } from "../generated/prisma/client.js";
 
-/** A role the user holds: its key and id, and whether it is one of the nine matrix-driven system roles. */
+/**
+ * A role the user holds: its key, id and display name, and whether it is one of the nine matrix-driven
+ * system roles.
+ */
 export interface PrincipalRole {
   readonly roleKey: string;
   readonly roleId: string;
+  readonly name: string;
   readonly isSystem: boolean;
 }
 
@@ -80,6 +84,7 @@ export class PrismaPrincipalRepository extends PrincipalRepository {
       roles: user.roles.map((entry) => ({
         roleKey: entry.role.roleKey,
         roleId: entry.role.id,
+        name: entry.role.name,
         isSystem: entry.role.isSystem,
       })),
       memberships: user.memberships.map((m) => ({
@@ -107,7 +112,7 @@ export class PrismaPrincipalRepository extends PrincipalRepository {
         // A soft-deleted role grants nothing (architecture §8), as in findByIdentitySubject.
         roles: {
           where: { role: { deletedAt: null } },
-          select: { role: { select: { id: true, roleKey: true, isSystem: true } } },
+          select: { role: { select: { id: true, roleKey: true, name: true, isSystem: true } } },
         },
       },
     });
@@ -117,6 +122,7 @@ export class PrismaPrincipalRepository extends PrincipalRepository {
       roles: user.roles.map(({ role }) => ({
         roleKey: role.roleKey,
         roleId: role.id,
+        name: role.name,
         isSystem: role.isSystem,
       })),
     }));

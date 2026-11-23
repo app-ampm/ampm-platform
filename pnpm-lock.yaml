@@ -574,6 +574,9 @@ importers:
       '@ampm/core':
         specifier: workspace:*
         version: link:../core
+      '@ampm/policy':
+        specifier: workspace:*
+        version: link:../policy
       '@tanstack/react-query':
         specifier: 'catalog:'
         version: 5.105.0(@types/react@19.3.0)(react@19.3.0)

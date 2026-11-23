@@ -46,9 +46,14 @@ export function roleName(roleKey: string): string {
   return ROLE_NAME_BY_KEY.get(roleKey) ?? roleKey;
 }
 
-/** The user's roles as one line: "Super Admin, Finance"; "No roles" when they hold none. */
-export function roleSummary(roles: readonly string[]): string {
-  return roles.length > 0 ? roles.map(roleName).join(", ") : "No roles";
+/**
+ * The user's roles as one line: "Super Admin, Sales assistant"; "No roles" when they hold none. Each
+ * role reads as the name the API sends (`roleNames`, D-164), so a custom role shows its name, not its
+ * generated key; a name an older API left out falls back to the system role's (`roleName`).
+ */
+export function roleSummary(user: Pick<StaffUserView, "roles" | "roleNames">): string {
+  if (user.roles.length === 0) return "No roles";
+  return user.roles.map((key, i) => user.roleNames[i] ?? roleName(key)).join(", ");
 }
 
 /** Last sign-in as a data date ("2 NOV 2026"), or "Never" when they have not signed in. */
@@ -67,5 +72,5 @@ export function authenticatorTone(mfaEnabled: boolean): StatusTone {
 
 /** What a directory row reads after the name, for a screen reader: the roles and the status. */
 export function staffUserSummary(user: StaffUserView): string {
-  return `${roleSummary(user.roles)}, ${userStatusLabel(user.status)}`;
+  return `${roleSummary(user)}, ${userStatusLabel(user.status)}`;
 }

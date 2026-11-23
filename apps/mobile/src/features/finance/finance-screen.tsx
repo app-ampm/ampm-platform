@@ -1,12 +1,16 @@
 import { useState, type ReactNode } from "react";
 import type { UseQueryResult } from "@tanstack/react-query";
 
-import { useMe, useSubscriptionReport, type CursorListResult } from "@ampm/api-client";
+import {
+  useMe,
+  useStaffAccess,
+  useSubscriptionReport,
+  type CursorListResult,
+} from "@ampm/api-client";
 import type { MeResponse, SubscriptionReportRow } from "@ampm/core";
 import { QueryErrorState, Screen, ScreenHeader, Skeleton, SplitPane, Text } from "@ampm/ui";
 
 import { useGoToSignIn } from "@/navigation/sign-in";
-import { rolesGrant } from "@/navigation/staff-areas";
 
 import { RecordPaymentSheet } from "../accounts/record-payment-sheet";
 import { useCanRecordPayment } from "../accounts/use-can-record-payment";
@@ -89,9 +93,9 @@ export interface FinanceScreenProps {
 /** The screen's state: the tab, the subscription picked in it, the report and the open record sheet. */
 function useFinanceScreen() {
   const me = useMe();
-  const roles = me.data?.roles ?? [];
-  const canRun = me.data ? rolesGrant(roles, REPORT_PERMISSION) : false;
-  const canReadLedger = me.data ? rolesGrant(roles, LEDGER_PERMISSION) : false;
+  const access = useStaffAccess();
+  const canRun = access.holds(REPORT_PERMISSION);
+  const canReadLedger = access.holds(LEDGER_PERMISSION);
   const canRecord = useCanRecordPayment();
   const [tab, setTab] = useState<FinanceTab>("awaiting");
   const [pickedId, setPickedId] = useState<string | undefined>(undefined);
@@ -99,7 +103,7 @@ function useFinanceScreen() {
   const report = useSubscriptionReport({ status: financeTabStatus(tab) }, { enabled: canRun });
   const selected = selectedAwaiting(tab, report.items, pickedId);
   const reportExport = useReportExport();
-  const canExport = me.data ? rolesGrant(roles, EXPORT_PERMISSION) : false;
+  const canExport = access.holds(EXPORT_PERMISSION);
   return {
     body: {
       me,

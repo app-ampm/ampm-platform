@@ -117,6 +117,7 @@ export type {
 } from "./staff-users";
 export {
   clientSide,
+  customRoleRef,
   entitlementModule,
   entitlements,
   financeReach,
@@ -129,6 +130,7 @@ export {
   staffRoleCode,
 } from "./identity";
 export type {
+  CustomRoleRef,
   EntitlementModule,
   FinanceReach,
   HotelReach,

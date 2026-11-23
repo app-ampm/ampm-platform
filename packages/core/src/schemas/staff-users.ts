@@ -22,6 +22,11 @@ export const staffUserView = z.object({
   mfaEnabled: z.boolean(),
   lastLoginAt: isoDateTime.nullable(),
   roles: z.array(z.string()),
+  /**
+   * Each role's display name, in the order of `roles`: a custom role reads as its name ("Sales
+   * assistant"), never its generated key (D-164). Empty from an API older than the field.
+   */
+  roleNames: z.array(z.string()).default([]),
   createdAt: isoDateTime,
 });
 export type StaffUserView = z.infer<typeof staffUserView>;
