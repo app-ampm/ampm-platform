@@ -150,6 +150,8 @@ Each phase lists its goal, what it builds (counted from the blueprint), its spri
 
 **Exit (G1).** Test-cases §3 phase 1 pack: AC-01 to AC-05, AC-12, AC-17 to AC-21, AC-24 to AC-26, AC-32 subscriber rows, AC-35.1, plus AC-16 on public pages and portal, AC-28 for payment, email, SMS and video, AC-34.1 search load. AMPM's scenarios 1 to 7 and 9 pass on staging.
 
+**Added on 23 November 2026.** Hotels supply their own information through the hotel information form: a staff-started request link, a one-time code, a staged draft and a field-by-field merge. It is built in one go, about 57 developer-days, and released when complete ([hotel-information-form-plan.md](../planning/hotel-information-form-plan.md), D-172 to D-182). The staff import uses one CSV template per kind (D-181); AC-35.1 stays in the G1 pack in that form, and AC-39 and AC-40 join it when the form is built.
+
 **AMPM provides.** Hotel import format agreed and ten sample hotels by week 8; the full hotel database with photographs, menus and rate cards by week 20; website copy and selected work with permissions by week 30; visual design approvals before sprints 20 and 22; testers for the acceptance window; the answers in the decision calendar for phase 1.
 
 ### Phase 2 · Wedding planning (about 20 weeks)

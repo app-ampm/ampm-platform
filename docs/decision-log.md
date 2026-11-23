@@ -1,6 +1,6 @@
 # AMPM Platform — Decision Log
 
-**Status:** AMPM's decisions of 2026-10-25, with the round-two decisions of 2026-10-26 (Decisions relayed by the developer on 26 October 2026, to be countersigned by AMPM in the blueprint sign-off sheet) where marked, generated from `docs/decisions.json` by `docs/tools/decision_log_build.py`. Do not edit by hand; change the JSON and rebuild.
+**Status:** AMPM's decisions of 2026-10-25, with the round-two decisions of 2026-10-26 (Decisions relayed by the developer on 26 October 2026, to be countersigned by AMPM in the blueprint sign-off sheet) where marked, and the round-three decisions of 2026-11-23 listed in their own section, generated from `docs/decisions.json` by `docs/tools/decision_log_build.py`. Do not edit by hand; change the JSON and rebuild.
 **Sources:** AMPM App – Compiled Questions & Answers (PDF, 5 pages, 25 Oct 2026); AMPM Management – Final App Decision Brief & Developer Requirements (PDF, 14 pages, 25 Oct 2026).
 
 This log is the record of what AMPM decided, question by question, and what each answer does to the assumptions the drafts were built on. The assumption registers in every draft carry the same markers; the generated decision register and assumptions sheet show them too.
@@ -333,6 +333,18 @@ This log is the record of what AMPM decided, question by question, and what each
 9. Privacy wording and retention periods for leads, guest records and identity documents
 10. Final material-change thresholds and approval rules
 11. The exact workflow for archiving projects and restoring access after archiving
+
+## Round three: the hotel information form (2026-11-23)
+
+Decisions relayed by the developer on 23 November 2026 for the hotel information form (docs/planning/hotel-information-form-plan.md §3), to be countersigned by AMPM.
+
+- Hotel staff who supply information through a request link that AMPM's Hotel team starts, plus a one-time code, with no account, are not a hotel login (Q22, A-22, P-11).
+- Seated at round tables is banquet capacity, floating (standing reception or cocktails) is reception capacity, and theatre stays theatre; a range keeps its maximum in the number and the range in the notes.
+- A hotel's booking terms (full buyout, minimum rooms, minimum nights, several functions on one day) stay internal for now.
+- A No to the form's display authorisation (7.5) means AMPM uses the details internally only and shows no photos; a live hotel's client details change, or a hotel holding them goes live, only with a recorded reason; 7.5 is reworded to promise only what AMPM shows.
+- Clients see "Verified on <date> by AMPM" for hotel-supplied details AMPM has reviewed, as for AMPM's own checks.
+- The form's changes to AMPM's PDF questions are approved (plan §5.3); every added question is optional.
+- Hotel-form data: code records, IP addresses and user agents kept 12 months; people on requests that expired unsubmitted, 12 months after expiry; rejected or revoked requests and declined files, 12 months; contributors' personal details on merged requests masked after 24 months; every clean-up approved by the Super Admin, nothing automatic.
 
 ## Assumptions by status
 
