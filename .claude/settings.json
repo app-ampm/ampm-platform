@@ -24,7 +24,7 @@
             "type": "command",
             "command": "bash \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/typecheck.sh\"",
             "timeout": 300,
-            "statusMessage": "AMPM: typecheck (inert until the monorepo exists)"
+            "statusMessage": "AMPM: typecheck of the session's checkout"
           },
           {
             "type": "command",
