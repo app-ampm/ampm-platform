@@ -19,8 +19,9 @@ if [ "$HOOK" = 1 ] && [ ! -t 0 ]; then
   AMPM_SESSION_JSON=$(cat 2>/dev/null || true); export AMPM_SESSION_JSON
 fi
 
-# True in a git repository, whether the main checkout (.git is a dir) or a worktree (.git is a file) — so
-# the checkpoint commits inside the worktrees every session runs in, not only the main checkout (F9).
+# True in a git repository, whether the main checkout (.git is a dir) or a worktree (.git is a file), so a run by hand
+# from a worktree's copy commits that worktree (F9). The Stop hook always runs the main checkout's copy (Claude Code
+# runs the hooks from there), so it commits the main checkout only; worktree sessions commit their own branches (D-163).
 in_git_repo() { git rev-parse --is-inside-work-tree >/dev/null 2>&1; }
 
 catch_up() {  # after a refused push: replay this branch's commits onto its upstream, aborting cleanly on any conflict
