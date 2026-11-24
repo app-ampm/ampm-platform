@@ -1,3 +1,4 @@
+import { HOTEL_INFO_REQUEST_PASTED_LINK_REFUSAL } from "@ampm/core";
 import type * as UiModule from "@ampm/ui";
 
 import { TEST_API_BASE } from "../../test/api";
@@ -167,5 +168,40 @@ describe("a refusal shows the API's own message in its sheet", () => {
     await fireEvent.press(await screen.findByTestId("record-share-form-channel-copy"));
     await fireEvent.press(screen.getByTestId("record-share-form-submit"));
     expect(await screen.findByTestId("record-share-form-refused")).toHaveTextContent(message);
+  });
+});
+
+describe("a hotel form link pasted into a label or note", () => {
+  it("is refused under the edit's label in the contract's words, and nothing is sent", async () => {
+    const sent: Sent = {};
+    await renderActions({}, sent);
+    await fireEvent.press(screen.getByTestId("request-edit"));
+    await fireEvent.changeText(
+      await screen.findByTestId("edit-request-label"),
+      `Sent ${ISSUED_URL}`,
+    );
+    await fireEvent.press(screen.getByTestId("edit-request-submit"));
+    const sheet = screen.getByTestId("edit-request");
+    expect(
+      await within(sheet).findByText(HOTEL_INFO_REQUEST_PASTED_LINK_REFUSAL),
+    ).toBeOnTheScreen();
+    expect(sent[REQUEST]).toBeUndefined();
+  });
+
+  it("is refused under a share's note in the contract's words, and nothing is sent", async () => {
+    const sent: Sent = {};
+    await renderActions({}, sent);
+    await fireEvent.press(screen.getByTestId("request-share"));
+    await fireEvent.press(await screen.findByTestId("record-share-form-channel-whatsapp"));
+    await fireEvent.changeText(
+      screen.getByTestId("record-share-form-note"),
+      `To the GM: ${ISSUED_URL}`,
+    );
+    await fireEvent.press(screen.getByTestId("record-share-form-submit"));
+    const sheet = screen.getByTestId("record-share");
+    expect(
+      await within(sheet).findByText(HOTEL_INFO_REQUEST_PASTED_LINK_REFUSAL),
+    ).toBeOnTheScreen();
+    expect(sent[`${REQUEST}/share-record`]).toBeUndefined();
   });
 });

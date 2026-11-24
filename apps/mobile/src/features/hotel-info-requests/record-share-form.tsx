@@ -4,6 +4,7 @@ import { useRecordHotelInfoRequestShare } from "@ampm/api-client";
 import {
   HOTEL_INFO_REQUEST_SHARE_NOTE_MAX,
   hotelInfoRequestShareChannel,
+  hotelInfoRequestShareNote,
   type HotelInfoRequestShareChannel,
 } from "@ampm/core";
 import { Button, Icon, Input, Row, Stack, Text, useToast } from "@ampm/ui";
@@ -20,11 +21,18 @@ export interface RecordShareFormProps {
   readonly testID?: string | undefined;
 }
 
-/** The note's check: optional, at most 500 characters. */
+/**
+ * The note's check, the API's own (core `hotelInfoRequestShareNote`): optional, at most 500 characters,
+ * and never the link pasted in, in the contract's words.
+ */
 function noteError(note: string): string | undefined {
-  return note.trim().length > HOTEL_INFO_REQUEST_SHARE_NOTE_MAX
+  if (note.trim() === "") return undefined;
+  const parsed = hotelInfoRequestShareNote.safeParse(note);
+  if (parsed.success) return undefined;
+  const issue = parsed.error.issues[0];
+  return issue?.code === "too_big"
     ? `Keep the note to ${HOTEL_INFO_REQUEST_SHARE_NOTE_MAX} characters at most`
-    : undefined;
+    : issue?.message;
 }
 
 /** The form's state: the channel (none until chosen), the note, and the record's outcome. */
