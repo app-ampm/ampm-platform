@@ -11,12 +11,12 @@ export type ReleaseSlot = () => void;
  * The uploads this API process is reading (D-187 §1), held in memory: at most two per owner (a signed-in
  * principal, or a client network) and four in all, so concurrent uploads cannot pile up request bodies
  * in memory. UploadSlotInterceptor takes a slot after the guards, before any byte of the body is read,
- * and gives it back once its response ends. One instance per application (PlatformModule).
+ * and gives it back once the handler's work ends. One instance per application (PlatformModule).
  *
  * @example
  * const release = slots.tryTake("user:0192f1a0-…");
  * if (!release) throw errors.unavailable("The server is busy with other uploads. Try again in 5 seconds.");
- * response.once("close", release);
+ * return next.handle().pipe(finalize(release));
  */
 export class UploadSlots {
   private readonly held = new Map<string, number>();
