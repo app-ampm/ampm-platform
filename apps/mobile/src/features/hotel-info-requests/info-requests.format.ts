@@ -75,6 +75,13 @@ export function infoRequestHotelName(request: HotelInfoRequestSummaryView): stri
   return request.hotelName ?? request.proposedName ?? request.reference;
 }
 
+/** A new hotel's proposed identity: its name, destination and web address; null for a catalogue hotel. */
+export function proposedHotelText(request: HotelInfoRequestSummaryView): string | null {
+  if (request.target !== "new") return null;
+  const parts = [request.proposedName, request.destinationName, request.proposedWebAddress];
+  return parts.filter(Boolean).join(" · ");
+}
+
 /** A screen reader's summary of a queue row: reference, hotel, place, status, expiry, test. */
 export function requestRowSummary(request: HotelInfoRequestSummaryView): string {
   const parts = [request.reference, infoRequestHotelName(request)];

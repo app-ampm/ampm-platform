@@ -8,6 +8,7 @@ import {
   infoRequestHotelName,
   infoRequestStatusLabel,
   infoRequestStatusTone,
+  proposedHotelText,
   requestRowSummary,
 } from "./info-requests.format";
 import {
@@ -31,6 +32,13 @@ describe("a request's status", () => {
   it("names the catalogue hotel, or a new hotel's proposed name", () => {
     expect(infoRequestHotelName(requestSummaryFixture())).toBe("The Lakeside Palace");
     expect(infoRequestHotelName(newHotelRequestFixture())).toBe("The Desert Fort");
+  });
+
+  it("states a new hotel's proposed identity, and nothing for a catalogue hotel", () => {
+    expect(proposedHotelText(newHotelRequestFixture())).toBe(
+      "The Desert Fort · Jaisalmer · https://desert-fort.example",
+    );
+    expect(proposedHotelText(requestSummaryFixture())).toBeNull();
   });
 
   it("summarises a row for a screen reader, test and expiry included", () => {

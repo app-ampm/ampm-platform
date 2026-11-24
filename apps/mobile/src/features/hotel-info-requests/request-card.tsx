@@ -10,6 +10,7 @@ import {
   infoRequestStatusLabel,
   infoRequestStatusTone,
   isLinkExpired,
+  proposedHotelText,
 } from "./info-requests.format";
 import { RequestActions } from "./request-actions";
 
@@ -64,9 +65,17 @@ function recipientText(request: HotelInfoRequestDetail): string | null {
 
 function RequestFacts({ request }: { readonly request: HotelInfoRequestDetail }) {
   const recipient = recipientText(request);
+  const proposed = proposedHotelText(request);
   return (
     <Stack gap={3}>
       <RequestTitle request={request} />
+      {proposed ? (
+        <Fact label="Proposed hotel">
+          <Text variant="bodySmall" testID="request-proposed-hotel">
+            {proposed}
+          </Text>
+        </Fact>
+      ) : null}
       {request.displayLabel ? <Fact label="Label">{request.displayLabel}</Fact> : null}
       <Fact label="Link">
         <Stack gap={1}>

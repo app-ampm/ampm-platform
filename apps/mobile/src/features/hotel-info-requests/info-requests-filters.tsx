@@ -97,6 +97,7 @@ export function InfoRequestFilters({ filters, onChange, showTests }: InfoRequest
       />
       {showTests ? (
         <Toggle
+          className="max-w-md"
           label="Show test requests"
           value={filters.includeTests}
           onValueChange={(includeTests) => onChange({ ...filters, includeTests })}

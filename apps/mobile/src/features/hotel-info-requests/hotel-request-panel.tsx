@@ -8,18 +8,27 @@ import {
   type HotelInfoRequestSummaryView,
   type HotelStaffDetail,
 } from "@ampm/core";
-import { Button, Card, QueryErrorState, Row, Skeleton, Stack, Text } from "@ampm/ui";
+import { Button, Card, QueryErrorState, Row, Skeleton, Stack, Text, useLayoutAt } from "@ampm/ui";
 
 import { currentRequestOf } from "./info-requests.format";
 import { RequestCard } from "./request-card";
 import { SendRequestSheet } from "./send-request-sheet";
 import { useInfoRequestPermissions } from "./use-info-request-permissions";
 
-/** The panel's title, and Send request where it may be sent (no live request, the create key). */
+/**
+ * The panel's title, and Send request where it may be sent (no live request, the create key). In the
+ * side column from 1024 the title steps down beside its action, as the contacts' does; stacked under the
+ * venues it is a section heading like theirs.
+ */
 function PanelHeading({ onSend }: { readonly onSend: (() => void) | undefined }) {
+  const isDesktop = useLayoutAt("lg");
   return (
     <Row justify="between" align="center" gap={3}>
-      <Text variant="subheading" accessibilityRole="header" className="shrink">
+      <Text
+        variant={isDesktop ? "subheading" : "heading"}
+        accessibilityRole="header"
+        className="shrink"
+      >
         Information request
       </Text>
       {onSend ? (

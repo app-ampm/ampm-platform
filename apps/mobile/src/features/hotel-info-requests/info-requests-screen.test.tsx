@@ -83,6 +83,9 @@ describe("InfoRequestsScreen (TW-99)", () => {
     expect(screen.getByText("Jaisalmer · New hotel")).toBeOnTheScreen();
     await fireEvent.press(row);
     expect(await screen.findByTestId("request-card")).toBeOnTheScreen();
+    expect(screen.getByTestId("request-proposed-hotel")).toHaveTextContent(
+      "The Desert Fort · Jaisalmer · https://desert-fort.example",
+    );
     expect(mockPush).not.toHaveBeenCalled();
     // A Project Manager reads the summary: no action on the sheet.
     expect(screen.queryByTestId("request-actions")).toBeNull();

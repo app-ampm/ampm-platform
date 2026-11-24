@@ -136,13 +136,26 @@ describe("SendRequestSheet", () => {
     await fireEvent.press(await screen.findByTestId("send-request-submit"));
     await fireEvent.press(await screen.findByTestId("issued-link-copy"));
     expect(mockCopy).toHaveBeenCalledWith(ISSUED_URL);
-    expect(await screen.findByText("Link copied")).toBeOnTheScreen();
+    // In the sheet itself: a toast would sit under the sheet's modal on the web.
+    expect(await screen.findByTestId("issued-link-copied")).toHaveTextContent("Link copied.");
     await fireEvent.press(await screen.findByTestId("issued-link-record-submit"));
     expect(await screen.findByText("Choose how it was shared")).toBeOnTheScreen();
     await fireEvent.press(screen.getByTestId("issued-link-record-channel-whatsapp"));
     await fireEvent.press(screen.getByTestId("issued-link-record-submit"));
     expect(await screen.findByText("Share recorded.")).toBeOnTheScreen();
     expect(seen.shared).toEqual({ channel: "whatsapp" });
+  });
+
+  it("says in the sheet when the browser refuses the copy, and still offers the record step", async () => {
+    mockCopy.mockResolvedValueOnce(false);
+    await renderWithApi(<Harness />, sheetFetch({}));
+    await fireEvent.press(await screen.findByTestId("send-request-submit"));
+    await fireEvent.press(await screen.findByTestId("issued-link-copy"));
+    expect(await screen.findByTestId("issued-link-copy-failed")).toHaveTextContent(
+      "Could not copy: select the link above and copy it.",
+    );
+    // A link copied by hand is shared all the same.
+    expect(screen.getByTestId("issued-link-record")).toBeOnTheScreen();
   });
 
   it("offers the record step after the share sheet, and not after a cancelled share", async () => {
