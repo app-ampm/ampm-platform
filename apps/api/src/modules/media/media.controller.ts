@@ -1,6 +1,6 @@
 import { Controller, Delete, Get, HttpCode, Patch, Post, Req, Res } from "@nestjs/common";
 import {
-  errors,
+  MAX_MEDIA_UPLOAD_BYTES,
   mediaAssetCreateRequest,
   mediaAssetUpdateRequest,
   mediaDownloadQuery,
@@ -18,8 +18,9 @@ import {
 import type { Request, Response } from "express";
 import { z } from "zod";
 
+import { octetStreamBody, readBoundedBody } from "../../common/bounded-body.js";
 import { RateLimit } from "../../common/rate-limit/rate-limit.decorator.js";
-import { UPLOADS } from "../../common/rate-limit/route-limits.js";
+import { UploadRoute } from "../../common/upload-slot/upload-route.decorator.js";
 import { ZodBody, ZodParams, ZodQuery } from "../../common/zod.js";
 import {
   Audited,
@@ -48,7 +49,8 @@ type BlobQuery = z.infer<typeof blobQuery>;
  * minted link points at (never a permanent path — security.md). `blob` is declared before `:mediaId` so it
  * is not read as an id. Create is audited by the interceptor; update, delete and upload self-audit.
  * `blob` is limited per network and fails open (a gallery loads many images; the signature is the
- * gate); an upload shares the staff upload limit, which fails closed (D-149).
+ * gate); an upload shares the staff upload limit, which fails closed (D-149), and reads its file after
+ * the guards, in an upload slot (D-187).
  */
 @Controller("media")
 export class MediaController {
@@ -98,24 +100,20 @@ export class MediaController {
     return this.media.get(params.mediaId);
   }
 
-  // The raw file bytes are the request body (application/octet-stream); content, not extension, decides type.
+  // The raw file bytes are the request body (application/octet-stream), read here, after the guards
+  // and in an upload slot (D-187); content, not extension, decides type.
   @Post(":mediaId/upload")
   @RequirePermission("hotels.hotel_media_rights_status.update")
-  @RateLimit(UPLOADS)
+  @UploadRoute()
   @HttpCode(200)
   @SelfAudited()
-  upload(
+  async upload(
     @ZodParams(mediaParam) params: MediaParam,
     @Req() req: Request,
     @CurrentPrincipal() principal: Principal,
   ): Promise<MediaAssetView> {
-    if (!Buffer.isBuffer(req.body)) {
-      throw errors.validation(
-        [],
-        "Send the raw file bytes as the request body (application/octet-stream)",
-      );
-    }
-    return this.media.uploadBytes(params.mediaId, req.body, staffId(principal));
+    const bytes = await readBoundedBody(req, octetStreamBody(MAX_MEDIA_UPLOAD_BYTES));
+    return this.media.uploadBytes(params.mediaId, bytes, staffId(principal));
   }
 
   @Patch(":mediaId")

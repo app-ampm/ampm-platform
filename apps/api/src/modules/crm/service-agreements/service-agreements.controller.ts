@@ -1,6 +1,6 @@
 import { Controller, Get, HttpCode, Patch, Post, Req } from "@nestjs/common";
 import {
-  errors,
+  MAX_DOCUMENT_UPLOAD_BYTES,
   serviceAgreementCreateRequest,
   serviceAgreementListQuery,
   serviceAgreementTransitionRequest,
@@ -17,9 +17,9 @@ import {
 import type { Request } from "express";
 import { z } from "zod";
 
-import { RateLimit } from "../../../common/rate-limit/rate-limit.decorator.js";
-import { UPLOADS } from "../../../common/rate-limit/route-limits.js";
+import { octetStreamBody, readBoundedBody } from "../../../common/bounded-body.js";
 import type { Access } from "../../../common/request-context.js";
+import { UploadRoute } from "../../../common/upload-slot/upload-route.decorator.js";
 import { ZodBody, ZodParams, ZodQuery } from "../../../common/zod.js";
 import {
   CurrentAccess,
@@ -103,25 +103,21 @@ export class ServiceAgreementsController {
     return this.agreements.transition(principal, access, params.agreementId, body);
   }
 
-  // The raw file bytes are the request body (application/octet-stream); content, not extension, decides type.
+  // The raw file bytes are the request body (application/octet-stream), read here, after the guards
+  // and in an upload slot (D-187); content, not extension, decides type.
   @Post("service-agreements/:agreementId/signed-copy")
   @HttpCode(200)
   @RequirePermission("crm.service_agreements.update")
-  @RateLimit(UPLOADS)
+  @UploadRoute()
   @SelfAudited()
-  markSignedOffline(
+  async markSignedOffline(
     @ZodParams(agreementParam) params: { agreementId: string },
     @Req() req: Request,
     @CurrentPrincipal() principal: Principal,
     @CurrentAccess() access: Access,
   ): Promise<ServiceAgreementStaffView> {
-    if (!Buffer.isBuffer(req.body)) {
-      throw errors.validation(
-        [],
-        "Send the signed copy's raw bytes as the request body (application/octet-stream)",
-      );
-    }
-    return this.signedCopies.markSignedOffline(principal, access, params.agreementId, req.body);
+    const bytes = await readBoundedBody(req, octetStreamBody(MAX_DOCUMENT_UPLOAD_BYTES));
+    return this.signedCopies.markSignedOffline(principal, access, params.agreementId, bytes);
   }
 
   @Post("service-agreements/:agreementId/signed-copy/link")

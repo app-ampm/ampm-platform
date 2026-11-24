@@ -244,13 +244,17 @@ describe("Booking milestone signed contract (e2e)", () => {
     await attach(milestoneId, PDF).expect(409);
   });
 
-  it("refuses a binary body on any other milestone route (415)", async () => {
+  it("never reads a binary body on any other milestone route: it carries no record (D-187)", async () => {
     const milestoneId = await newMilestone();
-    await http()
+    const before = await prisma.bookingMilestone.findUniqueOrThrow({ where: { id: milestoneId } });
+    const res = await http()
       .patch(`/consultancy-admin/booking-milestones/${milestoneId}`)
       .set("authorization", bearer.ht)
       .set("content-type", OCTET)
       .send(PDF)
-      .expect(415);
+      .expect(400);
+    expect(res.body.error.code).toBe("validation_failed");
+    const after = await prisma.bookingMilestone.findUniqueOrThrow({ where: { id: milestoneId } });
+    expect(after).toEqual(before);
   });
 });

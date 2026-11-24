@@ -181,13 +181,17 @@ describe("Hotel wedding reference consent (e2e)", () => {
     await mintLink(refId, "ht", otherHotelId).expect(404);
   });
 
-  it("refuses a binary body on any other reference route (415)", async () => {
+  it("never reads a binary body on any other reference route: it carries no record (D-187)", async () => {
     const refId = await newReference();
-    await http()
+    const before = await prisma.hotelWeddingReference.findUniqueOrThrow({ where: { id: refId } });
+    const res = await http()
       .patch(`${base()}/${refId}`)
       .set("Authorization", bearer.ht)
       .set("content-type", OCTET)
       .send(PDF)
-      .expect(415);
+      .expect(400);
+    expect(res.body.error.code).toBe("validation_failed");
+    const after = await prisma.hotelWeddingReference.findUniqueOrThrow({ where: { id: refId } });
+    expect(after).toEqual(before);
   });
 });

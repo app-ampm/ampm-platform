@@ -9,7 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AppModule } from "./app.module.js";
 import { PrismaService } from "./db/prisma.service.js";
-import { configureHttp } from "./http.setup.js";
+import { configureHttp, HTTP_APP_OPTIONS } from "./http.setup.js";
 import { JobQueue } from "./jobs/job-queue.js";
 
 const REDIS_URL = process.env["REDIS_URL"];
@@ -101,7 +101,7 @@ describe.skipIf(!REDIS_URL || !DATABASE_URL)(
       delete process.env["JOB_WORKER"];
       const app = await NestFactory.create<NestExpressApplication>(AppModule, {
         logger: false,
-        rawBody: true,
+        ...HTTP_APP_OPTIONS,
       });
       configureHttp(app);
       await app.listen(0, "127.0.0.1");

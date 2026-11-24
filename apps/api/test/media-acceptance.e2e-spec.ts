@@ -116,15 +116,16 @@ describe("Media AC-20/AC-24 acceptance (e2e)", () => {
 
   it("refuses an upload over the size ceiling (AC-20, size refusal)", async () => {
     const id = await newAsset("image", "image/jpeg");
-    // 25.5 MiB: within the 26 MiB body-parser limit but over the 25 MiB app ceiling, so the service
-    // rejects it (400) rather than the parser (413).
+    // 25.5 MiB, over the 25 MiB ceiling: the route's reader refuses the declared length with 413 before
+    // reading a byte (D-187), so the bytes never reach detection, the scan or sharp.
     const tooBig = Buffer.concat([JPEG_HEADER, Buffer.alloc(Math.floor(25.5 * 1024 * 1024))]);
-    const res = await uploadBytes(id, tooBig).expect(400);
-    // Pin the 400 to the SIZE ceiling, not the decode-reject path. The payload sniffs as JPEG but cannot
-    // decode, and both failures are validation_failed/400 — so the message is the only distinguisher.
-    // Without this assertion, removing the size guard would still pass here (the bytes would 400 at the
-    // sharp decode instead), leaving the AC-20 ceiling untested.
-    expect(res.body.error.message).toMatch(/exceeds the \d+ MB limit/i);
+    const res = await uploadBytes(id, tooBig).expect(413);
+    expect(res.body.error).toEqual({
+      code: "payload_too_large",
+      message: "The file is larger than 25 MB",
+    });
+    const after = await http().get(`/media/${id}`).set("Authorization", auth).expect(200);
+    expect(after.body.data.scanStatus).toBe("pending"); // nothing stored
   });
 
   it("stops serving a minted link once the owning asset is removed (AC-20.5, access follows the record)", async () => {

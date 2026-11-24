@@ -4,6 +4,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { AppLogger } from "../src/common/logger.service.js";
 import { requestContext } from "../src/common/request-context.js";
+import { PrismaService } from "../src/db/prisma.service.js";
 import { startApi } from "./start-api.js";
 
 const PROJECT = "0192f3a0-7d3e-7b1a-9c2f-aaaaaaaaaaaa";
@@ -12,6 +13,7 @@ const OVERSIZED = JSON.stringify({ body: "x".repeat(200 * 1024) });
 // The seeded wedding (prisma/seed.ts), of which the project manager is a member.
 const SEEDED_NOTES = "/spike/projects/0192f3a0-7d3e-7b1a-9c2f-0000000000a1/field-notes";
 const JSON_TYPE = "application/json";
+const FORM_SLUG = "e2e-http-form-destination";
 const MALFORMED = { code: "validation_failed", message: "Malformed request body" };
 const PARSER_REFUSALS = [
   {
@@ -47,6 +49,7 @@ describe("the HTTP edge (e2e)", () => {
   });
 
   afterAll(async () => {
+    await app.get(PrismaService).destination.deleteMany({ where: { slug: FORM_SLUG } });
     await app.close();
   });
 
@@ -73,6 +76,16 @@ describe("the HTTP edge (e2e)", () => {
       expect(response.body).toEqual({ error });
     },
   );
+
+  it("parses JSON only: a form-encoded record is never read, so it is refused (D-187)", async () => {
+    await request(app.getHttpServer())
+      .post("/hotels-admin/destinations")
+      .set("authorization", `Bearer ${await mint("local:admin")}`)
+      .type("form")
+      .send({ name: "E2E Form Destination", slug: FORM_SLUG })
+      .expect(400);
+    expect(await app.get(PrismaService).destination.count({ where: { slug: FORM_SLUG } })).toBe(0);
+  });
 
   it("does not name the framework in its headers", async () => {
     const response = await request(app.getHttpServer()).get("/health").expect(200);

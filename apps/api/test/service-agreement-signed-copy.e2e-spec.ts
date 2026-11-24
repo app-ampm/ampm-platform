@@ -156,11 +156,12 @@ describe("Service agreement signed copy (e2e)", () => {
 
   it("takes only raw bytes, and only from a signed-in staff member", async () => {
     const id = await sentAgreement();
-    await http()
+    const json = await http()
       .post(`/crm/service-agreements/${id}/signed-copy`)
       .set("authorization", await sm())
       .send({ documentId: "00000000-0000-7000-8000-0000000000dd" })
-      .expect(400);
+      .expect(415);
+    expect(json.body.error.code).toBe("unsupported_media_type");
     await http()
       .post(`/crm/service-agreements/${id}/signed-copy`)
       .set("content-type", OCTET)

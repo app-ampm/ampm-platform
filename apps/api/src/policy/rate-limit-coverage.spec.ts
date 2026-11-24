@@ -26,9 +26,11 @@ const COSTLY = [
   "PortalController.subscribe", // creates a gateway order
   "EnquiriesClientController.request", // notifies Sales
   "LeadsController.submit", // a bot check, a lead and an email to Sales
-  "MediaController.upload", // buffers, scans and stores up to 25 MiB
+  "MediaController.upload", // reads, scans and stores up to 25 MiB
+  // Each document upload reads, scans and stores up to 20 MiB.
   "BookingMilestonesController.attachContract",
   "ServiceAgreementsController.markSignedOffline",
+  "HotelReferencesController.attachConsent",
   // Each import preview reads up to 5 MiB and stores its plan; each import writes up to 2,000 rows.
   "HotelImportController.importHotels",
   "HotelImportController.importRooms",

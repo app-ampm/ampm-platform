@@ -2,7 +2,7 @@ import type { NestExpressApplication } from "@nestjs/platform-express";
 import { Test } from "@nestjs/testing";
 
 import { AppModule } from "../src/app.module.js";
-import { configureHttp } from "../src/http.setup.js";
+import { configureHttp, HTTP_APP_OPTIONS } from "../src/http.setup.js";
 import { LocalIdentityAdapter } from "../src/identity/local.adapter.js";
 
 /**
@@ -29,8 +29,8 @@ export interface TestApi {
  */
 export async function startApi(): Promise<TestApi> {
   const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
-  // `rawBody` matches main.ts, so the e2e suite exercises the webhook's raw-body signature check (8.3).
-  const app = moduleRef.createNestApplication<NestExpressApplication>({ rawBody: true });
+  // The options main.ts uses: the webhook's raw-body signature check (8.3) and the JSON parser only.
+  const app = moduleRef.createNestApplication<NestExpressApplication>(HTTP_APP_OPTIONS);
   configureHttp(app);
   await app.init();
   const adapter = new LocalIdentityAdapter(process.env["IDENTITY_LOCAL_SECRET"] ?? "");
