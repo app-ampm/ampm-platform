@@ -1,3 +1,4 @@
+import { HOTEL_INFO_REQUEST_PASTED_LINK_REFUSAL } from "@ampm/core";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
@@ -79,6 +80,26 @@ describe("Hotel information requests: changes and the hotel delete (e2e)", () =>
     });
     expect(audit.entityType).toBe("hotel_info_request");
     await shareRecord("ht", id, { channel: "copy", url: "https://x.example/#k=hfl_x" }).expect(400);
+  });
+
+  it("refuses a label, note or share note holding a pasted link, naming the field (400)", async () => {
+    const { id } = await openRequest("pasted-link");
+    const pasted = "Sent https://site.synthetic.example/hotel-form#k=abc on WhatsApp";
+    const refusals = [
+      await patch("ht", id, { staffNote: pasted }).expect(400),
+      await patch("ht", id, { displayLabel: `hf${"l_"}SyntheticPastedSecretRun01` }).expect(400),
+      await shareRecord("ht", id, { channel: "whatsapp", note: pasted }).expect(400),
+    ];
+    expect(refusals.map((answer) => answer.body.error.details[0].path)).toEqual([
+      "staffNote",
+      "displayLabel",
+      "note",
+    ]);
+    for (const answer of refusals) {
+      expect(answer.body.error.details[0].message).toBe(HOTEL_INFO_REQUEST_PASTED_LINK_REFUSAL);
+    }
+    const row = await suite.prisma.hotelInfoRequest.findUniqueOrThrow({ where: { id } });
+    expect(row).toMatchObject({ staffNote: null, displayLabel: null });
   });
 
   it("changes the label and recipient, naming the fields, and extends up to 60 days past the first expiry", async () => {

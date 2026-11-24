@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   HOTEL_INFO_REQUEST_EXTEND_DAYS_MAX,
+  HOTEL_INFO_REQUEST_PASTED_LINK_REFUSAL,
   HOTEL_INFO_REQUEST_TEXT_MAX,
   hotelDuplicateHintsQuery,
   hotelInfoRequestCreateRequest,
@@ -9,6 +10,7 @@ import {
   hotelInfoRequestListQuery,
   hotelInfoRequestReissueRequest,
   hotelInfoRequestRevokeRequest,
+  hotelInfoRequestShareNote,
   hotelInfoRequestShareRecordRequest,
   hotelInfoRequestUpdateRequest,
 } from "./hotel-info-request-contracts";
@@ -29,6 +31,11 @@ const proposed = {
 /** The paths of a failed parse's issues. */
 function pathsOf(result: { error?: { issues: { path: PropertyKey[] }[] } }): string[] {
   return (result.error?.issues ?? []).map((issue) => issue.path.map(String).join("."));
+}
+
+/** The messages of a failed parse's issues. */
+function messagesOf(result: { error?: { issues: { message: string }[] } }): string[] {
+  return (result.error?.issues ?? []).map((issue) => issue.message);
 }
 
 describe("hotelInfoRequestCreateRequest", () => {
@@ -203,6 +210,57 @@ describe("the reissue, share-record and revoke bodies", () => {
     });
     expect(hotelInfoRequestRevokeRequest.safeParse({}).success).toBe(false);
     expect(hotelInfoRequestRevokeRequest.safeParse({ reason: " " }).success).toBe(false);
+  });
+});
+
+describe("a hotel form link pasted into a label or note (D-188 §4)", () => {
+  // Shorter than a real secret (43 characters after the prefix), so no secret scanner takes it for one.
+  const secret = `hf${"l_"}SyntheticPastedSecretRun01`;
+  const pasted = [
+    `Sent https://site.synthetic.example/hotel-form#k=${secret} on WhatsApp`,
+    `The secret alone: ${secret}`,
+    "Only the fragment: https://site.synthetic.example/hotel-form#k=",
+  ];
+
+  it("refuses the link's secret or its #k= fragment in a label or note, create or edit, with one message", () => {
+    for (const text of pasted) {
+      for (const field of ["displayLabel", "staffNote"]) {
+        const create = hotelInfoRequestCreateRequest.safeParse({ ...existing, [field]: text });
+        expect(messagesOf(create), `${field}: ${text}`).toEqual([
+          HOTEL_INFO_REQUEST_PASTED_LINK_REFUSAL,
+        ]);
+        expect(pathsOf(create)).toEqual([field]);
+        const update = hotelInfoRequestUpdateRequest.safeParse({ [field]: text });
+        expect(messagesOf(update), `${field}: ${text}`).toEqual([
+          HOTEL_INFO_REQUEST_PASTED_LINK_REFUSAL,
+        ]);
+      }
+    }
+  });
+
+  it("refuses it in a recorded share's note, and says so through the note's own schema", () => {
+    for (const text of pasted) {
+      const share = hotelInfoRequestShareRecordRequest.safeParse({ channel: "copy", note: text });
+      expect(messagesOf(share), text).toEqual([HOTEL_INFO_REQUEST_PASTED_LINK_REFUSAL]);
+      expect(pathsOf(share)).toEqual(["note"]);
+      expect(messagesOf(hotelInfoRequestShareNote.safeParse(text))).toEqual([
+        HOTEL_INFO_REQUEST_PASTED_LINK_REFUSAL,
+      ]);
+    }
+  });
+
+  it("keeps text that only names the prefix, or holds a run too short to be a link's secret", () => {
+    const fine = [
+      `A link starts hf${"l_"} and goes to the hotel alone`,
+      `hf${"l_"}${"a".repeat(19)}`,
+      "Sent by WhatsApp to the GM",
+    ];
+    for (const text of fine) {
+      expect(
+        hotelInfoRequestCreateRequest.safeParse({ ...existing, staffNote: text }).success,
+      ).toBe(true);
+      expect(hotelInfoRequestShareNote.safeParse(text).success, text).toBe(true);
+    }
   });
 });
 

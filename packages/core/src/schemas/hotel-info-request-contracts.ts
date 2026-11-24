@@ -8,8 +8,9 @@ import { hotelInfoRequestKind, hotelInfoRequestStatus } from "./hotel-info-reque
 /*
  * What the staff routes of hotel information requests take (D-188 §3; plan §7.2): the create, update,
  * reissue, share-record and revoke bodies, the inbox and history queries, and the duplicate hints' query.
- * Every body and query is strict: a field a route does not take is refused, the link's secret among them.
- * The answers are in hotel-info-request-views.ts.
+ * Every body and query is strict: a field a route does not take is refused, the link's secret among them;
+ * and a label or note that holds a pasted link is refused too. The answers are in
+ * hotel-info-request-views.ts.
  */
 
 /** The longest staff note and revoke reason (docs/field-matrix.md: text, up to 10,000 characters). */
@@ -22,13 +23,35 @@ export const HOTEL_INFO_REQUEST_SHARE_NOTE_MAX = 500;
  */
 export const HOTEL_INFO_REQUEST_EXTEND_DAYS_MAX = 60;
 
+/** What a label or note holding a pasted hotel form link is refused with. */
+export const HOTEL_INFO_REQUEST_PASTED_LINK_REFUSAL =
+  "Remove the link: a label or note is seen by everyone who reads the request";
+
 const WEB_ADDRESS_REFUSAL = "Enter a web address such as https://www.hotel.example";
 const SWITCHBOARD_REFUSAL = "Enter the switchboard's full number, such as +91 141 234 5678";
+
+/**
+ * A hotel form link pasted into free text (D-188 §4): its secret, `hfl_` and a base64url run long enough
+ * to be one, or its `#k=` fragment. A label or note is read by everyone who reads the request, while the
+ * link goes to the hotel alone and is shown to staff once.
+ */
+const PASTED_LINK = /hfl_[A-Za-z0-9_-]{20,}|#k=/;
+
+/** Text that holds no pasted hotel form link. */
+function linkFree<T extends z.ZodString>(text: T): T {
+  return text.refine((value) => !PASTED_LINK.test(value), {
+    error: HOTEL_INFO_REQUEST_PASTED_LINK_REFUSAL,
+  });
+}
 
 /** A label, a name or a source: trimmed, 1 to 255 characters. */
 const shortText = storableText().min(1).max(255);
 /** A staff note or a reason: trimmed, 1 to 10,000 characters. */
 const longText = storableText().min(1).max(HOTEL_INFO_REQUEST_TEXT_MAX);
+/** The staff label shown in emails and lists: a short text with no pasted link. */
+const displayLabel = linkFree(shortText);
+/** The staff note: a long text with no pasted link. */
+const staffNote = linkFree(longText);
 /** The recipient's email as AMPM enters it, stored lower-case (RESTRICTED-CONTACT). */
 const recipientEmail = z.string().trim().toLowerCase().email().max(255);
 /**
@@ -53,8 +76,8 @@ const switchboardPhone = storableText()
 /** What a request carries beyond its target, all optional at creation. */
 const createFields = {
   /** The staff label shown in emails and lists. */
-  displayLabel: shortText.optional(),
-  staffNote: longText.optional(),
+  displayLabel: displayLabel.optional(),
+  staffNote: staffNote.optional(),
   /** The hotel's official website, as AMPM's own reference. */
   officialWebsite: webAddress.optional(),
   switchboardPhone: switchboardPhone.optional(),
@@ -132,8 +155,8 @@ export type HotelInfoRequestCreateRequestInput = z.input<typeof hotelInfoRequest
  */
 export const hotelInfoRequestUpdateRequest = z
   .object({
-    displayLabel: shortText.nullable().optional(),
-    staffNote: longText.nullable().optional(),
+    displayLabel: displayLabel.nullable().optional(),
+    staffNote: staffNote.nullable().optional(),
     recipientName: shortText.nullable().optional(),
     recipientEmail: recipientEmail.nullable().optional(),
     extendDays: z.number().int().min(1).max(HOTEL_INFO_REQUEST_EXTEND_DAYS_MAX).optional(),
@@ -168,6 +191,17 @@ export const hotelInfoRequestShareChannel = z.enum(["whatsapp", "copy", "other"]
 export type HotelInfoRequestShareChannel = z.infer<typeof hotelInfoRequestShareChannel>;
 
 /**
+ * A recorded share's note for AMPM: trimmed, 1 to 500 characters, with no pasted link (the Record share
+ * form checks it as the API does).
+ *
+ * @example
+ * hotelInfoRequestShareNote.safeParse("To the GM on WhatsApp").success; // true
+ */
+export const hotelInfoRequestShareNote = linkFree(
+  storableText().min(1).max(HOTEL_INFO_REQUEST_SHARE_NOTE_MAX),
+);
+
+/**
  * `POST …/:id/share-record`: that the link was shared, and how; the link itself is never sent or stored.
  *
  * @example
@@ -176,7 +210,7 @@ export type HotelInfoRequestShareChannel = z.infer<typeof hotelInfoRequestShareC
 export const hotelInfoRequestShareRecordRequest = z
   .object({
     channel: hotelInfoRequestShareChannel,
-    note: storableText().min(1).max(HOTEL_INFO_REQUEST_SHARE_NOTE_MAX).optional(),
+    note: hotelInfoRequestShareNote.optional(),
   })
   .strict();
 export type HotelInfoRequestShareRecordRequest = z.infer<typeof hotelInfoRequestShareRecordRequest>;
