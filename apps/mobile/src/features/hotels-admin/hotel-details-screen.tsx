@@ -8,6 +8,7 @@ import { QueryErrorState, Screen, Skeleton, SplitPane, Stack, useLayoutAt } from
 
 import { useGoToSignIn } from "@/navigation/sign-in";
 
+import { HotelRequestPanel } from "../hotel-info-requests/hotel-request-panel";
 import { ContactEditSheet } from "./contact-edit-sheet";
 import { HotelRecordHeader } from "./hotel-record-header";
 import { HotelSavedByClients } from "./hotel-saved-by-clients";
@@ -90,8 +91,7 @@ function HotelContacts({
   const deleteContact = useDeleteContact(hotelId);
   const isDesktop = useLayoutAt("lg");
   return (
-    // Stacked, 14 more than the split's 18 keeps the phone's 32 between venues and contacts.
-    <View className="mt-3.5 lg:mt-0" testID="hotel-contacts-column">
+    <View testID="hotel-contacts-column">
       <ManagedSection
         title="Hotel contacts"
         items={contacts}
@@ -114,9 +114,10 @@ function HotelContacts({
 }
 
 /**
- * Rooms and venues beside the contacts and the clients who saved the hotel; every section stays in its
- * slot at every width. The contacts come only to a reader of them (D-171): for anyone else the
- * response has none, and the section is left out rather than shown empty.
+ * Rooms and venues beside the hotel's information request, the contacts and the clients who saved the
+ * hotel; every section stays in its slot at every width. The request panel shows to a reader of requests
+ * (D-188 §7). The contacts come only to a reader of them (D-171): for anyone else the response has none,
+ * and the section is left out rather than shown empty.
  */
 function HotelSubresources({ hotelId, hotel }: SectionsProps) {
   const { canReadSavedHotels, canOpenClient } = useClientInterestPermissions();
@@ -124,7 +125,9 @@ function HotelSubresources({ hotelId, hotel }: SectionsProps) {
     <SplitPane
       sideWidth="sm"
       side={
-        <Stack gap={8}>
+        // Stacked, 14 more than the split's 18 keeps the phone's 32 between the venues and the side.
+        <Stack gap={8} className="mt-3.5 lg:mt-0">
+          <HotelRequestPanel hotelId={hotelId} hotel={hotel} />
           {"contacts" in hotel ? (
             <HotelContacts hotelId={hotelId} contacts={hotel.contacts} />
           ) : null}

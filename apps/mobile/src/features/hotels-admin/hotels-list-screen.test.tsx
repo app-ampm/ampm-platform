@@ -2,7 +2,8 @@ import { uiCopy } from "@ampm/ui";
 
 import { act, fireEvent, screen } from "../../test/render";
 import { staffMeFixture } from "../accounts/accounts.test-utils";
-import { HotelsListScreen } from "./hotels-list-screen";
+import { requestSummaryFixture } from "../hotel-info-requests/info-requests.test-utils";
+import { HotelsListScreen, requestsLabel } from "./hotels-list-screen";
 import {
   destinationListItemFixture,
   failure,
@@ -144,5 +145,64 @@ describe("HotelsListScreen", () => {
       routedFetch({ "/hotels-admin/hotels": () => failure("unauthenticated", 401) }),
     );
     expect(await screen.findByText("Sign in to view the hotel catalogue")).toBeOnTheScreen();
+  });
+});
+
+/** The catalogue, plus the requests waiting for review by status (D-188 §7), for `roles`. */
+function requestsFetch(roles: Roles, waiting: Record<string, number> = {}): FetchFn {
+  return (input, init) => {
+    const url = new URL(String(input));
+    if (url.pathname.endsWith("/hotels-admin/info-requests")) {
+      const status = url.searchParams.get("status") ?? "";
+      const items = Array.from({ length: waiting[status] ?? 0 }, (_, index) =>
+        requestSummaryFixture({
+          id: `018f0000-0000-7000-8000-0000000c3${status.length}${index}0`,
+          status: "submitted",
+        }),
+      );
+      return Promise.resolve(ok({ items, nextCursor: null }));
+    }
+    return hotelsFetch(undefined, roles)(input, init);
+  };
+}
+
+describe("HotelsListScreen: information requests (D-188 §7)", () => {
+  it("counts the requests to review on the way to TW-99, and opens it", async () => {
+    await renderWithApi(
+      <HotelsListScreen />,
+      requestsFetch(["HT"], { submitted: 2, in_review: 1 }),
+    );
+    expect(await screen.findByText("Requests · 3 to review")).toBeOnTheScreen();
+    await fireEvent.press(screen.getByTestId("hotel-requests-link"));
+    expect(mockPush).toHaveBeenCalledWith("/hotels-admin/requests");
+  });
+
+  it("opens Invite a new hotel beside the one gold New hotel", async () => {
+    await renderWithApi(<HotelsListScreen />, requestsFetch(["HT"]));
+    expect(await screen.findByText("Requests · 0 to review")).toBeOnTheScreen();
+    await fireEvent.press(screen.getByTestId("hotel-invite"));
+    expect(await screen.findByTestId("invite-hotel-submit")).toBeOnTheScreen();
+  });
+
+  it("lets a Sales Manager follow the requests but invite no hotel", async () => {
+    await renderWithApi(<HotelsListScreen />, requestsFetch(["SM"]));
+    expect(await screen.findByTestId("hotel-requests-link")).toBeOnTheScreen();
+    expect(screen.queryByTestId("hotel-invite")).toBeNull();
+  });
+
+  it("offers Finance neither, which may not read requests", async () => {
+    await renderWithApi(<HotelsListScreen />, requestsFetch(["FA"]));
+    expect(await screen.findByLabelText(/The Lakeside Palace, active/)).toBeOnTheScreen();
+    await act(() => new Promise((resolve) => setTimeout(resolve, 50)));
+    expect(screen.queryByTestId("hotel-requests-link")).toBeNull();
+    expect(screen.queryByTestId("hotel-invite")).toBeNull();
+  });
+});
+
+describe("requestsLabel", () => {
+  it("names the count waiting for review, with a + past a page, and nothing before it loads", () => {
+    expect(requestsLabel(undefined)).toBe("Requests");
+    expect(requestsLabel({ count: 0, isCapped: false })).toBe("Requests · 0 to review");
+    expect(requestsLabel({ count: 200, isCapped: true })).toBe("Requests · 200+ to review");
   });
 });

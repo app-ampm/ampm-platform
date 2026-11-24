@@ -1,7 +1,12 @@
 import { useState, type ReactNode } from "react";
 import { useRouter } from "expo-router";
 
-import { useStaffHotels, type CursorListResult } from "@ampm/api-client";
+import {
+  useHotelInfoRequestsToReview,
+  useStaffHotels,
+  type CursorListResult,
+  type HotelInfoRequestsToReview,
+} from "@ampm/api-client";
 import type { HotelStaffView } from "@ampm/core";
 import {
   Button,
@@ -18,6 +23,8 @@ import {
 
 import { useGoToSignIn } from "@/navigation/sign-in";
 
+import { InviteHotelSheet } from "../hotel-info-requests/invite-hotel-sheet";
+import { useInfoRequestPermissions } from "../hotel-info-requests/use-info-request-permissions";
 import { HotelProfileEditSheet } from "./hotel-profile-edit-sheet";
 import { hotelRowSummary } from "./hotels-admin.format";
 import { useHotelColumns } from "./hotels-table.columns";
@@ -129,37 +136,72 @@ function SavedByClientsLink({ onPress }: { readonly onPress: (() => void) | unde
   );
 }
 
-/**
- * The page's actions (T4): Destinations and Import on glass, then the gold New hotel; before them, for a
- * role that may read clients' saved hotels, the way to every client's saves on glass too.
- */
-function HotelsActions({
-  onOpenSaved,
-  onOpenDestinations,
-  onImport,
-  onCreate,
-}: {
+/** "Requests · 3 to review": submitted and in review, tests left out; "+" past a page of either. */
+export function requestsLabel(toReview: HotelInfoRequestsToReview | undefined): string {
+  if (!toReview) return "Requests";
+  return `Requests · ${toReview.count}${toReview.isCapped ? "+" : ""} to review`;
+}
+
+/** The way to TW-99, with the count waiting for review, for a reader of requests (glass). */
+function RequestsLink({ onPress }: { readonly onPress: (() => void) | undefined }) {
+  const toReview = useHotelInfoRequestsToReview({ enabled: onPress !== undefined });
+  if (!onPress) return null;
+  return (
+    <Button variant="glass" size="sm" icon="inbox" onPress={onPress} testID="hotel-requests-link">
+      {requestsLabel(toReview.data)}
+    </Button>
+  );
+}
+
+interface ActionsProps {
+  readonly onOpenRequests: (() => void) | undefined;
   readonly onOpenSaved: (() => void) | undefined;
   readonly onOpenDestinations: () => void;
   readonly onImport: () => void;
+  readonly onInvite: (() => void) | undefined;
   readonly onCreate: () => void;
-}) {
+}
+
+/**
+ * The page's actions (T4): the information requests with their count to review, then Destinations and
+ * Import on glass, Invite a new hotel in the secondary outline, and the one gold New hotel; before
+ * Destinations, for a role that may read clients' saved hotels, the way to every client's saves.
+ */
+function HotelsActions(props: ActionsProps) {
   return (
     <>
-      <SavedByClientsLink onPress={onOpenSaved} />
+      <RequestsLink onPress={props.onOpenRequests} />
+      <SavedByClientsLink onPress={props.onOpenSaved} />
       <Button
         variant="glass"
         size="sm"
         icon="map-pin"
-        onPress={onOpenDestinations}
+        onPress={props.onOpenDestinations}
         testID="hotel-destinations-link"
       >
         Destinations
       </Button>
-      <Button variant="glass" size="sm" icon="upload" onPress={onImport} testID="hotel-import-link">
+      <Button
+        variant="glass"
+        size="sm"
+        icon="upload"
+        onPress={props.onImport}
+        testID="hotel-import-link"
+      >
         Import
       </Button>
-      <Button variant="primary" size="sm" icon="plus" onPress={onCreate} testID="hotel-new">
+      {props.onInvite ? (
+        <Button
+          variant="secondary"
+          size="sm"
+          icon="send"
+          onPress={props.onInvite}
+          testID="hotel-invite"
+        >
+          Invite a new hotel
+        </Button>
+      ) : null}
+      <Button variant="primary" size="sm" icon="plus" onPress={props.onCreate} testID="hotel-new">
         New hotel
       </Button>
     </>
@@ -170,26 +212,59 @@ function HotelsActions({
 function HotelsHeader({
   eyebrow,
   onCreate,
+  onInvite,
 }: {
   readonly eyebrow: string;
   readonly onCreate: () => void;
+  readonly onInvite: (() => void) | undefined;
 }) {
   const router = useRouter();
   const { canReadSavedHotels } = useClientInterestPermissions();
+  const { canRead: canReadRequests } = useInfoRequestPermissions();
   return (
     <ScreenHeader
       eyebrow={eyebrow}
       title="Hotel catalogue"
       actions={
         <HotelsActions
+          onOpenRequests={canReadRequests ? () => router.push("/hotels-admin/requests") : undefined}
           onOpenSaved={canReadSavedHotels ? () => router.push("/leads/saved-hotels") : undefined}
           onOpenDestinations={() => router.push("/hotels-admin/destinations")}
           onImport={() => router.push("/hotels-admin/import")}
+          onInvite={onInvite}
           onCreate={onCreate}
         />
       }
     />
   );
+}
+
+/**
+ * The New hotel and Invite a new hotel sheets: whether each is open, Invite only for a role that may
+ * create requests, the way from either to Destinations when there is none yet (closing it first), and
+ * from a duplicate hint to that hotel's record, where its request panel is.
+ */
+function useCatalogueSheets() {
+  const router = useRouter();
+  const [creating, setCreating] = useState(false);
+  const [inviting, setInviting] = useState(false);
+  const { canCreate: canAddDestination } = useDestinationPermissions();
+  const { canCreate: canInvite } = useInfoRequestPermissions();
+  const addDestination = (): void => {
+    setCreating(false);
+    setInviting(false);
+    router.push("/hotels-admin/destinations");
+  };
+  return {
+    creating,
+    setCreating,
+    inviting,
+    setInviting,
+    onInvite: canInvite ? () => setInviting(true) : undefined,
+    onAddDestination: canAddDestination ? addDestination : undefined,
+    openDetails: (hotelId: string): void =>
+      router.push({ pathname: "/hotels-admin/[hotelId]/details", params: { hotelId } }),
+  };
 }
 
 export interface HotelsListScreenProps {
@@ -198,7 +273,9 @@ export interface HotelsListScreenProps {
 
 /**
  * The staff hotel catalogue (H1.1, T4): the private hotel database. Add a hotel with "New hotel", bulk-load
- * many from a CSV with "Import", or tap one to manage it (edit its profile, add photos, rate cards). The
+ * many from a CSV with "Import", ask a hotel the catalogue does not hold yet for its details with "Invite
+ * a new hotel" (D-188 §7), follow the information requests ("Requests · N to review", TW-99), or tap
+ * one to manage it (edit its profile, add photos, rate cards). The
  * list loads 50 hotels a page, name-ordered, with "Load more" under the table while more wait; the eyebrow
  * counts the loaded ones ("Hotels · 50+"). From 1024 the table carries T4's verification and visibility
  * columns. "Saved by clients" opens every client's saved hotels, for a role that may read them. Hotel team
@@ -209,27 +286,33 @@ export interface HotelsListScreenProps {
 export function HotelsListScreen({ tabBar }: HotelsListScreenProps) {
   const router = useRouter();
   const hotels = useStaffHotels();
-  const [creating, setCreating] = useState(false);
-  const { canCreate: canAddDestination } = useDestinationPermissions();
+  const sheets = useCatalogueSheets();
   const open = (hotel: HotelStaffView): void =>
     router.push({ pathname: "/hotels-admin/[hotelId]", params: { hotelId: hotel.id } });
-  // From the New hotel form when no destination exists yet: close it, then add one on Destinations.
-  const addDestination = (): void => {
-    setCreating(false);
-    router.push("/hotels-admin/destinations");
-  };
   return (
     <Screen
       width="wide"
       tabBar={tabBar}
-      header={<HotelsHeader eyebrow={hotelsEyebrow(hotels)} onCreate={() => setCreating(true)} />}
+      header={
+        <HotelsHeader
+          eyebrow={hotelsEyebrow(hotels)}
+          onCreate={() => sheets.setCreating(true)}
+          onInvite={sheets.onInvite}
+        />
+      }
     >
       <HotelsBody hotels={hotels} onOpen={open} />
       <HotelProfileEditSheet
-        open={creating}
+        open={sheets.creating}
         hotel={null}
-        onClose={() => setCreating(false)}
-        onAddDestination={canAddDestination ? addDestination : undefined}
+        onClose={() => sheets.setCreating(false)}
+        onAddDestination={sheets.onAddDestination}
+      />
+      <InviteHotelSheet
+        open={sheets.inviting}
+        onClose={() => sheets.setInviting(false)}
+        onOpenHotel={sheets.openDetails}
+        onAddDestination={sheets.onAddDestination}
       />
     </Screen>
   );
