@@ -272,7 +272,7 @@ describe("Uploads after the guards, in a bounded slot (e2e)", () => {
         .send(bytes);
     await upload(jpeg).expect(200);
     await slotsHeld(0);
-    await upload(Buffer.from("MZ a renamed executable")).expect(400);
+    await upload(Buffer.from("MZ a renamed executable")).expect(415);
     await slotsHeld(0);
   });
 });

@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
-import { errors } from "@ampm/core";
 import sharp, { type Metadata, type SharpOptions } from "sharp";
+
+import { uploadRefusal } from "../common/upload-refusal.js";
 
 /**
  * The image-derivation seam (feature 9.3c; AC-24.1 derivatives, AC-20.4 metadata stripping). Like the
@@ -12,10 +13,6 @@ export const IMAGE_PROCESSOR = Symbol("IMAGE_PROCESSOR");
 
 /** The largest image, in pixels (width x height), any upload may be (D-187 §4). */
 export const MAX_IMAGE_PIXELS = 25_000_000;
-
-/** The refusal of an image over MAX_IMAGE_PIXELS (D-187 §4). */
-export const IMAGE_TOO_LARGE_MESSAGE =
-  "Images can be at most 25 megapixels: save it as a PDF or a smaller image.";
 
 /**
  * How every pipeline reads its input (D-187 §4): an image over the pixel limit is refused from its
@@ -108,15 +105,13 @@ export class SharpImageProcessor implements ImageProcessor {
 
 /**
  * Reads the image's header, never its pixels, and refuses an image over the pixel limit with D-187's
- * wording (a 400 the services pass on as it is). The pipeline's own limit stays as the backstop.
+ * wording, the core refusal `image_too_many_pixels` (a 400 the services pass on as it is). The
+ * pipeline's own limit stays as the backstop.
  */
 async function withinPixelLimit(input: Buffer): Promise<Metadata> {
   const header = await sharp(input, { ...SHARP_INPUT, limitInputPixels: false }).metadata();
   if ((header.width ?? 0) * (header.height ?? 0) > MAX_IMAGE_PIXELS) {
-    throw errors.validation(
-      [{ path: "file", message: IMAGE_TOO_LARGE_MESSAGE }],
-      IMAGE_TOO_LARGE_MESSAGE,
-    );
+    throw uploadRefusal("image_too_many_pixels");
   }
   return header;
 }

@@ -143,7 +143,8 @@ describe("Hotel wedding reference consent (e2e)", () => {
   it("refuses a file by content, refuses an infected one, and keeps nothing of either", async () => {
     const refId = await newReference();
     const exe = Buffer.concat([Buffer.from("MZ"), Buffer.from("a renamed executable.pdf")]);
-    await attach(refId, exe).expect(400);
+    const refused = await attach(refId, exe).expect(415); // not a type the consent takes (D-187 §3)
+    expect(refused.body.error.code).toBe("unsupported_media_type");
     const eicar = Buffer.concat([PDF, Buffer.from("EICAR-STANDARD-ANTIVIRUS-TEST-FILE")]);
     const infected = await attach(refId, eicar);
     expect(infected.status).toBe(400);

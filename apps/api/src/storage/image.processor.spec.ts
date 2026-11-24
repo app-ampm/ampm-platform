@@ -1,15 +1,10 @@
 import { crc32 } from "node:zlib";
 
+import { UPLOAD_REFUSAL_MESSAGES } from "@ampm/core";
 import sharp from "sharp";
 import { describe, expect, it, vi } from "vitest";
 
-import {
-  IMAGE_QUEUE,
-  IMAGE_TOO_LARGE_MESSAGE,
-  SerialQueue,
-  SHARP_INPUT,
-  SharpImageProcessor,
-} from "./image.processor.js";
+import { IMAGE_QUEUE, SerialQueue, SHARP_INPUT, SharpImageProcessor } from "./image.processor.js";
 
 const flat = (width: number, height: number) =>
   sharp({ create: { width, height, channels: 3, background: { r: 20, g: 150, b: 90 } } });
@@ -87,13 +82,14 @@ describe("SharpImageProcessor limits (D-187 §4)", () => {
   });
 
   it("refuses an image over 25 megapixels from its header, without decoding its pixels", async () => {
+    const message = UPLOAD_REFUSAL_MESSAGES.image_too_many_pixels;
     const refusal = {
       code: "validation_failed",
       status: 400,
-      message: IMAGE_TOO_LARGE_MESSAGE,
-      details: [{ path: "file", message: IMAGE_TOO_LARGE_MESSAGE }],
+      message,
+      details: [{ path: "file", message }],
     };
-    expect(IMAGE_TOO_LARGE_MESSAGE).toBe(
+    expect(message).toBe(
       "Images can be at most 25 megapixels: save it as a PDF or a smaller image.",
     );
     const overLimit = await claimedPng(5001, 5000);

@@ -1,9 +1,21 @@
 import { createHash, randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
 
 import { Inject, Injectable } from "@nestjs/common";
-import { errors, isAppError, type DocumentLinkView } from "@ampm/core";
+import {
+  AppError,
+  CONTENT_KINDS,
+  DOCUMENT_TYPE_RULES,
+  documentTypeKinds,
+  errors,
+  isAppError,
+  type ContentKind,
+  type DocumentLinkView,
+  type DocumentType,
+} from "@ampm/core";
 
-import type { Prisma, DocumentType } from "../../generated/prisma/client.js";
+import { AppLogger } from "../../common/logger.service.js";
+import { loggableDetail, uploadRefusal } from "../../common/upload-refusal.js";
+import type { Prisma } from "../../generated/prisma/client.js";
 import { AuditService } from "../../policy/audit.service.js";
 import { AV_SCANNER, type AvScanner } from "../../storage/av-scanner.js";
 import {
@@ -12,12 +24,8 @@ import {
   type ImageProcessor,
 } from "../../storage/image.processor.js";
 import { STORAGE_ADAPTER, type StorageAdapter } from "../../storage/storage.types.js";
-import {
-  detectDocument,
-  downloadFileName,
-  MAX_DOCUMENT_BYTES,
-  type DetectedDocument,
-} from "./document-content.js";
+import { inspectContent } from "./content/inspect-content.js";
+import { downloadFileName } from "./document-content.js";
 import {
   DocumentsRepository,
   type DocumentOwner,
@@ -33,10 +41,10 @@ const LINK_TTL_MS = 15 * 60 * 1000;
  */
 const LINK_MAX_DOWNLOADS = 5;
 
-/** The image types a document keeps re-encoded, each in the format it came in (D-187 §3). */
-const IMAGE_FORMATS: Readonly<Record<string, DocumentImageFormat>> = {
-  "image/jpeg": "jpeg",
-  "image/png": "png",
+/** The image kinds a document keeps re-encoded, each in the format it came in (D-187 §3). */
+const IMAGE_FORMATS: Readonly<Partial<Record<ContentKind, DocumentImageFormat>>> = {
+  jpeg: "jpeg",
+  png: "png",
 };
 
 export interface StoreDocumentInput {
@@ -63,12 +71,13 @@ const sha256 = (value: string | Buffer): string => createHash("sha256").update(v
  * Module N documents (data-model §16, D-132): store a file for an owning record and serve it only
  * through a minted, expiring access link. The caller (the owning module's service) has already checked
  * the principal may act on the owner; this service scopes every read by that owner, so a document is
- * reached only through its record (security.md). Storing validates fully before anything is kept: the
- * type by content, the size, and an antivirus scan — a file that fails is refused outright, since a
+ * reached only through its record (security.md). Storing validates fully before anything is kept, in
+ * this order (D-187 §2 and §3): the content checks decide the file's kind, which the document type must
+ * take; the kind's cap for the type; an antivirus scan. A file that fails is refused outright, since a
  * document has no quarantine state. An image is then re-encoded without its metadata through the shared
- * image queue (D-187), and those are the bytes kept, sized and checksummed. The bytes are written first,
- * then the row, its audit and the caller's attach step commit in one transaction; if that fails the
- * bytes are removed again.
+ * image queue, and those are the bytes kept, sized and checksummed, under the detected kind's type. The
+ * bytes are written first, then the row, its audit and the caller's attach step commit in one
+ * transaction; if that fails the bytes are removed again.
  */
 @Injectable()
 export class DocumentsService {
@@ -78,6 +87,7 @@ export class DocumentsService {
     @Inject(STORAGE_ADAPTER) private readonly storage: StorageAdapter,
     @Inject(AV_SCANNER) private readonly scanner: AvScanner,
     @Inject(IMAGE_PROCESSOR) private readonly images: ImageProcessor,
+    private readonly logger: AppLogger,
   ) {}
 
   async store(
@@ -85,11 +95,12 @@ export class DocumentsService {
     actorId: string,
     attach: (document: DocumentRow, tx: Prisma.TransactionClient) => Promise<void>,
   ): Promise<DocumentRow> {
-    const detected = await this.validate(input.bytes);
-    const bytes = await this.keptBytes(input.bytes, detected);
+    const kind = await this.validate(input);
+    const bytes = await this.keptBytes(input.bytes, kind);
     const previous = await this.previousVersion(input);
+    const mimeType = CONTENT_KINDS[kind].mimeType;
     const storageKey = `documents/${input.owner.ownerType}/${input.owner.ownerId}/${randomUUID()}`;
-    await this.storage.putObject(storageKey, bytes, detected.mimeType);
+    await this.storage.putObject(storageKey, bytes, mimeType);
     try {
       return await this.repo.transaction(async (tx) => {
         const row = await this.repo.create(
@@ -100,7 +111,7 @@ export class DocumentsService {
             title: input.title,
             documentType: input.documentType,
             storageKey,
-            mimeType: detected.mimeType,
+            mimeType,
             sizeBytes: bytes.length,
             checksum: sha256(bytes),
             versionNumber: previous ? previous.versionNumber + 1 : 1,
@@ -185,29 +196,46 @@ export class DocumentsService {
    * stripped of its metadata and never downscaled; anything else as uploaded. A refusal of the image
    * itself (over the pixel limit) keeps its wording; bytes that will not decode are refused.
    */
-  private async keptBytes(uploaded: Buffer, detected: DetectedDocument): Promise<Buffer> {
-    const format = IMAGE_FORMATS[detected.mimeType];
+  private async keptBytes(uploaded: Buffer, kind: ContentKind): Promise<Buffer> {
+    const format = IMAGE_FORMATS[kind];
     if (!format) return uploaded;
     try {
       return await this.images.reencode(uploaded, format);
     } catch (error) {
       if (isAppError(error)) throw error;
-      const message = "The file is not a decodable image";
-      throw errors.validation([{ path: "file", message }], message);
+      throw uploadRefusal("image_undecodable");
     }
   }
 
-  /** Type by content, the size ceiling, then the scan — all before any stored state changes. */
-  private async validate(bytes: Buffer): Promise<DetectedDocument> {
-    const detected = detectDocument(bytes);
-    if (!detected) throw errors.validation([], "Unsupported file type; allowed: PDF, JPEG, PNG");
-    if (bytes.length > MAX_DOCUMENT_BYTES) {
-      throw errors.validation([], `File exceeds the ${MAX_DOCUMENT_BYTES} byte limit`);
+  /**
+   * The checks, then the kind's cap, then the scan, all before any stored state changes; the kind the
+   * file is kept as. Each refusal says why on the file field.
+   */
+  private async validate(input: StoreDocumentInput): Promise<ContentKind> {
+    const kind = await this.kindOf(input);
+    const cap = DOCUMENT_TYPE_RULES[input.documentType][kind];
+    if (cap === undefined) throw uploadRefusal("type_not_accepted");
+    if (input.bytes.length > cap) throw overCap(cap);
+    if ((await this.scanner.scan(input.bytes)) !== "clean") {
+      const message = "The file failed the antivirus scan and was not stored";
+      throw errors.validation([{ path: "file", message }], message);
     }
-    if ((await this.scanner.scan(bytes)) !== "clean") {
-      throw errors.validation([], "The file failed the antivirus scan and was not stored");
-    }
-    return detected;
+    return kind;
+  }
+
+  /** The kind the content checks find, among those the document type takes; a refusal is logged. */
+  private async kindOf(input: StoreDocumentInput): Promise<ContentKind> {
+    const accepted = new Set(documentTypeKinds(input.documentType));
+    const result = await inspectContent(input.bytes, accepted);
+    if (result.ok) return result.kind;
+    this.logger.info("upload.refused", {
+      reason: result.reason,
+      detail: loggableDetail(result.detail),
+      documentType: input.documentType,
+      ownerType: input.owner.ownerType,
+      sizeBytes: input.bytes.length,
+    });
+    throw uploadRefusal(result.reason);
   }
 
   private async auditCreate(row: DocumentRow, tx: Prisma.TransactionClient): Promise<void> {
@@ -232,6 +260,13 @@ export class DocumentsService {
       tx,
     );
   }
+}
+
+/** A file over its kind's cap for the document type: 413, naming the cap (D-187 §3). */
+function overCap(capBytes: number): AppError {
+  const mebibytes = Math.floor(capBytes / (1024 * 1024));
+  const message = `The file is larger than ${mebibytes} MB, the limit for this type of file.`;
+  return new AppError("payload_too_large", message, [{ path: "file", message }]);
 }
 
 /** Constant-time comparison of two hex hashes (equal length by construction). */

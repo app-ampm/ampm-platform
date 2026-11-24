@@ -148,7 +148,7 @@ describe("Service agreement signed copy (e2e)", () => {
   it("refuses a copy that is not a document, keeping the agreement waiting on the client", async () => {
     const id = await sentAgreement();
     const exe = Buffer.concat([Buffer.from("MZ"), Buffer.from("a renamed executable.pdf")]);
-    expect((await attach(id, exe)).status).toBe(400);
+    expect((await attach(id, exe)).status).toBe(415); // not a type the signed copy takes (D-187 §3)
     const row = await prisma.serviceAgreement.findUniqueOrThrow({ where: { id } });
     expect(row).toMatchObject({ status: "sent", documentId: null });
     expect(await prisma.document.count({ where: { ownerId: id } })).toBe(0);

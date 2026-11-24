@@ -14,8 +14,14 @@ import { startApi } from "./start-api.js";
 const PREFIX = "e2e-mediaac-";
 const OCTET = "application/octet-stream";
 const JPEG_HEADER = Buffer.from([0xff, 0xd8, 0xff, 0xe0]);
-// Sniffs as MP4 (the `ftyp` box sits at offset 4); stored as-is — a video is non-derivable (AC-24.2).
-const MP4 = Buffer.concat([Buffer.from([0, 0, 0, 0]), Buffer.from("ftypisomvideo-bytes")]);
+// An MP4 by its first box (size 20, `ftyp`, major brand isom, one compatible brand); stored as-is — a
+// video is non-derivable (AC-24.2). A box must declare its size: one of 0 bytes is refused as damaged.
+const MP4 = Buffer.concat([
+  Buffer.from([0, 0, 0, 20]),
+  Buffer.from("ftypisom"),
+  Buffer.alloc(4),
+  Buffer.from("isomvideo-bytes"),
+]);
 const realJpeg = (): Promise<Buffer> =>
   sharp({ create: { width: 16, height: 16, channels: 3, background: { r: 1, g: 2, b: 3 } } })
     .jpeg()

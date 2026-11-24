@@ -2,6 +2,7 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+import { UPLOAD_REFUSAL_MESSAGES } from "@ampm/core";
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import sharp from "sharp";
 import request from "supertest";
@@ -11,6 +12,7 @@ import { PrismaService } from "../src/db/prisma.service.js";
 import { startApi } from "./start-api.js";
 
 const PREFIX = "e2e-mediaup-";
+const FIXTURES = join(import.meta.dirname, "fixtures", "content");
 const OCTET = "application/octet-stream";
 const JPEG_HEADER = Buffer.from([0xff, 0xd8, 0xff, 0xe0]);
 // A byte string that sniffs as JPEG but is NOT decodable — for the scan/detection paths that never derive.
@@ -140,7 +142,8 @@ describe("Media upload and signed download (e2e)", () => {
   it("refuses a non-image by content, not by its declared type (AC-20.2)", async () => {
     const id = await newImageAsset();
     const exe = Buffer.concat([Buffer.from([0x4d, 0x5a]), Buffer.from("a renamed executable")]); // "MZ"
-    await uploadBytes(id, exe).expect(400);
+    const refused = await uploadBytes(id, exe).expect(415); // not a type media takes (D-187 §3)
+    expect(refused.body.error.code).toBe("unsupported_media_type");
   });
 
   it("quarantines an infected file fail-closed — never downloadable (AC-20.3)", async () => {
@@ -176,8 +179,25 @@ describe("Media upload and signed download (e2e)", () => {
 
   it("refuses bytes whose content kind differs from the declared kind (AC-20.2)", async () => {
     const id = await newImageAsset(); // declared image
-    const mp4 = Buffer.concat([Buffer.from([0, 0, 0, 0]), Buffer.from("ftypisom")]); // video magic at offset 4
-    await uploadBytes(id, mp4).expect(400);
+    // An MP4's first box: size 20, `ftyp`, major brand isom, minor version 0, one compatible brand.
+    const ftyp = Buffer.concat([
+      Buffer.from([0, 0, 0, 20]),
+      Buffer.from("ftypisom"),
+      Buffer.alloc(4),
+    ]);
+    const mp4 = Buffer.concat([ftyp, Buffer.from("isom"), Buffer.alloc(64)]);
+    const refused = await uploadBytes(id, mp4).expect(415); // a kind an image asset does not take
+    expect(refused.body.error.code).toBe("unsupported_media_type");
+  });
+
+  it("refuses a HEIC photo with 415 and says to save it as a JPEG or PNG (D-187 §2)", async () => {
+    const id = await newImageAsset();
+    const heic = await readFile(join(FIXTURES, "sips-macos-26.5.heic"));
+    const refused = await uploadBytes(id, heic).expect(415);
+    expect(refused.body.error.message).toBe(UPLOAD_REFUSAL_MESSAGES.heif_image);
+    expect(refused.body.error.details).toEqual([
+      { path: "file", message: UPLOAD_REFUSAL_MESSAGES.heif_image },
+    ]);
   });
 
   it("derives web + thumbnail, keeps the original, strips metadata, serves each (AC-24.1, AC-20.4)", async () => {
