@@ -132,6 +132,39 @@ describe("ConfigService", () => {
     expect(audit.records).toHaveLength(0);
   });
 
+  it("reads the hotel form's policy, off by default (D-188 §6)", async () => {
+    const policy = await build().service.get("hotel_form.policy");
+    expect(policy.mode).toBe("off");
+    expect(policy.linkValidityDays).toBe(30);
+  });
+
+  it("getFresh reads past the cache: a change another process wrote is seen at once (D-188 §6)", async () => {
+    const rows = new Map<string, ConfigRecord>();
+    const { service, repository } = build(rows);
+    expect((await service.get("hotel_form.policy")).mode).toBe("off");
+    // Another process (the API, for the worker) switches the mode: this process's cache still holds off.
+    rows.set("hotel_form.policy", {
+      valueJson: { ...CONFIG_REGISTRY["hotel_form.policy"].default, mode: "test_only" },
+    });
+    expect((await service.get("hotel_form.policy")).mode).toBe("off");
+    expect((await service.getFresh("hotel_form.policy")).mode).toBe("test_only");
+    expect(repository.calls).toBe(2);
+    // Each fresh read goes to the row, and leaves the cache holding what it read.
+    await service.getFresh("hotel_form.policy");
+    expect(repository.calls).toBe(3);
+    expect((await service.get("hotel_form.policy")).mode).toBe("test_only");
+    expect(repository.calls).toBe(3);
+  });
+
+  it("getFresh refuses a stored value that does not match the key's shape, as get does", async () => {
+    const rows = new Map<string, ConfigRecord>([
+      ["hotel_form.policy", { valueJson: { mode: "live" } }],
+    ]);
+    await expect(build(rows).service.getFresh("hotel_form.policy")).rejects.toMatchObject({
+      code: "internal",
+    });
+  });
+
   it("rejects an unknown configuration key", async () => {
     await expect(build().service.set("nope.not_a_key", {})).rejects.toMatchObject({
       code: "not_found",

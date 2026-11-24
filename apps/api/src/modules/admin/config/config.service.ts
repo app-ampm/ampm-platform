@@ -10,6 +10,7 @@ import {
   type ConsultancyMilestoneVisibilityPolicy,
   type FeatureFlags,
   type HotelCuisineOptions,
+  type HotelFormPolicy,
   type HotelVerificationPolicy,
   type NotificationChannelDefaults,
   type NotificationTemplates,
@@ -27,7 +28,8 @@ import { ConfigRepository } from "./config.repository.js";
  * The one typed accessor for configuration (api.md "configuration, not code"). A `configurations`
  * row overrides the registry's baseline; a row that does not match the key's schema is refused as a
  * server misconfiguration (500). Values are cached five minutes and dropped when a write invalidates
- * the key. Add a key by adding a registry entry in `@ampm/core` and an overload here.
+ * the key; `getFresh` reads past the cache. Add a key by adding a registry entry in `@ampm/core` and an
+ * overload here.
  *
  * @example
  * const { staffMinutes } = await this.config.get("session.idle_timeouts");
@@ -52,8 +54,23 @@ export class ConfigService {
   get(key: "consultancy.chargeable_services"): Promise<ConsultancyChargeablePolicy>;
   get(key: "consultancy.milestone_amounts_visible"): Promise<ConsultancyMilestoneVisibilityPolicy>;
   get(key: "storage.disk_guard"): Promise<StorageDiskGuard>;
+  get(key: "hotel_form.policy"): Promise<HotelFormPolicy>;
   async get(key: ConfigKey): Promise<unknown> {
     return this.resolve(key);
+  }
+
+  /**
+   * Reads a key past the five-minute cache, from its row or the registry baseline, schema-checked as `get`
+   * does: for a switch that must take effect at once in every process, as the hotel form's mode must (the
+   * API and the worker read `hotel_form.policy` fresh each time, D-188 §6). What it reads also refreshes
+   * this process's cache. Add an overload for each key read so.
+   *
+   * @example
+   * const { mode } = await this.config.getFresh("hotel_form.policy");
+   */
+  getFresh(key: "hotel_form.policy"): Promise<HotelFormPolicy>;
+  async getFresh(key: ConfigKey): Promise<unknown> {
+    return this.parse(key, await this.load(key));
   }
 
   /**
@@ -84,7 +101,11 @@ export class ConfigService {
   /** Loads a known key from the cache or its row, validates it against the key's schema, and returns it. */
   private async resolve(key: ConfigKey): Promise<unknown> {
     const cached = this.cache.get(key);
-    const raw = cached !== undefined ? cached : await this.load(key);
+    return this.parse(key, cached !== undefined ? cached : await this.load(key));
+  }
+
+  /** A stored value checked against its key's schema; a value that does not match is a 500. */
+  private parse(key: ConfigKey, raw: unknown): unknown {
     const parsed = CONFIG_REGISTRY[key].schema.safeParse(raw);
     if (!parsed.success) {
       throw errors.internal(`Configuration "${key}" is malformed`);

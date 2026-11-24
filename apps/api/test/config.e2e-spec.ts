@@ -143,6 +143,24 @@ describe("Configuration (e2e)", () => {
     expect(idle?.value).toMatchObject({ staffMinutes: expect.any(Number) });
   });
 
+  it("seeds the hotel form's policy with the mode off and no reply-to yet (D-188 §6)", async () => {
+    const row = await prisma.configuration.findUnique({
+      where: { configKey: "hotel_form.policy" },
+    });
+    expect(row?.valueJson).toEqual({
+      mode: "off",
+      linkValidityDays: 30,
+      maxExtensionDays: 60,
+      statusOnlyDays: 7,
+      maxPeople: 10,
+      replyTo: null,
+      helpContact: null,
+    });
+    const token = await mint("local:admin");
+    const response = await get(token, "hotel_form.policy").expect(200);
+    expect(response.body.data.value.mode).toBe("off");
+  });
+
   it("lets Finance read the configuration inventory", async () => {
     const token = await mint("local:fa");
     const response = await getList(token).expect(200);
