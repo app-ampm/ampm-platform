@@ -28,7 +28,7 @@ interface Call {
 interface Seen {
   queryKey: unknown;
   queryFn: ((context: { signal?: AbortSignal }) => Promise<unknown>) | null;
-  mutationFn: ((input: never) => Promise<unknown>) | null;
+  mutationFn: ((variables: unknown) => Promise<unknown>) | null;
   onSuccess: (() => void) | null;
   onError: ((error: Error) => void) | null;
   answer: Response;
@@ -118,8 +118,7 @@ function documentView(overrides: Partial<HotelDocumentView> = {}): HotelDocument
 
 /** Runs the mutation the last hook handed over, as React Query would. */
 const mutate = (input: unknown): Promise<unknown> =>
-  (seen.mutationFn as ((value: unknown) => Promise<unknown>) | null)?.(input) ??
-  Promise.reject(new Error("no mutation"));
+  seen.mutationFn?.(input) ?? Promise.reject(new Error("no mutation"));
 
 beforeEach(() => {
   seen.queryKey = null;

@@ -100,7 +100,24 @@ describe("what a type takes", () => {
       "application/vnd.ms-powerpoint",
       ".ppt",
     ]);
-    expect(documentAccept("menu")).toContain(".xlsx");
+    // A food or beverage menu takes the three Excel kinds, the older .xls and the template included.
+    const menu = [
+      "application/pdf",
+      ".pdf",
+      "image/jpeg",
+      ".jpg",
+      ".jpeg",
+      "image/png",
+      ".png",
+      CONTENT_KINDS.xlsx.mimeType,
+      ".xlsx",
+      CONTENT_KINDS.xltx.mimeType,
+      ".xltx",
+      "application/vnd.ms-excel",
+      ".xls",
+    ];
+    expect(documentAccept("menu").split(",")).toEqual(menu);
+    expect(documentAccept("beverage_menu").split(",")).toEqual(menu);
     expect(documentAccept("menu")).not.toContain(".pptx");
   });
 

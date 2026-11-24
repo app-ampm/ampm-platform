@@ -1,6 +1,6 @@
 import { Linking } from "react-native";
 
-import { offlineFetch, pendingFetch } from "../../test/api";
+import { jsonResponse, offlineFetch, pendingFetch } from "../../test/api";
 import { fireEvent, screen, waitFor, within } from "../../test/render";
 import { HotelDocumentsScreen } from "./hotel-documents-screen";
 import {
@@ -174,5 +174,46 @@ describe("HotelDocumentsScreen: the library", () => {
       },
     ]);
     await untilSettled(client);
+  });
+});
+
+describe("HotelDocumentsScreen: a refused delete or link", () => {
+  const newer = "A newer version of this document was filed since; reload and try again";
+  const refusal = (code: string, message: string, status: number) => () =>
+    jsonResponse({ error: { code, message } }, status);
+
+  it("says why a delete was refused, closes the confirm and refreshes the list", async () => {
+    let refused = false;
+    const client = await renderLibrary({
+      documents: () => [hotelDocumentFixture(refused ? { versionNumber: 3 } : {})],
+      remove: () => {
+        refused = true;
+        return refusal("conflict", newer, 409)();
+      },
+    });
+    await fireEvent.press(screen.getByRole("button", { name: "Delete Banquet menu" }));
+    await fireEvent.press(await screen.findByTestId("document-delete-confirm"));
+    expect(await screen.findByText(newer)).toBeOnTheScreen();
+    expect(screen.queryByText("Delete Banquet menu?")).toBeNull();
+    expect(await screen.findByText("Version 3 · PDF · 2.4 MB · 12 NOV 2026")).toBeOnTheScreen();
+    await untilSettled(client);
+  });
+
+  it("says why a document would not open, opens nothing and refreshes the list", async () => {
+    const open = jest.spyOn(Linking, "openURL").mockResolvedValue(undefined);
+    let refused = false;
+    const client = await renderLibrary({
+      documents: () => [hotelDocumentFixture(refused ? { title: "Banquet menu 2027" } : {})],
+      link: () => {
+        refused = true;
+        return refusal("not_found", "No such document", 404)();
+      },
+    });
+    await fireEvent.press(screen.getByRole("button", { name: "Open Banquet menu" }));
+    expect(await screen.findByText("No such document")).toBeOnTheScreen();
+    expect(await screen.findByText("Banquet menu 2027")).toBeOnTheScreen();
+    expect(open).not.toHaveBeenCalled();
+    await untilSettled(client);
+    open.mockRestore();
   });
 });
