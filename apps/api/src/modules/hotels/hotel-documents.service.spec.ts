@@ -62,6 +62,8 @@ function staff(...keys: string[]): StaffPrincipal {
 }
 
 interface HarnessOptions {
+  /** Whether the hotel is live when the upload starts. */
+  readonly hotelLive?: boolean;
   /** The hotel's live rows before the upload (every version). */
   readonly rows?: readonly DocumentRow[];
   /** Live documents counted before the file is read, and inside the transaction once it is added. */
@@ -81,7 +83,7 @@ interface HarnessOptions {
 function harness(options: HarnessOptions = {}) {
   const calls: string[] = [];
   const hotels = {
-    hotelExists: vi.fn(async () => true),
+    hotelExists: vi.fn(async () => options.hotelLive ?? true),
     lockLiveHotel: vi.fn(async (_hotelId: string, tx: unknown) => {
       calls.push(`lock hotel${tx === TX ? " in the transaction" : ""}`);
       return options.hotelLiveInTransaction ?? true;
@@ -121,23 +123,28 @@ function harness(options: HarnessOptions = {}) {
       },
     ),
   } as unknown as DocumentsService;
-  return { service: new HotelDocumentsService(hotels, documents, versions), calls, stored };
+  const readFile = vi.fn(async () => {
+    calls.push("read file");
+    return BYTES;
+  });
+  const service = new HotelDocumentsService(hotels, documents, versions);
+  return { service, calls, stored, readFile };
 }
 
-/** An upload as the controller hands it over: the query parsed by its core schema, then the file. */
+/** An upload as the controller hands it over: the query parsed by its core schema, and the reader. */
 function upload(
-  { service }: ReturnType<typeof harness>,
+  { service, readFile }: ReturnType<typeof harness>,
   query: HotelDocumentUploadQueryInput,
   principal = staff(CREATE, UPDATE),
 ) {
-  return service.upload(HOTEL, hotelDocumentUploadQuery.parse(query), BYTES, principal);
+  return service.upload(HOTEL, hotelDocumentUploadQuery.parse(query), principal, readFile);
 }
 
 describe("HotelDocumentsService.upload: inside its transaction (D-187 §6)", () => {
   it("refuses with 404 when the hotel was removed while the file was checked", async () => {
     const run = harness({ hotelLiveInTransaction: false });
     await expect(upload(run, { type: "other" })).rejects.toMatchObject({ status: 404 });
-    expect(run.calls).toEqual(["count", "store", "lock hotel in the transaction"]);
+    expect(run.calls).toEqual(["count", "read file", "store", "lock hotel in the transaction"]);
   });
 
   it("refuses a new document with 409 when it would be the hotel's 101st", async () => {
@@ -212,5 +219,43 @@ describe("HotelDocumentsService.upload: the update key (D-164)", () => {
     await expect(upload(run, { type: "other" }, staff(CREATE))).resolves.toMatchObject({
       id: NEW_ROW,
     });
+  });
+});
+
+describe("HotelDocumentsService.upload: the checks before the file is read (D-187 §1)", () => {
+  const V2 = "0192f1a0-0000-7000-8000-0000000000b2";
+  it.each<[string, HarnessOptions, HotelDocumentUploadQueryInput, string[], number, number]>([
+    ["a hotel that is gone", { hotelLive: false }, { type: "other" }, [CREATE], 404, 0],
+    ["a 101st document", { live: 100 }, { type: "other" }, [CREATE], 409, 1],
+    ["a replacement without the update key", {}, { type: "other", replaces: V1 }, [CREATE], 403, 0],
+    ["a replacement of no document", {}, { type: "other", replaces: V1 }, [CREATE, UPDATE], 404, 0],
+    [
+      "a replacement of an earlier version",
+      { rows: [documentRow(V2, V1), documentRow(V1, null)] },
+      { type: "other", replaces: V1 },
+      [CREATE, UPDATE],
+      409,
+      0,
+    ],
+    [
+      "a replacement of another type",
+      { rows: [documentRow(V1, null)] },
+      { type: "menu", replaces: V1 },
+      [CREATE, UPDATE],
+      400,
+      0,
+    ],
+  ])("refuses %s without reading the file", async (_case, options, query, keys, status, counts) => {
+    const run = harness(options);
+    await expect(upload(run, query, staff(...keys))).rejects.toMatchObject({ status });
+    expect(run.readFile).not.toHaveBeenCalled();
+    expect(run.calls).toEqual(Array.from({ length: counts }, () => "count"));
+  });
+
+  it("reads the file once, after those checks and before it is stored", async () => {
+    const run = harness();
+    await upload(run, { type: "other" });
+    expect(run.readFile).toHaveBeenCalledTimes(1);
+    expect(run.calls.slice(0, 3)).toEqual(["count", "read file", "store"]);
   });
 });

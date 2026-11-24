@@ -62,6 +62,18 @@ describe("Hotel documents library (e2e)", () => {
     http()
       .delete(`${base(hotel)}/${documentId}`)
       .set("Authorization", bearer[as]);
+  /**
+   * An upload whose body the reader refuses with 415, so the answer tells which check ran first. Sent
+   * by the Super Admin: the Hotel team's uploads in this file come close to the 30 a minute the upload
+   * limit allows one member of staff (route-limits.ts UPLOADS).
+   */
+  const notAFile = (query: Record<string, string>, hotel = hotelId) =>
+    http()
+      .post(base(hotel))
+      .query(query)
+      .set("Authorization", bearer.sa)
+      .set("Content-Type", "text/plain")
+      .send("not a file");
 
   async function newHotel(suffix: string): Promise<string> {
     const created = await http()
@@ -266,6 +278,13 @@ describe("Hotel documents library (e2e)", () => {
     }
   });
 
+  it("answers a refused upload before reading its body (D-187 §1)", async () => {
+    await notAFile({ type: "other" }, randomUUID()).expect(404);
+    await notAFile({ type: "other", replaces: randomUUID() }).expect(404);
+    // An upload every check lets through reaches the reader, which refuses the body.
+    await notAFile({ type: "other" }).expect(415);
+  });
+
   it("answers 404 for a hotel that does not exist or was removed", async () => {
     const pdf = await fixture("reportlab-5.0.0-plain.pdf");
     await list("ht", randomUUID()).expect(404);
@@ -296,6 +315,8 @@ describe("Hotel documents library (e2e)", () => {
     const pdf = await fixture("reportlab-5.0.0-plain.pdf");
     const refused = await upload(pdf, { type: "other" }, "ht", full).expect(409);
     expect(refused.body.error.code).toBe("conflict");
+    // Counted before the body is read: a body the reader would refuse gets the same 409.
+    await notAFile({ type: "other" }, full).expect(409);
     const seeded = await prisma.document.findFirstOrThrow({ where: { ownerId: full } });
     await upload(pdf, { type: "other", replaces: seeded.id }, "ht", full).expect(201);
     expect((await list("ht", full).expect(200)).body.data.items).toHaveLength(100);

@@ -28,9 +28,10 @@ type DocumentParam = z.infer<typeof documentParam>;
  * A hotel's documents library (D-187 §6), under the `hotels-admin` prefix beside the other staff hotel
  * routes, keyed `hotels.hotel_documents.*` (permission-matrix §5.3: SA and HT CRUD, SM and PM read; a
  * role without the read key is answered 404). The upload takes the file as the raw
- * `application/octet-stream` body, read here after the guards, the query and an upload slot, up to the
- * largest file the document type takes (D-187 §1: 25 MiB for a fact sheet, 20 MiB otherwise). Its
- * service audits every change in its own transaction, the link's minting included.
+ * `application/octet-stream` body, read after the guards, the query, an upload slot and the service's
+ * checks that need no file, up to the largest file the document type takes (D-187 §1: 25 MiB for a
+ * fact sheet, 20 MiB otherwise). Its service audits every change in its own transaction, the link's
+ * minting included.
  */
 @Controller("hotels-admin")
 export class HotelDocumentsController {
@@ -42,19 +43,22 @@ export class HotelDocumentsController {
     return this.documents.list(params.hotelId);
   }
 
+  // The service reads the body through the reader handed to it, and only once its checks that need no
+  // file (the hotel, the cap, the update key, the document replaced) have passed.
   @Post("hotels/:hotelId/documents")
   @RequirePermission("hotels.hotel_documents.create")
   @UploadRoute()
   @HttpCode(201)
   @SelfAudited()
-  async upload(
+  upload(
     @ZodParams(hotelParam) params: HotelParam,
     @ZodQuery(hotelDocumentUploadQuery) query: HotelDocumentUploadQuery,
     @Req() req: Request,
     @CurrentPrincipal() principal: Principal,
   ): Promise<HotelDocumentView> {
-    const bytes = await readBoundedBody(req, octetStreamBody(documentTypeMaxBytes(query.type)));
-    return this.documents.upload(params.hotelId, query, bytes, principal);
+    return this.documents.upload(params.hotelId, query, principal, () =>
+      readBoundedBody(req, octetStreamBody(documentTypeMaxBytes(query.type))),
+    );
   }
 
   @Delete("hotels/:hotelId/documents/:documentId")

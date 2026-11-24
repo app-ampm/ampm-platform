@@ -40,15 +40,20 @@ function titleOf(query: HotelDocumentUploadQuery, replaced: OwnedDocument | null
   return query.title ?? replaced?.latest.title ?? documentTypeLabel(query.type);
 }
 
+/** Reads the upload's file, once its checks have passed: the route's bounded body reader. */
+export type ReadUploadedFile = () => Promise<Buffer>;
+
 /**
  * A hotel's documents library (D-187 §6; permission-matrix §5.3 "Hotel documents"): the fact sheets,
  * menus, floor plans and other files a hotel sends, filed as Module N documents owned by the hotel and
  * always internal. The guard has checked the route's key; a replacement also needs the update key. Every
- * route first loads the hotel, live, so a missing or removed hotel is a 404. A file is checked, scanned
- * and stored by DocumentsService under its type's rules; a replacement becomes the next version of a
- * live, latest document of the same type; a hotel holds at most 100 live documents. Within the upload's
- * transaction the hotel's row is locked and the cap and the replacement checked again, so concurrent
- * uploads cannot pass the cap or both replace one document.
+ * route first loads the hotel, live, so a missing or removed hotel is a 404. An upload runs every check
+ * that needs no file before it reads one (D-187 §1: a refused caller never makes the API buffer a
+ * file): the hotel, the cap, the update key and the document it replaces. A file is then checked,
+ * scanned and stored by DocumentsService under its type's rules; a replacement becomes the next version
+ * of a live, latest document of the same type; a hotel holds at most 100 live documents. Within the
+ * upload's transaction the hotel's row is locked and the cap and the replacement checked again, so
+ * concurrent uploads cannot pass the cap or both replace one document.
  */
 @Injectable()
 export class HotelDocumentsService {
@@ -67,15 +72,17 @@ export class HotelDocumentsService {
     return { items: items.sort(byType) };
   }
 
+  /** Files an upload; `readFile` runs only once the checks that need no file have passed. */
   async upload(
     hotelId: string,
     query: HotelDocumentUploadQuery,
-    bytes: Buffer,
     principal: Principal,
+    readFile: ReadUploadedFile,
   ): Promise<HotelDocumentView> {
     await this.requireHotel(hotelId);
     const owner = ownerOf(hotelId);
     const replaced = await this.checkUpload(owner, query, principal);
+    const bytes = await readFile();
     const row = await this.documents.store(
       {
         owner,
@@ -110,7 +117,7 @@ export class HotelDocumentsService {
   }
 
   /**
-   * Before the file is checked: a new document needs room under the cap; a replacement needs the update
+   * Before the file is read: a new document needs room under the cap; a replacement needs the update
    * key and a live, latest document of the same type to follow, which it returns.
    */
   private async checkUpload(

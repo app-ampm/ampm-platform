@@ -208,7 +208,14 @@ describe("Uploads after the guards, in a bounded slot (e2e)", () => {
   });
 
   it.each(UPLOAD_ROUTES)("takes only raw bytes at %s: a JSON body is 415", async (path) => {
-    const res = await http().post(path).set("Authorization", admin).send({ file: "x" }).expect(415);
+    // The documents library checks its hotel before it reads a byte (a missing one is a 404), so its
+    // route needs a real hotel for the body to reach the reader.
+    const reader = path.replace(`/hotels/${NO_RECORD}/documents`, `/hotels/${hotelId}/documents`);
+    const res = await http()
+      .post(reader)
+      .set("Authorization", admin)
+      .send({ file: "x" })
+      .expect(415);
     expect(res.body.error.code).toBe("unsupported_media_type");
   });
 
