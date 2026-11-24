@@ -12,17 +12,30 @@ import { RevokeRequestConfirm } from "./revoke-request-confirm";
 /** An action a live request takes; each opens its own sheet. */
 type Action = "reissue" | "extend" | "share" | "edit" | "revoke";
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Whether one more whole day fits: an extension adds its days to the later of now and the current
+ * expiry, and the API accepts one that lands on `extendableUntil`, not past it.
+ */
+function hasRoomToExtend(request: HotelInfoRequestFullView, now: Date): boolean {
+  if (request.extendableUntil === null) return false;
+  const from = Math.max(now.getTime(), new Date(request.expiresAt).getTime());
+  return new Date(request.extendableUntil).getTime() >= from + DAY_MS;
+}
+
 /**
  * Which actions a request takes: each only where the API would accept it.
  *
  * @example
  * requestActionsFor(expired).reissue; // false: an expired link is extended first
  */
-export function requestActionsFor(request: HotelInfoRequestFullView): Record<Action, boolean> {
+export function requestActionsFor(
+  request: HotelInfoRequestFullView,
+  now: Date = new Date(),
+): Record<Action, boolean> {
   const live = isLiveHotelInfoRequestStatus(request.status);
-  const roomToExtend =
-    request.extendableUntil !== null &&
-    new Date(request.extendableUntil).getTime() > new Date(request.expiresAt).getTime();
+  const roomToExtend = hasRoomToExtend(request, now);
   return {
     // A reissue keeps the expiry, so an expired link is extended first.
     reissue: live && !request.isExpired,
@@ -88,7 +101,7 @@ export interface RequestActionsProps {
 
 /**
  * A live request's actions (D-188 §7), for a holder of the update key: Reissue (while the link has not
- * expired), Extend (while the policy leaves room), Record share, Edit and, for an open or
+ * expired), Extend (while the policy leaves room for a day more), Record share, Edit and, for an open or
  * changes-requested request, Revoke in the gold outline. Each opens its sheet; the sheets stay mounted
  * so a refresh of the request never cuts one off mid-step.
  *

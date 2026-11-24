@@ -90,7 +90,8 @@ export function requestFullFixture(
     ...requestSummaryFixture(),
     recipientName: "Synthetic Sales Desk",
     recipientEmail: "sales@lakeside.example",
-    extendableUntil: "2027-02-22T10:00:00.000Z",
+    // Far ahead: whether Extend is offered reads the clock, so it stays offered whatever day tests run.
+    extendableUntil: "2099-02-22T10:00:00.000Z",
     events: [requestEventFixture()],
     ...overrides,
   };
