@@ -2,8 +2,6 @@ import { useStaffAccess, type StaffAccess } from "@ampm/api-client";
 
 /** What the signed-in staff member may do with a hotel's documents library (D-187 §6). */
 export interface DocumentPermissions {
-  /** See the Documents tab, list the documents and open any version (`hotels.hotel_documents.read`). */
-  readonly canRead: boolean;
   /** Upload a new document (`…create`: SA, HT). */
   readonly canUpload: boolean;
   /**
@@ -20,15 +18,14 @@ export interface DocumentPermissions {
 /**
  * The permissions for a staff member's access, decided by @ampm/policy as the API's guard decides them,
  * a custom role's grants included (D-164). A Sales Manager or a project manager reads and opens the
- * documents but changes none.
+ * documents (the tab's own read gate) but changes none.
  *
  * @example
- * documentPermissionsFor(staffAccessFor(me)); // SM: { canRead: true, canUpload: false, … }
+ * documentPermissionsFor(staffAccessFor(me)); // SM: { canUpload: false, canReplace: false, … }
  */
 export function documentPermissionsFor(access: StaffAccess): DocumentPermissions {
   const canUpload = access.can("hotels.hotel_documents.create");
   return {
-    canRead: access.can("hotels.hotel_documents.read"),
     canUpload,
     canReplace: canUpload && access.can("hotels.hotel_documents.update"),
     canDelete: access.can("hotels.hotel_documents.delete"),

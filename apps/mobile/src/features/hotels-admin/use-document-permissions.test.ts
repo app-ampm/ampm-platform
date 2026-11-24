@@ -21,7 +21,6 @@ function access(roles: StaffRoleCode[], customCapabilities: string[] = []) {
 }
 
 const NOTHING = {
-  canRead: false,
   canUpload: false,
   canReplace: false,
   canDelete: false,
@@ -31,7 +30,6 @@ const NOTHING = {
 describe("documentPermissionsFor (permission-matrix §5.3, Hotel documents)", () => {
   it("lets the Hotel team and the Super Admin do everything, a draft F&B card included", () => {
     const all = {
-      canRead: true,
       canUpload: true,
       canReplace: true,
       canDelete: true,
@@ -42,8 +40,8 @@ describe("documentPermissionsFor (permission-matrix §5.3, Hotel documents)", ()
   });
 
   it("lets a Sales Manager and a project manager read and open documents, and change nothing", () => {
-    expect(documentPermissionsFor(access(["SM"]))).toEqual({ ...NOTHING, canRead: true });
-    expect(documentPermissionsFor(access(["PM"]))).toEqual({ ...NOTHING, canRead: true });
+    expect(documentPermissionsFor(access(["SM"]))).toEqual(NOTHING);
+    expect(documentPermissionsFor(access(["PM"]))).toEqual(NOTHING);
   });
 
   it("gives Finance, which reads rate cards but not documents, nothing here", () => {
@@ -75,7 +73,6 @@ describe("documentPermissionsFor (permission-matrix §5.3, Hotel documents)", ()
     );
     expect(documentPermissionsFor(custom)).toEqual({
       ...NOTHING,
-      canRead: true,
       canStartFbCard: true,
     });
   });
