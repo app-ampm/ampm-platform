@@ -8,15 +8,25 @@ import {
   PARALLEL_CHOICES,
   parallelChoiceLabel,
   hotelStatusTone,
+  RATE_UNITS,
   rateCardStatusLabel,
   rateCardStatusTone,
+  rateItemName,
   rateItemTypeLabel,
   rateUnitLabel,
   triStateLabel,
   verificationSourceLabel,
   yesNo,
 } from "./hotels-admin.format";
-import { hotelStaffViewFixture, verificationViewFixture } from "./hotels-admin.test-utils";
+import {
+  hotelStaffViewFixture,
+  rateItemViewFixture,
+  ROOM_ID,
+  roomCategoryViewFixture,
+  VENUE_ID,
+  venueViewFixture,
+  verificationViewFixture,
+} from "./hotels-admin.test-utils";
 
 describe("hotels-admin.format", () => {
   it("labels and tones the hotel status", () => {
@@ -55,6 +65,54 @@ describe("hotels-admin.format", () => {
     expect(rateItemTypeLabel("per_plate_veg")).toBe("Per plate (veg)");
     expect(rateUnitLabel("per_night")).toBe("per night");
     expect(verificationSourceLabel("site_visit")).toBe("Site visit");
+  });
+
+  it("offers every unit in the item sheet, percent included", () => {
+    expect(RATE_UNITS.map(rateUnitLabel)).toEqual([
+      "per night",
+      "per plate",
+      "per event",
+      "Percent",
+    ]);
+  });
+
+  describe("rateItemName", () => {
+    const places = {
+      rooms: [roomCategoryViewFixture({ name: "Lake View Suite" })],
+      venues: [venueViewFixture()],
+    };
+    const GONE_ID = "018f0000-0000-7000-8000-0000000c0d99";
+
+    it("names the room category or venue an item prices after its type, shown and spoken", () => {
+      expect(rateItemName(rateItemViewFixture({ roomCategoryId: ROOM_ID }), places)).toEqual({
+        title: "Room rate · Lake View Suite",
+        spoken: "Room rate for Lake View Suite",
+      });
+      const rental = rateItemViewFixture({ itemType: "venue_rental", venueId: VENUE_ID });
+      expect(rateItemName(rental, places)).toEqual({
+        title: "Venue rental · Grand Ballroom",
+        spoken: "Venue rental for Grand Ballroom",
+      });
+    });
+
+    it("says a removed room or venue when the link names none of the hotel's live ones", () => {
+      expect(rateItemName(rateItemViewFixture({ roomCategoryId: GONE_ID }), places)).toEqual({
+        title: "Room rate · a removed room",
+        spoken: "Room rate for a removed room",
+      });
+      const rental = rateItemViewFixture({ itemType: "venue_rental", venueId: GONE_ID });
+      expect(rateItemName(rental, places).title).toBe("Venue rental · a removed venue");
+    });
+
+    it("is the type alone for an item for neither, and while the hotel is not loaded", () => {
+      expect(rateItemName(rateItemViewFixture(), places)).toEqual({
+        title: "Room rate",
+        spoken: "Room rate",
+      });
+      expect(rateItemName(rateItemViewFixture({ roomCategoryId: ROOM_ID }), undefined).title).toBe(
+        "Room rate",
+      );
+    });
   });
 
   it("reads a flag as a word", () => {

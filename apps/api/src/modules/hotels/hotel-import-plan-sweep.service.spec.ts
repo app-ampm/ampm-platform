@@ -61,7 +61,7 @@ describe("HotelImportPlanSweepService", () => {
     expect(await api.service.run(NOW)).toBe(3);
     const cutoff = new Date(NOW.getTime() - HOTEL_IMPORT_PREVIEW_TTL_HOURS * 60 * 60 * 1000);
     expect(api.clearExpiredPlans).toHaveBeenCalledWith(
-      ["hotels", "hotel_rooms", "hotel_venues"],
+      ["hotels", "hotel_rooms", "hotel_venues", "hotel_rates"],
       cutoff,
     );
     expect(api.create).toHaveBeenCalledWith({

@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import {
   canonicalFieldsJson,
   HOTEL_IMPORT_COMPARED_FIELDS,
+  RATE_IMPORT_COMPARED_FIELDS,
   ROOM_IMPORT_COMPARED_FIELDS,
   VENUE_IMPORT_COMPARED_FIELDS,
   type HotelFieldKinds,
@@ -10,20 +11,29 @@ import {
   type HotelImportComparedField,
 } from "@ampm/core";
 
-import type { ImportTargetRow } from "./hotel-import.repository.js";
+import type { RateItemValues } from "./hotel-import.rates-plan.js";
+import type {
+  ImportRateCardRow,
+  ImportRateItemRow,
+  ImportTargetRow,
+} from "./hotel-import.repository.js";
+import { decimalToMoney } from "./hotel-rates.money.js";
+import { toDateString } from "./hotel-rates.view.js";
 import type { RoomRow, VenueRow } from "./hotel-subresources.repository.js";
 import { toHotelStaffView, toRoomCategoryView, toVenueView } from "./hotels-admin.view.js";
 
 /*
- * Version tokens of an import's targets (D-181): what a preview stores for each hotel, room or venue a row
- * plans to change or leave, so its import can refuse a row whose target changed since ("Changed since
- * preview"). Each token is SHA-256 of the target's import-compared fields, read as the staff views read
- * them (a decimal as a number, a venue's setting through `venueSettingOf`), never `updated_at`, which
+ * Version tokens of an import's targets (D-181, D-183, D-184): what a preview stores for each hotel,
+ * room, venue or rate item a row plans to change or leave, and each rate card a row plans to add an item
+ * to, so its import can refuse a row whose target changed since ("Changed since preview"). Each token is
+ * SHA-256 of the target's import-compared fields, read as the staff views read them (a decimal as a
+ * number, an amount in paise, a venue's setting through `venueSettingOf`), never `updated_at`, which
  * recording a verification moves without changing a field. A token is as fine as its kind's planner, so
- * two targets with one token always plan alike: a room's or venue's fields are normalised by core
- * `canonicalFieldsJson`, as its planner's `fieldChanges` normalises them; a hotel's are hashed exactly as
- * stored, since the hotels planner (Slice 2's `sameValue`) trims text only and compares lists and links
- * exactly, so an edit in spacing or in a link's case must move its token too.
+ * two targets with one token always plan alike: a room's, venue's or rate item's fields are normalised by
+ * core `canonicalFieldsJson`, as its planner's `fieldChanges` normalises them; a hotel's are hashed
+ * exactly as stored, since the hotels planner (Slice 2's `sameValue`) trims text only and compares lists
+ * and links exactly, so an edit in spacing or in a link's case must move its token too. A rate card's
+ * covers what decides whether rows may go into it: its status and its dates.
  */
 
 /**
@@ -106,6 +116,59 @@ export function roomVersion(row: RoomRow): string {
  */
 export function venueVersion(row: VenueRow): string {
   return versionOf(toVenueView(row), VENUE_IMPORT_COMPARED_FIELDS);
+}
+
+/**
+ * A stored rate item's compared values, its amounts in whole paise: what the rates planner compares and
+ * what its token covers.
+ *
+ * @example
+ * rateItemValuesOf(row).amount; // 1250000 for 12,500.00 rupees
+ */
+export function rateItemValuesOf(row: ImportRateItemRow): RateItemValues {
+  return {
+    amount: decimalToMoney(row.amount).minor,
+    amountMax: row.amountMax === null ? null : decimalToMoney(row.amountMax).minor,
+    unit: row.unit,
+    minQuantity: row.minQuantity,
+    isIndicative: row.isIndicative,
+    inclusions: row.inclusionsText,
+  };
+}
+
+/**
+ * A stored rate item's version token: its price and terms, never its visibility, which an import never
+ * changes.
+ *
+ * @example
+ * rateItemVersion(row) === stored.target.version; // the item holds what its preview planned against
+ */
+export function rateItemVersion(row: ImportRateItemRow): string {
+  return versionOf(rateItemValuesOf(row), RATE_IMPORT_COMPARED_FIELDS);
+}
+
+const RATE_CARD_FIELDS: HotelFieldKinds<"status" | "validFrom" | "validTo"> = {
+  status: "enum",
+  validFrom: "text",
+  validTo: "text",
+};
+
+/**
+ * A stored rate card's version token: its status and its dates, which decide whether a row may add an
+ * item to it. A rename moves no token: the import's re-plan matches the card by name.
+ *
+ * @example
+ * rateCardVersion(card) === stored.target.version; // still a draft, with the same dates
+ */
+export function rateCardVersion(
+  row: Pick<ImportRateCardRow, "status" | "validFrom" | "validTo">,
+): string {
+  const values = {
+    status: row.status,
+    validFrom: toDateString(row.validFrom),
+    validTo: toDateString(row.validTo),
+  };
+  return versionOf(values, RATE_CARD_FIELDS);
 }
 
 function sha256(text: string): string {

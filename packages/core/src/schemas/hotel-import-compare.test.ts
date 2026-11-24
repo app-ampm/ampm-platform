@@ -10,11 +10,13 @@ import {
 import {
   HOTEL_AREA_PAIRS,
   HOTEL_IMPORT_COMPARED_FIELDS,
+  RATE_IMPORT_COMPARED_FIELDS,
   ROOM_AREA_PAIRS,
   ROOM_IMPORT_COMPARED_FIELDS,
   VENUE_AREA_PAIRS,
   VENUE_IMPORT_COMPARED_FIELDS,
 } from "./hotel-import-compare.js";
+import { RATE_IMPORT_COLUMNS } from "./hotel-import-rates.js";
 import {
   ROOM_IMPORT_COLUMNS,
   ROOM_IMPORT_ENUM_COLUMNS,
@@ -163,5 +165,43 @@ describe("a staff view against an import row", () => {
     expect(canonicalFieldsJson(again, VENUE_IMPORT_COMPARED_FIELDS)).toBe(
       canonicalFieldsJson(storedVenue, VENUE_IMPORT_COMPARED_FIELDS),
     );
+  });
+});
+
+describe("what a rates row compares on a matched item (D-184)", () => {
+  it("compares the item's price and terms, never its card, type, room or venue, which key it", () => {
+    expect(Object.keys(RATE_IMPORT_COMPARED_FIELDS)).toEqual(
+      comparedColumns(RATE_IMPORT_COLUMNS, [
+        "hotelSlug",
+        "cardName",
+        "validFrom",
+        "validTo",
+        "itemType",
+        "roomName",
+        "venueName",
+      ]),
+    );
+    expect(RATE_IMPORT_COMPARED_FIELDS).toEqual({
+      amount: "number",
+      amountMax: "number",
+      unit: "enum",
+      minQuantity: "number",
+      isIndicative: "boolean",
+      inclusions: "text",
+    });
+  });
+
+  it("compares amounts in paise, and never clears with a blank", () => {
+    const stored = {
+      amount: 1_250_000,
+      amountMax: 1_500_000,
+      unit: "per_night",
+      minQuantity: null,
+      isIndicative: true,
+      inclusions: "Breakfast  for two",
+    };
+    const row = { amount: 1_300_000, inclusions: " Breakfast for two " };
+    expect(fieldChanges(stored, row, RATE_IMPORT_COMPARED_FIELDS)).toEqual(["amount"]);
+    expect(fieldChanges(stored, {}, RATE_IMPORT_COMPARED_FIELDS)).toEqual([]);
   });
 });

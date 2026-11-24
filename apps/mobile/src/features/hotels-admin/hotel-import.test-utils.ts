@@ -1,4 +1,9 @@
-import type { HotelImportKind, HotelImportResult, MeResponse } from "@ampm/core";
+import {
+  RUPEES_CELL_MESSAGE,
+  type HotelImportKind,
+  type HotelImportResult,
+  type MeResponse,
+} from "@ampm/core";
 
 import { failure, jsonResponse, ok, TEST_API_BASE, type FetchFn } from "../../test/api";
 import { staffMeFixture } from "../accounts/accounts.test-utils";
@@ -7,7 +12,7 @@ import { staffMeFixture } from "../accounts/accounts.test-utils";
  * Test helpers for the TW-25 import screen: the results the import routes return and a fetch that
  * records each import request as the server receives it (the address, the raw body, its content type).
  * It answers `/me` as the Hotel team by default, since the screen offers only the kinds a staff member
- * may import. Imported by tests only; synthetic hotels, rooms and venues only.
+ * may import. Imported by tests only; synthetic hotels, rooms, venues and rates only.
  */
 
 export const IMPORT_JOB_ID = "018f0000-0000-7000-8000-00000000f001";
@@ -19,6 +24,17 @@ export const IMPORT_CSV =
 /** A rooms file of two rows: one update, one new room category. */
 export const ROOMS_CSV =
   "hotelSlug,name,unitType,sizeSqft\nsynthetic-lake-hotel,Synthetic Garden Suite,suite,650\nsynthetic-lake-hotel,Synthetic Tent,tent,";
+
+/**
+ * A rates file of three rows for a draft card the hotel has: a room's rate to update, a venue's rental
+ * to add, and a per-plate rate refused for the "/-" after its amount.
+ */
+export const RATES_CSV = [
+  "hotelSlug,cardName,itemType,roomName,venueName,amount,unit",
+  'synthetic-lake-hotel,2026-27,Room rate,Lake View Suite,,"13,000",per night',
+  "synthetic-lake-hotel,2026-27,Venue rental,,Synthetic Lawn,250000,per event",
+  "synthetic-lake-hotel,2026-27,Per plate veg,,,1800/-,per plate",
+].join("\n");
 
 /** What validating {@link IMPORT_CSV} reports. */
 export function dryRunResult(overrides: Partial<HotelImportResult> = {}): HotelImportResult {
@@ -91,6 +107,46 @@ export function roomsDryRunResult(overrides: Partial<HotelImportResult> = {}): H
   });
 }
 
+/**
+ * What validating {@link RATES_CSV} reports, as the API words it: each row names its card and its item
+ * (the stored room's or venue's name once matched, a refused row's own cells), and a new item names its
+ * filled columns.
+ */
+export function ratesDryRunResult(overrides: Partial<HotelImportResult> = {}): HotelImportResult {
+  const card = { slug: "synthetic-lake-hotel", name: "2026-27" };
+  return dryRunResult({
+    kind: "rates",
+    totalRows: 3,
+    created: 1,
+    updated: 1,
+    rejected: [{ line: 4, errors: [{ field: "amount", message: RUPEES_CELL_MESSAGE }] }],
+    rows: [
+      {
+        line: 2,
+        ...card,
+        outcome: "update",
+        changedFields: ["amount"],
+        item: { itemType: "room_rate", roomName: "Lake View Suite", venueName: null },
+      },
+      {
+        line: 3,
+        ...card,
+        outcome: "create",
+        changedFields: ["itemType", "venueName", "amount", "unit"],
+        item: { itemType: "venue_rental", roomName: null, venueName: "Synthetic Lawn" },
+      },
+      {
+        line: 4,
+        ...card,
+        outcome: "error",
+        changedFields: [],
+        item: { itemType: "per_plate_veg", roomName: null, venueName: null },
+      },
+    ],
+    ...overrides,
+  });
+}
+
 /** One import request as the API received it. */
 export interface ImportRequest {
   readonly path: string;
@@ -108,13 +164,15 @@ export interface ImportAnswers {
   readonly me?: MeResponse;
 }
 
-// A preview always says it is a dry run (api-client `hotelImportPreviewPath`); a bare upload is a 404 here.
-const PREVIEW = /^\/hotels-admin\/imports\/(hotels|rooms|venues)\?dryRun=true$/;
-const APPLY = /^\/hotels-admin\/imports\/(hotels|rooms|venues)\/[^/]+\/apply$/;
+// A preview carries no query (api-client `hotelImportPreviewPath`; the API refuses one): one with a
+// query is a 404 here.
+const PREVIEW = /^\/hotels-admin\/imports\/(hotels|rooms|venues|rates)$/;
+const APPLY = /^\/hotels-admin\/imports\/(hotels|rooms|venues|rates)\/[^/]+\/apply$/;
 
 function dryResult(answers: ImportAnswers, kind: string): HotelImportResult {
   if (kind === "rooms") return answers.dry?.rooms ?? roomsDryRunResult();
   if (kind === "venues") return answers.dry?.venues ?? dryRunResult({ kind: "venues" });
+  if (kind === "rates") return answers.dry?.rates ?? ratesDryRunResult();
   return answers.dry?.hotels ?? dryRunResult();
 }
 

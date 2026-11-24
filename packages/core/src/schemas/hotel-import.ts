@@ -3,6 +3,16 @@ import { z } from "zod";
 import { uuid } from "./common.js";
 import { hotelCatalogueRequestFields } from "./hotel-catalogue.js";
 import {
+  RATE_IMPORT_BOOLEAN_COLUMNS,
+  RATE_IMPORT_COLUMNS,
+  RATE_IMPORT_ENUM_COLUMNS,
+  RATE_IMPORT_LIST_COLUMNS,
+  RATE_IMPORT_MONEY_COLUMNS,
+  RATE_IMPORT_NUMBER_COLUMNS,
+  RATE_IMPORT_REQUIRED_COLUMNS,
+  rateImportColumn,
+} from "./hotel-import-rates.js";
+import {
   ROOM_IMPORT_BOOLEAN_COLUMNS,
   ROOM_IMPORT_COLUMNS,
   ROOM_IMPORT_ENUM_COLUMNS,
@@ -20,21 +30,26 @@ import {
   VENUE_IMPORT_REQUIRED_COLUMNS,
   venueImportColumn,
 } from "./hotel-import-rooms-venues.js";
+import { hotelRateItemType } from "./hotel-rates.js";
 import { catalogueSlug, facilityLabels, hotelStatus } from "./hotels-admin.js";
 
 /*
- * The staff spreadsheet import (TW-25; AC-35.1; D-181): one CSV template per kind (hotels here, rooms and
- * venues in hotel-import-rooms-venues.ts), keyed by web address, with fixed headers; the cell rules are in
- * hotel-import-cells.ts. Every upload is a preview (`POST /hotels-admin/imports/<kind>`, raw bytes read
- * only after the guards): it writes nothing but its `import_jobs` record, which keeps the value-free
- * report and the planned rows. Import applies that preview by its job id
- * (`POST /hotels-admin/imports/<kind>/:jobId/apply`) within {@link HOTEL_IMPORT_PREVIEW_TTL_HOURS} hours,
- * refusing a row whose target changed since. On an update a blank cell leaves the value unchanged; status
- * and the flags change only when their cell is filled, or on create. Slice 4 adds the rates kind.
+ * The staff spreadsheet import (TW-25; AC-35.1; D-181, D-183, D-184): one CSV template per kind (hotels
+ * here, rooms and venues in hotel-import-rooms-venues.ts, rates in hotel-import-rates.ts), keyed by web
+ * address, with fixed headers; the cell rules are in hotel-import-cells.ts. Every upload is a preview
+ * (`POST /hotels-admin/imports/<kind>`, raw bytes read only after the guards, no query): it writes
+ * nothing but its `import_jobs` record, which keeps the value-free report and the planned rows. Import
+ * applies that preview by its job id (`POST /hotels-admin/imports/<kind>/:jobId/apply`) within
+ * {@link HOTEL_IMPORT_PREVIEW_TTL_HOURS} hours, refusing a row whose target changed since. On an update a
+ * blank cell leaves the value unchanged; status and the flags change only when their cell is filled, or
+ * on create.
  */
 
-/** The kinds of import (rates follow in Slice 4). Each maps to its `import_jobs.import_type`. */
-export const hotelImportKind = z.enum(["hotels", "rooms", "venues"]);
+/**
+ * The kinds of import. Each maps to its `import_jobs.import_type`: hotels to `hotels`, rooms to
+ * `hotel_rooms`, venues to `hotel_venues`, rates to `hotel_rates`.
+ */
+export const hotelImportKind = z.enum(["hotels", "rooms", "venues", "rates"]);
 export type HotelImportKind = z.infer<typeof hotelImportKind>;
 
 /** The largest import file, 5 MiB. */
@@ -182,9 +197,9 @@ export type HotelImportRow = z.infer<typeof hotelImportRow>;
  * The cell rules of one import kind, for the API's reader and the staff app's template and help: its
  * columns in template order, the ones a file must carry, and how each typed column's cells read (numbers,
  * booleans, lists by `hotelListEntries`, enum values by `hotelImportEnumValue`, other layouts by
- * `parseVenueLayoutsCell`). `capacityColumns` are number columns that take one number: a range there is
- * refused with `VENUE_CAPACITY_RANGE_MESSAGE` (`isNumberRangeCell`). The hotels template reads its enum
- * cells as exact values, as in Slice 2.
+ * `parseVenueLayoutsCell`, amounts in rupees by `parseRupeesCell`). `capacityColumns` are number columns
+ * that take one number: a range there is refused with `VENUE_CAPACITY_RANGE_MESSAGE`
+ * (`isNumberRangeCell`). The hotels template reads its enum cells as exact values, as in Slice 2.
  */
 export interface HotelImportTemplate {
   readonly columns: readonly string[];
@@ -195,6 +210,7 @@ export interface HotelImportTemplate {
   readonly enumColumns: readonly string[];
   readonly layoutColumns: readonly string[];
   readonly capacityColumns: readonly string[];
+  readonly moneyColumns: readonly string[];
 }
 
 /**
@@ -213,6 +229,7 @@ export const HOTEL_IMPORT_TEMPLATES: Readonly<Record<HotelImportKind, HotelImpor
     enumColumns: [],
     layoutColumns: [],
     capacityColumns: [],
+    moneyColumns: [],
   },
   rooms: {
     columns: ROOM_IMPORT_COLUMNS,
@@ -223,6 +240,7 @@ export const HOTEL_IMPORT_TEMPLATES: Readonly<Record<HotelImportKind, HotelImpor
     enumColumns: ROOM_IMPORT_ENUM_COLUMNS,
     layoutColumns: [],
     capacityColumns: [],
+    moneyColumns: [],
   },
   venues: {
     columns: VENUE_IMPORT_COLUMNS,
@@ -233,24 +251,30 @@ export const HOTEL_IMPORT_TEMPLATES: Readonly<Record<HotelImportKind, HotelImpor
     enumColumns: VENUE_IMPORT_ENUM_COLUMNS,
     layoutColumns: VENUE_IMPORT_LAYOUT_COLUMNS,
     capacityColumns: VENUE_IMPORT_CAPACITY_COLUMNS,
+    moneyColumns: [],
+  },
+  rates: {
+    columns: RATE_IMPORT_COLUMNS,
+    requiredColumns: RATE_IMPORT_REQUIRED_COLUMNS,
+    numberColumns: RATE_IMPORT_NUMBER_COLUMNS,
+    booleanColumns: RATE_IMPORT_BOOLEAN_COLUMNS,
+    listColumns: RATE_IMPORT_LIST_COLUMNS,
+    enumColumns: RATE_IMPORT_ENUM_COLUMNS,
+    layoutColumns: [],
+    capacityColumns: [],
+    moneyColumns: RATE_IMPORT_MONEY_COLUMNS,
   },
 };
 
 /**
- * The preview's query. Every upload is a preview, so nothing needs saying here; `dryRun=true` is taken
- * for one release because this staff bundle's Validate sends it: the previous API image imports a bare
- * upload, so should the API be rolled back while this bundle is live, its Validate stays a dry run there.
- * It buys the previous bundle nothing, since that bundle's strict result schemas refuse this API's answer
- * (`kind`, a row's `name`). `dryRun=false`, the previous bundle's import, is refused: an import now
- * applies a preview by its job id. Slice 4 removes the literal and the bundle's query together.
+ * The preview's query: none. Every upload is a preview, and an import applies a preview by its job id, so
+ * any query parameter is refused (400), the refusal naming it; `dryRun=true` among them since Slice 4
+ * (D-184).
+ *
+ * @example
+ * hotelImportQuery.safeParse({ dryRun: "true" }).success; // false: 'Unrecognized key: "dryRun"'
  */
-export const hotelImportQuery = z
-  .object({
-    dryRun: z
-      .literal("true", "An upload is always a preview: validate the file, then import that preview")
-      .optional(),
-  })
-  .strict();
+export const hotelImportQuery = z.object({}).strict();
 export type HotelImportQuery = z.infer<typeof hotelImportQuery>;
 
 /** The apply route's params: the preview's `import_jobs` id. */
@@ -277,18 +301,44 @@ export type HotelImportRowError = z.infer<typeof hotelImportRowError>;
 export const hotelImportRowOutcome = z.enum(["create", "update", "unchanged", "error"]);
 export type HotelImportRowOutcome = z.infer<typeof hotelImportRowOutcome>;
 
-/** A column a report row names as changed: one of its kind's template columns (the API checks which). */
+/**
+ * A column a report row names as changed: one of its kind's template columns (the API checks which). A
+ * rates row names its item's filled columns when it creates the item (`itemType` among them), the columns
+ * it changes on a matched item, and `cardName` with the card's dates on the row that creates the card.
+ *
+ * @example
+ * hotelImportChangedField.parse("amountMax"); // a rates column
+ */
 export const hotelImportChangedField = z.union([
   hotelImportColumn,
   roomImportColumn,
   venueImportColumn,
+  rateImportColumn,
 ]);
 export type HotelImportChangedField = z.infer<typeof hotelImportChangedField>;
 
 /**
- * One row of the import report: its line, its hotel's web address, the name of the hotel, room or venue
- * it reads (null when the row has none to show), its outcome and the names of the fields it changes
- * (never their values). An "error" row's messages are in `rejected`.
+ * The rate item a rates row reads (D-184): its type and the room or venue it is for, by name (null when
+ * it is for neither). A row matched to a stored item shows the stored room's or venue's name; a refused
+ * row, its own cells. Never an amount.
+ *
+ * @example
+ * hotelImportRowItem.parse({ itemType: "room_rate", roomName: "Lake View Suite", venueName: null });
+ */
+export const hotelImportRowItem = z
+  .object({
+    itemType: hotelRateItemType,
+    roomName: z.string().nullable(),
+    venueName: z.string().nullable(),
+  })
+  .strict();
+export type HotelImportRowItem = z.infer<typeof hotelImportRowItem>;
+
+/**
+ * One row of the import report: its line, its hotel's web address, the name of the hotel, room, venue
+ * or rate card it reads (null when the row has none to show), its outcome and the names of the fields it
+ * changes (never their values). A rates row also names its `item`, when its cells give a known item type.
+ * An "error" row's messages are in `rejected`.
  */
 export const hotelImportRowReport = z
   .object({
@@ -297,6 +347,7 @@ export const hotelImportRowReport = z
     name: z.string().nullable(),
     outcome: hotelImportRowOutcome,
     changedFields: z.array(hotelImportChangedField),
+    item: hotelImportRowItem.optional(),
   })
   .strict();
 export type HotelImportRowReport = z.infer<typeof hotelImportRowReport>;
@@ -307,8 +358,9 @@ export type HotelImportRowReport = z.infer<typeof hotelImportRowReport>;
  * answers with the preview's own `importJobId`: `applied` is true when it wrote anything (a row created or
  * updated, or an image registered) and false when it wrote nothing, every row unchanged or refused, a row
  * changed since the preview among them. `created`, `updated` and `unchanged` count the kind's rows
- * (hotels, rooms or venues); `destinationsCreated` the destinations a hotels import made on the way and
- * `mediaRegistered` the pending gallery images it registered by reference (both 0 for rooms and venues);
+ * (hotels, rooms, venues, or rate items); `destinationsCreated` the destinations a hotels import made on
+ * the way and `mediaRegistered` the pending gallery images it registered by reference (both 0 for the
+ * other kinds);
  * on a preview, the destinations and the images (those not registered yet) importing would add, so a
  * file that only adds images, its rows all unchanged, still has something to import. `rejected` the rows
  * refused, by line and field; `rows` every row's outcome.

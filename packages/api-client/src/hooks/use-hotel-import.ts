@@ -18,16 +18,14 @@ export interface HotelImportApplyInput {
 }
 
 /**
- * The address a kind's file is previewed at. Every upload is a preview, yet it says `dryRun=true`: the
- * previous API image imports a bare upload, so should the API be rolled back while this bundle is live,
- * its Validate still writes nothing there. This API takes the query for that one release (core
- * `hotelImportQuery`); Slice 4 drops it here and there together.
+ * The address a kind's file is previewed at. Every upload is a preview, so it carries no query: the API
+ * refuses any (core `hotelImportQuery`), `dryRun=true` included since Slice 4 (D-184).
  *
  * @example
- * hotelImportPreviewPath("rooms"); // "/hotels-admin/imports/rooms?dryRun=true"
+ * hotelImportPreviewPath("rates"); // "/hotels-admin/imports/rates"
  */
 export function hotelImportPreviewPath(kind: HotelImportKind): string {
-  return `/hotels-admin/imports/${kind}?dryRun=true`;
+  return `/hotels-admin/imports/${kind}`;
 }
 
 /**
@@ -41,11 +39,11 @@ export function hotelImportApplyPath(kind: HotelImportKind, jobId: string): stri
 }
 
 /**
- * Preview an import of the hotels, rooms or venues template (`POST /hotels-admin/imports/<kind>`, the
- * kind's create key; TW-25, D-181). The file goes up as raw bytes (`application/octet-stream`), never as
- * JSON, so the server reads it only after its guards and it may reach the 5 MB cap. A preview reports
- * each row (create, update with the fields it changes, unchanged or error) and writes nothing but its
- * job, so nothing refreshes; its `importJobId` is what {@link useHotelImportApply} imports.
+ * Preview an import of the hotels, rooms, venues or rates template (`POST /hotels-admin/imports/<kind>`,
+ * the kind's create key; TW-25, D-181). The file goes up as raw bytes (`application/octet-stream`),
+ * never as JSON, so the server reads it only after its guards and it may reach the 5 MB cap. A preview
+ * reports each row (create, update with the fields it changes, unchanged or error) and writes nothing
+ * but its job, so nothing refreshes; its `importJobId` is what {@link useHotelImportApply} imports.
  *
  *   const preview = useHotelImportPreview();
  *   preview.mutate({ kind: "rooms", csv });
@@ -67,9 +65,10 @@ export function useHotelImportPreview() {
  * server applies the rows it planned, refusing any whose target changed since, and answers with the same
  * `importJobId`; a job that is not the caller's preview of this kind is a 404, and one already imported
  * or expired a 409. When anything was written (`applied`) the staff catalogue refreshes, every open staff
- * hotel detail with it (their keys share its prefix, so the rooms and venues nested in a detail reload),
- * and the destinations (a hotels import may add one, and each counts its hotels); so do the hotels'
- * media lists when it registered images.
+ * hotel detail with it, and every hotel's rate cards (their keys share its prefix, so the rooms and
+ * venues nested in a detail and the items a rates import wrote reload), and the destinations (a hotels
+ * import may add one, and each counts its hotels); so do the hotels' media lists when it registered
+ * images.
  *
  *   const apply = useHotelImportApply();
  *   apply.mutate({ kind: "rooms", jobId: preview.importJobId });

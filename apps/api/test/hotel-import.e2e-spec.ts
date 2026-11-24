@@ -194,26 +194,23 @@ describe("Safe hotel import (e2e)", () => {
     });
   });
 
-  it("refuses an upload asking to import directly: an import applies a preview by its job id", async () => {
-    const res = await http()
-      .post(ROUTE)
-      .query({ dryRun: "false" })
-      .set("Authorization", admin)
-      .set("Content-Type", "text/csv")
-      .send(csv(KEPT))
-      .expect(400);
-    expect(res.body.error.details).toEqual([expect.objectContaining({ path: "dryRun" })]);
-  });
-
-  it("takes the dryRun=true the staff app's Validate sends, as the same preview", async () => {
-    const res = await http()
-      .post(ROUTE)
-      .query({ dryRun: "true" })
-      .set("Authorization", admin)
-      .set("Content-Type", "application/octet-stream")
-      .send(Buffer.from(csv(`${COAST},E2E CSV Dry,${PREFIX}dry,,,,,,,`)))
-      .expect(200);
-    expect(res.body.data).toMatchObject({ dryRun: true, applied: false, created: 1 });
+  it("refuses any query on an upload, naming it: every upload is a preview (D-183, D-184)", async () => {
+    const jobs = await prisma.importJob.count();
+    for (const dryRun of ["true", "false"]) {
+      const res = await http()
+        .post(ROUTE)
+        .query({ dryRun })
+        .set("Authorization", admin)
+        .set("Content-Type", "application/octet-stream")
+        .send(Buffer.from(csv(`${COAST},E2E CSV Dry,${PREFIX}dry,,,,,,,`)))
+        .expect(400);
+      expect(res.body.error).toMatchObject({
+        code: "validation_failed",
+        details: [{ path: "", message: expect.stringContaining('"dryRun"') }],
+      });
+    }
+    // Refused before the file is read: no preview is recorded.
+    expect(await prisma.importJob.count()).toBe(jobs);
     expect(await prisma.hotel.count({ where: { slug: `${PREFIX}dry` } })).toBe(0);
   });
 

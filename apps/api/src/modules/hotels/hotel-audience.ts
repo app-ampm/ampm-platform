@@ -30,6 +30,10 @@ export const ROOMS_VENUES_UPDATE = "hotels.room_categories_venues.update";
 export const ROOMS_VENUES_READ = "hotels.room_categories_venues.read";
 /** Changing a hotel contact: what demoting the current primary contact needs (D-178). */
 export const HOTEL_CONTACTS_UPDATE = "hotels.hotel_contacts.update";
+/** A hotel's rate cards and items: what the staff rates routes and the rates import ask (D-184). */
+export const RATE_CARDS_CREATE = "hotels.rate_cards_rate_items.create";
+export const RATE_CARDS_UPDATE = "hotels.rate_cards_rate_items.update";
+export const RATE_CARDS_READ = "hotels.rate_cards_rate_items.read";
 
 /**
  * The restricted parts of a staff hotel a principal reads, beyond the profile every reader of
@@ -127,6 +131,35 @@ export function childImportGrantsOf(principal: Principal): ChildImportGrants {
     canCreate: can(caller, ROOMS_VENUES_CREATE),
     canUpdate: can(caller, ROOMS_VENUES_UPDATE),
     readsRows: can(caller, ROOMS_VENUES_READ),
+  };
+}
+
+/**
+ * What a rates import's uploader may do and read (D-184): a row that creates a card or an item needs the
+ * create key, one that changes a stored item the update key, one that names a stored card at all the read
+ * key, and one that names a room or venue the rooms and venues read key, so a preview never tells an
+ * uploader whether a cell matches a card, an item, a room or a venue they cannot read.
+ */
+export interface RateImportGrants {
+  readonly canCreate: boolean;
+  readonly canUpdate: boolean;
+  readonly readsCards: boolean;
+  readonly readsRoomsVenues: boolean;
+}
+
+/**
+ * The rates import grants of a principal, decided from its grants alone (D-164).
+ *
+ * @example
+ * rateImportGrantsOf(staffPrincipal(["HT"])); // every one true
+ */
+export function rateImportGrantsOf(principal: Principal): RateImportGrants {
+  const caller = toPolicyPrincipal(principal);
+  return {
+    canCreate: can(caller, RATE_CARDS_CREATE),
+    canUpdate: can(caller, RATE_CARDS_UPDATE),
+    readsCards: can(caller, RATE_CARDS_READ),
+    readsRoomsVenues: can(caller, ROOMS_VENUES_READ),
   };
 }
 

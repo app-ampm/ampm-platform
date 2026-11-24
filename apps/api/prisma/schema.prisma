@@ -92,14 +92,16 @@ enum ConfigurationScope {
   project
 }
 
-/// What an import job brings in. The staff hotel imports map core `hotelImportKind` onto it (D-181):
-/// hotels to `hotels`, rooms to `hotel_rooms`, venues to `hotel_venues`; keep the three in step.
+/// What an import job brings in. The staff hotel imports map core `hotelImportKind` onto it (D-181,
+/// D-183, D-184): hotels to `hotels`, rooms to `hotel_rooms`, venues to `hotel_venues`, rates to
+/// `hotel_rates`; keep the four in step.
 enum ImportType {
   hotels
   guests
   vendors
   hotel_rooms
   hotel_venues
+  hotel_rates
 }
 
 enum ImportStatus {

@@ -2,9 +2,9 @@ import type { StaffAccess } from "@ampm/api-client";
 import type { HotelImportKind } from "@ampm/core";
 
 /*
- * What the TW-25 import screen says of each kind it imports (D-181; Slice 3): the picker's label, the
- * nouns of its rows, the grant the server's route checks, and the files its downloads save as. One
- * entry per kind (the Record is exhaustive), so Slice 4's rates kind is one more entry.
+ * What the TW-25 import screen says of each kind it imports (D-181; Slices 3 and 4): the picker's label,
+ * the nouns of its rows, the grant the server's route checks, and the files its downloads save as. One
+ * entry per kind (the Record is exhaustive).
  */
 
 export interface ImportKindCopy {
@@ -42,10 +42,17 @@ export const IMPORT_KIND_COPY: Readonly<Record<HotelImportKind, ImportKindCopy>>
     importedTitle: "Venues imported",
     grantKey: "hotels.room_categories_venues.create",
   },
+  rates: {
+    label: "Rates",
+    noun: ["rate item", "rate items"],
+    createLabel: "New item",
+    importedTitle: "Rates imported",
+    grantKey: "hotels.rate_cards_rate_items.create",
+  },
 };
 
 /** The kinds in the order the picker offers them. */
-export const IMPORT_KINDS: readonly HotelImportKind[] = ["hotels", "rooms", "venues"];
+export const IMPORT_KINDS: readonly HotelImportKind[] = ["hotels", "rooms", "venues", "rates"];
 
 /**
  * Whether a picker's value is a kind (a segmented control reports a plain string).
@@ -62,7 +69,7 @@ export function isImportKind(value: string): value is HotelImportKind {
  * the screen offers only these; the server stays the gate, and checks each row's create or update key.
  *
  * @example
- * importableKinds(staffAccessFor(me)); // HT: ["hotels", "rooms", "venues"]
+ * importableKinds(staffAccessFor(me)); // HT: ["hotels", "rooms", "venues", "rates"]
  */
 export function importableKinds(access: StaffAccess): HotelImportKind[] {
   return IMPORT_KINDS.filter((kind) => access.can(IMPORT_KIND_COPY[kind].grantKey));

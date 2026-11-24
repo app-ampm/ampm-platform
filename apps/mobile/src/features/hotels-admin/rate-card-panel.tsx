@@ -4,7 +4,11 @@ import { useDeleteRateCard, useDeleteRateItem } from "@ampm/api-client";
 import type { RateCardView, RateItemView } from "@ampm/core";
 import { Button, Card, ConfirmSheet, Row, Stack, StatusChip, Text, useToast } from "@ampm/ui";
 
-import { rateCardStatusLabel, rateCardStatusTone } from "./hotels-admin.format";
+import {
+  rateCardStatusLabel,
+  rateCardStatusTone,
+  type RateItemPlaces,
+} from "./hotels-admin.format";
 import { RateCardEditSheet } from "./rate-card-edit-sheet";
 import { RateItemEditSheet } from "./rate-item-edit-sheet";
 import { RateItemRow } from "./rate-item-row";
@@ -130,18 +134,39 @@ function RateCardHeader({
   );
 }
 
-/** The card's rate items, with an action to add one. */
-function RateCardItems({
-  card,
-  onAdd,
-  onEdit,
-  onDelete,
-}: {
+interface RateItemListProps {
   readonly card: RateCardView;
-  readonly onAdd: () => void;
+  readonly places: RateItemPlaces | undefined;
   readonly onEdit: (item: RateItemView) => void;
   readonly onDelete: (item: RateItemView) => void;
-}) {
+}
+
+/** The card's rate items, each with the room or venue it prices; a hint while it has none. */
+function RateItemList({ card, places, onEdit, onDelete }: RateItemListProps) {
+  if (card.items.length === 0) {
+    return (
+      <Text variant="bodySmall" tone="muted">
+        No items yet. Add the rates this card covers.
+      </Text>
+    );
+  }
+  return (
+    <Stack gap={3}>
+      {card.items.map((item) => (
+        <RateItemRow
+          key={item.id}
+          item={item}
+          places={places}
+          onEdit={() => onEdit(item)}
+          onDelete={() => onDelete(item)}
+        />
+      ))}
+    </Stack>
+  );
+}
+
+/** The card's rate items, with an action to add one. */
+function RateCardItems({ onAdd, ...list }: RateItemListProps & { readonly onAdd: () => void }) {
   return (
     <Stack gap={3}>
       <Row justify="between" align="center">
@@ -151,27 +176,12 @@ function RateCardItems({
           size="sm"
           icon="plus"
           onPress={onAdd}
-          testID={`rate-card-${card.id}-add-item`}
+          testID={`rate-card-${list.card.id}-add-item`}
         >
           Add item
         </Button>
       </Row>
-      {card.items.length === 0 ? (
-        <Text variant="bodySmall" tone="muted">
-          No items yet. Add the rates this card covers.
-        </Text>
-      ) : (
-        <Stack gap={3}>
-          {card.items.map((item) => (
-            <RateItemRow
-              key={item.id}
-              item={item}
-              onEdit={() => onEdit(item)}
-              onDelete={() => onDelete(item)}
-            />
-          ))}
-        </Stack>
-      )}
+      <RateItemList {...list} />
     </Stack>
   );
 }
@@ -235,10 +245,12 @@ function RateCardSheets({
 export interface RateCardPanelProps {
   readonly hotelId: string;
   readonly card: RateCardView;
+  /** The hotel's live rooms and venues (the staff hotel the screen reads); undefined until it loads. */
+  readonly places: RateItemPlaces | undefined;
 }
 
 /** One rate card: its header, its items, and the editors / verify / deletes it owns. */
-export function RateCardPanel({ hotelId, card }: RateCardPanelProps) {
+export function RateCardPanel({ hotelId, card, places }: RateCardPanelProps) {
   const panel = useRateCardPanel(hotelId, card);
   return (
     <Card testID={`rate-card-panel-${card.id}`}>
@@ -251,6 +263,7 @@ export function RateCardPanel({ hotelId, card }: RateCardPanelProps) {
         />
         <RateCardItems
           card={card}
+          places={places}
           onAdd={() => panel.setItemEditing({ item: null })}
           onEdit={(item) => panel.setItemEditing({ item })}
           onDelete={(item) => panel.setItemDeleting(item)}

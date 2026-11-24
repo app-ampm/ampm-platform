@@ -14,6 +14,7 @@ import {
   hotelImportResult,
   hotelImportRow,
 } from "./hotel-import.js";
+import { RATE_IMPORT_COLUMNS, RATE_IMPORT_MONEY_COLUMNS } from "./hotel-import-rates.js";
 import {
   ROOM_IMPORT_COLUMNS,
   VENUE_IMPORT_CAPACITY_COLUMNS,
@@ -69,6 +70,7 @@ describe("the hotels template", () => {
 
 describe("HOTEL_IMPORT_TEMPLATES", () => {
   it("has one template per kind, each typed column one of its own", () => {
+    expect(hotelImportKind.options).toEqual(["hotels", "rooms", "venues", "rates"]);
     expect(Object.keys(HOTEL_IMPORT_TEMPLATES).sort()).toEqual([...hotelImportKind.options].sort());
     for (const template of Object.values(HOTEL_IMPORT_TEMPLATES)) {
       const typed = [
@@ -79,6 +81,7 @@ describe("HOTEL_IMPORT_TEMPLATES", () => {
         ...template.enumColumns,
         ...template.layoutColumns,
         ...template.capacityColumns,
+        ...template.moneyColumns,
       ];
       for (const column of typed) expect(template.columns).toContain(column);
       for (const column of template.capacityColumns) {
@@ -98,21 +101,35 @@ describe("HOTEL_IMPORT_TEMPLATES", () => {
     expect(HOTEL_IMPORT_TEMPLATES.hotels.capacityColumns).toEqual([]);
     expect(HOTEL_IMPORT_TEMPLATES.rooms.capacityColumns).toEqual([]);
     expect(HOTEL_IMPORT_TEMPLATES.venues.capacityColumns).toBe(VENUE_IMPORT_CAPACITY_COLUMNS);
+    expect(HOTEL_IMPORT_TEMPLATES.rates.capacityColumns).toEqual([]);
+  });
+
+  it("reads money cells only in the Rates template (D-184)", () => {
+    expect(HOTEL_IMPORT_TEMPLATES.rates.columns).toBe(RATE_IMPORT_COLUMNS);
+    expect(HOTEL_IMPORT_TEMPLATES.rates.moneyColumns).toBe(RATE_IMPORT_MONEY_COLUMNS);
+    expect(HOTEL_IMPORT_TEMPLATES.rates.requiredColumns).toEqual([
+      "hotelSlug",
+      "cardName",
+      "itemType",
+    ]);
+    for (const kind of ["hotels", "rooms", "venues"] as const) {
+      expect(HOTEL_IMPORT_TEMPLATES[kind].moneyColumns).toEqual([]);
+    }
   });
 });
 
 describe("hotelImportQuery", () => {
-  it("takes nothing, or the dryRun=true this bundle's Validate sends (a dry run on the previous API too)", () => {
+  it("takes no query: every upload is a preview", () => {
     expect(hotelImportQuery.parse({})).toEqual({});
-    expect(hotelImportQuery.parse({ dryRun: "true" })).toEqual({ dryRun: "true" });
   });
 
-  it("refuses dryRun=false, the previous bundle's import, and anything else", () => {
-    const refused = hotelImportQuery.safeParse({ dryRun: "false" });
-    expect(refused.success).toBe(false);
-    expect(refused.success ? "" : refused.error.issues[0]?.message).toMatch(/validate the file/);
-    expect(hotelImportQuery.safeParse({ dryRun: "yes" }).success).toBe(false);
-    expect(hotelImportQuery.safeParse({ kind: "rooms" }).success).toBe(false);
+  it("refuses any query, dryRun=true included since Slice 4 (D-184), naming it", () => {
+    for (const query of [{ dryRun: "true" }, { dryRun: "false" }, { kind: "rooms" }]) {
+      const refused = hotelImportQuery.safeParse(query);
+      expect(refused.success).toBe(false);
+      const [name] = Object.keys(query);
+      expect(refused.success ? "" : refused.error.issues[0]?.message).toContain(`"${name}"`);
+    }
   });
 });
 
@@ -179,5 +196,48 @@ describe("hotelImportResult", () => {
   it("takes a null name for a row with none to show", () => {
     const rows = [{ ...result.rows[0], name: null, outcome: "error", changedFields: [] }];
     expect(hotelImportResult.safeParse({ ...result, rows }).success).toBe(true);
+  });
+
+  describe("a rates row (D-184)", () => {
+    const rateRow = {
+      line: 3,
+      slug: "synthetic-lake-hotel",
+      name: "Synthetic season 2027",
+      outcome: "create",
+      changedFields: ["cardName", "validFrom", "itemType", "roomName", "amount", "unit"],
+      item: { itemType: "room_rate", roomName: "Synthetic Lake Suite", venueName: null },
+    };
+    const rates = { ...result, kind: "rates", rows: [rateRow] };
+
+    it("names its card, and its item by type, room and venue", () => {
+      expect(hotelImportResult.safeParse(rates).success).toBe(true);
+      const { item: _item, ...withoutItem } = rateRow;
+      expect(hotelImportResult.safeParse({ ...rates, rows: [withoutItem] }).success).toBe(true);
+    });
+
+    it("names the rates changed fields, and no value", () => {
+      const changed = [
+        "validTo",
+        "amountMax",
+        "minQuantity",
+        "isIndicative",
+        "inclusions",
+        "venueName",
+      ];
+      const row = { ...rateRow, outcome: "update", changedFields: changed };
+      expect(hotelImportResult.safeParse({ ...rates, rows: [row] }).success).toBe(true);
+      const valued = {
+        ...rateRow,
+        item: { ...rateRow.item, amount: { minor: 1, currency: "INR" } },
+      };
+      expect(hotelImportResult.safeParse({ ...rates, rows: [valued] }).success).toBe(false);
+    });
+
+    it("refuses an item of an unknown type, or without its room and venue", () => {
+      const unknown = { ...rateRow, item: { ...rateRow.item, itemType: "room" } };
+      expect(hotelImportResult.safeParse({ ...rates, rows: [unknown] }).success).toBe(false);
+      const partial = { ...rateRow, item: { itemType: "room_rate" } };
+      expect(hotelImportResult.safeParse({ ...rates, rows: [partial] }).success).toBe(false);
+    });
   });
 });

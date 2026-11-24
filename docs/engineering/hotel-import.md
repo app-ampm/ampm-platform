@@ -1,32 +1,33 @@
 # Hotel import — the spreadsheet templates and how they load
 
-**For:** AMPM (Eva and the hotel team) and the developer · **Feature:** Module C 9.1 (TW-25; AC-35.1) · **Status:** rewritten on 24 November 2026 for Slice 3 of the [hotel information form plan](../planning/hotel-information-form-plan.md) (D-178, D-181). There is one CSV template per kind, with fixed headers. A blank cell never clears a value. Import applies the preview you validated, by its job id. This page covers the **Hotels**, **Rooms** and **Venues** templates; Rates follow with Slice 4.
+**For:** AMPM (Eva and the hotel team) and the developer · **Feature:** Module C 9.1 (TW-25; AC-35.1) · **Status:** rewritten on 24 November 2026 for Slices 3 and 4 of the [hotel information form plan](../planning/hotel-information-form-plan.md) (D-178, D-181, D-183, D-184). There is one CSV template per kind, with fixed headers. A blank cell never clears a value. Import applies the preview you validated, by its job id. This page covers the **Hotels**, **Rooms**, **Venues** and **Rates** templates.
 
-Eva loads the ~200 hotels from spreadsheets saved as **CSV**: first the hotels, one row per hotel, then their rooms and their venues, one row per room category or venue. On the import screen (TW-25):
+Eva loads the ~200 hotels from spreadsheets saved as **CSV**: first the hotels, one row per hotel, then their rooms and their venues, one row per room category or venue, then their rates, one row per rate item. On the import screen (TW-25):
 
 1. Choose the kind and download its template.
 2. Fill it in and save it as **CSV UTF-8**.
 3. Upload the file and press **Validate**. The preview checks every row and reports what importing would do, without changing anything.
 4. Press **Import** within 24 hours to load that preview.
 
-Import the hotels before their rooms and venues: a Rooms or Venues row can only name a hotel that already exists.
+Import the hotels before their rooms and venues, and the rooms and venues before the rates: a Rooms or Venues row can only name a hotel that already exists, and a Rates row can only name a room or venue that does.
 
 Each template has an example file with the same header and synthetic rows for a fictitious hotel, `example-hills-retreat`. Use them to see the formats; do not import them.
 
 - [`hotel-import-template.csv`](hotel-import-template.csv): Hotels.
 - [`hotel-import-rooms-template.csv`](hotel-import-rooms-template.csv): Rooms.
 - [`hotel-import-venues-template.csv`](hotel-import-venues-template.csv): Venues.
+- [`hotel-import-rates-template.csv`](hotel-import-rates-template.csv): Rates.
 
 ## How it loads
 
-- **The file itself, after the checks.** The team app uploads the raw CSV (`application/octet-stream`, not a JSON copy) to the kind's route: `POST /hotels-admin/imports/hotels`, `/hotels-admin/imports/rooms` or `/hotels-admin/imports/venues`.
+- **The file itself, after the checks.** The team app uploads the raw CSV (`application/octet-stream`, not a JSON copy) to the kind's route: `POST /hotels-admin/imports/hotels`, `/hotels-admin/imports/rooms`, `/hotels-admin/imports/venues` or `/hotels-admin/imports/rates`. The route takes no query: a query is refused (400).
   - A file may be up to **5 MiB** and **2,000** data rows. A larger one is refused whole (413 for the size), so split it. A file with the header and no data rows is refused whole too.
   - The API reads the body only after the sign-in, rate-limit and permission checks have passed, through the shared post-guard reader ([architecture §6](../architecture.md)).
 - **Every upload is a preview.** Every row is checked and planned, and the report gives each one an outcome: **create**, **update** (naming the columns that would change), **unchanged**, or **error** (naming the column and the reason).
   - The preview changes no hotel, room or venue. It records itself in `import_jobs` with its report, which names fields and never holds their values, and with its planned rows, values included, which are kept for the import and never shown.
   - The planned rows are kept only while they can be imported. They are cleared on import, when a newer preview replaces them, when an import finds the preview expired, and by a daily clean-up once they are more than 24 hours old; the job and its report stay.
   - Its counts say what importing would do, the images it would register included. A preview with no valid row cannot be imported.
-  - For one release the team app's Validate sends `?dryRun=true`, and the API takes it as the same preview. Should the API be rolled back to the previous version, which imports a file sent without it, a Validate from this team app still changes nothing there. The previous version of the team app cannot read this API's answers at all (its checks of a result are strict), so reload the team app after a deploy. `dryRun=false`, the previous team app's import, is refused (400). Slice 4 removes the query from both.
+  - The team app before Slice 3 cannot read this API's answers (its checks of a result are strict), and the Slice 3 team app still sends `?dryRun=true`, which this API refuses (400) since Slice 4. Reload the team app after a deploy.
 - **Import applies the preview by its job id.** Import sends no file: `POST /hotels-admin/imports/<kind>/<jobId>/apply`, with an empty body, loads the rows the preview planned.
   - It answers with the preview's own job id, which is then `applied`; no second job is created.
   - Error rows never load; the valid rows still do (48 of 50 in the acceptance test).
@@ -42,28 +43,30 @@ Each template has an example file with the same header and synthetic rows for a 
 - **Changed since preview.** Import locks the hotels the file touches and plans each stored row again against the catalogue as it is at that moment. It refuses a row, with "Changed since preview; validate the file again" on its `row` field, and counts it among the rejected rows, when:
   - a value the import compares changed on the row's hotel, room or venue after the preview;
   - the hotel, room or venue the row was to create now exists;
-  - the one the row was to update has been deleted or renamed, or its hotel deleted, even when the row could not create a new one instead (a venue row without a type, say).
+  - the one the row was to update has been deleted or renamed, or its hotel deleted, even when the row could not create a new one instead (a venue row without a type, say);
+  - for Rates: the rate card the row was to add an item to changed (verified, turned stale, retired, its dates edited), was deleted or renamed, or now holds that item; or the new card the row was to create now exists, or the row that made it in the preview is refused.
 
   The other rows still load, so an import never overwrites what staff changed after the preview. Validate the file again to see the change and load the refused rows.
 - **What counts as changed.** A change is a new value in a column the import compares:
   - **Hotels:** every template column except `slug`, `destinationName` and `imageRef`; `destinationSlug` compares the hotel's destination. The internal rating and notes count only for an uploader who reads them, or on a row that fills `internalRating` or `internalNotes` (only such a row could write over them). So an edit of the notes refuses no other row, and an uploader who cannot read the notes learns of one only when it refuses their own row that fills a notes cell, rather than letting that row write over it.
   - **Rooms and Venues:** every template column except `hotelSlug` and `name`.
+  - **Rates:** on an item, `amount`, `amountMax`, `unit`, `minQuantity`, `isIndicative` and `inclusions`; on a card, its status and its dates.
 
-  Each check is exactly as fine as its kind's comparison. Rooms and Venues compare text with its spacing evened out, so an edit only in spacing is not a change. The Hotels template compares text trimmed only, and links and list entries exactly, so on a hotel any stored edit counts, spacing and a link's case included. The check is a version token, a hash of those values taken at the preview, not the time of the last edit. Recording a verification, or editing what the template does not carry (contacts, media, rate cards, another room), is therefore not a change.
-- **A blank cell leaves the value unchanged.** On an existing hotel, room or venue an empty cell never clears or resets anything; to clear a value, edit it in the team app. A row that creates something leaves its blank cells empty, apart from the defaults the Hotels section gives.
+  Each check is exactly as fine as its kind's comparison. Rooms and Venues compare text with its spacing evened out, so an edit only in spacing is not a change. The Hotels template compares text trimmed only, and links and list entries exactly, so on a hotel any stored edit counts, spacing and a link's case included. The check is a version token, a hash of those values taken at the preview, not the time of the last edit. Recording a verification, or editing what a row's template does not carry (contacts, media, another room; for a Hotels, Rooms or Venues row, rate cards; for a Rates row, an item's visibility or a card's source and notes), is therefore not a change.
+- **A blank cell leaves the value unchanged.** On an existing hotel, room, venue or rate item an empty cell never clears or resets anything; to clear a value, edit it in the team app. A row that creates something leaves its blank cells empty, apart from the defaults the Hotels section gives.
 - **Permissions are checked row by row**, each on the key the dedicated screen asks; a row the uploader may not write is an error row, and the other rows still load. Each kind's section lists its keys. The Hotel team and the Super Admin hold every one of them, so the row checks matter for custom roles.
-- **Audited, and recorded.** Every hotel, room or venue an import creates or updates writes an audit event. The job keeps the counts and the import's report. A row that changes nothing writes nothing and no audit event, and an import that writes nothing says nothing was imported (the result's `applied` is false).
+- **Audited, and recorded.** Every hotel, room or venue an import creates or updates writes an audit event. The job keeps the counts and the import's report. A row that changes nothing writes nothing and no audit event, and an import that writes nothing says nothing was imported (the result's `applied` is false). A Rates import audits each rate card it creates and each item it creates or changes, naming the columns, never the amounts.
 
 ## Filling in the file
 
-- **Headers are fixed.** Use the template's header names exactly; there is no column mapping. A header the template does not have refuses the whole file, so delete extra columns (notes, helper formulas) before saving. A file may carry any subset of the columns, but it must have the kind's required columns: `destinationSlug` and `name` for Hotels, `hotelSlug` and `name` for Rooms and Venues.
+- **Headers are fixed.** Use the template's header names exactly; there is no column mapping. A header the template does not have refuses the whole file, so delete extra columns (notes, helper formulas) before saving. A file may carry any subset of the columns, but it must have the kind's required columns: `destinationSlug` and `name` for Hotels, `hotelSlug` and `name` for Rooms and Venues, and `hotelSlug`, `cardName` and `itemType` for Rates.
 - **Save as CSV UTF-8** (in Excel: *Save As*, then *CSV UTF-8 (Comma delimited)*). The byte-order mark Excel writes at the start is fine. Another encoding garbles names with accents or in Indic scripts.
 - **Lists** (`nameAliases`, `facilities`, `cuisines`) keep their entries in one cell, separated by `|`, for example `Pool|Spa|Gym`. A line break inside the cell (Alt+Enter in Excel) separates entries too, and a comma never does, so `Spa, salon and gym` is one facility. The team app's editor reads its one-per-line lists by the same rule, so a list saved by either reads back the same through the other.
 - **Option cells.**
-  - In the Rooms and Venues templates (`unitType`, `venueType`, `setting`), an option cell takes its value in any case, with spaces and hyphens read as underscores: `Meeting room`, `meeting-room` and `MEETING_ROOM` all read as `meeting_room`, and `Semi-open` as `semi_open`.
+  - In the Rooms, Venues and Rates templates (`unitType`, `venueType`, `setting`, `itemType`, `unit`), an option cell takes its value in any case, with spaces and hyphens read as underscores: `Meeting room`, `meeting-room` and `MEETING_ROOM` all read as `meeting_room`, and `Semi-open` as `semi_open`.
   - The Hotels template's option cells (`status`, `weddingBuyoutPolicy`, `parallelFunctions`) take the exact value its table shows.
-- **Yes-or-no columns** (Hotels only) take `true` or `false`; `yes`, `no`, `1` and `0` work too, in any case. On a new hotel a blank food fact means the hotel has not said, and a blank `demoVisible` or `publicShowcase` means no; on an existing hotel a blank cell leaves any of them unchanged.
-- **Numbers** are plain: no thousands separators and no units (`25833`, not `25,833 sq ft`). Distances take at most one decimal place, and lengths, widths and ceiling heights two; coordinates are kept to six.
+- **Yes-or-no columns** (Hotels, and `isIndicative` in Rates) take `true` or `false`; `yes`, `no`, `1` and `0` work too, in any case. On a new hotel a blank food fact means the hotel has not said, and a blank `demoVisible` or `publicShowcase` means no; a new rate item with a blank `isIndicative` is indicative; on an existing hotel or item a blank cell leaves any of them unchanged.
+- **Numbers** are plain: no thousands separators and no units (`25833`, not `25,833 sq ft`). Rates amounts are the exception: they take commas (see Amounts in rupees). Distances take at most one decimal place, and lengths, widths and ceiling heights two; coordinates are kept to six.
 - **Quote a cell that contains a comma**, as spreadsheets do when they save CSV (`"1 Example Road, Old Town"`). A quote opens a quoted cell only at the start of the cell; anywhere else it is text, so `55" TV` needs no quoting. A cell that opens a quote must close it: a quote that never closes refuses the file, naming its line, rather than swallow the rows below it.
 - **Line endings** may be those of any spreadsheet: CRLF (Windows), LF, or CR alone (Excel for Mac's older CSV). Blank rows are skipped, above the header too, and a row's line in the report is its place in the file.
 - **No null characters.** Text pasted from a PDF can carry an invisible null character, and a file saved as UTF-16 is full of them; the database cannot store one, so such a file is refused whole.
@@ -215,13 +218,55 @@ One row per venue. The column list is `VENUE_IMPORT_COLUMNS` in the same file, w
   - An entry that does not read that way is a row error on `otherLayouts`: "Write each layout as Name: max or Name: min-max, for example Classroom: 120 | U-shape: 30-40".
 - **Setting and indoor.** The setting decides whether the venue counts as indoor: only `indoor` does. Clients see indoor or outdoor until Slice 12, so a semi-open venue shows to them as outdoor.
 
+## Rates: how a row finds its card and item
+
+A Rates row names its hotel by web address in `hotelSlug`, its rate card by `cardName`, and its rate item by what the item is: `itemType`, and the room or venue it prices (`roomName` or `venueName`). Rates load only into **draft** cards and start **hidden** from clients: nothing an import loads reaches a client until the card is verified against a current rates verification on the hotel's Rate cards tab (D-170) and the item is shown there.
+
+- **The hotel must exist.** A web address that names no hotel, or a deleted one, is a row error on `hotelSlug`.
+- **The card is matched by name within the hotel**, ignoring case and spacing, among its rate cards that are not deleted or retired (a retired card's name is free again).
+  - **No such card:** the import creates a **draft** card, in rupees. Every row of the file that names that new card joins it, and the first row the import can load gives its `validFrom` and `validTo`. A later row of it that fills other dates is a row error ("Line N starts this new card with other dates; give its rows the same dates, or leave them blank"). If that first row is refused when you import (its room renamed meanwhile, say), the card is not made from another row: its other rows are refused as changed since the preview, so validate the file again.
+  - **A draft card:** the rows go into it. A filled `validFrom` or `validTo` that differs from the card's own is a row error ("This card's dates differ from the file's; change them in the staff app"): an import never changes a card.
+  - **A verified or stale card:** a row error ("Rates are imported only into draft cards, and this card is verified; give the file a new card name", or "… is stale; …"). An import never touches a priced card that clients may see.
+  - **Two cards sharing the name:** a row error ("Two rate cards are named …; rename one in the staff app first").
+- **The item is matched within the card** by its type and its room or venue, so the import keeps one item of each type for each room or venue, and one for none (two prices for one room go on separate cards).
+  - `roomName` and `venueName` name a live room category or venue of the hotel, matched as the Rooms and Venues templates match them. An unknown name is a row error ("No room named …", "No venue named …"), and so is a row that fills both ("An item is for a room or a venue, not both").
+  - No such item: the row creates it, hidden from clients. It needs `amount` and `unit` ("A new item needs its amount", "A new item needs its unit: per night, per plate, per event or percent").
+  - One such item: the row updates the columns it fills that differ, or leaves the item unchanged. It never changes whether the item is shown to clients.
+  - Two such items on the card: a row error ("This card has two such items; change one in the staff app first").
+  - The same item twice in one file, for the same card, is a row error on the later line ("Line N already names this item").
+- **Keys, row by row.** Uploading a Rates file needs `hotels.rate_cards_rate_items.create`. A row that creates a card or an item needs that key, and a row that changes an item needs `hotels.rate_cards_rate_items.update`.
+- **A preview compares only what the uploader may read.** A row that names an existing card also needs `hotels.rate_cards_rate_items.read`; without it the row is an error with one reason ("A rate card already has this name, and you cannot read rate cards"). A row that fills `roomName` or `venueName` needs `hotels.room_categories_venues.read` ("You cannot read rooms and venues").
+
+## The Rates template
+
+One row per rate item. The column list is `RATE_IMPORT_COLUMNS` in `packages/core/src/schemas/hotel-import-rates.ts`, which `HOTEL_IMPORT_TEMPLATES.rates` carries; the table follows its order.
+
+| Column | Required | Type | Notes |
+|---|---|---|---|
+| `hotelSlug` | **yes** | kebab-case | The hotel's web address. |
+| `cardName` | **yes** | text | The rate card's name, up to 255 characters, e.g. `2027-28 wedding season`. |
+| `validFrom` | no | date | The card's first day, `YYYY-MM-DD`. Sets the date only when the import creates the card; on any other row leave it blank or give the card's own (another date is a row error). |
+| `validTo` | no | date | The card's last day, `YYYY-MM-DD`, not before `validFrom`. As `validFrom`: set only when the import creates the card. |
+| `itemType` | **yes** | option | `Room rate`, `Venue rental`, `Per plate veg`, `Per plate non-veg`, `Wedding package`, `Beverage package`, `Service charge`, `Tax` or `Other`, in any case, spaces and hyphens reading as underscores (`room_rate` works too). |
+| `roomName` | no | text | The room category the item prices, by name. |
+| `venueName` | no | text | The venue the item prices, by name. Not with `roomName`. |
+| `amount` | **for a new item** | rupees | The price, or the lower bound of a range. |
+| `amountMax` | no | rupees | The upper bound of an indicative range, at least `amount`. |
+| `unit` | **for a new item** | option | `per night`, `per plate`, `per event` or `percent`, in any case. |
+| `minQuantity` | no | whole number | The fewest guests, plates or rooms the price needs, 0 to 100,000. |
+| `isIndicative` | no | true / false | Whether the price is indicative; a new item is indicative unless the cell says `false`. |
+| `inclusions` | no | text | What the price includes, up to 10,000 characters. |
+
+- **Amounts in rupees.** Write a number with at most two decimals, with or without commas in either the international or the Indian grouping: `12500`, `12,500`, `12,500.50`, `3,50,000`. A currency sign or word (`₹`, `Rs`, `INR`) is a row error ("Write the amount in rupees as a number, such as 12500 or 12,500.50"), and so is a range in one cell ("Put a range's upper bound in amountMax"). At most 10,000,000,000 rupees. For a `percent` item the amount is the percentage: `10` is 10%.
+- **Not in the template.** Whether an item is shown to clients (hidden when the import creates it, and never changed by an import; shown from the Rate cards tab), the card's currency (rupees), and the card's source and internal notes (staff-only: the Rate cards tab).
+
 ## The report and the downloads (TW-25)
 
-- **Choose the kind** first: Hotels, Rooms or Venues. The picker offers only the kinds you may import.
+- **Choose the kind** first: Hotels, Rooms, Venues or Rates. The picker offers only the kinds you may import.
 - **Download template** saves the chosen kind's header row, built in the app from the core template; the screen shows the kind's column help beside the button. The file starts with the byte-order mark that tells Excel the file is UTF-8, so Excel opens it, and saves it again, as CSV UTF-8 rather than turning ₹ or an Indic name into `?`.
 - **Validate** runs the preview and shows:
   - the counts: to create, to update, unchanged, rejected, and for Hotels any new destinations (in its toast too) and images importing would add;
-  - the rows that would create or update, up to 20: each row's line, the hotel's web address and, for Rooms and Venues, the room or venue name, with the columns that would change (never their values);
+  - the rows that would create or update, up to 20: each row's line, the hotel's web address and, for Rooms and Venues, the room or venue name, or, for Rates, the card name, the item's type and its room or venue, with the columns that would change (never their values);
   - the rejected rows, up to 20: line, column and reason.
 
   Unchanged rows are only counted. The screen notes that a preview can be imported for 24 hours.
@@ -235,4 +280,5 @@ One row per venue. The column list is `VENUE_IMPORT_COLUMNS` in the same file, w
 > - **Rooms.** Clients see the name, `roomCount`, `maxOccupancy`, the size in m², `facilities` and `description`.
 > - **Venues.** Clients see the name, `venueType` (the five new types included), indoor or outdoor (from `setting`), the area in m², the three capacities, `facilities` and `description`.
 > - **The other room and venue columns** (`unitType`, `viewLabel`, `bedConfiguration`, the sq ft figures, the dimensions, the pre-function area, `otherLayouts`, `capacityNotes` and the setting itself) are client data too, shown to clients only from Slice 12.
-> - **Never in these templates.** Contacts are never imported and never reach a client. Prices and availability are a separate, verified step (Rates with Slice 4).
+> - **Rates.** An imported item starts hidden in a draft card, so no imported price reaches a client. A client sees a price only once its card is verified against a current rates verification (D-170) and the item is shown, both on the hotel's Rate cards tab.
+> - **Never in these templates.** Contacts are never imported and never reach a client. Availability is not imported.

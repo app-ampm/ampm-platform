@@ -12,7 +12,10 @@ import {
   rateCardViewFixture,
   rateItemViewFixture,
   renderWithApi,
+  ROOM_ID,
+  roomCategoryViewFixture,
   routedFetch,
+  VENUE_ID,
   VERIFICATION_ID,
   verificationViewFixture,
   type FetchFn,
@@ -94,6 +97,24 @@ describe("HotelRatesScreen", () => {
     expect(screen.getByText(/16,000/)).toBeOnTheScreen();
     expect(screen.getByText("per night")).toBeOnTheScreen();
     expect(screen.getByText("Client")).toBeOnTheScreen();
+  });
+
+  it("names the room or venue each item prices, from the hotel the screen already reads", async () => {
+    const RENTAL_ID = "018f0000-0000-7000-8000-0000000c1102";
+    const items = [
+      rateItemViewFixture({ roomCategoryId: ROOM_ID }),
+      rateItemViewFixture({ id: RENTAL_ID, itemType: "venue_rental", venueId: VENUE_ID }),
+    ];
+    const hotel = hotelStaffDetailViewFixture({ rooms: [roomCategoryViewFixture()] });
+    const fetch = routedFetch({
+      [`/hotels-admin/hotels/${HOTEL_ID}`]: () => ok(hotel),
+      [`/hotels-admin/hotels/${HOTEL_ID}/rate-cards`]: () =>
+        ok({ items: [rateCardViewFixture({ items })] }),
+    });
+    await renderWithApi(<HotelRatesScreen hotelId={HOTEL_ID} />, fetch);
+    expect(await screen.findByText("Room rate · Deluxe Lake View")).toBeOnTheScreen();
+    expect(screen.getByText("Venue rental · a removed venue")).toBeOnTheScreen();
+    expect(screen.getByLabelText("Edit Room rate for Deluxe Lake View")).toBeOnTheScreen();
   });
 
   it("adds a rate card", async () => {

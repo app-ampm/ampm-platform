@@ -10,6 +10,7 @@ import {
   type HotelImportApplyInput,
   type HotelImportPreviewInput,
 } from "./use-hotel-import";
+import { rateCardsQueryKey } from "./use-hotel-rates";
 import {
   STAFF_DESTINATIONS_QUERY_KEY,
   STAFF_HOTELS_QUERY_KEY,
@@ -102,12 +103,13 @@ beforeEach(() => {
 });
 
 describe("the import addresses", () => {
-  // The previous API image imports a bare upload, so a Validate sent to it during a rollback must still
-  // say it is a dry run; this API takes `dryRun=true` for that one release (core `hotelImportQuery`).
-  it("previews each kind at its own address, always as a dry run", () => {
-    expect(hotelImportPreviewPath("hotels")).toBe("/hotels-admin/imports/hotels?dryRun=true");
-    expect(hotelImportPreviewPath("rooms")).toBe("/hotels-admin/imports/rooms?dryRun=true");
-    expect(hotelImportPreviewPath("venues")).toBe("/hotels-admin/imports/venues?dryRun=true");
+  // Every upload is a preview, and since Slice 4 the API refuses any query on one (core
+  // `hotelImportQuery`, D-184), `dryRun=true` included.
+  it("previews each kind at its own address, with no query", () => {
+    expect(hotelImportPreviewPath("hotels")).toBe("/hotels-admin/imports/hotels");
+    expect(hotelImportPreviewPath("rooms")).toBe("/hotels-admin/imports/rooms");
+    expect(hotelImportPreviewPath("venues")).toBe("/hotels-admin/imports/venues");
+    expect(hotelImportPreviewPath("rates")).toBe("/hotels-admin/imports/rates");
   });
 
   it("imports a preview of a kind by its job id", () => {
@@ -119,7 +121,7 @@ describe("the import addresses", () => {
 });
 
 describe("useHotelImportPreview", () => {
-  it.each(["hotels", "rooms", "venues"] as const)(
+  it.each(["hotels", "rooms", "venues", "rates"] as const)(
     "uploads a %s CSV as raw bytes, never as JSON, and reads the import result",
     async (kind) => {
       useHotelImportPreview();
@@ -127,7 +129,7 @@ describe("useHotelImportPreview", () => {
       expect(seen.sent).toEqual([
         {
           via: "upload",
-          path: `/hotels-admin/imports/${kind}?dryRun=true`,
+          path: `/hotels-admin/imports/${kind}`,
           options: {
             body: CSV,
             contentType: "application/octet-stream",
@@ -174,6 +176,17 @@ describe("useHotelImportApply", () => {
       STAFF_HOTELS_QUERY_KEY,
       STAFF_DESTINATIONS_QUERY_KEY,
       HOTEL_MEDIA_QUERY_KEY,
+    ]);
+  });
+
+  // A rates import adds and changes the items of draft cards: the hotel's Rates tab must show them.
+  it("refreshes every hotel's rate cards once a rates import has written", () => {
+    useHotelImportApply();
+    seen.onSuccess?.(result({ kind: "rates", dryRun: false, applied: true }));
+    expect(seen.invalidated).toEqual([STAFF_HOTELS_QUERY_KEY, STAFF_DESTINATIONS_QUERY_KEY]);
+    // Each hotel's rate-card key starts with the catalogue's, so that one refresh reloads them all.
+    expect(rateCardsQueryKey("hotel-1").slice(0, STAFF_HOTELS_QUERY_KEY.length)).toEqual([
+      ...STAFF_HOTELS_QUERY_KEY,
     ]);
   });
 

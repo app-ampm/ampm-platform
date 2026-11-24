@@ -272,15 +272,15 @@ Created at stage: **Configuration** · Default editor: SA · Default visibility:
 
 ### `import_jobs`
 
-Created at stage: **Any (import)** · Default editor: SA; HT (hotels, rooms and venues); VC (vendors); RG and PM (a) (guests) · Default visibility: INTERNAL · Assumptions: A-9 (Q9), GP-22, D-181
+Created at stage: **Any (import)** · Default editor: SA; HT (hotels, rooms, venues and rates); VC (vendors); RG and PM (a) (guests) · Default visibility: INTERNAL · Assumptions: A-9 (Q9), GP-22, D-181, D-184
 
 | Field | Type and validation | Options | Edited by | Visibility | Required | Automation and report impact |
 |---|---|---|---|---|---|---|
 | `id` (PK) | UUID v7, generated |  | SYS | INTERNAL | System | — |
-| `import_type` | one of the listed options; the staff hotel imports store their kind as hotels, hotel_rooms or hotel_venues | hotels, guests, vendors, hotel_rooms, hotel_venues | SA; HT (hotels, rooms and venues); VC (vendors); RG and PM (a) (guests) | INTERNAL | At creation | — |
-| `project_id` | references wedding_projects; required when import_type is guests |  | SA; HT (hotels, rooms and venues); VC (vendors); RG and PM (a) (guests) | INTERNAL | At creation for guest imports | — |
-| `file_document_id` (FK) | references documents; null for the staff hotel imports |  | SA; HT (hotels, rooms and venues); VC (vendors); RG and PM (a) (guests) | INTERNAL | At creation for guest and vendor imports; null for the staff hotel imports, which keep no file (D-181) | — |
-| `status` | one of the listed options; a hotel import preview stays validating until imported by its id (D-181) | uploaded, validating, failed, applied | SA; HT (hotels, rooms and venues); VC (vendors); RG and PM (a) (guests) | INTERNAL | At creation | Staff hotel imports (D-181): a preview is stored validating, or failed when no row is valid; importing it by its id, by its uploader within 24 hours and once, makes it applied, and a newer preview of the kind by the same uploader supersedes it. Guest and vendor imports validate in a worker. applied writes rows plus audit events; failed keeps the error report |
+| `import_type` | one of the listed options; the staff hotel imports store their kind as hotels, hotel_rooms, hotel_venues or hotel_rates | hotels, guests, vendors, hotel_rooms, hotel_venues, hotel_rates | SA; HT (hotels, rooms, venues and rates); VC (vendors); RG and PM (a) (guests) | INTERNAL | At creation | — |
+| `project_id` | references wedding_projects; required when import_type is guests |  | SA; HT (hotels, rooms, venues and rates); VC (vendors); RG and PM (a) (guests) | INTERNAL | At creation for guest imports | — |
+| `file_document_id` (FK) | references documents; null for the staff hotel imports |  | SA; HT (hotels, rooms, venues and rates); VC (vendors); RG and PM (a) (guests) | INTERNAL | At creation for guest and vendor imports; null for the staff hotel imports, which keep no file (D-181) | — |
+| `status` | one of the listed options; a hotel import preview stays validating until imported by its id (D-181) | uploaded, validating, failed, applied | SA; HT (hotels, rooms, venues and rates); VC (vendors); RG and PM (a) (guests) | INTERNAL | At creation | Staff hotel imports (D-181): a preview is stored validating, or failed when no row is valid; importing it by its id, by its uploader within 24 hours and once, makes it applied, and a newer preview of the kind by the same uploader supersedes it. Guest and vendor imports validate in a worker. applied writes rows plus audit events; failed keeps the error report |
 | `row_count` | integer, 0 or more |  | SYS | INTERNAL | Optional | — |
 | `error_report_json` | valid JSON; for the staff hotel imports the report without values: counts, refusals, and each row's outcome with the names of the fields it changes |  | SYS | INTERNAL | Optional | — |
 | `plan_json` | valid JSON: the preview's planned rows with their values, and each target's version token (a SHA-256 of its compared values, never updated_at) |  | SYS | RESTRICTED-NOTES (a hotel import preview's values, internal notes included; never returned) | System, on a hotel import preview with a valid row | Read only by the import of its preview, which refuses a row whose target's token moved (changed since preview); cleared on import, when a newer preview supersedes it, when an import finds it expired, and daily once older than 24 hours |
@@ -713,8 +713,8 @@ Created at stage: **Hotel data entry** · Default editor: HT; SA · Default visi
 | `id` (PK) | UUID v7, generated |  | SYS | CLIENT when client_visible and the card is verified | System | — |
 | `rate_card_id` (FK) | references hotel_rate_cards |  | HT; SA | CLIENT when client_visible and the card is verified | At creation | — |
 | `item_type` | one of the listed options; (A-9, Q9) | room_rate, venue_rental, per_plate_veg, per_plate_non_veg, wedding_package, beverage_package, service_charge, tax, other | HT; SA | CLIENT when client_visible and the card is verified | At creation | — |
-| `room_category_id` (FK) | references hotel_room_categories; nullable |  | HT; SA | CLIENT when client_visible and the card is verified | Optional | — |
-| `venue_id` (FK) | references hotel_venues; nullable |  | HT; SA | CLIENT when client_visible and the card is verified | Optional | — |
+| `room_category_id` (FK) | references hotel_room_categories; nullable; the card's hotel's own, never with venue_id (D-184) |  | HT; SA | CLIENT when client_visible and the card is verified | Optional | — |
+| `venue_id` (FK) | references hotel_venues; nullable; the card's hotel's own (D-184) |  | HT; SA | CLIENT when client_visible and the card is verified | Optional | — |
 | `amount` | numeric(14,2), 0 or more |  | HT; SA | CLIENT when client_visible and the card is verified | At creation | Client sees it with the card's freshness label |
 | `amount_max` | numeric(14,2), 0 or more; upper bound of an indicative range, nullable (Q9) |  | HT; SA | CLIENT when client_visible and the card is verified | Optional | — |
 | `is_indicative` | true or false; true for ranges shown to clients; confirmed quotations live in hotel_proposals |  | HT; SA | CLIENT when client_visible and the card is verified | Optional | — |

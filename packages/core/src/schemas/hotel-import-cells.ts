@@ -1,9 +1,12 @@
+import { rupeesToMinor } from "../forms.js";
+import type { Money } from "./common.js";
 import type { VenueOtherLayout } from "./hotel-rooms-venues.js";
 
 /*
  * How the staff import reads a cell, for every kind (TW-25; D-178, D-181): list cells, enum cells, a
- * venue's other layouts and its capacities. Pure, so the API's CSV reader and the template help in the
- * staff app say the same thing. Each helper reads one non-blank cell; the row schemas then check bounds.
+ * venue's other layouts and its capacities, and a rate's money cells (Slice 4). Pure and Hermes-safe (no
+ * `normalize`, no Unicode property escapes), so the API's CSV reader and the template help in the staff
+ * app say the same thing. Each helper reads one non-blank cell; the row schemas then check bounds.
  */
 
 /** What separates the entries of a list cell (name variants, facilities, cuisines, other layouts). */
@@ -96,4 +99,62 @@ const NUMBER_RANGE = /^\d[\d,]*\s*(?:[-–]|to)\s*\d[\d,]*$/i;
  */
 export function isNumberRangeCell(text: string): boolean {
   return NUMBER_RANGE.test(text.trim());
+}
+
+/**
+ * The largest amount a money cell takes, in rupees (D-184, Slice 4): well inside a rate's numeric(14,2)
+ * column, and in whole paise far inside the integers JavaScript holds exactly.
+ */
+export const HOTEL_IMPORT_MAX_RUPEES = 10_000_000_000;
+
+/**
+ * Why a money cell is refused: anything but rupees as a number, a currency sign or word (the rupee sign,
+ * Rs, INR) among them, a third decimal, or a comma out of place.
+ */
+export const RUPEES_CELL_MESSAGE =
+  "Write the amount in rupees as a number, such as 12500 or 12,500.50";
+
+/** Why a money cell holding a range is refused: a range's upper bound has a column of its own. */
+export const RUPEES_RANGE_MESSAGE = "Put a range's upper bound in amountMax";
+
+/** Why a money cell over {@link HOTEL_IMPORT_MAX_RUPEES} is refused. */
+export const RUPEES_LIMIT_MESSAGE = "Write an amount of at most 10,000,000,000 rupees";
+
+/**
+ * Rupees as digits: no commas, or commas grouping thousands as most of the world writes them (1,234,567)
+ * or as India does (12,34,567, the grouping the staff app shows), then at most two decimals.
+ */
+const RUPEES = /^(?:\d+|\d{1,3}(?:,\d{3})+|\d{1,2}(?:,\d{2})*,\d{3})(?:\.\d{1,2})?$/;
+
+/** Two amounts joined by a hyphen, a dash or "to", whatever marks surround them. */
+const RUPEES_RANGE = /^\D*\d[\d,.]*\s*(?:-|–|—|to)\s*\D*\d[\d,.]*\D*$/i;
+
+/** No money cell that long holds a range; the guard keeps the range test short. */
+const RANGE_CELL_MAX_LENGTH = 64;
+
+/** A money cell read: the amount in paise, or why the cell is refused. */
+export type RupeesCellRead = { readonly money: Money } | { readonly problem: string };
+
+/**
+ * A money cell as the amount it names, in whole paise with no floating point (D-184): rupees as digits,
+ * commas grouping thousands either way, at most two decimals, at most {@link HOTEL_IMPORT_MAX_RUPEES}.
+ * A currency sign or word, or a range, is refused with words saying what to write instead. A rate whose
+ * unit is `percent` holds the percentage the same way.
+ *
+ * @example
+ * parseRupeesCell("12,500.50"); // { money: { minor: 1250050, currency: "INR" } }
+ * parseRupeesCell("1,25,000"); // { money: { minor: 12500000, currency: "INR" } }
+ * parseRupeesCell("Rs 12500"); // { problem: RUPEES_CELL_MESSAGE }
+ * parseRupeesCell("12000-15000"); // { problem: RUPEES_RANGE_MESSAGE }
+ */
+export function parseRupeesCell(text: string): RupeesCellRead {
+  const cell = text.trim();
+  if (!RUPEES.test(cell)) {
+    const isRange = cell.length <= RANGE_CELL_MAX_LENGTH && RUPEES_RANGE.test(cell);
+    return { problem: isRange ? RUPEES_RANGE_MESSAGE : RUPEES_CELL_MESSAGE };
+  }
+  const minor = rupeesToMinor(cell);
+  if (minor === null || minor > HOTEL_IMPORT_MAX_RUPEES * 100)
+    return { problem: RUPEES_LIMIT_MESSAGE };
+  return { money: { minor, currency: "INR" } };
 }

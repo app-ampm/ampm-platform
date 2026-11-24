@@ -46,7 +46,7 @@ describe("HotelImportScreen", () => {
     // The file goes up as it is, raw bytes on the kind's preview address, never wrapped in JSON.
     expect(requests).toEqual([
       {
-        path: "/hotels-admin/imports/hotels?dryRun=true",
+        path: "/hotels-admin/imports/hotels",
         body: IMPORT_CSV,
         contentType: "application/octet-stream",
       },

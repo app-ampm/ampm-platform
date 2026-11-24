@@ -12,12 +12,14 @@ import {
 import { STAFF_HOTEL_SELECT } from "./hotels-admin.repository.js";
 
 /*
- * The import's own reads, its locks and its job record (TW-25; AC-35.1; D-181). The hotel lookups
- * deliberately include soft-deleted rows: a hotel's and a destination's slug stay unique across deleted
- * rows, so a row naming a deleted one must be reported, not inserted into the unique index. A hotel's rooms
- * and venues are read live only: a retired name is created again. The writes themselves go through
- * HotelsAdminRepository and HotelSubresourcesRepository. An import locks the hotels it names, then their
- * live rooms or venues, in id order (so two imports never deadlock), before it re-plans its preview.
+ * The import's own reads, its locks and its job record (TW-25; AC-35.1; D-181, D-183, D-184). The hotel
+ * lookups deliberately include soft-deleted rows: a hotel's and a destination's slug stay unique across
+ * deleted rows, so a row naming a deleted one must be reported, not inserted into the unique index. A
+ * hotel's rooms and venues are read live only: a retired name is created again; so are its rate cards,
+ * less the retired ones (whose names are free), each with its live items. The writes themselves go
+ * through HotelsAdminRepository, HotelSubresourcesRepository and HotelRatesRepository. An import locks
+ * the hotels it names first, then their live rooms, venues, rate cards and rate items, each in id order
+ * (so two imports never deadlock), before it re-plans its preview.
  */
 
 /** A hotel a file names: every staff column, its deletion and its destination's slug. */
@@ -40,7 +42,37 @@ export type ImportDestinationRow = Prisma.DestinationGetPayload<{
   select: typeof IMPORT_DESTINATION_SELECT;
 }>;
 
-/** A hotel a rooms or venues file names, deleted ones included. */
+/** A rate item as the rates import compares and hashes it. */
+const IMPORT_RATE_ITEM_SELECT = {
+  id: true,
+  itemType: true,
+  roomCategoryId: true,
+  venueId: true,
+  amount: true,
+  amountMax: true,
+  unit: true,
+  minQuantity: true,
+  isIndicative: true,
+  inclusionsText: true,
+} as const satisfies Prisma.HotelRateItemSelect;
+
+/** A rate card of a named hotel as the rates import matches it, with its live items. */
+const IMPORT_RATE_CARD_SELECT = {
+  id: true,
+  hotelId: true,
+  name: true,
+  status: true,
+  validFrom: true,
+  validTo: true,
+  items: { where: { deletedAt: null }, orderBy: { id: "asc" }, select: IMPORT_RATE_ITEM_SELECT },
+} as const satisfies Prisma.HotelRateCardSelect;
+
+export type ImportRateCardRow = Prisma.HotelRateCardGetPayload<{
+  select: typeof IMPORT_RATE_CARD_SELECT;
+}>;
+export type ImportRateItemRow = ImportRateCardRow["items"][number];
+
+/** A hotel a rooms, venues or rates file names, deleted ones included. */
 export interface ImportHotelRef {
   readonly id: string;
   readonly slug: string;
@@ -118,6 +150,15 @@ export class HotelImportRepository {
     });
   }
 
+  /** The live rate cards of these hotels that are not retired, each with its live items. */
+  findLiveRateCards(hotelIds: readonly string[], tx?: Client): Promise<ImportRateCardRow[]> {
+    return (tx ?? this.prisma).hotelRateCard.findMany({
+      where: { hotelId: { in: [...hotelIds] }, deletedAt: null, status: { not: "retired" } },
+      orderBy: { id: "asc" },
+      select: IMPORT_RATE_CARD_SELECT,
+    });
+  }
+
   /** Locks the hotels with these web addresses until the transaction ends, deleted ones included. */
   async lockHotelsBySlug(slugs: readonly string[], tx: Client): Promise<void> {
     if (slugs.length === 0) return;
@@ -139,6 +180,48 @@ export class HotelImportRepository {
     await tx.$queryRaw`
       SELECT id FROM hotel_venues
       WHERE hotel_id = ANY(${[...hotelIds]}::uuid[]) AND deleted_at IS NULL ORDER BY id FOR UPDATE`;
+  }
+
+  /**
+   * Holds these hotels' live room categories against a rename or removal until the transaction ends,
+   * for an import that only reads them (Rates, D-184). A share lock, not FOR UPDATE: a staff rate-item
+   * edit that links a room takes the foreign key's key-share lock on it, which FOR UPDATE would block
+   * while that edit holds the item the import locks next (a deadlock).
+   */
+  async shareLiveRooms(hotelIds: readonly string[], tx: Client): Promise<void> {
+    if (hotelIds.length === 0) return;
+    await tx.$queryRaw`
+      SELECT id FROM hotel_room_categories
+      WHERE hotel_id = ANY(${[...hotelIds]}::uuid[]) AND deleted_at IS NULL ORDER BY id FOR SHARE`;
+  }
+
+  /** As {@link shareLiveRooms}, for these hotels' live venues. */
+  async shareLiveVenues(hotelIds: readonly string[], tx: Client): Promise<void> {
+    if (hotelIds.length === 0) return;
+    await tx.$queryRaw`
+      SELECT id FROM hotel_venues
+      WHERE hotel_id = ANY(${[...hotelIds]}::uuid[]) AND deleted_at IS NULL ORDER BY id FOR SHARE`;
+  }
+
+  /**
+   * Locks these hotels' live rate cards that are not retired until the transaction ends, so none is
+   * verified, retired, redated or renamed under an import; answers their ids, whose items are locked next.
+   */
+  async lockLiveRateCards(hotelIds: readonly string[], tx: Client): Promise<string[]> {
+    if (hotelIds.length === 0) return [];
+    const rows = await tx.$queryRaw<{ id: string }[]>`
+      SELECT id FROM hotel_rate_cards
+      WHERE hotel_id = ANY(${[...hotelIds]}::uuid[]) AND deleted_at IS NULL AND status <> 'retired'
+      ORDER BY id FOR UPDATE`;
+    return rows.map(({ id }) => id);
+  }
+
+  /** Locks these rate cards' live items until the transaction ends. */
+  async lockLiveRateItems(cardIds: readonly string[], tx: Client): Promise<void> {
+    if (cardIds.length === 0) return;
+    await tx.$queryRaw`
+      SELECT id FROM hotel_rate_items
+      WHERE rate_card_id = ANY(${[...cardIds]}::uuid[]) AND deleted_at IS NULL ORDER BY id FOR UPDATE`;
   }
 
   // --- The job ---

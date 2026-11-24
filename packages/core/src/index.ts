@@ -11,7 +11,7 @@ export {
   rupeesFromMinor,
   rupeesToMinor,
 } from "./forms";
-export { RATE_ITEM_TYPES, rateItemTypeLabel } from "./labels";
+export { RATE_ITEM_TYPES, rateItemTypeLabel, ratePercentLabel } from "./labels";
 export { COUPLE_PERSON_NAME_MAX, coupleSubtitle, coupleTitle } from "./couple";
 export type { CoupleNames } from "./couple";
 export {

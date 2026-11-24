@@ -1,0 +1,6 @@
+hotelSlug,cardName,validFrom,validTo,itemType,roomName,venueName,amount,amountMax,unit,minQuantity,isIndicative,inclusions
+example-hills-retreat,Example 2027-28 season,2027-04-01,2028-03-31,Room rate,Example Hillside Villa,,"28,000","34,000",per night,,true,Breakfast for two. Synthetic example row; not a real hotel.
+example-hills-retreat,Example 2027-28 season,,,Room rate,Example Garden Room,,"12,500",,per night,,true,Synthetic example row; not a real hotel.
+example-hills-retreat,Example 2027-28 season,,,Venue rental,,Example Ballroom,"3,50,000",,per event,,true,Six hours. Synthetic example row; not a real hotel.
+example-hills-retreat,Example 2027-28 season,,,Per plate veg,,,"2,400","3,100",per plate,150,true,Synthetic example row; not a real hotel.
+example-hills-retreat,Example 2027-28 season,,,Service charge,,,10,,percent,,false,Synthetic example row; not a real hotel.

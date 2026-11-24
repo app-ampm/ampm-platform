@@ -1,7 +1,15 @@
 import { describe, expect, it } from "vitest";
 
-import { hotelVersion, roomVersion, venueVersion } from "./hotel-import.version.js";
+import {
+  hotelVersion,
+  rateCardVersion,
+  rateItemValuesOf,
+  rateItemVersion,
+  roomVersion,
+  venueVersion,
+} from "./hotel-import.version.js";
 import { storedHotel } from "./testing/import-service-fixtures.js";
+import { rateCardRow, rateItemRow } from "./testing/rate-import-fixtures.js";
 import { decimal, roomRow, venueRow } from "./testing/subresource-fixtures.js";
 
 /*
@@ -73,6 +81,52 @@ describe("version tokens", () => {
     expect(hotelVersion(edited, WITH_NOTES)).not.toBe(hotelVersion(hotel, WITH_NOTES));
     expect(hotelVersion({ ...hotel, city: "Synthetic City" }, WITHOUT_NOTES)).not.toBe(
       hotelVersion(hotel, WITHOUT_NOTES),
+    );
+  });
+});
+
+describe("rate version tokens (D-184)", () => {
+  it("hash a rate item's compared fields, its amounts as whole paise", () => {
+    const item = rateItemRow();
+    expect(rateItemVersion(item)).toMatch(/^[0-9a-f]{64}$/);
+    expect(rateItemVersion(rateItemRow({ amount: decimal("12500") }))).toBe(rateItemVersion(item));
+    expect(rateItemVersion(rateItemRow({ amount: decimal("12500.50") }))).not.toBe(
+      rateItemVersion(item),
+    );
+    expect(rateItemValuesOf(rateItemRow({ amount: decimal("12500.50") }))).toMatchObject({
+      amount: 1_250_050,
+      amountMax: 1_500_000,
+    });
+  });
+
+  it("move with an item's terms, but not with spacing its planner ignores", () => {
+    const item = rateItemRow();
+    for (const edit of [
+      { amountMax: null },
+      { unit: "per_event" as const },
+      { minQuantity: 10 },
+      { isIndicative: false },
+      { inclusionsText: "Dinner" },
+    ]) {
+      expect(rateItemVersion(rateItemRow(edit))).not.toBe(rateItemVersion(item));
+    }
+    const spaced = rateItemRow({ inclusionsText: " Breakfast  for two " });
+    expect(rateItemVersion(spaced)).toBe(rateItemVersion(item));
+  });
+
+  it("hash a card's status and dates, never its name, which its rows match it by", () => {
+    const card = rateCardRow();
+    expect(rateCardVersion(card)).toMatch(/^[0-9a-f]{64}$/);
+    for (const edit of [
+      { status: "verified" as const },
+      { status: "stale" as const },
+      { validFrom: null },
+      { validTo: new Date("2028-02-29T00:00:00.000Z") },
+    ]) {
+      expect(rateCardVersion(rateCardRow(edit))).not.toBe(rateCardVersion(card));
+    }
+    expect(rateCardVersion(rateCardRow({ name: "Synthetic other name", items: [] }))).toBe(
+      rateCardVersion(card),
     );
   });
 });

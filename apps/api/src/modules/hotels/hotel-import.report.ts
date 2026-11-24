@@ -3,6 +3,7 @@ import type {
   HotelImportKind,
   HotelImportResult,
   HotelImportRowError,
+  HotelImportRowItem,
   HotelImportRowOutcome,
   HotelImportRowReport,
 } from "@ampm/core";
@@ -12,10 +13,11 @@ import type { RejectedRow } from "./hotel-import.file.js";
 import type { FieldError } from "./hotel-import.plan.js";
 
 /*
- * The import's report (AC-35.1; D-181), the same for every kind: every row's outcome, the hotel, room or
- * venue it reads and the names of the fields it changes (never their values, so no internal value reaches
- * the report or the job's stored copy), the refused rows by line and field, and the counts. A preview's
- * counts say what importing it would do; an import's say what it did.
+ * The import's report (AC-35.1; D-181, D-183, D-184), the same for every kind: every row's outcome, the
+ * hotel, room, venue or rate card it reads (a rates row, its item too) and the names of the fields it
+ * changes (never their values, so no internal value reaches the report or the job's stored copy), the
+ * refused rows by line and field, and the counts. A preview's counts say what importing it would do; an
+ * import's say what it did.
  */
 
 /** One planned row as every kind reports it: what it names, its outcome, and what it changes or why not. */
@@ -23,8 +25,10 @@ export interface RowReport {
   readonly line: number;
   /** The hotel's web address. */
   readonly slug: string | null;
-  /** The hotel's, room's or venue's name. */
+  /** The hotel's, room's, venue's or rate card's name. */
   readonly name: string | null;
+  /** A rates row's item: its type, and the room or venue it is for. */
+  readonly item?: HotelImportRowItem;
   readonly outcome: HotelImportRowOutcome;
   readonly changedFields: readonly HotelImportChangedField[];
   readonly errors: readonly FieldError[];
@@ -62,7 +66,12 @@ const byLine = (a: { readonly line: number }, b: { readonly line: number }): num
  * refusedReport({ line: 3, slug: "synthetic-bay", name: null }, [{ field: "row", message: "Changed since preview; validate the file again" }]);
  */
 export function refusedReport(
-  row: { readonly line: number; readonly slug: string | null; readonly name: string | null },
+  row: {
+    readonly line: number;
+    readonly slug: string | null;
+    readonly name: string | null;
+    readonly item?: HotelImportRowItem;
+  },
   errors: readonly FieldError[],
 ): RowReport {
   return { ...row, outcome: "error", changedFields: [], errors };
@@ -105,6 +114,7 @@ function rowReportOf(report: RowReport): HotelImportRowReport {
     name: report.name,
     outcome: report.outcome,
     changedFields: [...report.changedFields],
+    ...(report.item === undefined ? {} : { item: { ...report.item } }),
   };
 }
 

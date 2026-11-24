@@ -13,7 +13,6 @@ import {
   hasRejections,
   importColumnsHint,
   importInputProblem,
-  importReportCsv,
   importSummary,
   importTemplateCsv,
   moreRowsText,
@@ -248,29 +247,10 @@ describe("hotel-import.format", () => {
       );
     });
 
+    // The downloaded report itself is tested in hotel-import.report.test.ts.
     it("caps the lists on screen and points at the report for the rest", () => {
       expect(moreRowsText(20)).toBeNull();
       expect(moreRowsText(23)).toBe("3 more in the downloaded report.");
-    });
-
-    it("downloads every row with its outcome, changes and errors, in line order", () => {
-      const lines = importReportCsv(report).split("\r\n");
-      expect(lines).toEqual([
-        "line,slug,outcome,changedFields,errors",
-        '2,synthetic-lake-hotel,update,"city, mapsUrl",',
-        "3,synthetic-fort-hotel,unchanged,,",
-        "4,synthetic-hill-resort,create,name,",
-        "5,,error,,name: required",
-      ]);
-    });
-
-    it("keeps a rejected row the report does not list, quoting what a spreadsheet would split", () => {
-      const unlisted = result({
-        rejected: [{ line: 7, errors: [{ field: "name", message: 'is "short", at most 255' }] }],
-      });
-      expect(importReportCsv(unlisted).split("\r\n")[1]).toBe(
-        '7,,error,,"name: is ""short"", at most 255"',
-      );
     });
   });
 

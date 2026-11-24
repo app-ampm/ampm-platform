@@ -224,7 +224,7 @@ All automated suites run against synthetic data from the seed in §7 (V-15). Job
 | AC-01 Public enquiry saves source and owner; team tracks follow-up | SPEC §12 | AC-01.1 to AC-01.9 | 1 | PUB-06, PUB-09, TW-10, TW-11 | 1 |
 | AC-02 Subscription activates hotel discovery without exposing wedding modules | SPEC §12 | AC-02.1 to AC-02.11 | 1, 12 | AUTH-02, CP-11, CP-01, TW-14, TW-80, TW-92 | 1 |
 | AC-03 Demo account cannot access records outside demo scope | SPEC §12 | AC-03.1 to AC-03.8 | 1 | TW-11, DM-01, CP-01 to CP-07 | 1 |
-| AC-04 Hotel search shows freshness; unverified availability never confirmed | SPEC §12 | AC-04.1 to AC-04.9 | 2 | CP-04, CP-05, TW-22, TW-23, TW-24 | 1 |
+| AC-04 Hotel search shows freshness; unverified availability never confirmed | SPEC §12 | AC-04.1 to AC-04.10 | 2 | CP-04, CP-05, TW-22, TW-23, TW-24 | 1 |
 | AC-05 Negotiation and site visit recorded without exposing internal notes | SPEC §12 | AC-05.1 to AC-05.8 | 2 | TW-27, TW-28, CP-09, CP-10 | 1 |
 | AC-06 Engaged client receives correct project and permissions | SPEC §12 | AC-06.1 to AC-06.7 | 3 | TW-31, TW-33, CP-20, CP-24 | 2 |
 | AC-07 Multiple functions with independent vendors, schedules, budgets, approvals | SPEC §12 | AC-07.1 to AC-07.5 | 4, 5 | TW-34, TW-35, TW-36, TW-38 | 2 |
@@ -554,6 +554,21 @@ All automated suites run against synthetic data from the seed in §7 (V-15). Job
   - Step 6: the unique index `hotel_contacts_hotel_live_primary_key` refuses the insert. The API answers a write that loses such a race with 409.
   - Step 7: no contact field appears in any body (AC-05.8).
 - **References.** TW-22; D-178; AC-05.8; field-matrix `hotel_contacts`.
+
+#### AC-04.10 A rate item prices this hotel's own room or venue, never both
+- **Type and priority.** API integration, P1, Phase 1, automated.
+- **Principal.** HT.
+- **Steps.**
+  1. On a draft rate card of hotel A, add a room rate item for one of hotel A's room categories, then one for a room category of hotel B, then one with an id that names no room category.
+  2. Add a venue rental item for one of hotel B's venues.
+  3. Add an item that names one of hotel A's room categories and one of its venues together; then update the step 1 item to name a venue as well.
+  4. Remove the step 1 item's room category, then edit the item's amount from the team app, which sends the item's stored room category back.
+- **Expected.**
+  - Step 1: the first item is added. The second and third are refused with 400 naming `roomCategoryId`, both with "Choose a room category of this hotel", so the answer never tells whether the other id exists.
+  - Step 2: refused with 400 naming `venueId`, "Choose a venue of this hotel".
+  - Step 3: both refused with 400, "An item is for a room category or a venue, not both"; nothing is stored.
+  - Step 4: the edit saves. A link sent back unchanged is not checked again; only a room category or venue an edit changes must be a live one of the hotel.
+- **References.** TW-23; D-184; hotel information form plan §2.3 item 5.
 
 ### AC-05 AMPM records negotiation and site visit without exposing internal notes
 
@@ -1612,6 +1627,7 @@ All automated suites run against synthetic data from the seed in §7 (V-15). Job
   3. Validate and import the hotels file again, with blank cells in fields staff have since edited.
   4. Validate a rooms file, edit one of its rooms in the team app, then import the preview.
   5. Validate a venues file that leaves out an existing venue and names another with different case and spacing, and import it. Then import the same preview again, and try a preview older than 24 hours.
+  6. Validate and import the rates file again unchanged. Then validate a rates file naming a verified card, and one adding an item to a draft card; verify that draft card in the team app, then import the second preview.
 - **Expected.**
   - Each preview reports every row (create; update, naming the fields that change; unchanged; or an error naming the row and field) and writes nothing but its job. The report can be downloaded.
   - Import applies the stored preview without the file being sent again, and answers with the same job id, which becomes `applied`.
@@ -1621,8 +1637,9 @@ All automated suites run against synthetic data from the seed in §7 (V-15). Job
   - Step 4: the edited room's row is refused with "Changed since preview; validate the file again"; the other rows load.
   - Step 5: the venue left out is kept, since an import never deletes. The other venue matches by name and keeps its stored name. The second import of the preview and the expired preview each answer 409 and write nothing. The expired preview's stored rows are cleared, as a daily job clears every preview's once it is past 24 hours.
   - A hotels file whose rows all match but add images previews as unchanged with the images it would register, and can be imported.
+  - Step 6: the rates file validated again reports every row it loaded as unchanged (its two invalid rows are still errors) and has nothing to import: Import stays disabled, and an apply writes nothing. The verified card's rows are errors ("Rates are imported only into draft cards…"). The item for the card verified after its preview is refused with "Changed since preview; validate the file again". The import itself shows no item to clients and verifies no card.
   - Every applied row writes an audit event, and each job stores its counts and report.
-- **References.** TW-25, D-181 (one template per kind replaced the single template with column mapping on 23 November 2026; Slice 3 imports a preview by its job id); D-178.
+- **References.** TW-25, D-181 (one template per kind replaced the single template with column mapping on 23 November 2026; Slice 3 imports a preview by its job id); D-178; D-184 (rates into draft cards with hidden items, Slice 4).
 
 #### AC-35.2 Guest import by the client
 - **Type and priority.** End to end, P1, Phase 3, automated.

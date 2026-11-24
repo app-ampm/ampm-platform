@@ -2,6 +2,7 @@ import {
   hotelImportEnumValue,
   hotelListEntries,
   isNumberRangeCell,
+  parseRupeesCell,
   parseVenueLayoutsCell,
   VENUE_CAPACITY_RANGE_MESSAGE,
   VENUE_LAYOUTS_CELL_MESSAGE,
@@ -17,9 +18,10 @@ import {
  * refuses the file rather than swallow the rows below it. `headerProblems` holds the file to its kind's
  * fixed headers (core `HOTEL_IMPORT_TEMPLATES`). `buildCandidate` turns one row into a typed object ready
  * for the kind's row schema: a blank cell is left out, which on an update means "leave this unchanged";
- * number, true/false, list, enum and other-layout cells are converted as the template says; a value that
- * does not convert falls through as its string, so the schema reports a clear field error, except a
- * capacity range and an unreadable layouts cell, which are refused on their column with their own words.
+ * number, true/false, list, enum, other-layout and money cells are converted as the template says; a value
+ * that does not convert falls through as its string, so the schema reports a clear field error, except a
+ * capacity range, an unreadable layouts cell and an unreadable amount, which are refused on their column
+ * with their own words.
  */
 
 /** Why a file that is not UTF-8 text is refused. */
@@ -214,6 +216,7 @@ interface CellRules {
   readonly enums: ReadonlySet<string>;
   readonly layouts: ReadonlySet<string>;
   readonly capacities: ReadonlySet<string>;
+  readonly money: ReadonlySet<string>;
 }
 
 const RULES = new WeakMap<HotelImportTemplate, CellRules>();
@@ -230,6 +233,7 @@ function rulesOf(template: HotelImportTemplate): CellRules {
     enums: new Set(template.enumColumns),
     layouts: new Set(template.layoutColumns),
     capacities: new Set(template.capacityColumns),
+    money: new Set(template.moneyColumns),
   };
   RULES.set(template, rules);
   return rules;
@@ -302,6 +306,15 @@ function numberCell(column: string, raw: string, rules: CellRules): CellRead {
   return { value: Number.isNaN(num) ? raw : num };
 }
 
+/**
+ * A money cell: rupees as a number, as whole paise in the wire money shape (core `parseRupeesCell`), so a
+ * stored preview's row parses again the same; a currency marker or a range is refused with its own words.
+ */
+function moneyCell(raw: string): CellRead {
+  const read = parseRupeesCell(raw);
+  return "problem" in read ? read : { value: read.money };
+}
+
 /** A list cell's entries, or undefined when it holds none. */
 const entriesOrUndefined = <T>(entries: readonly T[]): readonly T[] | undefined =>
   entries.length > 0 ? entries : undefined;
@@ -310,9 +323,10 @@ const entriesOrUndefined = <T>(entries: readonly T[]): readonly T[] | undefined 
  * One non-blank cell as its column's type. A list cell's entries are split at each "|" and line break
  * (core `hotelListEntries`), the rule the staff editor's one-per-line lists share; an enum cell is read in
  * any case with spaces and hyphens as underscores (`hotelImportEnumValue`); an other-layouts cell is
- * `Name: max | Name: min-max` (`parseVenueLayoutsCell`).
+ * `Name: max | Name: min-max` (`parseVenueLayoutsCell`); a money cell is rupees (`parseRupeesCell`).
  */
 function cellValue(column: string, raw: string, rules: CellRules): CellRead {
+  if (rules.money.has(column)) return moneyCell(raw);
   if (rules.numbers.has(column)) return numberCell(column, raw, rules);
   if (rules.booleans.has(column)) return { value: coerceBoolean(raw) };
   if (rules.enums.has(column)) return { value: hotelImportEnumValue(raw) };

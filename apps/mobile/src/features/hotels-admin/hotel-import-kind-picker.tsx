@@ -13,8 +13,8 @@ export interface ImportKindPickerProps {
 }
 
 /**
- * What the file imports (TW-25): Hotels, Rooms or Venues, as pill segments spanning the column; only the
- * kinds the staff member's grants allow. Changing it locks Import until the file is validated as the
+ * What the file imports (TW-25): Hotels, Rooms, Venues or Rates, as pill segments spanning the column;
+ * only the kinds the staff member's grants allow. Changing it locks Import until the file is validated as the
  * new kind; while a request is under way the other kinds are disabled, the chosen one still shown.
  *
  *   <ImportKindPicker kinds={kinds} value={kind} onChange={changeKind} disabled={pending} />

@@ -1172,7 +1172,7 @@ Hotel-driven moves are written as System movers, because the transitions generat
 | `PATCH /hotels-admin/hotels/:hotelId/media/:mediaId/subject` | `hotels.hotel_media_rights_status.update` | Sets a photo's purpose and room or venue (Slice 11) |
 | `POST /hotels-admin/hotels/:hotelId/{rooms, venues}/:id/retire` | `hotels.room_categories_venues.delete` | Soft-deletes the row after checking its rate items (Slice 11) |
 | `POST /hotels-admin/hotels/:hotelId/verifications` (changed) | `hotels.verifications.create` | Refuses `hotel_form`, computes `next_due_at` and recomputes `last_verified_at` (Slice 2) |
-| `POST /hotels-admin/imports/:kind?dryRun=` (Slice 2); `POST /hotels-admin/imports/:jobId/apply` (Slice 3) | Per-kind keys; the shared reader | Imports for hotels, rooms, venues and rates (Slices 2 to 4). The template and error-report downloads are built in TW-25 from the core column list |
+| `POST /hotels-admin/imports/:kind` (Slice 2; its `dryRun` query removed in Slice 4); `POST /hotels-admin/imports/:kind/:jobId/apply` (Slice 3) | Per-kind keys; the shared reader | Imports for hotels, rooms, venues and rates (Slices 2 to 4). The template and error-report downloads are built in TW-25 from the core column list |
 | `GET /hotels-admin/cuisine-options` | `hotels.hotel_profiles_client_fields.read` | The cuisine choices from configuration `hotel.cuisine_options`, plus "Other", for the staff editor (Slice 2) |
 | `POST /hotels-admin/info-requests/bulk` | `info_requests.create` | Refresh requests for many hotels at once (Slice 14) |
 | `GET` and `POST /admin/hotel-intake/{contributors, retention-candidates}` | A Super-Admin-only key | Find, export, correct or mask a contributor; approve retention (Slice 14) |

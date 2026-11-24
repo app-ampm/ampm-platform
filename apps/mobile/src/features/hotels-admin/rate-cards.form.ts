@@ -84,6 +84,42 @@ export function buildRateCardBody(draft: RateCardDraft): RateCardCreateRequest {
 
 // --- Rate items (amounts typed as rupees, converted to wire paise; room/venue linking is a later slice) ---
 
+/**
+ * How a rate item's amount fields speak of their figure: rupees, or for a `percent` item the percentage,
+ * typed as a number and kept in hundredths through the same parse (10 is 1000), the convention the Rates
+ * import writes and the client views read (D-184).
+ */
+export interface RateAmountCopy {
+  readonly symbol: string;
+  readonly help: string;
+  readonly invalid: string;
+  readonly invalidMax: string;
+}
+
+const MONEY_COPY: RateAmountCopy = {
+  symbol: "₹",
+  help: "In rupees, e.g. 25000",
+  invalid: "Enter the amount in rupees, e.g. 25000",
+  invalidMax: "Enter the upper amount in rupees",
+};
+
+const PERCENT_COPY: RateAmountCopy = {
+  symbol: "%",
+  help: "The percentage as a number, e.g. 18",
+  invalid: "Enter the percentage as a number, e.g. 18",
+  invalidMax: "Enter the upper percentage as a number",
+};
+
+/**
+ * The amount fields' words for a unit: rupees, or for `percent` the percentage.
+ *
+ * @example
+ * `Amount (${rateAmountCopy(draft.unit).symbol})`; // "Amount (%)" while the unit is percent
+ */
+export function rateAmountCopy(unit: HotelRateItemUnit): RateAmountCopy {
+  return unit === "percent" ? PERCENT_COPY : MONEY_COPY;
+}
+
 export interface RateItemDraft {
   readonly itemType: HotelRateItemType;
   readonly amount: string;
@@ -120,6 +156,7 @@ export type RateItemErrors = {
 };
 
 export function validateRateItem(draft: RateItemDraft): RateItemErrors {
+  const copy = rateAmountCopy(draft.unit);
   const amountMinor = rupeesToMinor(draft.amount);
   const maxTrimmed = draft.amountMax.trim();
   const maxMinor = maxTrimmed === "" ? null : rupeesToMinor(maxTrimmed);
@@ -128,13 +165,13 @@ export function validateRateItem(draft: RateItemDraft): RateItemErrors {
       draft.amount.trim() === ""
         ? "Enter the amount"
         : amountMinor === null
-          ? "Enter the amount in rupees, e.g. 25000"
+          ? copy.invalid
           : undefined,
     amountMax:
       maxTrimmed === ""
         ? undefined
         : maxMinor === null
-          ? "Enter the upper amount in rupees"
+          ? copy.invalidMax
           : amountMinor !== null && maxMinor < amountMinor
             ? "Upper amount must be at least the amount"
             : undefined,

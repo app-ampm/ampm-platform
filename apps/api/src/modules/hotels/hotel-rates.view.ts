@@ -10,7 +10,8 @@ import type { RateCardRow, RateItemRow, VerificationRow } from "./hotel-rates.re
  * repository's explicit selects). The client discovery rate view (with the freshness label) is a later slice.
  */
 
-function toDateString(value: Date | null): string | null {
+/** A `@db.Date` column as YYYY-MM-DD, or null. */
+export function toDateString(value: Date | null): string | null {
   return value ? value.toISOString().slice(0, 10) : null;
 }
 

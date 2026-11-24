@@ -1,4 +1,9 @@
-import { errors, HOTEL_IMPORT_MAX_ROWS, type HotelImportRowError } from "@ampm/core";
+import {
+  errors,
+  HOTEL_IMPORT_MAX_ROWS,
+  type HotelImportRowError,
+  type HotelImportRowItem,
+} from "@ampm/core";
 
 import {
   buildCandidate,
@@ -26,10 +31,14 @@ export interface ImportRow<Row> {
   readonly row: Row;
 }
 
-/** A row refused before it was planned: its line, the web address and name it gives, and why. */
+/**
+ * A row refused before it was planned: its line, the web address and name it gives (a rates row, the item
+ * its cells name), and why.
+ */
 export interface RejectedRow extends HotelImportRowError {
   readonly slug: string | null;
   readonly name: string | null;
+  readonly item?: HotelImportRowItem;
 }
 
 /** The file's rows: those that passed the schema, those that did not, and how many there were. */

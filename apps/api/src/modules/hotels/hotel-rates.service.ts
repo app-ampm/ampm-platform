@@ -15,6 +15,7 @@ import {
 import { AuditService } from "../../policy/audit.service.js";
 import { ConfigService } from "../admin/config/config.service.js";
 import { HotelRatesRepository } from "./hotel-rates.repository.js";
+import { HotelSubresourcesRepository } from "./hotel-subresources.repository.js";
 import { toRateCardView, toRateItemView, toVerificationView } from "./hotel-rates.view.js";
 import {
   isFutureDated,
@@ -27,14 +28,40 @@ import {
  * verified only against a current rates verification of the same hotel (AC-04.4 — never without one; a
  * stale, unverified, out-of-window, future-dated or other group's one is refused too), which the
  * freshness job later turns stale with its cards (AC-04.3). Every write confirms the hotel, and every
- * nested write confirms the child belongs to its parent (a mismatch is a 404).
+ * nested write confirms the child belongs to its parent (a mismatch is a 404). An item is for one live
+ * room category or venue of its card's hotel, or neither, never both (D-184).
  */
+
+/** The room category and venue an item is for, as stored or as a request sets them. */
+interface ItemPlace {
+  readonly roomCategoryId?: string | null | undefined;
+  readonly venueId?: string | null | undefined;
+}
+
+const NOT_BOTH = "An item is for a room category or a venue, not both";
+
+const isId = (value: string | null | undefined): value is string => typeof value === "string";
+
+/**
+ * The links an update changes. The staff sheet sends an item's stored links back with every edit, and a
+ * room or venue removed since (a soft delete keeps the id) is no longer a live one of the hotel, so a
+ * link sent back unchanged is not checked again, as a contact's stored phone is not (D-178).
+ */
+function changedLinks(stored: Required<ItemPlace>, patch: ItemPlace): ItemPlace {
+  const changes = (field: keyof ItemPlace) =>
+    patch[field] !== undefined && patch[field] !== stored[field];
+  return {
+    ...(changes("roomCategoryId") ? { roomCategoryId: patch.roomCategoryId } : {}),
+    ...(changes("venueId") ? { venueId: patch.venueId } : {}),
+  };
+}
 @Injectable()
 export class HotelRatesService {
   constructor(
     private readonly repo: HotelRatesRepository,
     private readonly audit: AuditService,
     private readonly config: ConfigService,
+    private readonly subresources: HotelSubresourcesRepository,
   ) {}
 
   async listCards(hotelId: string): Promise<{ items: RateCardView[] }> {
@@ -114,6 +141,7 @@ export class HotelRatesService {
     actorId: string,
   ): Promise<RateItemView> {
     await this.requireCard(hotelId, cardId);
+    await this.requireItemPlace(hotelId, request, request);
     return toRateItemView(await this.repo.createItem(cardId, request, actorId));
   }
 
@@ -124,7 +152,13 @@ export class HotelRatesService {
     patch: RateItemUpdateRequest,
     actorId: string,
   ): Promise<RateItemView> {
-    await this.requireItem(hotelId, cardId, itemId);
+    const stored = await this.requireItem(hotelId, cardId, itemId);
+    const merged = {
+      roomCategoryId:
+        patch.roomCategoryId === undefined ? stored.roomCategoryId : patch.roomCategoryId,
+      venueId: patch.venueId === undefined ? stored.venueId : patch.venueId,
+    };
+    await this.requireItemPlace(hotelId, merged, changedLinks(stored, patch));
     const row = await this.repo.updateItem(itemId, patch, actorId);
     await this.auditMutation("update", "hotel_rate_item", itemId, { itemType: row.itemType });
     return toRateItemView(row);
@@ -226,10 +260,40 @@ export class HotelRatesService {
     return card;
   }
 
-  private async requireItem(hotelId: string, cardId: string, itemId: string): Promise<void> {
+  private async requireItem(
+    hotelId: string,
+    cardId: string,
+    itemId: string,
+  ): Promise<{ roomCategoryId: string | null; venueId: string | null }> {
     await this.requireCard(hotelId, cardId);
-    if (!(await this.repo.findItemInCard(cardId, itemId))) {
-      throw errors.notFound("No such rate item");
+    const item = await this.repo.findItemInCard(cardId, itemId);
+    if (!item) throw errors.notFound("No such rate item");
+    return item;
+  }
+
+  /**
+   * The room category and venue a request sets must each be a live one of the card's hotel, and the item
+   * (as it will be: `merged`) may not hold both; a violation answers 400 on the field the request set.
+   * One that exists nowhere gets the same words as another hotel's, so nothing leaks (D-184, §5).
+   */
+  private async requireItemPlace(
+    hotelId: string,
+    merged: ItemPlace,
+    request: ItemPlace,
+  ): Promise<void> {
+    const set = (["roomCategoryId", "venueId"] as const).filter((field) => isId(request[field]));
+    if (set.length === 0) return;
+    if (isId(merged.roomCategoryId) && isId(merged.venueId)) {
+      throw errors.validation(set.map((path) => ({ path, message: NOT_BOTH })));
+    }
+    const room = request.roomCategoryId;
+    if (isId(room) && !(await this.subresources.findRoomInHotel(hotelId, room))) {
+      const message = "Choose a room category of this hotel";
+      throw errors.validation([{ path: "roomCategoryId", message }]);
+    }
+    const venue = request.venueId;
+    if (isId(venue) && !(await this.subresources.findVenueInHotel(hotelId, venue))) {
+      throw errors.validation([{ path: "venueId", message: "Choose a venue of this hotel" }]);
     }
   }
 }
