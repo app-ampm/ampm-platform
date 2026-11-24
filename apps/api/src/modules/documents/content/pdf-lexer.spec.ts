@@ -55,4 +55,29 @@ describe("PdfLexer", () => {
     const [string] = tokens(`(${"x".repeat(5000)})`);
     expect(string?.kind === "string" ? string.value.length : 0).toBe(1024);
   });
+
+  it.each([
+    ["12", 12],
+    ["-3.5", -3.5],
+    ["+.5", 0.5],
+    ["4.", 4],
+    ["007", 7],
+  ])("reads %s as a number", (text, value) => {
+    expect(tokens(text)).toEqual([{ kind: "number", value }]);
+  });
+
+  it.each(["1.2.3", "1e5", "--1", "+", ".", "12x"])("reads %s as a keyword", (text) => {
+    expect(tokens(text)).toEqual([{ kind: "keyword", value: text }]);
+  });
+
+  it.each([
+    ["1 MB of digits and then a letter", `${"1".repeat(1_000_000)}x`],
+    ["1 MB of digits, a point and a letter", `${"1".repeat(1_000_000)}.x`],
+    ["a sign, a point and 1 MB of digits and a point", `-.${"1".repeat(1_000_000)}.`],
+  ])("reads %s as one keyword well under 100 ms (linear time)", (_name, text) => {
+    const started = performance.now();
+    const read = tokens(text);
+    expect(performance.now() - started).toBeLessThan(100);
+    expect(read.map((token) => token.kind)).toEqual(["keyword"]);
+  });
 });

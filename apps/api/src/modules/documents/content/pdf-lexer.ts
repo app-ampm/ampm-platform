@@ -16,7 +16,11 @@ export type PdfToken =
   | { readonly kind: "close"; readonly value: ">>" | "]" };
 
 const KEPT_STRING_BYTES = 1024;
-const NUMBER = /^[+-]?(?:\d+\.?\d*|\.\d+)$/;
+/*
+ * Each digit belongs to one quantifier only: in `\d+\.?\d*` a run of digits could split between the two
+ * in as many ways as it is long, so a long run of digits ending in a letter took quadratic time to refuse.
+ */
+const NUMBER = /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)$/;
 
 const isWhitespace = (byte: number): boolean =>
   byte === 0x20 ||

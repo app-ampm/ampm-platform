@@ -77,6 +77,15 @@ describe("checkPdf: refused names, outside and inside object streams", () => {
   });
 });
 
+describe("checkPdf: in linear time", () => {
+  it("reads a word of 1 MB of digits ending in a letter in under a second", () => {
+    const pdf = Buffer.from(`%PDF-1.7\n${"1".repeat(1_000_000)}x\n%%EOF\n`, "latin1");
+    const started = performance.now();
+    checkPdf(pdf);
+    expect(performance.now() - started).toBeLessThan(1000);
+  });
+});
+
 describe("checkPdf: unreadable PDFs", () => {
   it("refuses a stream without endstream", async () => {
     const pdf = Buffer.from("%PDF-1.7\n1 0 obj << /Length 999 >> stream\nSample Hotel");
