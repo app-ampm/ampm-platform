@@ -1,5 +1,5 @@
 /*
- * Golden table of §5.1 to §5.7 (docs/permission-matrix.md lines 142-225), written by hand from the
+ * Golden table of §5.1 to §5.7 (docs/permission-matrix.md lines 142-228), written by hand from the
  * document, line by line: every role's letters, scope and note (src/staff.golden.test.ts).
  */
 import { all, assigned, own, row, type GoldenRow } from "./staff";
@@ -125,35 +125,37 @@ export const STAFF_ROWS_5_1_TO_5_7: readonly GoldenRow[] = [
   }),
   // The hotel documents library (D-187 §6): every one of its documents is internal.
   row(178, "5.3", "Hotel documents", { SA: "CRUD", SM: "R", HT: "CRUD", PM: "R" }),
+  // D-188 §2: SM and PM read the summary response model (the §5.3 note); the generator needs no condition.
+  row(179, "5.3", "Hotel information requests", { SA: "CRUA", SM: "R", HT: "CRUA", PM: "R" }),
   // §5.4 Hotel consultancy
-  row(184, "5.4", "Hotel enquiries, client fields", {
+  row(187, "5.4", "Hotel enquiries, client fields", {
     SA: "CRUD",
     SM: "CR",
     HT: "CRU",
     PM: assigned("CRU"),
     FA: "R",
   }),
-  row(185, "5.4", "Enquiry internal notes and internal-only events", {
+  row(188, "5.4", "Enquiry internal notes and internal-only events", {
     SA: "CRU",
     SM: "R",
     HT: "CRU",
     PM: assigned("CR"),
   }),
-  row(186, "5.4", "Site visits", { SA: "CRU", SM: "R", HT: "CRU", PM: assigned("CRU") }),
-  row(187, "5.4", "Hotel proposals, client amounts", {
+  row(189, "5.4", "Site visits", { SA: "CRU", SM: "R", HT: "CRU", PM: assigned("CRU") }),
+  row(190, "5.4", "Hotel proposals, client amounts", {
     SA: "CRUS",
     SM: "R",
     HT: "CRUS",
     PM: assigned("RUS"),
     FA: "R",
   }),
-  row(188, "5.4", "Hotel proposals, internal amounts", {
+  row(191, "5.4", "Hotel proposals, internal amounts", {
     SA: "RU",
     HT: "RU",
     PM: assigned("R"),
     FA: "R",
   }),
-  row(189, "5.4", "Booking milestones", {
+  row(192, "5.4", "Booking milestones", {
     SA: "CRU",
     SM: "R",
     HT: "CRU",
@@ -161,7 +163,7 @@ export const STAFF_ROWS_5_1_TO_5_7: readonly GoldenRow[] = [
     FA: "RU",
   }),
   // §5.5 Wedding projects
-  row(195, "5.5", "Wedding projects (create, edit, status)", {
+  row(198, "5.5", "Wedding projects (create, edit, status)", {
     SA: "CRUD",
     SM: "CR",
     HT: "R",
@@ -172,8 +174,8 @@ export const STAFF_ROWS_5_1_TO_5_7: readonly GoldenRow[] = [
     HL: assigned("R"),
     FA: "R",
   }),
-  row(196, "5.5", "Project internal notes", { SA: "RU", PM: assigned("RU"), FA: "R" }),
-  row(197, "5.5", "Project hotels and external venues", {
+  row(199, "5.5", "Project internal notes", { SA: "RU", PM: assigned("RU"), FA: "R" }),
+  row(200, "5.5", "Project hotels and external venues", {
     SA: "CRU",
     HT: "CRU",
     PM: assigned("CRU"),
@@ -182,7 +184,7 @@ export const STAFF_ROWS_5_1_TO_5_7: readonly GoldenRow[] = [
     RG: assigned("R"),
     HL: assigned("RU"),
   }),
-  row(198, "5.5", "Project members, staff", {
+  row(201, "5.5", "Project members, staff", {
     SA: "CRUD",
     PM: assigned("CRUD"),
     CD: assigned("R"),
@@ -190,13 +192,13 @@ export const STAFF_ROWS_5_1_TO_5_7: readonly GoldenRow[] = [
     RG: assigned("R"),
     HL: assigned("R"),
   }),
-  row(199, "5.5", "Project members, client users and their flags", {
+  row(202, "5.5", "Project members, client users and their flags", {
     SA: "CRUD",
     SM: "CRU",
     PM: assigned("CRUD"),
   }),
   // §5.6 Functions, programme and run-of-show
-  row(205, "5.6", "Functions", {
+  row(208, "5.6", "Functions", {
     SA: "CRUD",
     SM: "R",
     HT: assigned("R"),
@@ -207,7 +209,7 @@ export const STAFF_ROWS_5_1_TO_5_7: readonly GoldenRow[] = [
     HL: assigned("RU", { fields: ["logistics_notes"] }),
     FA: "R",
   }),
-  row(206, "5.6", "Programme items (shared schedule)", {
+  row(209, "5.6", "Programme items (shared schedule)", {
     SA: "CRUDS",
     PM: assigned("CRUDS"),
     CD: assigned("R"),
@@ -215,7 +217,7 @@ export const STAFF_ROWS_5_1_TO_5_7: readonly GoldenRow[] = [
     RG: assigned("R"),
     HL: assigned("CRU"),
   }),
-  row(207, "5.6", "Run-of-show items", {
+  row(210, "5.6", "Run-of-show items", {
     SA: "CRUD",
     PM: assigned("CRUD"),
     CD: assigned("R"),
@@ -223,7 +225,7 @@ export const STAFF_ROWS_5_1_TO_5_7: readonly GoldenRow[] = [
     RG: assigned("R"),
     HL: assigned("CRU"),
   }),
-  row(208, "5.6", "Readiness checklist items", {
+  row(211, "5.6", "Readiness checklist items", {
     SA: "CRU",
     PM: assigned("CRU"),
     CD: assigned("RU"),
@@ -232,14 +234,14 @@ export const STAFF_ROWS_5_1_TO_5_7: readonly GoldenRow[] = [
     HL: assigned("CRU"),
   }),
   // PM: "request only" (Q10): asking is not a grant.
-  row(209, "5.6", "Readiness exceptions (Q10: Eva's authorised personnel only)", { SA: "A" }),
-  row(210, "5.6", "Function status (planned, confirmed, cancelled)", {
+  row(212, "5.6", "Readiness exceptions (Q10: Eva's authorised personnel only)", { SA: "A" }),
+  row(213, "5.6", "Function status (planned, confirmed, cancelled)", {
     SA: "U",
     PM: assigned("U"),
   }),
   // §5.7 Budget and finance
-  row(216, "5.7", "Budget categories", { ...EVERYONE_READS, SA: "CRUD", FA: "CRUD" }),
-  row(217, "5.7", "Budget lines, client-facing amounts", {
+  row(219, "5.7", "Budget categories", { ...EVERYONE_READS, SA: "CRUD", FA: "CRUD" }),
+  row(220, "5.7", "Budget lines, client-facing amounts", {
     SA: "CRUDS",
     HT: all("RU", { side: "hotel" }),
     PM: assigned("CRUS"),
@@ -248,46 +250,46 @@ export const STAFF_ROWS_5_1_TO_5_7: readonly GoldenRow[] = [
     HL: assigned("R"),
     FA: "CRUS",
   }),
-  row(218, "5.7", "Budget lines, internal cost", {
+  row(221, "5.7", "Budget lines, internal cost", {
     SA: "RU",
     HT: all("RU", { side: "hotel" }),
     PM: assigned("RU"),
     VC: assigned("RU", { side: "vendor" }),
     FA: "RU",
   }),
-  row(219, "5.7", "Cost entries", {
+  row(222, "5.7", "Cost entries", {
     SA: "CRUD",
     HT: all("CR", { side: "hotel" }),
     PM: assigned("CR"),
     VC: assigned("CR"),
     FA: "CRUD",
   }),
-  row(220, "5.7", "Vendor quotes", { SA: "CRUD", PM: assigned("R"), VC: "CRUD", FA: "R" }),
-  row(221, "5.7", "Contracts with the client", {
+  row(223, "5.7", "Vendor quotes", { SA: "CRUD", PM: assigned("R"), VC: "CRUD", FA: "R" }),
+  row(224, "5.7", "Contracts with the client", {
     SA: "CRUS",
     SM: "R",
     PM: assigned("RUS"),
     FA: "CRUS",
   }),
-  row(222, "5.7", "Contracts with vendors and hotels", {
+  row(225, "5.7", "Contracts with vendors and hotels", {
     SA: "CRU",
     HT: all("CRU", { side: "hotel" }),
     PM: assigned("R"),
     VC: all("CRU", { side: "vendor" }),
     FA: "RU",
   }),
-  row(223, "5.7", "Invoices issued to the client", {
+  row(226, "5.7", "Invoices issued to the client", {
     SA: "CRUS",
     SM: "R",
     PM: assigned("R"),
     FA: "CRUS",
   }),
-  row(224, "5.7", "Invoices received from vendors and hotels", {
+  row(227, "5.7", "Invoices received from vendors and hotels", {
     SA: "CRU",
     HT: all("CR", { side: "hotel" }),
     PM: assigned("R"),
     VC: assigned("CR", { side: "vendor" }),
     FA: "CRU",
   }),
-  row(225, "5.7", "Final accounts", { SA: "CRUA", PM: assigned("RU"), FA: "CRUA" }),
+  row(228, "5.7", "Final accounts", { SA: "CRUA", PM: assigned("RU"), FA: "CRUA" }),
 ];

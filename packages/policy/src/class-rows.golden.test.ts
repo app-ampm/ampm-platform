@@ -2,7 +2,7 @@
  * The key layer and the class layer of §1 against each other on the §5 rows whose records hold one
  * visibility class. A role decide() lets read such a row must be a role staffReadableClasses() can
  * open that class to; otherwise it reads, and may write, records whose columns it is never shown
- * (ENGINE-4: VC on vendor bank details, §4 line 125 against §5.8 line 235). The rows, their classes
+ * (ENGINE-4: VC on vendor bank details, §4 line 125 against §5.8 line 238). The rows, their classes
  * and the sides of their records are written by hand from §4 lines 122-127 and the §5 labels; the
  * readers come from the generated matrix, since this compares what the two layers do with it.
  */
@@ -45,31 +45,31 @@ const CLASS_ROWS: readonly ClassRow[] = [
   // §4 line 122: internal notes and ratings, internal-only enquiry events, internal comments and
   // incidents by default.
   classRow(170, "5.3", "Hotel internal rating and notes", "RESTRICTED-NOTES"),
-  classRow(185, "5.4", "Enquiry internal notes and internal-only events", "RESTRICTED-NOTES"),
-  classRow(196, "5.5", "Project internal notes", "RESTRICTED-NOTES"),
-  classRow(234, "5.8", "Vendor internal rating and notes", "RESTRICTED-NOTES"),
-  classRow(250, "5.9", "Comments, internal", "RESTRICTED-NOTES"),
-  classRow(265, "5.10", "Guest internal notes", "RESTRICTED-NOTES"),
-  classRow(298, "5.13", "Incidents (report, assign, escalate, resolve, close)", "RESTRICTED-NOTES"),
+  classRow(188, "5.4", "Enquiry internal notes and internal-only events", "RESTRICTED-NOTES"),
+  classRow(199, "5.5", "Project internal notes", "RESTRICTED-NOTES"),
+  classRow(237, "5.8", "Vendor internal rating and notes", "RESTRICTED-NOTES"),
+  classRow(253, "5.9", "Comments, internal", "RESTRICTED-NOTES"),
+  classRow(268, "5.10", "Guest internal notes", "RESTRICTED-NOTES"),
+  classRow(301, "5.13", "Incidents (report, assign, escalate, resolve, close)", "RESTRICTED-NOTES"),
   // §4 line 123: internal amounts, and the whole tables of quotes, cost entries, contracts with a
   // vendor or hotel, invoices received and outbound payments.
   classRow(161, "5.2", "Payments outbound to vendors and hotels", "RESTRICTED-FINANCE", EITHER),
-  classRow(188, "5.4", "Hotel proposals, internal amounts", "RESTRICTED-FINANCE", HOTEL),
-  classRow(218, "5.7", "Budget lines, internal cost", "RESTRICTED-FINANCE", EITHER),
-  classRow(219, "5.7", "Cost entries", "RESTRICTED-FINANCE", EITHER),
-  classRow(220, "5.7", "Vendor quotes", "RESTRICTED-FINANCE", VENDOR),
-  classRow(222, "5.7", "Contracts with vendors and hotels", "RESTRICTED-FINANCE", EITHER),
-  classRow(224, "5.7", "Invoices received from vendors and hotels", "RESTRICTED-FINANCE", EITHER),
-  classRow(239, "5.8", "Vendor proposals, internal cost", "RESTRICTED-FINANCE", VENDOR),
-  classRow(242, "5.8", "Artist fee, internal", "RESTRICTED-FINANCE", VENDOR),
-  classRow(277, "5.11", "Room blocks, internal rate", "RESTRICTED-FINANCE", HOTEL),
+  classRow(191, "5.4", "Hotel proposals, internal amounts", "RESTRICTED-FINANCE", HOTEL),
+  classRow(221, "5.7", "Budget lines, internal cost", "RESTRICTED-FINANCE", EITHER),
+  classRow(222, "5.7", "Cost entries", "RESTRICTED-FINANCE", EITHER),
+  classRow(223, "5.7", "Vendor quotes", "RESTRICTED-FINANCE", VENDOR),
+  classRow(225, "5.7", "Contracts with vendors and hotels", "RESTRICTED-FINANCE", EITHER),
+  classRow(227, "5.7", "Invoices received from vendors and hotels", "RESTRICTED-FINANCE", EITHER),
+  classRow(242, "5.8", "Vendor proposals, internal cost", "RESTRICTED-FINANCE", VENDOR),
+  classRow(245, "5.8", "Artist fee, internal", "RESTRICTED-FINANCE", VENDOR),
+  classRow(280, "5.11", "Room blocks, internal rate", "RESTRICTED-FINANCE", HOTEL),
   // §4 line 124: hotel contacts (whole table) and the vendors' contact fields.
   classRow(171, "5.3", "Hotel contacts", "RESTRICTED-CONTACT", HOTEL),
-  classRow(233, "5.8", "Vendor contacts", "RESTRICTED-CONTACT", VENDOR),
+  classRow(236, "5.8", "Vendor contacts", "RESTRICTED-CONTACT", VENDOR),
   // §4 lines 125-127.
-  classRow(235, "5.8", "Vendor bank details", "RESTRICTED-BANK", VENDOR),
-  classRow(264, "5.10", "Guest sensitive fields (allergies, accessibility)", "SENSITIVE-GUEST"),
-  classRow(266, "5.10", "Identity documents", "RESTRICTED-IDENTITY"),
+  classRow(238, "5.8", "Vendor bank details", "RESTRICTED-BANK", VENDOR),
+  classRow(267, "5.10", "Guest sensitive fields (allergies, accessibility)", "SENSITIVE-GUEST"),
+  classRow(269, "5.10", "Identity documents", "RESTRICTED-IDENTITY"),
 ];
 
 /** Rows whose label names a class but whose records hold several classes, and why. */

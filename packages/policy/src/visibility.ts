@@ -22,7 +22,7 @@ export interface ClassContext extends ConditionFacts {
   readonly ownRow?: boolean | undefined;
   /**
    * The principal holds the explicit grant P-5 names on the record's wedding, which an RG needs
-   * for identity documents (§5.10 line 266): holdsExplicitGrant(principal, key, projectId).
+   * for identity documents (§5.10 line 269): holdsExplicitGrant(principal, key, projectId).
    */
   readonly explicitGrant?: boolean | undefined;
   /**
@@ -97,7 +97,7 @@ function readsRow(roles: readonly StaffRole[], row: MatrixRow, context: ClassCon
 }
 
 /**
- * §4 line 127 by the §5.10 cell (line 266): SA "R break-glass", RG "with explicit grant" on assigned
+ * §4 line 127 by the §5.10 cell (line 269): SA "R break-glass", RG "with explicit grant" on assigned
  * weddings, HL "check-in only" on assigned weddings; the facts come in the context, as decide()
  * takes them, so the class and the key never disagree.
  */

@@ -47,11 +47,11 @@ const NO_MOVER_CLAUSES: readonly string[] = [
   "a critical incident requires resolution notes",
   "New subscription row",
   "the old one is never reactivated",
-  // §7 line 450: SA authorises the exception on a checklist item (§5.6 line 209, decide() on the
-  // readiness exceptions row); readiness then follows from the items (data-model.md line 1838), so
+  // §7 line 453: SA authorises the exception on a checklist item (§5.6 line 212, decide() on the
+  // readiness exceptions row); readiness then follows from the items (data-model.md line 1155), so
   // the clause says who authorises, not who moves the status.
   "an exception needs SA, Eva's authorised personnel (P-8 changed by Q10)",
-  // §7 line 432, the second sentence: how many decisions approve and what moves the approval at
+  // §7 line 435, the second sentence: how many decisions approve and what moves the approval at
   // once; the movers are the first sentence's.
   "Approved needs `required_decisions` approvals, one by default",
   "one rejection or revision request moves it immediately",
@@ -81,7 +81,7 @@ function readMover(text: string, movers: Movers): number {
   return actor[0].length;
 }
 
-/** A role code left in a condition, unless it says who approves ("approved by FA", line 423). */
+/** A role code left in a condition, unless it says who approves ("approved by FA", line 426). */
 function strayRole(condition: string): string | undefined {
   for (const match of condition.matchAll(/\b(SA|SM|HT|PM|CD|VC|RG|HL|FA|CR)\b/g)) {
     if (!/\bby\s+$/.test(condition.slice(0, match.index))) return match[1];
@@ -117,7 +117,7 @@ function parseMovers(clause: string): { movers: Movers; count: number; rest: str
 
 /**
  * Splits a Who cell into its mover clauses and the notes that name no mover. Each sentence is read
- * like the first, so a mover named later is a rule, never words in a condition (line 432).
+ * like the first, so a mover named later is a rule, never words in a condition (line 435).
  */
 function parseWho(who: string): { clauses: Clause[]; notes: string[] } {
   const clauses: Clause[] = [];

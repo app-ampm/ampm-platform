@@ -176,6 +176,9 @@ Legend: **C** create, **R** read, **U** update, **D** delete (soft), **A** appro
 | Wedding references | CRUD | R | CRUD | R | — | — | — | — | — |
 | Saved hotels (created by clients) | R | R | R | R (a) | — | — | — | — | — |
 | Hotel documents | CRUD | R | CRUD | R | — | — | — | — | — |
+| Hotel information requests | CRUA | R | CRUA | R | — | — | — | — | — |
+
+Hotel information requests (D-188) are the hotel information form's requests to hotels and their links. SM and PM read each request as a summary: the API answers them with the summary response model, without the recipient or the events, which only SA and HT read. Issuing a request's link, reissuing it and recording a share are U, audited with the action `share`; the matrix's S means sharing with the client, which a request never is.
 
 ### 5.4 Hotel consultancy
 
@@ -488,6 +491,21 @@ Status lists are the enumerations on each table in data-model.md. This section a
 
 ### Project closure checklist (SPEC §7 closure statuses)
 The spec's closure sequence (open items, departure, vendor reconciliation, final accounts, closure review, closed) maps to the required items of the `project_closure` checklist template. Each item is completed by the role in §5.15; the project closes per the wedding project table above.
+
+### Hotel information request
+| From | To | Who |
+|---|---|---|
+| open | submitted | System, when a verified contributor submits the hotel form |
+| submitted | in_review | SA, HT, claiming the request for review |
+| in_review | submitted | SA, HT, releasing the claim |
+| in_review or submitted | changes_requested | SA, HT, with a note to the hotel |
+| changes_requested | submitted | System, when a verified contributor submits the form again |
+| in_review | merged | SA, HT, through the merge |
+| submitted or in_review | rejected | SA, HT, with a reason |
+| open or changes_requested | revoked | SA, HT, with a reason; System, when the hotel is deleted |
+| merged | changes_requested | SA, HT, reopening the request, refused while another request for the hotel is live |
+
+A request's expiry is worked out from `expires_at`, never stored as a status. The moves a hotel's people cause are the System's, since this table names no hotel actor (D-188).
 
 ---
 

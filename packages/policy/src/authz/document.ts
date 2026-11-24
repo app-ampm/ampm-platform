@@ -17,7 +17,7 @@ const LINES = readFileSync(
  * under, and its cells.
  *
  * @example
- * const { line, cells } = documentTableRows("## 6.", "## 7.")[0]; // 342, ["Hotel discovery …", "R", …]
+ * const { line, cells } = documentTableRows("## 6.", "## 7.")[0]; // 349, ["Hotel discovery …", "R", …]
  */
 export interface DocumentRow {
   readonly line: number;

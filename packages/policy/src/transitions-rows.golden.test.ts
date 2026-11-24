@@ -11,9 +11,10 @@ import { documentTableRows } from "./authz/document";
 import { expectNoOtherMoves, expectRowMoves } from "./golden/transitions";
 import { TRANSITIONS_389_TO_429 } from "./golden/transitions-rows-a";
 import { TRANSITIONS_434_TO_483 } from "./golden/transitions-rows-b";
+import { TRANSITIONS_498_TO_506 } from "./golden/transitions-rows-c";
 import { STATUS_MACHINES } from "./statuses";
 
-const ROWS = [...TRANSITIONS_389_TO_429, ...TRANSITIONS_434_TO_483];
+const ROWS = [...TRANSITIONS_389_TO_429, ...TRANSITIONS_434_TO_483, ...TRANSITIONS_498_TO_506];
 
 describe("§7 golden table: status transitions", () => {
   it("holds every row of §7, on the line and under the heading the document gives it", () => {
@@ -21,7 +22,7 @@ describe("§7 golden table: status transitions", () => {
     expect(ROWS.map((row) => [row.line, STATUS_MACHINES[row.entity]?.heading])).toEqual(
       document.map((row) => [row.line, row.heading]),
     );
-    expect(ROWS).toHaveLength(59);
+    expect(ROWS).toHaveLength(68);
   });
 
   for (const row of ROWS) {

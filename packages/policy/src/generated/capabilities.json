@@ -7231,6 +7231,68 @@
     ]
   },
   {
+    "id": "hotels.info_requests.approve:all",
+    "module": "hotels",
+    "resource": "info_requests",
+    "action": "approve",
+    "scope": "all",
+    "conditions": [],
+    "isStaffOnly": true,
+    "isEscalationLocked": false,
+    "label": "Approve — Hotel information requests",
+    "sourceRoles": [
+      "SA",
+      "HT"
+    ]
+  },
+  {
+    "id": "hotels.info_requests.create:all",
+    "module": "hotels",
+    "resource": "info_requests",
+    "action": "create",
+    "scope": "all",
+    "conditions": [],
+    "isStaffOnly": true,
+    "isEscalationLocked": false,
+    "label": "Create — Hotel information requests",
+    "sourceRoles": [
+      "SA",
+      "HT"
+    ]
+  },
+  {
+    "id": "hotels.info_requests.read:all",
+    "module": "hotels",
+    "resource": "info_requests",
+    "action": "read",
+    "scope": "all",
+    "conditions": [],
+    "isStaffOnly": true,
+    "isEscalationLocked": false,
+    "label": "Read — Hotel information requests",
+    "sourceRoles": [
+      "SA",
+      "SM",
+      "HT",
+      "PM"
+    ]
+  },
+  {
+    "id": "hotels.info_requests.update:all",
+    "module": "hotels",
+    "resource": "info_requests",
+    "action": "update",
+    "scope": "all",
+    "conditions": [],
+    "isStaffOnly": true,
+    "isEscalationLocked": false,
+    "label": "Update — Hotel information requests",
+    "sourceRoles": [
+      "SA",
+      "HT"
+    ]
+  },
+  {
     "id": "hotels.rate_cards_rate_items.create:all",
     "module": "hotels",
     "resource": "rate_cards_rate_items",

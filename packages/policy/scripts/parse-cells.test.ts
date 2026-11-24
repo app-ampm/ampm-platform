@@ -8,21 +8,21 @@ import { describe, expect, it } from "vitest";
 import { parseCell } from "./parse-cells.ts";
 
 describe("parseCell, §5 staff cells", () => {
-  it("§5 line 136: (a) and (o) bind to the letters they follow (§5.9 line 249 'CR (a) UD (o)')", () => {
+  it("§5 line 136: (a) and (o) bind to the letters they follow (§5.9 line 253 'CR (a) UD (o)')", () => {
     expect(parseCell("CR (a) UD (o)", "staff")).toEqual([
       { actions: ["create", "read"], scope: "assigned", conditions: [] },
       { actions: ["update", "delete"], scope: "own", conditions: [] },
     ]);
   });
 
-  it("§5.9 line 249: 'CR (o) UD' would edit every comment while reading only one's own; read as UD (o)", () => {
+  it("§5.9 line 253: 'CR (o) UD' would edit every comment while reading only one's own; read as UD (o)", () => {
     expect(parseCell("CR (o) UD", "staff")).toEqual([
       { actions: ["create", "read"], scope: "own", conditions: [] },
       { actions: ["update", "delete"], scope: "own", conditions: [] },
     ]);
   });
 
-  it("§4 line 125 against §5.8 line 234: a reading can hold for one cell only, named by its place", () => {
+  it("§4 line 125 against §5.8 line 238: a reading can hold for one cell only, named by its place", () => {
     const readUpdate = [{ actions: ["read", "update"], scope: "all", conditions: [] }];
     const bank = { section: "5.8", label: "Vendor bank details" };
     expect(parseCell("RU", "staff", { ...bank, column: "VC" })).toEqual([]);
@@ -36,7 +36,7 @@ describe("parseCell, §5 staff cells", () => {
     ]);
   });
 
-  it("§5.10 line 265: 'with explicit grant' and 'check-in only' narrow the grant", () => {
+  it("§5.10 line 269: 'with explicit grant' and 'check-in only' narrow the grant", () => {
     expect(parseCell("CRU (a) with explicit grant", "staff")).toEqual([
       {
         actions: ["create", "read", "update"],
@@ -52,7 +52,7 @@ describe("parseCell, §5 staff cells", () => {
     ]);
   });
 
-  it("§5.7 line 217 and §5.6 line 204: side and field notes, including a note split by commas", () => {
+  it("§5.7 line 220 and §5.6 line 208: side and field notes, including a note split by commas", () => {
     expect(parseCell("RU hotel lines", "staff")).toEqual([
       {
         actions: ["read", "update"],
@@ -60,7 +60,7 @@ describe("parseCell, §5 staff cells", () => {
         conditions: [{ kind: "side", anyOf: ["hotel"] }],
       },
     ]);
-    // §5.7 line 223: "CR (a) vendor" is the vendor side of an invoice received, not a record type.
+    // §5.7 line 227: "CR (a) vendor" is the vendor side of an invoice received, not a record type.
     expect(parseCell("CR (a) vendor", "staff")).toEqual([
       {
         actions: ["create", "read"],
@@ -84,7 +84,7 @@ describe("parseCell, §5 staff cells", () => {
     ]);
   });
 
-  it("§5.15 line 315: the closure precondition; §5.6 line 208: 'request only' grants nothing", () => {
+  it("§5.15 line 319: the closure precondition; §5.6 line 212: 'request only' grants nothing", () => {
     expect(
       parseCell("A (a) when the checklist is complete and final accounts are approved", "staff"),
     ).toEqual([
@@ -128,7 +128,7 @@ describe("parseCell, §5 staff cells", () => {
     expect(() => parseCell("R (o), U (o) hotel", "staff")).not.toThrow();
   });
 
-  it("§5.6 line 209, §5.8 line 239, §5.9 line 249, §5.15 line 314: the document's own edit-beyond-read cells parse", () => {
+  it("§5.6 line 213, §5.8 line 243, §5.9 line 253, §5.15 line 318: the document's own edit-beyond-read cells parse", () => {
     for (const cell of [
       "U",
       "U (a)",
@@ -145,27 +145,27 @@ describe("parseCell, §5 staff cells", () => {
 });
 
 describe("parseCell, §6 client, guest and demo cells", () => {
-  it("§6 line 341: every client grant is scoped to the principal's own wedding or account", () => {
+  it("§6 line 345: every client grant is scoped to the principal's own wedding or account", () => {
     expect(parseCell("R", "others")).toEqual([{ actions: ["read"], scope: "own", conditions: [] }]);
     expect(parseCell("CRUD own account", "others")).toEqual([
       { actions: ["create", "read", "update", "delete"], scope: "own", conditions: [] },
     ]);
   });
 
-  it("§6 line 374: a bare 'own' manages the principal's own record", () => {
+  it("§6 line 378: a bare 'own' manages the principal's own record", () => {
     expect(parseCell("own", "others")).toEqual([
       { actions: ["create", "read", "update", "delete"], scope: "own", conditions: [] },
     ]);
   });
 
-  it("§6 line 348: 'R, U feedback' limits the update, not the read", () => {
+  it("§6 line 352: 'R, U feedback' limits the update, not the read", () => {
     expect(parseCell("R, U feedback", "others")).toEqual([
       { actions: ["read"], scope: "own", conditions: [] },
       { actions: ["update"], scope: "own", conditions: [{ kind: "fields", only: ["feedback"] }] },
     ]);
   });
 
-  it("§6 line 359: 'comment' is its own grant, a comment created on the shared version", () => {
+  it("§6 line 363: 'comment' is its own grant, a comment created on the shared version", () => {
     expect(parseCell("R, comment, A", "others")).toEqual([
       { actions: ["read"], scope: "own", conditions: [] },
       { actions: ["create"], scope: "own", conditions: [{ kind: "subject", anyOf: ["comment"] }] },
@@ -173,7 +173,7 @@ describe("parseCell, §6 client, guest and demo cells", () => {
     ]);
   });
 
-  it("§6 line 364: each note of the guest's identity-document cell binds to its own grant", () => {
+  it("§6 line 368: each note of the guest's identity-document cell binds to its own grant", () => {
     expect(
       parseCell("own: C upload when the project requires it, R status only", "others"),
     ).toEqual([
@@ -186,7 +186,7 @@ describe("parseCell, §6 client, guest and demo cells", () => {
     ]);
   });
 
-  it("§6 lines 361 and 366: prefixes and notes of the guest cells", () => {
+  it("§6 lines 365 and 370: prefixes and notes of the guest cells", () => {
     expect(
       parseCell(
         "own group: R members, U attendance and dietary, C members up to allowance",
@@ -214,13 +214,13 @@ describe("parseCell, §6 client, guest and demo cells", () => {
     ]);
   });
 
-  it("§6 lines 353-355 and 376: 'to confirm' and dashed cells grant nothing until AMPM answers", () => {
+  it("§6 lines 357-359 and 380: 'to confirm' and dashed cells grant nothing until AMPM answers", () => {
     expect(parseCell("To confirm (Q4); internal data never", "others")).toEqual([]);
     expect(parseCell("— (not in the first release, Q4)", "others")).toEqual([]);
     expect(parseCell("To confirm (Q4); never guest data", "others")).toEqual([]);
   });
 
-  it("§6 lines 345 and 347: the demo's masked reads and routed creations are conditions", () => {
+  it("§6 lines 351 and 357: the demo's masked reads and routed creations are conditions", () => {
     expect(parseCell("R sample masked", "others")).toEqual([
       {
         actions: ["read"],

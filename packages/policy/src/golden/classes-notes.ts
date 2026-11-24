@@ -10,30 +10,30 @@ import { A, type ClassGolden, on, ROWS } from "./class-contexts";
 const PLAIN = {
   anywhere: {},
   unknown: on("hotels.nowhere"),
-  hotelProfiles: on(ROWS.hotelProfiles, A), // notes row 169: SA RU, SM R, HT RU, PM R
-  hotelContacts: on(ROWS.hotelContacts, A), // its table's notes (169); HL reads contacts only
-  enquiries: on(ROWS.enquiries, A), // 183: SA CRU, SM R, HT CRU, PM CR (a); FA reads 182 only
-  projects: on(ROWS.projects, A), // 194: SA RU, PM RU (a), FA R
+  hotelProfiles: on(ROWS.hotelProfiles, A), // notes row 170: SA RU, SM R, HT RU, PM R
+  hotelContacts: on(ROWS.hotelContacts, A), // its table's notes (170); HL reads contacts only
+  enquiries: on(ROWS.enquiries, A), // 188: SA CRU, SM R, HT CRU, PM CR (a); FA reads 187 only
+  projects: on(ROWS.projects, A), // 199: SA RU, PM RU (a), FA R
   projectsUnassigned: on(ROWS.projects),
-  vendorProfiles: on(ROWS.vendorProfiles, A), // 232: SA RU, PM R (a), VC RU
+  vendorProfiles: on(ROWS.vendorProfiles, A), // 237: SA RU, PM R (a), VC RU
   vendorProfilesUnassigned: on(ROWS.vendorProfiles),
-  vendorContacts: on(ROWS.vendorContacts, A), // its table's notes (232); HL reads contacts only
-  guests: on(ROWS.guests, A), // 263: SA RU, PM R (a), RG CRU (a), HL R (a)
+  vendorContacts: on(ROWS.vendorContacts, A), // its table's notes (237); HL reads contacts only
+  guests: on(ROWS.guests, A), // 268: SA RU, PM R (a), RG CRU (a), HL R (a)
   guestsUnassigned: on(ROWS.guests),
-  internalComments: on(ROWS.internalComments, A), // 248: CR (a) for PM, CD, VC, RG, HL
-  ownInternalComments: on(ROWS.internalComments, { owned: true }), // 248: CR (o) SM, HT, FA
-  incidents: on(ROWS.incidents, A), // 296: incidents are notes by default
+  internalComments: on(ROWS.internalComments, A), // 253: CR (a) for PM, CD, VC, RG, HL
+  ownInternalComments: on(ROWS.internalComments, { owned: true }), // 253: CR (o) SM, HT, FA
+  incidents: on(ROWS.incidents, A), // 301: incidents are notes by default
 };
 
 // Records on which some role holds only a conditioned read.
 const CONDITIONED = {
-  // 203, functions' internal_notes (line 122): CD "RU (a) theme, dress code", HL "RU (a) logistics
+  // 208, functions' internal_notes (line 122): CD "RU (a) theme, dress code", HL "RU (a) logistics
   // notes"; SA CRUD, SM R, HT R (a), PM CRUD (a), VC R (a), RG R (a), FA R read the row plainly.
   functionsTheme: on(ROWS.functions, { assigned: true, fields: ["theme", "dress_code"] }),
   functionsLogistics: on(ROWS.functions, { assigned: true, fields: ["logistics_notes"] }),
-  // 205: VC "RU (a) vendor cues"; SA, PM, CD R (a), HL CRU (a) plainly.
+  // 210: VC "RU (a) vendor cues"; SA, PM, CD R (a), HL CRU (a) plainly.
   runOfShowCues: on(ROWS.runOfShow, { assigned: true, fields: ["vendor_cues"] }),
-  // 215: HT "RU hotel lines", VC "RU (a) vendor lines"; SA, PM, CD R (a), HL R (a), FA plainly.
+  // 220: HT "RU hotel lines", VC "RU (a) vendor lines"; SA, PM, CD R (a), HL R (a), FA plainly.
   clientLinesHotel: on(ROWS.clientLines, { assigned: true, side: "hotel" }),
   clientLinesVendor: on(ROWS.clientLines, { assigned: true, side: "vendor" }),
 };

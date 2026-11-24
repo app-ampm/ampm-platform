@@ -2209,6 +2209,75 @@
       "exclusions": []
     },
     {
+      "section": "5.3",
+      "module": "hotels",
+      "resource": "info_requests",
+      "label": "Hotel information requests",
+      "provisional": false,
+      "cells": {
+        "SA": "CRUA",
+        "SM": "R",
+        "HT": "CRUA",
+        "PM": "R",
+        "CD": "—",
+        "VC": "—",
+        "RG": "—",
+        "HL": "—",
+        "FA": "—"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "approve"
+            ],
+            "scope": "all",
+            "conditions": []
+          }
+        ],
+        "SM": [
+          {
+            "actions": [
+              "read"
+            ],
+            "scope": "all",
+            "conditions": []
+          }
+        ],
+        "HT": [
+          {
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "approve"
+            ],
+            "scope": "all",
+            "conditions": []
+          }
+        ],
+        "PM": [
+          {
+            "actions": [
+              "read"
+            ],
+            "scope": "all",
+            "conditions": []
+          }
+        ],
+        "CD": [],
+        "VC": [],
+        "RG": [],
+        "HL": [],
+        "FA": []
+      },
+      "aliases": [],
+      "exclusions": []
+    },
+    {
       "section": "5.4",
       "module": "consultancy",
       "resource": "enquiries",
@@ -12322,6 +12391,243 @@
         "requester"
       ],
       "condition": null
+    },
+    {
+      "entity": "hotel_info_request",
+      "from": [
+        "open"
+      ],
+      "to": [
+        "submitted"
+      ],
+      "restore": false,
+      "kind": null,
+      "who": "System, when a verified contributor submits the hotel form",
+      "roles": [],
+      "client": false,
+      "system": true,
+      "actors": [],
+      "condition": "when a verified contributor submits the hotel form"
+    },
+    {
+      "entity": "hotel_info_request",
+      "from": [
+        "submitted"
+      ],
+      "to": [
+        "in_review"
+      ],
+      "restore": false,
+      "kind": null,
+      "who": "SA, HT, claiming the request for review",
+      "roles": [
+        {
+          "role": "SA",
+          "assigned": false
+        },
+        {
+          "role": "HT",
+          "assigned": false
+        }
+      ],
+      "client": false,
+      "system": false,
+      "actors": [],
+      "condition": "claiming the request for review"
+    },
+    {
+      "entity": "hotel_info_request",
+      "from": [
+        "in_review"
+      ],
+      "to": [
+        "submitted"
+      ],
+      "restore": false,
+      "kind": null,
+      "who": "SA, HT, releasing the claim",
+      "roles": [
+        {
+          "role": "SA",
+          "assigned": false
+        },
+        {
+          "role": "HT",
+          "assigned": false
+        }
+      ],
+      "client": false,
+      "system": false,
+      "actors": [],
+      "condition": "releasing the claim"
+    },
+    {
+      "entity": "hotel_info_request",
+      "from": [
+        "in_review",
+        "submitted"
+      ],
+      "to": [
+        "changes_requested"
+      ],
+      "restore": false,
+      "kind": null,
+      "who": "SA, HT, with a note to the hotel",
+      "roles": [
+        {
+          "role": "SA",
+          "assigned": false
+        },
+        {
+          "role": "HT",
+          "assigned": false
+        }
+      ],
+      "client": false,
+      "system": false,
+      "actors": [],
+      "condition": "with a note to the hotel"
+    },
+    {
+      "entity": "hotel_info_request",
+      "from": [
+        "changes_requested"
+      ],
+      "to": [
+        "submitted"
+      ],
+      "restore": false,
+      "kind": null,
+      "who": "System, when a verified contributor submits the form again",
+      "roles": [],
+      "client": false,
+      "system": true,
+      "actors": [],
+      "condition": "when a verified contributor submits the form again"
+    },
+    {
+      "entity": "hotel_info_request",
+      "from": [
+        "in_review"
+      ],
+      "to": [
+        "merged"
+      ],
+      "restore": false,
+      "kind": null,
+      "who": "SA, HT, through the merge",
+      "roles": [
+        {
+          "role": "SA",
+          "assigned": false
+        },
+        {
+          "role": "HT",
+          "assigned": false
+        }
+      ],
+      "client": false,
+      "system": false,
+      "actors": [],
+      "condition": "through the merge"
+    },
+    {
+      "entity": "hotel_info_request",
+      "from": [
+        "submitted",
+        "in_review"
+      ],
+      "to": [
+        "rejected"
+      ],
+      "restore": false,
+      "kind": null,
+      "who": "SA, HT, with a reason",
+      "roles": [
+        {
+          "role": "SA",
+          "assigned": false
+        },
+        {
+          "role": "HT",
+          "assigned": false
+        }
+      ],
+      "client": false,
+      "system": false,
+      "actors": [],
+      "condition": "with a reason"
+    },
+    {
+      "entity": "hotel_info_request",
+      "from": [
+        "open",
+        "changes_requested"
+      ],
+      "to": [
+        "revoked"
+      ],
+      "restore": false,
+      "kind": null,
+      "who": "SA, HT, with a reason; System, when the hotel is deleted",
+      "roles": [
+        {
+          "role": "SA",
+          "assigned": false
+        },
+        {
+          "role": "HT",
+          "assigned": false
+        }
+      ],
+      "client": false,
+      "system": false,
+      "actors": [],
+      "condition": "with a reason"
+    },
+    {
+      "entity": "hotel_info_request",
+      "from": [
+        "open",
+        "changes_requested"
+      ],
+      "to": [
+        "revoked"
+      ],
+      "restore": false,
+      "kind": null,
+      "who": "SA, HT, with a reason; System, when the hotel is deleted",
+      "roles": [],
+      "client": false,
+      "system": true,
+      "actors": [],
+      "condition": "when the hotel is deleted"
+    },
+    {
+      "entity": "hotel_info_request",
+      "from": [
+        "merged"
+      ],
+      "to": [
+        "changes_requested"
+      ],
+      "restore": false,
+      "kind": null,
+      "who": "SA, HT, reopening the request, refused while another request for the hotel is live",
+      "roles": [
+        {
+          "role": "SA",
+          "assigned": false
+        },
+        {
+          "role": "HT",
+          "assigned": false
+        }
+      ],
+      "client": false,
+      "system": false,
+      "actors": [],
+      "condition": "reopening the request, refused while another request for the hotel is live"
     }
   ]
 }
