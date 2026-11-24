@@ -156,6 +156,25 @@ describe("ConfigService", () => {
     expect(repository.calls).toBe(3);
   });
 
+  it("reads a stored hotel form policy that lacks later fields, filling them from their defaults", async () => {
+    // The seed never rewrites a stored row: a value stored before a later slice added a field lacks it.
+    const rows = new Map<string, ConfigRecord>([
+      ["hotel_form.policy", { valueJson: { mode: "test_only", linkValidityDays: 14 } }],
+    ]);
+    const { service } = build(rows);
+    const expected = {
+      ...CONFIG_REGISTRY["hotel_form.policy"].default,
+      mode: "test_only",
+      linkValidityDays: 14,
+    };
+    expect(await service.getFresh("hotel_form.policy")).toEqual(expected);
+    expect(await service.get("hotel_form.policy")).toEqual(expected);
+    const listed = (await service.list()).entries.find(
+      (entry) => entry.key === "hotel_form.policy",
+    );
+    expect(listed?.value).toEqual(expected);
+  });
+
   it("getFresh refuses a stored value that does not match the key's shape, as get does", async () => {
     const rows = new Map<string, ConfigRecord>([
       ["hotel_form.policy", { valueJson: { mode: "live" } }],

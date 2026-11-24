@@ -133,17 +133,21 @@ export type HotelFormMode = z.infer<typeof hotelFormMode>;
  * first expiry it may be extended; the days a merged request stays status-only; the people a request may
  * verify; and the reply-to address of hotel-form email and the help contact the form shows (decision 21).
  * The reply-to and the help contact start empty: AMPM's admin mailbox is a real address, which the
- * repository never carries, so a Super Admin sets them. A field this schema does not know is dropped, not
- * refused, so a release still reads a value a later release wrote (a rollback).
+ * repository never carries, so a Super Admin sets them.
+ *
+ * Every field carries a default, its baseline, and a field a later slice adds must carry one too: the
+ * seed never rewrites a stored row, so a value stored before a field existed lacks it, and without a
+ * default `get`, `getFresh` and the admin configuration list would answer 500. A field this schema does
+ * not know is dropped, not refused, so a release still reads a value a later release wrote (a rollback).
  */
 export const hotelFormPolicy = z.object({
-  mode: hotelFormMode,
-  linkValidityDays: z.number().int().min(1).max(90),
-  maxExtensionDays: z.number().int().min(0).max(60),
-  statusOnlyDays: z.number().int().min(0).max(30),
-  maxPeople: z.number().int().min(1).max(20),
-  replyTo: z.string().trim().toLowerCase().email().max(255).nullable(),
-  helpContact: z.string().trim().min(1).max(300).nullable(),
+  mode: hotelFormMode.default("off"),
+  linkValidityDays: z.number().int().min(1).max(90).default(30),
+  maxExtensionDays: z.number().int().min(0).max(60).default(60),
+  statusOnlyDays: z.number().int().min(0).max(30).default(7),
+  maxPeople: z.number().int().min(1).max(20).default(10),
+  replyTo: z.string().trim().toLowerCase().email().max(255).nullable().default(null),
+  helpContact: z.string().trim().min(1).max(300).nullable().default(null),
 });
 export type HotelFormPolicy = z.infer<typeof hotelFormPolicy>;
 
@@ -196,16 +200,9 @@ export const CONFIG_REGISTRY = {
     milestoneAmountsVisible: false,
   }),
   "storage.disk_guard": entry(storageDiskGuard, { floorGiB: 9, warnGiB: 12 }),
-  // D-188 §6: off until a Super Admin switches it, so nothing reaches a hotel before then.
-  "hotel_form.policy": entry(hotelFormPolicy, {
-    mode: "off",
-    linkValidityDays: 30,
-    maxExtensionDays: 60,
-    statusOnlyDays: 7,
-    maxPeople: 10,
-    replyTo: null,
-    helpContact: null,
-  }),
+  // D-188 §6: off until a Super Admin switches it, so nothing reaches a hotel before then. The baseline
+  // is the schema's defaults, so the two can never differ.
+  "hotel_form.policy": entry(hotelFormPolicy, hotelFormPolicy.parse({})),
   "notification.templates": entry(notificationTemplates, {
     "staff.invite": {
       email: {

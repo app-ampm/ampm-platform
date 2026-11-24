@@ -118,10 +118,22 @@ describe("hotel_form.policy", () => {
     );
   });
 
-  it("refuses a value missing a field, and drops a field it does not know", () => {
+  it("fills a field the stored value lacks from its default, and drops a field it does not know", () => {
+    // The seed never rewrites a stored row, so a value stored before a field existed lacks it: it must
+    // still read, or get, getFresh and the admin configuration list would answer 500.
     const { maxPeople: _omit, ...withoutPeople } = valid;
-    expect(hotelFormPolicy.safeParse(withoutPeople).success).toBe(false);
+    expect(hotelFormPolicy.parse(withoutPeople)).toEqual({ ...valid, maxPeople: 10 });
+    expect(hotelFormPolicy.parse({ mode: "on" })).toEqual({
+      ...CONFIG_REGISTRY["hotel_form.policy"].default,
+      mode: "on",
+    });
+    expect(hotelFormPolicy.parse({})).toEqual(CONFIG_REGISTRY["hotel_form.policy"].default);
     // A later slice adds fields: the release before it must still read the value after a rollback.
     expect(hotelFormPolicy.parse({ ...valid, smsCap: 300 })).toEqual(valid);
+  });
+
+  it("still refuses a field it knows that holds a wrong value, rather than defaulting it", () => {
+    expect(hotelFormPolicy.safeParse({ ...valid, maxPeople: null }).success).toBe(false);
+    expect(hotelFormPolicy.safeParse({ ...valid, mode: "" }).success).toBe(false);
   });
 });
