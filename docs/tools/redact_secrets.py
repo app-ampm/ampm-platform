@@ -189,6 +189,9 @@ PATTERNS: list[tuple[str, re.Pattern[bytes] | Prefiltered, frozenset[int]]] = [
     ("stripe-key", re.compile(rb"(?P<secret>[sr]k_(?:live|test)_[A-Za-z0-9]{16,})"), WORD),
     ("google-api-key", re.compile(rb"(?P<secret>AIza[0-9A-Za-z_-]{35})"), WORD_DASH),
     ("npm-token", re.compile(rb"(?P<secret>npm_[A-Za-z0-9]{36})"), WORD),
+    # The hotel information form's link secret (hfl_) and form session token (hfs_), each the base64url of 32
+    # random bytes: 43 characters, never part of a longer base64url run (D-188 §4; the plan's §4.2 and §4.3).
+    ("hotel-form-token", re.compile(rb"(?P<secret>hf[ls]_[A-Za-z0-9_-]{43})(?![A-Za-z0-9_-])"), WORD_DASH),
     # An age secret key (sops/age): the master key that decrypts every encrypted secret; never in a transcript.
     ("age-secret-key", re.compile(rb"(?P<secret>AGE-SECRET-KEY-1[0-9A-Z]{50,})"), WORD_DASH),
     # A password inside a connection URL, the user part may be empty (redis://:pw@host); eight characters

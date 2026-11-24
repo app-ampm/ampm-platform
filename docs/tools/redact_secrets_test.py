@@ -220,6 +220,22 @@ def residual_cases() -> list[Case]:
     ]
 
 
+def hotel_form_cases() -> list[Case]:
+    """The hotel information form's secrets (D-188 §4; plan §4.2 and §4.3): the link's hfl_ and a form
+    session's hfs_, each the base64url of 32 random bytes (43 characters), wherever they appear."""
+    secret = "Aa0-_" * 8 + "Bb1"  # 43 base64url characters
+    link, session = "hf" + "l_" + secret, "hf" + "s_" + secret
+    return [
+        ("a hotel form link", tool_result(f"https://site.ampm.example/hotel-form#k={link}"), 1, [secret]),
+        ("a hotel form session token in prose", tool_result(f"opened with {session} today"), 1, [secret]),
+        ("a link token in json", tool_result(json.dumps({"value": link})), 1, [secret]),
+        ("a link as a quoted shell argument", tool_use(f"curl -d '{{\"t\":\"{link}\"}}' https://x"), 1, [secret]),
+        ("an hfl_ identifier, not a token", tool_result("const hfl_link_token_generation = 2;"), 0, []),
+        ("an hfl_ run inside a longer word", tool_result(f"x{link}"), 0, []),
+        ("an hfs_ run longer than a token", tool_result(f"{session}Q"), 0, []),
+    ]
+
+
 def residual_code_cases() -> list[Case]:
     """What the residual rules must leave alone: code, labels, prompts, expansions and paths."""
     return [
@@ -724,7 +740,7 @@ def run() -> int:
     failures: list[str] = []
     cases = baseline_cases() + ops01_cases() + ops04_cases() + ops05_cases()
     cases += named_and_prefix_cases() + residual_cases() + code_and_prose_cases() + residual_code_cases()
-    cases += hidden_and_mixed_case_cases()
+    cases += hidden_and_mixed_case_cases() + hotel_form_cases()
     for case in cases + escape_cases():
         failures += check_case(*case)
     failures += check_head_stops_at_prose() + check_lines_kept_apart() + check_nested_json_survives()
