@@ -160,7 +160,7 @@ export class HotelsAdminController {
   @Post("hotels/:hotelId/rooms")
   @RequirePermission("hotels.room_categories_venues.create")
   @HttpCode(201)
-  @Audited({ entityType: "hotel_room_category" })
+  @SelfAudited()
   addRoom(
     @ZodParams(hotelParam) params: HotelParam,
     @ZodBody(roomCategoryCreateRequest) body: RoomCategoryCreateRequest,
@@ -193,7 +193,7 @@ export class HotelsAdminController {
   @Post("hotels/:hotelId/venues")
   @RequirePermission("hotels.room_categories_venues.create")
   @HttpCode(201)
-  @Audited({ entityType: "hotel_venue" })
+  @SelfAudited()
   addVenue(
     @ZodParams(hotelParam) params: HotelParam,
     @ZodBody(venueCreateRequest) body: VenueCreateRequest,
@@ -223,16 +223,17 @@ export class HotelsAdminController {
     return this.subresources.removeVenue(params.hotelId, params.venueId, staffId(principal));
   }
 
+  // Self-audited: a new primary contact demotes the current one, and both are audited in one transaction.
   @Post("hotels/:hotelId/contacts")
   @RequirePermission("hotels.hotel_contacts.create")
   @HttpCode(201)
-  @Audited({ entityType: "hotel_contact" })
+  @SelfAudited()
   addContact(
     @ZodParams(hotelParam) params: HotelParam,
     @ZodBody(hotelContactCreateRequest) body: HotelContactCreateRequest,
     @CurrentPrincipal() principal: Principal,
   ): Promise<HotelContactView> {
-    return this.subresources.addContact(params.hotelId, body, staffId(principal));
+    return this.subresources.addContact(params.hotelId, body, principal);
   }
 
   @Patch("hotels/:hotelId/contacts/:contactId")

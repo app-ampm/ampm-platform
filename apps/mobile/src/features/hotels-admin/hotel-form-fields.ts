@@ -1,10 +1,12 @@
-import { hotelListEntries } from "@ampm/core";
+import { FACILITY_LABEL_MAX_LENGTH, FACILITY_LABELS_MAX, hotelListEntries } from "@ampm/core";
+import type { ToastOptions } from "@ampm/ui";
 
 /*
  * Shared pure helpers for the hotel-admin forms (profile, rooms, venues, contacts): the editors hold
  * text as strings and parse on submit, so these convert between the view's typed fields and the draft's
- * strings, and build the request values (trimmed text or null, parsed numbers, the rooms' and venues'
- * comma-separated facility lists, the profile's one-per-line lists, a yes / no / not known answer). No
+ * strings, and build the request values (trimmed text or null, parsed numbers, one-per-line lists read
+ * by the import's list rule, a yes / no / not known answer, the room, venue and contact sheets' text
+ * without the null character), an update's changed part, and the toast of a save the checks blocked. No
  * rendering, no I/O — tested through the form modules that use them and in hotel-form-fields.test.ts.
  */
 
@@ -14,6 +16,21 @@ export const LONG_TEXT_MAX = 10_000;
 export function textOrNull(value: string): string | null {
   const trimmed = value.trim();
   return trimmed === "" ? null : trimmed;
+}
+
+const NUL = "\u0000";
+
+/**
+ * Text as the room, venue and contact sheets check and send it: without the null character (U+0000),
+ * which text pasted from a PDF can carry and no database text column stores. Core refuses it
+ * (`NUL_TEXT_MESSAGE`) and the import keeps refusing a file with one, but a sheet's save would fail over
+ * a character no one can see to remove, so the sheets drop it. A text of nothing else is then empty.
+ *
+ * @example
+ * withoutNul("Seated 300\u0000"); // "Seated 300"
+ */
+export function withoutNul(value: string): string {
+  return value.split(NUL).join("");
 }
 
 /** The number typed, or null when blank; call it once the entry has passed its check. */
@@ -68,20 +85,6 @@ export function numberRuleError(value: string, rule: NumberRule): string | undef
   return number < rule.min || number > rule.max ? rule.message : undefined;
 }
 
-/** A facility list as the "wifi, pool, spa" text the form shows. */
-export function facilitiesToText(facilities: readonly string[] | null): string {
-  return facilities ? facilities.join(", ") : "";
-}
-
-/** Split the "wifi, pool, spa" text into the trimmed, non-empty facility array the API takes (null if none). */
-export function textToFacilities(value: string): string[] | null {
-  const items = value
-    .split(",")
-    .map((item) => item.trim())
-    .filter((item) => item.length > 0);
-  return items.length === 0 ? null : items;
-}
-
 /** A list as the one-entry-per-line text a multiline field shows. */
 export function listToLines(list: readonly string[] | null): string {
   return list ? list.join("\n") : "";
@@ -99,6 +102,26 @@ export function listToLines(list: readonly string[] | null): string {
 export function linesToList(value: string): string[] | null {
   const items = hotelListEntries(value);
   return items.length === 0 ? null : items;
+}
+
+/**
+ * Why a room's or venue's one-per-line facilities cannot be saved, or undefined when they can: the
+ * contract takes at most 100 entries of at most 120 characters (core `facilityLabels`), and refuses an
+ * entry holding the null character, which the sheet drops before it checks and sends them (`withoutNul`).
+ * A comma stays inside its entry, so a comma list pasted on one line is one long facility, and the
+ * message says to put each on its own line.
+ *
+ * @example
+ * facilitiesError("Pool, spa, gym, …"); // over 120 characters: "Each facility is at most 120 characters; …"
+ */
+export function facilitiesError(value: string): string | undefined {
+  const entries = linesToList(withoutNul(value)) ?? [];
+  if (entries.length > FACILITY_LABELS_MAX) {
+    return `Keep to ${FACILITY_LABELS_MAX} facilities, one per line`;
+  }
+  return entries.some((entry) => entry.length > FACILITY_LABEL_MAX_LENGTH)
+    ? `Each facility is at most ${FACILITY_LABEL_MAX_LENGTH} characters; put each one on its own line`
+    : undefined;
 }
 
 /** A yes / no fact the hotel may not have given yet: "unknown" is null, never false. */
@@ -119,4 +142,44 @@ export function booleanFromTriState(state: TriState): boolean | null {
 
 export function hasErrors(errors: Readonly<Record<string, string | undefined>>): boolean {
   return Object.values(errors).some((error) => error !== undefined);
+}
+
+/** Whether two body values are the same: a list or an object by its entries, anything else as it is. */
+function sameBodyValue(a: unknown, b: unknown): boolean {
+  if (typeof a === "object" && a !== null && typeof b === "object" && b !== null) {
+    // Both bodies come from one builder, so their keys are in the same order.
+    return JSON.stringify(a) === JSON.stringify(b);
+  }
+  return a === b;
+}
+
+/**
+ * The entries of `next` whose value differs from `opened`'s: an update's body, both built from drafts
+ * the same way, so formatting never counts as a change and a save never writes back a value it did not
+ * touch, which an import or another editor may have changed meanwhile. Empty when nothing changed.
+ *
+ * @example
+ * changedEntries({ name: "Lawn", capacityBanquet: 250 }, { name: "Lawn", capacityBanquet: 200 }); // { capacityBanquet: 250 }
+ */
+export function changedEntries<T extends object>(next: T, opened: T): Partial<T> {
+  const changed: Partial<T> = {};
+  for (const key in next) {
+    if (!sameBodyValue(next[key], opened[key])) changed[key] = next[key];
+  }
+  return changed;
+}
+
+/**
+ * The toast for a save the checks blocked: it names the first field to fix, by its label, and why, since
+ * the field may sit in a panel out of sight. The toast carries its own live region.
+ *
+ * @example
+ * blockedSaveToastFor("Max occupancy", "Max occupancy is a whole number from 1 to 100");
+ */
+export function blockedSaveToastFor(label: string, message: string): ToastOptions {
+  return {
+    title: "Check the highlighted fields",
+    description: `${label}: ${message}`,
+    tone: "danger",
+  };
 }

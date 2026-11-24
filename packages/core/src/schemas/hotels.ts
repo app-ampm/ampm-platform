@@ -139,7 +139,12 @@ export const hotelRatesView = z
   .strict();
 export type HotelRatesView = z.infer<typeof hotelRatesView>;
 
-/** Function/event venue kinds (HotelVenueType in the Prisma schema; keep the two in step). */
+/**
+ * Function/event venue kinds (HotelVenueType in the Prisma schema; keep the two in step). A client
+ * contract enum: a new value ships the API and the web bundle back to back. The five fact-sheet kinds
+ * (D-178) come after `other`, in the order PostgreSQL appended them, so a picker orders the kinds itself
+ * (Other last) rather than by `.options`.
+ */
 export const hotelVenueType = z.enum([
   "ballroom",
   "lawn",
@@ -148,6 +153,11 @@ export const hotelVenueType = z.enum([
   "courtyard",
   "beach",
   "other",
+  "terrace",
+  "garden",
+  "amphitheatre",
+  "meeting_room",
+  "lounge",
 ]);
 export type HotelVenueType = z.infer<typeof hotelVenueType>;
 

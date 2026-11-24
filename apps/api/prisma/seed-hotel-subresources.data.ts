@@ -1,24 +1,20 @@
-/*
- * Module C demo depth (data.md: synthetic only) — the venues, room categories and rate items for the four
- * seeded hotels. Every rate card is VERIFIED with client-visible items (the only way a price reaches a
- * client; AC-04), every item is indicative and never an internal cost (security.md), and each hotel keeps a
- * `room_rate` so the B11 card always shows a per-night range. Data only; the seed logic is in the sibling file.
- */
+import type { HotelRoomUnitType } from "@ampm/core";
 
-export type VenueSeed = {
-  name: string;
-  venueType: "ballroom" | "lawn" | "poolside" | "rooftop" | "courtyard" | "beach" | "other";
-  isIndoor: boolean;
-  areaSqm: number;
-  capacityBanquet: number;
-  capacityReception: number;
-  capacityTheatre: number;
-  facilities: string[];
-  description: string;
-};
+import { SEED_VENUES, type VenueSeed } from "./seed-hotel-subresources.venues.js";
+
+/*
+ * Module C demo depth (data.md: synthetic only) — the room categories and rate items for the four seeded
+ * hotels; their venues are in seed-hotel-subresources.venues.ts. Every rate card is VERIFIED with
+ * client-visible items (the only way a price reaches a client; AC-04), every item is indicative and never
+ * an internal cost (security.md), and each hotel keeps a `room_rate` so the B11 card always shows a
+ * per-night range. A few rooms state their unit type (D-178). Data only; the seed logic is in the sibling
+ * file.
+ */
 
 export type RoomSeed = {
   name: string;
+  /** What the category is (D-178); left out where a fact sheet would not say. */
+  unitType?: HotelRoomUnitType;
   roomCount: number;
   maxOccupancy: number;
   sizeSqm: number;
@@ -49,33 +45,11 @@ export const RATES_VERIFIED_AT = new Date("2026-11-02T06:30:00.000Z");
 export const SUBRESOURCES: readonly HotelSubresources[] = [
   {
     slug: "lake-pavilion-udaipur",
-    venues: [
-      {
-        name: "The Pichola Ballroom",
-        venueType: "ballroom",
-        isIndoor: true,
-        areaSqm: 900,
-        capacityBanquet: 350,
-        capacityReception: 600,
-        capacityTheatre: 450,
-        facilities: ["Stage", "Dance floor", "Air conditioning"],
-        description: "A pillarless lakeside ballroom overlooking Lake Pichola.",
-      },
-      {
-        name: "Courtyard Lawn",
-        venueType: "lawn",
-        isIndoor: false,
-        areaSqm: 1400,
-        capacityBanquet: 500,
-        capacityReception: 800,
-        capacityTheatre: 600,
-        facilities: ["Open-air mandap", "Power backup", "Valet parking"],
-        description: "A walled heritage lawn for pheras and evening receptions.",
-      },
-    ],
+    venues: SEED_VENUES["lake-pavilion-udaipur"],
     rooms: [
       {
         name: "Lake-View Suite",
+        unitType: "suite",
         roomCount: 24,
         maxOccupancy: 3,
         sizeSqm: 65,
@@ -111,30 +85,7 @@ export const SUBRESOURCES: readonly HotelSubresources[] = [
   },
   {
     slug: "aravalli-retreat-udaipur",
-    venues: [
-      {
-        name: "Aravalli Lawn",
-        venueType: "lawn",
-        isIndoor: false,
-        areaSqm: 700,
-        capacityBanquet: 200,
-        capacityReception: 350,
-        capacityTheatre: 260,
-        facilities: ["Open-air mandap", "Power backup"],
-        description: "A terraced garden lawn set against the Aravalli hills.",
-      },
-      {
-        name: "Terrace Deck",
-        venueType: "rooftop",
-        isIndoor: false,
-        areaSqm: 300,
-        capacityBanquet: 120,
-        capacityReception: 200,
-        capacityTheatre: 150,
-        facilities: ["Sunset view", "Bar counter"],
-        description: "An intimate rooftop for sangeet and cocktail evenings.",
-      },
-    ],
+    venues: SEED_VENUES["aravalli-retreat-udaipur"],
     rooms: [
       {
         name: "Hill-View Room",
@@ -146,6 +97,7 @@ export const SUBRESOURCES: readonly HotelSubresources[] = [
       },
       {
         name: "Garden Suite",
+        unitType: "suite",
         roomCount: 12,
         maxOccupancy: 3,
         sizeSqm: 55,
@@ -173,33 +125,11 @@ export const SUBRESOURCES: readonly HotelSubresources[] = [
   },
   {
     slug: "rose-fort-jaipur",
-    venues: [
-      {
-        name: "Sheesh Mahal Ballroom",
-        venueType: "ballroom",
-        isIndoor: true,
-        areaSqm: 1100,
-        capacityBanquet: 400,
-        capacityReception: 700,
-        capacityTheatre: 520,
-        facilities: ["Mirror-work hall", "Stage", "Air conditioning"],
-        description: "A restored mirror-work hall for grand indoor functions.",
-      },
-      {
-        name: "Mughal Garden Lawn",
-        venueType: "lawn",
-        isIndoor: false,
-        areaSqm: 2000,
-        capacityBanquet: 700,
-        capacityReception: 1100,
-        capacityTheatre: 850,
-        facilities: ["Char-bagh layout", "Fountain", "Valet parking"],
-        description: "A formal Mughal-style garden for large baraats and receptions.",
-      },
-    ],
+    venues: SEED_VENUES["rose-fort-jaipur"],
     rooms: [
       {
         name: "Palace Suite",
+        unitType: "suite",
         roomCount: 30,
         maxOccupancy: 3,
         sizeSqm: 70,
@@ -235,30 +165,7 @@ export const SUBRESOURCES: readonly HotelSubresources[] = [
   },
   {
     slug: "candolim-sands-goa",
-    venues: [
-      {
-        name: "Beachfront Deck",
-        venueType: "beach",
-        isIndoor: false,
-        areaSqm: 1000,
-        capacityBanquet: 250,
-        capacityReception: 500,
-        capacityTheatre: 350,
-        facilities: ["Sea-facing stage", "Sand setup", "Power backup"],
-        description: "A beachfront deck for sunset pheras and receptions.",
-      },
-      {
-        name: "Sunset Lawn",
-        venueType: "lawn",
-        isIndoor: false,
-        areaSqm: 1200,
-        capacityBanquet: 300,
-        capacityReception: 550,
-        capacityTheatre: 420,
-        facilities: ["Open-air mandap", "Bar counter", "Valet parking"],
-        description: "A palm-lined lawn a step back from the beach.",
-      },
-    ],
+    venues: SEED_VENUES["candolim-sands-goa"],
     rooms: [
       {
         name: "Sea-View Room",
@@ -270,6 +177,7 @@ export const SUBRESOURCES: readonly HotelSubresources[] = [
       },
       {
         name: "Beach Villa",
+        unitType: "villa",
         roomCount: 20,
         maxOccupancy: 4,
         sizeSqm: 90,

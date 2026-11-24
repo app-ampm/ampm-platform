@@ -167,7 +167,7 @@ export function hotelProfileDetailFixture(
   return { ...profile, ...overrides };
 }
 
-/** A room category as the staff hotel detail nests it. */
+/** A room category as the staff hotel detail nests it; its D-178 fields not given yet. */
 export function roomCategoryViewFixture(
   overrides: Partial<RoomCategoryView> = {},
 ): RoomCategoryView {
@@ -180,11 +180,15 @@ export function roomCategoryViewFixture(
     sizeSqm: 45,
     facilities: ["wifi", "minibar"],
     description: null,
+    unitType: null,
+    viewLabel: null,
+    bedConfiguration: null,
+    sizeSqft: null,
     ...overrides,
   };
 }
 
-/** A venue as the staff hotel detail nests it. */
+/** A venue as the staff hotel detail nests it: indoor, its other D-178 fields not given yet. */
 export function venueViewFixture(overrides: Partial<VenueView> = {}): VenueView {
   return {
     id: VENUE_ID,
@@ -198,11 +202,20 @@ export function venueViewFixture(overrides: Partial<VenueView> = {}): VenueView 
     capacityReception: 500,
     facilities: ["stage", "AV"],
     description: null,
+    setting: "indoor",
+    areaSqft: null,
+    lengthM: null,
+    widthM: null,
+    ceilingHeightM: null,
+    prefunctionAreaSqm: null,
+    prefunctionAreaSqft: null,
+    otherLayouts: null,
+    capacityNotes: null,
     ...overrides,
   };
 }
 
-/** A hotel contact as the staff hotel detail nests it (RESTRICTED-CONTACT). */
+/** A hotel contact as the staff hotel detail nests it (RESTRICTED-CONTACT), its phone in E.164. */
 export function hotelContactViewFixture(
   overrides: Partial<HotelContactView> = {},
 ): HotelContactView {
@@ -211,7 +224,7 @@ export function hotelContactViewFixture(
     hotelId: HOTEL_ID,
     name: "Priya Sharma",
     roleTitle: "Events Manager",
-    phone: "+91 98765 43210",
+    phone: "+911234567801",
     email: "priya@lakeside.example",
     isPrimary: true,
     ...overrides,

@@ -133,7 +133,8 @@ describe("hotel profile form", () => {
     });
 
     it("checks the event space as whole numbers within the contract's bounds", () => {
-      expect(validateDraft({ ...valid, totalEventSpaceSqm: "12.5" }).totalEventSpaceSqm).toBe(
+      const typedSqm = { ...valid, totalEventSpaceSqm: "12.5", totalEventSpaceSqft: "" };
+      expect(validateDraft(typedSqm).totalEventSpaceSqm).toBe(
         "Event space in m² is a whole number, up to 1,000,000",
       );
       expect(

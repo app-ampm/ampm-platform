@@ -1,58 +1,74 @@
-import { useEffect, useState } from "react";
+import type { HotelContactView } from "@ampm/core";
+import { Button, Input, Sheet, Stack, Toggle } from "@ampm/ui";
 
-import { useCreateContact, useUpdateContact } from "@ampm/api-client";
-import { isAppError, type HotelContactView } from "@ampm/core";
-import { Button, Input, Sheet, Stack, Toggle, useToast } from "@ampm/ui";
-
-import { hasErrors } from "./hotel-form-fields";
+import { phoneHint } from "./contacts.form";
 import { InternalHint } from "./subresource-section";
-import {
-  buildContactBody,
-  draftFromContact,
-  validateContact,
-  type ContactDraft,
-  type ContactErrors,
-} from "./subresources.form";
+import { useContactForm, type ContactForm } from "./use-contact-form";
 
-const NO_ERRORS: ContactErrors = { name: undefined, email: undefined };
+/** The longest name, role, phone or email the contract takes. */
+const TEXT_MAX = 255;
 
-/** The contact create/edit form's state, validation and submission. */
-function useContactForm(
-  hotelId: string,
-  open: boolean,
-  contact: HotelContactView | null,
-  onClose: () => void,
-) {
-  const toast = useToast();
-  const create = useCreateContact(hotelId);
-  const update = useUpdateContact(hotelId);
-  const [draft, setDraft] = useState<ContactDraft>(() => draftFromContact(contact));
-  const [showErrors, setShowErrors] = useState(false);
-  useEffect(() => {
-    if (open) {
-      setDraft(draftFromContact(contact));
-      setShowErrors(false);
-    }
-  }, [open, contact]);
-  const pending = create.isPending || update.isPending;
-  const onError = (error: unknown): void =>
-    void toast.show({
-      title: isAppError(error) ? error.message : "Could not save the contact",
-      tone: "danger",
-    });
-  const onSuccess = (): void => {
-    toast.show({ title: contact ? "Contact updated" : "Contact added", tone: "success" });
-    onClose();
-  };
-  const patch = (next: Partial<ContactDraft>): void => setDraft((prev) => ({ ...prev, ...next }));
-  const submit = (): void => {
-    if (pending) return;
-    if (hasErrors(validateContact(draft))) return setShowErrors(true);
-    const body = buildContactBody(draft);
-    if (contact) update.mutate({ contactId: contact.id, body }, { onSuccess, onError });
-    else create.mutate(body, { onSuccess, onError });
-  };
-  return { draft, patch, errors: showErrors ? validateContact(draft) : NO_ERRORS, pending, submit };
+/** The phone, with the form a save keeps it in under it (E.164) or why it is refused, and the email. */
+function ReachFields({ draft, patch, errors, phone }: ContactForm) {
+  return (
+    <>
+      <Input
+        label="Phone"
+        value={draft.phone}
+        onChangeText={(value) => patch({ phone: value })}
+        helpText={phoneHint(phone)}
+        errorText={errors.phone}
+        keyboardType="phone-pad"
+        maxLength={TEXT_MAX}
+        testID="contact-phone"
+      />
+      <Input
+        label="Email"
+        value={draft.email}
+        onChangeText={(email) => patch({ email })}
+        keyboardType="email-address"
+        autoCapitalize="none"
+        errorText={errors.email}
+        maxLength={TEXT_MAX}
+        testID="contact-email"
+      />
+    </>
+  );
+}
+
+/** The contact's fields, under the reminder that they never reach a client. */
+function ContactFields(form: ContactForm) {
+  const { draft, patch, errors } = form;
+  return (
+    <Stack gap={4}>
+      <InternalHint text="Never shown to clients" testID="contact-edit-internal" />
+      <Input
+        label="Name"
+        required
+        value={draft.name}
+        onChangeText={(name) => patch({ name })}
+        errorText={errors.name}
+        maxLength={TEXT_MAX}
+        testID="contact-name"
+      />
+      <Input
+        label="Role / title"
+        value={draft.roleTitle}
+        onChangeText={(roleTitle) => patch({ roleTitle })}
+        maxLength={TEXT_MAX}
+        placeholder="e.g. Events Manager"
+        testID="contact-role"
+      />
+      <ReachFields {...form} />
+      <Toggle
+        label="Primary contact"
+        description="Making this the primary contact replaces the current one"
+        value={draft.isPrimary}
+        onValueChange={(isPrimary) => patch({ isPrimary })}
+        testID="contact-primary"
+      />
+    </Stack>
+  );
 }
 
 export interface ContactEditSheetProps {
@@ -64,11 +80,14 @@ export interface ContactEditSheetProps {
 }
 
 /**
- * Add or edit a hotel contact (RESTRICTED-CONTACT — never shown to clients). Name, role, phone, email
- * and whether it is the primary contact. Hotel team / Super Admin only, gated server-side.
+ * Add or edit a hotel contact (RESTRICTED-CONTACT — never shown to clients): name, role, phone, email
+ * and whether it is the hotel's primary contact. The phone is saved in E.164, previewed as it is typed;
+ * making a contact primary replaces the current one. Hotel team / Super Admin only, gated server-side.
+ *
+ *   <ContactEditSheet hotelId={hotelId} open={open} contact={editing} onClose={close} />
  */
 export function ContactEditSheet({ hotelId, open, contact, onClose }: ContactEditSheetProps) {
-  const { draft, patch, errors, pending, submit } = useContactForm(hotelId, open, contact, onClose);
+  const form = useContactForm(hotelId, open, contact, onClose);
   return (
     <Sheet
       open={open}
@@ -77,51 +96,12 @@ export function ContactEditSheet({ hotelId, open, contact, onClose }: ContactEdi
       size="full"
       testID="contact-edit"
       footer={
-        <Button fullWidth loading={pending} onPress={submit} testID="contact-edit-submit">
+        <Button fullWidth loading={form.pending} onPress={form.submit} testID="contact-edit-submit">
           {contact ? "Save changes" : "Add contact"}
         </Button>
       }
     >
-      <Stack gap={4}>
-        <InternalHint text="Never shown to clients" testID="contact-edit-internal" />
-        <Input
-          label="Name"
-          required
-          value={draft.name}
-          onChangeText={(name) => patch({ name })}
-          errorText={errors.name}
-          testID="contact-name"
-        />
-        <Input
-          label="Role / title"
-          value={draft.roleTitle}
-          onChangeText={(roleTitle) => patch({ roleTitle })}
-          placeholder="e.g. Events Manager"
-          testID="contact-role"
-        />
-        <Input
-          label="Phone"
-          value={draft.phone}
-          onChangeText={(phone) => patch({ phone })}
-          keyboardType="phone-pad"
-          testID="contact-phone"
-        />
-        <Input
-          label="Email"
-          value={draft.email}
-          onChangeText={(email) => patch({ email })}
-          keyboardType="email-address"
-          autoCapitalize="none"
-          errorText={errors.email}
-          testID="contact-email"
-        />
-        <Toggle
-          label="Primary contact"
-          value={draft.isPrimary}
-          onValueChange={(isPrimary) => patch({ isPrimary })}
-          testID="contact-primary"
-        />
-      </Stack>
+      <ContactFields {...form} />
     </Sheet>
   );
 }

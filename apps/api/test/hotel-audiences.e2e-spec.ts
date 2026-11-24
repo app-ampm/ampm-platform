@@ -4,6 +4,7 @@ import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { PrismaService } from "../src/db/prisma.service.js";
+import { importCalls } from "./hotel-import-calls.js";
 import { startApi } from "./start-api.js";
 
 /** Fixture hotels and the destination carry this slug prefix, so the suite cleans up after itself. */
@@ -260,12 +261,8 @@ describe("Staff hotel audiences (e2e)", () => {
       `${PREFIX}dest,E2E Audience Imported,${PREFIX}imported,`,
       `${PREFIX}dest,E2E Audience Noted,${PREFIX}noted,Not theirs to write`,
     ].join("\n");
-    const res = await http()
-      .post("/hotels-admin/imports/hotels")
-      .set("Authorization", await bearer(CONTACTS_EDITOR.subject))
-      .set("Content-Type", "text/csv")
-      .send(csv)
-      .expect(200);
+    const editor = await bearer(CONTACTS_EDITOR.subject);
+    const res = await importCalls(app).previewAndApply(editor, "hotels", csv);
     expect(res.body.data).toMatchObject({
       created: 1,
       rejected: [{ line: 3, errors: [{ field: "internalNotes" }] }],
@@ -279,20 +276,17 @@ describe("Staff hotel audiences (e2e)", () => {
       `${PREFIX}elsewhere,E2E Audience Elsewhere,${PREFIX}elsewhere,`,
       `${PREFIX}dest,E2E Audience Pictured,${PREFIX}pictured,https://img.example/pictured.jpg`,
     ].join("\n");
-    const res = await http()
-      .post("/hotels-admin/imports/hotels")
-      .set("Authorization", await bearer(CONTACTS_EDITOR.subject))
-      .set("Content-Type", "text/csv")
-      .send(csv)
-      .expect(200);
+    const editor = await bearer(CONTACTS_EDITOR.subject);
+    const res = await importCalls(app).preview(editor, "hotels", csv, "text/csv").expect(200);
     expect(res.body.data).toMatchObject({
-      applied: false,
       created: 0,
       rejected: [
         { line: 2, errors: [{ field: "destinationSlug" }] },
         { line: 3, errors: [{ field: "imageRef" }] },
       ],
     });
+    // With no row it may import, the preview keeps no plan: importing it is refused.
+    await importCalls(app).apply(editor, "hotels", res.body.data.importJobId).expect(409);
     expect(await prisma.destination.count({ where: { slug: `${PREFIX}elsewhere` } })).toBe(0);
     const slugs = [`${PREFIX}elsewhere`, `${PREFIX}pictured`];
     expect(await prisma.hotel.count({ where: { slug: { in: slugs } } })).toBe(0);

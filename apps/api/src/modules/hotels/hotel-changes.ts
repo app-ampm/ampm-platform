@@ -47,6 +47,19 @@ export function columnUnits(value: number, scale: number): bigint | null {
 }
 
 /**
+ * A number as a numeric(p, scale) column stores it: rounded half away from zero from its decimal form
+ * (`columnUnits`), so a value carrying a binary double's noise reads as what the column will hold.
+ *
+ * @example
+ * atScale(30.000000000000004, 2); // 30
+ * atScale(12.350000001, 2); // 12.35
+ */
+export function atScale(value: number, scale: number): number {
+  const units = columnUnits(value, scale);
+  return units === null ? value : Number(units) / 10 ** scale;
+}
+
+/**
  * Whether a value holds what is stored, compared as the column keeps it.
  *
  * @example

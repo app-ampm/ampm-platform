@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import {
   errors,
+  HOTEL_AREA_PAIRS,
   HOTEL_CUISINE_OTHER,
   type DestinationCreateRequest,
   type DestinationList,
@@ -18,6 +19,7 @@ import {
 import { AuditService } from "../../policy/audit.service.js";
 import { type Principal, staffId } from "../../policy/principal.types.js";
 import { ConfigService } from "../admin/config/config.service.js";
+import { settleAreas } from "./hotel-areas.js";
 import { hotelAudienceOf, requireNotesWrite } from "./hotel-audience.js";
 import { changedRequestFields, type StoredHotelValues } from "./hotel-changes.js";
 import { auditImageOf } from "./hotel-import.audit.js";
@@ -49,8 +51,9 @@ import {
  * The staff hotel catalogue (feature 9.1). Reads are gated by the `hotels.*` read keys and writes by the
  * matching create/update/delete keys on the controller; this layer holds the rules — slug resolution and
  * uniqueness, the destination must exist, the internal rating and notes are written only on their own
- * key, a postal code fits its destination's country and a cuisine is one the configuration offers (D-178)
- * — answers every hotel in the model of the caller's audience (D-171), and records the update/delete
+ * key, a postal code fits its destination's country, a cuisine is one the configuration offers and the
+ * total event space follows the units rule (D-178) — answers every hotel in the model of the caller's
+ * audience (D-171), and records the update/delete
  * audit (create is audited by the interceptor through `@Audited`). The import is `HotelImportService`.
  */
 @Injectable()
@@ -81,7 +84,8 @@ export class HotelsAdminService {
   async create(request: HotelCreateRequest, principal: Principal): Promise<HotelStaffDetail> {
     requireNotesWrite(principal, request.internalRating != null || request.internalNotes != null);
     const destination = await this.requireDestination(request.destinationId);
-    const fields = await this.checkProfile(request, async () => destination.country, NEW_HOTEL);
+    const checked = await this.checkProfile(request, async () => destination.country, NEW_HOTEL);
+    const fields = settleAreas(checked, HOTEL_AREA_PAIRS, null);
     const slug = request.slug ?? slugify(request.name);
     if (await this.repo.slugExists(slug)) {
       throw errors.conflict(`A hotel with the slug "${slug}" already exists`);
@@ -110,7 +114,12 @@ export class HotelsAdminService {
       principal,
       request.internalRating !== undefined || request.internalNotes !== undefined,
     );
-    const checked = await this.checkUpdate(request, current);
+    // The units rule (D-178): a filled sq ft stores its derived m², an m² alone clears a stored sq ft.
+    const checked = settleAreas(
+      await this.checkUpdate(request, current),
+      HOTEL_AREA_PAIRS,
+      current,
+    );
     await this.repo.transaction(async (tx) => {
       await this.repo.updateHotel(hotelId, toHotelUpdatePatch(checked), actorId, tx);
       await this.audit.record(

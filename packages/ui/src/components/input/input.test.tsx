@@ -3,6 +3,7 @@ import { colors } from "@ampm/tokens";
 import { spyOnAnnounce } from "../../test/announce";
 import { classes, fireEvent, renderWithProviders, screen } from "../../test/render";
 import { Input } from "./input";
+import { requiredLabel } from "./input.parts";
 import { fieldStyles, fieldTextStyles } from "./input.styles";
 
 /** The frame around the field's text input: its parent view. */
@@ -34,6 +35,11 @@ describe("Input", () => {
       "aria-hidden",
       true,
     );
+  });
+
+  it("words a required name for a screen reader, which controls outside the kit reuse", () => {
+    expect(requiredLabel("Setting", true)).toBe("Setting, required");
+    expect(requiredLabel("Unit type", false)).toBe("Unit type");
   });
 
   it("names an optional field by its label alone", async () => {

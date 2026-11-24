@@ -1,5 +1,11 @@
-import { HOTEL_IMPORT_COLUMNS, type HotelImportColumn, type HotelImportRow } from "@ampm/core";
+import {
+  HOTEL_AREA_PAIRS,
+  HOTEL_IMPORT_COLUMNS,
+  type HotelImportColumn,
+  type HotelImportRow,
+} from "@ampm/core";
 
+import { settleAreas } from "./hotel-areas.js";
 import { sameValue } from "./hotel-changes.js";
 import type { ImportRow } from "./hotel-import.file.js";
 import { slugify } from "./hotel-import.js";
@@ -19,7 +25,9 @@ import { HOTEL_PROFILE_KEYS, type HotelProfileKey } from "./hotel-write.js";
  * otherwise it updates only the cells that are filled and differ from what is stored, compared at the
  * column's precision; nothing else changes, so a blank never clears and status and the flags move only
  * when their cell says so. A row moves its hotel to another destination only when its slug cell names
- * the hotel: a web address made from a name may be another property's of the same name elsewhere. A row
+ * the hotel: a web address made from a name may be another property's of the same name elsewhere. The
+ * total event space follows the units rule (core `areaWrite`, D-178): a filled sq ft gives its m², and an m²
+ * filled alone on a hotel that stores sq ft clears that sq ft, both then named changed. A row
  * is refused when its web address belongs to a deleted hotel or appears earlier in the file, its
  * destination was deleted, its postal code (or, on a move, the one the hotel keeps) or cuisines break the
  * profile rules, or it does what the uploader's keys do not allow: change an existing hotel, set the
@@ -82,6 +90,7 @@ export type RowPlan =
       readonly outcome: "error";
       readonly line: number;
       readonly slug: string | null;
+      readonly name: string | null;
       readonly errors: readonly FieldError[];
     }
   | {
@@ -134,7 +143,10 @@ const NOT_STORED = new Set<HotelImportColumn>(["slug", "destinationName", "image
  * @example
  * const plans = planImport(file.rows, context);
  */
-export function planImport(rows: readonly ImportRow[], context: ImportContext): RowPlan[] {
+export function planImport(
+  rows: readonly ImportRow<HotelImportRow>[],
+  context: ImportContext,
+): RowPlan[] {
   const firstLine = new Map<string, number>();
   return rows.map(({ line, row }) => {
     const slug = importSlug(row);
@@ -159,12 +171,14 @@ function planRow(
   const target = context.hotels.get(slug) ?? null;
   const filing = target?.deletedAt === null ? target.filing : null;
   const { row, errors } = checkRow(input, slug, earlierLine, { target, filing }, context);
-  if (errors.length > 0) return { outcome: "error", line, slug: slug || null, errors };
+  const name = input.name;
+  if (errors.length > 0) return { outcome: "error", line, slug: slug || null, name, errors };
   if (target === null) {
     return { outcome: "create", line, slug, row, changedFields: filledColumns(row) };
   }
   if (filing === null) {
-    return { outcome: "error", line, slug, errors: [{ field: "slug", message: READ_REFUSED }] };
+    const errors = [{ field: "slug", message: READ_REFUSED }];
+    return { outcome: "error", line, slug, name, errors };
   }
   return planExisting(line, slug, row, { target, filing }, context.canUpdate);
 }
@@ -202,7 +216,7 @@ function planExisting(
   const movesDestination = movedFrom(row, filing) !== null;
   const writes = changed.length > 0 || movesDestination;
   const refusal = canUpdate ? null : updateRefusal(writes, row.imageRef !== undefined);
-  if (refusal) return { outcome: "error", line, slug, errors: [refusal] };
+  if (refusal) return { outcome: "error", line, slug, name: row.name, errors: [refusal] };
   if (!writes) return { outcome: "unchanged", line, slug, hotelId: target.id, row };
   const changedFields: HotelImportColumn[] = movesDestination
     ? ["destinationSlug", ...changed]
@@ -241,7 +255,12 @@ function checkRow(
   ];
   const postal = postalCheck(input, destination, filing);
   const cuisines = cuisineCheck(input, target, context.cuisineOptions);
-  const row = { ...input, ...postal.value, ...cuisines.value };
+  const stored = filing === null ? null : (target?.values ?? null);
+  const row = settleAreas(
+    { ...input, ...postal.value, ...cuisines.value },
+    HOTEL_AREA_PAIRS,
+    stored,
+  );
   return { row, errors: [...errors, ...postal.errors, ...cuisines.errors] };
 }
 

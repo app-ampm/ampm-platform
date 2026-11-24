@@ -3,6 +3,7 @@ import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { PrismaService } from "../src/db/prisma.service.js";
+import { importCalls } from "./hotel-import-calls.js";
 import { startApi } from "./start-api.js";
 
 /** Imported fixtures all carry this slug prefix so the suite cleans up after itself. */
@@ -20,11 +21,11 @@ const CSV = [
 
 /**
  * Hotel spreadsheet import end to end (Module C, feature 9.1; AC-35.1; D-181). A Super Admin uploads the
- * raw CSV to `POST /hotels-admin/imports/hotels`; a dry run writes nothing and reports what applying would
- * do; a real run creates the valid hotels (and their destination) with the invalid row reported by line
- * and field; a re-run of the same file changes nothing and says so; the staff detail carries the
- * RESTRICTED internal fields the client view hides. The safe-import rules have their own suite
- * (hotel-import.e2e-spec.ts).
+ * raw CSV to `POST /hotels-admin/imports/hotels`; the preview writes nothing and reports what importing
+ * would do; importing that preview by its job id creates the valid hotels (and their destination) with the
+ * invalid row reported by line and field; previewing and importing the same file again changes nothing
+ * and says so; the staff detail carries the RESTRICTED internal fields the client view hides. The
+ * safe-import rules have their own suites (hotel-import.e2e-spec.ts, hotel-import-apply.e2e-spec.ts).
  */
 describe("Hotel import (e2e)", () => {
   let app: NestExpressApplication;
@@ -77,16 +78,13 @@ describe("Hotel import (e2e)", () => {
   const http = () => request(app.getHttpServer());
   const sa = async () => `Bearer ${await mint("local:admin")}`;
   const countImported = () => prisma.hotel.count({ where: { slug: { startsWith: PREFIX } } });
-  const upload = (authorization: string, csv: string, dryRun = false) =>
-    http()
-      .post("/hotels-admin/imports/hotels")
-      .query({ dryRun: String(dryRun) })
-      .set("Authorization", authorization)
-      .set("Content-Type", "text/csv")
-      .send(csv);
+  const importFile = async (csv: string) =>
+    importCalls(app).previewAndApply(await sa(), "hotels", csv);
 
-  it("dry-run validates and reports what applying would do, without writing anything", async () => {
-    const res = await upload(await sa(), CSV, true).expect(200);
+  it("previews and reports what importing would do, without writing anything", async () => {
+    const res = await importCalls(app)
+      .preview(await sa(), "hotels", CSV, "text/csv")
+      .expect(200);
     expect(res.body.data).toMatchObject({
       dryRun: true,
       applied: false,
@@ -95,7 +93,7 @@ describe("Hotel import (e2e)", () => {
       updated: 0,
       unchanged: 0,
       destinationsCreated: 1,
-      mediaRegistered: 0, // a dry run writes nothing, media included
+      mediaRegistered: 2, // what importing would register: both valid rows carry an imageRef
     });
     expect(res.body.data.rows.map((row: { outcome: string }) => row.outcome)).toEqual([
       "create",
@@ -117,8 +115,8 @@ describe("Hotel import (e2e)", () => {
     expect(mediaAfter).toBe(0);
   });
 
-  it("applies the valid rows and reports the invalid one (AC-35.1)", async () => {
-    const res = await upload(await sa(), CSV).expect(200);
+  it("imports the preview's valid rows by its job id and reports the invalid one (AC-35.1)", async () => {
+    const res = await importFile(CSV);
     expect(res.body.data).toMatchObject({
       dryRun: false,
       applied: true,
@@ -189,8 +187,13 @@ describe("Hotel import (e2e)", () => {
     expect(res.body.data.venues).toEqual([]);
   });
 
-  it("is idempotent — re-running the same file writes nothing (applied: false), and the job still applied", async () => {
-    const res = await upload(await sa(), CSV).expect(200);
+  it("is idempotent — importing the same file again writes nothing (applied: false), the job still applied", async () => {
+    // Its preview already says so: the rows match and their images are registered (D-181).
+    const preview = await importCalls(app)
+      .preview(await sa(), "hotels", CSV)
+      .expect(200);
+    expect(preview.body.data).toMatchObject({ created: 0, updated: 0, mediaRegistered: 0 });
+    const res = await importFile(CSV);
     expect(res.body.data).toMatchObject({
       applied: false,
       created: 0,

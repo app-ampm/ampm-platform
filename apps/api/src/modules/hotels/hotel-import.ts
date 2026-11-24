@@ -1,22 +1,25 @@
 import {
-  HOTEL_IMPORT_BOOLEAN_COLUMNS,
-  HOTEL_IMPORT_COLUMNS,
-  HOTEL_IMPORT_LIST_COLUMNS,
-  HOTEL_IMPORT_NUMBER_COLUMNS,
-  HOTEL_IMPORT_REQUIRED_COLUMNS,
+  hotelImportEnumValue,
   hotelListEntries,
+  isNumberRangeCell,
+  parseVenueLayoutsCell,
+  VENUE_CAPACITY_RANGE_MESSAGE,
+  VENUE_LAYOUTS_CELL_MESSAGE,
+  type HotelImportTemplate,
 } from "@ampm/core";
 
 /*
- * Pure helpers for the hotel spreadsheet import (TW-25; AC-35.1; D-181). No Nest, no Prisma, so they test
- * in isolation. `decodeCsv` turns the uploaded bytes into text, refusing anything but UTF-8. `parseCsv` is
- * a small RFC-4180 state machine (quoted fields, escaped `""`, embedded commas and newlines; a record
- * ends at LF, CR or CRLF) that holds memory near the file's size and reads a quote as spreadsheets do:
- * one opens a quoted cell only at the cell's start, and a quoted cell that never closes refuses the file
- * rather than swallow the rows below it. `headerProblems` holds the file to the template's fixed headers.
- * `buildCandidate` turns one row into a typed object ready for `hotelImportRow`: a blank cell is left out,
- * which on an update means "leave this unchanged"; number, true/false and list columns are converted; a
- * value that does not convert falls through as its string, so the schema reports a clear field error.
+ * Pure helpers for the staff spreadsheet import (TW-25; AC-35.1; D-181), for every kind. No Nest, no
+ * Prisma, so they test in isolation. `decodeCsv` turns the uploaded bytes into text, refusing anything but
+ * UTF-8. `parseCsv` is a small RFC-4180 state machine (quoted fields, escaped `""`, embedded commas and
+ * newlines; a record ends at LF, CR or CRLF) that holds memory near the file's size and reads a quote as
+ * spreadsheets do: one opens a quoted cell only at the cell's start, and a quoted cell that never closes
+ * refuses the file rather than swallow the rows below it. `headerProblems` holds the file to its kind's
+ * fixed headers (core `HOTEL_IMPORT_TEMPLATES`). `buildCandidate` turns one row into a typed object ready
+ * for the kind's row schema: a blank cell is left out, which on an update means "leave this unchanged";
+ * number, true/false, list, enum and other-layout cells are converted as the template says; a value that
+ * does not convert falls through as its string, so the schema reports a clear field error, except a
+ * capacity range and an unreadable layouts cell, which are refused on their column with their own words.
  */
 
 /** Why a file that is not UTF-8 text is refused. */
@@ -30,12 +33,18 @@ export const HAS_NUL =
   "The file holds a null character, which text copied from a PDF or a UTF-16 file can carry; remove it, save the file as UTF-8 CSV and upload it again";
 
 /**
- * The uploaded bytes as text: UTF-8 only, its byte-order mark dropped. Null when the bytes are not valid
- * UTF-8 or carry the replacement character, the trace a browser leaves when it reads another encoding as
- * UTF-8 (Excel's plain "CSV" is Windows-1252).
+ * The uploaded bytes as text: UTF-8 only, its byte-order mark dropped, in Unicode's composed form (NFC),
+ * so a name spelt with a combining accent, as text copied from some PDFs arrives, reads as the same name
+ * typed in the staff app. The stored room and venue names are compared in NFC too, and a hotel's slug is
+ * made from its composed name (`slugify`); any other stored value, a hotel's name among them, is compared
+ * as stored, so one stored decomposed that a row fills plans a one-off update that stores it composed.
+ * Null when the bytes are not valid UTF-8 or carry the replacement character, the trace a browser leaves
+ * when it reads another encoding as UTF-8 (Excel's plain "CSV" is Windows-1252). Composing never touches
+ * a comma, a quote or a line break.
  *
  * @example
  * decodeCsv(new TextEncoder().encode("\uFEFFdestinationSlug,name")); // "destinationSlug,name"
+ * decodeCsv(new TextEncoder().encode("name\nCafe\u0301")); // "name\nCaf\u00e9"
  */
 export function decodeCsv(bytes: Uint8Array): string | null {
   let text: string;
@@ -44,7 +53,7 @@ export function decodeCsv(bytes: Uint8Array): string | null {
   } catch {
     return null;
   }
-  return text.includes("\uFFFD") ? null : text;
+  return text.includes("\uFFFD") ? null : text.normalize("NFC");
 }
 
 /**
@@ -162,7 +171,7 @@ class CsvReader {
     this.cellLength = 0;
     this.started = false;
     if (this.record.length <= CSV_MAX_CELLS) return null;
-    return `Line ${this.line()} has more than ${CSV_MAX_CELLS} cells; the template has ${HOTEL_IMPORT_COLUMNS.length} columns.`;
+    return `Line ${this.line()} has more than ${CSV_MAX_CELLS} cells; no import template has that many columns.`;
   }
 
   private endRecord(): void {
@@ -195,10 +204,37 @@ export function isBlankRow(cells: readonly string[]): boolean {
   return cells.every((cell) => cell.trim() === "");
 }
 
-const KNOWN_COLUMNS = new Set<string>(HOTEL_IMPORT_COLUMNS);
-const NUMBER_COLUMNS = new Set<string>(HOTEL_IMPORT_NUMBER_COLUMNS);
-const BOOLEAN_COLUMNS = new Set<string>(HOTEL_IMPORT_BOOLEAN_COLUMNS);
-const LIST_COLUMNS = new Set<string>(HOTEL_IMPORT_LIST_COLUMNS);
+/** A template's cell rules as sets, built once per template. */
+interface CellRules {
+  readonly known: ReadonlySet<string>;
+  readonly required: readonly string[];
+  readonly numbers: ReadonlySet<string>;
+  readonly booleans: ReadonlySet<string>;
+  readonly lists: ReadonlySet<string>;
+  readonly enums: ReadonlySet<string>;
+  readonly layouts: ReadonlySet<string>;
+  readonly capacities: ReadonlySet<string>;
+}
+
+const RULES = new WeakMap<HotelImportTemplate, CellRules>();
+
+function rulesOf(template: HotelImportTemplate): CellRules {
+  const known = RULES.get(template);
+  if (known) return known;
+  const rules: CellRules = {
+    known: new Set(template.columns),
+    required: template.requiredColumns,
+    numbers: new Set(template.numberColumns),
+    booleans: new Set(template.booleanColumns),
+    lists: new Set(template.listColumns),
+    enums: new Set(template.enumColumns),
+    layouts: new Set(template.layoutColumns),
+    capacities: new Set(template.capacityColumns),
+  };
+  RULES.set(template, rules);
+  return rules;
+}
+
 /** How many headers a refusal names, and how much of each, so a stray file cannot flood it. */
 const NAMED_HEADERS_MAX = 10;
 const NAMED_HEADER_LENGTH = 60;
@@ -221,17 +257,22 @@ function repeatedHeaders(headers: readonly string[]): string[] {
 }
 
 /**
- * What is wrong with a file's header row, one sentence each, or nothing. The headers are the template's,
- * fixed (D-181): an unknown, blank or repeated header is refused, and the required columns must be there.
+ * What is wrong with a file's header row, one sentence each, or nothing. The headers are the kind's
+ * template's, fixed (D-181): an unknown, blank or repeated header is refused, and the required columns
+ * must be there.
  *
  * @example
- * headerProblems(["destinationSlug", "name", "mystery"]); // ["Unknown column(s): mystery. …"]
+ * headerProblems(["destinationSlug", "name", "mystery"], HOTEL_IMPORT_TEMPLATES.hotels); // ["Unknown column(s): mystery. …"]
  */
-export function headerProblems(headers: readonly string[]): string[] {
+export function headerProblems(
+  headers: readonly string[],
+  template: HotelImportTemplate,
+): string[] {
+  const rules = rulesOf(template);
   const blank = headers.flatMap((header, index) => (header === "" ? [index + 1] : []));
-  const unknown = headers.filter((header) => header !== "" && !KNOWN_COLUMNS.has(header));
+  const unknown = headers.filter((header) => header !== "" && !rules.known.has(header));
   const repeated = repeatedHeaders(headers);
-  const missing = HOTEL_IMPORT_REQUIRED_COLUMNS.filter((column) => !headers.includes(column));
+  const missing = rules.required.filter((column) => !headers.includes(column));
   const problems: string[] = [];
   if (blank.length > 0) problems.push(`Column(s) ${named(blank)} have no header.`);
   if (unknown.length > 0) {
@@ -249,49 +290,85 @@ function coerceBoolean(raw: string): boolean | string {
   return raw; // a non-boolean value falls through so z.boolean() reports it
 }
 
+/** One cell as its column's value (undefined when a list cell holds no entries), or why it is refused. */
+type CellRead = { readonly value: unknown } | { readonly problem: string };
+
+/** A number cell: a capacity takes one number, so a range there is refused with its own words. */
+function numberCell(column: string, raw: string, rules: CellRules): CellRead {
+  if (rules.capacities.has(column) && isNumberRangeCell(raw)) {
+    return { problem: VENUE_CAPACITY_RANGE_MESSAGE };
+  }
+  const num = Number(raw);
+  return { value: Number.isNaN(num) ? raw : num };
+}
+
+/** A list cell's entries, or undefined when it holds none. */
+const entriesOrUndefined = <T>(entries: readonly T[]): readonly T[] | undefined =>
+  entries.length > 0 ? entries : undefined;
+
 /**
- * One non-blank cell as its column's type; undefined when a list cell holds no entries. A list cell's
- * entries are split at each "|" and line break (core `hotelListEntries`), the rule the staff editor's
- * one-per-line lists share, so a list one of them saves reads back the same through the other.
+ * One non-blank cell as its column's type. A list cell's entries are split at each "|" and line break
+ * (core `hotelListEntries`), the rule the staff editor's one-per-line lists share; an enum cell is read in
+ * any case with spaces and hyphens as underscores (`hotelImportEnumValue`); an other-layouts cell is
+ * `Name: max | Name: min-max` (`parseVenueLayoutsCell`).
  */
-function cellValue(column: string, raw: string): unknown {
-  if (NUMBER_COLUMNS.has(column)) {
-    const num = Number(raw);
-    return Number.isNaN(num) ? raw : num;
+function cellValue(column: string, raw: string, rules: CellRules): CellRead {
+  if (rules.numbers.has(column)) return numberCell(column, raw, rules);
+  if (rules.booleans.has(column)) return { value: coerceBoolean(raw) };
+  if (rules.enums.has(column)) return { value: hotelImportEnumValue(raw) };
+  if (rules.lists.has(column)) return { value: entriesOrUndefined(hotelListEntries(raw)) };
+  if (rules.layouts.has(column)) {
+    const layouts = parseVenueLayoutsCell(raw);
+    return layouts === null
+      ? { problem: VENUE_LAYOUTS_CELL_MESSAGE }
+      : { value: entriesOrUndefined(layouts) };
   }
-  if (BOOLEAN_COLUMNS.has(column)) return coerceBoolean(raw);
-  if (LIST_COLUMNS.has(column)) {
-    const entries = hotelListEntries(raw);
-    return entries.length > 0 ? entries : undefined;
-  }
-  return raw;
+  return { value: raw };
+}
+
+/** One row as typed cells, and the cells refused before the schema reads them, by column. */
+export interface CandidateRow {
+  readonly values: Record<string, unknown>;
+  readonly problems: readonly { readonly field: string; readonly message: string }[];
 }
 
 /**
- * One row as the object `hotelImportRow` checks. A blank cell is left out (on an update the column stays
- * as it is; a blank never clears). The headers have passed `headerProblems`.
+ * One row as the object its kind's row schema checks, and the cells refused on the way (a capacity range,
+ * an unreadable layouts cell), which are left out of the object. A blank cell is left out too (on an
+ * update the column stays as it is; a blank never clears). The headers have passed `headerProblems`.
  *
  * @example
- * buildCandidate(["destinationSlug", "name", "cuisines"], ["udaipur", "X", "Indian | Italian"]);
- * // { destinationSlug: "udaipur", name: "X", cuisines: ["Indian", "Italian"] }
+ * buildCandidate(["destinationSlug", "name", "cuisines"], ["udaipur", "X", "Indian | Italian"], HOTEL_IMPORT_TEMPLATES.hotels);
+ * // { values: { destinationSlug: "udaipur", name: "X", cuisines: ["Indian", "Italian"] }, problems: [] }
  */
 export function buildCandidate(
   headers: readonly string[],
   cells: readonly string[],
-): Record<string, unknown> {
-  const out: Record<string, unknown> = {};
+  template: HotelImportTemplate,
+): CandidateRow {
+  const rules = rulesOf(template);
+  const values: Record<string, unknown> = {};
+  const problems: { field: string; message: string }[] = [];
   headers.forEach((header, index) => {
     const raw = (cells[index] ?? "").trim();
     if (raw === "") return;
-    const value = cellValue(header, raw);
-    if (value !== undefined) out[header] = value;
+    const read = cellValue(header, raw, rules);
+    if ("problem" in read) problems.push({ field: header, message: read.problem });
+    else if (read.value !== undefined) values[header] = read.value;
   });
-  return out;
+  return { values, problems };
 }
 
-/** Lowercase a name into a slug (`The Lake Pavilion` → `the-lake-pavilion`); matches the `slug` contract. */
+/**
+ * Lowercase a name into a slug (`The Lake Pavilion` → `the-lake-pavilion`); matches the `slug` contract.
+ * The name is composed (NFC) first. An accented letter drops out of a slug, but spelt as a letter and a
+ * combining accent it would leave the letter behind (`caf` against `cafe`), so the staff hotel and
+ * destination creates, which take the name as it arrived, and the import, which reads its file composed,
+ * would otherwise make two slugs of one name.
+ */
 export function slugify(value: string): string {
   return value
+    .normalize("NFC")
     .trim()
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")

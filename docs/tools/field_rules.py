@@ -103,11 +103,30 @@ TABLES["configurations"] = T(
                  automation="Takes effect on the next job run or request; change audited"),
     scope_id=F(validation="references wedding_projects when scope is project"),
 )
+# D-181: a staff hotel import (hotels, rooms or venues) keeps no file; its preview stores the planned rows, values
+# included, in plan_json until it is imported by its job id, superseded or expired (24 hours).
 TABLES["import_jobs"] = T(
-    "Any (import)", "SA; HT (hotels); VC (vendors); RG and PM (a) (guests)",
-    required=["import_type", "file_document_id", "status"], assumptions="A-9 (Q9), GP-22",
-    status=F(automation="validating runs in a worker; applied writes rows plus audit events; failed keeps the error report"),
-    row_count=F(editor=SYS), error_report_json=F(editor=SYS),
+    "Any (import)", "SA; HT (hotels, rooms and venues); VC (vendors); RG and PM (a) (guests)",
+    required=["import_type", "status"], assumptions="A-9 (Q9), GP-22, D-181",
+    import_type=F(validation="one of the listed options; the staff hotel imports store their kind as hotels, "
+                             "hotel_rooms or hotel_venues"),
+    file_document_id=F(required="At creation for guest and vendor imports; null for the staff hotel imports, which "
+                                "keep no file (D-181)"),
+    status=F(automation="Staff hotel imports (D-181): a preview is stored validating, or failed when no row is valid; "
+                        "importing it by its id, by its uploader within 24 hours and once, makes it applied, and a "
+                        "newer preview of the kind by the same uploader supersedes it. Guest and vendor imports "
+                        "validate in a worker. applied writes rows plus audit events; failed keeps the error report"),
+    row_count=F(editor=SYS),
+    error_report_json=F(editor=SYS,
+                        validation="valid JSON; for the staff hotel imports the report without values: counts, "
+                                   "refusals, and each row's outcome with the names of the fields it changes"),
+    plan_json=F(editor=SYS, required="System, on a hotel import preview with a valid row",
+                visibility="RESTRICTED-NOTES (a hotel import preview's values, internal notes included; never returned)",
+                validation="valid JSON: the preview's planned rows with their values, and each target's version token "
+                           "(a SHA-256 of its compared values, never updated_at)",
+                automation="Read only by the import of its preview, which refuses a row whose target's token moved "
+                           "(changed since preview); cleared on import, when a newer preview supersedes it, when an "
+                           "import finds it expired, and daily once older than 24 hours"),
     project_id=F(validation="references wedding_projects; required when import_type is guests", required="At creation for guest imports"),
 )
 TABLES["sessions"] = T(
@@ -259,6 +278,13 @@ STAFF_COORDINATES = "INTERNAL (staff-only coordinates, D-178)"
 DISTANCE_KM = "numeric(4,1), 0 to 999.9 km, at most one decimal place"
 DRIVE_MINUTES = "integer, 0 to 600"
 NOT_STATED = "true or false; empty when the hotel has not said"
+# D-178, Slice 3: the square feet a hotel publishes are kept and the square metres, canonical for filters, derived by
+# one converter in packages/core (sqmFromSqft); every write, staff or import, follows its rule (areaWrite).
+SQM_DERIVED = ("Derived when the sq ft is set: round(sq ft × 0.09290304), one converter in packages/core, replacing an "
+               "m² sent with it; set alone on a row that stores sq ft, it becomes the published figure and clears the sq ft")
+SQFT_DERIVES = "Setting it derives the m² (round(sq ft × 0.09290304)); clearing it leaves the stored m²"
+CAPACITY = "integer, 0 to 100,000; one number: a stated range keeps its maximum here and the range in capacity_notes"
+STAFF_UNTIL_SLICE_12 = "the D-178 columns reach only the staff views until Slice 12"
 TABLES["hotels"] = T(
     "Hotel data entry", "HT; SA", "CLIENT", required=["destination_id", "name", "slug", "status"],
     assumptions="A-9 (Q9), A-28 (AM-8), RK-1, D-178",
@@ -282,8 +308,8 @@ TABLES["hotels"] = T(
     public_showcase=F(automation="Exposes name, destination and hero media on the website only"),
     internal_rating=F(validation="integer 1 to 5"),
     total_rooms=F(validation="integer, 0 to 100,000"),
-    total_event_space_sqm=F(validation="integer, 0 to 1,000,000"),
-    total_event_space_sqft=F(validation="integer, 0 to 10,000,000; as the hotel published it"),
+    total_event_space_sqm=F(validation="integer, 0 to 1,000,000; canonical for the filters", automation=SQM_DERIVED),
+    total_event_space_sqft=F(validation="integer, 0 to 10,000,000; as the hotel published it", automation=SQFT_DERIVES),
     wedding_buyout_policy=F(visibility=BOOKING_TERMS, validation="one of the listed options"),
     min_rooms_without_buyout=F(visibility=BOOKING_TERMS, validation="integer, 0 to 10,000"),
     min_nights=F(visibility=BOOKING_TERMS, validation="integer, 1 to 60"),
@@ -296,19 +322,63 @@ TABLES["hotels"] = T(
     last_verified_at=F(editor=SYS, automation="Recomputed when a verification is recorded, in the same transaction, and "
                                               "by the daily freshness job; drives the freshness label"),
 )
-TABLES["hotel_contacts"] = T("Hotel data entry", "HT; SA", table_class="RESTRICTED-CONTACT",
-                             required=["hotel_id", "name"], assumptions="P-3 contact tier")
+TABLES["hotel_contacts"] = T(
+    "Hotel data entry", "HT; SA", table_class="RESTRICTED-CONTACT", required=["hotel_id", "name"],
+    assumptions="P-3 contact tier, D-178",
+    phone=F(validation="E.164 (a + and 8 to 15 digits), stored normalised by core normaliseHotelPhone: spaces, hyphens, "
+                       "dots and brackets dropped; a leading 00 read as +; digits alone read as Indian (one leading 0 "
+                       "dropped, then 10 digits gain +91, 12 starting 91 gain +, an 11-digit 1800 number gains +91); "
+                       "an extension is refused and goes in role_title; a phone equal to the stored one is accepted "
+                       "unchanged, so a free-text phone saved before Slice 3 never blocks another edit"),
+    is_primary=F(automation="At most one live primary per hotel: making a contact primary, on create or update, demotes "
+                            "the current one in the same transaction, audited as its update, and needs the contacts "
+                            "update key; the partial unique index hotel_contacts_hotel_live_primary_key backs it, a "
+                            "write that loses a race getting 409"),
+)
 TABLES["hotel_room_categories"] = T(
-    "Hotel data entry", "HT; SA", "CLIENT", required=["hotel_id", "name", "room_count", "max_occupancy"],
-    assumptions="A-27 (AM-5)",
-    room_count=F(automation="Upper bound for room blocks at this hotel"),
-    max_occupancy=F(validation="integer, 1 or more", automation="Upper bound for occupants per allocation"),
+    "Hotel data entry", "HT; SA", "CLIENT", required=["hotel_id", "name"],
+    assumptions="A-27 (AM-5), D-178", note=STAFF_UNTIL_SLICE_12,
+    room_count=F(validation="integer, 0 to 100,000; inventory in this category (A-27)",
+                 automation="Upper bound for room blocks at this hotel"),
+    unit_type=F(validation="one of the listed options; empty when not stated"),
+    max_occupancy=F(validation="integer, 1 to 100 per room (A-27) when stated; a database CHECK "
+                               "(hotel_room_categories_max_occupancy_at_least_one) refuses 0 or less",
+                    automation="Upper bound for occupants per allocation"),
+    size_sqm=F(validation="integer, 0 to 100,000; canonical for the filters", automation=SQM_DERIVED),
+    size_sqft=F(validation="integer, 0 to 1,000,000; as the hotel published it", automation=SQFT_DERIVES),
 )
 TABLES["hotel_venues"] = T(
-    "Hotel data entry", "HT; SA", "CLIENT", required=["hotel_id", "name", "venue_type"],
-    capacity_banquet=F(automation="Compared with function guest_estimate; mismatch flagged"),
-    capacity_theatre=F(automation="Compared with function guest_estimate; mismatch flagged"),
-    capacity_reception=F(automation="Compared with function guest_estimate; mismatch flagged"),
+    "Hotel data entry", "HT; SA", "CLIENT", required=["hotel_id", "name", "venue_type", "setting"],
+    assumptions="D-178; decision 11 of the hotel information form plan (capacity meanings)",
+    note=STAFF_UNTIL_SLICE_12 + "; venue_type's five new values reach clients now",
+    venue_type=F(automation="The client views carry it: a new value is a client contract change, so the API and the "
+                            "web bundle deploy back to back; pickers order the types themselves, Other last"),
+    setting=F(required="At creation (through the API; a venue written without one, by the previous image or a direct "
+                       "insert, or with one its is_indoor contradicts, reads it from is_indoor)",
+              automation="Sets is_indoor in the same write: true only for indoor, so a semi-open venue reads as "
+                         "outdoor to clients until Slice 12"),
+    is_indoor=F(editor=SYS, required="System",
+                automation="Set from setting on every write, true only for indoor; no request carries it; the client "
+                           "views read it until Slice 12"),
+    area_sqm=F(validation="integer, 0 to 1,000,000; canonical for the filters", automation=SQM_DERIVED),
+    area_sqft=F(validation="integer, 0 to 10,000,000; as the hotel published it", automation=SQFT_DERIVES),
+    length_m=F(validation="numeric(6,2), 0 to 2,000 metres, at most two decimal places"),
+    width_m=F(validation="numeric(6,2), 0 to 2,000 metres, at most two decimal places"),
+    ceiling_height_m=F(validation="numeric(6,2), 0 to 100 metres, at most two decimal places"),
+    capacity_banquet=F(validation=CAPACITY, validation_extra='labelled "Seated (dinner at round tables)" (decision 11)',
+                       automation="Compared with function guest_estimate; mismatch flagged"),
+    capacity_theatre=F(validation=CAPACITY, validation_extra='labelled "Theatre (rows of chairs)" (decision 11)',
+                       automation="Compared with function guest_estimate; mismatch flagged"),
+    capacity_reception=F(validation=CAPACITY,
+                         validation_extra='labelled "Floating (standing reception or cocktails)" (decision 11)',
+                         automation="Compared with function guest_estimate; mismatch flagged"),
+    other_layouts_json=F(validation="JSON array of up to 12 layouts, each a name of 1 to 60 characters (none repeated, "
+                                    "ignoring case), a maximum (integer, 1 to 100,000) and an optional minimum "
+                                    "(1 or more, not above the maximum)"),
+    prefunction_area_sqm=F(validation="integer, 0 to 1,000,000", automation=SQM_DERIVED),
+    prefunction_area_sqft=F(validation="integer, 0 to 10,000,000; as the hotel published it", automation=SQFT_DERIVES),
+    capacity_notes=F(validation="text, up to 1,000 characters; a stated range, such as 600 to 700, whose maximum the "
+                                "capacity keeps"),
 )
 TABLES["hotel_rate_cards"] = T(
     "Hotel data entry", "HT; SA", "CLIENT", required=["hotel_id", "name", "valid_from", "valid_to", "currency", "status"],

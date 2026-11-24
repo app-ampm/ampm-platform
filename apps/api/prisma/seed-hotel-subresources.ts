@@ -1,4 +1,4 @@
-import { CONFIG_REGISTRY } from "@ampm/core";
+import { CONFIG_REGISTRY, isIndoorSetting } from "@ampm/core";
 
 import type { PrismaClient } from "../src/generated/prisma/client.js";
 import { verificationNextDueAt } from "../src/modules/hotels/rate-card-verification.js";
@@ -28,13 +28,22 @@ async function clearChildren(prisma: PrismaClient, hotelId: string): Promise<voi
   await prisma.hotelRoomCategory.deleteMany({ where: { hotelId } });
 }
 
-/** Creates one hotel's venues and room categories (CP-05 profile data). */
+/**
+ * Creates one hotel's venues and room categories (CP-05 profile data). A venue's `is_indoor` comes from its
+ * setting, as the service writes it (D-178): true only for indoor.
+ */
 async function createProfile(
   prisma: PrismaClient,
   hotelId: string,
   sub: HotelSubresources,
 ): Promise<void> {
-  await prisma.hotelVenue.createMany({ data: sub.venues.map((venue) => ({ ...venue, hotelId })) });
+  await prisma.hotelVenue.createMany({
+    data: sub.venues.map((venue) => ({
+      ...venue,
+      isIndoor: isIndoorSetting(venue.setting),
+      hotelId,
+    })),
+  });
   await prisma.hotelRoomCategory.createMany({
     data: sub.rooms.map((room) => ({ ...room, hotelId })),
   });

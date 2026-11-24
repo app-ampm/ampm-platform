@@ -21,6 +21,40 @@ export {
   normalisePostalCode,
   postalCodeProblem,
 } from "./hotel-location";
+export {
+  areaWrite,
+  hasAtMostDecimals,
+  SQM_PER_SQFT_DENOMINATOR,
+  SQM_PER_SQFT_NUMERATOR,
+  sqmFromSqft,
+} from "./hotel-units";
+export type { AreaWrite, HotelAreaPair } from "./hotel-units";
+export { HOTEL_PHONE_REFUSAL, normaliseHotelPhone } from "./hotel-phone";
+// HotelChangeSet (D-178, D-181): the normalisers, the field compare and the row matching the imports and
+// the form's merge share.
+export {
+  canonicalFieldsJson,
+  fieldChanges,
+  normaliseEmail,
+  normaliseRowName,
+  normaliseUrl,
+  normaliseWhitespace,
+} from "./hotel-change-set";
+export type {
+  HotelFieldChangeOptions,
+  HotelFieldKind,
+  HotelFieldKinds,
+  HotelFieldValues,
+} from "./hotel-change-set";
+export { matchContact, matchRowsByName } from "./hotel-row-match";
+export type {
+  HotelContactMatch,
+  HotelContactMatchKey,
+  HotelContactProbe,
+  HotelMatchableContact,
+  HotelNamedRow,
+  HotelRowMatch,
+} from "./hotel-row-match";
 
 export { formatDay, formatDayRange, formatMoment } from "./dates";
 export type { DateFormatOptions, DateStyle, DayReading } from "./dates";

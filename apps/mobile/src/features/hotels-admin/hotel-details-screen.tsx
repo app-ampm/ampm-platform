@@ -11,9 +11,9 @@ import { useGoToSignIn } from "@/navigation/sign-in";
 import { ContactEditSheet } from "./contact-edit-sheet";
 import { HotelRecordHeader } from "./hotel-record-header";
 import { HotelSavedByClients } from "./hotel-saved-by-clients";
-import { contactSummary, roomSummary, venueSummary } from "./hotels-admin.format";
 import { ManagedSection } from "./managed-subresource-section";
 import { RoomEditSheet } from "./room-edit-sheet";
+import { contactSummary, roomSummary, venueSummary } from "./subresources.format";
 import { useClientInterestPermissions } from "./use-client-interest-permissions";
 import { VenueEditSheet } from "./venue-edit-sheet";
 
@@ -31,16 +31,23 @@ interface SectionsProps {
   readonly hotel: HotelStaffDetail;
 }
 
-/** The hotel's room categories and event venues: the main column. */
+/**
+ * The hotel's room categories and event venues: the main column. A row's summary (both units, the
+ * venue's setting, capacities and dimensions) may wrap to a second line before it is cut off, and a
+ * venue's to a third below 1024: on a phone its type, setting and area in both units can fill most of
+ * two, and the capacities come after them.
+ */
 function RoomsAndVenues({ hotelId, hotel }: SectionsProps) {
   const deleteRoom = useDeleteRoom(hotelId);
   const deleteVenue = useDeleteVenue(hotelId);
+  const isDesktop = useLayoutAt("lg");
   return (
     <Stack gap={8}>
       <ManagedSection
         title="Room categories"
         items={hotel.rooms}
         summaryOf={roomSummary}
+        summaryLines={2}
         addLabel="Add room"
         emptyText="No room categories yet. Add the room types this hotel offers."
         noun="room category"
@@ -54,6 +61,7 @@ function RoomsAndVenues({ hotelId, hotel }: SectionsProps) {
         title="Venues"
         items={hotel.venues}
         summaryOf={venueSummary}
+        summaryLines={isDesktop ? 2 : 3}
         addLabel="Add venue"
         emptyText="No venues yet. Add the event spaces this hotel offers."
         noun="venue"

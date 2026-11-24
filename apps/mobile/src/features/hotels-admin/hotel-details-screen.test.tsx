@@ -73,8 +73,14 @@ describe("HotelDetailsScreen", () => {
     await renderWithApi(<HotelDetailsScreen hotelId={HOTEL_ID} />, detailFetch({}));
     expect(await screen.findByText("Room categories")).toBeOnTheScreen();
     expect(screen.getByText("Deluxe Lake View")).toBeOnTheScreen();
-    expect(screen.getByText("20 rooms · sleeps 3 · 45 sqm")).toBeOnTheScreen();
+    expect(screen.getByText("20 rooms · sleeps 3 · 45 m²")).toBeOnTheScreen();
     expect(screen.getByText("Grand Ballroom")).toBeOnTheScreen();
+    expect(
+      screen.getByText("Ballroom · Indoor · 500 m² · 300 seated · 500 floating · 400 theatre"),
+    ).toBeOnTheScreen();
+    expect(
+      screen.getByText("Events Manager · +911234567801 · priya@lakeside.example"),
+    ).toBeOnTheScreen();
     expect(screen.getByText("Priya Sharma")).toBeOnTheScreen();
     expect(screen.getByText("Primary")).toBeOnTheScreen();
     // The RESTRICTED-CONTACT marker persists once contacts are populated, not only in the empty state.

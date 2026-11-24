@@ -18,7 +18,13 @@ interface FieldLabelProps {
   readonly disabled?: boolean | undefined;
 }
 
-/** "Work email, required": a required field's name, so its asterisk is never read as "star". */
+/**
+ * A required field's name as a screen reader says it, so its drawn asterisk is never read as "star"; an
+ * optional field's name as it is. For a control of the app's own that marks itself required.
+ *
+ *   requiredLabel("Work email", true); // "Work email, required"
+ *   requiredLabel("Company", false); // "Company"
+ */
 export function requiredLabel(label: string, required: boolean): string {
   return required ? `${label}, ${uiCopy.required}` : label;
 }

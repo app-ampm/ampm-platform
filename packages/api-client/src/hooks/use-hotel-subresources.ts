@@ -24,6 +24,9 @@ import { staffHotelQueryKey } from "./use-staff-hotels";
  * (`GET /hotels-admin/hotels/:id`), so every write invalidates that detail. All staff-gated server-side
  * (rooms/venues under `hotels.room_categories_venues.*`, contacts under `hotels.hotel_contacts.*`,
  * RESTRICTED-CONTACT). Deletes are soft; the server verifies the child belongs to the hotel (404 else).
+ * A filled sq ft gives the room's or venue's m² on the server (core `areaWrite`); a contact saved as
+ * primary demotes the hotel's current primary in the same write, and its phone is stored in E.164, so
+ * the refreshed detail shows both.
  */
 
 /** Delete returns only `{ id }`; the caller does not use it. */

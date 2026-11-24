@@ -20,9 +20,9 @@ Global conventions that apply to every row: money is `numeric(14,2)` with a sibl
 
 | Module | Tables | Fields | Required at creation | Client or public visible | Restricted, sensitive or secret |
 |---|---|---|---|---|---|
-| A — Identity, access and administration | 20 | 128 | 61 | 10 | 5 |
+| A — Identity, access and administration | 20 | 129 | 61 | 10 | 6 |
 | B — CRM, subscriptions and commercial agreements | 13 | 143 | 55 | 94 | 4 |
-| C — Hotel intelligence | 10 | 128 | 38 | 102 | 11 |
+| C — Hotel intelligence | 10 | 141 | 37 | 115 | 11 |
 | D — Hotel consultancy | 6 | 70 | 28 | 65 | 3 |
 | E — Wedding project | 3 | 36 | 13 | 29 | 3 |
 | F — Functions, programme and run-of-show | 4 | 43 | 17 | 27 | 1 |
@@ -37,9 +37,9 @@ Global conventions that apply to every row: money is `numeric(14,2)` with a sibl
 | O — Checklists, closure and feedback | 4 | 30 | 17 | 7 | 0 |
 | P — Public website content (dormant) | 2 | 17 | 8 | 17 | 0 |
 | Q — Live chat | 2 | 16 | 6 | 16 | 0 |
-| **Total** | **117** | **1198** | **502** | **670** | **108** |
+| **Total** | **117** | **1212** | **501** | **683** | **109** |
 
-Fields by visibility class: CLIENT 637, INTERNAL 363, Other (per record, recipient or parent) 57, RESTRICTED-NOTES 34, PUBLIC 33, RESTRICTED-FINANCE 31, RESTRICTED-CONTACT 13, RESTRICTED-IDENTITY 13, SECRET 11, RESTRICTED-BANK 4, SENSITIVE-GUEST 2.
+Fields by visibility class: CLIENT 650, INTERNAL 363, Other (per record, recipient or parent) 57, RESTRICTED-NOTES 35, PUBLIC 33, RESTRICTED-FINANCE 31, RESTRICTED-CONTACT 13, RESTRICTED-IDENTITY 13, SECRET 11, RESTRICTED-BANK 4, SENSITIVE-GUEST 2.
 
 ---
 
@@ -272,17 +272,18 @@ Created at stage: **Configuration** · Default editor: SA · Default visibility:
 
 ### `import_jobs`
 
-Created at stage: **Any (import)** · Default editor: SA; HT (hotels); VC (vendors); RG and PM (a) (guests) · Default visibility: INTERNAL · Assumptions: A-9 (Q9), GP-22
+Created at stage: **Any (import)** · Default editor: SA; HT (hotels, rooms and venues); VC (vendors); RG and PM (a) (guests) · Default visibility: INTERNAL · Assumptions: A-9 (Q9), GP-22, D-181
 
 | Field | Type and validation | Options | Edited by | Visibility | Required | Automation and report impact |
 |---|---|---|---|---|---|---|
 | `id` (PK) | UUID v7, generated |  | SYS | INTERNAL | System | — |
-| `import_type` | one of the listed options; (A-9) | hotels, guests, vendors | SA; HT (hotels); VC (vendors); RG and PM (a) (guests) | INTERNAL | At creation | — |
-| `project_id` | references wedding_projects; required when import_type is guests |  | SA; HT (hotels); VC (vendors); RG and PM (a) (guests) | INTERNAL | At creation for guest imports | — |
-| `file_document_id` (FK) | references documents |  | SA; HT (hotels); VC (vendors); RG and PM (a) (guests) | INTERNAL | At creation | — |
-| `status` | one of the listed options | uploaded, validating, failed, applied | SA; HT (hotels); VC (vendors); RG and PM (a) (guests) | INTERNAL | At creation | validating runs in a worker; applied writes rows plus audit events; failed keeps the error report |
+| `import_type` | one of the listed options; the staff hotel imports store their kind as hotels, hotel_rooms or hotel_venues | hotels, guests, vendors, hotel_rooms, hotel_venues | SA; HT (hotels, rooms and venues); VC (vendors); RG and PM (a) (guests) | INTERNAL | At creation | — |
+| `project_id` | references wedding_projects; required when import_type is guests |  | SA; HT (hotels, rooms and venues); VC (vendors); RG and PM (a) (guests) | INTERNAL | At creation for guest imports | — |
+| `file_document_id` (FK) | references documents; null for the staff hotel imports |  | SA; HT (hotels, rooms and venues); VC (vendors); RG and PM (a) (guests) | INTERNAL | At creation for guest and vendor imports; null for the staff hotel imports, which keep no file (D-181) | — |
+| `status` | one of the listed options; a hotel import preview stays validating until imported by its id (D-181) | uploaded, validating, failed, applied | SA; HT (hotels, rooms and venues); VC (vendors); RG and PM (a) (guests) | INTERNAL | At creation | Staff hotel imports (D-181): a preview is stored validating, or failed when no row is valid; importing it by its id, by its uploader within 24 hours and once, makes it applied, and a newer preview of the kind by the same uploader supersedes it. Guest and vendor imports validate in a worker. applied writes rows plus audit events; failed keeps the error report |
 | `row_count` | integer, 0 or more |  | SYS | INTERNAL | Optional | — |
-| `error_report_json` | valid JSON matching the registered schema |  | SYS | INTERNAL | Optional | — |
+| `error_report_json` | valid JSON; for the staff hotel imports the report without values: counts, refusals, and each row's outcome with the names of the fields it changes |  | SYS | INTERNAL | Optional | — |
+| `plan_json` | valid JSON: the preview's planned rows with their values, and each target's version token (a SHA-256 of its compared values, never updated_at) |  | SYS | RESTRICTED-NOTES (a hotel import preview's values, internal notes included; never returned) | System, on a hotel import preview with a valid row | Read only by the import of its preview, which refuses a row whose target's token moved (changed since preview); cleared on import, when a newer preview supersedes it, when an import finds it expired, and daily once older than 24 hours |
 
 ### `sessions`
 
@@ -611,8 +612,8 @@ Created at stage: **Hotel data entry** · Default editor: HT; SA · Default visi
 | `internal_rating` | integer 1 to 5 |  | HT; SA | RESTRICTED-NOTES | Optional | — |
 | `internal_notes` | text, up to 10,000 characters |  | HT; SA | RESTRICTED-NOTES | Optional | Never serialised to client, guest or demo principals |
 | `total_rooms` | integer, 0 to 100,000 |  | HT; SA | CLIENT | Optional | — |
-| `total_event_space_sqm` | integer, 0 to 1,000,000 |  | HT; SA | CLIENT | Optional | — |
-| `total_event_space_sqft` | integer, 0 to 10,000,000; as the hotel published it |  | HT; SA | CLIENT | Optional | — |
+| `total_event_space_sqm` | integer, 0 to 1,000,000; canonical for the filters |  | HT; SA | CLIENT | Optional | Derived when the sq ft is set: round(sq ft × 0.09290304), one converter in packages/core, replacing an m² sent with it; set alone on a row that stores sq ft, it becomes the published figure and clears the sq ft |
+| `total_event_space_sqft` | integer, 0 to 10,000,000; as the hotel published it |  | HT; SA | CLIENT | Optional | Setting it derives the m² (round(sq ft × 0.09290304)); clearing it leaves the stored m² |
 | `wedding_buyout_policy` | one of the listed options | not_required, required, depends | HT; SA | INTERNAL (booking terms, D-178) | Optional | — |
 | `min_rooms_without_buyout` | integer, 0 to 10,000 |  | HT; SA | INTERNAL (booking terms, D-178) | Optional | — |
 | `min_nights` | integer, 1 to 60 |  | HT; SA | INTERNAL (booking terms, D-178) | Optional | — |
@@ -628,48 +629,61 @@ Created at stage: **Hotel data entry** · Default editor: HT; SA · Default visi
 
 ### `hotel_contacts`
 
-Created at stage: **Hotel data entry** · Default editor: HT; SA · Default visibility: INTERNAL · Whole table: **RESTRICTED-CONTACT** · Assumptions: P-3 contact tier
+Created at stage: **Hotel data entry** · Default editor: HT; SA · Default visibility: INTERNAL · Whole table: **RESTRICTED-CONTACT** · Assumptions: P-3 contact tier, D-178
 
 | Field | Type and validation | Options | Edited by | Visibility | Required | Automation and report impact |
 |---|---|---|---|---|---|---|
 | `id` (PK) | UUID v7, generated |  | SYS | RESTRICTED-CONTACT | System | — |
 | `hotel_id` (FK) | references hotels |  | HT; SA | RESTRICTED-CONTACT | At creation | — |
 | `name` | string, up to 255 characters; whole table, clients contact hotels through AMPM |  | HT; SA | RESTRICTED-CONTACT | At creation | — |
-| `role_title` | string, up to 255 characters |  | HT; SA | RESTRICTED-CONTACT | Optional | — |
-| `phone` | E.164 format, default +91 |  | HT; SA | RESTRICTED-CONTACT | Optional | — |
+| `role_title` | string, up to 255 characters; an extension goes here, never in the phone (D-178) |  | HT; SA | RESTRICTED-CONTACT | Optional | — |
+| `phone` | E.164 (a + and 8 to 15 digits), stored normalised by core normaliseHotelPhone: spaces, hyphens, dots and brackets dropped; a leading 00 read as +; digits alone read as Indian (one leading 0 dropped, then 10 digits gain +91, 12 starting 91 gain +, an 11-digit 1800 number gains +91); an extension is refused and goes in role_title; a phone equal to the stored one is accepted unchanged, so a free-text phone saved before Slice 3 never blocks another edit |  | HT; SA | RESTRICTED-CONTACT | Optional | — |
 | `email` | valid email address, stored lowercase |  | HT; SA | RESTRICTED-CONTACT | Optional | — |
-| `is_primary` | true or false |  | HT; SA | RESTRICTED-CONTACT | Optional | — |
+| `is_primary` | true or false; at most one live primary per hotel, partial unique index hotel_contacts_hotel_live_primary_key (D-178) |  | HT; SA | RESTRICTED-CONTACT | Optional | At most one live primary per hotel: making a contact primary, on create or update, demotes the current one in the same transaction, audited as its update, and needs the contacts update key; the partial unique index hotel_contacts_hotel_live_primary_key backs it, a write that loses a race getting 409 |
 
 ### `hotel_room_categories`
 
-Created at stage: **Hotel data entry** · Default editor: HT; SA · Default visibility: CLIENT · Assumptions: A-27 (AM-5)
+Created at stage: **Hotel data entry** · Default editor: HT; SA · Default visibility: CLIENT · Assumptions: A-27 (AM-5), D-178 · the D-178 columns reach only the staff views until Slice 12
 
 | Field | Type and validation | Options | Edited by | Visibility | Required | Automation and report impact |
 |---|---|---|---|---|---|---|
 | `id` (PK) | UUID v7, generated |  | SYS | CLIENT | System | — |
 | `hotel_id` (FK) | references hotels |  | HT; SA | CLIENT | At creation | — |
 | `name` | string, up to 255 characters |  | HT; SA | CLIENT | At creation | — |
-| `room_count` | integer, 0 or more; inventory in this category (A-27) |  | HT; SA | CLIENT | At creation | Upper bound for room blocks at this hotel |
-| `max_occupancy` | integer, 1 or more |  | HT; SA | CLIENT | At creation | Upper bound for occupants per allocation |
-| `size_sqm` | integer, 0 or more |  | HT; SA | CLIENT | Optional | — |
+| `room_count` | integer, 0 to 100,000; inventory in this category (A-27) |  | HT; SA | CLIENT | Optional | Upper bound for room blocks at this hotel |
+| `unit_type` | one of the listed options; empty when not stated | room, suite, villa, cottage, tent, tent_suite, apartment, other | HT; SA | CLIENT | Optional | — |
+| `view_label` | string, up to 255 characters; e.g. lake view (D-178) |  | HT; SA | CLIENT | Optional | — |
+| `bed_configuration` | string, up to 255 characters; e.g. one king bed or two twin beds (D-178) |  | HT; SA | CLIENT | Optional | — |
+| `max_occupancy` | integer, 1 to 100 per room (A-27) when stated; a database CHECK (hotel_room_categories_max_occupancy_at_least_one) refuses 0 or less |  | HT; SA | CLIENT | Optional | Upper bound for occupants per allocation |
+| `size_sqm` | integer, 0 to 100,000; canonical for the filters |  | HT; SA | CLIENT | Optional | Derived when the sq ft is set: round(sq ft × 0.09290304), one converter in packages/core, replacing an m² sent with it; set alone on a row that stores sq ft, it becomes the published figure and clears the sq ft |
+| `size_sqft` | integer, 0 to 1,000,000; as the hotel published it |  | HT; SA | CLIENT | Optional | Setting it derives the m² (round(sq ft × 0.09290304)); clearing it leaves the stored m² |
 | `facilities_json` | valid JSON matching the registered schema |  | HT; SA | CLIENT | Optional | — |
 | `description` | text, up to 10,000 characters |  | HT; SA | CLIENT | Optional | — |
 
 ### `hotel_venues`
 
-Created at stage: **Hotel data entry** · Default editor: HT; SA · Default visibility: CLIENT
+Created at stage: **Hotel data entry** · Default editor: HT; SA · Default visibility: CLIENT · Assumptions: D-178; decision 11 of the hotel information form plan (capacity meanings) · the D-178 columns reach only the staff views until Slice 12; venue_type's five new values reach clients now
 
 | Field | Type and validation | Options | Edited by | Visibility | Required | Automation and report impact |
 |---|---|---|---|---|---|---|
 | `id` (PK) | UUID v7, generated |  | SYS | CLIENT | System | — |
 | `hotel_id` (FK) | references hotels |  | HT; SA | CLIENT | At creation | — |
 | `name` | string, up to 255 characters |  | HT; SA | CLIENT | At creation | — |
-| `venue_type` | one of the listed options | ballroom, lawn, poolside, rooftop, courtyard, beach, other | HT; SA | CLIENT | At creation | — |
-| `is_indoor` | true or false |  | HT; SA | CLIENT | Optional | — |
-| `area_sqm` | integer, 0 or more |  | HT; SA | CLIENT | Optional | — |
-| `capacity_banquet` | integer, 0 or more |  | HT; SA | CLIENT | Optional | Compared with function guest_estimate; mismatch flagged |
-| `capacity_theatre` | integer, 0 or more |  | HT; SA | CLIENT | Optional | Compared with function guest_estimate; mismatch flagged |
-| `capacity_reception` | integer, 0 or more |  | HT; SA | CLIENT | Optional | Compared with function guest_estimate; mismatch flagged |
+| `venue_type` | one of the listed options; the last five appended after other (D-178) | ballroom, lawn, poolside, rooftop, courtyard, beach, other, terrace, garden, amphitheatre, meeting_room, lounge | HT; SA | CLIENT | At creation | The client views carry it: a new value is a client contract change, so the API and the web bundle deploy back to back; pickers order the types themselves, Other last |
+| `setting` | one of the listed options; semi_open meaning covered or semi-open (D-178) | indoor, outdoor, semi_open | HT; SA | CLIENT | At creation (through the API; a venue written without one, by the previous image or a direct insert, or with one its is_indoor contradicts, reads it from is_indoor) | Sets is_indoor in the same write: true only for indoor, so a semi-open venue reads as outdoor to clients until Slice 12 |
+| `is_indoor` | true or false; kept in step with setting by the service |  | SYS | CLIENT | System | Set from setting on every write, true only for indoor; no request carries it; the client views read it until Slice 12 |
+| `area_sqm` | integer, 0 to 1,000,000; canonical for the filters |  | HT; SA | CLIENT | Optional | Derived when the sq ft is set: round(sq ft × 0.09290304), one converter in packages/core, replacing an m² sent with it; set alone on a row that stores sq ft, it becomes the published figure and clears the sq ft |
+| `area_sqft` | integer, 0 to 10,000,000; as the hotel published it |  | HT; SA | CLIENT | Optional | Setting it derives the m² (round(sq ft × 0.09290304)); clearing it leaves the stored m² |
+| `length_m` | numeric(6,2), 0 to 2,000 metres, at most two decimal places |  | HT; SA | CLIENT | Optional | — |
+| `width_m` | numeric(6,2), 0 to 2,000 metres, at most two decimal places |  | HT; SA | CLIENT | Optional | — |
+| `ceiling_height_m` | numeric(6,2), 0 to 100 metres, at most two decimal places |  | HT; SA | CLIENT | Optional | — |
+| `capacity_banquet` | integer, 0 to 100,000; one number: a stated range keeps its maximum here and the range in capacity_notes; labelled "Seated (dinner at round tables)" (decision 11) |  | HT; SA | CLIENT | Optional | Compared with function guest_estimate; mismatch flagged |
+| `capacity_theatre` | integer, 0 to 100,000; one number: a stated range keeps its maximum here and the range in capacity_notes; labelled "Theatre (rows of chairs)" (decision 11) |  | HT; SA | CLIENT | Optional | Compared with function guest_estimate; mismatch flagged |
+| `capacity_reception` | integer, 0 to 100,000; one number: a stated range keeps its maximum here and the range in capacity_notes; labelled "Floating (standing reception or cocktails)" (decision 11) |  | HT; SA | CLIENT | Optional | Compared with function guest_estimate; mismatch flagged |
+| `other_layouts_json` | JSON array of up to 12 layouts, each a name of 1 to 60 characters (none repeated, ignoring case), a maximum (integer, 1 to 100,000) and an optional minimum (1 or more, not above the maximum) |  | HT; SA | CLIENT | Optional | — |
+| `prefunction_area_sqm` | integer, 0 to 1,000,000 |  | HT; SA | CLIENT | Optional | Derived when the sq ft is set: round(sq ft × 0.09290304), one converter in packages/core, replacing an m² sent with it; set alone on a row that stores sq ft, it becomes the published figure and clears the sq ft |
+| `prefunction_area_sqft` | integer, 0 to 10,000,000; as the hotel published it |  | HT; SA | CLIENT | Optional | Setting it derives the m² (round(sq ft × 0.09290304)); clearing it leaves the stored m² |
+| `capacity_notes` | text, up to 1,000 characters; a stated range, such as 600 to 700, whose maximum the capacity keeps |  | HT; SA | CLIENT | Optional | — |
 | `facilities_json` | valid JSON matching the registered schema |  | HT; SA | CLIENT | Optional | — |
 | `description` | text, up to 10,000 characters |  | HT; SA | CLIENT | Optional | — |
 

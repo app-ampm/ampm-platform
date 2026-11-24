@@ -139,3 +139,53 @@ describe("the staff hotel detail (D-171)", () => {
     expect(hotelStaffDetail.safeParse({ ...detail, contactsHidden: true }).success).toBe(false);
   });
 });
+
+describe("the staff detail's rooms and venues (D-178)", () => {
+  const room = {
+    id: "0192f1a0-0000-7000-8000-000000000004",
+    hotelId: HOTEL,
+    name: "Synthetic Lake View Suite",
+    roomCount: 6,
+    maxOccupancy: 3,
+    sizeSqm: 60,
+    facilities: ["Balcony"],
+    description: null,
+    unitType: "suite",
+    viewLabel: "Lake",
+    bedConfiguration: "One king bed",
+    sizeSqft: 650,
+  };
+  const venue = {
+    id: "0192f1a0-0000-7000-8000-000000000005",
+    hotelId: HOTEL,
+    name: "Synthetic Terrace",
+    venueType: "terrace",
+    isIndoor: false,
+    areaSqm: 279,
+    capacityBanquet: 180,
+    capacityTheatre: null,
+    capacityReception: 300,
+    facilities: null,
+    description: null,
+    setting: "semi_open",
+    areaSqft: 3_000,
+    lengthM: 30.5,
+    widthM: 9.15,
+    ceilingHeightM: null,
+    prefunctionAreaSqm: null,
+    prefunctionAreaSqft: null,
+    otherLayouts: [{ layout: "Cluster", max: 120, min: 100 }],
+    capacityNotes: "Seats 160 to 180 at round tables",
+  };
+
+  it("carries the new room and venue fields to every audience", () => {
+    const populated = { ...detail, rooms: [room], venues: [venue] };
+    expect(hotelStaffDetailView.safeParse(populated).success).toBe(true);
+    expect(hotelStaffDetail.safeParse({ ...populated, ...notes, ...contacts }).success).toBe(true);
+  });
+
+  it("always names a venue's setting", () => {
+    const venues = [{ ...venue, setting: null }];
+    expect(hotelStaffDetailView.safeParse({ ...detail, venues }).success).toBe(false);
+  });
+});

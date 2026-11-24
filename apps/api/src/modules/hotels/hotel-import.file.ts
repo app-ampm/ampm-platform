@@ -1,10 +1,4 @@
-import {
-  errors,
-  hotelImportRow,
-  HOTEL_IMPORT_MAX_ROWS,
-  type HotelImportRow,
-  type HotelImportRowError,
-} from "@ampm/core";
+import { errors, HOTEL_IMPORT_MAX_ROWS, type HotelImportRowError } from "@ampm/core";
 
 import {
   buildCandidate,
@@ -14,31 +8,33 @@ import {
   isBlankRow,
   NOT_UTF8,
   parseCsv,
-  slugify,
 } from "./hotel-import.js";
+import type { ImportKindSpec } from "./hotel-import.kinds.js";
 
 /*
- * Reads an uploaded hotels file into rows (D-181). Pure. A problem with the file as a whole (not UTF-8, a
- * null character, empty, a runaway cell or record, a quote that never closes, the headers not the
- * template's, no hotel rows or too many) refuses it with a 400 naming the file; a row that fails the
- * schema is reported by line and field, and the other rows go on. The header is the first row that is
- * not blank, and a row's line is its place in the file, so a blank row above the header still counts.
+ * Reads an uploaded file of one import kind into rows (D-181). Pure. A problem with the file as a whole
+ * (not UTF-8, a null character, empty, a runaway cell or record, a quote that never closes, the headers
+ * not the kind's template's, no rows or too many) refuses it with a 400 naming the file; a row that fails
+ * a cell rule or the kind's row schema is reported by line and field, and the other rows go on. The header
+ * is the first row that is not blank, and a row's line is its place in the file, so a blank row above the
+ * header still counts.
  */
 
-/** A row that passed the schema, with its line in the file (the header is line 1). */
-export interface ImportRow {
+/** A row that passed its kind's schema, with its line in the file (the header is line 1). */
+export interface ImportRow<Row> {
   readonly line: number;
-  readonly row: HotelImportRow;
+  readonly row: Row;
 }
 
-/** A row the schema refused: its line, the web address it names if it names one, and why. */
+/** A row refused before it was planned: its line, the web address and name it gives, and why. */
 export interface RejectedRow extends HotelImportRowError {
   readonly slug: string | null;
+  readonly name: string | null;
 }
 
 /** The file's rows: those that passed the schema, those that did not, and how many there were. */
-export interface ImportFile {
-  readonly rows: readonly ImportRow[];
+export interface ImportFile<Row> {
+  readonly rows: readonly ImportRow<Row>[];
   readonly rejected: readonly RejectedRow[];
   readonly totalRows: number;
 }
@@ -74,12 +70,12 @@ function fileError(problems: readonly string[]): Error {
 }
 
 /**
- * The rows of an uploaded hotels file, or a 400 for the file as a whole.
+ * The rows of an uploaded file of one kind, or a 400 for the file as a whole.
  *
  * @example
- * const { rows, rejected, totalRows } = readHotelImportFile(bytes);
+ * const { rows, rejected, totalRows } = readImportFile(bytes, ROOMS_IMPORT);
  */
-export function readHotelImportFile(bytes: Uint8Array): ImportFile {
+export function readImportFile<Row>(bytes: Uint8Array, spec: ImportKindSpec<Row>): ImportFile<Row> {
   const text = decodeCsv(bytes);
   if (text === null) throw fileError([NOT_UTF8]);
   if (text.includes("\u0000")) throw fileError([HAS_NUL]);
@@ -94,54 +90,50 @@ export function readHotelImportFile(bytes: Uint8Array): ImportFile {
   const [header, ...rowLines] = lines;
   if (header === undefined) throw fileError(["The file is empty."]);
   const headers = header.cells.map((cell) => cell.trim());
-  const problems = headerProblems(headers);
+  const problems = headerProblems(headers, spec.template);
   if (problems.length > 0) throw fileError(problems);
-  return readRows(headers, rowLines);
+  return readRows(headers, rowLines, spec);
 }
 
 /** The rows under the header, or a 400 when there are none or too many. */
-function readRows(
+function readRows<Row>(
   headers: readonly string[],
   lines: readonly { readonly cells: readonly string[]; readonly line: number }[],
-): ImportFile {
-  if (lines.length === 0) throw fileError(["The file has no hotel rows."]);
+  spec: ImportKindSpec<Row>,
+): ImportFile<Row> {
+  if (lines.length === 0) throw fileError([`The file has no ${spec.noun} rows.`]);
   if (lines.length > HOTEL_IMPORT_MAX_ROWS) {
     throw fileError([
       `The file has ${lines.length} rows; one import takes at most ${HOTEL_IMPORT_MAX_ROWS}.`,
     ]);
   }
-  const rows: ImportRow[] = [];
+  const rows: ImportRow<Row>[] = [];
   const rejected: RejectedRow[] = [];
   for (const { cells, line } of lines) {
-    const read = readRow(headers, cells, line);
+    const read = readRow(headers, cells, line, spec);
     if ("row" in read) rows.push(read);
     else rejected.push(read);
   }
   return { rows, rejected, totalRows: lines.length };
 }
 
-/** One record as a schema-valid row, or the reasons it is not one. */
-function readRow(
+/** One record as a schema-valid row, or the reasons it is not one: its refused cells and schema issues. */
+function readRow<Row>(
   headers: readonly string[],
   cells: readonly string[],
   line: number,
-): ImportRow | RejectedRow {
-  const candidate = buildCandidate(headers, cells);
+  spec: ImportKindSpec<Row>,
+): ImportRow<Row> | RejectedRow {
+  const candidate = buildCandidate(headers, cells, spec.template);
+  const key = spec.keyOf(candidate.values);
   if (cells.slice(headers.length).some((cell) => cell.trim() !== "")) {
-    return { line, slug: slugOf(candidate), errors: [{ field: "row", message: EXTRA_CELLS }] };
+    return { line, ...key, errors: [{ field: "row", message: EXTRA_CELLS }] };
   }
-  const parsed = hotelImportRow.safeParse(candidate);
-  if (parsed.success) return { line, row: parsed.data };
-  const fieldErrors = parsed.error.issues.map((issue) => ({
-    field: issue.path.join("."),
-    message: issue.message,
-  }));
-  return { line, slug: slugOf(candidate), errors: fieldErrors };
-}
-
-/** The web address a refused row names: its slug cell, else one made from its name. */
-function slugOf(candidate: Record<string, unknown>): string | null {
-  const { slug, name } = candidate;
-  if (typeof slug === "string") return slug;
-  return typeof name === "string" ? slugify(name) || null : null;
+  const parsed = spec.schema.safeParse(candidate.values);
+  const issues = parsed.success
+    ? []
+    : parsed.error.issues.map((issue) => ({ field: issue.path.join("."), message: issue.message }));
+  const fieldErrors = [...candidate.problems, ...issues];
+  if (parsed.success && fieldErrors.length === 0) return { line, row: parsed.data };
+  return { line, ...key, errors: fieldErrors };
 }

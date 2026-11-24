@@ -5,7 +5,6 @@ import {
   changingHeadline,
   changingRows,
   hasRejections,
-  IMPORT_REPORT_FILE,
   IMPORT_ROWS_SHOWN,
   importReportCsv,
   importSummary,
@@ -14,6 +13,7 @@ import {
   rejectedRowText,
   rowOutcomeText,
 } from "./hotel-import.format";
+import { importReportFile } from "./hotel-import.kinds";
 import { useCsvDownload } from "./use-csv-download";
 
 interface RowLine {
@@ -43,13 +43,16 @@ function RowBlock({ headline, lines }: { readonly headline: string; readonly lin
   );
 }
 
-/** The rows that add or update a hotel, each with the columns it changes (never their values). */
+/**
+ * The rows that add or update a record, each with the columns it changes (never their values) and, for
+ * rooms and venues, the record's name.
+ */
 function ChangingRows({ result }: { readonly result: HotelImportResult }) {
   const headline = changingHeadline(result);
   if (!headline) return null;
   const lines = changingRows(result).map((row) => ({
     testID: `hotel-import-row-${row.line}`,
-    text: rowOutcomeText(row),
+    text: rowOutcomeText(row, result.kind),
   }));
   return <RowBlock headline={headline} lines={lines} />;
 }
@@ -72,9 +75,10 @@ export interface ImportResultPanelProps {
 }
 
 /**
- * The outcome of a validate or an import (TW-25): a summary callout, the rows that add or update a
- * hotel with the columns each changes, the rejected rows with their reasons (each list capped on
- * screen), and the whole per-row report as a CSV to download, so staff fix the rejected rows in their
+ * The outcome of a validate or an import (TW-25), for the kind it reports on: a summary callout, the
+ * rows that add or update a record with the columns each changes, the rejected rows with their reasons
+ * (a row refused at import as changed since the preview among them; each list capped on screen), and
+ * the whole per-row report as the kind's CSV to download, so staff fix the rejected rows in their
  * spreadsheet. Unchanged rows are counted, not listed. Once the CSV changes, it says the report is of
  * the CSV as it was, and stays on screen while staff fix the rows it names.
  *
@@ -102,7 +106,7 @@ export function ImportResultPanel({ result, isStale }: ImportResultPanelProps) {
           variant="secondary"
           size="sm"
           icon="download"
-          onPress={() => download(IMPORT_REPORT_FILE, importReportCsv(result))}
+          onPress={() => download(importReportFile(result.kind), importReportCsv(result))}
           testID="hotel-import-report"
         >
           {hasRejections(result) ? "Download error report" : "Download report"}

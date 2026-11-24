@@ -1,7 +1,15 @@
 import { z } from "zod";
 
-import { cursorQuery, uuid } from "./common.js";
+import { cursorQuery, storableText, uuid } from "./common.js";
 import { hotelCatalogueRequestFields } from "./hotel-catalogue.js";
+import {
+  hotelVenueSetting,
+  roomCatalogueRequestFields,
+  roomCatalogueViewFields,
+  VENUE_CAPACITY_MAX,
+  venueCatalogueRequestFields,
+  venueCatalogueViewFields,
+} from "./hotel-rooms-venues.js";
 import { hotelVenueType } from "./hotels.js";
 
 /*
@@ -18,13 +26,21 @@ import { hotelVenueType } from "./hotels.js";
 export const hotelStatus = z.enum(["draft", "active", "inactive"]);
 export type HotelStatus = z.infer<typeof hotelStatus>;
 
+/** The most facilities a hotel, a room category or a venue lists, and the longest one. */
+export const FACILITY_LABELS_MAX = 100;
+export const FACILITY_LABEL_MAX_LENGTH = 120;
+
 /**
- * A list of free-text facility labels (facilities_json): a hotel's, a room category's or a venue's.
+ * A list of free-text facility labels (facilities_json): a hotel's, a room category's or a venue's, at
+ * most {@link FACILITY_LABELS_MAX} of at most {@link FACILITY_LABEL_MAX_LENGTH} characters each. An entry
+ * holding the null character is refused on its own index (`storableText`).
  *
  * @example
  * facilityLabels.parse(["wifi", "pool", "spa"]);
  */
-export const facilityLabels = z.array(z.string().trim().min(1).max(120)).max(100);
+export const facilityLabels = z
+  .array(storableText().min(1).max(FACILITY_LABEL_MAX_LENGTH))
+  .max(FACILITY_LABELS_MAX);
 
 const slug = z
   .string()
@@ -113,23 +129,36 @@ export const roomCategoryView = z
     sizeSqm: z.number().int().nullable(),
     facilities: facilityLabels.nullable(),
     description: z.string().nullable(),
+    ...roomCatalogueViewFields, // unit type, view, bed configuration, size in sq ft (D-178)
   })
   .strict();
 export type RoomCategoryView = z.infer<typeof roomCategoryView>;
 
-export const roomCategoryCreateRequest = z
-  .object({
-    name: z.string().trim().min(1).max(255),
-    roomCount: z.number().int().min(0).nullish(),
-    maxOccupancy: z.number().int().min(0).nullish(),
-    sizeSqm: z.number().int().min(0).nullish(),
-    facilities: facilityLabels.nullish(),
-    description: z.string().trim().max(10_000).nullish(),
-  })
-  .strict();
+/**
+ * A room category's fields as a request writes them, with no create-time default, so the update (a
+ * `.partial()` of them) never leaks one: absent leaves a value, null clears it. The staff requests and
+ * the rooms import row spread them, so their bounds are one. A filled `sizeSqft` gives the `sizeSqm` at
+ * write (core `areaWrite`); `maxOccupancy` is at least 1 when stated, which a database CHECK backs. The
+ * room count stops where a hotel's total rooms does, so no row reaches the integer column out of range.
+ *
+ * @example
+ * z.object(roomCategoryRequestFields).parse({ name: "Lake View Suite", unitType: "suite", sizeSqft: 650 });
+ */
+export const roomCategoryRequestFields = {
+  name: storableText().min(1).max(255),
+  roomCount: z.number().int().min(0).max(100_000).nullish(),
+  maxOccupancy: z.number().int().min(1).max(100).nullish(),
+  sizeSqm: z.number().int().min(0).max(100_000).nullish(),
+  facilities: facilityLabels.nullish(),
+  description: storableText().max(10_000).nullish(),
+  ...roomCatalogueRequestFields,
+};
+
+export const roomCategoryCreateRequest = z.object(roomCategoryRequestFields).strict();
 export type RoomCategoryCreateRequest = z.infer<typeof roomCategoryCreateRequest>;
 
-export const roomCategoryUpdateRequest = roomCategoryCreateRequest
+export const roomCategoryUpdateRequest = z
+  .object(roomCategoryRequestFields)
   .partial()
   .strict()
   .refine((v) => Object.keys(v).length > 0, "at least one field is required");
@@ -143,33 +172,49 @@ export const venueView = z
     hotelId: uuid,
     name: z.string(),
     venueType: hotelVenueType,
-    isIndoor: z.boolean(),
+    isIndoor: z.boolean(), // true only for indoor: the API keeps it in step (`isIndoorSetting`)
     areaSqm: z.number().int().nullable(),
     capacityBanquet: z.number().int().nullable(),
     capacityTheatre: z.number().int().nullable(),
     capacityReception: z.number().int().nullable(),
     facilities: facilityLabels.nullable(),
     description: z.string().nullable(),
+    ...venueCatalogueViewFields, // setting, area in sq ft, dimensions, layouts, notes (D-178)
   })
   .strict();
 export type VenueView = z.infer<typeof venueView>;
 
-export const venueCreateRequest = z
-  .object({
-    name: z.string().trim().min(1).max(255),
-    venueType: hotelVenueType,
-    isIndoor: z.boolean(),
-    areaSqm: z.number().int().min(0).nullish(),
-    capacityBanquet: z.number().int().min(0).nullish(),
-    capacityTheatre: z.number().int().min(0).nullish(),
-    capacityReception: z.number().int().min(0).nullish(),
-    facilities: facilityLabels.nullish(),
-    description: z.string().trim().max(10_000).nullish(),
-  })
-  .strict();
+const venueCapacity = z.number().int().min(0).max(VENUE_CAPACITY_MAX).nullish();
+
+/**
+ * A venue's fields as a request writes them, with no create-time default (see
+ * {@link roomCategoryRequestFields}). `setting` is required on create and decides `is_indoor`, which no
+ * request carries: the API writes it, true only for indoor. The capacities mean (decision 11): banquet
+ * seated, dinner at round tables; reception floating, a standing reception or cocktails; theatre rows of
+ * chairs. A range keeps its maximum in the capacity and the range in `capacityNotes`. A filled
+ * `areaSqft` or `prefunctionAreaSqft` gives its m² at write (core `areaWrite`).
+ *
+ * @example
+ * z.object(venueRequestFields).parse({ name: "Synthetic Terrace", venueType: "terrace", setting: "semi_open" });
+ */
+export const venueRequestFields = {
+  name: storableText().min(1).max(255),
+  venueType: hotelVenueType,
+  setting: hotelVenueSetting,
+  areaSqm: z.number().int().min(0).max(1_000_000).nullish(),
+  capacityBanquet: venueCapacity,
+  capacityTheatre: venueCapacity,
+  capacityReception: venueCapacity,
+  facilities: facilityLabels.nullish(),
+  description: storableText().max(10_000).nullish(),
+  ...venueCatalogueRequestFields,
+};
+
+export const venueCreateRequest = z.object(venueRequestFields).strict();
 export type VenueCreateRequest = z.infer<typeof venueCreateRequest>;
 
-export const venueUpdateRequest = venueCreateRequest
+export const venueUpdateRequest = z
+  .object(venueRequestFields)
   .partial()
   .strict()
   .refine((v) => Object.keys(v).length > 0, "at least one field is required");
@@ -190,10 +235,15 @@ export const hotelContactView = z
   .strict();
 export type HotelContactView = z.infer<typeof hotelContactView>;
 
+// The phone stays free text on the wire: the API stores it in E.164 (core `normaliseHotelPhone`, refused
+// with `HOTEL_PHONE_REFUSAL`) yet accepts a phone equal to the stored one unchanged, so a legacy free-text
+// phone never blocks an unrelated edit. `isPrimary: true` makes the contact the hotel's one live primary:
+// the API demotes the current one in the same transaction (a partial unique index backs it). Text holding
+// the null character is refused on its field (`storableText`).
 const hotelContactFields = {
-  name: z.string().trim().min(1).max(255),
-  roleTitle: z.string().trim().max(255).nullish(),
-  phone: z.string().trim().max(255).nullish(),
+  name: storableText().min(1).max(255),
+  roleTitle: storableText().max(255).nullish(),
+  phone: storableText().max(255).nullish(),
   email: z.string().trim().toLowerCase().email().max(255).nullish(),
   isPrimary: z.boolean(),
 };

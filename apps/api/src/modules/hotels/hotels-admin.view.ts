@@ -1,20 +1,22 @@
-import type {
-  DestinationListItemView,
-  DestinationView,
-  HotelCatalogueKey,
-  HotelContactView,
-  HotelStaffDetail,
-  HotelStaffDetailView,
-  HotelStaffListItem,
-  HotelStaffNotesView,
-  HotelStaffView,
-  RoomCategoryView,
-  VenueView,
+import {
+  venueSettingOf,
+  type DestinationListItemView,
+  type DestinationView,
+  type HotelCatalogueKey,
+  type HotelContactView,
+  type HotelStaffDetail,
+  type HotelStaffDetailView,
+  type HotelStaffListItem,
+  type HotelStaffNotesView,
+  type HotelStaffView,
+  type RoomCategoryView,
+  type VenueView,
 } from "@ampm/core";
 
 import type { Prisma } from "../../generated/prisma/client.js";
 import type { HotelAudience } from "./hotel-audience.js";
 import { toStringList } from "./hotel-string-lists.js";
+import { toVenueLayouts } from "./hotel-venue-layouts.js";
 import type {
   DestinationListRow,
   DestinationRow,
@@ -67,9 +69,17 @@ export function toRoomCategoryView(row: RoomRow): RoomCategoryView {
     sizeSqm: row.sizeSqm,
     facilities: toStringList(row.facilities),
     description: row.description,
+    unitType: row.unitType,
+    viewLabel: row.viewLabel,
+    bedConfiguration: row.bedConfiguration,
+    sizeSqft: row.sizeSqft,
   };
 }
 
+/**
+ * A venue as staff read it: its setting never null (a venue saved before D-178 reads it from `is_indoor`,
+ * core `venueSettingOf`), its metres as numbers and its other layouts narrowed from the JSON column.
+ */
 export function toVenueView(row: VenueRow): VenueView {
   return {
     id: row.id,
@@ -83,6 +93,15 @@ export function toVenueView(row: VenueRow): VenueView {
     capacityReception: row.capacityReception,
     facilities: toStringList(row.facilities),
     description: row.description,
+    setting: venueSettingOf(row),
+    areaSqft: row.areaSqft,
+    lengthM: toNumber(row.lengthM),
+    widthM: toNumber(row.widthM),
+    ceilingHeightM: toNumber(row.ceilingHeightM),
+    prefunctionAreaSqm: row.prefunctionAreaSqm,
+    prefunctionAreaSqft: row.prefunctionAreaSqft,
+    otherLayouts: toVenueLayouts(row.otherLayouts),
+    capacityNotes: row.capacityNotes,
   };
 }
 
