@@ -180,8 +180,8 @@ bash deploy/redeploy-site.sh
 It builds the image, recreates only the `web` container (the API, worker, Postgres and Redis keep
 running) and checks the home page on `127.0.0.1:7002`. The build installs the workspace and downloads
 the fonts (`next/font`), so it needs the network. Every rebuild from changed source adds an install layer
-to Docker's build cache; that cache is shared with the server's other projects, so pruning it is the
-server owner's call.
+to Docker's build cache, which the server's other projects share. The production redeploy trims that
+cache to 8 GiB after every deploy (D-186; `deploy/app-ampmverse/production-setup.md`, section 6).
 
 ### Checks
 
