@@ -112,7 +112,7 @@ const CONTACT: ClassGolden = {
       ...["hotelContacts", "hotelContactsUnassigned", "vendorContacts", "vendorProfiles"],
       ...["venues", "venuesHotelSide", "vehicles"],
     ],
-    // §5.8 line 232 gives HL "R (a)" on vendor contacts, though §4 line 124 does not list vendors.
+    // §5.8 line 233 gives HL "R (a)" on vendor contacts, though §4 line 124 does not list vendors.
     HL: [
       ...["hotelContacts", "vendorContacts", "vendorProfiles", "venues", "venuesHotelSide"],
       "vehicles",

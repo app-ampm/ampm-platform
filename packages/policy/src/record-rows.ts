@@ -41,36 +41,36 @@ const WEDDING_PROJECTS: RowName = {
  * RECORD_ROWS.find((entry) => entry.row.label === "Close the project")?.record?.section; // "5.5"
  */
 export const RECORD_ROWS: readonly RecordRow[] = [
-  // §5.6 line 208 authorises an exception on a readiness checklist item (line 207), which turns
+  // §5.6 line 209 authorises an exception on a readiness checklist item (line 208), which turns
   // `exception` with `exception_authorised_by` (data-model.md line 1823; AC-13.2, line 926).
   {
     row: { section: "5.6", label: "Readiness exceptions (Q10: Eva's authorised personnel only)" },
     record: { section: "5.6", label: "Readiness checklist items" },
   },
-  // §5.6 line 209 sets a function's `status` (line 204; data-model.md line 815).
+  // §5.6 line 210 sets a function's `status` (line 205; data-model.md line 815).
   {
     row: { section: "5.6", label: "Function status (planned, confirmed, cancelled)" },
     record: { section: "5.6", label: "Functions" },
   },
-  // §5.9 line 253 records the client's decision on an approval (line 252), as an
+  // §5.9 line 254 records the client's decision on an approval (line 253), as an
   // `approval_decisions` row with `recorded_on_behalf_by` (data-model.md line 1246).
   {
     row: { section: "5.9", label: "Approval decisions, on the client's behalf with evidence" },
     record: { section: "5.9", label: "Approvals, submit for decision" },
   },
-  // §5.14 line 304 sets a document's `visibility` (line 303; data-model.md line 1729).
+  // §5.14 line 305 sets a document's `visibility` (line 304; data-model.md line 1729).
   {
     row: { section: "5.14", label: "Set client visibility on a document" },
     record: { section: "5.14", label: "Documents on records the role can reach" },
   },
-  // §5.15 lines 313 and 313 close and archive the wedding of §5.5 line 194 (`closed_at` and
+  // §5.15 lines 316 and 316 close and archive the wedding of §5.5 line 195 (`closed_at` and
   // `archived_at`, data-model.md lines 746 and 746).
   { row: { section: "5.15", label: "Close the project" }, record: WEDDING_PROJECTS },
   {
     row: { section: "5.15", label: "Archive the project after the window (Q23)" },
     record: WEDDING_PROJECTS,
   },
-  // §5.15 line 315 approves a deletion the retention job proposed (§8 line 508): identity
+  // §5.15 line 318 approves a deletion the retention job proposed (§8 line 512): identity
   // documents, guest data or leads, so no one row's record.
   {
     row: {

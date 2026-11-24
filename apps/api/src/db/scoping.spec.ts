@@ -64,7 +64,7 @@ describe("recordScope (architecture §6 step 5)", () => {
     });
   });
 
-  it("§6 line 338 and §1 line 54: clients reach their weddings, through what is addressed to them", () => {
+  it("§6 line 342 and §1 line 54: clients reach their weddings, through what is addressed to them", () => {
     expect(recordScope(CLIENT, "own")).toEqual({
       where: { projectId: { in: [MEMBER] }, deletedAt: null },
       isDemo: false,
@@ -81,7 +81,7 @@ describe("recordScope (architecture §6 step 5)", () => {
   });
 
   it("CODE-03: the scope comes from the matrix cell, not from the role's 'assigned' flag", () => {
-    // §5.13 line 296 gives VC "CR (a)" on incidents, although VC is not an assigned role (§2).
+    // §5.13 line 298 gives VC "CR (a)" on incidents, although VC is not an assigned role (§2).
     expect(STAFF_ROLES.VC.assigned).toBe(false);
     const vc = staff(["VC"]);
     const decision = decideBeforeRead(toPolicyPrincipal(vc), "tasks.incidents.read", {

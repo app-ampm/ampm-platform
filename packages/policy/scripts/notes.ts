@@ -197,18 +197,18 @@ export const REPORT_EXCLUSIONS: Readonly<Record<string, ReportExclusion>> = {
  * EDITS_BEYOND_READ.includes("U (a) mark delivered"); // true
  */
 export const EDITS_BEYOND_READ: readonly string[] = [
-  // §5.9 line 248 (PM, CD, VC, RG, HL): their own internal comments, written through C (a).
+  // §5.9 line 249 (PM, CD, VC, RG, HL): their own internal comments, written through C (a).
   "CR (a) UD (o)",
-  // §5.6 line 208: function status; the function itself is read through its row (line 203).
+  // §5.6 line 209: function status; the function itself is read through its row (line 204).
   "U",
   "U (a)",
-  // §5.8 line 238: HL marks a deliverable delivered on the assignment it reads (line 235).
+  // §5.8 line 239: HL marks a deliverable delivered on the assignment it reads (line 236).
   "U (a) mark delivered",
-  // §5.15 line 311: each role completes its own item of the closure checklist.
+  // §5.15 line 314: each role completes its own item of the closure checklist.
   "U vendor completion",
   "U (a) departures, lost and found",
   "U final accounts",
-  // §6 line 354: the representatives record the vendor decision on the options of line 353.
+  // §6 line 357: the representatives record the vendor decision on the options of line 356.
   "U (either representative)",
 ];
 
@@ -227,9 +227,9 @@ export const READINGS: Readonly<Record<string, string>> = {
   // §5.9 "Comments, internal" (SM, HT, FA): "UD" after "CR (o)" would let them edit and delete every
   // internal comment while reading only their own; the narrower reading holds (POL-19).
   "CR (o) UD": "CR (o) UD (o)",
-  // §4 line 125 makes RESTRICTED-BANK readable by SA and FA and writable by FA and SA; §5.8 line 233
+  // §4 line 125 makes RESTRICTED-BANK readable by SA and FA and writable by FA and SA; §5.8 line 234
   // gives VC "RU" on the row that holds that class alone (§5 legend line 136). Until AMPM decides,
   // the narrower reading holds in both layers: VC has no grant, as the class layer never opens the
-  // class to VC; SA keeps line 233's "R" and FA its "RU" (ENGINE-4).
+  // class to VC; SA keeps line 234's "R" and FA its "RU" (ENGINE-4).
   "§5.8 Vendor bank details, VC: RU": "—",
 };

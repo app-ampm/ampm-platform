@@ -2,7 +2,7 @@ import { MATRIX } from "./matrix";
 import type { RowName } from "./record-rows";
 
 /**
- * §10's resource names (permission-matrix.md lines 538-553) that are not the generated resource of
+ * §10's resource names (permission-matrix.md lines 542-557) that are not the generated resource of
  * their row, by `module.resource`, with the §5 row each names in its own module. A key spelt this
  * way decides on that row, so a route written with the documented key reaches the same grants as
  * the generated spelling. A §10 key that names its row from another module is in OUTSIDE_KEYS
@@ -12,23 +12,23 @@ import type { RowName } from "./record-rows";
  * DOCUMENT_RESOURCES["functions.readiness"]?.section; // "5.6"
  */
 export const DOCUMENT_RESOURCES: Readonly<Record<string, RowName>> = {
-  // Lines 538-540: the hotel profile, rate card and contact rows of §5.3 (lines 169, 173, 171).
+  // Lines 542-544: the hotel profile, rate card and contact rows of §5.3 (lines 169, 173, 171).
   "hotels.profiles": { section: "5.3", label: "Hotel profiles, client fields" },
   "hotels.rate_cards": { section: "5.3", label: "Rate cards and rate items" },
   "hotels.contacts": { section: "5.3", label: "Hotel contacts" },
   // consultancy.proposals needs no bridge: feature 10.4 curated the §5.4 "Hotel proposals, client
   // amounts" row's resource to `proposals`, so `consultancy.proposals.*` resolves directly (the internal
   // total is reached through that row's `read_internal_amount` alias).
-  // Line 543: adding or removing members on a project is the §5.5 staff members row (line 197).
+  // Line 547: adding or removing members on a project is the §5.5 staff members row (line 198).
   "projects.members": { section: "5.5", label: "Project members, staff" },
-  // Lines 544-545: budget lines are the §5.7 row of line 216; `read_internal_cost` reads line 217.
+  // Lines 548-549: budget lines are the §5.7 row of line 217; `read_internal_cost` reads line 218.
   "budget.lines": { section: "5.7", label: "Budget lines, client-facing amounts" },
-  // Line 550: allergies and accessibility needs are the §5.10 sensitive fields (line 263).
+  // Line 554: allergies and accessibility needs are the §5.10 sensitive fields (line 264).
   "guests.sensitive": {
     section: "5.10",
     label: "Guest sensitive fields (allergies, accessibility)",
   },
-  // Line 551: authorising a readiness exception is the §5.6 decision of line 208.
+  // Line 555: authorising a readiness exception is the §5.6 decision of line 209.
   "functions.readiness": {
     section: "5.6",
     label: "Readiness exceptions (Q10: Eva's authorised personnel only)",

@@ -23,7 +23,7 @@ export interface AliasHolder {
  * A §10 alias key and the row it decides on; a role it does not list holds no grant.
  *
  * @example
- * const golden: AliasGolden = { line: 195, section: "5.5", label: "Project internal notes", key, holders };
+ * const golden: AliasGolden = { line: 196, section: "5.5", label: "Project internal notes", key, holders };
  */
 export interface AliasGolden {
   /** The §5 line of the row the key stands for, and its subsection and label (KEY_ALIASES). */
@@ -60,21 +60,21 @@ export const KEY_ALIAS_GOLDEN: readonly AliasGolden[] = [
     holders: { SA: ALL, SM: ALL, HT: ALL, PM: ALL, HL: ASSIGNED },
   },
   {
-    line: 184,
+    line: 185,
     section: "5.4",
     label: "Enquiry internal notes and internal-only events",
     key: "consultancy.enquiries.read_internal_notes",
     holders: { SA: ALL, SM: ALL, HT: ALL, PM: ASSIGNED },
   },
   {
-    line: 187,
+    line: 188,
     section: "5.4",
     label: "Hotel proposals, internal amounts",
     key: "consultancy.proposals.read_internal_amount",
     holders: { SA: ALL, HT: ALL, PM: ASSIGNED, FA: ALL },
   },
   {
-    line: 195,
+    line: 196,
     section: "5.5",
     label: "Project internal notes",
     key: "projects.wedding_projects.read_internal_notes",
@@ -82,14 +82,14 @@ export const KEY_ALIAS_GOLDEN: readonly AliasGolden[] = [
   },
   {
     // "A" for SA; PM "request only" holds nothing (Q10).
-    line: 208,
+    line: 209,
     section: "5.6",
     label: "Readiness exceptions (Q10: Eva's authorised personnel only)",
     key: "functions.readiness_exceptions.authorise_exception",
     holders: { SA: ALL },
   },
   {
-    line: 217,
+    line: 218,
     section: "5.7",
     label: "Budget lines, internal cost",
     key: "budget.budget_lines_client_facing.read_internal_cost",
@@ -102,56 +102,56 @@ export const KEY_ALIAS_GOLDEN: readonly AliasGolden[] = [
     },
   },
   {
-    line: 232,
+    line: 233,
     section: "5.8",
     label: "Vendor contacts",
     key: "vendors.vendor_profiles_client_fields.read_contacts",
     holders: { SA: ALL, PM: ASSIGNED, VC: ALL, HL: ASSIGNED },
   },
   {
-    line: 233,
+    line: 234,
     section: "5.8",
     label: "Vendor internal rating and notes",
     key: "vendors.vendor_profiles_client_fields.read_internal_notes",
     holders: { SA: ALL, PM: ASSIGNED, VC: ALL },
   },
   {
-    line: 238,
+    line: 239,
     section: "5.8",
     label: "Vendor proposals, internal cost",
     key: "vendors.vendor_proposals_client_amounts.read_internal_cost",
     holders: { SA: ALL, PM: ASSIGNED, VC: ALL, FA: ALL },
   },
   {
-    line: 241,
+    line: 242,
     section: "5.8",
     label: "Artist fee, internal",
     key: "vendors.artist_bookings.read_internal_cost",
     holders: { SA: ALL, PM: ASSIGNED, VC: ALL, FA: ALL },
   },
   {
-    line: 253,
+    line: 254,
     section: "5.9",
     label: "Approval decisions, on the client's behalf with evidence",
     key: "creative.approval_decisions_on_client.create_on_behalf",
     holders: { SA: ALL, PM: ASSIGNED },
   },
   {
-    line: 263,
+    line: 264,
     section: "5.10",
     label: "Guest sensitive fields (allergies, accessibility)",
     key: "guests.family_groups_guests_standard.read_sensitive",
     holders: { SA: ALL, PM: ASSIGNED, RG: ASSIGNED, HL: ASSIGNED },
   },
   {
-    line: 264,
+    line: 265,
     section: "5.10",
     label: "Guest internal notes",
     key: "guests.family_groups_guests_standard.read_internal_notes",
     holders: { SA: ALL, PM: ASSIGNED, RG: ASSIGNED, HL: ASSIGNED },
   },
   {
-    line: 265,
+    line: 266,
     section: "5.10",
     label: "Identity documents",
     key: "guests.family_groups_guests_standard.read_identity",
@@ -162,7 +162,7 @@ export const KEY_ALIAS_GOLDEN: readonly AliasGolden[] = [
     },
   },
   {
-    line: 276,
+    line: 277,
     section: "5.11",
     label: "Room blocks, internal rate",
     key: "rooms.room_blocks_client_fields.read_internal_cost",

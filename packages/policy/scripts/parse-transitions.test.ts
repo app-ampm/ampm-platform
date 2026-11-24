@@ -12,7 +12,7 @@ function table(heading: string, ...rows: string[]): string {
 }
 
 describe("parseTransitions", () => {
-  it("§7 line 419: role codes come from the who-part, never from the condition ('approved by FA')", () => {
+  it("§7 line 422: role codes come from the who-part, never from the condition ('approved by FA')", () => {
     const [rule] = parseTransitions(
       table(
         "Wedding project",
@@ -35,7 +35,7 @@ describe("parseTransitions", () => {
     });
   });
 
-  it("§7 line 455: 'any open state' is the named set of open incident states", () => {
+  it("§7 line 458: 'any open state' is the named set of open incident states", () => {
     const [rule] = parseTransitions(
       table(
         "Incident",
@@ -52,7 +52,7 @@ describe("parseTransitions", () => {
     });
   });
 
-  it("§7 lines 389 and 400: each clause of a who-cell is its own rule", () => {
+  it("§7 lines 392 and 403: each clause of a who-cell is its own rule", () => {
     const rules = parseTransitions(
       table(
         "Subscription",
@@ -72,7 +72,7 @@ describe("parseTransitions", () => {
     ]);
   });
 
-  it("§7 lines 478-483: the assigned staff member and the requester are actors; qualifiers are kinds", () => {
+  it("§7 lines 481-486: the assigned staff member and the requester are actors; qualifiers are kinds", () => {
     const rules = parseTransitions(
       table(
         "Client request",
@@ -91,14 +91,14 @@ describe("parseTransitions", () => {
     expect(rules[3]?.from).not.toContain("withdrawn");
   });
 
-  it("§7 line 421: 'previous status' restores the status saved before the hold", () => {
+  it("§7 line 424: 'previous status' restores the status saved before the hold", () => {
     const [rule] = parseTransitions(
       table("Wedding project", "| on_hold | previous status | PM (a), SA |"),
     );
     expect(rule).toMatchObject({ from: ["on_hold"], to: [], restore: true });
   });
 
-  it("§7 lines 420 and 422: a plain 'any' leaves out the terminal statuses and the target", () => {
+  it("§7 lines 423 and 425: a plain 'any' leaves out the terminal statuses and the target", () => {
     const [rule] = parseTransitions(
       table("Wedding project", "| any | on_hold | PM (a), SA, with reason; approvals are paused |"),
     );
@@ -113,7 +113,7 @@ describe("parseTransitions", () => {
     ]);
   });
 
-  it("§7 line 446: readiness is derived by the System; 'an exception needs SA' names no mover", () => {
+  it("§7 line 449: readiness is derived by the System; 'an exception needs SA' names no mover", () => {
     const rules = parseTransitions(
       table(
         "Function status and readiness",
@@ -121,7 +121,7 @@ describe("parseTransitions", () => {
         "| ready | live | PM (a), HL (a) on the day |",
       ),
     );
-    // data-model.md line 1838: the exception is authorised on the checklist item (§5.6 line 207);
+    // data-model.md line 1838: the exception is authorised on the checklist item (§5.6 line 208);
     // the System derives ready from the items, so SA moves the readiness status by no rule.
     expect(rules.map((r) => [r.entity, r.from, r.to, r.system, r.roles])).toEqual([
       [
@@ -147,7 +147,7 @@ describe("parseTransitions", () => {
     );
   });
 
-  it("§7 line 395: a row with no mover is kept only when the document says nobody moves it", () => {
+  it("§7 line 398: a row with no mover is kept only when the document says nobody moves it", () => {
     const [rule] = parseTransitions(
       table(
         "Subscription",
@@ -177,7 +177,7 @@ describe("parseTransitions", () => {
     ).toThrow(/owner/);
   });
 
-  it("§7 line 483: stops on an indented row instead of skipping it", () => {
+  it("§7 line 486: stops on an indented row instead of skipping it", () => {
     const block = table(
       "Client request",
       "| accepted | implemented | PM (a) |",
@@ -186,7 +186,7 @@ describe("parseTransitions", () => {
     expect(() => parseTransitions(block)).toThrow(/indented/);
   });
 
-  it("§7 line 428: a later sentence of a Who cell is read like the first, so its mover is a rule", () => {
+  it("§7 line 431: a later sentence of a Who cell is read like the first, so its mover is a rule", () => {
     const rules = parseTransitions(
       table("Incident", "| resolved | closed | PM (a). SA may also close it |"),
     );
@@ -196,7 +196,7 @@ describe("parseTransitions", () => {
     ]);
   });
 
-  it("§7 line 428: a later sentence that names no mover, or leaves a role in a condition, stops it", () => {
+  it("§7 line 431: a later sentence that names no mover, or leaves a role in a condition, stops it", () => {
     const later = (who: string) => () =>
       parseTransitions(table("Incident", `| resolved | closed | ${who} |`));
     expect(later("PM (a). An auditor; HL (a) on the day")).toThrow(/no mover in "An auditor"/);
@@ -204,7 +204,7 @@ describe("parseTransitions", () => {
     expect(later("PM (a). HL (a) and SA")).toThrow(/SA is in the condition/);
   });
 
-  it("§7 line 428: the approval row's second sentence names no mover and is known to need none", () => {
+  it("§7 line 431: the approval row's second sentence names no mover and is known to need none", () => {
     const counting =
       "Approved needs `required_decisions` approvals, one by default; one rejection or revision request moves it immediately";
     const rules = parseTransitions(
@@ -225,7 +225,7 @@ describe("parseTransitions", () => {
     ]);
   });
 
-  it("§7 line 419: a role code left in a condition stops the generator unless it says who approves", () => {
+  it("§7 line 422: a role code left in a condition stops the generator unless it says who approves", () => {
     expect(() =>
       parseTransitions(table("Room allocation", "| proposed | confirmed | PM (a) and HL |")),
     ).toThrow(/HL/);

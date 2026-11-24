@@ -32,7 +32,7 @@ class Routes {
   })
   readInternalCost(): void {}
 
-  // §10 line 551.
+  // §10 line 556.
   @RequirePermission("projects.close:assigned", { projectParam: "projectId" })
   closeProject(): void {}
 
@@ -41,13 +41,13 @@ class Routes {
   })
   authoriseException(): void {}
 
-  // §10 line 550 spells the same decision as the document does.
+  // §10 line 555 spells the same decision as the document does.
   @RequirePermission("functions.readiness.authorise_exception:assigned", {
     projectParam: "projectId",
   })
   authoriseExceptionAsDocumented(): void {}
 
-  // §10 line 543.
+  // §10 line 548.
   @RequirePermission("budget.lines.read_internal_cost:assigned", { projectParam: "projectId" })
   readInternalCostAsDocumented(): void {}
 
@@ -128,7 +128,7 @@ describe("PermissionGuard (architecture §6 step 4)", () => {
     expect(run(null, "readIncidents").status).toBe(401);
   });
 
-  it("permission-matrix §5.13 line 296: SA reaches every wedding, PM (a) its own", () => {
+  it("permission-matrix §5.13 line 298: SA reaches every wedding, PM (a) its own", () => {
     expect(run(staff(["SA"], []), "readIncidents", OTHER)).toMatchObject({
       allowed: true,
       access: { key: "tasks.incidents.read", scope: "all" },
@@ -154,7 +154,7 @@ describe("PermissionGuard (architecture §6 step 4)", () => {
     expect(run(staff(["CD"]), "updateIncident", OTHER).status).toBe(404);
   });
 
-  it("§5 legend line 136, §5.13 line 293: an own-scope grant passes as own for the repository", () => {
+  it("§5 legend line 136, §5.13 line 295: an own-scope grant passes as own for the repository", () => {
     expect(run(staff(["FA"], []), "readTasks", OTHER)).toMatchObject({
       allowed: true,
       access: { scope: "own" },
@@ -166,7 +166,7 @@ describe("PermissionGuard (architecture §6 step 4)", () => {
     });
   });
 
-  it("§5.13 line 293, test-cases.md line 212: FA and SM see only their own tasks, so a delete is a 404", () => {
+  it("§5.13 line 295, test-cases.md line 212: FA and SM see only their own tasks, so a delete is a 404", () => {
     // Their read is "(o)": before the task is read the guard cannot tell theirs from Bob's.
     expect(run(staff(["FA"], []), "deleteTask", OTHER).status).toBe(404);
     expect(run(staff(["SM"], []), "deleteTask", OTHER).status).toBe(404);
@@ -176,7 +176,7 @@ describe("PermissionGuard (architecture §6 step 4)", () => {
     expect(run(staff(["PM"]), "deleteTask").allowed).toBe(true);
   });
 
-  it("§6 line 338: a client never holds a staff key and sees no staff records, a 404", () => {
+  it("§6 line 342: a client never holds a staff key and sees no staff records, a 404", () => {
     expect(run(CLIENT, "readIncidents").status).toBe(404);
   });
 
@@ -184,12 +184,12 @@ describe("PermissionGuard (architecture §6 step 4)", () => {
     expect(run(staff(["SM"]), "readIncidents").status).toBe(404);
   });
 
-  it("test-cases.md line 212, §5.7 line 215: CD (a) sees the line but not its internal cost, a 403", () => {
+  it("test-cases.md line 212, §5.7 lines 217-218: CD (a) sees the line but not its internal cost, a 403", () => {
     expect(run(staff(["CD"]), "readInternalCost").status).toBe(403);
     expect(run(staff(["CD"]), "readInternalCost", OTHER).status).toBe(404);
   });
 
-  it("§5.15 line 312: PM (a) closing before the checklist is complete sees its wedding, a 403", () => {
+  it("§5.15 line 316: PM (a) closing before the checklist is complete sees its wedding, a 403", () => {
     expect(run(staff(["PM"]), "closeProject").status).toBe(403);
     expect(run(staff(["PM"]), "closeProject", OTHER).status).toBe(404);
     expect(run(staff(["SA"], []), "closeProject", OTHER).allowed).toBe(true);
@@ -203,7 +203,7 @@ describe("PermissionGuard (architecture §6 step 4)", () => {
     expect(run(staff(["SA"], []), "authoriseException").allowed).toBe(true);
   });
 
-  it("§10 line 550, AC-13.2: the key as §10 spells it refuses HL and PM (a) with 403, lets SA through", () => {
+  it("§10 line 555, AC-13.2: the key as §10 spells it refuses HL and PM (a) with 403, lets SA through", () => {
     for (const role of ["HL", "PM"] as const) {
       expect(run(staff([role]), "authoriseExceptionAsDocumented").status).toBe(403);
       expect(run(staff([role]), "authoriseExceptionAsDocumented", OTHER).status).toBe(404);
@@ -211,7 +211,7 @@ describe("PermissionGuard (architecture §6 step 4)", () => {
     expect(run(staff(["SA"], []), "authoriseExceptionAsDocumented", OTHER).allowed).toBe(true);
   });
 
-  it("§10 line 543, §5.7 lines 215-216: budget.lines.read_internal_cost as §10 spells it", () => {
+  it("§10 line 548, §5.7 lines 217-218: budget.lines.read_internal_cost as §10 spells it", () => {
     expect(run(staff(["PM"]), "readInternalCostAsDocumented").allowed).toBe(true);
     expect(run(staff(["CD"]), "readInternalCostAsDocumented").status).toBe(403);
     expect(run(staff(["CD"]), "readInternalCostAsDocumented", OTHER).status).toBe(404);
