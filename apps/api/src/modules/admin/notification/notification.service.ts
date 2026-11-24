@@ -10,7 +10,6 @@ import {
   type NotificationChannel,
   type NotificationStatus,
   type NotificationView,
-  type RecipientType,
   type RenderedContent,
 } from "@ampm/core";
 import type { Scope } from "@ampm/policy";
@@ -39,10 +38,26 @@ export const sendNotificationJob = defineJob(
   z.object({ notificationId: uuid }),
 );
 
-/** What a caller asks to notify someone of; `eventType` keys the per-user channel preference. */
-export interface QueueNotification {
-  readonly recipientType: RecipientType;
+/** A user or a guest token: the delivery address is read from their record when the message is sent. */
+interface RecordRecipient {
+  readonly recipientType: "user" | "guest";
   readonly recipientId: string;
+}
+
+/**
+ * Someone outside AMPM (D-188 §5), such as the contact AMPM entered for a hotel: `recipientId` is the
+ * record the message is about (a hotel information request's id) and `recipientAddress` the address it
+ * goes to (an email address for email, a mobile for SMS). The address is held, RESTRICTED-CONTACT, only
+ * until the row leaves `queued`; no channel preference applies, as there is no user to hold one.
+ */
+interface ExternalRecipient {
+  readonly recipientType: "external";
+  readonly recipientId: string;
+  readonly recipientAddress: string;
+}
+
+/** What a caller asks to notify someone of; `eventType` keys the per-user channel preference. */
+interface NotificationMessage {
   readonly channel: NotificationChannel;
   readonly eventType: string;
   readonly templateKey: string;
@@ -55,7 +70,22 @@ export interface QueueNotification {
    * it skips the per-user channel preference.
    */
   readonly required?: boolean;
+  /**
+   * The email's Reply-To (D-188 §5: hotel-form email uses `hotel_form.policy.replyTo`); held on the row
+   * until it leaves `queued`, as the render variables are.
+   */
+  readonly replyTo?: string;
 }
+
+/**
+ * A notification to queue: who it goes to and what it says.
+ *
+ * @example
+ * await notifications.queue({ recipientType: "external", recipientId: request.id,
+ *   recipientAddress: request.recipientEmail, channel: "email", eventType: "hotel_form.link",
+ *   templateKey: "hotel_form.link", variables, ...(policy.replyTo ? { replyTo: policy.replyTo } : {}) });
+ */
+export type QueueNotification = (RecordRecipient | ExternalRecipient) & NotificationMessage;
 
 export type QueueResult = { suppressed: true } | { suppressed: false; notificationId: string };
 
@@ -79,6 +109,20 @@ function canAdvance(from: NotificationStatus, to: NotificationStatus): boolean {
 
 /** The render variables a caller may attach to a notification (e.g. the activation link); all strings. */
 const renderVariables = z.record(z.string(), z.string());
+
+/** The channels an external recipient's address can serve: an email address, or a mobile for SMS. */
+const ADDRESSED_CHANNELS: readonly NotificationChannel[] = ["email", "sms"];
+
+/** An external recipient needs an address, on a channel that delivers to one (fails closed, D-188 §5). */
+function checkExternal(input: QueueNotification): void {
+  if (input.recipientType !== "external") return;
+  if (input.recipientAddress.trim() === "") {
+    throw errors.internal("An external notification needs the recipient's address");
+  }
+  if (!ADDRESSED_CHANNELS.includes(input.channel)) {
+    throw errors.internal(`An external notification cannot go by ${input.channel}`);
+  }
+}
 
 /** The channels delivered through the adapter; in-app is delivered by the service, so it maps to null. */
 function externalChannel(channel: NotificationChannel): ExternalChannel | null {
@@ -133,6 +177,7 @@ export class NotificationService implements OnModuleInit {
   }
 
   async queue(input: QueueNotification): Promise<QueueResult> {
+    checkExternal(input);
     if (
       input.recipientType === "user" &&
       input.required !== true &&
@@ -148,6 +193,8 @@ export class NotificationService implements OnModuleInit {
       entityType: input.entityType ?? null,
       entityId: input.entityId ?? null,
       data: input.variables,
+      recipientAddress: input.recipientType === "external" ? input.recipientAddress : null,
+      replyTo: input.replyTo ?? null,
     });
     await this.jobs.enqueue(
       sendNotificationJob,
@@ -203,7 +250,7 @@ export class NotificationService implements OnModuleInit {
   ): Promise<void> {
     // Email and SMS need a delivery address; resolve it here (adapters never read persistence) and fail
     // closed when the recipient has none, rather than hand the adapter an unsendable message.
-    const address = await this.addressFor(channel, row.recipientId);
+    const address = await this.addressFor(channel, row);
     if ((channel === "email" || channel === "sms") && !address) {
       this.logger.warn("notification.no_address", { templateKey: row.templateKey, channel });
       await this.advance(row, { status: "failed", clearData: true });
@@ -216,6 +263,7 @@ export class NotificationService implements OnModuleInit {
         recipientType: row.recipientType,
         recipientId: row.recipientId,
         address,
+        ...(row.replyTo ? { replyTo: row.replyTo } : {}),
         templateKey: row.templateKey,
         content,
         variables,
@@ -236,10 +284,16 @@ export class NotificationService implements OnModuleInit {
     });
   }
 
-  /** The address a channel delivers to: the email for email, the mobile for SMS, none otherwise. */
-  private async addressFor(channel: ExternalChannel, recipientId: string): Promise<string | null> {
-    if (channel === "email") return this.repository.recipientEmail(recipientId);
-    if (channel === "sms") return this.repository.recipientPhone(recipientId);
+  /**
+   * The address a channel delivers to: the email for email, the mobile for SMS, none otherwise. An
+   * external recipient's is the one the row was queued with; a user's is read from their record.
+   */
+  private async addressFor(channel: ExternalChannel, row: NotificationRow): Promise<string | null> {
+    if (row.recipientType === "external") {
+      return ADDRESSED_CHANNELS.includes(channel) ? row.recipientAddress : null;
+    }
+    if (channel === "email") return this.repository.recipientEmail(row.recipientId);
+    if (channel === "sms") return this.repository.recipientPhone(row.recipientId);
     return null;
   }
 
@@ -268,7 +322,8 @@ export class NotificationService implements OnModuleInit {
 
   /**
    * The job's dead-letter handler: every send attempt failed, so mark the still-`queued` row failed
-   * and clear its render variables (the invite token). A no-op if the row has since left `queued`.
+   * and clear its render variables (the invite token), an external recipient's address and the Reply-To.
+   * A no-op if the row has since left `queued`.
    */
   private async failPermanently(notificationId: string): Promise<void> {
     const row = await this.repository.findById(notificationId);

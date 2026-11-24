@@ -49,6 +49,8 @@ export class FakeNotificationRepository extends NotificationRepository {
       sentAt: null,
       deliveredAt: null,
       data: data.data ?? null,
+      recipientAddress: data.recipientAddress ?? null,
+      replyTo: data.replyTo ?? null,
       createdAt: new Date("2026-10-28T00:00:00.000Z"),
     };
     this.rows.set(id, row);
@@ -69,6 +71,8 @@ export class FakeNotificationRepository extends NotificationRepository {
       sentAt: patch.sentAt ?? row.sentAt,
       deliveredAt: patch.deliveredAt ?? row.deliveredAt,
       data: patch.clearData ? null : row.data,
+      recipientAddress: patch.clearData ? null : row.recipientAddress,
+      replyTo: patch.clearData ? null : row.replyTo,
     });
   }
 

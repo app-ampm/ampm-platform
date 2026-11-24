@@ -103,3 +103,34 @@ describe("SmtpEmailAdapter (offline contract)", () => {
     expect(message).not.toContain("pat@example.com");
   });
 });
+
+describe("SmtpEmailAdapter: Reply-To (D-188 §5)", () => {
+  function recording(): { transport: MailTransport; sent: Record<string, unknown>[] } {
+    const sent: Record<string, unknown>[] = [];
+    return {
+      sent,
+      transport: {
+        async sendMail(message) {
+          sent.push({ ...message });
+          return { messageId: "msg-reply" };
+        },
+      },
+    };
+  }
+
+  it("sets the Reply-To a delivery carries, and logs neither it nor the recipient", async () => {
+    const { transport, sent } = recording();
+    const { logger, entries } = createMemoryLogger();
+    const adapter = new SmtpEmailAdapter(transport, "AMPM <no-reply@ampm.test>", logger);
+    await adapter.send(delivery({ replyTo: "desk@ampm.example" }));
+    expect(sent[0]).toMatchObject({ to: "pat@example.com", replyTo: "desk@ampm.example" });
+    expect(JSON.stringify(entries)).not.toContain("desk@ampm.example");
+  });
+
+  it("sends no Reply-To field when the delivery has none", async () => {
+    const { transport, sent } = recording();
+    const { logger } = createMemoryLogger();
+    await new SmtpEmailAdapter(transport, "from@ampm.test", logger).send(delivery());
+    expect(sent[0]).not.toHaveProperty("replyTo");
+  });
+});

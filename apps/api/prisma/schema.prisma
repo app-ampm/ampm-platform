@@ -50,9 +50,12 @@ enum AuthTokenPurpose {
   sign_in_challenge
 }
 
+/// `external` (D-188 §5): someone outside AMPM, such as a hotel's contact; `recipient_id` is the record the
+/// notice is about and `notifications.recipient_address` the address, held until the row leaves `queued`.
 enum RecipientType {
   user
   guest
+  external
 }
 
 enum NotificationChannel {
@@ -615,21 +618,25 @@ model Session {
 /// Partitioned by month on `created_at` (raw SQL migration, data.md); the composite primary key
 /// includes the partition key, so reads/updates by id alone use findFirst / updateMany.
 model Notification {
-  id            String              @default(uuid(7)) @db.Uuid
-  recipientType RecipientType       @map("recipient_type")
-  recipientId   String              @map("recipient_id") @db.Uuid
-  channel       NotificationChannel
-  templateKey   String              @map("template_key") @db.VarChar(255)
-  entityType    String?             @map("entity_type") @db.VarChar(255)
-  entityId      String?             @map("entity_id") @db.Uuid
-  status        NotificationStatus  @default(queued)
-  providerRef   String?             @map("provider_ref") @db.VarChar(255)
-  sentAt        DateTime?           @map("sent_at") @db.Timestamptz(6)
-  deliveredAt   DateTime?           @map("delivered_at") @db.Timestamptz(6)
+  id               String              @default(uuid(7)) @db.Uuid
+  recipientType    RecipientType       @map("recipient_type")
+  recipientId      String              @map("recipient_id") @db.Uuid
+  channel          NotificationChannel
+  templateKey      String              @map("template_key") @db.VarChar(255)
+  entityType       String?             @map("entity_type") @db.VarChar(255)
+  entityId         String?             @map("entity_id") @db.Uuid
+  status           NotificationStatus  @default(queued)
+  providerRef      String?             @map("provider_ref") @db.VarChar(255)
+  sentAt           DateTime?           @map("sent_at") @db.Timestamptz(6)
+  deliveredAt      DateTime?           @map("delivered_at") @db.Timestamptz(6)
   // Server-only render variables (e.g. the activation link) consumed at delivery; never in a view (5.2).
-  data          Json?               @db.JsonB
-  createdAt     DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt     DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
+  data             Json?               @db.JsonB
+  // An external recipient's address (D-188 §5, RESTRICTED-CONTACT) and an email's Reply-To; both are
+  // cleared with `data` when the row leaves `queued`, and neither is ever in a view.
+  recipientAddress String?             @map("recipient_address") @db.VarChar(255)
+  replyTo          String?             @map("reply_to") @db.VarChar(255)
+  createdAt        DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   @@id([id, createdAt])
   @@index([recipientType, recipientId, status])
@@ -1169,14 +1176,15 @@ model Destination {
   updatedBy String?   @map("updated_by") @db.Uuid
   deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
 
-  hotels Hotel[]
+  hotels           Hotel[]
+  proposedRequests HotelInfoRequest[]
 
   @@index([status])
   @@index([deletedAt])
   @@map("destinations")
 }
 
-/// A hotel in the catalogue (A-28; data-model.md:565-585). Client-class fields (name, brand, address,
+/// A hotel in the catalogue (A-28; data-model.md:610-658). Client-class fields (name, brand, address,
 /// description_client, …) build the client view; `internal_rating` and `internal_notes` are
 /// RESTRICTED-NOTES and never enter a client response (the repository select omits them — security.md).
 /// `demo_visible` is the demo-isolation flag the repository filters on for a demo principal (data.md).
@@ -1248,6 +1256,7 @@ model Hotel {
   rateCards         HotelRateCard[]
   verifications     HotelVerification[]
   weddingReferences HotelWeddingReference[]
+  infoRequests      HotelInfoRequest[]
 
   @@index([destinationId])
   @@index([status, demoVisible])
@@ -1255,7 +1264,7 @@ model Hotel {
   @@map("hotels")
 }
 
-/// A hotel a client account has shortlisted (data-model.md:665-679). Unique on (account_id, hotel_id)
+/// A hotel a client account has shortlisted (data-model.md:751-758). Unique on (account_id, hotel_id)
 /// so a re-save reuses the row (the service clears `deleted_at` rather than inserting a second row).
 /// `project_id` is back-filled by the system when a project is linked (GP-27, Module E) — plain Uuid now.
 model SavedHotel {
@@ -1603,6 +1612,165 @@ model HotelWeddingReference {
   @@index([hotelId])
   @@index([deletedAt])
   @@map("hotel_wedding_references")
+}
+
+// ---------------------------------------------------------------- Module C — hotel information requests
+// (D-188 §1; docs/data-model.md §5; docs/planning/hotel-information-form-plan.md §4.2 and §6.1). One
+// request is one round of the hotel information form for a hotel, or for a proposed new hotel: its
+// reference, its secret link (stored only as a hash), the recipient AMPM entered, and its status, which
+// moves per permission-matrix §7 "Hotel information request". Keep the enums in step with core
+// `hotel-info-requests.ts` (a spec in src/modules/hotels checks them).
+
+/// One round (D-188 §1): a hotel's first onboarding, or a seasonal refresh.
+enum HotelInfoRequestKind {
+  onboarding
+  refresh
+}
+
+/// A hotel the catalogue holds, or a proposed new one.
+enum HotelInfoRequestTarget {
+  existing
+  new
+}
+
+/// A request's status (STATUS_MACHINES.hotel_info_request in @ampm/policy). Live: open, submitted,
+/// in_review and changes_requested. Expiry is worked out from expires_at, never stored.
+enum HotelInfoRequestStatus {
+  open
+  submitted
+  in_review
+  changes_requested
+  merged
+  rejected
+  revoked
+}
+
+/// What the form shows from the catalogue: nothing in version 1 (plan decision 16).
+enum HotelInfoRequestPrefillMode {
+  none
+}
+
+/// What a request event records: Slice 7a's; later slices add theirs.
+enum HotelInfoRequestEventType {
+  created
+  link_reissued
+  link_emailed
+  share_recorded
+  updated
+  expiry_extended
+  revoked
+}
+
+/// Who wrote a request event: AMPM staff, a person at the hotel, or the System.
+enum HotelInfoRequestActorKind {
+  staff
+  hotel_person
+  system
+}
+
+/// A hotel information request (D-188 §1), retention class `hotel_intake`. `reference` is HIR, the
+/// creation year (UTC) and a number from the sequence `hotel_info_request_ref_seq`, which never resets
+/// (helper `nextHotelInfoRequestReference`). `token_hash` is the SHA-256 of the link's secret (SECRET);
+/// the secret itself is never stored. `recipient_name` and `recipient_email` are RESTRICTED-CONTACT, as AMPM
+/// entered them. An existing-hotel request names its hotel, and a new-hotel request its proposed name,
+/// destination and normalised web address (core `normaliseWebAddress`): two CHECKs, and two partial unique
+/// indexes holding one live request per hotel and per proposed web address, are raw SQL in
+/// 20261128000000_hotel_info_requests. A new hotel's request gets its `hotel_id` at the merge. The
+/// submission, review, merge and revoke columns wait, nullable, for their slices; `submitted_by_person_id`
+/// names a hotel_info_request_people row from Slice 7b, which adds that table and its foreign key.
+model HotelInfoRequest {
+  id        String                 @id @default(uuid(7)) @db.Uuid
+  reference String                 @unique @db.VarChar(32)
+  kind      HotelInfoRequestKind
+  target    HotelInfoRequestTarget
+  hotelId   String?                @map("hotel_id") @db.Uuid
+
+  proposedName          String? @map("proposed_name") @db.VarChar(255)
+  proposedDestinationId String? @map("proposed_destination_id") @db.Uuid
+  proposedWebAddress    String? @map("proposed_web_address") @db.VarChar(255)
+  proposedWebAddressKey String? @map("proposed_web_address_key") @db.VarChar(2048)
+
+  // Entered by staff: the hotel's official website and switchboard, and where the number came from.
+  officialWebsite   String? @map("official_website") @db.VarChar(255)
+  switchboardPhone  String? @map("switchboard_phone") @db.VarChar(32)
+  switchboardSource String? @map("switchboard_source") @db.VarChar(255)
+
+  isTest          Boolean                @default(false) @map("is_test")
+  status          HotelInfoRequestStatus @default(open)
+  expiresAt       DateTime               @map("expires_at") @db.Timestamptz(6)
+  statusOnlyUntil DateTime?              @map("status_only_until") @db.Timestamptz(6)
+  displayLabel    String?                @map("display_label") @db.VarChar(255)
+  staffNote       String?                @map("staff_note") @db.Text
+
+  tokenHash       String    @unique @map("token_hash") @db.VarChar(128) // SECRET
+  tokenGeneration Int       @default(1) @map("token_generation")
+  linkIssuedAt    DateTime  @map("link_issued_at") @db.Timestamptz(6)
+  linkEmailedAt   DateTime? @map("link_emailed_at") @db.Timestamptz(6)
+  recipientName   String?   @map("recipient_name") @db.VarChar(255) // RESTRICTED-CONTACT
+  recipientEmail  String?   @map("recipient_email") @db.VarChar(255) // RESTRICTED-CONTACT
+
+  prefillMode         HotelInfoRequestPrefillMode @default(none) @map("prefill_mode")
+  revision            Int                         @default(0)
+  submittedAt         DateTime?                   @map("submitted_at") @db.Timestamptz(6)
+  submittedByPersonId String?                     @map("submitted_by_person_id") @db.Uuid
+  reviewerUserId      String?                     @map("reviewer_user_id") @db.Uuid
+  reviewStartedAt     DateTime?                   @map("review_started_at") @db.Timestamptz(6)
+  changesRequestedAt  DateTime?                   @map("changes_requested_at") @db.Timestamptz(6)
+  rejectedAt          DateTime?                   @map("rejected_at") @db.Timestamptz(6)
+  rejectReason        String?                     @map("reject_reason") @db.Text // RESTRICTED-NOTES
+  mergedAt            DateTime?                   @map("merged_at") @db.Timestamptz(6)
+  mergePlanHash       String?                     @map("merge_plan_hash") @db.VarChar(64)
+  revokedAt           DateTime?                   @map("revoked_at") @db.Timestamptz(6)
+  revokeReason        String?                     @map("revoke_reason") @db.Text
+  retentionClass      String                      @default("hotel_intake") @map("retention_class") @db.VarChar(32)
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  hotel               Hotel?                  @relation(fields: [hotelId], references: [id], onDelete: Restrict)
+  proposedDestination Destination?            @relation(fields: [proposedDestinationId], references: [id], onDelete: Restrict)
+  events              HotelInfoRequestEvent[]
+
+  @@index([hotelId])
+  @@index([proposedDestinationId])
+  @@index([status, expiresAt])
+  @@index([status, submittedAt])
+  @@index([reviewerUserId])
+  @@index([submittedByPersonId])
+  @@index([deletedAt])
+  @@map("hotel_info_requests")
+}
+
+/// One entry of a request's history (D-188 §1): what happened, the actor's kind and ids, and a masked
+/// detail. Written in the transaction that makes the change; append-only by repository convention (create
+/// and list only), keeping the standard columns as hotel_enquiry_events does. The Hotel team reads it; the
+/// audit log stays the Super Admin's. `actor_person_id` names a hotel_info_request_people row from Slice 7b.
+model HotelInfoRequestEvent {
+  id            String                    @id @default(uuid(7)) @db.Uuid
+  requestId     String                    @map("request_id") @db.Uuid
+  eventType     HotelInfoRequestEventType @map("event_type")
+  actorKind     HotelInfoRequestActorKind @map("actor_kind")
+  actorUserId   String?                   @map("actor_user_id") @db.Uuid
+  actorPersonId String?                   @map("actor_person_id") @db.Uuid
+  detail        Json?                     @map("detail_json") @db.JsonB
+  occurredAt    DateTime                  @default(now()) @map("occurred_at") @db.Timestamptz(6)
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  request HotelInfoRequest @relation(fields: [requestId], references: [id], onDelete: Restrict)
+
+  @@index([requestId, occurredAt])
+  @@index([actorUserId])
+  @@index([actorPersonId])
+  @@index([deletedAt])
+  @@map("hotel_info_request_events")
 }
 
 // ---------------------------------------------------------------- Module D — Hotel consultancy

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import type { PrismaService } from "../../../db/prisma.service.js";
+import { Prisma } from "../../../generated/prisma/client.js";
 import { PrismaNotificationRepository } from "./notification.repository.js";
 
 describe("PrismaNotificationRepository.recipientEmail", () => {
@@ -55,6 +56,61 @@ describe("PrismaNotificationRepository.listForRecipient", () => {
       expect.objectContaining({
         where: expect.objectContaining({ NOT: { templateKey: { startsWith: "auth." } } }),
       }),
+    );
+  });
+});
+
+describe("PrismaNotificationRepository: external recipients (D-188 §5)", () => {
+  it("stores an external recipient's address and the Reply-To with the new row", async () => {
+    const create = vi.fn(async ({ data }: { data: Record<string, unknown> }) => ({
+      id: "n1",
+      ...data,
+    }));
+    const repo = new PrismaNotificationRepository({
+      notification: { create },
+    } as unknown as PrismaService);
+    await repo.create({
+      recipientType: "external",
+      recipientId: "request-1",
+      channel: "email",
+      templateKey: "hotel_form.link",
+      recipientAddress: "sales@synthetic-hotel.example",
+      replyTo: "desk@ampm.example",
+    });
+    expect(create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        recipientType: "external",
+        recipientAddress: "sales@synthetic-hotel.example",
+        replyTo: "desk@ampm.example",
+      }),
+    });
+  });
+
+  it("clears the address and the Reply-To together with the render data", async () => {
+    const updateMany = vi.fn(async () => ({ count: 1 }));
+    const repo = new PrismaNotificationRepository({
+      notification: { updateMany },
+    } as unknown as PrismaService);
+    await repo.updateStatus("n1", { status: "sent", clearData: true });
+    expect(updateMany).toHaveBeenCalledWith({
+      where: { id: "n1" },
+      data: { status: "sent", data: Prisma.DbNull, recipientAddress: null, replyTo: null },
+    });
+    await repo.updateStatus("n1", { status: "delivered" });
+    expect(updateMany).toHaveBeenLastCalledWith({
+      where: { id: "n1" },
+      data: { status: "delivered" },
+    });
+  });
+
+  it("keeps every list to user recipients, so an external row is in no one's feed", async () => {
+    const findMany = vi.fn(async () => []);
+    const repo = new PrismaNotificationRepository({
+      notification: { findMany },
+    } as unknown as PrismaService);
+    await repo.listForRecipient({ where: { deletedAt: null } }, 20);
+    expect(findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: expect.objectContaining({ recipientType: "user" }) }),
     );
   });
 });

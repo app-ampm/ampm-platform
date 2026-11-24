@@ -11,6 +11,7 @@ describe("Notifications (e2e)", () => {
   let prisma: PrismaService;
   let pmNotif: string;
   let cdNotif: string;
+  let externalNotif: string;
 
   beforeAll(async () => {
     ({ app, mint } = await startApi());
@@ -37,10 +38,26 @@ describe("Notifications (e2e)", () => {
     });
     pmNotif = pmRow.id;
     cdNotif = cdRow.id;
+    // An email to someone outside AMPM (D-188 §5): recipient_id is the record it is about, here a
+    // synthetic hotel information request id, and the address sits on the row until it is sent.
+    const externalRow = await prisma.notification.create({
+      data: {
+        recipientType: "external",
+        recipientId: "0196a0b0-0000-7000-8000-00000000e0e2",
+        recipientAddress: "sales@synthetic-hotel.example",
+        replyTo: "desk@ampm.example",
+        channel: "email",
+        templateKey: "e2e.external",
+        status: "queued",
+      },
+    });
+    externalNotif = externalRow.id;
   });
 
   afterAll(async () => {
-    await prisma.notification.deleteMany({ where: { id: { in: [pmNotif, cdNotif] } } });
+    await prisma.notification.deleteMany({
+      where: { id: { in: [pmNotif, cdNotif, externalNotif] } },
+    });
     await app.close();
   });
 
@@ -74,5 +91,14 @@ describe("Notifications (e2e)", () => {
       .set("authorization", await as("local:admin"))
       .expect(200);
     expect(ids(admin.body)).toEqual(expect.arrayContaining([pmNotif, cdNotif]));
+  });
+
+  it("lists no external recipient's mail to anyone, the Super Admin included (D-188 §5)", async () => {
+    const admin = await request(app.getHttpServer())
+      .get("/notifications?limit=100")
+      .set("authorization", await as("local:admin"))
+      .expect(200);
+    expect(ids(admin.body)).not.toContain(externalNotif);
+    expect(JSON.stringify(admin.body)).not.toContain("sales@synthetic-hotel.example");
   });
 });

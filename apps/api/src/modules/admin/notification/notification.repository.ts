@@ -19,6 +19,10 @@ export interface NotificationRow {
   readonly deliveredAt: Date | null;
   /** Server-only render variables; opaque here, parsed where it is rendered. Never in a view (5.2). */
   readonly data: unknown;
+  /** An external recipient's address (D-188 §5, RESTRICTED-CONTACT); null once the row leaves `queued`. */
+  readonly recipientAddress: string | null;
+  /** The email's Reply-To; null once the row leaves `queued`. Never in a view. */
+  readonly replyTo: string | null;
   readonly createdAt: Date;
 }
 
@@ -30,6 +34,9 @@ export interface NewNotification {
   readonly entityType?: string | null;
   readonly entityId?: string | null;
   readonly data?: Readonly<Record<string, string>> | null;
+  /** Set for, and only for, an `external` recipient (D-188 §5). */
+  readonly recipientAddress?: string | null;
+  readonly replyTo?: string | null;
 }
 
 export interface StatusPatch {
@@ -37,7 +44,10 @@ export interface StatusPatch {
   readonly providerRef?: string;
   readonly sentAt?: Date;
   readonly deliveredAt?: Date;
-  /** Clears the server-only render variables; set when the row leaves `queued` (5.2, D-044). */
+  /**
+   * Clears the server-only render variables, an external recipient's address and the Reply-To; set when
+   * the row leaves `queued` (5.2, D-044, D-188 §5).
+   */
   readonly clearData?: boolean;
 }
 
@@ -81,6 +91,8 @@ export class PrismaNotificationRepository extends NotificationRepository {
         entityId: data.entityId ?? null,
         status: "queued",
         ...(data.data ? { data: data.data } : {}),
+        recipientAddress: data.recipientAddress ?? null,
+        replyTo: data.replyTo ?? null,
       },
     });
     return row;
@@ -99,7 +111,7 @@ export class PrismaNotificationRepository extends NotificationRepository {
         ...(patch.providerRef !== undefined ? { providerRef: patch.providerRef } : {}),
         ...(patch.sentAt !== undefined ? { sentAt: patch.sentAt } : {}),
         ...(patch.deliveredAt !== undefined ? { deliveredAt: patch.deliveredAt } : {}),
-        ...(patch.clearData ? { data: Prisma.DbNull } : {}),
+        ...(patch.clearData ? { data: Prisma.DbNull, recipientAddress: null, replyTo: null } : {}),
       },
     });
   }
@@ -115,7 +127,8 @@ export class PrismaNotificationRepository extends NotificationRepository {
     // Keyset pagination on the time-ordered uuid v7 id: notifications is partitioned (composite PK
     // id + created_at), so id alone is not a Prisma `cursor`; an id range uses the PK's leading column.
     // Security messages (a sign-in code's SMS, a password-reset email; template keys `auth.*`) are not
-    // part of anyone's feed (D-147).
+    // part of anyone's feed (D-147), and neither is mail to an external recipient (D-188 §5): only rows
+    // addressed to a user are listed, the Super Admin's whole log included.
     const where = {
       recipientType: "user" as const,
       NOT: { templateKey: { startsWith: "auth." } },
