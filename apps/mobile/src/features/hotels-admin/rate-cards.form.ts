@@ -50,6 +50,20 @@ export function draftFromRateCard(card: RateCardView | null): RateCardDraft {
   };
 }
 
+/**
+ * The draft a rate-card sheet opens with: the card being edited as it is, or a new card with what the
+ * caller fills in (a menu's draft F&B card: its name and source, D-187 §6).
+ *
+ * @example
+ * openingRateCardDraft(null, { name: "F&B · Banquet menu" }); // a new card, named
+ */
+export function openingRateCardDraft(
+  card: RateCardView | null,
+  prefill: Partial<RateCardDraft> = {},
+): RateCardDraft {
+  return card ? draftFromRateCard(card) : { ...draftFromRateCard(null), ...prefill };
+}
+
 export type RateCardErrors = {
   readonly name: string | undefined;
   readonly validFrom: string | undefined;
