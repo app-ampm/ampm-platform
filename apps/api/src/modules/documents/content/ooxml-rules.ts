@@ -116,12 +116,14 @@ export function refuseContentType(part: string, contentType: string): void {
   }
 }
 
-const SAFE_LINK = /^(?:https?|mailto):/i;
+/** The external targets a hyperlink may have: a web page, an email address or a phone number. */
+const SAFE_LINK = /^(?:https?|mailto|tel):/i;
 const HAS_SCHEME = /^[a-z][a-z0-9+.-]*:/i;
 
 /**
- * Refuses a relationship of a refused type, an external target other than an http, https or mailto
- * hyperlink, and an internal target that is really a URL or a network path.
+ * Refuses a relationship of a refused type, an external target other than an http, https, mailto or tel
+ * hyperlink (an online video, a linked picture or template included), and an internal target that is
+ * really a URL or a network path.
  */
 export function refuseRelationship(relationship: Relationship): void {
   const { type, target, source } = relationship;

@@ -175,6 +175,30 @@ describe("inspectOoxml: refused anywhere in the package (D-187 §2)", () => {
       "active_content",
     ],
     [
+      "an online video",
+      { relationships: [rel(SLIDE, `${T}/video`, "https://www.youtube.com/embed/sample", true)] },
+      "external_content",
+    ],
+    [
+      "an online video's media link",
+      {
+        relationships: [
+          rel(
+            SLIDE,
+            "http://schemas.microsoft.com/office/2007/relationships/media",
+            "https://example.com/tour.mp4",
+            true,
+          ),
+        ],
+      },
+      "external_content",
+    ],
+    [
+      "a phone link that is not a hyperlink",
+      { relationships: [rel(SLIDE, `${T}/image`, "tel:+912255550100", true)] },
+      "external_content",
+    ],
+    [
       "an externally linked picture",
       { relationships: [rel(SLIDE, `${T}/image`, "http://example.com/a.png", true)] },
       "external_content",
@@ -214,13 +238,16 @@ describe("inspectOoxml: refused anywhere in the package (D-187 §2)", () => {
     expect(refusal.reason).toBe(reason);
   });
 
-  it.each(["http://example.com/menu", "HTTPS://example.com/menu", "mailto:events@example.com"])(
-    "accepts a hyperlink to %s",
-    async (target) => {
-      const pkg = buildPackage({ relationships: [rel(SLIDE, `${T}/hyperlink`, target, true)] });
-      await expect(inspectOoxml(pkg, EVERY_KIND)).resolves.toBe("pptx");
-    },
-  );
+  it.each([
+    "http://example.com/menu",
+    "HTTPS://example.com/menu",
+    "mailto:events@example.com",
+    "tel:+91 22 5555 0100",
+    "TEL:+912255550100",
+  ])("accepts a hyperlink to %s", async (target) => {
+    const pkg = buildPackage({ relationships: [rel(SLIDE, `${T}/hyperlink`, target, true)] });
+    await expect(inspectOoxml(pkg, EVERY_KIND)).resolves.toBe("pptx");
+  });
 
   it.each<[string, string, string]>([
     [
