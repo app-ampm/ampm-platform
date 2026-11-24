@@ -1,10 +1,12 @@
 import { fromFile, refuse } from "./refusal.js";
+import { XmlEncoding } from "./xml-encoding.js";
 
 /*
  * A streaming XML tokenizer for the parts of an Office package (D-187 §2). It is fed the inflated chunks
  * as they come, keeps only the markup it is inside (capped at 1 MiB), and reports start tags, end tags
  * and, while asked to, the text between them. It refuses what Office's own parser refuses or what could
- * hide content from a byte-level check: a DTD (entity declarations), and an encoding other than UTF-8.
+ * hide content from a byte-level check: a DTD (entity declarations), and an encoding other than UTF-8 or
+ * UTF-16 with its byte order mark (xml-encoding.ts transcodes UTF-16 to the UTF-8 read here).
  */
 
 export interface XmlEvents {
@@ -35,7 +37,7 @@ export class XmlScanner {
   /** While true, text and CDATA between tags go to `events.text`. */
   capture = false;
   private mode: Mode = "text";
-  private head: Buffer | null = Buffer.alloc(0);
+  private readonly encoding: XmlEncoding;
   private opening: number[] = [];
   private pieces: Buffer[] = [];
   private pieceBytes = 0;
@@ -46,48 +48,23 @@ export class XmlScanner {
   constructor(
     private readonly events: XmlEvents,
     private readonly part: string,
-  ) {}
+  ) {
+    this.encoding = new XmlEncoding(part);
+  }
 
   write(chunk: Buffer): void {
-    if (this.head === null) {
-      this.consume(chunk, 0);
-      return;
-    }
-    const head = Buffer.concat([this.head, chunk]);
-    if (head.length < 4) {
-      this.head = head;
-      return;
-    }
-    this.head = null;
-    this.consume(head, this.startOffset(head));
+    this.consume(this.encoding.write(chunk));
   }
 
   end(): void {
-    if (this.head !== null) {
-      const head = this.head;
-      this.head = null;
-      this.consume(head, this.startOffset(head));
-    }
+    this.consume(this.encoding.end());
     if (this.mode !== "text")
       refuse("file_damaged", `XML that ends inside markup in ${fromFile(this.part)}`);
     this.events.end?.();
   }
 
-  /** Skips a UTF-8 byte order mark; refuses UTF-16 and UTF-32, with or without one. */
-  private startOffset(head: Buffer): number {
-    if (head[0] === 0xef && head[1] === 0xbb && head[2] === 0xbf) return 3;
-    const wide =
-      (head[0] === 0xfe && head[1] === 0xff) ||
-      (head[0] === 0xff && head[1] === 0xfe) ||
-      head[0] === 0 ||
-      head[1] === 0;
-    if (wide && head.length > 1)
-      refuse("file_damaged", `XML not in UTF-8 in ${fromFile(this.part)}`);
-    return 0;
-  }
-
-  private consume(chunk: Buffer, from: number): void {
-    let at = from;
+  private consume(chunk: Buffer): void {
+    let at = 0;
     while (at < chunk.length) at = this.step(chunk, at);
   }
 
@@ -231,9 +208,7 @@ export class XmlScanner {
     const declaration = this.markup().slice(0, MAX_DECLARATION_BYTES);
     if (!isFirst || !/^<\?xml\s/.test(declaration)) return;
     const encoding = /\bencoding\s*=\s*["']([^"']*)["']/.exec(declaration)?.[1];
-    if (encoding !== undefined && !/^utf-?8$/i.test(encoding)) {
-      refuse("file_damaged", `XML declared as ${fromFile(encoding)} in ${fromFile(this.part)}`);
-    }
+    if (encoding !== undefined) this.encoding.checkDeclared(encoding);
   }
 
   private closeQuietly(at: number): number {

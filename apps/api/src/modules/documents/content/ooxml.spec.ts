@@ -90,11 +90,43 @@ describe("inspectOoxml: the main part decides the kind (D-187 §2)", () => {
     expect((await refusalOf(inspectOoxml(pkg, EVERY_KIND))).reason).toBe("archive_expansion");
   });
 
-  it("refuses an XML part with a DTD, and one in UTF-16", async () => {
+  it("refuses an XML part with a DTD, and one in UTF-16 without a byte order mark", async () => {
     const dtd = buildPackage({ body: '<!DOCTYPE x [<!ENTITY a "ppaction://macro">]><p:sld/>' });
     expect((await refusalOf(inspectOoxml(dtd, EVERY_KIND))).reason).toBe("file_damaged");
-    const wide = Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from("<p:sld/>", "utf16le")]);
-    const utf16 = buildPackage({ body: wide });
-    expect((await refusalOf(inspectOoxml(utf16, EVERY_KIND))).reason).toBe("file_damaged");
+    const noMark = buildPackage({ body: Buffer.from("<p:sld/>", "utf16le") });
+    expect((await refusalOf(inspectOoxml(noMark, EVERY_KIND))).reason).toBe("file_damaged");
+  });
+
+  it("reads parts in UTF-16 with a byte order mark, which OPC allows, and checks them", async () => {
+    const wide = (text: string): Buffer =>
+      Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from(text, "utf16le")]);
+    const clean = '<?xml version="1.0" encoding="UTF-16"?><p:sld><a:t>Sample Hotel</a:t></p:sld>';
+    await expect(inspectOoxml(buildPackage({ body: wide(clean) }), EVERY_KIND)).resolves.toBe(
+      "pptx",
+    );
+    const action = '<p:sld><a:hlinkClick r:id="" action="ppaction://macro?name=Run"/></p:sld>';
+    const refusal = await refusalOf(inspectOoxml(buildPackage({ body: wide(action) }), EVERY_KIND));
+    expect(refusal.reason).toBe("active_content");
+  });
+
+  it("reads content types and package relationships in UTF-16", async () => {
+    const wide = (text: string): Buffer =>
+      Buffer.concat([Buffer.from([0xfe, 0xff]), Buffer.from(text, "utf16le").swap16()]);
+    const zip = writeZip([
+      {
+        name: "[Content_Types].xml",
+        data: wide(
+          '<Types><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/></Types>',
+        ),
+      },
+      {
+        name: "_rels/.rels",
+        data: wide(
+          `<Relationships><Relationship Id="r1" Type="${TRANSITIONAL_RELS}/officeDocument" Target="ppt/presentation.xml"/></Relationships>`,
+        ),
+      },
+      { name: "ppt/presentation.xml", data: "<main/>" },
+    ]);
+    await expect(inspectOoxml(zip, EVERY_KIND)).resolves.toBe("pptx");
   });
 });
