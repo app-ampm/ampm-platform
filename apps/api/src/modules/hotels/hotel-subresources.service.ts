@@ -17,8 +17,10 @@ import { AuditService } from "../../policy/audit.service.js";
 import { type Principal, staffId } from "../../policy/principal.types.js";
 import { hotelAudienceOf, requireContactsRead, requireContactsUpdate } from "./hotel-audience.js";
 import {
+  contactCreateImages,
   createImages,
   deleteImages,
+  demotionImages,
   updateImages,
   type ChildAuditImages,
 } from "./hotel-child-audit.js";
@@ -57,8 +59,9 @@ type ChildEntity = "hotel_room_category" | "hotel_venue" | "hotel_contact";
  * hotel-child-write.ts maps them (the units rule; a venue's setting decides `is_indoor`, D-178). A
  * contact's phone is stored in E.164 (a repeated stored phone kept as it is), and a hotel has one live
  * primary contact: a write that names a new one demotes the current one in the same transaction, audited,
- * which needs the contacts update key. Every write and delete records its audit in its own transaction
- * (the routes are `@SelfAudited`), naming the row and the fields it set or changed (hotel-child-audit.ts).
+ * which needs the contacts update key. Every write and delete records its audit in the write's own
+ * transaction (the routes are `@SelfAudited`): the row's name and the fields a write set or changed, and
+ * for a contact create or demotion the primary flag (hotel-child-audit.ts).
  */
 @Injectable()
 export class HotelSubresourcesService {
@@ -157,8 +160,8 @@ export class HotelSubresourcesService {
     const target = { hotelId, contactId: null, makesPrimary: data.isPrimary };
     return this.writeContact(principal, target, async (tx) => {
       const row = await this.repo.createContact(hotelId, data, actorId, tx);
-      const after = { name: row.name, isPrimary: row.isPrimary };
-      await this.record("create", "hotel_contact", row.id, { before: null, after }, tx);
+      const images = contactCreateImages(toHotelContactView(row));
+      await this.record("create", "hotel_contact", row.id, images, tx);
       return row;
     });
   }
@@ -251,23 +254,15 @@ export class HotelSubresourcesService {
       staffId(principal),
       tx,
     );
-    for (const { id } of primaries) {
-      const after = { isPrimary: false, changedFields: ["isPrimary"] };
-      await this.audit.record(
-        {
-          action: "update",
-          entityType: "hotel_contact",
-          entityId: id,
-          before: { isPrimary: true },
-          after,
-          maskImages: false,
-        },
-        tx,
-      );
+    for (const primary of primaries) {
+      await this.record("update", "hotel_contact", primary.id, demotionImages(primary), tx);
     }
   }
 
-  /** One audit event in the write's transaction; its images hold names and field names, no values. */
+  /**
+   * One audit event in the write's transaction. Its images name the row and the fields a write set or
+   * changed; of the fields' values they hold only a contact's primary flag, on a create or a demotion.
+   */
   private record(
     action: "create" | "update" | "delete",
     entityType: ChildEntity,

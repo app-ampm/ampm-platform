@@ -22,6 +22,9 @@ const filled: RoomDraft = {
   description: "",
 };
 
+// Escaped, never the character itself: text pasted from a PDF can carry this invisible one.
+const NUL = "\u0000";
+
 describe("rooms.form", () => {
   it("seeds an edit from the room category, its facilities one per line", () => {
     const room = roomCategoryViewFixture({ unitType: "villa", sizeSqft: 484, viewLabel: "Lake" });
@@ -99,6 +102,28 @@ describe("rooms.form", () => {
     const body = buildRoomBody({ ...filled, unitType: "unset", sizeSqm: "45", sizeSqft: "" });
     expect(body).toMatchObject({ unitType: null, sizeSqm: 45, sizeSqft: null });
     expect(buildRoomBody({ ...filled, facilities: " \n | " }).facilities).toBeNull();
+  });
+
+  // The contract refuses the null character, which no one can see to remove, so the sheet drops it.
+  it("sends its text without the null character, and reads a name of only that as none", () => {
+    const body = buildRoomBody({
+      ...filled,
+      name: `Synthetic${NUL} Garden Suite`,
+      viewLabel: `Garden view${NUL}`,
+      bedConfiguration: `${NUL}King`,
+      facilities: `wifi, minibar${NUL}\n${NUL}\nBalcony | Bathtub`,
+      description: `Quiet${NUL}`,
+    });
+    expect(body).toMatchObject({
+      name: "Synthetic Garden Suite",
+      viewLabel: "Garden view",
+      bedConfiguration: "King",
+      facilities: ["wifi, minibar", "Balcony", "Bathtub"],
+      description: "Quiet",
+    });
+    expect(validateRoom({ ...filled, name: ` ${NUL} ` }).name).toBe(
+      "Give the room category a name",
+    );
   });
 
   it("updates only what changed, so a save keeps what an import wrote meanwhile", () => {

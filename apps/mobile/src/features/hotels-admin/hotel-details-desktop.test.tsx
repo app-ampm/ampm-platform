@@ -12,6 +12,7 @@ import {
   renderWithApi,
   roomCategoryViewFixture,
   routedFetch,
+  VENUE_ID,
   venueViewFixture,
 } from "./hotels-admin.test-utils";
 
@@ -60,6 +61,7 @@ async function renderDetails(): Promise<void> {
 }
 
 const summary = () => screen.getByTestId(`contact-${CONTACT_ID}-summary`);
+const venueSummary = () => screen.getByTestId(`venue-${VENUE_ID}-summary`);
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -83,6 +85,16 @@ describe("HotelDetailsScreen from 1024 (T5)", () => {
     await resizeTo(390);
     expect(summary().props.numberOfLines).toBe(1);
     expect(screen.getByTestId("details-split").props.className).toContain("flex-col");
+  });
+
+  // Testing Library lays out no text, so the line count is what can be checked: on a phone a venue's
+  // type, setting and area in both units can fill most of two lines, so a third is left for the
+  // capacities after them.
+  it("gives a venue's summary a third line on a phone, and two lines from 1024", async () => {
+    await renderDetails();
+    expect(venueSummary().props.numberOfLines).toBe(2);
+    await resizeTo(390);
+    expect(venueSummary().props.numberOfLines).toBe(3);
   });
 
   it("keeps a contact being written when the window crosses 1024, both ways", async () => {

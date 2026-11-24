@@ -5,9 +5,9 @@ import type { ToastOptions } from "@ampm/ui";
  * Shared pure helpers for the hotel-admin forms (profile, rooms, venues, contacts): the editors hold
  * text as strings and parse on submit, so these convert between the view's typed fields and the draft's
  * strings, and build the request values (trimmed text or null, parsed numbers, one-per-line lists read
- * by the import's list rule, a yes / no / not known answer), an update's changed part, and the toast of
- * a save the checks blocked. No rendering, no I/O — tested through the form modules that use them and in
- * hotel-form-fields.test.ts.
+ * by the import's list rule, a yes / no / not known answer, the room, venue and contact sheets' text
+ * without the null character), an update's changed part, and the toast of a save the checks blocked. No
+ * rendering, no I/O — tested through the form modules that use them and in hotel-form-fields.test.ts.
  */
 
 /** The longest free text a hotel field takes (an address, a description, notes), as the contract caps it. */
@@ -16,6 +16,21 @@ export const LONG_TEXT_MAX = 10_000;
 export function textOrNull(value: string): string | null {
   const trimmed = value.trim();
   return trimmed === "" ? null : trimmed;
+}
+
+const NUL = "\u0000";
+
+/**
+ * Text as the room, venue and contact sheets check and send it: without the null character (U+0000),
+ * which text pasted from a PDF can carry and no database text column stores. Core refuses it
+ * (`NUL_TEXT_MESSAGE`) and the import keeps refusing a file with one, but a sheet's save would fail over
+ * a character no one can see to remove, so the sheets drop it. A text of nothing else is then empty.
+ *
+ * @example
+ * withoutNul("Seated 300\u0000"); // "Seated 300"
+ */
+export function withoutNul(value: string): string {
+  return value.split(NUL).join("");
 }
 
 /** The number typed, or null when blank; call it once the entry has passed its check. */
@@ -90,15 +105,17 @@ export function linesToList(value: string): string[] | null {
 }
 
 /**
- * Why a one-per-line facilities list cannot be saved, or undefined when it can: the contract takes at most
- * 100 entries of at most 120 characters (core `facilityLabels`). A comma stays inside its entry, so a
- * comma list pasted on one line is one long facility, and the message says to put each on its own line.
+ * Why a room's or venue's one-per-line facilities cannot be saved, or undefined when they can: the
+ * contract takes at most 100 entries of at most 120 characters (core `facilityLabels`), and refuses an
+ * entry holding the null character, which the sheet drops before it checks and sends them (`withoutNul`).
+ * A comma stays inside its entry, so a comma list pasted on one line is one long facility, and the
+ * message says to put each on its own line.
  *
  * @example
  * facilitiesError("Pool, spa, gym, …"); // over 120 characters: "Each facility is at most 120 characters; …"
  */
 export function facilitiesError(value: string): string | undefined {
-  const entries = linesToList(value) ?? [];
+  const entries = linesToList(withoutNul(value)) ?? [];
   if (entries.length > FACILITY_LABELS_MAX) {
     return `Keep to ${FACILITY_LABELS_MAX} facilities, one per line`;
   }

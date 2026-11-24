@@ -229,12 +229,15 @@ export class HotelSubresourcesRepository {
     });
   }
 
-  /** The hotel's live primary contacts other than `exceptId` (one at most, by the partial unique index). */
+  /**
+   * The hotel's live primary contacts other than `exceptId` (one at most, by the partial unique index),
+   * with the names their demotion's audit carries.
+   */
   findLivePrimaries(
     hotelId: string,
     exceptId: string | null,
     tx: Client,
-  ): Promise<{ id: string }[]> {
+  ): Promise<{ id: string; name: string }[]> {
     return tx.hotelContact.findMany({
       where: {
         hotelId,
@@ -242,7 +245,7 @@ export class HotelSubresourcesRepository {
         deletedAt: null,
         ...(exceptId === null ? {} : { id: { not: exceptId } }),
       },
-      select: { id: true },
+      select: { id: true, name: true },
     });
   }
 

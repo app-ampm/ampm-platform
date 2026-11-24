@@ -84,12 +84,25 @@ describe("Hotel contacts: one primary, phones in E.164 (e2e)", () => {
     const demotion = await prisma.auditEvent.findFirstOrThrow({
       where: { entityType: "hotel_contact", entityId: first.body.data.id, action: "update" },
     });
-    expect(demotion.beforeJson).toEqual({ isPrimary: true });
-    expect(demotion.afterJson).toEqual({ isPrimary: false, changedFields: ["isPrimary"] });
-    const created = await prisma.auditEvent.count({
+    expect(demotion.beforeJson).toEqual({ name: "E2E Sales Desk", isPrimary: true });
+    expect(demotion.afterJson).toEqual({
+      name: "E2E Sales Desk",
+      isPrimary: false,
+      changedFields: ["isPrimary"],
+    });
+    const created = await prisma.auditEvent.findMany({
       where: { entityType: "hotel_contact", entityId: second.body.data.id, action: "create" },
     });
-    expect(created).toBe(1);
+    expect(created.map(({ beforeJson, afterJson }) => ({ beforeJson, afterJson }))).toEqual([
+      {
+        beforeJson: null,
+        afterJson: {
+          name: "E2E Events Desk",
+          changedFields: ["name", "isPrimary"],
+          isPrimary: true,
+        },
+      },
+    ]);
   });
 
   it("makes an existing contact primary by an edit, demoting the current one", async () => {

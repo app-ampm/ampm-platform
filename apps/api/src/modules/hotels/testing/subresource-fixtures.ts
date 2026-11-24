@@ -20,6 +20,8 @@ export const ROOM_ID = "0192f1a0-0000-7000-8000-0000000000f1";
 export const VENUE_ID = "0192f1a0-0000-7000-8000-0000000000f2";
 export const CONTACT_ID = "0192f1a0-0000-7000-8000-0000000000f3";
 export const OTHER_CONTACT_ID = "0192f1a0-0000-7000-8000-0000000000f4";
+/** The name of the hotel's other live primary contact, when a spec gives it one. */
+export const PRIMARY_CONTACT_NAME = "Synthetic Front Office";
 
 /** A synthetic room category as the repository reads it, every D-178 column empty unless overridden. */
 export function roomRow(overrides: Partial<RoomRow> = {}): RoomRow {
@@ -125,7 +127,7 @@ function contacts(primaries: readonly string[]) {
         contactRow({ phone: "Front desk 0141 234567" }),
     ),
     findLivePrimaries: vi.fn(async (_hotelId: string, _exceptId: string | null, _tx: unknown) =>
-      primaries.map((id) => ({ id })),
+      primaries.map((id) => ({ id, name: PRIMARY_CONTACT_NAME })),
     ),
     demoteContacts: vi.fn(async (_ids: readonly string[], _actorId: string, _tx: unknown) => {}),
     softDeleteContact: vi.fn(async (_id: string, _actorId: string, _tx: unknown) => {}),

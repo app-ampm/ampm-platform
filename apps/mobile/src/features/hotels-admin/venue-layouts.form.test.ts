@@ -15,6 +15,9 @@ function row(key: string, layout: string, max: string, min = ""): LayoutDraft {
   return { key, layout, max, min };
 }
 
+// Escaped, never the character itself: text pasted from a PDF can carry this invisible one.
+const NUL = "\u0000";
+
 function rows(count: number): LayoutDraft[] {
   return Array.from({ length: count }, (_, i) => row(String(i), `Layout ${i + 1}`, "50"));
 }
@@ -72,6 +75,16 @@ describe("venue-layouts.form", () => {
     );
     expect(layoutsListError(rows(VENUE_OTHER_LAYOUTS_MAX + 1))).toBe("Keep to 12 other layouts");
     expect(layoutsError(rows(VENUE_OTHER_LAYOUTS_MAX))).toBeUndefined();
+  });
+
+  // The contract refuses the null character in a layout name, so the rows are read without it.
+  it("reads a layout name without the null character, a row holding only that being blank", () => {
+    expect(layoutsBody([row("0", `U${NUL}-shape`, "40")])).toEqual([
+      { layout: "U-shape", max: 40 },
+    ]);
+    expect(layoutsListError([row("0", `U${NUL}-shape`, "40")])).toBeUndefined();
+    expect(layoutRowErrors(row("0", NUL, "40")).layout).toBe("Name the layout");
+    expect(layoutsBody([row("0", NUL, "")])).toBeNull();
   });
 
   it("names a row's own problem before the list's", () => {

@@ -326,8 +326,9 @@ jobs:
       - name: docs/tools tests (redactor, memory, checkpoint and Claude Code hooks)
         run: pnpm run test:tools
 
-  # The deploy scripts run by hand against production, so they are shellchecked, and the source ship is
-  # tested end to end against a stand-in box (an ssh shim and a scratch directory; D-156).
+  # The deploy scripts run by hand against production, so they are shellchecked, the source ship is
+  # tested end to end against a stand-in box (an ssh shim and a scratch directory; D-156), and the
+  # redeploy's image prune against a docker stub (it must keep the image a rollback by hand needs).
   deploy:
     needs: changes
     if: ${{ needs.changes.outputs.deploy == 'true' }}
@@ -339,6 +340,8 @@ jobs:
         run: find deploy -type f -name '*.sh' -print0 | xargs -0r shellcheck
       - name: deploy/ship-source.sh against a stand-in box
         run: bash deploy/ship-source.test.sh
+      - name: deploy/redeploy-prod.sh's image prune against a docker stub
+        run: bash deploy/redeploy-prod.test.sh
 
   # A committed plaintext secret could land in any file, so this runs on every change (feature 6.4):
   # reuse the transcript redactor's detector over every tracked file, and refuse any plaintext-secret

@@ -35,9 +35,12 @@ export const HAS_NUL =
 /**
  * The uploaded bytes as text: UTF-8 only, its byte-order mark dropped, in Unicode's composed form (NFC),
  * so a name spelt with a combining accent, as text copied from some PDFs arrives, reads as the same name
- * typed in the staff app (the stored names are compared in NFC too). Null when the bytes are not valid
- * UTF-8 or carry the replacement character, the trace a browser leaves when it reads another encoding as
- * UTF-8 (Excel's plain "CSV" is Windows-1252). Composing never touches a comma, a quote or a line break.
+ * typed in the staff app. The stored room and venue names are compared in NFC too, and a hotel's slug is
+ * made from its composed name (`slugify`); any other stored value, a hotel's name among them, is compared
+ * as stored, so one stored decomposed that a row fills plans a one-off update that stores it composed.
+ * Null when the bytes are not valid UTF-8 or carry the replacement character, the trace a browser leaves
+ * when it reads another encoding as UTF-8 (Excel's plain "CSV" is Windows-1252). Composing never touches
+ * a comma, a quote or a line break.
  *
  * @example
  * decodeCsv(new TextEncoder().encode("\uFEFFdestinationSlug,name")); // "destinationSlug,name"
@@ -356,9 +359,16 @@ export function buildCandidate(
   return { values, problems };
 }
 
-/** Lowercase a name into a slug (`The Lake Pavilion` → `the-lake-pavilion`); matches the `slug` contract. */
+/**
+ * Lowercase a name into a slug (`The Lake Pavilion` → `the-lake-pavilion`); matches the `slug` contract.
+ * The name is composed (NFC) first. An accented letter drops out of a slug, but spelt as a letter and a
+ * combining accent it would leave the letter behind (`caf` against `cafe`), so the staff hotel and
+ * destination creates, which take the name as it arrived, and the import, which reads its file composed,
+ * would otherwise make two slugs of one name.
+ */
 export function slugify(value: string): string {
   return value
+    .normalize("NFC")
     .trim()
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")

@@ -6,14 +6,15 @@ import {
   type VenueOtherLayout,
 } from "@ampm/core";
 
-import { numberRuleError, type NumberRule } from "./hotel-form-fields";
+import { numberRuleError, withoutNul, type NumberRule } from "./hotel-form-fields";
 
 /*
  * A venue's other layouts as the editor holds them (D-178): beside the three capacities, up to
  * {@link VENUE_OTHER_LAYOUTS_MAX} rows of a name, the most guests and, for a range, the fewest. Each row
  * is checked on its own first, so its message names the box to fix; the filled rows then pass core's
- * `venueOtherLayouts` (the cap, each name once ignoring case), the rule the API applies. A row left blank
- * is dropped, never refused. Pure.
+ * `venueOtherLayouts` (the cap, each name once ignoring case), the rule the API applies. A name is read
+ * without the null character (`withoutNul`), as a save sends it. A row left blank is dropped, never
+ * refused. Pure.
  */
 
 /** One row as the editor holds it: text boxes, and a key that keeps the row's identity in the list. */
@@ -59,8 +60,11 @@ export function canAddLayout(rows: readonly LayoutDraft[]): boolean {
   return rows.length < VENUE_OTHER_LAYOUTS_MAX;
 }
 
+/** A row's layout name as a save sends it: trimmed, without the null character. */
+const layoutName = (row: LayoutDraft): string => withoutNul(row.layout).trim();
+
 function isBlankRow(row: LayoutDraft): boolean {
-  return row.layout.trim() === "" && row.max.trim() === "" && row.min.trim() === "";
+  return layoutName(row) === "" && row.max.trim() === "" && row.min.trim() === "";
 }
 
 const GUESTS: Omit<NumberRule, "message"> = { min: 1, max: VENUE_CAPACITY_MAX, places: 0 };
@@ -95,14 +99,14 @@ export function layoutRowErrors(row: LayoutDraft): LayoutRowErrors {
     row.min.trim() !== "" &&
     Number(row.min) > Number(row.max);
   return {
-    layout: nameError(row.layout.trim()),
+    layout: nameError(layoutName(row)),
     max,
     min: fewestAboveMost ? "The fewest guests is above the most" : min,
   };
 }
 
 function toEntry(row: LayoutDraft): VenueOtherLayout {
-  const entry = { layout: row.layout.trim(), max: Number(row.max.trim()) };
+  const entry = { layout: layoutName(row), max: Number(row.max.trim()) };
   return row.min.trim() === "" ? entry : { ...entry, min: Number(row.min.trim()) };
 }
 

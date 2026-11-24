@@ -14,9 +14,10 @@ import {
 
 /*
  * The audit of a staff write to a hotel's room, venue or contact (security.md: before and after values).
- * Each event names the row before and after and the fields the write changed, compared as the staff view
- * reads them, never their values (a contact's phone or email stays out of the images); and each lands in
- * the write's own transaction, deletes included, so a write is never committed unaudited.
+ * Each event names the row and the fields the write set or changed, compared as the staff view reads
+ * them, never their values (a contact's phone or email stays out of the images), except a contact's
+ * primary flag, which a contact create and a demotion record; and each lands in the write's own
+ * transaction, deletes included, so a write is never committed unaudited.
  */
 
 const HT = staffPrincipal(["HT"]);
@@ -172,6 +173,30 @@ describe("auditing a staff create or delete of a room, venue or contact", () => 
       expect.objectContaining({ action: "create", entityType: "hotel_venue", entityId: VENUE_ID }),
       TX,
     );
+  });
+
+  it("audits a new contact by the fields it sets and its primary flag, never its phone or email", async () => {
+    const { service, repo, audit } = build();
+    const phone = "+911234567801";
+    const email = "desk@example.com";
+    repo.createContact.mockResolvedValueOnce(contactRow({ phone, email }));
+    const request = { name: "Synthetic Sales Desk", phone, email, isPrimary: false };
+    await service.addContact(HOTEL_ID, request, HT);
+    const event = audit.record.mock.calls[0]?.[0];
+    expect(event).toEqual({
+      action: "create",
+      entityType: "hotel_contact",
+      entityId: CONTACT_ID,
+      before: null,
+      after: {
+        name: "Synthetic Sales Desk",
+        changedFields: ["name", "phone", "email", "isPrimary"],
+        isPrimary: false,
+      },
+      maskImages: false,
+    });
+    expect(JSON.stringify(event)).not.toContain(phone);
+    expect(JSON.stringify(event)).not.toContain(email);
   });
 
   it.each(DELETES)(

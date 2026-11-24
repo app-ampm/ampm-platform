@@ -149,7 +149,8 @@ describe("hotelContactCreateRequest", () => {
 });
 
 // PostgreSQL stores no U+0000 in text, varchar or jsonb, and text copied from a PDF can carry one: the
-// edge refuses it on its field (a 400 the sheet can show) instead of a database error (a bare 500).
+// edge refuses it on its field, a 400 rather than a database error (a bare 500). The hotel profile shows
+// a facility's refusal under that field; the room, venue and contact sheets strip the character first.
 describe("text holding the null character", () => {
   const NUL = "\u0000";
   const venue = { name: "Synthetic Hall", venueType: "ballroom", setting: "indoor" };

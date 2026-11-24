@@ -17,6 +17,7 @@ import {
   numberRuleError,
   numberToText,
   textOrNull,
+  withoutNul,
   type NumberRule,
 } from "./hotel-form-fields";
 import { CAPACITY_LABEL } from "./subresources.format";
@@ -30,8 +31,9 @@ import {
 /*
  * The venue editor's form logic (TW-22; D-178), pure so it is tested without rendering: the draft (text
  * as strings), the checks that must pass before a save, and the create body and an update's changed
- * part. A new venue starts with no setting, so staff say where it is rather than accept a default; the
- * server derives `is_indoor` from it and re-validates every bound.
+ * part. Its free text, layout names included (not the number boxes), is checked and sent without the
+ * null character (`withoutNul`). A new venue starts with no setting, so staff say where it is rather than
+ * accept a default; the server derives `is_indoor` from it and re-validates every bound.
  */
 
 /** A venue's setting as the picker holds it: one of core's, or "unset" until a new venue's is chosen. */
@@ -156,7 +158,7 @@ export function validateVenue(draft: VenueDraft): VenueErrors {
     PREFUNCTION_AREA,
   );
   return {
-    name: draft.name.trim() === "" ? "Give the venue a name" : undefined,
+    name: withoutNul(draft.name).trim() === "" ? "Give the venue a name" : undefined,
     setting: hasSetting(draft) ? undefined : "Choose the venue's setting",
     areaSqm: area.sqm,
     areaSqft: area.sqft,
@@ -174,14 +176,14 @@ export function validateVenue(draft: VenueDraft): VenueErrors {
 }
 
 /**
- * The create body from a valid draft: trimmed text or null, the m² of each area worked out from a
- * filled sq ft, the filled layout rows (null when none), facilities one per line.
+ * The create body from a valid draft: text without the null character, trimmed or null, the m² of each
+ * area worked out from a filled sq ft, the filled layout rows (null when none), facilities one per line.
  */
 export function buildVenueBody(draft: ValidVenueDraft): VenueCreateRequest {
   const area = areaBody(draft.areaSqm, draft.areaSqft);
   const prefunction = areaBody(draft.prefunctionAreaSqm, draft.prefunctionAreaSqft);
   return {
-    name: draft.name.trim(),
+    name: withoutNul(draft.name).trim(),
     venueType: draft.venueType,
     setting: draft.setting,
     areaSqm: area.sqm,
@@ -192,12 +194,12 @@ export function buildVenueBody(draft: ValidVenueDraft): VenueCreateRequest {
     capacityBanquet: intOrNull(draft.capacityBanquet),
     capacityTheatre: intOrNull(draft.capacityTheatre),
     capacityReception: intOrNull(draft.capacityReception),
-    capacityNotes: textOrNull(draft.capacityNotes),
+    capacityNotes: textOrNull(withoutNul(draft.capacityNotes)),
     otherLayouts: layoutsBody(draft.otherLayouts),
     prefunctionAreaSqm: prefunction.sqm,
     prefunctionAreaSqft: prefunction.sqft,
-    facilities: linesToList(draft.facilities),
-    description: textOrNull(draft.description),
+    facilities: linesToList(withoutNul(draft.facilities)),
+    description: textOrNull(withoutNul(draft.description)),
   };
 }
 

@@ -12,6 +12,8 @@ import {
 import { hotelContactViewFixture } from "./hotels-admin.test-utils";
 
 const blank = draftFromContact(null);
+// Escaped, never the character itself: text pasted from a PDF can carry this invisible one.
+const NUL = "\u0000";
 
 describe("contacts.form", () => {
   it("starts a new contact blank and not primary, and seeds an edit from the contact", () => {
@@ -62,6 +64,34 @@ describe("contacts.form", () => {
     const retyped = { ...draftFromContact(contact), phone: "01234 567 802" };
     expect(contactUpdateBody(retyped, contact)).toEqual({ phone: "+911234567802" });
     expect(contactUpdateBody({ ...retyped, phone: " " }, contact)).toEqual({ phone: null });
+  });
+
+  // The contract refuses the null character, which no one can see to remove, so the sheet drops it.
+  it("checks and sends its text without the null character, a name of only that being none", () => {
+    const draft: ContactDraft = {
+      name: `Asha${NUL} Rao`,
+      roleTitle: `Sales${NUL}`,
+      phone: `0141-234 5678${NUL}`,
+      email: `asha${NUL}@hotel.example`,
+      isPrimary: false,
+    };
+    expect(phonePreview(draft, null)).toEqual({ kind: "saved", phone: "+911412345678" });
+    expect(validateContact(draft, null)).toEqual({
+      name: undefined,
+      phone: undefined,
+      email: undefined,
+    });
+    expect(buildContactBody(draft)).toEqual({
+      name: "Asha Rao",
+      roleTitle: "Sales",
+      phone: "+911412345678",
+      email: "asha@hotel.example",
+      isPrimary: false,
+    });
+    expect(validateContact({ ...blank, name: NUL }, null).name).toBe("Give the contact a name");
+    const contact = hotelContactViewFixture();
+    const repeated = { ...draftFromContact(contact), phone: `${contact.phone ?? ""}${NUL}` };
+    expect(contactUpdateBody(repeated, contact)).toEqual({});
   });
 
   it("updates only what changed: making a contact primary sends that alone", () => {

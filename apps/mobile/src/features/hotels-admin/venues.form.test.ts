@@ -27,6 +27,9 @@ const filled: ValidVenueDraft = {
   facilities: "Stage, lights\nBar",
 };
 
+// Escaped, never the character itself: text pasted from a PDF can carry this invisible one.
+const NUL = "\u0000";
+
 describe("venues.form", () => {
   it("holds the facilities to the contract's 100 entries of 120 characters, naming the field", () => {
     const commaList = Array.from({ length: 12 }, (_, i) => `Synthetic amenity ${i}`).join(", ");
@@ -102,6 +105,26 @@ describe("venues.form", () => {
       facilities: ["Stage, lights", "Bar"],
       description: null,
     });
+  });
+
+  // The contract refuses the null character, which no one can see to remove, so the sheet drops it.
+  it("sends its text and layout names without the null character, a name of only that being none", () => {
+    const body = buildVenueBody({
+      ...filled,
+      name: `Synthetic Terrace${NUL}`,
+      capacityNotes: `160 to 180 seated${NUL} with the stage in`,
+      otherLayouts: [{ key: "0", layout: `Class${NUL}room`, max: "120", min: "" }],
+      facilities: `Stage, lights\nBar${NUL}`,
+      description: NUL,
+    });
+    expect(body).toMatchObject({
+      name: "Synthetic Terrace",
+      capacityNotes: "160 to 180 seated with the stage in",
+      otherLayouts: [{ layout: "Classroom", max: 120 }],
+      facilities: ["Stage, lights", "Bar"],
+      description: null,
+    });
+    expect(validateVenue({ ...filled, name: NUL }).name).toBe("Give the venue a name");
   });
 
   it("updates only what changed: a new setting, or nothing at all", () => {

@@ -772,7 +772,7 @@ Notes:
   - **Capacities** mean (decision 11 of the plan, AMPM agreed): `capacity_banquet` seated, dinner at round tables; `capacity_reception` floating, a standing reception or cocktails; `capacity_theatre` rows of chairs. A capacity holds one number: a stated range keeps its maximum in the column and the range in `capacity_notes`. `other_layouts_json` holds up to 12 more layouts, each a name, a maximum and an optional minimum.
   - **One primary contact, phones in E.164.** A hotel has at most one live primary contact. Making a contact primary, on create or on update, demotes the current primary in the same transaction; the demotion is audited as an update of that contact and needs the contacts update key. The partial unique index `hotel_contacts_hotel_live_primary_key` (`hotel_id`, where `is_primary` and not deleted) is the race-safe backstop: a write that loses a race gets 409. The migration first demoted extra primaries, keeping each hotel's most recently updated one. The service stores phones in E.164 (core `normaliseHotelPhone`, India by default) and refuses an extension, which goes in `role_title`. A phone sent back equal to the stored one is accepted as it is, so a free-text phone saved before Slice 3 never blocks another edit.
   - **Imports by the preview's job id.** The staff imports now take Rooms and Venues files beside Hotels (`import_type` `hotel_rooms` and `hotel_venues`), and every upload is a preview: an `import_jobs` row in status `validating` that keeps the value-free report in `error_report_json` and the planned rows in `plan_json`. Import applies that preview by its job id: only its uploader may, within 24 hours and once, and a newer preview of the same kind by the same person supersedes it. Import plans each stored row again against the catalogue as it is then, and refuses a row with "Changed since preview; validate the file again" when a value the import compares changed on its target after the preview, when the row it was to create now exists, or when the row it was to update was deleted or renamed, or its hotel deleted (even when the row could not create a new one instead); the other rows load. The comparison is a version token, a hash of the target's compared values, never `updated_at`, so recording a verification does not count as a change. The runbook is [engineering/hotel-import.md](engineering/hotel-import.md); the Module A note on import jobs covers the columns.
-  - **Rolling back past this migration.** The migration only adds, but the previous API image stays safe only until a venue uses one of the five new types. Its Prisma client refuses a `venue_type` it does not know, so the client and staff details of that venue's hotel answer 500. Fix forward when you can. Otherwise stop this release's api and worker first, so no one adds such a venue meanwhile, and run this in one transaction with psql in the postgres container (as [infra/runbooks/restore.md](../infra/runbooks/restore.md) does). It keeps those venues' types and remaps only them:
+  - **Rolling back past this migration.** The migration only adds, but the previous API image stays safe only until a venue uses one of the five new types. Its Prisma client refuses a `venue_type` it does not know, so the client and staff details of that venue's hotel answer 500. Fix forward when you can. Otherwise stop this release's api and worker first, so no one adds such a venue meanwhile, and run this in one transaction with psql in the postgres container, sent on stdin (the command and the order of the steps are in [deploy/app-ampmverse/production-setup.md](../deploy/app-ampmverse/production-setup.md), "Rolling back a release by hand"). It keeps those venues' types and remaps only them:
 
     ```sql
     BEGIN;
@@ -805,7 +805,24 @@ Notes:
     COMMIT;
     ```
 
-    Skip the first two statements when the rollback SQL above was not run (there is no `venue_type_rollback` table). The previous image never knew the pre-function area, so that pair needs nothing. A hotel's total event space is different: that image edits its m² and its sq ft apart, so a mismatch may hold a newer sq ft. List those hotels and settle each by hand rather than clear either figure: `SELECT id, name, total_event_space_sqm, total_event_space_sqft FROM hotels WHERE total_event_space_sqft IS NOT NULL AND total_event_space_sqm IS DISTINCT FROM round(total_event_space_sqft::numeric * 145161 / 1562500);`.
+    When the rollback SQL above was not run (there is no `venue_type_rollback` table), leave out the `UPDATE … FROM venue_type_rollback` and the `DROP TABLE`. The previous image never knew the pre-function area, so that pair needs nothing.
+
+    A hotel's total event space is different: that image edits its m² and its sq ft apart, so a mismatch may hold a newer sq ft or a newer m². Decide per hotel rather than clear one figure for all. List the live hotels concerned:
+
+    ```sql
+    SELECT id, name, total_event_space_sqm, total_event_space_sqft FROM hotels
+      WHERE deleted_at IS NULL AND total_event_space_sqft IS NOT NULL
+        AND total_event_space_sqm IS DISTINCT FROM round(total_event_space_sqft::numeric * 145161 / 1562500);
+    ```
+
+    Then, for each one, keep the sq ft, working the m² out from it, or keep the m², clearing the sq ft as the units rule does:
+
+    ```sql
+    UPDATE hotels SET total_event_space_sqm = round(total_event_space_sqft::numeric * 145161 / 1562500) WHERE id = '<id>';
+    UPDATE hotels SET total_event_space_sqft = NULL WHERE id = '<id>';
+    ```
+
+    The staff app can keep the m² (clear the sq ft box and save), but not the sq ft: its editor shows the m² worked out from the stored sq ft, so a save sends no change. A Hotels import row that carries the sq ft settles it too. Until then the stale m² is what a Hotels import compares. None of these statements writes an audit event or moves `updated_at`, so note what you changed in the incident record.
 
 ---
 

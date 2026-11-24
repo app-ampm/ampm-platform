@@ -178,7 +178,7 @@ function layoutsText(layouts: readonly VenueOtherLayout[] | null): string | null
 /**
  * A venue's summary for its row, in TW-22's order: type, setting, area in both units, then the seated,
  * floating and theatre capacities, and after them the dimensions, other layouts and pre-function area.
- * The row shows two lines, so on a phone the capacities come before the details that may be cut.
+ * The capacities come before the details, so a row whose summary is cut short loses the details first.
  *
  * @example
  * venueSummary(venue); // "Terrace · Covered or semi-open · 500 m² (5,382 sq ft) · 300 seated · 500 floating"

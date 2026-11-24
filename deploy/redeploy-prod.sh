@@ -79,7 +79,9 @@ rollback() {
   [[ -n "$previous_app" ]] ||
     die "health gate FAILED and there is no previous image to roll back to — investigate now"
   log "rolling api and worker back to $previous_app"
-  if AMPM_IMAGE="$previous_app" "${COMPOSE[@]}" up -d --no-deps --wait --wait-timeout 180 api worker; then
+  # --no-build: the api service has a build section, so a tag the box no longer holds would otherwise
+  # be built from this tree, which is the release that just failed, under the previous image's name.
+  if AMPM_IMAGE="$previous_app" "${COMPOSE[@]}" up -d --no-deps --no-build --wait --wait-timeout 180 api worker; then
     write_compose_env "$previous_app"
     die "deploy of ${commit:0:12} failed its health gate — rolled back to $previous_app"
   fi
@@ -141,10 +143,16 @@ done
 printf '%s\n' "$AMPM_IMAGE" >"$STATE/app-image"
 write_compose_env "$AMPM_IMAGE"
 # Keep the image that just passed and the one before it (the rollback target); drop older app images.
-keep="$AMPM_IMAGE ${previous_app}"
-docker image ls ampm-prod-app --format '{{.Repository}}:{{.Tag}}' | while read -r img; do
-  [[ " $keep " == *" $img "* ]] || docker image rm "$img" >/dev/null 2>&1 || true
-done
+# A rerun of the same commit (an environment change, say) or a first deploy names no new rollback
+# target, so it drops nothing: keeping this image alone would delete the one a rollback by hand needs.
+if [[ -n "$previous_app" && "$previous_app" != "$AMPM_IMAGE" ]]; then
+  keep="$AMPM_IMAGE ${previous_app}"
+  docker image ls ampm-prod-app --format '{{.Repository}}:{{.Tag}}' | while read -r img; do
+    [[ " $keep " == *" $img "* ]] || docker image rm "$img" >/dev/null 2>&1 || true
+  done
+else
+  log "no new rollback target (${previous_app:-first deploy}): keeping every app image"
+fi
 curl -s "http://127.0.0.1:${PORT}/health" && echo
 # The scanner is outside the gate (uploads fail closed while it is down), but say how it stands.
 scanner="$("${COMPOSE[@]}" ps --format '{{.Health}}' clamav 2>/dev/null || true)"

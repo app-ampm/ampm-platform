@@ -8,6 +8,7 @@ import {
   buildSubresourcesService,
   CONTACT_ID,
   OTHER_CONTACT_ID,
+  PRIMARY_CONTACT_NAME,
   ROOM_ID,
   VENUE_ID,
 } from "./testing/subresource-fixtures.js";
@@ -106,8 +107,8 @@ describe("HotelSubresourcesService: one primary contact (D-178)", () => {
         action: "update",
         entityType: "hotel_contact",
         entityId: OTHER_CONTACT_ID,
-        before: { isPrimary: true },
-        after: { isPrimary: false, changedFields: ["isPrimary"] },
+        before: { name: PRIMARY_CONTACT_NAME, isPrimary: true },
+        after: { name: PRIMARY_CONTACT_NAME, isPrimary: false, changedFields: ["isPrimary"] },
         maskImages: false,
       },
       expect.anything(),

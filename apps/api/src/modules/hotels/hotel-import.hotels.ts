@@ -148,8 +148,9 @@ export class HotelRowsImporter implements KindImporter<HotelImportRow> {
    * What the plan reads beside the rows (the hotels and destinations they name, deleted ones included,
    * each hotel as its uploader may read it), the named hotels' audit images, and each live hotel's
    * version token, never shown to them: it covers the internal rating and notes only for an uploader who
-   * reads them or a row that fills them (`notesScopes`), so a notes edit refuses no other row and tells
-   * no one who cannot read the notes that they changed (hotel-import.version.ts).
+   * reads them or a row that fills them (`notesScopes`), so a notes edit refuses no other row; an
+   * uploader who cannot read the notes learns of an edit only when it refuses their own row that fills a
+   * notes cell, rather than letting it write over them (hotel-import.version.ts).
    */
   private async lookUp(
     rows: readonly ImportRow<HotelImportRow>[],

@@ -1,5 +1,6 @@
 import {
   booleanFromTriState,
+  facilitiesError,
   intOrNull,
   linesToList,
   listToLines,
@@ -7,12 +8,15 @@ import {
   numberRuleError,
   TRI_STATES,
   triStateFrom,
+  withoutNul,
   type NumberRule,
 } from "./hotel-form-fields";
 
 const KM: NumberRule = { min: 0, max: 999.9, places: 1, message: "Distance is wrong" };
 const WHOLE: NumberRule = { min: 1, max: 60, places: 0, message: "Nights are wrong" };
 const SIGNED: NumberRule = { min: -90, max: 90, places: 6, message: "Latitude is wrong" };
+// Escaped, never the character itself: text pasted from a PDF can carry this invisible one.
+const NUL = "\u0000";
 
 describe("hotel-form-fields", () => {
   describe("numberRuleError", () => {
@@ -68,6 +72,13 @@ describe("hotel-form-fields", () => {
       "Lawn",
     ]);
     expect(linesToList(listToLines(["Spa, salon", "Pool"]))).toEqual(["Spa, salon", "Pool"]);
+  });
+
+  it("drops the null character from a sheet's text, and checks the facilities a sheet sends", () => {
+    expect(withoutNul(`Seated${NUL} 300${NUL}`)).toBe("Seated 300");
+    const hundred = Array.from({ length: 100 }, (_, i) => `Synthetic amenity ${i}`).join("\n");
+    expect(facilitiesError(`${hundred}\n${NUL}`)).toBeUndefined();
+    expect(facilitiesError(`${hundred}\nSpa`)).toBe("Keep to 100 facilities, one per line");
   });
 
   it("keeps not known apart from no: null is unknown, never false", () => {

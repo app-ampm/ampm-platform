@@ -117,8 +117,8 @@ describe("subresources.format", () => {
       );
     });
 
-    // The row shows two lines, which a phone fills after about 65 characters: the capacities TW-22 asks
-    // for come before the dimensions, so a long venue loses only the details.
+    // A summary cut short loses its end first, so the capacities TW-22 asks for come before the
+    // dimensions, layouts and pre-function area.
     it("adds both units, then the capacities, then the dimensions, layouts and pre-function area", () => {
       const terrace = venueViewFixture({
         venueType: "terrace",

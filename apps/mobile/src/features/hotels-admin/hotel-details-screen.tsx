@@ -33,11 +33,14 @@ interface SectionsProps {
 
 /**
  * The hotel's room categories and event venues: the main column. A row's summary (both units, the
- * venue's setting, dimensions and capacities) may wrap to a second line before it is cut off.
+ * venue's setting, capacities and dimensions) may wrap to a second line before it is cut off, and a
+ * venue's to a third below 1024: on a phone its type, setting and area in both units can fill most of
+ * two, and the capacities come after them.
  */
 function RoomsAndVenues({ hotelId, hotel }: SectionsProps) {
   const deleteRoom = useDeleteRoom(hotelId);
   const deleteVenue = useDeleteVenue(hotelId);
+  const isDesktop = useLayoutAt("lg");
   return (
     <Stack gap={8}>
       <ManagedSection
@@ -58,7 +61,7 @@ function RoomsAndVenues({ hotelId, hotel }: SectionsProps) {
         title="Venues"
         items={hotel.venues}
         summaryOf={venueSummary}
-        summaryLines={2}
+        summaryLines={isDesktop ? 2 : 3}
         addLabel="Add venue"
         emptyText="No venues yet. Add the event spaces this hotel offers."
         noun="venue"
