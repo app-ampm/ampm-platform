@@ -12,7 +12,10 @@ import { can } from "@ampm/policy";
 
 import type { Prisma } from "../../generated/prisma/client.js";
 import { type Principal, staffId, toPolicyPrincipal } from "../../policy/principal.types.js";
-import { DocumentVersionsService } from "../documents/document-versions.service.js";
+import {
+  DocumentVersionsService,
+  type OwnedDocument,
+} from "../documents/document-versions.service.js";
 import type { DocumentOwner } from "../documents/documents.repository.js";
 import { DocumentsService } from "../documents/documents.service.js";
 import { HotelDocumentsRepository } from "./hotel-documents.repository.js";
@@ -63,7 +66,7 @@ export class HotelDocumentsService {
   ): Promise<HotelDocumentView> {
     await this.requireHotel(hotelId);
     const owner = ownerOf(hotelId);
-    await this.checkUpload(owner, query, principal);
+    const replaced = await this.checkUpload(owner, query, principal);
     const row = await this.documents.store(
       {
         owner,
@@ -77,7 +80,8 @@ export class HotelDocumentsService {
       staffId(principal),
       (document, tx) => this.confirmInTransaction(hotelId, query, document.id, tx),
     );
-    return toHotelDocumentView(hotelId, await this.versions.requireLatest(row.id, owner));
+    const earlier = replaced ? [replaced.latest, ...replaced.earlier] : [];
+    return toHotelDocumentView(hotelId, { latest: row, earlier });
   }
 
   async remove(
@@ -98,16 +102,16 @@ export class HotelDocumentsService {
 
   /**
    * Before the file is checked: a new document needs room under the cap; a replacement needs the update
-   * key and a live, latest document of the same type to follow.
+   * key and a live, latest document of the same type to follow, which it returns.
    */
   private async checkUpload(
     owner: DocumentOwner,
     query: HotelDocumentUploadQuery,
     principal: Principal,
-  ): Promise<void> {
+  ): Promise<OwnedDocument | null> {
     if (query.replaces === null) {
       if ((await this.versions.countLive(owner)) >= HOTEL_DOCUMENTS_MAX) throw tooMany();
-      return;
+      return null;
     }
     if (!can(toPolicyPrincipal(principal), HOTEL_DOCUMENTS_UPDATE)) {
       throw errors.forbidden("You cannot replace a hotel's documents");
@@ -117,6 +121,7 @@ export class HotelDocumentsService {
       const message = "A replacement must be of the same type as the document it replaces";
       throw errors.validation([{ path: "replaces", message }], message);
     }
+    return current;
   }
 
   /** Inside the upload's transaction: the hotel still live and locked, then the cap or the replacement. */
