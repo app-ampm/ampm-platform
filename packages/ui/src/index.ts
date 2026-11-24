@@ -14,6 +14,8 @@ export type { VariantProps } from "./lib/variants";
 export { AnimatedView } from "./lib/animated-view";
 export { pickFile } from "./lib/pick-file";
 export type { PickedFile } from "./lib/pick-file";
+export { copyText } from "./lib/copy-text";
+export { shareText } from "./lib/share-text";
 
 export { ThemeProvider, useTheme } from "./theme/theme-provider";
 export type { ThemeProviderProps } from "./theme/theme-provider";

@@ -2,11 +2,9 @@ import { useState } from "react";
 
 import { useAccountContactInviteLink } from "@ampm/api-client";
 import { isAppError } from "@ampm/core";
-import { Button, Row, Stack, Text, useToast } from "@ampm/ui";
+import { Button, copyText, Row, Stack, Text, useToast } from "@ampm/ui";
 
 import { env } from "@/lib/env";
-
-import { copyText } from "./copy-text";
 
 /**
  * Only a build on the local identity provider asks: the API serves invite links on test builds alone (a
