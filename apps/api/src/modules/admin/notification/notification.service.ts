@@ -31,6 +31,7 @@ import {
   type NotificationRow,
   type StatusPatch,
 } from "./notification.repository.js";
+import { SendGates, type GatedNotification, type SendGate } from "./notification-send-gates.js";
 
 /** The send job: loads the row and delivers it. The payload carries only the id (nothing in Redis is the only copy). */
 export const sendNotificationJob = defineJob(
@@ -131,6 +132,18 @@ function externalChannel(channel: NotificationChannel): ExternalChannel | null {
     : null;
 }
 
+/** What a send gate reads of a row: what it is and is about, never its address or render data. */
+function gatedOf(row: NotificationRow): GatedNotification {
+  return {
+    templateKey: row.templateKey,
+    recipientType: row.recipientType,
+    recipientId: row.recipientId,
+    channel: row.channel,
+    entityType: row.entityType,
+    entityId: row.entityId,
+  };
+}
+
 function toView(row: NotificationRow): NotificationView {
   return {
     id: row.id,
@@ -158,6 +171,8 @@ function toView(row: NotificationRow): NotificationView {
  */
 @Injectable()
 export class NotificationService implements OnModuleInit {
+  private readonly gates = new SendGates();
+
   constructor(
     private readonly repository: NotificationRepository,
     private readonly jobs: JobQueue,
@@ -174,6 +189,17 @@ export class NotificationService implements OnModuleInit {
       // its render variables so no invite token is held at rest on a permanently-queued row (D-044).
       (payload) => this.failPermanently(payload.notificationId),
     );
+  }
+
+  /**
+   * Registers the gate the send path asks before it sends a notification whose template key starts with
+   * `prefix`; one that answers false is dropped (D-188 §5: the hotel form's kill switch).
+   *
+   * @example
+   * notifications.registerSendGate("hotel_form.", (notification) => gate.admits(notification));
+   */
+  registerSendGate(prefix: string, gate: SendGate): void {
+    this.gates.register(prefix, gate);
   }
 
   async queue(input: QueueNotification): Promise<QueueResult> {
@@ -224,6 +250,15 @@ export class NotificationService implements OnModuleInit {
   private async deliver(notificationId: string): Promise<void> {
     const row = await this.repository.findById(notificationId);
     if (!row || row.status !== "queued") return;
+    if (!(await this.gates.admits(gatedOf(row)))) {
+      // Dropped at send time: never sent, and its render data, address and Reply-To are cleared now.
+      this.logger.info("notification.dropped", {
+        templateKey: row.templateKey,
+        channel: row.channel,
+      });
+      await this.advance(row, { status: "failed", clearData: true });
+      return;
+    }
     // Leaving `queued` also clears the row's render variables: they may carry a single-use invite
     // link, and are only needed while the row is still queued and re-renderable. A replay runs only on
     // a queued row, so this stays deterministic while holding the token at rest for sub-seconds (D-044).
