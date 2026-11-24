@@ -1,0 +1,142 @@
+import { refuse } from "./refusal.js";
+import { decodeXmlEntities, XmlScanner } from "./xml-scan.js";
+import { opcKey } from "./zip-names.js";
+
+/*
+ * The two kinds of part that describe an Office package (ECMA-376 Part 2, Open Packaging Conventions):
+ * `[Content_Types].xml`, which gives every part its content type, and the relationship parts (`.rels`),
+ * which say what each part points to. Both are read whole (each at most 2 MiB) and parsed with the same
+ * tokenizer that scans the other parts.
+ */
+
+export interface Tag {
+  readonly name: string;
+  /** The name without its namespace prefix. */
+  readonly local: string;
+  readonly attributes: ReadonlyMap<string, string>;
+  readonly selfClosing: boolean;
+}
+
+const TAG_NAME = /^<([^\s/>]+)/;
+const ATTRIBUTE = /([^\s=/>]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/g;
+
+/** The name, attributes (entities decoded) and form of a start tag as the tokenizer reports it. */
+export function parseTag(raw: string, part: string): Tag {
+  const name = TAG_NAME.exec(raw)?.[1] ?? "";
+  const attributes = new Map<string, string>();
+  for (const match of raw.slice(name.length + 1).matchAll(ATTRIBUTE)) {
+    const [, key = "", double, single] = match;
+    if (attributes.has(key)) refuse("file_damaged", `a repeated attribute ${key} in ${part}`);
+    attributes.set(key, decodeXmlEntities(double ?? single ?? ""));
+  }
+  return {
+    name,
+    local: name.slice(name.indexOf(":") + 1),
+    attributes,
+    selfClosing: raw.endsWith("/>"),
+  };
+}
+
+/** Every start tag of a whole XML part. */
+export function readTags(xml: Buffer, part: string): Tag[] {
+  const tags: Tag[] = [];
+  const scanner = new XmlScanner(
+    {
+      startTag: (raw) => tags.push(parseTag(raw, part)),
+      endTag: () => undefined,
+      text: () => undefined,
+    },
+    part,
+  );
+  scanner.write(xml);
+  scanner.end();
+  return tags;
+}
+
+export interface ContentTypes {
+  readonly defaults: ReadonlyMap<string, string>;
+  readonly overrides: ReadonlyMap<string, string>;
+}
+
+/** A content type without parameters, lower-cased (MIME types compare without case). */
+const bareType = (type: string): string => (type.split(";")[0] ?? "").trim().toLowerCase();
+
+function setOnce(map: Map<string, string>, key: string, value: string, what: string): void {
+  if (map.has(key)) refuse("archive_unsafe", `two content types for ${what}`);
+  map.set(key, bareType(value));
+}
+
+/** The defaults (by extension) and overrides (by part name) of `[Content_Types].xml`. */
+export function parseContentTypes(xml: Buffer): ContentTypes {
+  const defaults = new Map<string, string>();
+  const overrides = new Map<string, string>();
+  for (const tag of readTags(xml, "[Content_Types].xml")) {
+    const type = tag.attributes.get("ContentType");
+    if (type === undefined) continue;
+    const extension = tag.attributes.get("Extension");
+    const partName = tag.attributes.get("PartName");
+    if (tag.local === "Default" && extension !== undefined) {
+      setOnce(defaults, extension.toLowerCase(), type, `the extension ${extension}`);
+    } else if (tag.local === "Override" && partName !== undefined) {
+      setOnce(overrides, opcKey(partName.replace(/^\//, "")), type, partName);
+    }
+  }
+  return { defaults, overrides };
+}
+
+/** A part's content type: its override, else the default for its extension, else null. */
+export function contentTypeOf(types: ContentTypes, partName: string): string | null {
+  const override = types.overrides.get(opcKey(partName));
+  if (override !== undefined) return override;
+  const lastSegment = partName.slice(partName.lastIndexOf("/") + 1);
+  const dot = lastSegment.lastIndexOf(".");
+  if (dot < 0) return null;
+  return types.defaults.get(lastSegment.slice(dot + 1).toLowerCase()) ?? null;
+}
+
+export interface Relationship {
+  /** The part the relationship belongs to, "" for the package itself. */
+  readonly source: string;
+  readonly type: string;
+  readonly target: string;
+  readonly external: boolean;
+}
+
+const RELS = /^(?:(.*)\/)?_rels\/([^/]*)\.rels$/i;
+
+/** The part a relationship part describes ("" for `_rels/.rels`), or null when `name` is not one. */
+export function sourceOfRels(name: string): string | null {
+  const match = RELS.exec(name);
+  if (!match) return null;
+  const [, folder, file = ""] = match;
+  return folder === undefined ? file : `${folder}/${file}`;
+}
+
+/** The relationships of a relationship part. */
+export function parseRelationships(xml: Buffer, relsName: string): Relationship[] {
+  const source = sourceOfRels(relsName) ?? "";
+  return readTags(xml, relsName)
+    .filter((tag) => tag.local === "Relationship")
+    .map((tag) => ({
+      source,
+      type: tag.attributes.get("Type") ?? "",
+      target: tag.attributes.get("Target") ?? "",
+      external: (tag.attributes.get("TargetMode") ?? "").toLowerCase() === "external",
+    }));
+}
+
+/**
+ * The part an internal relationship points to, resolved against its source's folder, without a leading
+ * slash; null when it climbs out of the package.
+ */
+export function resolveTarget(source: string, target: string): string | null {
+  const path = target.split("#")[0] ?? "";
+  const base = path.startsWith("/") ? [] : source.split("/").slice(0, -1);
+  const segments = [...base];
+  for (const segment of path.split("/")) {
+    if (segment === "" || segment === ".") continue;
+    if (segment !== "..") segments.push(segment);
+    else if (segments.pop() === undefined) return null;
+  }
+  return segments.length === 0 ? null : segments.join("/");
+}
