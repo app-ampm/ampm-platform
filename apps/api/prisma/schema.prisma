@@ -1991,6 +1991,9 @@ model MediaAsset {
   @@map("media_assets")
 }
 
+/// What a document is (data-model.md §16). `menu` is the food menu. The hotel documents library (D-187 §6)
+/// files `fact_sheet`, `menu`, `beverage_menu`, `floor_plan` and `other`; each type takes the kinds of
+/// file, and sizes, of DOCUMENT_TYPE_RULES in @ampm/core.
 enum DocumentType {
   proposal
   contract
@@ -2003,6 +2006,9 @@ enum DocumentType {
   ticket
   consent
   other
+  fact_sheet
+  beverage_menu
+  floor_plan
 }
 
 enum DocumentVisibility {
@@ -2018,6 +2024,9 @@ enum DocumentVisibility {
 /// feature 10.1 (the first document_id consumer: enquiry/agreement/proposal/contract attachments).
 /// size_bytes/checksum are filled at upload-finalize, so they are nullable until then. Every upload is
 /// scanned before it is stored (security.md), by the scanner MediaAsset shares (ClamAV in production, D-151).
+/// Its kind is decided from its bytes by the content checks (D-187 §2): mime_type is the detected kind's.
+/// A hotel's documents (owner_type `hotel`) are a library of versions: a replacement names the version it
+/// follows in previous_version_id, and a removal soft-deletes every version (D-187 §6).
 model Document {
   id                String             @id @default(uuid(7)) @db.Uuid
   projectId         String?            @map("project_id") @db.Uuid
