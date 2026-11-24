@@ -82,7 +82,11 @@ describe("Uploads after the guards, in a bounded slot (e2e)", () => {
         response.on("data", (chunk: string) => (text += chunk));
         response.on("end", () => {
           call.destroy();
-          resolve({ status: response.statusCode ?? 0, body: JSON.parse(text) as unknown });
+          try {
+            resolve({ status: response.statusCode ?? 0, body: JSON.parse(text) as unknown });
+          } catch (error) {
+            reject(error instanceof Error ? error : new Error(String(error)));
+          }
         });
       });
     });

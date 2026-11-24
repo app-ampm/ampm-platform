@@ -38,8 +38,9 @@ export function detectDocument(bytes: Buffer): DetectedDocument | null {
 /**
  * The flat ceiling for one document (security.md: size limits per document type), one shared constant
  * with the client (core). One value while the signed contract is the only type; per-type limits from
- * `configurations` arrive with the next document type, like media's. Kept under the API's raw-body
- * ceiling (http.setup.ts) so an oversized file is answered here with the named limit, not the parser.
+ * `configurations` arrive with the next document type, like media's. The upload routes read their body
+ * with this cap (octetStreamBody; D-187), so an oversized file is refused with 413 before it is read;
+ * this check stays for any caller that stores bytes another way.
  */
 export const MAX_DOCUMENT_BYTES = MAX_DOCUMENT_UPLOAD_BYTES;
 
