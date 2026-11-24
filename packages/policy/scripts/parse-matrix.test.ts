@@ -100,7 +100,7 @@ describe("parseMatrix", () => {
     expect(() => parseMatrix(othersBlock, "others")).toThrow(/indented/);
   });
 
-  it("§10 lines 568, 569 and 574: stops when a §10 key names a row label the section does not have", () => {
+  it("§10 lines 569, 570 and 575: stops when a §10 key names a row label the section does not have", () => {
     const block = [
       "### 5.7 Budget and finance",
       ROLES,

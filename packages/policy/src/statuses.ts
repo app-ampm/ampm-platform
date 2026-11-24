@@ -203,7 +203,7 @@ export const STATUS_MACHINES: Readonly<Record<string, StatusMachine>> = {
   hotel_info_request: {
     ...PLAIN,
     heading: "Hotel information request",
-    // D-188 §2: merged is left only by the reopen row (§7 line 506); rejected and revoked are final.
+    // D-188 §2: merged is left only by the reopen row (§7 line 507); rejected and revoked are final.
     // Expiry is worked out from expires_at, never a status. Keep in step with core hotelInfoRequestStatus.
     terminal: ["merged", "rejected", "revoked"],
     statuses: [

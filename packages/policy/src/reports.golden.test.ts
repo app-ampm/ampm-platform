@@ -145,7 +145,7 @@ describe("§5.16 reports and exports", () => {
     );
   });
 
-  it("§10 line 575: the internal cost and margin export is reports.budget_internal.export (FA, SA)", () => {
+  it("§10 line 576: the internal cost and margin export is reports.budget_internal.export (FA, SA)", () => {
     expect(RESOURCES["5.16"]?.["Internal cost and margin variance"]).toBe("budget_internal");
     expect(decide(staff("FA"), "reports.budget_internal.export").allowed).toBe(true);
     expect(decide(staff("SA"), "reports.budget_internal.export").allowed).toBe(true);

@@ -75,11 +75,11 @@ describe("readKeyFor", () => {
     expect(readKeyFor("tasks.incidents.create")).toBe("tasks.incidents.read");
     expect(readKeyFor("tasks.incidents.update:assigned")).toBe("tasks.incidents.read");
     expect(readKeyFor("tasks.incidents.read")).toBe("tasks.incidents.read");
-    // §10 line 570: the class alias reads the identity documents row.
+    // §10 line 571: the class alias reads the identity documents row.
     expect(readKeyFor("guests.family_groups_guests_standard.read_identity")).toBe(
       "guests.identity_documents.read",
     );
-    // §10 line 568: a key named from outside its row's subsection.
+    // §10 line 569: a key named from outside its row's subsection.
     expect(readKeyFor("vendors.quotes.read")).toBe("budget.vendor_quotes.read");
     expect(readKeyFor("nonsense")).toBeNull();
     expect(readKeyFor("tasks.unknown_row.read")).toBeNull();
@@ -129,12 +129,12 @@ describe("readKeyFor", () => {
     expect(readKeyFor("closure.archive_project_after_window.approve")).toBe(
       "projects.wedding_projects.read",
     );
-    // §5.15 line 321: the retention job's proposal (§8 line 530) is no one row's record.
+    // §5.15 line 321: the retention job's proposal (§8 line 531) is no one row's record.
     expect(readKeyFor("closure.approve_retention_deletion_proposed.approve")).toBeNull();
   });
 });
 
-describe("§10 line 573: functions.readiness.authorise_exception as the document spells it", () => {
+describe("§10 line 574: functions.readiness.authorise_exception as the document spells it", () => {
   const key = "functions.readiness.authorise_exception:assigned";
   const hl = { type: "staff", userId: "u-hl", roles: ["HL"], projectIds: ["p-1"] } as const;
 

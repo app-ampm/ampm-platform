@@ -154,9 +154,9 @@ function expectNarrowing(rule: Transition, from: string, to: string): void {
 describe("generated transition suite: §7", () => {
   it("covers every §7 row, as the document's text counts them, one rule per mover clause", () => {
     const rows = documentRows("## 7. Status transitions", "## 8. Automation");
-    expect(rows).toBe(68);
+    expect(rows).toBe(69);
     expect(transitionRows(MATRIX.transitions)).toBe(rows);
-    expect(MATRIX.transitions).toHaveLength(74);
+    expect(MATRIX.transitions).toHaveLength(75);
   });
 
   for (const rule of MATRIX.transitions) {

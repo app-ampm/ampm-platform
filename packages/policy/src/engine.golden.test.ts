@@ -30,7 +30,7 @@ describe("§5.10 identity documents (P-5)", () => {
     expect(decide(elsewhere, key, { projectId: "p-1" }).allowed).toBe(false);
   });
 
-  it("§10 lines 570-570, P-5 line 21: an explicit grant counts however §10 spells its key", () => {
+  it("§10 lines 571-571, P-5 line 21: an explicit grant counts however §10 spells its key", () => {
     for (const spelling of [
       "guests.identity_documents.read:assigned",
       "guests.family_groups_guests_standard.read_identity",
@@ -74,7 +74,7 @@ describe("§5.10 identity documents (P-5)", () => {
     );
   });
 
-  it("§5.10 line 269, §10 line 571: the Super Admin reads identity documents by break-glass only", () => {
+  it("§5.10 line 269, §10 line 572: the Super Admin reads identity documents by break-glass only", () => {
     expect(decide(staff(["SA"]), key).reason).toBe("condition_unmet");
     expect(decide(staff(["SA"]), key, { checks: ["break_glass"] })).toMatchObject({
       allowed: true,
@@ -114,7 +114,7 @@ describe("§5.7 internal cost", () => {
     expect(decide(staff(["HT"]), contracts, { side: "vendor" }).allowed).toBe(false);
   });
 
-  it("§5.7 line 221, §10 line 567: Finance and the Super Admin read internal cost everywhere", () => {
+  it("§5.7 line 221, §10 line 568: Finance and the Super Admin read internal cost everywhere", () => {
     expect(decide(staff(["FA"]), read)).toMatchObject({ allowed: true, scope: "all" });
     expect(decide(staff(["SA"]), read)).toMatchObject({ allowed: true, scope: "all" });
   });

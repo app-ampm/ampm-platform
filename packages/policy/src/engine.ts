@@ -16,7 +16,7 @@ import type { PrincipalType, StaffRole } from "./roles";
 export interface ExplicitGrant {
   /**
    * The key, as §10 spells it or as its base key: a scope suffix or a §10 alias of the same row
-   * names the same grant (`guests.identity_documents.read:assigned`, line 570).
+   * names the same grant (`guests.identity_documents.read:assigned`, line 571).
    */
   readonly key: string;
   readonly projectId: string;

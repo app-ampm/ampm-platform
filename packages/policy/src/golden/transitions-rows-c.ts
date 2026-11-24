@@ -1,18 +1,18 @@
 import type { GoldenTransition } from "./transitions-types";
 
 /*
- * Golden table of §7, lines 498-506 of docs/permission-matrix.md, written by hand from the document,
+ * Golden table of §7, lines 498-507 of docs/permission-matrix.md, written by hand from the document,
  * line by line (src/transitions-rows.golden.test.ts): the hotel information request (D-188 §2). The
  * moves a hotel's people cause are the System's, since the table names no hotel actor.
  */
 
 /**
- * The rows of §7 lines 498-506, in the document's order.
+ * The rows of §7 lines 498-507, in the document's order.
  *
  * @example
- * TRANSITIONS_498_TO_506.find((row) => row.line === 505)?.system; // true: a deleted hotel's request
+ * TRANSITIONS_498_TO_507.find((row) => row.line === 506)?.system; // true: a deleted hotel's request
  */
-export const TRANSITIONS_498_TO_506: readonly GoldenTransition[] = [
+export const TRANSITIONS_498_TO_507: readonly GoldenTransition[] = [
   // Hotel information request
   {
     line: 498,
@@ -73,6 +73,13 @@ export const TRANSITIONS_498_TO_506: readonly GoldenTransition[] = [
   },
   {
     line: 506,
+    entity: "hotel_info_request",
+    from: ["submitted", "in_review"],
+    to: ["revoked"],
+    system: true,
+  },
+  {
+    line: 507,
     entity: "hotel_info_request",
     from: ["merged"],
     to: ["changes_requested"],

@@ -293,13 +293,29 @@ describe("§7 hotel information request (D-188 §2)", () => {
       expect(canTransition(system, request, from, "revoked")).not.toBeNull();
       expect(canTransition(staff(["SM"]), request, from, "revoked")).toBeNull();
     }
-    for (const from of ["submitted", "in_review", "merged", "rejected"]) {
+  });
+
+  it("§7 line 506: the System revokes a submitted or in-review request when the hotel is deleted, staff never", () => {
+    for (const from of ["submitted", "in_review"]) {
+      expect(canTransition(system, request, from, "revoked"), from).not.toBeNull();
+      for (const role of ["SA", "HT", "SM", "PM"] as const) {
+        expect(
+          canTransition(staff([role]), request, from, "revoked"),
+          `${role} ${from}`,
+        ).toBeNull();
+      }
+    }
+    // Every live status, then: a deleted hotel never keeps a live request (D-188 §3).
+    for (const from of ["open", "submitted", "in_review", "changes_requested"]) {
+      expect(canTransition(system, request, from, "revoked"), from).not.toBeNull();
+    }
+    for (const from of ["merged", "rejected"]) {
       expect(canTransition(staff(["SA"]), request, from, "revoked"), from).toBeNull();
       expect(canTransition(system, request, from, "revoked"), from).toBeNull();
     }
   });
 
-  it("§7 line 506: a merged request leaves merged only by reopening; rejected and revoked are final", () => {
+  it("§7 line 507: a merged request leaves merged only by reopening; rejected and revoked are final", () => {
     expect(canTransition(staff(["HT"]), request, "merged", "changes_requested")).not.toBeNull();
     for (const to of ["open", "submitted", "in_review", "rejected", "revoked"]) {
       expect(canTransition(staff(["SA"]), request, "merged", to), to).toBeNull();

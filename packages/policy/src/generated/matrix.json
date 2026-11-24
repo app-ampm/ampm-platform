@@ -12606,6 +12606,24 @@
     {
       "entity": "hotel_info_request",
       "from": [
+        "submitted",
+        "in_review"
+      ],
+      "to": [
+        "revoked"
+      ],
+      "restore": false,
+      "kind": null,
+      "who": "System, when the hotel is deleted",
+      "roles": [],
+      "client": false,
+      "system": true,
+      "actors": [],
+      "condition": "when the hotel is deleted"
+    },
+    {
+      "entity": "hotel_info_request",
+      "from": [
         "merged"
       ],
       "to": [

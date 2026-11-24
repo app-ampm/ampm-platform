@@ -9,7 +9,7 @@ import type { ClassAction, VerbAction } from "./keys";
  *
  * A key as §10 spells it resolves to its row through DOCUMENT_RESOURCES (document-keys.ts, the §10
  * resource names of the row's own module), OUTSIDE_KEYS (a row named from another module) or a
- * KEY_ALIASES row: `hotels.contacts.read` (§10 line 562) decides on "Hotel contacts". A new §10 key
+ * KEY_ALIASES row: `hotels.contacts.read` (§10 line 563) decides on "Hotel contacts". A new §10 key
  * that none of them covers fails keys.golden.test.ts and document-keys.test.ts.
  *
  * @example
@@ -229,15 +229,15 @@ export interface OutsideKey {
  * OUTSIDE_KEYS["projects.close"]?.section; // "5.15"
  */
 export const OUTSIDE_KEYS: Record<string, OutsideKey> = {
-  // §10 line 568: raw vendor quotes are the §5.7 (budget) row of line 223.
+  // §10 line 569: raw vendor quotes are the §5.7 (budget) row of line 223.
   "vendors.quotes.read": { section: "5.7", label: "Vendor quotes", as: "read" },
-  // §10 line 569: recording a client decision with evidence is the §5.9 (creative) row of line 257.
+  // §10 line 570: recording a client decision with evidence is the §5.9 (creative) row of line 257.
   "approvals.decisions.create_on_behalf": {
     section: "5.9",
     label: "Approval decisions, on the client's behalf with evidence",
     as: "approve",
   },
-  // §10 line 574: closing a project is the §5.15 (closure) decision of line 319.
+  // §10 line 575: closing a project is the §5.15 (closure) decision of line 319.
   "projects.close": { section: "5.15", label: "Close the project", as: "approve" },
 };
 

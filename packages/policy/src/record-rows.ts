@@ -70,7 +70,7 @@ export const RECORD_ROWS: readonly RecordRow[] = [
     row: { section: "5.15", label: "Archive the project after the window (Q23)" },
     record: WEDDING_PROJECTS,
   },
-  // §5.15 line 321 approves a deletion the retention job proposed (§8 line 530): identity
+  // §5.15 line 321 approves a deletion the retention job proposed (§8 line 531): identity
   // documents, guest data or leads, so no one row's record.
   {
     row: {

@@ -503,9 +503,10 @@ The spec's closure sequence (open items, departure, vendor reconciliation, final
 | in_review | merged | SA, HT, through the merge |
 | submitted or in_review | rejected | SA, HT, with a reason |
 | open or changes_requested | revoked | SA, HT, with a reason; System, when the hotel is deleted |
+| submitted or in_review | revoked | System, when the hotel is deleted |
 | merged | changes_requested | SA, HT, reopening the request, refused while another request for the hotel is live |
 
-A request's expiry is worked out from `expires_at`, never stored as a status. The moves a hotel's people cause are the System's, since this table names no hotel actor (D-188).
+A request's expiry is worked out from `expires_at`, never stored as a status. The moves a hotel's people cause are the System's, since this table names no hotel actor (D-188). Deleting a hotel revokes its live request, whatever its live status, so a deleted hotel never keeps one (D-188 §3).
 
 ---
 
