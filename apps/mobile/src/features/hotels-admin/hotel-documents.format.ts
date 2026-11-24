@@ -19,8 +19,8 @@ import type { PickedFile } from "@ampm/ui";
 /*
  * The words and rules of the staff hotel record's Documents tab (D-187 §6): the groups by type, each
  * version's line, what a type takes and the picker's filter (both read from the core rules the API
- * checks, D-187 §3), the size check before an upload, and the draft F&B card a menu starts. Pure; tested
- * beside it.
+ * checks, D-187 §3), the kind and size checks before an upload, and the draft F&B card a menu starts.
+ * Pure; tested beside it.
  */
 
 const KIB = 1024;
@@ -140,6 +140,15 @@ function spokenList(items: readonly string[]): string {
   return items.length > 1 ? `${items.slice(0, -1).join(", ")} or ${last}` : last;
 }
 
+/** "PDF or PowerPoint": the families a type takes, each named once, in `contentKind` order. */
+function typeFamilies(type: HotelDocumentType): string {
+  const families: string[] = [];
+  for (const kind of documentTypeKinds(type)) {
+    if (!families.includes(KIND_FAMILY[kind])) families.push(KIND_FAMILY[kind]);
+  }
+  return spokenList(families);
+}
+
 /**
  * What a type takes, as the API checks it: "PDF, JPEG or PNG up to 20 MB, or Excel up to 10 MB".
  *
@@ -185,22 +194,24 @@ export function pickedFileKind(file: Pick<PickedFile, "name" | "mimeType">): Con
 }
 
 /**
- * Why a picked file is too big to upload as a type, or undefined when it fits: the cap of its kind
- * when the type takes that kind (a food menu's workbook, 10 MB), else the largest file the type takes.
- * Checked before anything is sent; the server checks again after typing the bytes.
+ * Why a picked file cannot be uploaded as a type, or undefined when it can: a kind the type does not
+ * take ("Floor plans take PDF, JPEG or PNG"), else a file over its kind's cap for the type (a food
+ * menu's workbook, 10 MB), or over the largest file the type takes when its kind is unknown. Checked
+ * before anything is sent; the server checks again after typing the bytes.
  *
  * @example
- * documentFileSizeError("menu", picked); // "This Excel file is over the 10 MB limit for food menus"
+ * documentFileError("menu", picked); // "This Excel file is over the 10 MB limit for food menus"
  */
-export function documentFileSizeError(
+export function documentFileError(
   type: HotelDocumentType,
   file: Pick<PickedFile, "name" | "mimeType" | "sizeBytes">,
 ): string | undefined {
   const kind = pickedFileKind(file);
   const kindCap = kind ? DOCUMENT_TYPE_RULES[type][kind] : undefined;
+  if (kind && kindCap === undefined) return `${GROUP_HEADING[type]} take ${typeFamilies(type)}`;
   const cap = kindCap ?? documentTypeMaxBytes(type);
   if (file.sizeBytes <= cap) return undefined;
-  const subject = kind && kindCap !== undefined ? `This ${KIND_FAMILY[kind]} file` : "This file";
+  const subject = kind ? `This ${KIND_FAMILY[kind]} file` : "This file";
   return `${subject} is over the ${megabytes(cap)} limit for ${GROUP_HEADING[type].toLowerCase()}`;
 }
 

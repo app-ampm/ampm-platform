@@ -146,6 +146,23 @@ describe("DocumentUploadSheet: a new document", () => {
     expect(sent).toEqual([]);
     await untilSettled(client);
   });
+
+  it("says the chosen type does not take the picked file's kind, without sending it", async () => {
+    const sent: SentRequest[] = [];
+    jest.mocked(pickFile).mockResolvedValue({
+      file: new Blob(["PK"]),
+      mimeType: CONTENT_KINDS.xlsx.mimeType,
+      sizeBytes: 2 * MIB,
+      name: "menu.xlsx",
+    });
+    const client = await openUpload({ sent });
+    await fireEvent.press(screen.getByTestId("document-upload-choose"));
+    await fireEvent.press(await screen.findByRole("radio", { name: "Floor plan" }));
+    expect(await screen.findByText("Floor plans take PDF, JPEG or PNG")).toBeOnTheScreen();
+    await fireEvent.press(screen.getByTestId("document-upload-submit"));
+    expect(sent).toEqual([]);
+    await untilSettled(client);
+  });
 });
 
 describe("DocumentUploadSheet: the API's answers", () => {

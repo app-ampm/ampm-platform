@@ -5,7 +5,7 @@ import {
   buildDocumentUpload,
   draftForUpload,
   endsReplacement,
-  fileSizeError,
+  pickedFileError,
   titleHint,
   uploadRefusalMessage,
   validateDocumentUpload,
@@ -58,20 +58,23 @@ describe("the upload sheet's draft", () => {
     );
   });
 
-  it("checks the picked file against the chosen type's limit for its kind", () => {
+  it("checks the picked file against the chosen type's kinds and its limit for the kind", () => {
     const workbook = picked({
       name: "menu.xlsx",
       mimeType: CONTENT_KINDS.xlsx.mimeType,
       sizeBytes: 11 * MIB,
     });
-    expect(fileSizeError({ type: "menu", title: "", file: workbook })).toBe(
+    expect(pickedFileError({ type: "menu", title: "", file: workbook })).toBe(
       "This Excel file is over the 10 MB limit for food menus",
+    );
+    expect(validateDocumentUpload({ type: "floor_plan", title: "", file: workbook }).file).toBe(
+      "Floor plans take PDF, JPEG or PNG",
     );
     expect(validateDocumentUpload({ type: "menu", title: "", file: workbook }).file).toBe(
       "This Excel file is over the 10 MB limit for food menus",
     );
-    // Nothing to say about the size before the type is chosen.
-    expect(fileSizeError({ type: null, title: "", file: workbook })).toBe(undefined);
+    // Nothing to say about the file before the type is chosen.
+    expect(pickedFileError({ type: null, title: "", file: workbook })).toBe(undefined);
   });
 
   it("says what a blank title becomes", () => {

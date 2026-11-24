@@ -8,7 +8,7 @@ import {
   buildDocumentUpload,
   draftForUpload,
   endsReplacement,
-  fileSizeError,
+  pickedFileError,
   uploadRefusalMessage,
   validateDocumentUpload,
   type DocumentUploadDraft,
@@ -26,16 +26,17 @@ function useUploadDraft(replacing: HotelDocumentView | null) {
     setDraft((previous) => ({ ...previous, ...next }));
     setRefusal(null);
   };
-  // The size is a fact about the picked file, so it shows as soon as both the file and the type are known.
+  // The kind and the size are facts about the picked file, so they show as soon as both the file and
+  // the type are known.
   const errors: DocumentUploadErrors = showErrors
     ? validateDocumentUpload(draft)
-    : { type: undefined, title: undefined, file: fileSizeError(draft) };
+    : { type: undefined, title: undefined, file: pickedFileError(draft) };
   return { draft, patch, errors, refusal, setRefusal, setShowErrors };
 }
 
 /**
- * Whether this sheet is on screen now, for an answer that arrives later: false once it is closed, and
- * once it is gone (another opening replaced it, or the tab was left).
+ * Whether this sheet is on screen now, for an answer that arrives later: false once it is closed,
+ * and once it is gone (another opening replaced it, or the tab was left).
  */
 function useShowing(open: boolean): RefObject<boolean> {
   const showing = useRef(open);
@@ -56,10 +57,11 @@ interface OutcomeOptions {
 }
 
 /**
- * What an upload's answer does. A filed document is confirmed in a toast and closes the sheet if it is
- * still showing. A refusal shows under the file while the sheet is showing, except one that ends a new
- * version's sheet (its document gone or changed, 404 or 409), which closes it and says why in a toast,
- * the list refreshed by the upload hook; once the sheet has closed, a refusal is a toast naming the file.
+ * What an upload's answer does. A filed document is confirmed in a toast and closes the sheet if it
+ * is still showing. A refusal shows under the file while the sheet is showing, except one that ends
+ * a new version's sheet (its document gone or changed, 404 or 409), which closes it and says why in
+ * a toast, the list refreshed by the upload hook; once the sheet has closed, a refusal is a toast
+ * naming the file.
  */
 function useUploadOutcome({ replacing, showing, onClose, setRefusal }: OutcomeOptions) {
   const toast = useToast();
@@ -91,11 +93,11 @@ export interface DocumentUploadFormOptions {
 }
 
 /**
- * The upload sheet's form (D-187 §6): the draft, the file picker narrowed to the type's kinds, the size
- * check before anything is sent, and the upload. Its answer is read from the upload's own promise, which
- * settles whether or not the sheet is still mounted (React Query runs mutate()'s callbacks only while
- * the component that called it is), so an upload answered after the sheet has closed is still reported.
- * Mount it fresh for each opening (a `key`).
+ * The upload sheet's form (D-187 §6): the draft, the file picker narrowed to the type's kinds, the
+ * kind and size checks before anything is sent, and the upload. Its answer is read from the
+ * upload's own promise, which settles whether or not the sheet is still mounted (React Query runs
+ * mutate()'s callbacks only while the component that called it is), so an upload answered after the
+ * sheet has closed is still reported. Mount it fresh for each opening (a `key`).
  *
  *   const form = useDocumentUploadForm({ hotelId, replacing, open, onClose });
  */

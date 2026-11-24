@@ -8,13 +8,13 @@ import {
 } from "@ampm/core";
 import type { PickedFile } from "@ampm/ui";
 
-import { documentFileSizeError } from "./hotel-documents.format";
+import { documentFileError } from "./hotel-documents.format";
 
 /*
- * The upload sheet's draft (D-187 §6): what a new document is, or the document a new version replaces;
- * its optional title (at most 120 characters; when blank, the type's name for a new document and the
- * current title for a new version) and the picked file; the checks before anything is sent, and the
- * upload it builds. No rendering, no I/O.
+ * The upload sheet's draft (D-187 §6): what a new document is, or the document a new version
+ * replaces; its optional title (at most 120 characters; when blank, the type's name for a new
+ * document and the current title for a new version) and the picked file; the checks before anything
+ * is sent, and the upload it builds. No rendering, no I/O.
  */
 
 export interface DocumentUploadDraft {
@@ -37,12 +37,18 @@ export function draftForUpload(replacing: HotelDocumentView | null): DocumentUpl
     : { type: null, title: "", file: null };
 }
 
-/** Whether the picked file is over the chosen type's limit; nothing to say before both are chosen. */
-export function fileSizeError(draft: DocumentUploadDraft): string | undefined {
-  return draft.type && draft.file ? documentFileSizeError(draft.type, draft.file) : undefined;
+/**
+ * What is wrong with the picked file for the chosen type (a kind it does not take, or over its
+ * limit); nothing to say before both are chosen.
+ */
+export function pickedFileError(draft: DocumentUploadDraft): string | undefined {
+  return draft.type && draft.file ? documentFileError(draft.type, draft.file) : undefined;
 }
 
-/** The checks a save runs: a type, a title the contract takes, and a file within the type's limit. */
+/**
+ * The checks a save runs: a type, a title the contract takes, and a file the type takes, within
+ * its limit.
+ */
 export function validateDocumentUpload(draft: DocumentUploadDraft): DocumentUploadErrors {
   return {
     type: draft.type ? undefined : "Choose what this document is",
@@ -50,14 +56,15 @@ export function validateDocumentUpload(draft: DocumentUploadDraft): DocumentUplo
       draft.title.trim().length > HOTEL_DOCUMENT_TITLE_MAX
         ? `Keep the title to ${HOTEL_DOCUMENT_TITLE_MAX} characters`
         : undefined,
-    file: draft.file ? fileSizeError(draft) : "Choose the file to upload",
+    file: draft.file ? pickedFileError(draft) : "Choose the file to upload",
   };
 }
 
 /**
- * The upload a valid draft sends: the type, the title when one is given (trimmed; a blank one is left out
- * so the API names a new document after its type, and a new version keeps its document's title), the
- * document a new version replaces, and the file. Null while the draft lacks a type or a file.
+ * The upload a valid draft sends: the type, the title when one is given (trimmed; a blank one is
+ * left out so the API names a new document after its type, and a new version keeps its document's
+ * title), the document a new version replaces, and the file. Null while the draft lacks a type or a
+ * file.
  */
 export function buildDocumentUpload(
   draft: DocumentUploadDraft,
@@ -74,8 +81,8 @@ export function buildDocumentUpload(
 }
 
 /**
- * The title field's hint: what a blank title becomes. The API keeps a new version's current title, and
- * names a new document after its type.
+ * The title field's hint: what a blank title becomes. The API keeps a new version's current title,
+ * and names a new document after its type.
  */
 export function titleHint(
   type: HotelDocumentType | null,
@@ -89,8 +96,8 @@ export function titleHint(
 
 /**
  * What the person reads when the API refuses an upload: the reason on the file when it names one (a
- * refused file, D-187 §3), else its message (a full library, a newer version filed since, a busy server,
- * a file over the cap).
+ * refused file, D-187 §3), else its message (a full library, a newer version filed since, a busy
+ * server, a file over the cap).
  */
 export function uploadRefusalMessage(error: unknown): string {
   if (!isAppError(error)) return "Could not upload the document. Try again.";

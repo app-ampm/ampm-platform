@@ -4,7 +4,7 @@ import {
   deleteDocumentWarning,
   documentAccept,
   documentCount,
-  documentFileSizeError,
+  documentFileError,
   documentGroups,
   documentKindLabel,
   documentMeta,
@@ -114,7 +114,7 @@ describe("what a type takes", () => {
   });
 });
 
-describe("the size check before an upload", () => {
+describe("the checks of a picked file before an upload", () => {
   const file = (name: string, mimeType: string, sizeBytes: number) => ({
     name,
     mimeType,
@@ -130,25 +130,35 @@ describe("the size check before an upload", () => {
 
   it("holds a file to its kind's cap: a food menu's workbook to 10 MB, its PDF to 20 MB", () => {
     const workbook = file("menu.xlsx", CONTENT_KINDS.xlsx.mimeType, 12 * MIB);
-    expect(documentFileSizeError("menu", workbook)).toBe(
+    expect(documentFileError("menu", workbook)).toBe(
       "This Excel file is over the 10 MB limit for food menus",
     );
-    expect(documentFileSizeError("menu", file("menu.pdf", "application/pdf", 12 * MIB))).toBe(
+    expect(documentFileError("menu", file("menu.pdf", "application/pdf", 12 * MIB))).toBe(
       undefined,
     );
-    expect(documentFileSizeError("menu", file("menu.pdf", "application/pdf", 20 * MIB))).toBe(
+    expect(documentFileError("menu", file("menu.pdf", "application/pdf", 20 * MIB))).toBe(
       undefined,
     );
   });
 
-  it("holds a file of a kind the type does not take to the type's largest cap", () => {
+  it("says what the type takes when the file is a kind it does not take, whatever its size", () => {
+    const workbook = file("menu.xlsx", CONTENT_KINDS.xlsx.mimeType, 1);
+    expect(documentFileError("floor_plan", workbook)).toBe("Floor plans take PDF, JPEG or PNG");
+    expect(documentFileError("other", workbook)).toBe("Other documents take PDF, JPEG or PNG");
+    expect(documentFileError("fact_sheet", file("plan.png", "image/png", 1))).toBe(
+      "Fact sheets take PDF or PowerPoint",
+    );
+    expect(documentFileError("menu", file("deck.pptx", "application/octet-stream", 1))).toBe(
+      "Food menus take PDF, JPEG, PNG or Excel",
+    );
+  });
+
+  it("holds a file of an unknown kind to the type's largest cap, for the server to type", () => {
     const unknown = file("sheet.key", "application/octet-stream", 25 * MIB + 1);
-    expect(documentFileSizeError("fact_sheet", unknown)).toBe(
+    expect(documentFileError("fact_sheet", unknown)).toBe(
       "This file is over the 25 MB limit for fact sheets",
     );
-    expect(documentFileSizeError("fact_sheet", { ...unknown, sizeBytes: 25 * MIB })).toBe(
-      undefined,
-    );
+    expect(documentFileError("fact_sheet", { ...unknown, sizeBytes: 25 * MIB })).toBe(undefined);
   });
 });
 
