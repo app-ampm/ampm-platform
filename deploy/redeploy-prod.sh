@@ -45,6 +45,13 @@ bash deploy/verify-shipped-source.sh ||
 # gate only after the build and the migration; stop here instead.
 grep -Eq '^[[:space:]]+AV_PROVIDER:[[:space:]]*"?clamav"?[[:space:]]*$' "$OVR" ||
   die "$OVR lacks 'AV_PROVIDER: clamav' (and CLAMAV_HOST): copy them from deploy/app-ampmverse/compose.production-box.example.yml"
+# Production refuses a missing, plain-http or local PUBLIC_SITE_URL, the website the hotel form's links
+# point to (D-188 §6), so the same applies: an https origin, never localhost.
+site_line="$(grep -E '^[[:space:]]+PUBLIC_SITE_URL:' "$OVR" || true)"
+if ! [[ "$site_line" =~ ^[[:space:]]+PUBLIC_SITE_URL:[[:space:]]*\"?https://[^[:space:]\"/]+/?\"?[[:space:]]*$ ]] ||
+  [[ "$site_line" =~ https://(localhost|127\.|\[::1\])|\.localhost ]]; then
+  die "$OVR lacks 'PUBLIC_SITE_URL: https://<the website>' (not localhost): copy it from deploy/app-ampmverse/compose.production-box.example.yml"
+fi
 AMPM_PROD_SECRETS="$SECRETS" bash deploy/app-ampmverse/prod-secrets.sh check ||
   die "secrets incomplete: set the missing keys with deploy/app-ampmverse/prod-secrets.sh set"
 free_gb="$(df -BG --output=avail / | tail -1 | tr -dc 0-9)"

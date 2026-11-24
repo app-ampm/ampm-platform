@@ -34,6 +34,7 @@ Box paths outside the source trees (none is served by a web root):
 Every upload (gallery media and documents) is streamed to ClamAV and stored only if it comes back clean (AC-20.3). Two containers run from the official image pinned in the base compose (`clamav/clamav:1.5.5_base`):
 
 - `clamav` is clamd alone, on the internal network, with no internet. The API connects to `clamav:3310`, set by `AV_PROVIDER: clamav` and `CLAMAV_HOST: clamav` in `compose.box.yml`. Production refuses the stub scanner, and `redeploy-prod.sh` stops early when those lines are missing.
+- `PUBLIC_SITE_URL` in `compose.box.yml` is the website's origin, `https://site.ampmverse.com`: the hotel information form's links point to it (D-188). Production refuses http or a local host, and `redeploy-prod.sh` stops early when the line is missing, so add it to the box's `compose.box.yml` before the first deploy of Slice 7a.
 - `freshclam` downloads the signatures over egress into the `ampm_clamav-db` volume and checks 12 times a day. clamd picks new signatures up within 10 minutes (its self-check) and reloads them in place.
 
 How it behaves:

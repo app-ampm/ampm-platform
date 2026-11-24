@@ -6,8 +6,10 @@
 # by hand needs (the Slice 3 rollback, docs/data-model.md). Every successful deploy also trims the build
 # cache to 8 GiB, least recently used first, once (D-186). The 7-day window it replaces freed nothing: with
 # a deploy a day, no entry got that old. A prune that fails is logged with the daemon's own error and the
-# deploy carries on, since the release has passed its gate. The block is cut from the script itself, so
-# the test runs what the box runs.
+# deploy carries on, since the release has passed its gate. The preflight's checks of the box override are
+# tested the same way: the override example passes, and an override without the antivirus lines, or
+# without an https, non-local PUBLIC_SITE_URL (D-188 §6), stops the deploy before anything is built. Each
+# block is cut from the script itself, so the test runs what the box runs.
 #   bash deploy/redeploy-prod.test.sh
 set -euo pipefail
 
@@ -95,6 +97,49 @@ prune "a release whose build-cache prune fails" ampm-prod-app:cccccccccccc ampm-
   ampm-prod-app:aaaaaaaaaaaa STUB_PRUNE_ERROR="Error response from daemon: a prune operation is already running"
 logged "a release whose build-cache prune fails" "WARNING: the build-cache prune failed"
 logged "a release whose build-cache prune fails" "Error response from daemon: a prune operation is already running"
+
+# The override checks: from the antivirus check to the line before the secrets check.
+preflight="$(awk '
+  /^# Production refuses the stub virus scanner/ { on = 1 }
+  on && /^AMPM_PROD_SECRETS=/ { exit }
+  on { print }
+' "$here/redeploy-prod.sh")"
+if [[ "$preflight" != *PUBLIC_SITE_URL* || "$preflight" != *AV_PROVIDER* ]]; then
+  echo "FAIL could not find the override checks in deploy/redeploy-prod.sh" >&2
+  exit 1
+fi
+example="$here/app-ampmverse/compose.production-box.example.yml"
+
+# override <case> <file> <expected: pass, or text the refusal must hold>
+override() {
+  local out status=0
+  out="$(env OVR="$2" bash -c "set -euo pipefail; die() { printf '%s\n' \"\$*\"; exit 1; }; $preflight" 2>&1)" ||
+    status=$?
+  if [[ "$3" == pass ]]; then
+    if ((status == 0)); then ok "$1 passes the preflight"; else bad "$1 is refused: $out"; fi
+  elif ((status != 0)) && [[ "$out" == *"$3"* ]]; then
+    ok "$1 is refused, naming $3"
+  else
+    bad "$1 is not refused for $3 (exit $status: $out)"
+  fi
+}
+# variant <case> <sed expression>: the example override with one change.
+variant() {
+  sed -E "$2" "$example" >"$work/$1.yml"
+  printf '%s' "$work/$1.yml"
+}
+
+override "the override example" "$example" pass
+override "a quoted site address with a trailing slash" \
+  "$(variant quoted 's#^([[:space:]]+PUBLIC_SITE_URL:).*#\1 "https://site.ampmverse.com/"#')" pass
+override "an override without PUBLIC_SITE_URL" "$(variant no-site '/^[[:space:]]+PUBLIC_SITE_URL:/d')" PUBLIC_SITE_URL
+override "a plain-http site address" \
+  "$(variant http-site 's#^([[:space:]]+PUBLIC_SITE_URL:).*#\1 http://site.ampmverse.com#')" PUBLIC_SITE_URL
+override "a localhost site address" \
+  "$(variant local-site 's#^([[:space:]]+PUBLIC_SITE_URL:).*#\1 https://localhost:3417#')" PUBLIC_SITE_URL
+override "a site address with a path" \
+  "$(variant path-site 's#^([[:space:]]+PUBLIC_SITE_URL:).*#\1 https://site.ampmverse.com/hotel-form#')" PUBLIC_SITE_URL
+override "an override without the antivirus lines" "$(variant no-av '/^[[:space:]]+AV_PROVIDER:/d')" AV_PROVIDER
 
 if ((failures > 0)); then
   echo "$failures redeploy-prod check(s) failed" >&2

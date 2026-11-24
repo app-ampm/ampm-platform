@@ -13,6 +13,7 @@ const prodValid = {
   SMTP_HOST: "smtp.example.com",
   EMAIL_FROM: "AMPM <no-reply@ampm.example>",
   WEB_APP_URL: "https://app.ampm.example",
+  PUBLIC_SITE_URL: "https://site.ampm.example",
   TRUST_PROXY: "1",
   REDIS_URL: "redis://redis:6379",
   BOT_CHECK_PROVIDER: "siteverify",
@@ -256,5 +257,54 @@ describe("loadEnv: SMS and the on-screen client code (D-147)", () => {
     const { SMS_SENDER_ID: _sender, ...withoutSender } = prodValid;
     expect(() => loadEnv(withoutSender)).toThrow(/SMS_SENDER_ID/);
     expect(loadEnv({ ...withoutSender, SMS_PROVIDER: "msg91" }).SMS_PROVIDER).toBe("msg91");
+  });
+});
+
+describe("loadEnv: the public website's address (D-188 §6)", () => {
+  const development = {
+    DATABASE_URL: "postgres://localhost:5432/ampm",
+    IDENTITY_PROVIDER: "local",
+    IDENTITY_LOCAL_SECRET: "a-development-secret-that-is-32chars",
+  };
+
+  it("defaults to the local website in development, where the hotel form's links point", () => {
+    expect(loadEnv(development).PUBLIC_SITE_URL).toBe("http://localhost:3417");
+  });
+
+  it("takes an https address in production, without a trailing slash", () => {
+    expect(loadEnv(prodValid).PUBLIC_SITE_URL).toBe("https://site.ampm.example");
+    expect(
+      loadEnv({ ...prodValid, PUBLIC_SITE_URL: "https://site.ampm.example/" }).PUBLIC_SITE_URL,
+    ).toBe("https://site.ampm.example");
+  });
+
+  it("refuses production without it, since the default is the local website", () => {
+    const { PUBLIC_SITE_URL: _omit, ...withoutSite } = prodValid;
+    expect(() => loadEnv(withoutSite)).toThrow(/PUBLIC_SITE_URL/);
+  });
+
+  it("refuses a plain-http or local address in production", () => {
+    for (const url of [
+      "http://site.ampm.example",
+      "https://localhost",
+      "https://localhost:3417",
+      "https://127.0.0.1",
+      "https://[::1]:3417",
+      "https://site.localhost",
+    ]) {
+      expect(() => loadEnv({ ...prodValid, PUBLIC_SITE_URL: url }), url).toThrow(/PUBLIC_SITE_URL/);
+    }
+  });
+
+  it("refuses an address with a path, query or fragment, which the form's link would break", () => {
+    for (const url of [
+      "https://site.ampm.example/hotel-form",
+      "https://site.ampm.example?x=1",
+      "https://site.ampm.example#k",
+    ]) {
+      expect(() => loadEnv({ ...development, PUBLIC_SITE_URL: url }), url).toThrow(
+        /PUBLIC_SITE_URL/,
+      );
+    }
   });
 });
