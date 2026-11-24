@@ -1,7 +1,7 @@
 import type * as UiModule from "@ampm/ui";
 
 import { TEST_API_BASE } from "../../test/api";
-import { fireEvent, screen, waitFor } from "../../test/render";
+import { fireEvent, screen, waitFor, within } from "../../test/render";
 import {
   failure,
   ISSUED_URL,
@@ -26,9 +26,10 @@ jest.mock("react-native/Libraries/Utilities/useWindowDimensions", () => ({
 }));
 
 /*
- * A live request's sheets (D-188 §7) as staff meet them: a reissued link is shown once and forgotten when
- * the sheet closes, and a sheet whose reissue is under way cannot be closed (scrim, close button or
- * Escape), or the link the server issues would never be shown.
+ * A live request's sheets (D-188 §7) as staff meet them: each shows the API's own message when it refuses
+ * (reissue, revoke, extend, edit, record share); a reissued link is shown once and forgotten when the
+ * sheet closes; and a sheet whose reissue is under way cannot be closed (scrim, close button or Escape),
+ * or the link the server issues would never be shown.
  */
 
 const REQUEST = `/hotels-admin/info-requests/${REQUEST_ID}`;
@@ -68,6 +69,12 @@ async function renderActions(
   );
 }
 
+/** An API refusal in its envelope: the code, the message staff read, and the field a 400 names. */
+function refusal(status: number, code: string, message: string, path?: string): Response {
+  const details = path === undefined ? {} : { details: [{ path, message }] };
+  return new Response(JSON.stringify({ error: { code, message, ...details } }), { status });
+}
+
 /** An answer the test gives when it chooses: a request still under way until then. */
 function heldAnswer() {
   let give = (_response: Response): void => undefined;
@@ -102,5 +109,63 @@ describe("the reissued link", () => {
     held.give(ok(linkIssuedFixture({ request: requestFullFixture({ tokenGeneration: 2 }) })));
     expect(await screen.findByText(ISSUED_URL)).toBeOnTheScreen();
     expect(screen.getByText("Shown only now")).toBeOnTheScreen();
+  });
+});
+
+describe("a refusal shows the API's own message in its sheet", () => {
+  const changed = "This request changed meanwhile: reload it and try again";
+
+  it("on a reissue, above the warning, with no link", async () => {
+    await renderActions({ [`${REQUEST}/reissue`]: () => refusal(409, "conflict", changed) });
+    await fireEvent.press(screen.getByTestId("request-reissue"));
+    await fireEvent.press(await screen.findByTestId("reissue-submit"));
+    expect(await screen.findByTestId("reissue-refusal")).toHaveTextContent(changed);
+    expect(screen.queryByText(ISSUED_URL)).toBeNull();
+  });
+
+  it("on a revoke, under the reason", async () => {
+    const message = "A submitted request is with the reviewers: reject it rather than revoke it";
+    await renderActions({ [`${REQUEST}/revoke`]: () => refusal(409, "conflict", message) });
+    await fireEvent.press(screen.getByTestId("request-revoke"));
+    await fireEvent.changeText(
+      await screen.findByTestId("revoke-request-reason"),
+      "Sent to the wrong hotel",
+    );
+    await fireEvent.press(screen.getByTestId("revoke-request-confirm"));
+    const sheet = screen.getByTestId("revoke-request");
+    expect(await within(sheet).findByText(message)).toBeOnTheScreen();
+  });
+
+  it("on an extension, under the days", async () => {
+    const message = "This link can be extended to 22 Feb 2099 at the latest";
+    const sent: Sent = {};
+    await renderActions(
+      { [REQUEST]: () => refusal(400, "validation_failed", message, "extendDays") },
+      sent,
+    );
+    await fireEvent.press(screen.getByTestId("request-extend"));
+    await fireEvent.changeText(await screen.findByTestId("extend-days"), "7");
+    await fireEvent.press(screen.getByTestId("extend-submit"));
+    const sheet = screen.getByTestId("extend");
+    expect(await within(sheet).findByText(message)).toBeOnTheScreen();
+    expect(sent[REQUEST]).toEqual({ extendDays: 7 });
+  });
+
+  it("on an edit, at the top of the sheet", async () => {
+    const message = "A revoked request is read-only";
+    await renderActions({ [REQUEST]: () => refusal(409, "conflict", message) });
+    await fireEvent.press(screen.getByTestId("request-edit"));
+    await fireEvent.changeText(await screen.findByTestId("edit-request-label"), "Lake refresh");
+    await fireEvent.press(screen.getByTestId("edit-request-submit"));
+    expect(await screen.findByTestId("edit-request-refusal")).toHaveTextContent(message);
+  });
+
+  it("on a recorded share, under the form", async () => {
+    const message = "A revoked request is read-only";
+    await renderActions({ [`${REQUEST}/share-record`]: () => refusal(409, "conflict", message) });
+    await fireEvent.press(screen.getByTestId("request-share"));
+    await fireEvent.press(await screen.findByTestId("record-share-form-channel-copy"));
+    await fireEvent.press(screen.getByTestId("record-share-form-submit"));
+    expect(await screen.findByTestId("record-share-form-refused")).toHaveTextContent(message);
   });
 });
