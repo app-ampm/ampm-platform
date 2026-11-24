@@ -1,10 +1,12 @@
-import { jsonResponse } from "../../test/api";
+import { jsonResponse, ok } from "../../test/api";
 import { fireEvent, screen } from "../../test/render";
+import { staffMeFixture } from "../accounts/accounts.test-utils";
 import { HotelImportScreen } from "./hotel-import-screen";
 import {
   appliedResult,
   dryRunResult,
   IMPORT_CSV,
+  IMPORT_JOB_ID,
   importFetch,
   type ImportRequest,
 } from "./hotel-import.test-utils";
@@ -32,7 +34,7 @@ async function validate(csv = IMPORT_CSV): Promise<void> {
 }
 
 describe("HotelImportScreen", () => {
-  it("validates the raw CSV as a dry run and reports each row without saving", async () => {
+  it("previews the raw CSV and reports each row without saving", async () => {
     const requests: ImportRequest[] = [];
     await renderImport(importFetch(requests));
     await validate();
@@ -41,10 +43,10 @@ describe("HotelImportScreen", () => {
         "Checked 3 rows: 1 to add, 1 to update, 0 unchanged, 1 rejected — nothing saved yet.",
       ),
     ).toBeOnTheScreen();
-    // The file goes up as it is, raw bytes on the dry-run address, never wrapped in JSON.
+    // The file goes up as it is, raw bytes on the kind's preview address, never wrapped in JSON.
     expect(requests).toEqual([
       {
-        path: "/hotels-admin/imports/hotels?dryRun=true",
+        path: "/hotels-admin/imports/hotels",
         body: IMPORT_CSV,
         contentType: "application/octet-stream",
       },
@@ -57,11 +59,11 @@ describe("HotelImportScreen", () => {
       "Line 4 · synthetic-beach-resort · New hotel: destinationSlug, name",
     );
     expect(screen.getByText("Line 3: destinationSlug — required")).toBeOnTheScreen();
-    // The dry-run outcome is announced (its own live toast), not only shown in the panel.
+    // The preview's outcome is announced (its own live toast), not only shown in the panel.
     expect(screen.getByText("Validated — some rows rejected")).toBeOnTheScreen();
   });
 
-  it("keeps Import locked until the CSV has been validated, then applies that CSV", async () => {
+  it("keeps Import locked until validated, then imports that preview by its job id", async () => {
     const requests: ImportRequest[] = [];
     await renderImport(importFetch(requests));
     await fireEvent.changeText(await screen.findByTestId("hotel-import-content"), IMPORT_CSV);
@@ -71,16 +73,23 @@ describe("HotelImportScreen", () => {
     await fireEvent.press(screen.getByTestId("hotel-import-validate"));
     await screen.findByText("Validated — some rows rejected");
     expect(screen.queryByTestId("hotel-import-locked")).toBeNull();
+    expect(screen.getByTestId("hotel-import-ttl")).toHaveTextContent(
+      "A preview can be imported for 24 hours.",
+    );
     await fireEvent.press(screen.getByTestId("hotel-import-run"));
     expect(await screen.findByText("Hotels imported")).toBeOnTheScreen();
     expect(
       screen.getByText("Imported 1 created · 1 updated · 1 new destination."),
     ).toBeOnTheScreen();
-    expect(requests.map((request) => request.path)).toEqual([
-      "/hotels-admin/imports/hotels?dryRun=true",
-      "/hotels-admin/imports/hotels?dryRun=false",
-    ]);
-    expect(requests[1]?.body).toBe(IMPORT_CSV);
+    // Import sends the job, never the file again: an empty JSON body on the apply address.
+    expect(requests[1]).toEqual({
+      path: `/hotels-admin/imports/hotels/${IMPORT_JOB_ID}/apply`,
+      body: "{}",
+      contentType: "application/json",
+    });
+    // A preview imports once: Import locks again until the next Validate.
+    expect(screen.getByTestId("hotel-import-run")).toBeDisabled();
+    expect(screen.getByTestId("hotel-import-locked")).toBeOnTheScreen();
   });
 
   it("locks Import again when the CSV changes after validating, marking the report as the old CSV's", async () => {
@@ -98,8 +107,21 @@ describe("HotelImportScreen", () => {
     expect(requests).toHaveLength(1);
   });
 
-  it("says in the dry run's toast and summary when importing would add destinations", async () => {
-    await renderImport(importFetch([], { dry: dryRunResult({ destinationsCreated: 1 }) }));
+  it("keeps Import off when the preview would neither add nor update anything", async () => {
+    const nothing = dryRunResult({ created: 0, updated: 0, unchanged: 2, rows: [] });
+    await renderImport(importFetch([], { dry: { hotels: nothing } }));
+    await validate();
+    await screen.findByText("Validated — some rows rejected");
+    expect(screen.getByTestId("hotel-import-run")).toBeDisabled();
+    expect(screen.getByTestId("hotel-import-locked")).toHaveTextContent(
+      "Nothing to import: every row is unchanged or rejected.",
+    );
+  });
+
+  it("says in the preview's toast and summary when importing would add destinations", async () => {
+    await renderImport(
+      importFetch([], { dry: { hotels: dryRunResult({ destinationsCreated: 1 }) } }),
+    );
     await validate();
     expect(await screen.findByText("Importing would add 1 new destination.")).toBeOnTheScreen();
     expect(
@@ -109,8 +131,8 @@ describe("HotelImportScreen", () => {
     ).toBeOnTheScreen();
   });
 
-  // A real run that wrote nothing answers `applied: false` (core hotelImportResult; the API's
-  // hotel-import e2e re-imports a loaded file and expects the same).
+  // An import that wrote nothing answers `applied: false` (core hotelImportResult): its rows matched
+  // the catalogue by then, or were refused as changed since the preview.
   it("says nothing was imported when every row already matches the catalogue", async () => {
     const unchanged = { created: 0, updated: 0, unchanged: 3, rejected: [], rows: [] };
     const fetch = importFetch([], {
@@ -124,25 +146,19 @@ describe("HotelImportScreen", () => {
     expect(screen.getByText("Nothing imported — 3 unchanged.")).toBeOnTheScreen();
   });
 
-  it("blocks an empty validate and sends nothing", async () => {
+  it("blocks an empty or whitespace-only validate and sends nothing", async () => {
     const requests: ImportRequest[] = [];
     await renderImport(importFetch(requests));
     await fireEvent.press(await screen.findByTestId("hotel-import-validate"));
     expect(await screen.findByText("Paste or choose a CSV first")).toBeOnTheScreen();
-    expect(requests).toEqual([]);
-  });
-
-  it("blocks a whitespace-only validate and sends nothing", async () => {
-    const requests: ImportRequest[] = [];
-    await renderImport(importFetch(requests));
     await validate("   \n  \t");
-    expect(await screen.findByText("Paste or choose a CSV first")).toBeOnTheScreen();
     expect(requests).toEqual([]);
   });
 
-  it("surfaces the server's message in a toast when the import is refused", async () => {
+  it("surfaces the server's message in a toast when the preview is refused", async () => {
     await renderImport(
       routedFetch({
+        "/me": () => ok(staffMeFixture(["HT"])),
         "/hotels-admin/imports/hotels": () =>
           jsonResponse({ error: { code: "forbidden", message: "You cannot import hotels." } }, 403),
       }),

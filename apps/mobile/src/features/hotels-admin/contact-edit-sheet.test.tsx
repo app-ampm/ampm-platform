@@ -1,3 +1,5 @@
+import { HOTEL_PHONE_REFUSAL } from "@ampm/core";
+
 import { fireEvent, screen } from "../../test/render";
 import { ContactEditSheet } from "./contact-edit-sheet";
 import {
@@ -35,31 +37,54 @@ function contactFetch(captured: Captured): FetchFn {
 
 const noop = (): void => {};
 
+async function renderNew(captured: Captured): Promise<void> {
+  await renderWithApi(
+    <ContactEditSheet hotelId={HOTEL_ID} open contact={null} onClose={noop} />,
+    contactFetch(captured),
+  );
+}
+
 describe("ContactEditSheet", () => {
-  it("adds a contact: fills the fields, marks it primary and lower-cases the email", async () => {
+  it("adds a contact: marks it primary, lower-cases the email and saves the phone in E.164", async () => {
     const captured: Captured = {};
-    await renderWithApi(
-      <ContactEditSheet hotelId={HOTEL_ID} open contact={null} onClose={noop} />,
-      contactFetch(captured),
-    );
+    await renderNew(captured);
     await fireEvent.changeText(await screen.findByTestId("contact-name"), "Asha Rao");
-    await fireEvent.changeText(screen.getByTestId("contact-email"), "Asha.Rao@Hotel.com");
+    await fireEvent.changeText(screen.getByTestId("contact-email"), "Asha.Rao@Hotel.example");
+    await fireEvent.changeText(screen.getByTestId("contact-phone"), "0123-456 7890");
+    expect(screen.getByText("Saved as +911234567890")).toBeOnTheScreen();
     await fireEvent.press(screen.getByTestId("contact-primary"));
     await fireEvent.press(screen.getByTestId("contact-edit-submit"));
     expect(await screen.findByText("Contact added")).toBeOnTheScreen();
-    expect(captured.created).toMatchObject({
+    expect(captured.created).toEqual({
       name: "Asha Rao",
-      email: "asha.rao@hotel.com",
+      roleTitle: null,
+      phone: "+911234567890",
+      email: "asha.rao@hotel.example",
       isPrimary: true,
     });
   });
 
+  it("says making a contact primary replaces the current one", async () => {
+    await renderNew({});
+    expect(
+      await screen.findByText("Making this the primary contact replaces the current one"),
+    ).toBeOnTheScreen();
+  });
+
+  it("shows why a phone is refused as it is typed, and blocks the save on it", async () => {
+    const captured: Captured = {};
+    await renderNew(captured);
+    await fireEvent.changeText(await screen.findByTestId("contact-name"), "Asha");
+    await fireEvent.changeText(screen.getByTestId("contact-phone"), "0141 234 5678 ext 12");
+    expect(screen.getByText(HOTEL_PHONE_REFUSAL)).toBeOnTheScreen();
+    await fireEvent.press(screen.getByTestId("contact-edit-submit"));
+    expect(screen.getByText(HOTEL_PHONE_REFUSAL)).toBeOnTheScreen();
+    expect(captured.created).toBeUndefined();
+  });
+
   it("blocks submit on a malformed email", async () => {
     const captured: Captured = {};
-    await renderWithApi(
-      <ContactEditSheet hotelId={HOTEL_ID} open contact={null} onClose={noop} />,
-      contactFetch(captured),
-    );
+    await renderNew(captured);
     await fireEvent.changeText(await screen.findByTestId("contact-name"), "Asha");
     await fireEvent.changeText(screen.getByTestId("contact-email"), "nope");
     await fireEvent.press(screen.getByTestId("contact-edit-submit"));
@@ -67,7 +92,22 @@ describe("ContactEditSheet", () => {
     expect(captured.created).toBeUndefined();
   });
 
-  it("edits a contact: seeds from it and patches the change", async () => {
+  it("edits a contact: sends only the change, never a phone it did not touch", async () => {
+    const captured: Captured = {};
+    const contact = hotelContactViewFixture({ phone: "12345 678 ext 9" });
+    await renderWithApi(
+      <ContactEditSheet hotelId={HOTEL_ID} open contact={contact} onClose={noop} />,
+      contactFetch(captured),
+    );
+    await screen.findByDisplayValue("Priya Sharma");
+    expect(screen.getByText("Saved as 12345 678 ext 9")).toBeOnTheScreen();
+    await fireEvent.changeText(screen.getByTestId("contact-role"), "General Manager");
+    await fireEvent.press(screen.getByTestId("contact-edit-submit"));
+    expect(await screen.findByText("Contact updated")).toBeOnTheScreen();
+    expect(captured.updated).toEqual({ roleTitle: "General Manager" });
+  });
+
+  it("sends a retyped phone in E.164", async () => {
     const captured: Captured = {};
     await renderWithApi(
       <ContactEditSheet
@@ -78,10 +118,9 @@ describe("ContactEditSheet", () => {
       />,
       contactFetch(captured),
     );
-    await screen.findByDisplayValue("Priya Sharma");
-    await fireEvent.changeText(screen.getByTestId("contact-role"), "General Manager");
+    await fireEvent.changeText(await screen.findByTestId("contact-phone"), "+91 12345 67802");
     await fireEvent.press(screen.getByTestId("contact-edit-submit"));
     expect(await screen.findByText("Contact updated")).toBeOnTheScreen();
-    expect(captured.updated).toMatchObject({ name: "Priya Sharma", roleTitle: "General Manager" });
+    expect(captured.updated).toEqual({ phone: "+911234567802" });
   });
 });

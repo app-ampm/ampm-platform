@@ -1,0 +1,3 @@
+hotelSlug,name,roomCount,unitType,viewLabel,bedConfiguration,maxOccupancy,sizeSqm,sizeSqft,facilities,description
+example-hills-retreat,Example Hillside Villa,12,villa,Valley view,One king bed,3,,850,Plunge pool|Rain shower|Balcony,A villa with its own plunge pool. Synthetic example row; not a real hotel.
+example-hills-retreat,Example Garden Room,40,Room,Garden view,"One king bed, or two twin beds",2,32,,Balcony|Bath tub,Synthetic example row; not a real hotel.

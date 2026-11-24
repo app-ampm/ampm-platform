@@ -4,19 +4,27 @@ import type {
   HotelContactUpdateRequest,
   RoomCategoryCreateRequest,
   RoomCategoryUpdateRequest,
-  VenueCreateRequest,
-  VenueUpdateRequest,
 } from "@ampm/core";
 
 import { PrismaService } from "../../db/prisma.service.js";
 import { Prisma } from "../../generated/prisma/client.js";
+import type {
+  StoredRoomArea,
+  StoredVenueAreas,
+  VenuePatchData,
+  VenueWriteData,
+} from "./hotel-child-write.js";
 import { stringListInput } from "./hotel-string-lists.js";
+import { venueLayoutsInput } from "./hotel-venue-layouts.js";
 
 /*
- * Writes for a hotel's room categories, venues and contacts (feature 9.1, staff). The selects are the
- * nested shapes the staff detail reads (HotelsAdminRepository imports them; hotels-admin.view.ts maps
- * them), so a created/updated row renders through the same view mappers. `hotels.room_categories_venues.*` covers rooms and venues;
- * `hotels.hotel_contacts.*` covers contacts (contacts are RESTRICTED-CONTACT).
+ * Writes for a hotel's room categories, venues and contacts (feature 9.1, staff), for the staff routes and
+ * the rooms and venues imports alike: each write takes the columns hotel-child-write.ts maps, and an
+ * optional transaction. The selects are the nested shapes the staff detail reads (HotelsAdminRepository
+ * imports them; hotels-admin.view.ts maps them), so a created or updated row renders through the same
+ * view mappers; the client discovery repository lists its own columns, so none of the D-178 ones reach a
+ * client. `hotels.room_categories_venues.*` covers rooms and venues; `hotels.hotel_contacts.*` covers
+ * contacts (RESTRICTED-CONTACT).
  */
 
 export const ROOM_SELECT = {
@@ -28,7 +36,11 @@ export const ROOM_SELECT = {
   sizeSqm: true,
   facilities: true,
   description: true,
-} as const;
+  unitType: true,
+  viewLabel: true,
+  bedConfiguration: true,
+  sizeSqft: true,
+} as const satisfies Prisma.HotelRoomCategorySelect;
 
 export const VENUE_SELECT = {
   id: true,
@@ -42,7 +54,16 @@ export const VENUE_SELECT = {
   capacityReception: true,
   facilities: true,
   description: true,
-} as const;
+  setting: true,
+  areaSqft: true,
+  lengthM: true,
+  widthM: true,
+  ceilingHeightM: true,
+  prefunctionAreaSqm: true,
+  prefunctionAreaSqft: true,
+  otherLayouts: true,
+  capacityNotes: true,
+} as const satisfies Prisma.HotelVenueSelect;
 
 export const CONTACT_SELECT = {
   id: true,
@@ -57,6 +78,8 @@ export const CONTACT_SELECT = {
 export type RoomRow = Prisma.HotelRoomCategoryGetPayload<{ select: typeof ROOM_SELECT }>;
 export type VenueRow = Prisma.HotelVenueGetPayload<{ select: typeof VENUE_SELECT }>;
 export type ContactRow = Prisma.HotelContactGetPayload<{ select: typeof CONTACT_SELECT }>;
+
+type Client = Prisma.TransactionClient;
 
 @Injectable()
 export class HotelSubresourcesRepository {
@@ -74,13 +97,14 @@ export class HotelSubresourcesRepository {
 
   createRoom(
     hotelId: string,
-    request: RoomCategoryCreateRequest,
+    data: RoomCategoryCreateRequest,
     actorId: string,
+    tx?: Client,
   ): Promise<RoomRow> {
-    return this.prisma.hotelRoomCategory.create({
+    return (tx ?? this.prisma).hotelRoomCategory.create({
       data: {
-        ...request,
-        facilities: stringListInput(request.facilities),
+        ...data,
+        facilities: stringListInput(data.facilities),
         hotelId,
         createdBy: actorId,
         updatedBy: actorId,
@@ -89,18 +113,27 @@ export class HotelSubresourcesRepository {
     });
   }
 
-  updateRoom(id: string, patch: RoomCategoryUpdateRequest, actorId: string): Promise<RoomRow> {
-    return this.prisma.hotelRoomCategory.update({
+  updateRoom(
+    id: string,
+    patch: RoomCategoryUpdateRequest,
+    actorId: string,
+    tx?: Client,
+  ): Promise<RoomRow> {
+    return (tx ?? this.prisma).hotelRoomCategory.update({
       where: { id },
       data: { ...patch, facilities: stringListInput(patch.facilities), updatedBy: actorId },
       select: ROOM_SELECT,
     });
   }
 
-  findRoomInHotel(hotelId: string, roomId: string): Promise<{ id: string } | null> {
+  /** The live room of this hotel with the sq ft an update's units rule reads, or null. */
+  findRoomInHotel(
+    hotelId: string,
+    roomId: string,
+  ): Promise<({ id: string } & StoredRoomArea) | null> {
     return this.prisma.hotelRoomCategory.findFirst({
       where: { id: roomId, hotelId, deletedAt: null },
-      select: { id: true },
+      select: { id: true, sizeSqft: true },
     });
   }
 
@@ -113,11 +146,17 @@ export class HotelSubresourcesRepository {
 
   // --- Venues ---
 
-  createVenue(hotelId: string, request: VenueCreateRequest, actorId: string): Promise<VenueRow> {
-    return this.prisma.hotelVenue.create({
+  createVenue(
+    hotelId: string,
+    data: VenueWriteData,
+    actorId: string,
+    tx?: Client,
+  ): Promise<VenueRow> {
+    return (tx ?? this.prisma).hotelVenue.create({
       data: {
-        ...request,
-        facilities: stringListInput(request.facilities),
+        ...data,
+        facilities: stringListInput(data.facilities),
+        otherLayouts: venueLayoutsInput(data.otherLayouts),
         hotelId,
         createdBy: actorId,
         updatedBy: actorId,
@@ -126,18 +165,27 @@ export class HotelSubresourcesRepository {
     });
   }
 
-  updateVenue(id: string, patch: VenueUpdateRequest, actorId: string): Promise<VenueRow> {
-    return this.prisma.hotelVenue.update({
+  updateVenue(id: string, patch: VenuePatchData, actorId: string, tx?: Client): Promise<VenueRow> {
+    return (tx ?? this.prisma).hotelVenue.update({
       where: { id },
-      data: { ...patch, facilities: stringListInput(patch.facilities), updatedBy: actorId },
+      data: {
+        ...patch,
+        facilities: stringListInput(patch.facilities),
+        otherLayouts: venueLayoutsInput(patch.otherLayouts),
+        updatedBy: actorId,
+      },
       select: VENUE_SELECT,
     });
   }
 
-  findVenueInHotel(hotelId: string, venueId: string): Promise<{ id: string } | null> {
+  /** The live venue of this hotel with the sq ft figures an update's units rule reads, or null. */
+  findVenueInHotel(
+    hotelId: string,
+    venueId: string,
+  ): Promise<({ id: string } & StoredVenueAreas) | null> {
     return this.prisma.hotelVenue.findFirst({
       where: { id: venueId, hotelId, deletedAt: null },
-      select: { id: true },
+      select: { id: true, areaSqft: true, prefunctionAreaSqft: true },
     });
   }
 
@@ -152,11 +200,12 @@ export class HotelSubresourcesRepository {
 
   createContact(
     hotelId: string,
-    request: HotelContactCreateRequest,
+    data: HotelContactCreateRequest,
     actorId: string,
+    tx: Client,
   ): Promise<ContactRow> {
-    return this.prisma.hotelContact.create({
-      data: { ...request, hotelId, createdBy: actorId, updatedBy: actorId },
+    return tx.hotelContact.create({
+      data: { ...data, hotelId, createdBy: actorId, updatedBy: actorId },
       select: CONTACT_SELECT,
     });
   }
@@ -165,18 +214,47 @@ export class HotelSubresourcesRepository {
     id: string,
     patch: HotelContactUpdateRequest,
     actorId: string,
+    tx: Client,
   ): Promise<ContactRow> {
-    return this.prisma.hotelContact.update({
+    return tx.hotelContact.update({
       where: { id },
       data: { ...patch, updatedBy: actorId },
       select: CONTACT_SELECT,
     });
   }
 
-  findContactInHotel(hotelId: string, contactId: string): Promise<{ id: string } | null> {
+  /** The live contact of this hotel with the phone it stores (a repeated phone is kept as it is), or null. */
+  findContactInHotel(
+    hotelId: string,
+    contactId: string,
+  ): Promise<{ id: string; phone: string | null } | null> {
     return this.prisma.hotelContact.findFirst({
       where: { id: contactId, hotelId, deletedAt: null },
+      select: { id: true, phone: true },
+    });
+  }
+
+  /** The hotel's live primary contacts other than `exceptId` (one at most, by the partial unique index). */
+  findLivePrimaries(
+    hotelId: string,
+    exceptId: string | null,
+    tx: Client,
+  ): Promise<{ id: string }[]> {
+    return tx.hotelContact.findMany({
+      where: {
+        hotelId,
+        isPrimary: true,
+        deletedAt: null,
+        ...(exceptId === null ? {} : { id: { not: exceptId } }),
+      },
       select: { id: true },
+    });
+  }
+
+  async demoteContacts(ids: readonly string[], actorId: string, tx: Client): Promise<void> {
+    await tx.hotelContact.updateMany({
+      where: { id: { in: [...ids] } },
+      data: { isPrimary: false, updatedBy: actorId },
     });
   }
 
@@ -185,5 +263,10 @@ export class HotelSubresourcesRepository {
       where: { id },
       data: { deletedAt: new Date(), updatedBy: actorId },
     });
+  }
+
+  /** Runs `work` in one transaction, so a write and its audit (and a primary's demotion) land together. */
+  transaction<T>(work: (tx: Client) => Promise<T>): Promise<T> {
+    return this.prisma.$transaction(work);
   }
 }

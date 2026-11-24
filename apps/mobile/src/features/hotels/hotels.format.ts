@@ -274,6 +274,11 @@ const VENUE_TYPE_LABEL: Readonly<Record<HotelVenueType, string>> = {
   courtyard: "Courtyard",
   beach: "Beach",
   other: "Venue",
+  terrace: "Terrace",
+  garden: "Garden",
+  amphitheatre: "Amphitheatre",
+  meeting_room: "Meeting room",
+  lounge: "Lounge",
 };
 
 export function venueTypeLabel(type: HotelVenueType): string {

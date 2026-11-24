@@ -69,7 +69,12 @@ describe("Hotel sub-resources (e2e)", () => {
     await http()
       .post(`/hotels-admin/hotels/${hotelId}/venues`)
       .set("Authorization", auth)
-      .send({ name: "Grand Ballroom", venueType: "ballroom", isIndoor: true, capacityBanquet: 300 })
+      .send({
+        name: "Grand Ballroom",
+        venueType: "ballroom",
+        setting: "indoor",
+        capacityBanquet: 300,
+      })
       .expect(201);
     await http()
       .post(`/hotels-admin/hotels/${hotelId}/contacts`)
@@ -89,6 +94,8 @@ describe("Hotel sub-resources (e2e)", () => {
     });
     expect(detail.body.data.venues[0]).toMatchObject({
       venueType: "ballroom",
+      setting: "indoor",
+      isIndoor: true,
       capacityBanquet: 300,
     });
     expect(detail.body.data.contacts[0]).toMatchObject({ name: "Sales Desk", isPrimary: true });

@@ -1,44 +1,60 @@
 import { describe, expect, it } from "vitest";
 
-import type { ImportFile } from "./hotel-import.file.js";
-import { planImport } from "./hotel-import.plan.js";
-import { summarise } from "./hotel-import.report.js";
-import { importContext as context, importRow as row } from "./testing/import-plan-fixtures.js";
+import { refusedReport, summarise, type RowReport } from "./hotel-import.report.js";
+
+const planned = (line: number, outcome: RowReport["outcome"]): RowReport => ({
+  line,
+  slug: "synthetic-bay",
+  name: "Synthetic Bay Hotel",
+  outcome,
+  changedFields: outcome === "update" ? ["brand"] : [],
+  errors: [],
+});
 
 describe("summarise", () => {
-  it("counts what the plan does and the destinations it would create, rows by line", () => {
-    const rows = [
-      { line: 2, row: row({ brand: "Synthetic Collection" }) },
-      {
-        line: 3,
-        row: row({ slug: "synthetic-cove", name: "Cove", destinationSlug: "synthetic-new" }),
-      },
-      { line: 5, row: row({ slug: "synthetic-cove", name: "Cove Again" }) },
-    ];
-    const file: ImportFile = {
-      rows,
-      rejected: [{ line: 4, slug: null, errors: [{ field: "name", message: "Required" }] }],
-      totalRows: 4,
+  it("counts what the plan does, reporting every row by line, the refused ones with their reasons", () => {
+    const refusedBeforePlanning = {
+      line: 4,
+      slug: null,
+      name: null,
+      errors: [{ field: "name", message: "Required" }],
     };
-    const ctx = context();
-    const summary = summarise(file, planImport(rows, ctx), ctx.destinations);
-    expect(summary).toMatchObject({
-      created: 1,
-      updated: 0,
-      unchanged: 1,
-      valid: 2,
+    const changed = { field: "row", message: "Changed since preview; validate the file again" };
+    const summary = summarise({
+      totalRows: 5,
+      refused: [refusedBeforePlanning],
+      reports: [
+        planned(2, "unchanged"),
+        planned(3, "create"),
+        planned(5, "update"),
+        refusedReport({ line: 6, slug: "synthetic-cove", name: "Synthetic Cove" }, [changed]),
+      ],
       newDestinations: 1,
     });
-    expect(summary.rows.map((report) => [report.line, report.outcome])).toEqual([
-      [2, "unchanged"],
-      [3, "create"],
-      [4, "error"],
-      [5, "error"],
-    ]);
-    expect(summary.rejected.map((rejected) => rejected.line)).toEqual([4, 5]);
-    expect(summary.rejected[0]).toEqual({
-      line: 4,
-      errors: [{ field: "name", message: "Required" }],
+    expect(summary).toMatchObject({
+      created: 1,
+      updated: 1,
+      unchanged: 1,
+      valid: 3,
+      newDestinations: 1,
     });
+    expect(summary.rows.map((report) => [report.line, report.outcome, report.name])).toEqual([
+      [2, "unchanged", "Synthetic Bay Hotel"],
+      [3, "create", "Synthetic Bay Hotel"],
+      [4, "error", null],
+      [5, "update", "Synthetic Bay Hotel"],
+      [6, "error", "Synthetic Cove"],
+    ]);
+    expect(summary.rows[3]).toEqual({
+      line: 5,
+      slug: "synthetic-bay",
+      name: "Synthetic Bay Hotel",
+      outcome: "update",
+      changedFields: ["brand"],
+    });
+    expect(summary.rejected).toEqual([
+      { line: 4, errors: [{ field: "name", message: "Required" }] },
+      { line: 6, errors: [changed] },
+    ]);
   });
 });

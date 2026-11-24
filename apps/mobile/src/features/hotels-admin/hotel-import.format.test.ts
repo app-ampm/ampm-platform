@@ -1,7 +1,7 @@
 import {
   HOTEL_IMPORT_COLUMNS,
   HOTEL_IMPORT_MAX_BYTES,
-  HOTEL_IMPORT_REQUIRED_COLUMNS,
+  VENUE_IMPORT_COLUMNS,
   type HotelImportResult,
   type HotelImportRowReport,
 } from "@ampm/core";
@@ -9,10 +9,9 @@ import {
 import {
   changingHeadline,
   changingRows,
+  hasChanges,
   hasRejections,
-  IMPORT_COLUMNS_HINT,
-  IMPORT_RULES,
-  IMPORT_TEMPLATE_HEADER,
+  importColumnsHint,
   importInputProblem,
   importReportCsv,
   importSummary,
@@ -27,6 +26,7 @@ import {
 function result(overrides: Partial<HotelImportResult> = {}): HotelImportResult {
   return {
     importJobId: "018f0000-0000-7000-8000-00000000f001",
+    kind: "hotels",
     dryRun: false,
     applied: true,
     totalRows: 50,
@@ -45,6 +45,7 @@ function row(overrides: Partial<HotelImportRowReport> = {}): HotelImportRowRepor
   return {
     line: 2,
     slug: "synthetic-lake-hotel",
+    name: "Synthetic Lake Hotel",
     outcome: "update",
     changedFields: [],
     ...overrides,
@@ -52,32 +53,17 @@ function row(overrides: Partial<HotelImportRowReport> = {}): HotelImportRowRepor
 }
 
 describe("hotel-import.format", () => {
-  it("takes the template's columns from core, required ones first", () => {
-    expect(IMPORT_TEMPLATE_HEADER).toBe(HOTEL_IMPORT_COLUMNS.join(","));
-    expect(IMPORT_COLUMNS_HINT.split(", ")).toEqual([...HOTEL_IMPORT_COLUMNS]);
-    expect(IMPORT_TEMPLATE_HEADER.startsWith("destinationSlug,destinationName,slug,name,")).toBe(
-      true,
-    );
-    expect(HOTEL_IMPORT_REQUIRED_COLUMNS).toEqual(["destinationSlug", "name"]);
-    expect(IMPORT_RULES).toContain("Required: destinationSlug, name.");
+  it("takes each kind's columns from core", () => {
+    expect(importColumnsHint("hotels").split(", ")).toEqual([...HOTEL_IMPORT_COLUMNS]);
+    expect(importColumnsHint("venues").split(", ")).toEqual([...VENUE_IMPORT_COLUMNS]);
   });
 
-  it("says a blank cell leaves a value unchanged, flags change only when filled, lists split on |", () => {
-    expect(IMPORT_RULES).toContain("a blank cell leaves its value unchanged");
-    expect(IMPORT_RULES).toContain("change only when filled");
-    expect(IMPORT_RULES).toContain(
-      'Separate the entries of a list cell with "|" or a line break; a comma stays inside an entry.',
-    );
-    expect(IMPORT_RULES).toContain("Yes-or-no columns take true or false");
-    expect(IMPORT_RULES).toContain("Up to 5 MB and 2,000 rows.");
-    expect(IMPORT_RULES).toContain("Save the file as CSV UTF-8");
-  });
-
-  it("builds the template as the header row alone, marked UTF-8 so Excel keeps ₹ and Indic names", () => {
-    const template = importTemplateCsv();
-    expect(template).toBe(`\uFEFF${IMPORT_TEMPLATE_HEADER}`);
+  it("builds a kind's template as the header row alone, marked UTF-8 so Excel keeps ₹ and Indic names", () => {
+    const template = importTemplateCsv("hotels");
+    expect(template).toBe(`\uFEFF${HOTEL_IMPORT_COLUMNS.join(",")}`);
     expect(template.split("\r\n")).toHaveLength(1);
-    expect(template.split(",")).toHaveLength(HOTEL_IMPORT_COLUMNS.length);
+    expect(template.startsWith("\uFEFFdestinationSlug,destinationName,slug,name,")).toBe(true);
+    expect(importTemplateCsv("venues")).toBe(`\uFEFF${VENUE_IMPORT_COLUMNS.join(",")}`);
   });
 
   describe("importSummary", () => {
@@ -223,10 +209,10 @@ describe("hotel-import.format", () => {
       expect(changingHeadline(report)).toBe("2 hotels to add or update");
       expect(changingHeadline(result({ rows: [row()] }))).toBe("1 hotel added or updated");
       expect(changingHeadline(result())).toBeNull();
-      expect(rowOutcomeText(row({ changedFields: ["city", "mapsUrl"] }))).toBe(
+      expect(rowOutcomeText(row({ changedFields: ["city", "mapsUrl"] }), "hotels")).toBe(
         "Line 2 · synthetic-lake-hotel · Update: city, mapsUrl",
       );
-      expect(rowOutcomeText(row({ line: 4, slug: null, outcome: "create" }))).toBe(
+      expect(rowOutcomeText(row({ line: 4, slug: null, outcome: "create" }), "hotels")).toBe(
         "Line 4 · New hotel",
       );
     });
@@ -255,6 +241,11 @@ describe("hotel-import.format", () => {
         '7,,error,,"name: is ""short"", at most 255"',
       );
     });
+  });
+
+  it("says whether a preview would add or update anything", () => {
+    expect(hasChanges(result({ created: 0, updated: 1 }))).toBe(true);
+    expect(hasChanges(result({ created: 0, updated: 0, unchanged: 3 }))).toBe(false);
   });
 
   it("refuses an empty CSV and one over the 5 MB cap before it is sent", () => {

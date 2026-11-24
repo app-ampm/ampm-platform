@@ -1,62 +1,111 @@
-import { useEffect, useState } from "react";
+import type { RoomCategoryView } from "@ampm/core";
+import { Button, Input, Sheet, Stack } from "@ampm/ui";
 
-import { useCreateRoom, useUpdateRoom } from "@ampm/api-client";
-import { isAppError, type RoomCategoryView } from "@ampm/core";
-import { Button, Input, Sheet, Stack, useToast } from "@ampm/ui";
+import { AreaFields } from "./area-fields";
+import { ROOM_SIZE_AREA } from "./hotel-area.form";
+import { LONG_TEXT_MAX } from "./hotel-form-fields";
+import { ProfileSection } from "./hotel-profile-section";
+import { MediaOptionPicker } from "./media-option-picker";
+import { ROOM_FIELD_LABEL } from "./rooms.form";
+import { UNIT_TYPE_CHOICES, unitTypeLabel } from "./subresources.format";
+import { roomField, useRoomForm, type RoomFieldsProps } from "./use-room-form";
 
-import { hasErrors } from "./hotel-form-fields";
-import {
-  buildRoomBody,
-  draftFromRoom,
-  validateRoom,
-  type RoomDraft,
-  type RoomErrors,
-} from "./subresources.form";
+/** The longest name, view or bed configuration the contract takes. */
+const LABEL_MAX = 255;
 
-const NO_ERRORS: RoomErrors = {
-  name: undefined,
-  roomCount: undefined,
-  maxOccupancy: undefined,
-  sizeSqm: undefined,
-};
+/** What the room category is: its name, unit type, view and beds. */
+function RoomIdentityPanel(props: RoomFieldsProps) {
+  const { draft, patch } = props;
+  return (
+    <ProfileSection title="Room category" testID="room-identity">
+      <Input
+        label={ROOM_FIELD_LABEL.name}
+        required
+        {...roomField(props, "name")}
+        maxLength={LABEL_MAX}
+        placeholder="e.g. Deluxe Lake View"
+        testID="room-name"
+      />
+      <MediaOptionPicker
+        label="Unit type"
+        value={draft.unitType}
+        options={UNIT_TYPE_CHOICES}
+        optionLabel={unitTypeLabel}
+        onChange={(unitType) => patch({ unitType })}
+        testID="room-unit-type"
+      />
+      <Input
+        label="View"
+        value={draft.viewLabel}
+        onChangeText={(viewLabel) => patch({ viewLabel })}
+        maxLength={LABEL_MAX}
+        placeholder="e.g. Lake view"
+        testID="room-view"
+      />
+      <Input
+        label="Bed configuration"
+        value={draft.bedConfiguration}
+        onChangeText={(bedConfiguration) => patch({ bedConfiguration })}
+        maxLength={LABEL_MAX}
+        placeholder="e.g. King or twin"
+        testID="room-bed"
+      />
+    </ProfileSection>
+  );
+}
 
-/** The room-category create/edit form's state, validation and submission. */
-function useRoomForm(
-  hotelId: string,
-  open: boolean,
-  room: RoomCategoryView | null,
-  onClose: () => void,
-) {
-  const toast = useToast();
-  const create = useCreateRoom(hotelId);
-  const update = useUpdateRoom(hotelId);
-  const [draft, setDraft] = useState<RoomDraft>(() => draftFromRoom(room));
-  const [showErrors, setShowErrors] = useState(false);
-  useEffect(() => {
-    if (open) {
-      setDraft(draftFromRoom(room));
-      setShowErrors(false);
-    }
-  }, [open, room]);
-  const pending = create.isPending || update.isPending;
-  const onError = (error: unknown): void =>
-    void toast.show({
-      title: isAppError(error) ? error.message : "Could not save the room category",
-      tone: "danger",
-    });
-  const onSuccess = (): void => {
-    toast.show({ title: room ? "Room category updated" : "Room category added", tone: "success" });
-    onClose();
-  };
-  const patch = (next: Partial<RoomDraft>): void => setDraft((prev) => ({ ...prev, ...next }));
-  const submit = (): void => {
-    if (pending) return;
-    if (hasErrors(validateRoom(draft))) return setShowErrors(true);
-    const body = buildRoomBody(draft);
-    if (room) update.mutate({ roomId: room.id, body }, { onSuccess, onError });
-    else create.mutate(body, { onSuccess, onError });
-  };
-  return { draft, patch, errors: showErrors ? validateRoom(draft) : NO_ERRORS, pending, submit };
+/** How many there are, how many each sleeps, and their size in both units. */
+function RoomSizePanel(props: RoomFieldsProps) {
+  return (
+    <ProfileSection title="Size and occupancy" testID="room-size-panel">
+      <Input
+        label={ROOM_FIELD_LABEL.roomCount}
+        {...roomField(props, "roomCount")}
+        keyboardType="number-pad"
+        testID="room-count"
+      />
+      <Input
+        label={ROOM_FIELD_LABEL.maxOccupancy}
+        helpText="The most guests one room sleeps, at least 1."
+        {...roomField(props, "maxOccupancy")}
+        keyboardType="number-pad"
+        testID="room-occupancy"
+      />
+      <AreaFields
+        sqmLabel={ROOM_FIELD_LABEL.sizeSqm}
+        sqftLabel={ROOM_FIELD_LABEL.sizeSqft}
+        sqm={roomField(props, "sizeSqm")}
+        sqft={roomField(props, "sizeSqft")}
+        rules={ROOM_SIZE_AREA}
+        sqmTestID="room-size"
+        sqftTestID="room-size-sqft"
+      />
+    </ProfileSection>
+  );
+}
+
+/** The room's amenities, one per line, and its description. */
+function RoomAmenitiesPanel({ draft, patch }: Pick<RoomFieldsProps, "draft" | "patch">) {
+  return (
+    <ProfileSection title="Amenities and notes" testID="room-amenities">
+      <Input
+        label="Facilities"
+        helpText="One per line; a | also separates two."
+        value={draft.facilities}
+        onChangeText={(facilities) => patch({ facilities })}
+        multiline
+        testID="room-facilities"
+      />
+      <Input
+        label="Description"
+        value={draft.description}
+        onChangeText={(description) => patch({ description })}
+        multiline
+        maxLength={LONG_TEXT_MAX}
+        testID="room-description"
+      />
+    </ProfileSection>
+  );
 }
 
 export interface RoomEditSheetProps {
@@ -67,9 +116,15 @@ export interface RoomEditSheetProps {
   readonly onClose: () => void;
 }
 
-/** Add or edit a hotel room category (name, counts, size, facilities). Hotel team / Super Admin only. */
+/**
+ * Add or edit a hotel room category (TW-22; D-178): its name, unit type, view and beds; how many there
+ * are, how many each sleeps and their size (the m² worked out from a filled sq ft); its amenities, one
+ * per line, and description. Hotel team / Super Admin only, gated server-side.
+ *
+ *   <RoomEditSheet hotelId={hotelId} open={open} room={editing} onClose={close} />
+ */
 export function RoomEditSheet({ hotelId, open, room, onClose }: RoomEditSheetProps) {
-  const { draft, patch, errors, pending, submit } = useRoomForm(hotelId, open, room, onClose);
+  const { pending, submit, ...fields } = useRoomForm(hotelId, open, room, onClose);
   return (
     <Sheet
       open={open}
@@ -84,53 +139,9 @@ export function RoomEditSheet({ hotelId, open, room, onClose }: RoomEditSheetPro
       }
     >
       <Stack gap={4}>
-        <Input
-          label="Name"
-          required
-          value={draft.name}
-          onChangeText={(name) => patch({ name })}
-          errorText={errors.name}
-          placeholder="e.g. Deluxe Lake View"
-          testID="room-name"
-        />
-        <Input
-          label="Number of rooms"
-          value={draft.roomCount}
-          onChangeText={(roomCount) => patch({ roomCount })}
-          keyboardType="number-pad"
-          errorText={errors.roomCount}
-          testID="room-count"
-        />
-        <Input
-          label="Max occupancy"
-          value={draft.maxOccupancy}
-          onChangeText={(maxOccupancy) => patch({ maxOccupancy })}
-          keyboardType="number-pad"
-          errorText={errors.maxOccupancy}
-          testID="room-occupancy"
-        />
-        <Input
-          label="Size (sqm)"
-          value={draft.sizeSqm}
-          onChangeText={(sizeSqm) => patch({ sizeSqm })}
-          keyboardType="number-pad"
-          errorText={errors.sizeSqm}
-          testID="room-size"
-        />
-        <Input
-          label="Facilities"
-          helpText="Comma-separated, e.g. wifi, minibar, balcony"
-          value={draft.facilities}
-          onChangeText={(facilities) => patch({ facilities })}
-          testID="room-facilities"
-        />
-        <Input
-          label="Description"
-          value={draft.description}
-          onChangeText={(description) => patch({ description })}
-          multiline
-          testID="room-description"
-        />
+        <RoomIdentityPanel {...fields} />
+        <RoomSizePanel {...fields} />
+        <RoomAmenitiesPanel draft={fields.draft} patch={fields.patch} />
       </Stack>
     </Sheet>
   );

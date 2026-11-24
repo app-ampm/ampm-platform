@@ -109,7 +109,7 @@ describe("Hotel catalogue fields (e2e)", () => {
     expect(res.body.data).toMatchObject({ ...LOCATION, ...INTERNAL, railwayDistanceKm: null });
   });
 
-  it("round-trips a PATCH: coordinates and distances at their scale, a null clearing a field", async () => {
+  it("round-trips a PATCH: coordinates and distances at their scale, the event space's m² derived, a null clearing a field", async () => {
     const res = await patch({
       latitude: 24.576123,
       longitude: 73.683456,
@@ -123,6 +123,7 @@ describe("Hotel catalogue fields (e2e)", () => {
       longitude: 73.683456,
       cityCentreDistanceKm: 3.5,
       totalEventSpaceSqft: 12000,
+      totalEventSpaceSqm: 1115, // round(12,000 sq ft × 0.09290304), the units rule (D-178)
       isPureVegetarian: false,
       bookingNotes: null,
       minNights: 2,

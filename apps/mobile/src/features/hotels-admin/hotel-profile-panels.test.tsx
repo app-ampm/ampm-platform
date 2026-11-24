@@ -172,7 +172,7 @@ describe("the profile editor's D-178 panels", () => {
   });
 
   describe("identity and details", () => {
-    it("seeds the name variants one per line and the event space, sending only what changes", async () => {
+    it("seeds the name variants one per line and works the event space's m² out from its sq ft", async () => {
       const captured: CapturedSave = {};
       const hotel = hotelStaffViewFixture({
         parentGroup: "Synthetic Group",
@@ -186,10 +186,29 @@ describe("the profile editor's D-178 panels", () => {
       expect(await screen.findByTestId("hotel-name-variants")).toHaveDisplayValue(
         "The Lakeside\nLakeside Palace Hotel",
       );
-      await fireEvent.changeText(screen.getByTestId("hotel-event-space-sqm"), "1200");
+      // With the sq ft filled, the m² is worked out from it and read-only.
+      expect(screen.getByTestId("hotel-event-space-sqm")).toHaveDisplayValue("1200");
+      expect(screen.getByTestId("hotel-event-space-sqm")).toBeDisabled();
+      expect(screen.getByText("Worked out from sq ft")).toBeOnTheScreen();
+      await fireEvent.changeText(screen.getByTestId("hotel-event-space-sqft"), "13000");
+      expect(screen.getByTestId("hotel-event-space-sqm")).toHaveDisplayValue("1208");
       await save();
       // The INTERNAL values the sheet seeded are left out while unchanged, so a save cannot wipe them.
-      expect(captured.updated).toEqual({ totalEventSpaceSqm: 1200 });
+      expect(captured.updated).toEqual({ totalEventSpaceSqm: 1208, totalEventSpaceSqft: 13000 });
+    });
+
+    it("lets the event space's m² be typed once its sq ft is emptied", async () => {
+      const captured: CapturedSave = {};
+      const hotel = hotelStaffViewFixture({ totalEventSpaceSqm: 1200, totalEventSpaceSqft: 12917 });
+      await renderWithApi(
+        <HotelProfileEditSheet open hotel={hotel} onClose={noop} />,
+        profileEditorFetch(captured),
+      );
+      await fireEvent.changeText(await screen.findByTestId("hotel-event-space-sqft"), "");
+      expect(screen.getByTestId("hotel-event-space-sqm")).toBeEnabled();
+      await fireEvent.changeText(screen.getByTestId("hotel-event-space-sqm"), "1150");
+      await save();
+      expect(captured.updated).toEqual({ totalEventSpaceSqm: 1150, totalEventSpaceSqft: null });
     });
   });
 });

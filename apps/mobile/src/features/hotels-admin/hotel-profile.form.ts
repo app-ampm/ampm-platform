@@ -7,6 +7,7 @@ import {
   type HotelUpdateRequest,
 } from "@ampm/core";
 
+import { areaBody, areaErrors, EVENT_SPACE_AREA } from "./hotel-area.form";
 import {
   bookingTermsBody,
   bookingTermsDraftFrom,
@@ -22,11 +23,11 @@ import {
   type FoodErrors,
 } from "./hotel-food.form";
 import {
+  changedEntries,
   intOrNull,
   isWholeNumber,
   linesToList,
   listToLines,
-  numberOrNull,
   numberRuleError,
   numberToText,
   textOrNull,
@@ -161,6 +162,11 @@ function nameAliasesError(value: string): string | undefined {
 }
 
 function validateIdentity(draft: IdentityDraft): IdentityErrors {
+  const eventSpace = areaErrors(
+    draft.totalEventSpaceSqm,
+    draft.totalEventSpaceSqft,
+    EVENT_SPACE_AREA,
+  );
   return {
     name: draft.name.trim() === "" ? "Give the hotel a name" : undefined,
     destinationId: draft.destinationId === "" ? "Choose a destination" : undefined,
@@ -171,18 +177,8 @@ function validateIdentity(draft: IdentityDraft): IdentityErrors {
       places: 0,
       message: "Rooms must be a whole number, up to 100,000",
     }),
-    totalEventSpaceSqm: numberRuleError(draft.totalEventSpaceSqm, {
-      min: 0,
-      max: 1_000_000,
-      places: 0,
-      message: "Event space in m² is a whole number, up to 1,000,000",
-    }),
-    totalEventSpaceSqft: numberRuleError(draft.totalEventSpaceSqft, {
-      min: 0,
-      max: 10_000_000,
-      places: 0,
-      message: "Event space in sq ft is a whole number, up to 10,000,000",
-    }),
+    totalEventSpaceSqm: eventSpace.sqm,
+    totalEventSpaceSqft: eventSpace.sqft,
   };
 }
 
@@ -212,12 +208,13 @@ export function validateDraft(
 
 /**
  * The request body from a valid draft: trimmed text or null for empties, parsed numbers, "not known"
- * and "not set" as null. slug is omitted (the server derives it from the name on create, and it is
+ * and "not set" as null, the event space's m² worked out from its sq ft when that is filled. slug is omitted (the server derives it from the name on create, and it is
  * immutable after), and so is streetViewRef. A create sends it whole; an update sends the part
  * {@link hotelUpdateBody} picks. The internal rating and notes are left out: {@link internalNotesBody}
  * adds them for someone who may.
  */
 export function buildHotelBody(draft: HotelProfileDraft): HotelCreateRequest {
+  const eventSpace = areaBody(draft.totalEventSpaceSqm, draft.totalEventSpaceSqft);
   return {
     destinationId: draft.destinationId,
     name: draft.name.trim(),
@@ -229,8 +226,8 @@ export function buildHotelBody(draft: HotelProfileDraft): HotelCreateRequest {
     descriptionClient: textOrNull(draft.descriptionClient),
     facilities: linesToList(draft.facilities),
     totalRooms: intOrNull(draft.totalRooms),
-    totalEventSpaceSqm: numberOrNull(draft.totalEventSpaceSqm),
-    totalEventSpaceSqft: numberOrNull(draft.totalEventSpaceSqft),
+    totalEventSpaceSqm: eventSpace.sqm,
+    totalEventSpaceSqft: eventSpace.sqft,
     status: draft.status,
     demoVisible: draft.demoVisible,
     publicShowcase: draft.publicShowcase,
@@ -266,23 +263,6 @@ export function internalNotesBody(
 export function saveBody(draft: HotelProfileDraft, notesEditable: boolean): HotelCreateRequest {
   const profile = buildHotelBody(draft);
   return notesEditable ? { ...profile, ...internalNotesBody(draft) } : profile;
-}
-
-/** Whether two body values are the same: lists entry by entry, anything else as it is. */
-function sameBodyValue(a: unknown, b: unknown): boolean {
-  if (Array.isArray(a) && Array.isArray(b)) {
-    return a.length === b.length && a.every((item, i) => item === b[i]);
-  }
-  return a === b;
-}
-
-/** The entries of `next` whose value differs from `opened`'s. */
-function changedEntries<T extends object>(next: T, opened: T): Partial<T> {
-  const changed: Partial<T> = {};
-  for (const key in next) {
-    if (!sameBodyValue(next[key], opened[key])) changed[key] = next[key];
-  }
-  return changed;
 }
 
 /**

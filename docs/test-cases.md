@@ -224,7 +224,7 @@ All automated suites run against synthetic data from the seed in §7 (V-15). Job
 | AC-01 Public enquiry saves source and owner; team tracks follow-up | SPEC §12 | AC-01.1 to AC-01.9 | 1 | PUB-06, PUB-09, TW-10, TW-11 | 1 |
 | AC-02 Subscription activates hotel discovery without exposing wedding modules | SPEC §12 | AC-02.1 to AC-02.11 | 1, 12 | AUTH-02, CP-11, CP-01, TW-14, TW-80, TW-92 | 1 |
 | AC-03 Demo account cannot access records outside demo scope | SPEC §12 | AC-03.1 to AC-03.8 | 1 | TW-11, DM-01, CP-01 to CP-07 | 1 |
-| AC-04 Hotel search shows freshness; unverified availability never confirmed | SPEC §12 | AC-04.1 to AC-04.7 | 2 | CP-04, CP-05, TW-22, TW-23, TW-24 | 1 |
+| AC-04 Hotel search shows freshness; unverified availability never confirmed | SPEC §12 | AC-04.1 to AC-04.9 | 2 | CP-04, CP-05, TW-22, TW-23, TW-24 | 1 |
 | AC-05 Negotiation and site visit recorded without exposing internal notes | SPEC §12 | AC-05.1 to AC-05.8 | 2 | TW-27, TW-28, CP-09, CP-10 | 1 |
 | AC-06 Engaged client receives correct project and permissions | SPEC §12 | AC-06.1 to AC-06.7 | 3 | TW-31, TW-33, CP-20, CP-24 | 2 |
 | AC-07 Multiple functions with independent vendors, schedules, budgets, approvals | SPEC §12 | AC-07.1 to AC-07.5 | 4, 5 | TW-34, TW-35, TW-36, TW-38 | 2 |
@@ -513,6 +513,47 @@ All automated suites run against synthetic data from the seed in §7 (V-15). Job
 - **Steps.** Record an availability verification for a hotel; open CP-05.
 - **Expected.** The availability field group shows its own date and the explanation that date-specific availability is answered inside an enquiry; no calendar is implied.
 - **References.** GP-9; A-9.
+
+#### AC-04.8 Rooms and venues keep the published unit and their new attributes
+- **Type and priority.** API integration, with component tests for the sheets, P1, Phase 1, automated.
+- **Principal.** HT; CO.
+- **Steps.**
+  1. As HT, add a room on TW-22: unit type villa, a view, a bed configuration, 850 sq ft, maximum occupancy 3. Then change only its m² to 80.
+  2. Add a semi-open terrace venue: 5,000 sq ft, 30.5 × 15.25 m, ceiling 6 m, pre-function area 1,000 sq ft, seated 300, floating 450, theatre 400, two other layouts (one with a minimum), and capacity notes "Floating 400 to 450". Then change its setting to indoor.
+  3. Send, one at a time: a maximum occupancy of 0; a thirteenth layout; a layout whose minimum is above its maximum; a length with three decimal places; a venue without a setting; a request carrying `isIndoor`.
+  4. Set the hotel's total event space to 12,000 sq ft alone.
+  5. Add one venue of each of the other new types: garden, amphitheatre, meeting_room and lounge.
+  6. Open CP-05 as CO.
+- **Expected.**
+  - After step 1: the room stores 79 m² beside 850 sq ft. After the m² change it stores 80 m², and its sq ft is cleared.
+  - After step 2: the venue stores 465 m² and a pre-function area of 93 m², and the dimensions come back as numbers (30.5, 15.25 and 6), not strings. `is_indoor` is false while the venue is semi-open and true once it is indoor, checked in the database too.
+  - The room and venue sheets show the m² read-only with "Worked out from sq ft", and label the capacities "Seated (dinner at round tables)", "Floating (standing reception or cocktails)" and "Theatre (rows of chairs)".
+  - Step 3: each request is refused with 400 naming its field, and nothing is stored.
+  - Step 4: the hotel stores 1,115 m².
+  - Step 5: each type is accepted.
+  - Step 6: the client response shows each venue's type, the five new ones included, and whether it is indoor, and each room's size in m². None of the Slice 12 columns is in it: unit type, view, bed configuration, the sq ft figures, setting, dimensions, pre-function area, other layouts and capacity notes.
+- **References.** TW-22, CP-05; D-178; decision 11 of the hotel information form plan; field-matrix `hotel_room_categories`, `hotel_venues`.
+
+#### AC-04.9 One primary hotel contact; phones stored in E.164
+- **Type and priority.** API integration, P1, Phase 1, automated.
+- **Principal.** HT; a custom role that may add and read a hotel's contacts but not update them; CO.
+- **Steps.**
+  1. As HT, add a primary contact to a hotel, then a second contact marked primary.
+  2. Make the first contact primary again through an update.
+  3. As the custom role, add a third contact marked primary; then add one that is not primary.
+  4. As HT, add contacts with the phones `01234 567890`, `+91 12345 67890`, `0091 12345 67890`, `1800 000 0000`, `+91 12345 67890 ext 12` and `12345`.
+  5. Update a contact whose stored phone predates Slice 3 and is free text: change only its role title, sending its phone back unchanged.
+  6. Insert a second live primary contact for the hotel directly in the database.
+  7. Fetch every client hotel route as CO.
+- **Expected.**
+  - Step 1: the hotel has exactly one live primary, the second contact. The first was demoted in the same transaction, with an `update` audit event naming `isPrimary`.
+  - Step 2: the first contact is primary again and the second demoted, audited the same way.
+  - Step 3: the primary contact is refused with 403 and nothing is stored, since a demotion needs the contacts update key; the other contact is added.
+  - Step 4: the first three phones are stored as `+911234567890` and the fourth as `+9118000000000`. The last two are refused with 400 naming `phone`, with the message "Enter a full phone number such as +91 141 234 5678. Put an extension in the role title."
+  - Step 5: the update succeeds and the phone is kept as it was.
+  - Step 6: the unique index `hotel_contacts_hotel_live_primary_key` refuses the insert. The API answers a write that loses such a race with 409.
+  - Step 7: no contact field appears in any body (AC-05.8).
+- **References.** TW-22; D-178; AC-05.8; field-matrix `hotel_contacts`.
 
 ### AC-05 AMPM records negotiation and site visit without exposing internal notes
 
@@ -1567,15 +1608,20 @@ All automated suites run against synthetic data from the seed in §7 (V-15). Job
 - **Type and priority.** End to end, P1, Phase 1, automated.
 - **Steps.**
   1. Download the Hotels, Rooms, Venues and Rates templates.
-  2. Upload 50 hotels, then their rooms, venues and rates. Each file has two invalid rows.
-  3. Upload the hotels file again with blank cells in fields staff have since edited.
+  2. Validate 50 hotels, then their rooms, venues and rates, importing each preview by its job id. Each file has two invalid rows.
+  3. Validate and import the hotels file again, with blank cells in fields staff have since edited.
+  4. Validate a rooms file, edit one of its rooms in the team app, then import the preview.
+  5. Validate a venues file that leaves out an existing venue and names another with different case and spacing, and import it. Then import the same preview again, and try a preview older than 24 hours.
 - **Expected.**
-  - Each dry run reports every row (create; update, naming the fields that change; unchanged; or an error naming the row and field), and the report can be downloaded.
-  - Apply creates 48 hotels with their rooms and venues, and draft rate cards with hidden, unverified items.
-  - The second upload leaves blank-cell fields, status and flags unchanged.
-  - A deleted hotel's web address is a row error.
-  - Every applied row writes an audit event, and each job stores its counts and error report.
-- **References.** TW-25, D-181 (one template per kind replaced the single template with column mapping on 23 November 2026).
+  - Each preview reports every row (create; update, naming the fields that change; unchanged; or an error naming the row and field) and writes nothing but its job. The report can be downloaded.
+  - Import applies the stored preview without the file being sent again, and answers with the same job id, which becomes `applied`.
+  - The imports create 48 hotels with their rooms and venues, and draft rate cards with hidden, unverified items.
+  - The second hotels import leaves blank-cell fields, status and flags unchanged.
+  - A deleted hotel's web address is a row error, and so is a rooms or venues row that names no hotel or a deleted one.
+  - Step 4: the edited room's row is refused with "Changed since preview; validate the file again"; the other rows load.
+  - Step 5: the venue left out is kept, since an import never deletes. The other venue matches by name and keeps its stored name. The second import of the preview and the expired preview each answer 409 and write nothing.
+  - Every applied row writes an audit event, and each job stores its counts and report.
+- **References.** TW-25, D-181 (one template per kind replaced the single template with column mapping on 23 November 2026; Slice 3 imports a preview by its job id); D-178.
 
 #### AC-35.2 Guest import by the client
 - **Type and priority.** End to end, P1, Phase 3, automated.
@@ -1698,7 +1744,7 @@ flowchart LR
 | Measure | Value |
 |---|---|
 | Acceptance criteria | 38 (15 from SPEC §12, 23 derived, two of them from AMPM's decisions of 25 October 2026) |
-| Test cases | 220 identifiers, of which 11 are cross-references to tests under another criterion and 3 are dormant |
+| Test cases | 222 identifiers, of which 11 are cross-references to tests under another criterion and 3 are dormant |
 | Automated | All but four (AC-16.3, AC-22.1, AC-22.2, AC-27.4) and the AC-34.5 projection |
 | Phase 1 exit pack | 15 criteria |
 | Dormant tests awaiting a decision | AC-10.11 to AC-10.13 (open wedding link, V-9); AC-36.3 and AC-36.4 if invoices are not issued from the platform (V-12); AC-33 if offline is dropped (V-4) |

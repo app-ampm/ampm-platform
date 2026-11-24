@@ -3,6 +3,7 @@ import type * as ReactModule from "react";
 import type { HotelImportResult } from "@ampm/core";
 
 import { act, fireEvent, screen, within } from "../../test/render";
+import { staffMeFixture } from "../accounts/accounts.test-utils";
 import { HotelImportScreen } from "./hotel-import-screen";
 import { HotelsListScreen } from "./hotels-list-screen";
 import { pickCsvFile } from "./pick-csv-file";
@@ -60,6 +61,7 @@ const hotelsFetch: FetchFn = routedFetch({
 
 const RESULT: HotelImportResult = {
   importJobId: "018f0000-0000-7000-8000-00000000f001",
+  kind: "hotels",
   dryRun: true,
   applied: false,
   totalRows: 1,
@@ -69,9 +71,20 @@ const RESULT: HotelImportResult = {
   destinationsCreated: 0,
   mediaRegistered: 0,
   rejected: [],
-  rows: [{ line: 2, slug: "synthetic-lake-hotel", outcome: "unchanged", changedFields: [] }],
+  rows: [
+    {
+      line: 2,
+      slug: "synthetic-lake-hotel",
+      name: "Synthetic Lake Hotel",
+      outcome: "unchanged",
+      changedFields: [],
+    },
+  ],
 };
-const importFetch: FetchFn = routedFetch({ "/hotels-admin/imports/hotels": () => ok(RESULT) });
+const importFetch: FetchFn = routedFetch({
+  "/me": () => ok(staffMeFixture(["HT"])),
+  "/hotels-admin/imports/hotels": () => ok(RESULT),
+});
 const CSV = "destinationSlug,name\nudaipur,Synthetic Lake Hotel";
 
 beforeEach(() => {
@@ -127,6 +140,7 @@ describe("HotelImportScreen across 1024", () => {
     await renderWithApi(<HotelImportScreen />, importFetch);
     const hintIn = (column: string) =>
       within(screen.getByTestId(`hotel-import-${column}`)).queryByTestId("hotel-import-columns");
+    await screen.findByTestId("hotel-import-main");
     expect(hintIn("main")).toBeOnTheScreen();
     await fireEvent.press(screen.getByTestId("hotel-import-choose"));
     expect(await screen.findByText("hotels.csv")).toBeOnTheScreen();
@@ -144,7 +158,7 @@ describe("HotelImportScreen across 1024", () => {
 
   it("shows the validation result in the side column, beside a taller CSV box", async () => {
     await renderWithApi(<HotelImportScreen />, importFetch);
-    expect(screen.getByTestId("hotel-import-content").props.numberOfLines).toBe(14);
+    expect((await screen.findByTestId("hotel-import-content")).props.numberOfLines).toBe(14);
     await fireEvent.changeText(screen.getByTestId("hotel-import-content"), CSV);
     await fireEvent.press(screen.getByTestId("hotel-import-validate"));
     const side = screen.getByTestId("hotel-import-side");

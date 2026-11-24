@@ -17,9 +17,12 @@ const UPLOAD_PATHS: readonly RegExp[] = [
 ];
 
 // The routes that read their own body inside the handler, after the guards, through readBoundedBody
-// (common/bounded-body.ts; D-176): the staff spreadsheet import (D-181). A binary body may reach them, and
-// no parser ever buffers it. Never list one of them in UPLOAD_PATHS too.
-const POST_GUARD_PATHS: readonly RegExp[] = [/^\/hotels-admin\/imports\/[^/]+\/?$/];
+// (common/bounded-body.ts; D-176): the staff spreadsheet import's previews, one per kind (D-181). A binary
+// body may reach them, and no parser ever buffers it. An import's apply route takes no file, so it is a
+// JSON route and stays off this list, as off UPLOAD_PATHS. Never list a route in both.
+const POST_GUARD_PATHS: readonly RegExp[] = [
+  /^\/hotels-admin\/imports\/(?:hotels|rooms|venues)\/?$/,
+];
 
 /**
  * Whether a request is a POST to a route that reads its own body after the guards (POST_GUARD_PATHS).

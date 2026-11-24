@@ -40,6 +40,20 @@ describe("planImport: an existing hotel", () => {
     expect(planOne({ latitude: 8.1864485 }, ctx).outcome).toBe("unchanged");
   });
 
+  it("settles the total event space by the units rule before it compares (D-178)", () => {
+    const values = { ...STORED.values, totalEventSpaceSqm: 1115, totalEventSpaceSqft: 12000 };
+    const ctx = context({ hotels: new Map([["synthetic-bay", { ...STORED, values }]]) });
+    // An m² filled alone republishes the space in m², clearing the stored sq ft: both are named.
+    expect(planOne({ totalEventSpaceSqm: 1200 }, ctx)).toMatchObject({
+      outcome: "update",
+      changed: ["totalEventSpaceSqm", "totalEventSpaceSqft"],
+      row: { totalEventSpaceSqm: 1200, totalEventSpaceSqft: null },
+    });
+    // A filled sq ft gives its m², whatever m² the row also carries.
+    const both = planOne({ totalEventSpaceSqft: 12000, totalEventSpaceSqm: 999 }, ctx);
+    expect(both.outcome).toBe("unchanged");
+  });
+
   it("moves the hotel when the destination cell names another one", () => {
     expect(planOne({ destinationSlug: "synthetic-abroad" })).toMatchObject({
       outcome: "update",
@@ -125,6 +139,7 @@ describe("planImport: refused rows", () => {
       outcome: "error",
       line: 2,
       slug: "synthetic-bay",
+      name: "Synthetic Bay",
       errors: [
         {
           field: "slug",

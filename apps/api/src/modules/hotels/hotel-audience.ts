@@ -24,6 +24,12 @@ export const HOTEL_PROFILE_UPDATE = "hotels.hotel_profiles_client_fields.update"
 export const DESTINATION_CREATE = "hotels.destinations.create";
 /** Adding a hotel image, as the media routes ask. */
 export const HOTEL_MEDIA_CREATE = "hotels.hotel_media_rights_status.create";
+/** A hotel's room categories and venues: what the staff routes and the rooms and venues imports ask. */
+export const ROOMS_VENUES_CREATE = "hotels.room_categories_venues.create";
+export const ROOMS_VENUES_UPDATE = "hotels.room_categories_venues.update";
+export const ROOMS_VENUES_READ = "hotels.room_categories_venues.read";
+/** Changing a hotel contact: what demoting the current primary contact needs (D-178). */
+export const HOTEL_CONTACTS_UPDATE = "hotels.hotel_contacts.update";
 
 /**
  * The restricted parts of a staff hotel a principal reads, beyond the profile every reader of
@@ -96,6 +102,47 @@ export function importGrantsOf(principal: Principal): ImportGrants {
     readsProfiles: can(caller, HOTEL_PROFILE_READ),
     readsNotes: can(caller, HOTEL_NOTES_READ),
   };
+}
+
+/**
+ * What a rooms or venues import's uploader may do and read (D-181): a row that creates needs the create
+ * key, one that changes a stored room or venue the update key, and one that names a stored room or venue
+ * at all the read key, so a preview never compares a cell with a row its uploader may not read.
+ */
+export interface ChildImportGrants {
+  readonly canCreate: boolean;
+  readonly canUpdate: boolean;
+  readonly readsRows: boolean;
+}
+
+/**
+ * The rooms and venues import grants of a principal, decided from its grants alone (D-164).
+ *
+ * @example
+ * childImportGrantsOf(staffPrincipal(["HT"])); // { canCreate: true, canUpdate: true, readsRows: true }
+ */
+export function childImportGrantsOf(principal: Principal): ChildImportGrants {
+  const caller = toPolicyPrincipal(principal);
+  return {
+    canCreate: can(caller, ROOMS_VENUES_CREATE),
+    canUpdate: can(caller, ROOMS_VENUES_UPDATE),
+    readsRows: can(caller, ROOMS_VENUES_READ),
+  };
+}
+
+/**
+ * Refuses a contact write that would demote the hotel's current primary contact for a principal who may
+ * not change contacts (403: the hotel is theirs to see). The create route asks only the create key.
+ *
+ * @example
+ * requireContactsUpdate(principal); // before demoting the current primary
+ */
+export function requireContactsUpdate(principal: Principal): void {
+  if (!can(toPolicyPrincipal(principal), HOTEL_CONTACTS_UPDATE)) {
+    throw errors.forbidden(
+      "Making this the primary contact changes the current one, and you cannot change contacts",
+    );
+  }
 }
 
 /**

@@ -1,4 +1,9 @@
-import { HOTEL_IMPORT_COLUMNS, type HotelImportRowReport } from "@ampm/core";
+import {
+  HOTEL_IMPORT_COLUMNS,
+  ROOM_IMPORT_COLUMNS,
+  VENUE_IMPORT_COLUMNS,
+  type HotelImportRowReport,
+} from "@ampm/core";
 
 import { fireEvent, screen } from "../../test/render";
 import { HotelImportScreen } from "./hotel-import-screen";
@@ -6,6 +11,7 @@ import {
   dryRunResult,
   IMPORT_CSV,
   importFetch,
+  ROOMS_CSV,
   type ImportRequest,
 } from "./hotel-import.test-utils";
 import { renderWithApi } from "./hotels-admin.test-utils";
@@ -28,30 +34,36 @@ beforeEach(() => {
 });
 
 /** Pastes the CSV and presses Validate, waiting for its report. */
-async function validate(): Promise<void> {
-  await fireEvent.changeText(await screen.findByTestId("hotel-import-content"), IMPORT_CSV);
+async function validate(csv = IMPORT_CSV): Promise<void> {
+  await fireEvent.changeText(await screen.findByTestId("hotel-import-content"), csv);
   await fireEvent.press(screen.getByTestId("hotel-import-validate"));
   await screen.findByTestId("hotel-import-result");
 }
 
-/** A dry-run report with `count` hotels to update, from line 2. */
+/** A preview with `count` hotels to update, from line 2. */
 function manyUpdates(count: number): HotelImportRowReport[] {
   return Array.from({ length: count }, (_, index): HotelImportRowReport => ({
     line: index + 2,
     slug: `synthetic-hotel-${index + 1}`,
+    name: `Synthetic Hotel ${index + 1}`,
     outcome: "update",
     changedFields: ["city"],
   }));
 }
 
 describe("HotelImportScreen downloads", () => {
-  it("downloads the template as the header row of the core columns, and nothing else", async () => {
+  it("downloads each kind's template as the header row of its core columns, marked UTF-8", async () => {
     await renderWithApi(<HotelImportScreen />, importFetch([]));
     await fireEvent.press(await screen.findByTestId("hotel-import-template"));
-    expect(mockDownloadCsv).toHaveBeenCalledTimes(1);
-    const [filename, csv] = mockDownloadCsv.mock.calls[0]!;
-    expect(filename).toBe("hotels-import-template.csv");
-    expect(csv).toBe(`\uFEFF${HOTEL_IMPORT_COLUMNS.join(",")}`);
+    await fireEvent.press(screen.getByTestId("hotel-import-kind-rooms"));
+    await fireEvent.press(screen.getByTestId("hotel-import-template"));
+    await fireEvent.press(screen.getByTestId("hotel-import-kind-venues"));
+    await fireEvent.press(screen.getByTestId("hotel-import-template"));
+    expect(mockDownloadCsv.mock.calls).toEqual([
+      ["hotels-import-template.csv", `\uFEFF${HOTEL_IMPORT_COLUMNS.join(",")}`],
+      ["rooms-import-template.csv", `\uFEFF${ROOM_IMPORT_COLUMNS.join(",")}`],
+      ["venues-import-template.csv", `\uFEFF${VENUE_IMPORT_COLUMNS.join(",")}`],
+    ]);
   });
 
   it("downloads the per-row report of a validate, the rejected rows with their reasons", async () => {
@@ -71,6 +83,20 @@ describe("HotelImportScreen downloads", () => {
     expect(requests).toHaveLength(1);
   });
 
+  it("downloads a rooms report with each row's hotel and room category", async () => {
+    await renderWithApi(<HotelImportScreen />, importFetch([]));
+    await fireEvent.press(await screen.findByTestId("hotel-import-kind-rooms"));
+    await validate(ROOMS_CSV);
+    await fireEvent.press(screen.getByTestId("hotel-import-report"));
+    const [filename, csv] = mockDownloadCsv.mock.calls[0]!;
+    expect(filename).toBe("rooms-import-report.csv");
+    expect(csv.split("\r\n")).toEqual([
+      "line,hotelSlug,name,outcome,changedFields,errors",
+      '2,synthetic-lake-hotel,Synthetic Garden Suite,update,"sizeSqft, sizeSqm",',
+      '3,synthetic-lake-hotel,Synthetic Tent,create,"hotelSlug, name, unitType",',
+    ]);
+  });
+
   it("says to download from the web where a file cannot be saved", async () => {
     mockDownloadCsv.mockReturnValue(false);
     await renderWithApi(<HotelImportScreen />, importFetch([]));
@@ -82,7 +108,7 @@ describe("HotelImportScreen downloads", () => {
     const dry = dryRunResult({ totalRows: 25, updated: 25, created: 0, rejected: [] });
     await renderWithApi(
       <HotelImportScreen />,
-      importFetch([], { dry: { ...dry, rows: manyUpdates(25) } }),
+      importFetch([], { dry: { hotels: { ...dry, rows: manyUpdates(25) } } }),
     );
     await validate();
     expect(screen.getByText("25 hotels to add or update")).toBeOnTheScreen();

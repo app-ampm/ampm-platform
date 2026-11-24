@@ -130,6 +130,29 @@ describe("HotelsAdminService writes the D-178 fields", () => {
     expect(patch).toEqual({ minNights: 2, bookingNotes: null });
   });
 
+  it("follows the units rule on the total event space, naming both fields when an m² clears the sq ft", async () => {
+    const { service, repo, audit } = build({
+      totalEventSpaceSqm: 1115,
+      totalEventSpaceSqft: 12000,
+    });
+    await service.create({ ...CREATE, totalEventSpaceSqft: 25833, totalEventSpaceSqm: 1 }, HT);
+    expect(repo.createHotel).toHaveBeenCalledWith(
+      expect.objectContaining({ totalEventSpaceSqft: 25833, totalEventSpaceSqm: 2400 }),
+      expect.any(String),
+    );
+    await service.update(HOTEL_ID, { totalEventSpaceSqm: 1200 }, HT);
+    const [, patch] = repo.updateHotel.mock.calls[0] ?? [];
+    expect(patch).toEqual({ totalEventSpaceSqm: 1200, totalEventSpaceSqft: null });
+    expect(audit.record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        after: expect.objectContaining({
+          changedFields: ["totalEventSpaceSqm", "totalEventSpaceSqft"],
+        }),
+      }),
+      expect.anything(),
+    );
+  });
+
   it("answers the staff editor's cuisine choices with the label for anything else", async () => {
     const { service } = build();
     await expect(service.cuisineOptions()).resolves.toEqual({

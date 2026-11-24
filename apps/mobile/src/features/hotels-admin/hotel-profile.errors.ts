@@ -1,6 +1,7 @@
 import type { ErrorDetail } from "@ampm/core";
 import type { ToastOptions } from "@ampm/ui";
 
+import { blockedSaveToastFor } from "./hotel-form-fields";
 import type { HotelProfileErrors } from "./hotel-profile.form";
 
 /*
@@ -106,11 +107,7 @@ export function firstInvalidField(errors: ProfileFieldErrors): ProfileFieldKey |
  * // { title: "Check the highlighted fields", description: "Google Maps link: Use an https…", tone: "danger" }
  */
 export function blockedSaveToast(key: ProfileFieldKey, message: string): ToastOptions {
-  return {
-    title: "Check the highlighted fields",
-    description: `${profileFieldLabel(key)}: ${message}`,
-    tone: "danger",
-  };
+  return blockedSaveToastFor(profileFieldLabel(key), message);
 }
 
 /**

@@ -2,35 +2,45 @@ import { hotelImportResult, type HotelImportResult } from "@ampm/core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { HOTEL_MEDIA_QUERY_KEY } from "./use-hotel-media";
-import { hotelImportPath, useHotelImport, type HotelImportInput } from "./use-hotel-import";
-import { STAFF_DESTINATIONS_QUERY_KEY, STAFF_HOTELS_QUERY_KEY } from "./use-staff-hotels";
+import {
+  hotelImportApplyPath,
+  hotelImportPreviewPath,
+  useHotelImportApply,
+  useHotelImportPreview,
+  type HotelImportApplyInput,
+  type HotelImportPreviewInput,
+} from "./use-hotel-import";
+import {
+  STAFF_DESTINATIONS_QUERY_KEY,
+  STAFF_HOTELS_QUERY_KEY,
+  staffHotelQueryKey,
+} from "./use-staff-hotels";
 
-interface Upload {
+interface Sent {
+  readonly via: "upload" | "request";
   readonly path: string;
-  readonly body: unknown;
-  readonly contentType: string;
-  readonly schema: unknown;
+  readonly options: Readonly<Record<string, unknown>>;
 }
 
 interface Seen {
-  mutationFn: ((input: HotelImportInput) => Promise<unknown>) | null;
+  mutationFn: ((input: HotelImportPreviewInput & HotelImportApplyInput) => Promise<unknown>) | null;
   onSuccess: ((result: HotelImportResult) => void) | null;
-  readonly uploads: Upload[];
+  readonly sent: Sent[];
   readonly invalidated: unknown[];
 }
 
-/** What the hook handed to useMutation, every upload its mutation made, and the keys it refreshed. */
+/** What the hook handed to useMutation, every call its mutation made, and the keys it refreshed. */
 const seen = vi.hoisted((): Seen => ({
   mutationFn: null,
   onSuccess: null,
-  uploads: [],
+  sent: [],
   invalidated: [],
 }));
 
 vi.mock("@tanstack/react-query", () => ({
-  useMutation: (options: Pick<Seen, "mutationFn" | "onSuccess">) => {
+  useMutation: (options: { mutationFn: Seen["mutationFn"]; onSuccess?: Seen["onSuccess"] }) => {
     seen.mutationFn = options.mutationFn;
-    seen.onSuccess = options.onSuccess;
+    seen.onSuccess = options.onSuccess ?? null;
     return {};
   },
   useQueryClient: () => ({
@@ -43,16 +53,23 @@ vi.mock("@tanstack/react-query", () => ({
 
 vi.mock("../provider", () => ({
   useApiClient: () => ({
-    upload: (path: string, options: Omit<Upload, "path">) => {
-      seen.uploads.push({ path, ...options });
+    upload: (path: string, options: Record<string, unknown>) => {
+      seen.sent.push({ via: "upload", path, options });
+      return Promise.resolve(null);
+    },
+    request: (path: string, options: Record<string, unknown>) => {
+      seen.sent.push({ via: "request", path, options });
       return Promise.resolve(null);
     },
   }),
 }));
 
+const JOB_ID = "0192f1a0-0000-7000-8000-00000000f001";
+
 function result(overrides: Partial<HotelImportResult> = {}): HotelImportResult {
   return hotelImportResult.parse({
-    importJobId: "0192f1a0-0000-7000-8000-00000000f001",
+    importJobId: JOB_ID,
+    kind: "rooms",
     dryRun: true,
     applied: false,
     totalRows: 1,
@@ -62,58 +79,95 @@ function result(overrides: Partial<HotelImportResult> = {}): HotelImportResult {
     destinationsCreated: 0,
     mediaRegistered: 0,
     rejected: [],
-    rows: [{ line: 2, slug: "synthetic-lake-hotel", outcome: "update", changedFields: ["city"] }],
+    rows: [
+      {
+        line: 2,
+        slug: "synthetic-lake-hotel",
+        name: "Synthetic Garden Suite",
+        outcome: "update",
+        changedFields: ["sizeSqft", "sizeSqm"],
+      },
+    ],
     ...overrides,
   });
 }
 
-const CSV = "destinationSlug,name,city\nudaipur,Synthetic Lake Hotel,Udaipur";
+const CSV = "hotelSlug,name,sizeSqft\nsynthetic-lake-hotel,Synthetic Garden Suite,650";
 
-describe("hotelImportPath", () => {
-  it("names the hotels template and carries the dry run in the query", () => {
-    expect(hotelImportPath(true)).toBe("/hotels-admin/imports/hotels?dryRun=true");
-    expect(hotelImportPath(false)).toBe("/hotels-admin/imports/hotels?dryRun=false");
+beforeEach(() => {
+  seen.mutationFn = null;
+  seen.onSuccess = null;
+  seen.sent.length = 0;
+  seen.invalidated.length = 0;
+});
+
+describe("the import addresses", () => {
+  it("previews each kind at its own address, with no query: every upload is a preview", () => {
+    expect(hotelImportPreviewPath("hotels")).toBe("/hotels-admin/imports/hotels");
+    expect(hotelImportPreviewPath("rooms")).toBe("/hotels-admin/imports/rooms");
+    expect(hotelImportPreviewPath("venues")).toBe("/hotels-admin/imports/venues");
+  });
+
+  it("imports a preview of a kind by its job id", () => {
+    expect(hotelImportApplyPath("venues", JOB_ID)).toBe(
+      `/hotels-admin/imports/venues/${JOB_ID}/apply`,
+    );
+    expect(hotelImportApplyPath("hotels", "a/b")).toBe("/hotels-admin/imports/hotels/a%2Fb/apply");
   });
 });
 
-describe("useHotelImport", () => {
-  beforeEach(() => {
-    seen.mutationFn = null;
-    seen.onSuccess = null;
-    seen.uploads.length = 0;
-    seen.invalidated.length = 0;
-  });
+describe("useHotelImportPreview", () => {
+  it.each(["hotels", "rooms", "venues"] as const)(
+    "uploads a %s CSV as raw bytes, never as JSON, and reads the import result",
+    async (kind) => {
+      useHotelImportPreview();
+      await seen.mutationFn?.({ kind, csv: CSV, jobId: "" });
+      expect(seen.sent).toEqual([
+        {
+          via: "upload",
+          path: `/hotels-admin/imports/${kind}`,
+          options: {
+            body: CSV,
+            contentType: "application/octet-stream",
+            schema: hotelImportResult,
+          },
+        },
+      ]);
+    },
+  );
 
-  it("uploads the CSV as raw bytes, never as JSON, and reads the import result", async () => {
-    useHotelImport();
-    await seen.mutationFn?.({ csv: CSV, dryRun: true });
-    expect(seen.uploads).toEqual([
+  it("refreshes nothing: a preview writes nothing but its job", () => {
+    useHotelImportPreview();
+    expect(seen.onSuccess).toBeNull();
+  });
+});
+
+describe("useHotelImportApply", () => {
+  it("posts an empty JSON body to the preview's apply address and reads the import result", async () => {
+    useHotelImportApply();
+    await seen.mutationFn?.({ kind: "rooms", jobId: JOB_ID, csv: "" });
+    expect(seen.sent).toEqual([
       {
-        path: "/hotels-admin/imports/hotels?dryRun=true",
-        body: CSV,
-        contentType: "application/octet-stream",
-        schema: hotelImportResult,
+        via: "request",
+        path: `/hotels-admin/imports/rooms/${JOB_ID}/apply`,
+        options: { method: "POST", body: {}, schema: hotelImportResult },
       },
     ]);
   });
 
-  it("applies with dryRun=false", async () => {
-    useHotelImport();
-    await seen.mutationFn?.({ csv: CSV, dryRun: false });
-    expect(seen.uploads.map((upload) => upload.path)).toEqual([
-      "/hotels-admin/imports/hotels?dryRun=false",
+  it("refreshes the catalogue, every hotel detail and the destinations once an import has written", () => {
+    useHotelImportApply();
+    seen.onSuccess?.(result({ dryRun: false, applied: true }));
+    expect(seen.invalidated).toEqual([STAFF_HOTELS_QUERY_KEY, STAFF_DESTINATIONS_QUERY_KEY]);
+    // A detail's key starts with the catalogue's, so the one refresh reloads the rooms and venues in it.
+    expect(staffHotelQueryKey("hotel-1").slice(0, STAFF_HOTELS_QUERY_KEY.length)).toEqual([
+      ...STAFF_HOTELS_QUERY_KEY,
     ]);
   });
 
-  it("refreshes the catalogue and the destinations once an import has written", () => {
-    useHotelImport();
-    seen.onSuccess?.(result({ dryRun: false, applied: true }));
-    expect(seen.invalidated).toEqual([STAFF_HOTELS_QUERY_KEY, STAFF_DESTINATIONS_QUERY_KEY]);
-  });
-
-  it("refreshes every hotel's media too once an import has registered images", () => {
-    useHotelImport();
-    seen.onSuccess?.(result({ dryRun: false, applied: true, mediaRegistered: 2 }));
+  it("refreshes every hotel's media too once a hotels import has registered images", () => {
+    useHotelImportApply();
+    seen.onSuccess?.(result({ kind: "hotels", dryRun: false, applied: true, mediaRegistered: 2 }));
     expect(seen.invalidated).toEqual([
       STAFF_HOTELS_QUERY_KEY,
       STAFF_DESTINATIONS_QUERY_KEY,
@@ -121,14 +175,8 @@ describe("useHotelImport", () => {
     ]);
   });
 
-  it("refreshes nothing after a dry run, which writes nothing", () => {
-    useHotelImport();
-    seen.onSuccess?.(result());
-    expect(seen.invalidated).toEqual([]);
-  });
-
-  it("refreshes nothing after a real run that wrote nothing, every row unchanged", () => {
-    useHotelImport();
+  it("refreshes nothing after an import that wrote nothing, every row unchanged or refused", () => {
+    useHotelImportApply();
     seen.onSuccess?.(result({ dryRun: false, applied: false, updated: 0, unchanged: 1, rows: [] }));
     expect(seen.invalidated).toEqual([]);
   });

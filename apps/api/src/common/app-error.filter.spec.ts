@@ -135,6 +135,18 @@ describe("the binary-body gate (D-176)", () => {
     ).toBe(true);
   });
 
+  it("reads each kind's preview after the guards, and nothing else under imports (D-181)", () => {
+    for (const kind of ["hotels", "rooms", "venues"]) {
+      expect(isPostGuardUpload({ method: "POST", url: `/hotels-admin/imports/${kind}` })).toBe(
+        true,
+      );
+    }
+    const apply = "/hotels-admin/imports/rooms/0192f1a0-0000-7000-8000-0000000000a1/apply";
+    expect(isPostGuardUpload({ method: "POST", url: apply })).toBe(false);
+    expect(passes("POST", apply)).toBe(false); // the import takes no file: a binary body is a 415
+    expect(isPostGuardUpload({ method: "POST", url: "/hotels-admin/imports/rates" })).toBe(false);
+  });
+
   it("keeps the buffered upload routes off the post-guard list", () => {
     expect(passes("POST", "/media/0192f1a0-0000-7000-8000-0000000000a1/upload")).toBe(true);
     expect(isPostGuardUpload({ method: "POST", url: "/media/x/upload" })).toBe(false);

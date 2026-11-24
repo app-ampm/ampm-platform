@@ -105,7 +105,9 @@ describe("planImport: an uploader who cannot read the hotels", () => {
       { destinationSlug: "synthetic-nowhere" },
     ];
     for (const ctx of [context({ hotels: unread }), context({ ...CREATE_ONLY, hotels: unread })]) {
-      for (const cells of guesses) expect(planOne(cells, ctx)).toEqual(refused);
+      for (const cells of guesses) {
+        expect(planOne(cells, ctx)).toEqual({ ...refused, name: "Synthetic Bay Hotel" });
+      }
     }
   });
 
@@ -115,7 +117,7 @@ describe("planImport: an uploader who cannot read the hotels", () => {
         [{ line: 2, row: { destinationSlug, name: "Synthetic Bay" } }],
         context({ ...CREATE_ONLY, hotels: unread }),
       );
-      expect(plan).toEqual(refused);
+      expect(plan).toEqual({ ...refused, name: "Synthetic Bay" });
     }
   });
 });

@@ -302,12 +302,13 @@ erDiagram
     }
     import_jobs {
         uuid id PK
-        string import_type "enum hotels / guests / vendors (A-9)"
+        string import_type "enum hotels / guests / vendors / hotel_rooms / hotel_venues (A-9, D-181)"
         uuid project_id "nullable, required for guests"
-        uuid file_document_id FK
-        string status "enum uploaded / validating / failed / applied"
+        uuid file_document_id FK "null for the staff hotel imports"
+        string status "enum uploaded / validating / failed / applied, a hotel import preview stays validating until imported by its id (D-181)"
         int row_count
-        json error_report_json
+        json error_report_json "the hotel imports keep it value-free: counts, refusals, each row's outcome and changed field names"
+        json plan_json "RESTRICTED, a hotel import preview's planned rows with their values and version tokens, cleared on import or supersede (D-181)"
     }
     sessions {
         uuid id PK
@@ -358,6 +359,7 @@ Notes:
     COMMIT;
     ```
   - **Never dropped.** Partitions are never dropped; deleting old log rows stays a retention proposal for a Super Admin to approve (§1).
+- **Staff hotel imports (24 November 2026, D-181).** The hotels, rooms and venues imports (`import_type` `hotels`, `hotel_rooms` and `hotel_venues`) keep no file, so their `file_document_id` is null. Each upload is a preview, stored as a `validating` job, or as `failed` with no plan when no row is valid. `error_report_json` holds its value-free report: the counts, the refusals, and each row's outcome with the names of the fields it changes. `plan_json` holds the planned rows with their values and each target's version token. Those values can include a hotel's internal notes, so the column is RESTRICTED-NOTES: written by the System and read only by the import, never selected or returned anywhere else. Importing the preview by its id makes the job `applied`, with the import's report in `error_report_json`, and no second job is created. A newer preview of the same kind by the same person supersedes it. Importing and superseding both clear `plan_json`. The rules are in the Module C note "Rooms, venues, units and contacts".
 
 ---
 
@@ -633,7 +635,7 @@ erDiagram
         int internal_rating "RESTRICTED"
         text internal_notes "RESTRICTED"
         int total_rooms
-        int total_event_space_sqm
+        int total_event_space_sqm "canonical, derived from total_event_space_sqft when that is set (D-178)"
         int total_event_space_sqft "as the hotel published it"
         string wedding_buyout_policy "enum not_required / required / depends, INTERNAL booking term (D-178)"
         int min_rooms_without_buyout "INTERNAL booking term"
@@ -652,18 +654,22 @@ erDiagram
         uuid id PK
         uuid hotel_id FK
         string name "RESTRICTED table, clients contact hotels through AMPM"
-        string role_title
-        string phone
+        string role_title "an extension goes here, never in the phone (D-178)"
+        string phone "E.164, stored normalised by the service (D-178)"
         string email
-        bool is_primary
+        bool is_primary "at most one live primary per hotel, partial unique index hotel_contacts_hotel_live_primary_key (D-178)"
     }
     hotel_room_categories {
         uuid id PK
         uuid hotel_id FK
         string name
         int room_count "inventory in this category (A-27)"
-        int max_occupancy "per room (A-27)"
-        int size_sqm
+        string unit_type "enum room / suite / villa / cottage / tent / tent_suite / apartment / other, empty when not stated (D-178)"
+        string view_label "e.g. lake view (D-178)"
+        string bed_configuration "e.g. one king bed or two twin beds (D-178)"
+        int max_occupancy "per room (A-27), 1 or more when stated, CHECK hotel_room_categories_max_occupancy_at_least_one"
+        int size_sqm "canonical for filters, derived from size_sqft when that is set"
+        int size_sqft "as the hotel published it (D-178)"
         json facilities_json
         text description
     }
@@ -671,12 +677,21 @@ erDiagram
         uuid id PK
         uuid hotel_id FK
         string name
-        string venue_type "enum ballroom / lawn / poolside / rooftop / courtyard / beach / other"
-        bool is_indoor
-        int area_sqm
-        int capacity_banquet
-        int capacity_theatre
-        int capacity_reception
+        string venue_type "enum ballroom / lawn / poolside / rooftop / courtyard / beach / other / terrace / garden / amphitheatre / meeting_room / lounge, the last five appended after other (D-178)"
+        string setting "enum indoor / outdoor / semi_open, semi_open meaning covered or semi-open (D-178)"
+        bool is_indoor "kept in step with setting by the service"
+        int area_sqm "canonical for filters, derived from area_sqft when that is set"
+        int area_sqft "as the hotel published it (D-178)"
+        decimal length_m "metres (D-178)"
+        decimal width_m "metres (D-178)"
+        decimal ceiling_height_m "metres (D-178)"
+        int capacity_banquet "seated, dinner at round tables (decision 11)"
+        int capacity_theatre "rows of chairs (decision 11)"
+        int capacity_reception "floating, a standing reception or cocktails (decision 11)"
+        json other_layouts_json "up to 12 more layouts, each a name, a maximum and an optional minimum (D-178)"
+        int prefunction_area_sqm "derived from prefunction_area_sqft when that is set (D-178)"
+        int prefunction_area_sqft "as the hotel published it (D-178)"
+        text capacity_notes "a stated range such as 600 to 700, whose maximum the capacity column keeps (D-178)"
         json facilities_json
         text description
     }
@@ -744,6 +759,19 @@ Notes:
 - **Compare hotels** is a view over `saved_hotels`; no table is needed. `saved_hotels` is unique on (`account_id`, `hotel_id`).
 - **Previous wedding media** (GP-20) are `media_assets` with `owner_type = hotel`, `rights_status = consent_obtained` and `consent_source_project_id` set; the publishing rule in the permission matrix refuses client or public visibility without it.
 - **Catalogue fields (24 November 2026, D-178).** `hotels` gains a home for every recurring answer on the hotel information form and every recurring fact on the hotels' fact sheets: `locality`, `city`, `state` and `postal_code`; `maps_url`; the airport, railway-station and city-centre names, distances in km (numeric(4,1)) and drive minutes, with `access_notes`; `parent_group` and `name_aliases_json`; the total event space in m² and in sq ft; `cuisines_json` and three food facts; and five booking terms. Every one is nullable, and a null food fact means the hotel has not said. The booking terms (`wedding_buyout_policy`, `min_rooms_without_buyout`, `min_nights`, `parallel_functions`, `booking_notes`) and the name variants in `name_aliases_json` are INTERNAL: every staff reader of the hotel profile gets them and no client view does (AMPM keeps the booking terms internal for now; showing them later is an additive change). `latitude` and `longitude` are INTERNAL too: staff-only coordinates. The other new fields are CLIENT class, but they reach clients only when the client views add them, in Slice 12 of the hotel information form plan; until then the client selects leave them out and only staff read them. `maps_url` is stored as given and never fetched by the server: only its scheme, host and path are checked (`isGoogleMapsUrl` in `packages/core`), so a short link is never resolved. When the destination's country is India, `postal_code` must be a PIN: 6 digits, not starting with 0, spaces ignored (`postalCodeProblem`); a hotel has no country of its own, so the check reads the destination's. Cuisine labels come from configuration `hotel.cuisine_options`, or `Other`. The `policies` field group of `hotel_verifications` records a check of the booking terms. Implemented in migration `20261124000000_hotel_catalogue_fields`.
+- **Rooms, venues, units and contacts (24 November 2026, D-178, D-181).** Slice 3 of the hotel information form plan, implemented in migration `20261125000000_hotel_rooms_venues_units`. Every new column is nullable (expand only).
+  - **Rooms** gain `unit_type`, `view_label`, `bed_configuration` and `size_sqft`. `room_count` and `max_occupancy` stay optional at creation. `max_occupancy` is 1 or more when stated, held by the CHECK `hotel_room_categories_max_occupancy_at_least_one`; the migration first set any stored 0 or less to null, which meant "not stated".
+  - **Units.** The square feet a hotel publishes are kept beside the square metres, which stay canonical because the filters read them. One converter in `packages/core` derives the m²: `sqmFromSqft`, round(sq ft × 0.09290304) in exact integer arithmetic. It serves a room's size, a venue's area and pre-function area, and the hotel's total event space. Staff screens and imports write by one rule (`areaWrite`):
+    - a write that sets the sq ft stores the m² derived from it, and an m² sent with it is replaced;
+    - a write that sets the m² without the sq ft, on a row that stores sq ft, makes that m² the published figure and clears the sq ft;
+    - a write that clears the sq ft leaves the stored m².
+
+    Lengths, widths and ceiling heights stay in metres, numeric(6,2). The migration filled `hotels.total_event_space_sqm` from the sq ft where only the sq ft was stored, and never overwrote a typed m².
+  - **Setting and `is_indoor`.** A venue's `setting` is indoor, outdoor or semi_open (covered or semi-open), and the API requires it on create. No request carries `is_indoor`: the service sets it from the setting on every write, true only for indoor. The client views carry `is_indoor` alone until Slice 12, so a semi-open venue reads as outdoor to a client. `setting` stays nullable, with no CHECK against `is_indoor`, because the previous image, the seed and direct inserts write `is_indoor` alone. A null setting reads from `is_indoor`, indoor when true and outdoor otherwise (core `venueSettingOf`); the migration filled every stored venue's setting the same way.
+  - **Venue types: a client contract change.** `venue_type` gains terrace, garden, amphitheatre, meeting_room and lounge. PostgreSQL appends them after `other`, so pickers order the types themselves, with Other last. The client views carry `venue_type` and parse it strictly, so the API and the web bundle deploy back to back. The other new room and venue columns are CLIENT class but reach only the staff views until Slice 12.
+  - **Capacities** mean (decision 11 of the plan, AMPM agreed): `capacity_banquet` seated, dinner at round tables; `capacity_reception` floating, a standing reception or cocktails; `capacity_theatre` rows of chairs. A capacity holds one number: a stated range keeps its maximum in the column and the range in `capacity_notes`. `other_layouts_json` holds up to 12 more layouts, each a name, a maximum and an optional minimum.
+  - **One primary contact, phones in E.164.** A hotel has at most one live primary contact. Making a contact primary, on create or on update, demotes the current primary in the same transaction; the demotion is audited as an update of that contact and needs the contacts update key. The partial unique index `hotel_contacts_hotel_live_primary_key` (`hotel_id`, where `is_primary` and not deleted) is the race-safe backstop: a write that loses a race gets 409. The migration first demoted extra primaries, keeping each hotel's most recently updated one. The service stores phones in E.164 (core `normaliseHotelPhone`, India by default) and refuses an extension, which goes in `role_title`. A phone sent back equal to the stored one is accepted as it is, so a free-text phone saved before Slice 3 never blocks another edit.
+  - **Imports by the preview's job id.** The staff imports now take Rooms and Venues files beside Hotels (`import_type` `hotel_rooms` and `hotel_venues`), and every upload is a preview: an `import_jobs` row in status `validating` that keeps the value-free report in `error_report_json` and the planned rows in `plan_json`. Import applies that preview by its job id: only its uploader may, within 24 hours and once, and a newer preview of the same kind by the same person supersedes it. Import plans each stored row again against the catalogue as it is then, and refuses a row with "Changed since preview; validate the file again" when a value the import compares changed on its target after the preview, when the row it was to create now exists, or when the row it was to update was deleted; the other rows load. The comparison is a version token, a hash of the target's compared values, never `updated_at`, so recording a verification does not count as a change. The runbook is [engineering/hotel-import.md](engineering/hotel-import.md); the Module A note on import jobs covers the columns.
 
 ---
 
@@ -2093,7 +2121,7 @@ Phase numbers follow SPEC §11 as adjusted by A-10. "Restricted" lists the field
 | notifications, notification_preferences | A | 1 | Delivery log and preferences | — |
 | audit_events | A | 1 | Append-only change history | — |
 | configurations | A | 1 | Thresholds, labels, escalation rules | — |
-| import_jobs | A | 1 | Spreadsheet imports for hotels, guests, vendors | — |
+| import_jobs | A | 1 | Spreadsheet imports for hotels, hotel rooms and venues, guests, vendors | plan_json (a hotel import preview's values) |
 | lead_sources, leads, lead_activities | B | 1 | Enquiry pipeline and follow-up | — |
 | client_accounts, account_contacts | B | 1 | Client account and family contacts | internal_notes |
 | plans, plan_modules | B | 1 | Packages and module entitlements | — |

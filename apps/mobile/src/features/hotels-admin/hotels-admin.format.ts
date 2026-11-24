@@ -1,15 +1,11 @@
 import type {
   DestinationView,
-  HotelContactView,
   HotelRateCardStatus,
   HotelRateItemUnit,
   HotelStaffView,
   HotelStatus,
-  HotelVenueType,
   HotelVerificationFieldGroup,
   HotelVerificationSource,
-  RoomCategoryView,
-  VenueView,
   VerificationView,
 } from "@ampm/core";
 import type { StatusTone } from "@ampm/ui";
@@ -20,7 +16,10 @@ import type { TriState } from "./hotel-form-fields";
 // The rate-item type label + order are shared (used by the consultancy proposal lines too).
 export { RATE_ITEM_TYPES, rateItemTypeLabel } from "@ampm/core";
 
-/* Presentation helpers for the staff hotel catalogue (H1.1). No fetching, no rules. */
+/*
+ * Presentation helpers for the staff hotel catalogue (H1.1). No fetching, no rules. The room, venue and
+ * contact labels and summaries are in subresources.format.ts.
+ */
 
 /** A hotel's or a destination's lifecycle, in the order the editors offer it. */
 export const HOTEL_STATUSES: readonly HotelStatus[] = ["draft", "active", "inactive"];
@@ -56,20 +55,6 @@ export function yesNo(flag: boolean): string {
 /** A destination's name with its state (e.g. "Udaipur, Rajasthan"), for the hotel editor's picker. */
 export function destinationOption(destination: DestinationView): string {
   return destination.state ? `${destination.name}, ${destination.state}` : destination.name;
-}
-
-const VENUE_TYPE_LABEL: Record<HotelVenueType, string> = {
-  ballroom: "Ballroom",
-  lawn: "Lawn",
-  poolside: "Poolside",
-  rooftop: "Rooftop",
-  courtyard: "Courtyard",
-  beach: "Beach",
-  other: "Other",
-};
-
-export function venueTypeLabel(type: HotelVenueType): string {
-  return VENUE_TYPE_LABEL[type];
 }
 
 /* --- The profile's yes / no facts and booking terms (D-178): a fact the hotel has not given is said so. */
@@ -121,32 +106,6 @@ const PARALLEL_LABEL: Record<ParallelChoice, string> = {
 
 export function parallelChoiceLabel(choice: ParallelChoice): string {
   return PARALLEL_LABEL[choice];
-}
-
-/** A one-line summary of a room category for its list row (counts, occupancy, size). */
-export function roomSummary(room: RoomCategoryView): string {
-  const parts: string[] = [];
-  if (room.roomCount != null)
-    parts.push(`${room.roomCount} ${room.roomCount === 1 ? "room" : "rooms"}`);
-  if (room.maxOccupancy != null) parts.push(`sleeps ${room.maxOccupancy}`);
-  if (room.sizeSqm != null) parts.push(`${room.sizeSqm} sqm`);
-  return parts.join(" · ");
-}
-
-/** A one-line summary of a venue for its list row (type, indoor/outdoor, banquet capacity). */
-export function venueSummary(venue: VenueView): string {
-  const parts: string[] = [venueTypeLabel(venue.venueType), venue.isIndoor ? "Indoor" : "Outdoor"];
-  if (venue.capacityBanquet != null) parts.push(`${venue.capacityBanquet} banquet`);
-  return parts.join(" · ");
-}
-
-/** A one-line summary of a contact for its list row (role, phone, email). */
-export function contactSummary(contact: HotelContactView): string {
-  const parts: string[] = [];
-  if (contact.roleTitle) parts.push(contact.roleTitle);
-  if (contact.phone) parts.push(contact.phone);
-  if (contact.email) parts.push(contact.email);
-  return parts.join(" · ");
 }
 
 /* --- Rate cards, rate items and verifications (feature 9.2). Labels only; money renders via MoneyText. */
