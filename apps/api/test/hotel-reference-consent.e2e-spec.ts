@@ -191,6 +191,11 @@ describe("Hotel wedding reference consent (e2e)", () => {
     const url = (await mintLink(refId).expect(201)).body.data.url as string;
     const download = await http().get(url).responseType("blob").expect(200);
     expect(download.headers["content-type"]).toContain("image/jpeg");
+    expect(download.headers).toMatchObject({
+      "content-security-policy": "default-src 'none'; sandbox", // a raster image is sandboxed too
+      "cross-origin-resource-policy": "same-site",
+      "content-disposition": 'inline; filename="consent.jpg"',
+    });
     const served = Buffer.from(download.body);
     const meta = await sharp(served).metadata();
     expect(meta.format).toBe("jpeg");

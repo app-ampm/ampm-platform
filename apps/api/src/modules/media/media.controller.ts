@@ -19,6 +19,7 @@ import type { Request, Response } from "express";
 import { z } from "zod";
 
 import { octetStreamBody, readBoundedBody } from "../../common/bounded-body.js";
+import { sendFile } from "../../common/file-response.js";
 import { RateLimit } from "../../common/rate-limit/rate-limit.decorator.js";
 import { UploadRoute } from "../../common/upload-slot/upload-route.decorator.js";
 import { ZodBody, ZodParams, ZodQuery } from "../../common/zod.js";
@@ -46,7 +47,8 @@ type BlobQuery = z.infer<typeof blobQuery>;
 /**
  * Gallery media (Module N, feature 9.3). Staff CRUD + upload + a minted download link are
  * `hotels.hotel_media_rights_status.*`; `GET /media/blob` is the public, signature-verified byte stream a
- * minted link points at (never a permanent path — security.md). `blob` is declared before `:mediaId` so it
+ * minted link points at (never a permanent path — security.md), served restrictively
+ * (common/file-response.ts; D-187 §5). `blob` is declared before `:mediaId` so it
  * is not read as an id. Create is audited by the interceptor; update, delete and upload self-audit.
  * `blob` is limited per network and fails open (a gallery loads many images; the signature is the
  * gate); an upload shares the staff upload limit, which fails closed (D-149), and reads its file after
@@ -61,11 +63,8 @@ export class MediaController {
   @Public()
   @RateLimit({ name: "media.blob", limit: 600, windowMs: 60_000, failClosed: false })
   async blob(@ZodQuery(blobQuery) query: BlobQuery, @Res() res: Response): Promise<void> {
-    const { bytes, mimeType } = await this.media.streamBlob(query.key, query.exp, query.sig);
-    res.setHeader("Content-Type", mimeType);
-    res.setHeader("Cache-Control", "private, max-age=900");
-    res.setHeader("X-Content-Type-Options", "nosniff");
-    res.send(bytes);
+    const blob = await this.media.streamBlob(query.key, query.exp, query.sig);
+    sendFile(res, { ...blob, cacheControl: "private, max-age=900" });
   }
 
   @Post()

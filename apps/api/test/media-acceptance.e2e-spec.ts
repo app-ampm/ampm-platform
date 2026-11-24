@@ -177,6 +177,12 @@ describe("Media AC-20/AC-24 acceptance (e2e)", () => {
       .get(original.body.data.url as string)
       .expect(200);
     expect(served.headers["content-type"]).toContain("video/mp4");
+    // Not a raster image: a download, never rendered in the API's origin (D-187 §5).
+    expect(served.headers).toMatchObject({
+      "content-security-policy": "default-src 'none'",
+      "cross-origin-resource-policy": "same-site",
+      "content-disposition": 'attachment; filename="video.mp4"',
+    });
 
     await http()
       .get(`/media/${id}/download-url?variant=web`)

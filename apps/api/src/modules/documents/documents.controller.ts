@@ -3,6 +3,7 @@ import { uuid } from "@ampm/core";
 import type { Response } from "express";
 import { z } from "zod";
 
+import { sendFile } from "../../common/file-response.js";
 import { RateLimit } from "../../common/rate-limit/rate-limit.decorator.js";
 import { ZodParams } from "../../common/zod.js";
 import { Public } from "../../policy/decorators.js";
@@ -19,9 +20,10 @@ type LinkParams = z.infer<typeof linkParams>;
  * The byte stream a minted document link points at (Module N, D-132). Public because the link itself is
  * the capability: the owning module checked the principal's access to the record before minting it, and
  * this route checks the token, expiry, revocation and download cap. Anything wrong is a 404 (denial
- * equals absence). Never cached; served inline under its detected type (PDF, JPEG or PNG only, nosniff
- * set globally) with a PII-free file name. Limited per network and failing open (D-149): the token, not
- * the limiter, is the gate, and the link's own download cap bounds each document.
+ * equals absence). Never cached; served restrictively under its detected type with a PII-free file name
+ * (common/file-response.ts; D-187 §5: no active content, same-site only, inline only for a PDF or a
+ * raster image). Limited per network and failing open (D-149): the token, not the limiter, is the gate,
+ * and the link's own download cap bounds each document.
  */
 @Controller("documents")
 export class DocumentsController {
@@ -32,9 +34,6 @@ export class DocumentsController {
   @RateLimit({ name: "documents.link", limit: 60, windowMs: 60_000, failClosed: false })
   async open(@ZodParams(linkParams) params: LinkParams, @Res() res: Response): Promise<void> {
     const blob = await this.documents.open(params.linkId, params.token);
-    res.setHeader("Content-Type", blob.mimeType);
-    res.setHeader("Content-Disposition", `inline; filename="${blob.fileName}"`);
-    res.setHeader("Cache-Control", "private, no-store");
-    res.send(blob.bytes);
+    sendFile(res, { ...blob, cacheControl: "private, no-store" });
   }
 }

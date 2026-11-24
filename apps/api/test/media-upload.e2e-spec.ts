@@ -122,6 +122,14 @@ describe("Media upload and signed download (e2e)", () => {
 
     const download = await http().get(url).expect(200); // public, signature-verified — no auth header
     expect(download.headers["content-type"]).toContain("image/jpeg");
+    // Served restrictively (D-187 §5), and still cached privately for the gallery's 15 minutes.
+    expect(download.headers).toMatchObject({
+      "x-content-type-options": "nosniff",
+      "content-security-policy": "default-src 'none'; sandbox",
+      "cross-origin-resource-policy": "same-site",
+      "content-disposition": 'inline; filename="image.jpg"',
+      "cache-control": "private, max-age=900",
+    });
 
     // A tampered signature is rejected as absence (AC-20).
     await http()

@@ -23,6 +23,7 @@ import { STORAGE_ADAPTER, type StorageAdapter } from "../../storage/storage.type
 import {
   CLIENT_VISIBILITIES,
   DEMO_VISIBILITIES,
+  mediaFileName,
   mimeForRef,
   PUBLISHABLE_RIGHTS,
 } from "./media-content.js";
@@ -324,11 +325,15 @@ export class MediaService {
     key: string,
     expiresAtEpoch: number,
     signature: string,
-  ): Promise<{ bytes: Buffer; mimeType: string }> {
+  ): Promise<{ bytes: Buffer; mimeType: string; fileName: string }> {
     if (!this.storage.verifyDownload(key, expiresAtEpoch, signature)) throw errors.notFound();
     const asset = await this.repo.findByAnyKey(key);
     if (!asset || asset.scanStatus !== "clean") throw errors.notFound();
-    return { bytes: await this.storage.getObject(key), mimeType: asset.mimeType };
+    return {
+      bytes: await this.storage.getObject(key),
+      mimeType: asset.mimeType,
+      fileName: mediaFileName(asset.mimeType),
+    };
   }
 
   private toGalleryItem(row: GalleryReadyRow): MediaGalleryItem {

@@ -196,8 +196,14 @@ describe("Booking milestone signed contract (e2e)", () => {
 
     const download = await http().get(url).responseType("blob").expect(200); // public: the link is the capability
     expect(download.headers["content-type"]).toContain("application/pdf");
-    expect(download.headers["content-disposition"]).toBe('inline; filename="contract.pdf"');
-    expect(download.headers["cache-control"]).toBe("private, no-store");
+    // Served restrictively (D-187 §5): no active content, same-site only, a PDF inline but unsandboxed.
+    expect(download.headers).toMatchObject({
+      "x-content-type-options": "nosniff",
+      "content-security-policy": "default-src 'none'",
+      "cross-origin-resource-policy": "same-site",
+      "content-disposition": 'inline; filename="contract.pdf"',
+      "cache-control": "private, no-store",
+    });
     expect(Buffer.from(download.body).equals(PDF)).toBe(true);
 
     await http()

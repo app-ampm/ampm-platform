@@ -46,6 +46,25 @@ export function detectMedia(bytes: Buffer): DetectedMedia | null {
   return hit ? hit.detected : null;
 }
 
+/** The extension a media file is named with, by its detected type (a stored key carries none). */
+const MEDIA_EXTENSIONS: Readonly<Record<string, string>> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+  "image/gif": "gif",
+  "video/mp4": "mp4",
+};
+
+/**
+ * A media file's name as it is served (D-187 §5): a fixed, PII-free stem by kind and the extension of
+ * its detected type; `media.bin` for a type the gallery does not take.
+ */
+export function mediaFileName(mimeType: string): string {
+  const extension = MEDIA_EXTENSIONS[mimeType];
+  if (!extension) return "media.bin";
+  return `${mimeType.startsWith("video/") ? "video" : "image"}.${extension}`;
+}
+
 /** The flat upload ceiling the API buffers and stores (AC-20.2); one shared constant with the client (core). */
 export const MAX_UPLOAD_BYTES = MAX_MEDIA_UPLOAD_BYTES;
 
