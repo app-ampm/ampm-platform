@@ -8,8 +8,11 @@
 # a deploy a day, no entry got that old. A prune that fails is logged with the daemon's own error and the
 # deploy carries on, since the release has passed its gate. The preflight's checks of the box override are
 # tested the same way: the override example passes, and an override without the antivirus lines, or
-# without an https, non-local PUBLIC_SITE_URL (D-188 §6), stops the deploy before anything is built. Each
-# block is cut from the script itself, so the test runs what the box runs.
+# without an https, non-local PUBLIC_SITE_URL (D-188 §6), stops the deploy before anything is built. Every
+# PUBLIC_SITE_URL line is checked (an api block and a worker block each have one when the override does
+# not share them), quoted or not, with or without a comment; a local host in any case, with a trailing dot
+# or as 0.0.0.0, a user name, a query or a path is refused. Each block is cut from the script itself, so
+# the test runs what the box runs.
 #   bash deploy/redeploy-prod.test.sh
 set -euo pipefail
 
@@ -128,6 +131,17 @@ variant() {
   sed -E "$2" "$example" >"$work/$1.yml"
   printf '%s' "$work/$1.yml"
 }
+# twice <case> <api value> <worker value>: the example with the site address set in an api block and a
+# worker block of their own, as an override written without the shared anchor would have it.
+twice() {
+  awk -v api="$2" -v worker="$3" '
+    /^ +PUBLIC_SITE_URL:/ { next }
+    { print }
+    /^  api:/ { print "    environment:"; print "      PUBLIC_SITE_URL: " api }
+    /^  worker:/ { print "    environment:"; print "      PUBLIC_SITE_URL: " worker }
+  ' "$example" >"$work/$1.yml"
+  printf '%s' "$work/$1.yml"
+}
 
 override "the override example" "$example" pass
 override "a quoted site address with a trailing slash" \
@@ -139,6 +153,22 @@ override "a localhost site address" \
   "$(variant local-site 's#^([[:space:]]+PUBLIC_SITE_URL:).*#\1 https://localhost:3417#')" PUBLIC_SITE_URL
 override "a site address with a path" \
   "$(variant path-site 's#^([[:space:]]+PUBLIC_SITE_URL:).*#\1 https://site.ampmverse.com/hotel-form#')" PUBLIC_SITE_URL
+override "a single-quoted site address with a trailing comment" \
+  "$(variant commented "s#^([[:space:]]+PUBLIC_SITE_URL:).*#\\1 'https://site.ampmverse.com' \\# the website#")" pass
+override "an upper-case local site address" \
+  "$(variant upper-local 's#^([[:space:]]+PUBLIC_SITE_URL:).*#\1 https://LOCALHOST:3417#')" PUBLIC_SITE_URL
+override "a local site address with a trailing dot" \
+  "$(variant dot-local 's#^([[:space:]]+PUBLIC_SITE_URL:).*#\1 https://localhost.#')" PUBLIC_SITE_URL
+override "an unspecified site address" \
+  "$(variant any-site 's#^([[:space:]]+PUBLIC_SITE_URL:).*#\1 https://0.0.0.0#')" PUBLIC_SITE_URL
+override "a site address with a user name" \
+  "$(variant userinfo 's#^([[:space:]]+PUBLIC_SITE_URL:).*#\1 https://ampm:secret@site.ampmverse.com#')" PUBLIC_SITE_URL
+override "a site address with a query" \
+  "$(variant query-site 's#^([[:space:]]+PUBLIC_SITE_URL:).*#\1 https://site.ampmverse.com?x=1#')" PUBLIC_SITE_URL
+override "a site address in both the api and the worker blocks" \
+  "$(twice both-blocks https://site.ampmverse.com '"https://site.ampmverse.com"')" pass
+override "a worker block whose site address is local" \
+  "$(twice local-worker https://site.ampmverse.com https://localhost:3417)" PUBLIC_SITE_URL
 override "an override without the antivirus lines" "$(variant no-av '/^[[:space:]]+AV_PROVIDER:/d')" AV_PROVIDER
 
 if ((failures > 0)); then

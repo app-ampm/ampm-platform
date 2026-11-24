@@ -46,12 +46,30 @@ bash deploy/verify-shipped-source.sh ||
 grep -Eq '^[[:space:]]+AV_PROVIDER:[[:space:]]*"?clamav"?[[:space:]]*$' "$OVR" ||
   die "$OVR lacks 'AV_PROVIDER: clamav' (and CLAMAV_HOST): copy them from deploy/app-ampmverse/compose.production-box.example.yml"
 # Production refuses a missing, plain-http or local PUBLIC_SITE_URL, the website the hotel form's links
-# point to (D-188 §6), so the same applies: an https origin, never localhost.
-site_line="$(grep -E '^[[:space:]]+PUBLIC_SITE_URL:' "$OVR" || true)"
-if ! [[ "$site_line" =~ ^[[:space:]]+PUBLIC_SITE_URL:[[:space:]]*\"?https://[^[:space:]\"/]+/?\"?[[:space:]]*$ ]] ||
-  [[ "$site_line" =~ https://(localhost|127\.|\[::1\])|\.localhost ]]; then
-  die "$OVR lacks 'PUBLIC_SITE_URL: https://<the website>' (not localhost): copy it from deploy/app-ampmverse/compose.production-box.example.yml"
+# point to (D-188 §6), so the same applies to every line that sets it (the api's and the worker's, when
+# the override does not share them): an https origin, quoted or not, with or without a comment, and never
+# a local host in any case or with a trailing dot, 0.0.0.0, a user name, a query or a path.
+site_ok() {
+  local value="${1#*PUBLIC_SITE_URL:}" host
+  value="$(printf '%s' "$value" | sed -E 's/[[:space:]]+#.*$//; s/^[[:space:]]+//; s/[[:space:]]+$//')"
+  if [[ "$value" =~ ^\"(.*)\"$ || "$value" =~ ^\'(.*)\'$ ]]; then value="${BASH_REMATCH[1]}"; fi
+  value="$(printf '%s' "$value" | tr '[:upper:]' '[:lower:]')"
+  [[ "$value" =~ ^https://[a-z0-9.-]+(:[0-9]+)?/?$ ]] || return 1
+  host="${value#https://}"
+  host="${host%/}"
+  host="$(printf '%s' "${host%%:*}" | sed -E 's/[.]+$//')"
+  case "$host" in
+  localhost | *.localhost | 0.0.0.0 | 127.*) return 1 ;;
+  esac
+}
+site_lines="$(grep -E '^[[:space:]]+PUBLIC_SITE_URL:' "$OVR" || true)"
+site_valid=false
+if [[ -n "$site_lines" ]]; then
+  site_valid=true
+  while IFS= read -r site_line; do site_ok "$site_line" || site_valid=false; done <<<"$site_lines"
 fi
+[[ "$site_valid" == true ]] ||
+  die "$OVR lacks 'PUBLIC_SITE_URL: https://<the website>' (not localhost) in every block that sets it: copy it from deploy/app-ampmverse/compose.production-box.example.yml"
 AMPM_PROD_SECRETS="$SECRETS" bash deploy/app-ampmverse/prod-secrets.sh check ||
   die "secrets incomplete: set the missing keys with deploy/app-ampmverse/prod-secrets.sh set"
 free_gb="$(df -BG --output=avail / | tail -1 | tr -dc 0-9)"
