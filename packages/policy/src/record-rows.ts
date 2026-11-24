@@ -63,8 +63,8 @@ export const RECORD_ROWS: readonly RecordRow[] = [
     row: { section: "5.14", label: "Set client visibility on a document" },
     record: { section: "5.14", label: "Documents on records the role can reach" },
   },
-  // §5.15 lines 316 and 316 close and archive the wedding of §5.5 line 195 (`closed_at` and
-  // `archived_at`, data-model.md lines 746 and 746).
+  // §5.15 lines 316 and 317 close and archive the wedding of §5.5 line 195 (`closed_at` and
+  // `archived_at`, data-model.md lines 979 and 980).
   { row: { section: "5.15", label: "Close the project" }, record: WEDDING_PROJECTS },
   {
     row: { section: "5.15", label: "Archive the project after the window (Q23)" },

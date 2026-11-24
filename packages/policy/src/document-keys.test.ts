@@ -33,7 +33,7 @@ const GOLDEN: readonly Golden[] = [
   },
   // §10 names PM for the scoped key; SA holds the unscoped one (§5.5 line 198).
   { line: 547, key: "projects.members.update:assigned", allowed: ["SA", "PM"] },
-  // The scope suffix does not change the row: lines 547 and 547 decide alike (§5.7 line 218; HT
+  // The scope suffix does not change the row: lines 548 and 549 decide alike (§5.7 line 218; HT
   // and VC hold it for their side's lines only).
   { line: 548, key: "budget.lines.read_internal_cost:assigned", allowed: ["SA", "PM", "FA"] },
   { line: 549, key: "budget.lines.read_internal_cost", allowed: ["SA", "PM", "FA"] },
