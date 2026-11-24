@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # A read-only probe of the limits in front of the production API (D-177; plesk-nginx-directives.conf and
 # plesk-apache-directives.conf), run from any machine. It prints each expectation with PASS or FAIL.
-#   - 40 MiB to an upload route: the edge refuses it with its own 413, rather than passing it on to be cut
-#     off by the API, which Apache answers with a 502 (the state measured on 24 Nov 2026);
+#   - 40 MiB to an upload route: the edge refuses it with its own 413, rather than passing it on (on 24 Nov
+#     2026 it passed it on, the API's pre-guard parser of the time cut it off at 26 MB and Apache answered
+#     a 502; since D-187 the API answers an anonymous upload 401 without reading its body);
 #   - 20 MiB to an upload route: it reaches the API, which answers itself (401 or 415), not the edge's 413;
 #   - with --hardened (the optional tier): 2 MiB of JSON to any other API route gets the edge's 413.
 # It sends no credentials and nothing a server stores: with no token, the API refuses every request before
@@ -30,8 +31,8 @@ if [[ ! "$base" =~ ^https?://[A-Za-z0-9.-]+(:[0-9]+)?$ ]]; then
   exit 2
 fi
 
-# The media upload route (UPLOAD_PATHS in apps/api/src/common/app-error.filter.ts), for a media id that no
-# media asset has, and a JSON staff route.
+# The media upload route, which reads its body after the guards (D-187), for a media id that no media asset
+# has, and a JSON staff route.
 UPLOAD="/_api/media/00000000-0000-0000-0000-000000000000/upload"
 JSON_ROUTE="/_api/hotels-admin/hotels"
 MIB=$((1024 * 1024))
@@ -61,10 +62,10 @@ read -r code ctype <<<"$(post "$work/body" application/octet-stream "$UPLOAD")"
 what="40 MiB to an upload route"
 if [[ "$code" == 413 ]] && ! from_api "${ctype:-}"; then
   pass "$what: refused at the edge (413)"
+elif from_api "${ctype:-}"; then
+  fail "$what: the API answered $code, so the edge passed it on (no edge limit)"
 elif [[ "$code" == 502 ]]; then
-  fail "$what: 502, so the edge passed it on and the API cut it off (no edge limit)"
-elif [[ "$code" == 413 ]]; then
-  fail "$what: the API's own 413, so the edge passed it on"
+  fail "$what: 502, so the edge passed it on and it failed behind the edge (no edge limit)"
 else
   fail "$what: expected the edge's 413, got ${code:-000} (${ctype:-no content type})"
 fi
