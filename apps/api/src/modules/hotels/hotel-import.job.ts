@@ -19,7 +19,9 @@ import type { FieldError } from "./hotel-import.plan.js";
  * the rows as read, each with the version token of the target it planned against, and the refused rows by
  * line. Only the uploader imports it, once, within HOTEL_IMPORT_PREVIEW_TTL_HOURS hours, and only their
  * newest preview of the kind (a newer one clears the older plans). The import re-plans each stored row
- * against the catalogue as it is then, and refuses a row whose target changed since.
+ * against the catalogue as it is then, and refuses a row whose target changed since. A plan is kept no
+ * longer than it can be used: the import that finds it expired clears it, and so does the daily sweep
+ * (hotel-import-plan-sweep.service.ts).
  */
 
 export const PREVIEW_NOT_FOUND = "No such import preview";
@@ -110,22 +112,24 @@ export function storedPlanJson(
 }
 
 /**
- * A stored plan read back, each row parsed again by its kind's schema. A plan that no longer reads (a
- * release changed the template in between) cannot be imported: 409, validate the file again.
+ * A stored plan read back, each row parsed again by its kind's schema, or null for a plan that no longer
+ * reads (a release changed the template in between): it cannot be imported, so it is refused as expired
+ * (409, validate the file again) and cleared.
  *
  * @example
  * const plan = readStoredPlan(job.planJson, ROOMS_IMPORT);
+ * if (plan === null) return refuse("expired");
  */
 export function readStoredPlan<Row>(
   json: Prisma.JsonValue | null,
   spec: ImportKindSpec<Row>,
-): StoredPlan<Row> {
+): StoredPlan<Row> | null {
   const parsed = storedPlan.safeParse(json);
-  if (!parsed.success || parsed.data.kind !== spec.kind) throw errors.conflict(PREVIEW_EXPIRED);
+  if (!parsed.success || parsed.data.kind !== spec.kind) return null;
   const rows: StoredRow<Row>[] = [];
   for (const { line, row, target } of parsed.data.rows) {
     const read = spec.schema.safeParse(row);
-    if (!read.success) throw errors.conflict(PREVIEW_EXPIRED);
+    if (!read.success) return null;
     rows.push({ line, row: read.data, target });
   }
   return { totalRows: parsed.data.totalRows, rows, refused: parsed.data.refused };
@@ -142,33 +146,51 @@ export interface PreviewJob {
 }
 
 /**
- * Why this caller cannot import this preview now, or null when they can: 404 for a job that is not
- * theirs or not of this kind (denial equals absence), 409 for one already imported, and 409 for one that
- * expired, was replaced by their newer preview, or had no row to import.
+ * Why a caller cannot import a preview: it is not theirs or not of this kind (`not_found`), it was
+ * imported already (`applied`), or it can no longer be imported (`expired`: past the time limit, replaced
+ * by their newer preview, with no row to import, or no longer read by this release).
+ */
+export type PreviewRefusal = "not_found" | "applied" | "expired";
+
+/**
+ * Why this caller cannot import this preview now, or null when they can. A job that is not theirs or not
+ * of this kind is `not_found` whatever else holds (denial equals absence).
  *
  * @example
  * const refusal = previewRefusal(job, { actorId, importType: "hotel_rooms" }, new Date());
- * if (refusal) throw refusal;
+ * if (refusal) throw refusalError(refusal);
  */
 export function previewRefusal(
   job: PreviewJob | null,
   caller: { readonly actorId: string; readonly importType: ImportType },
   now: Date,
-): Error | null {
+): PreviewRefusal | null {
   if (
     job === null ||
     job.deletedAt !== null ||
     job.createdBy !== caller.actorId ||
     job.importType !== caller.importType
   ) {
-    return errors.notFound(PREVIEW_NOT_FOUND);
+    return "not_found";
   }
-  if (job.status === "applied") return errors.conflict(PREVIEW_APPLIED);
+  if (job.status === "applied") return "applied";
   const expiresAt = job.createdAt.getTime() + HOTEL_IMPORT_PREVIEW_TTL_HOURS * HOUR_MS;
   if (job.status !== "validating" || job.planJson === null || now.getTime() > expiresAt) {
-    return errors.conflict(PREVIEW_EXPIRED);
+    return "expired";
   }
   return null;
+}
+
+/**
+ * A refusal's answer: 404 for a preview that is not the caller's (as for one that does not exist), 409
+ * for one imported already or one that expired, whose next step is to validate the file again.
+ *
+ * @example
+ * refusalError("expired"); // 409 "This preview has expired; validate the file again"
+ */
+export function refusalError(refusal: PreviewRefusal): Error {
+  if (refusal === "not_found") return errors.notFound(PREVIEW_NOT_FOUND);
+  return errors.conflict(refusal === "applied" ? PREVIEW_APPLIED : PREVIEW_EXPIRED);
 }
 
 /**

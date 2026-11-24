@@ -63,6 +63,11 @@ export interface PlannedRows {
   readonly stored: readonly StoredRow<Prisma.InputJsonValue>[];
   /** The destinations importing the rows would create (hotels only). */
   readonly newDestinations: number;
+  /**
+   * The images importing the rows would register (hotels only): an image never makes a row an update,
+   * so without this a file that only adds images would read as one that changes nothing.
+   */
+  readonly newImages: number;
 }
 
 /** What an import's rows did inside its transaction. */

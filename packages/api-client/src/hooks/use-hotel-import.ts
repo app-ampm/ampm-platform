@@ -18,13 +18,16 @@ export interface HotelImportApplyInput {
 }
 
 /**
- * The address a kind's file is previewed at. Every upload is a preview, so it carries no query.
+ * The address a kind's file is previewed at. Every upload is a preview, yet it says `dryRun=true`: the
+ * previous API image imports a bare upload, so should the API be rolled back while this bundle is live,
+ * its Validate still writes nothing there. This API takes the query for that one release (core
+ * `hotelImportQuery`); Slice 4 drops it here and there together.
  *
  * @example
- * hotelImportPreviewPath("rooms"); // "/hotels-admin/imports/rooms"
+ * hotelImportPreviewPath("rooms"); // "/hotels-admin/imports/rooms?dryRun=true"
  */
 export function hotelImportPreviewPath(kind: HotelImportKind): string {
-  return `/hotels-admin/imports/${kind}`;
+  return `/hotels-admin/imports/${kind}?dryRun=true`;
 }
 
 /**

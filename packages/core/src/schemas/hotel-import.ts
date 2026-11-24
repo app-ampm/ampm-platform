@@ -237,9 +237,12 @@ export const HOTEL_IMPORT_TEMPLATES: Readonly<Record<HotelImportKind, HotelImpor
 };
 
 /**
- * The preview's query. Every upload is a preview, so nothing needs saying; `dryRun=true` is still taken
- * for one release because the previous staff bundle's Validate sends it (Slice 4 removes it), while
- * `dryRun=false`, the previous bundle's import, is refused: an import now applies a preview by its job id.
+ * The preview's query. Every upload is a preview, so nothing needs saying here; `dryRun=true` is taken
+ * for one release because this staff bundle's Validate sends it: the previous API image imports a bare
+ * upload, so should the API be rolled back while this bundle is live, its Validate stays a dry run there.
+ * It buys the previous bundle nothing, since that bundle's strict result schemas refuse this API's answer
+ * (`kind`, a row's `name`). `dryRun=false`, the previous bundle's import, is refused: an import now
+ * applies a preview by its job id. Slice 4 removes the literal and the bundle's query together.
  */
 export const hotelImportQuery = z
   .object({
@@ -306,7 +309,9 @@ export type HotelImportRowReport = z.infer<typeof hotelImportRowReport>;
  * changed since the preview among them. `created`, `updated` and `unchanged` count the kind's rows
  * (hotels, rooms or venues); `destinationsCreated` the destinations a hotels import made on the way and
  * `mediaRegistered` the pending gallery images it registered by reference (both 0 for rooms and venues);
- * `rejected` the rows refused, by line and field; `rows` every row's outcome.
+ * on a preview, the destinations and the images (those not registered yet) importing would add, so a
+ * file that only adds images, its rows all unchanged, still has something to import. `rejected` the rows
+ * refused, by line and field; `rows` every row's outcome.
  */
 export const hotelImportResult = z
   .object({

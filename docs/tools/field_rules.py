@@ -104,7 +104,7 @@ TABLES["configurations"] = T(
     scope_id=F(validation="references wedding_projects when scope is project"),
 )
 # D-181: a staff hotel import (hotels, rooms or venues) keeps no file; its preview stores the planned rows, values
-# included, in plan_json until it is imported by its job id or superseded.
+# included, in plan_json until it is imported by its job id, superseded or expired (24 hours).
 TABLES["import_jobs"] = T(
     "Any (import)", "SA; HT (hotels, rooms and venues); VC (vendors); RG and PM (a) (guests)",
     required=["import_type", "status"], assumptions="A-9 (Q9), GP-22, D-181",
@@ -125,7 +125,8 @@ TABLES["import_jobs"] = T(
                 validation="valid JSON: the preview's planned rows with their values, and each target's version token "
                            "(a SHA-256 of its compared values, never updated_at)",
                 automation="Read only by the import of its preview, which refuses a row whose target's token moved "
-                           "(changed since preview); cleared on import and when a newer preview supersedes it"),
+                           "(changed since preview); cleared on import, when a newer preview supersedes it, when an "
+                           "import finds it expired, and daily once older than 24 hours"),
     project_id=F(validation="references wedding_projects; required when import_type is guests", required="At creation for guest imports"),
 )
 TABLES["sessions"] = T(
@@ -352,8 +353,8 @@ TABLES["hotel_venues"] = T(
     note=STAFF_UNTIL_SLICE_12 + "; venue_type's five new values reach clients now",
     venue_type=F(automation="The client views carry it: a new value is a client contract change, so the API and the "
                             "web bundle deploy back to back; pickers order the types themselves, Other last"),
-    setting=F(required="At creation (through the API; a venue written without one, by the seed or the previous image, "
-                       "reads it from is_indoor)",
+    setting=F(required="At creation (through the API; a venue written without one, by the previous image or a direct "
+                       "insert, reads it from is_indoor)",
               automation="Sets is_indoor in the same write: true only for indoor, so a semi-open venue reads as "
                          "outdoor to clients until Slice 12"),
     is_indoor=F(editor=SYS, required="System",

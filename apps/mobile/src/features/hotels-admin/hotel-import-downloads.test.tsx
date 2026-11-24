@@ -92,8 +92,8 @@ describe("HotelImportScreen downloads", () => {
     expect(filename).toBe("rooms-import-report.csv");
     expect(csv.split("\r\n")).toEqual([
       "line,hotelSlug,name,outcome,changedFields,errors",
-      '2,synthetic-lake-hotel,Synthetic Garden Suite,update,"sizeSqft, sizeSqm",',
-      '3,synthetic-lake-hotel,Synthetic Tent,create,"hotelSlug, name, unitType",',
+      '2,synthetic-lake-hotel,Synthetic Garden Suite,update,"sizeSqm, sizeSqft",',
+      '3,synthetic-lake-hotel,Synthetic Tent,create,"name, unitType",',
     ]);
   });
 

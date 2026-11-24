@@ -1,10 +1,15 @@
 import { describe, expect, it } from "vitest";
 
 import { staffPrincipal } from "../../policy/testing/staff-principal.js";
-import { CHANGED_SINCE_PREVIEW, PREVIEW_APPLIED, PREVIEW_EXPIRED } from "./hotel-import.job.js";
+import {
+  CHANGED_SINCE_PREVIEW,
+  PREVIEW_APPLIED,
+  PREVIEW_EXPIRED,
+  type PreviewJob,
+} from "./hotel-import.job.js";
 import { buildImportService, csv, NEW_ROW_ID } from "./testing/import-service-fixtures.js";
 import { HOTEL_ID } from "./testing/staff-hotel-fixtures.js";
-import { ROOM_ID, roomRow, VENUE_ID, venueRow } from "./testing/subresource-fixtures.js";
+import { decimal, ROOM_ID, roomRow, VENUE_ID, venueRow } from "./testing/subresource-fixtures.js";
 
 /*
  * Importing a Rooms or Venues preview by its job id (D-181): the file is never sent again; only the
@@ -113,6 +118,8 @@ describe("who may import a preview, and when", () => {
       code: "not_found",
     });
     expect(built.subresources.updateRoom).not.toHaveBeenCalled();
+    // Nothing another person asks clears the uploader's plan.
+    expect(built.imports.jobs.get(importJobId)?.planJson).not.toBeNull();
   });
 
   it("answers 409 to a second import of the same preview", async () => {
@@ -126,21 +133,41 @@ describe("who may import a preview, and when", () => {
     expect(built.subresources.updateRoom).toHaveBeenCalledOnce();
   });
 
-  it("answers 409 to a preview over a day old, which must be validated again", async () => {
+  // An expired plan can never be imported, and it holds the file's values (RESTRICTED-NOTES), so the
+  // refusal clears it (security.md), committed though the import is refused.
+  it("answers 409 to a preview over a day old, clearing its plan", async () => {
     const built = buildImportService({ rooms: [roomRow()] });
     const { importJobId } = await preview(built, KEPT);
-    const job = built.imports.jobs.get(importJobId);
-    if (job)
-      built.imports.jobs.set(importJobId, {
-        ...job,
-        createdAt: new Date(Date.now() - 25 * 60 * 60 * 1000),
-      });
+    editJob(built, importJobId, { createdAt: new Date(Date.now() - 25 * 60 * 60 * 1000) });
     await expect(built.service.apply("rooms", importJobId, HT)).rejects.toMatchObject({
       code: "conflict",
       message: PREVIEW_EXPIRED,
     });
+    expect(built.imports.jobs.get(importJobId)?.planJson).toBeNull();
+    expect(built.subresources.updateRoom).not.toHaveBeenCalled();
+  });
+
+  it("answers 409 to a preview whose plan this release no longer reads, clearing it too", async () => {
+    const built = buildImportService({ rooms: [roomRow()] });
+    const { importJobId } = await preview(built, KEPT);
+    editJob(built, importJobId, { planJson: { version: 0 } });
+    await expect(built.service.apply("rooms", importJobId, HT)).rejects.toMatchObject({
+      code: "conflict",
+      message: PREVIEW_EXPIRED,
+    });
+    expect(built.imports.jobs.get(importJobId)?.planJson).toBeNull();
   });
 });
+
+/** Rewrites what the job table holds for a preview, as time or another release would. */
+function editJob(
+  built: ReturnType<typeof buildImportService>,
+  id: string,
+  change: Partial<PreviewJob>,
+): void {
+  const job = built.imports.jobs.get(id);
+  if (job) built.imports.jobs.set(id, { ...job, ...change });
+}
 
 describe("importing a venues preview (D-178)", () => {
   it("writes is_indoor with a changed setting", async () => {
@@ -158,5 +185,27 @@ describe("importing a venues preview (D-178)", () => {
       HT.userId,
       expect.anything(),
     );
+  });
+
+  it("compares and writes a venue's metres at their column's two places, so importing again settles", async () => {
+    const stored = (widthM: string) =>
+      venueRow({ setting: "indoor", lengthM: decimal("30.00"), widthM: decimal(widthM) });
+    const built = buildImportService({ venues: [stored("12.30")] });
+    const file = csv(
+      "hotelSlug,name,lengthM,widthM",
+      "synthetic-lake-hotel,Synthetic Grand Hall,30.000000000000004,12.350000001",
+    );
+    const preview = await built.service.preview("venues", file, HT);
+    expect(preview.rows[0]).toMatchObject({ outcome: "update", changedFields: ["widthM"] });
+    await built.service.apply("venues", preview.importJobId, HT);
+    expect(built.subresources.updateVenue).toHaveBeenCalledWith(
+      VENUE_ID,
+      { widthM: 12.35 },
+      HT.userId,
+      expect.anything(),
+    );
+    built.state.venues = [stored("12.35")];
+    const again = await built.service.preview("venues", file, HT);
+    expect(again).toMatchObject({ updated: 0, unchanged: 1 });
   });
 });

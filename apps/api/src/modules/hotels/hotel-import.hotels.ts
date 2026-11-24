@@ -75,7 +75,8 @@ export class HotelRowsImporter implements KindImporter<HotelImportRow> {
       return [{ line: row.line, row: this.spec.toJson(row.row), target }];
     });
     const newDestinations = newDestinationCount(plans, lookup.context.destinations);
-    return { reports: plans.map(reportOf), stored, newDestinations };
+    const newImages = await this.newImageCount(plans);
+    return { reports: plans.map(reportOf), stored, newDestinations, newImages };
   }
 
   async apply(
@@ -123,9 +124,26 @@ export class HotelRowsImporter implements KindImporter<HotelImportRow> {
   }
 
   /**
+   * How many images importing the planned rows would register, as `afterCommit` would: each new hotel's,
+   * and each existing hotel's (hotel, ref) pair Module N does not hold yet. A refused row registers none.
+   */
+  private async newImageCount(plans: readonly RowPlan[]): Promise<number> {
+    let forNewHotels = 0;
+    const existing: ImportImageRef[] = [];
+    for (const plan of plans) {
+      if (plan.outcome === "error" || !plan.row.imageRef) continue;
+      if (plan.outcome === "create") forNewHotels++;
+      else existing.push({ hotelId: plan.hotelId, ref: plan.row.imageRef });
+    }
+    const refs = existing.map(({ hotelId, ref }) => ({ ownerId: hotelId, ref }));
+    return forNewHotels + (await this.media.countUnregisteredImports("hotel", refs));
+  }
+
+  /**
    * What the plan reads beside the rows (the hotels and destinations they name, deleted ones included,
    * each hotel as its uploader may read it), the named hotels' audit images, and each live hotel's
-   * version token, read whatever the uploader reads: it is never shown to them.
+   * version token, never shown to them: it covers the internal rating and notes only for an uploader who
+   * reads or writes them, so a notes edit refuses no one else's row (hotel-import.version.ts).
    */
   private async lookUp(
     rows: readonly ImportRow<HotelImportRow>[],
@@ -148,10 +166,11 @@ export class HotelRowsImporter implements KindImporter<HotelImportRow> {
       destinations: new Map(destinations.map(({ slug, ...destination }) => [slug, destination])),
     };
     const live = hotels.filter((hotel) => hotel.deletedAt === null);
+    const scope = { notes: grants.readsNotes || grants.canWriteNotes };
     return {
       context,
       images: new Map(hotels.map((hotel) => [hotel.id, auditImageOf(hotel)])),
-      versions: new Map(live.map((hotel) => [hotel.id, hotelVersion(hotel)])),
+      versions: new Map(live.map((hotel) => [hotel.id, hotelVersion(hotel, scope)])),
     };
   }
 }

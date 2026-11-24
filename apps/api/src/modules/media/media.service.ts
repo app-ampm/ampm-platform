@@ -38,6 +38,11 @@ function refHash(ref: string): string {
   return createHash("sha256").update(ref).digest("hex").slice(0, 32);
 }
 
+/** An imported image's object key: one per (owner, ref), the importer's idempotency handle. */
+function importedImageKey(ownerType: MediaOwnerType, ownerId: string, ref: string): string {
+  return `${ownerType}/${ownerId}/import-${refHash(ref)}`;
+}
+
 /** The rights-and-visibility image audited on a media change — the fields GP-20 compliance turns on. */
 function rightsImage(row: MediaAssetRow): Record<string, unknown> {
   return {
@@ -101,7 +106,7 @@ export class MediaService {
     // A deterministic object key per (owner, ref) is the idempotency handle — a re-run resolves the same key
     // and skips. The reference is an INTERNAL datum, so it is kept in the audit event (append-only), never in
     // the client-facing caption, which would otherwise reach the gallery once the asset is published (GP-20).
-    const storageKey = `${ownerType}/${ownerId}/import-${refHash(ref)}`;
+    const storageKey = importedImageKey(ownerType, ownerId, ref);
     if (await this.repo.findByAnyKey(storageKey)) return { created: false };
     const row = await this.repo.create(
       {
@@ -127,6 +132,22 @@ export class MediaService {
       maskImages: false,
     });
     return { created: true };
+  }
+
+  /**
+   * How many of these by-reference images `registerImportedImage` would register now: the (owner, ref)
+   * pairs no live asset holds yet, each counted once, in one read. What an import preview reports, so a
+   * file that only adds images can be told from one that changes nothing (D-181).
+   */
+  async countUnregisteredImports(
+    ownerType: MediaOwnerType,
+    refs: readonly { readonly ownerId: string; readonly ref: string }[],
+  ): Promise<number> {
+    const keys = [
+      ...new Set(refs.map(({ ownerId, ref }) => importedImageKey(ownerType, ownerId, ref))),
+    ];
+    const held = await this.repo.heldKeys(keys);
+    return keys.filter((key) => !held.has(key)).length;
   }
 
   async list(query: MediaListQuery): Promise<MediaAssetPage> {

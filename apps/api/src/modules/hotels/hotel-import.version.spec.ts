@@ -10,6 +10,9 @@ import { decimal, roomRow, venueRow } from "./testing/subresource-fixtures.js";
  * updated_at) or writing a value the same way twice never refuses a row.
  */
 
+const WITH_NOTES = { notes: true };
+const WITHOUT_NOTES = { notes: false };
+
 describe("version tokens", () => {
   it("are SHA-256 hex, the same for the same compared values", () => {
     expect(roomVersion(roomRow())).toMatch(/^[0-9a-f]{64}$/);
@@ -36,11 +39,40 @@ describe("version tokens", () => {
   it("ignore a hotel's verification date, but not its notes or its destination", () => {
     const hotel = storedHotel();
     const verified = { ...hotel, lastVerifiedAt: new Date("2026-11-24T00:00:00.000Z") };
-    expect(hotelVersion(verified)).toBe(hotelVersion(hotel));
-    expect(hotelVersion({ ...hotel, internalNotes: "Synthetic new note" })).not.toBe(
-      hotelVersion(hotel),
+    expect(hotelVersion(verified, WITH_NOTES)).toBe(hotelVersion(hotel, WITH_NOTES));
+    expect(hotelVersion({ ...hotel, internalNotes: "Synthetic new note" }, WITH_NOTES)).not.toBe(
+      hotelVersion(hotel, WITH_NOTES),
     );
     const moved = { ...hotel, destination: { slug: "synthetic-elsewhere" } };
-    expect(hotelVersion(moved)).not.toBe(hotelVersion(hotel));
+    expect(hotelVersion(moved, WITH_NOTES)).not.toBe(hotelVersion(hotel, WITH_NOTES));
+  });
+
+  // The hotels planner compares as Slice 2 does (text trimmed only, lists and links exactly), so its
+  // token must see every edit that planner can see: spacing, a link's case, a list entry's spacing.
+  it("hash a hotel's fields as stored, so an edit only in spacing or case moves it", () => {
+    const hotel = storedHotel({
+      descriptionClient: "Lake views. Pool.",
+      website: "https://Example.com/x",
+      facilities: ["Pool", "Spa"],
+    });
+    const before = hotelVersion(hotel, WITH_NOTES);
+    const edits = [
+      { descriptionClient: "Lake views.\n\nPool." },
+      { website: "https://example.com/x" },
+      { facilities: ["Pool", "Spa  "] },
+    ];
+    for (const edit of edits) {
+      expect(hotelVersion({ ...hotel, ...edit }, WITH_NOTES)).not.toBe(before);
+    }
+  });
+
+  it("leave a hotel's internal rating and notes out for an uploader who neither reads nor writes them", () => {
+    const hotel = storedHotel({ internalRating: 3, internalNotes: "Synthetic note" });
+    const edited = { ...hotel, internalRating: 4, internalNotes: "Synthetic other note" };
+    expect(hotelVersion(edited, WITHOUT_NOTES)).toBe(hotelVersion(hotel, WITHOUT_NOTES));
+    expect(hotelVersion(edited, WITH_NOTES)).not.toBe(hotelVersion(hotel, WITH_NOTES));
+    expect(hotelVersion({ ...hotel, city: "Synthetic City" }, WITHOUT_NOTES)).not.toBe(
+      hotelVersion(hotel, WITHOUT_NOTES),
+    );
   });
 });

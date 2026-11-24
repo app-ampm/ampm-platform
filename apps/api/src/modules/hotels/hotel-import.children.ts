@@ -83,7 +83,7 @@ export class ChildRowsImporter {
           : null;
       return [{ line: row.line, row: kind.spec.toJson(row.row), target }];
     });
-    return { reports: plans.map(reportOf), stored, newDestinations: 0 };
+    return { reports: plans.map(reportOf), stored, newDestinations: 0, newImages: 0 };
   }
 
   private async apply<

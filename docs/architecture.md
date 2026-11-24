@@ -465,7 +465,8 @@ All jobs are idempotent (safe to run twice) and record their outcome. Source ref
 | Overdue surfacing (tasks, milestones, vendors, readiness) | Hourly | none, read-only | — |
 | Incident escalation timer | Delayed job at incident creation | incident id | Re-schedule |
 | Media processing (images, video callbacks) | Upload event | storage key | Backoff |
-| Import apply | Import job status applied | import job id | Manual |
+| Import apply (guest and vendor imports; a staff hotel import applies inside its own request, D-181) | Import job status applied | import job id | Manual |
+| Expired import previews: clear a staff hotel import preview's stored rows once it is past 24 hours (D-181) | Daily | job name and date | Next day |
 | Export build | User request | export request id | Manual |
 | Retention (identity documents, guest data, leads, demo reset) | Daily | entity id and date | Next day, alert on failure |
 | Backup verification | Weekly | date | Alert |
@@ -536,7 +537,7 @@ Mapped to SPEC §10 and the audit's compliance findings. Controls are listed by 
 
 - Trunk-based development with short-lived branches; every pull request runs lint, type checks, unit tests, the generated authorisation suite and contract tests.
 - Merges deploy to staging automatically; production deploys from a tagged release after AMPM acceptance on staging.
-- Database migrations run as a release step using expand and contract (§8); a release is reversible by redeploying the previous image because the schema stays compatible across one release.
+- Database migrations run as a release step using expand and contract (§8); a release is reversible by redeploying the previous image because the schema stays compatible across one release. A value only the new release writes, such as a new enum value, can still break the previous image's reads, so such a release names in its data-model note the rows a rollback must remap first (the venue types of D-178).
 - **Deployment freeze** while any wedding project is in `live` status (T-14); hotfixes only, with the project lead informed.
 - Feature flags are rows in `configurations`, so a feature can be switched off without a deploy.
 

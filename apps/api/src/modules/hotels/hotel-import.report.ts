@@ -130,7 +130,7 @@ export function reportJson(summary: ImportSummary, dryRun: boolean): Prisma.Inpu
 
 /**
  * The response; `applied` is whether an import wrote anything (core `hotelImportResult`), and a preview's
- * `destinationsCreated` is how many destinations importing it would create.
+ * `destinationsCreated` and `mediaRegistered` are how many destinations and images importing it would add.
  *
  * @example
  * return importResult(importJobId, "rooms", summary, { dryRun: true, mediaRegistered: 0 });

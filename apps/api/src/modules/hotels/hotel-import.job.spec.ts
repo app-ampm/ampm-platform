@@ -8,6 +8,7 @@ import {
   PREVIEW_EXPIRED,
   previewRefusal,
   readStoredPlan,
+  refusalError,
   storedPlanJson,
   type PreviewJob,
 } from "./hotel-import.job.js";
@@ -42,30 +43,33 @@ describe("previewRefusal: who may import a preview, and when (D-181)", () => {
     expect(refusalOf(job())).toBeNull();
   });
 
-  it("answers 404 for no job, another uploader's, another kind's or a deleted one", () => {
+  it("refuses as not found no job, another uploader's, another kind's or a deleted one", () => {
     for (const preview of [
       null,
-      job({ createdBy: "0192f1a0-0000-7000-8000-0000000000e2" }),
+      job({ createdBy: "0192f1a0-0000-7000-8000-0000000000e2", createdAt: new Date(0) }),
       job({ importType: "hotel_venues" }),
       job({ deletedAt: NOW }),
     ]) {
-      expect(refusalOf(preview)).toMatchObject({ code: "not_found", status: 404 });
+      expect(refusalOf(preview)).toBe("not_found");
     }
   });
 
-  it("answers 409 for an imported preview, and for an expired, replaced or failed one", () => {
-    expect(refusalOf(job({ status: "applied", planJson: null }))).toMatchObject({
-      code: "conflict",
-      message: PREVIEW_APPLIED,
-    });
+  it("refuses an imported preview, and as expired one that is old, replaced or failed", () => {
+    expect(refusalOf(job({ status: "applied", planJson: null }))).toBe("applied");
     const old = new Date(NOW.getTime() - (HOTEL_IMPORT_PREVIEW_TTL_HOURS * HOUR_MS + 1));
     for (const preview of [
       job({ createdAt: old }),
       job({ planJson: null }),
       job({ status: "failed", planJson: null }),
     ]) {
-      expect(refusalOf(preview)).toMatchObject({ code: "conflict", message: PREVIEW_EXPIRED });
+      expect(refusalOf(preview)).toBe("expired");
     }
+  });
+
+  it("answers 404 for a preview that is not the caller's, and 409 for one imported or expired", () => {
+    expect(refusalError("not_found")).toMatchObject({ code: "not_found", status: 404 });
+    expect(refusalError("applied")).toMatchObject({ code: "conflict", message: PREVIEW_APPLIED });
+    expect(refusalError("expired")).toMatchObject({ code: "conflict", message: PREVIEW_EXPIRED });
   });
 });
 
@@ -88,22 +92,16 @@ describe("the stored plan", () => {
     });
   });
 
-  it("answers 409 for a plan of another kind or a row its kind no longer reads", () => {
+  it("reads nothing back from a plan of another kind, or with a row its kind no longer reads", () => {
     const rooms = storedPlanJson("rooms", { totalRows: 1, rows: [], refused: [] });
-    expect(() => readStoredPlan(stored(rooms), VENUES_IMPORT)).toThrow(
-      expect.objectContaining({ code: "conflict", message: PREVIEW_EXPIRED }),
-    );
+    expect(readStoredPlan(stored(rooms), VENUES_IMPORT)).toBeNull();
     const stale = storedPlanJson("rooms", {
       totalRows: 1,
       rows: [{ line: 2, row: { ...row, mystery: true }, target: null }],
       refused: [],
     });
-    expect(() => readStoredPlan(stored(stale), ROOMS_IMPORT)).toThrow(
-      expect.objectContaining({ code: "conflict" }),
-    );
-    expect(() => readStoredPlan(null, ROOMS_IMPORT)).toThrow(
-      expect.objectContaining({ code: "conflict" }),
-    );
+    expect(readStoredPlan(stored(stale), ROOMS_IMPORT)).toBeNull();
+    expect(readStoredPlan(null, ROOMS_IMPORT)).toBeNull();
   });
 });
 

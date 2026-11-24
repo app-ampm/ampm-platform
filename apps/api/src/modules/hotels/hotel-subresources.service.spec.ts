@@ -128,6 +128,30 @@ describe("HotelSubresourcesService: one primary contact (D-178)", () => {
     expect(repo.createContact).toHaveBeenCalledOnce();
   });
 
+  // Denial equals absence (security.md): the answer must not say whether a hotel whose contacts the
+  // caller cannot read has a primary, so for them the update key decides before anything is read.
+  it("answers a caller who cannot read contacts alike with or without a primary, reading none", async () => {
+    const adder = staffPrincipal([], ["hotels.hotel_contacts.create:all"]);
+    for (const primaries of [[OTHER_CONTACT_ID], []]) {
+      const { service, repo } = buildSubresourcesService({ primaries });
+      await expect(
+        service.addContact(HOTEL_ID, { name: "Synthetic Events", isPrimary: true }, adder),
+      ).rejects.toMatchObject({ code: "forbidden" });
+      expect(repo.findLivePrimaries).not.toHaveBeenCalled();
+      expect(repo.createContact).not.toHaveBeenCalled();
+    }
+  });
+
+  it("lets a caller who changes but cannot read contacts make one primary either way", async () => {
+    const keys = ["hotels.hotel_contacts.create:all", "hotels.hotel_contacts.update:all"];
+    const writer = staffPrincipal([], keys);
+    for (const primaries of [[OTHER_CONTACT_ID], []]) {
+      const { service, repo } = buildSubresourcesService({ primaries });
+      await service.addContact(HOTEL_ID, { name: "Synthetic Events", isPrimary: true }, writer);
+      expect(repo.createContact).toHaveBeenCalledOnce();
+    }
+  });
+
   it("demotes no one when the contact being made primary already is", async () => {
     const { service, repo } = buildSubresourcesService();
     await service.updateContact(HOTEL_ID, CONTACT_ID, { isPrimary: true }, HT);

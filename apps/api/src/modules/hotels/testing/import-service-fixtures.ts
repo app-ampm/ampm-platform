@@ -84,6 +84,10 @@ function jobStore() {
       const job = jobs.get(id);
       if (job) jobs.set(id, { ...job, status: "applied", planJson: null });
     }),
+    clearPlan: vi.fn(async (id: string, _actorId: string, _tx: unknown) => {
+      const job = jobs.get(id);
+      if (job) jobs.set(id, { ...job, planJson: null });
+    }),
   };
 }
 
@@ -141,7 +145,7 @@ function writes() {
 /**
  * The import service over fakes: the synthetic hotel (with any catalogue the spec gives), its destination,
  * one configured cuisine, writes that answer fixed ids, an audit that records nothing and media that
- * always registers.
+ * always registers and holds no image yet.
  *
  * @example
  * const { service, state, subresources } = buildImportService({ rooms: [roomRow()] });
@@ -155,7 +159,13 @@ export function buildImportService(
   const imports = importRepository(state, options.transaction);
   const { hotelsRepo, subresources } = writes();
   const audit = { record: vi.fn(async (_input: unknown, _tx?: unknown) => {}) };
-  const media = { registerImportedImage: vi.fn(async () => ({ created: true })) };
+  const media = {
+    registerImportedImage: vi.fn(async () => ({ created: true })),
+    // None of the existing hotels' images is registered yet, unless a spec says otherwise.
+    countUnregisteredImports: vi.fn(
+      async (_ownerType: string, refs: readonly { ownerId: string; ref: string }[]) => refs.length,
+    ),
+  };
   const config = { get: vi.fn(async () => ({ options: ["Indian"] })) };
   const repo = imports as unknown as HotelImportRepository;
   const auditService = audit as unknown as AuditService;

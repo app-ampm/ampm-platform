@@ -4,6 +4,7 @@ import { useRouter } from "expo-router";
 import type { HotelImportKind } from "@ampm/core";
 import {
   EmptyState,
+  QueryErrorState,
   Screen,
   ScreenHeader,
   Skeleton,
@@ -12,13 +13,15 @@ import {
   useLayoutAt,
 } from "@ampm/ui";
 
+import { useGoToSignIn } from "@/navigation/sign-in";
+
 import { ImportActions } from "./hotel-import-actions";
 import { ImportColumnsHint } from "./hotel-import-columns-hint";
 import { ImportContentInput } from "./hotel-import-content-input";
 import { ImportKindPicker } from "./hotel-import-kind-picker";
 import { ImportResultPanel } from "./hotel-import-result";
 import { useHotelImportForm } from "./use-hotel-import-form";
-import { useImportKinds } from "./use-import-kinds";
+import { useImportKinds, type ImportKinds } from "./use-import-kinds";
 
 type ImportForm = ReturnType<typeof useHotelImportForm>;
 
@@ -33,7 +36,12 @@ interface ImportMainProps {
 function ImportMain({ form, kinds, kind, isDesktop }: ImportMainProps) {
   return (
     <Stack gap={4} testID="hotel-import-main">
-      <ImportKindPicker kinds={kinds} value={kind} onChange={form.changeKind} />
+      <ImportKindPicker
+        kinds={kinds}
+        value={kind}
+        onChange={form.changeKind}
+        disabled={form.pending}
+      />
       {isDesktop ? null : <ImportColumnsHint kind={kind} />}
       <ImportContentInput content={form.content} setContent={form.setContent} tall={isDesktop} />
       <ImportActions
@@ -47,14 +55,31 @@ function ImportMain({ form, kinds, kind, isDesktop }: ImportMainProps) {
   );
 }
 
-/** Before `/me` answers, or for a staff member who may import nothing: no form to show. */
-function ImportUnavailable({ isPending }: { readonly isPending: boolean }) {
-  if (isPending) {
+/** Before `/me` answers, when it failed, or for a staff member who may import nothing: no form to show. */
+function ImportUnavailable({ access }: { readonly access: ImportKinds }) {
+  const goToSignIn = useGoToSignIn();
+  if (access.isPending) {
     return (
       <Stack gap={4} testID="hotel-import-loading">
         <Skeleton className="h-24 w-full" />
         <Skeleton className="h-24 w-full" />
       </Stack>
+    );
+  }
+  // A failed /me (an ended session, no network) leaves the role unknown, which is not a denial: offer
+  // sign-in or a retry rather than tell a Hotel team member their role lacks the access.
+  if (access.isError) {
+    return (
+      <QueryErrorState
+        error={access.error}
+        onRetry={access.retry}
+        onSignIn={goToSignIn}
+        signIn={{
+          title: "Sign in to import",
+          description: "Your session has ended. Sign in again to continue.",
+        }}
+        testID="hotel-import-error"
+      />
     );
   }
   return (
@@ -85,7 +110,8 @@ export interface HotelImportScreenProps {
  */
 export function HotelImportScreen({ tabBar }: HotelImportScreenProps) {
   const router = useRouter();
-  const { kinds, isPending } = useImportKinds();
+  const access = useImportKinds();
+  const { kinds } = access;
   const form = useHotelImportForm(kinds);
   const isDesktop = useLayoutAt("lg");
   const { kind, result } = form;
@@ -103,7 +129,7 @@ export function HotelImportScreen({ tabBar }: HotelImportScreenProps) {
     >
       <SplitPane sideWidth="lg" side={side} testID="hotel-import-split">
         {kind === null ? (
-          <ImportUnavailable isPending={isPending} />
+          <ImportUnavailable access={access} />
         ) : (
           <ImportMain form={form} kinds={kinds} kind={kind} isDesktop={isDesktop} />
         )}

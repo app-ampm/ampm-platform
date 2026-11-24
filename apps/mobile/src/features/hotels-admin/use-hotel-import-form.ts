@@ -21,9 +21,10 @@ import { IMPORT_KIND_COPY } from "./hotel-import.kinds";
  * The TW-25 import's state (D-181; Slice 3): the kind, the CSV, the last result, and the preview Import
  * would apply. Validate previews the CSV of the chosen kind; Import applies that preview by its job id,
  * never the file again, and only while the kind and the CSV are the ones validated and the preview
- * changes something. A kind change, a CSV edit or an import locks Import; a preview the server no longer
- * imports (404: not this person's of this kind; 409: imported already, or expired) clears the
- * validation and says why.
+ * writes something (a row created or updated, or an image registered). A kind change, a CSV edit or an
+ * import locks Import, and the kind waits while a request is under way; a preview the server no longer
+ * imports (404: not this person's of this kind; 409: imported already, expired, or raced by another
+ * write) clears the validation and says why.
  */
 
 /** The preview Import would apply: its kind, the CSV it checked, its job, and whether it writes. */

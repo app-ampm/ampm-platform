@@ -187,6 +187,33 @@ export class HotelImportRepository {
     return tx.importJob.findUnique({ where: { id }, select: PREVIEW_JOB_SELECT });
   }
 
+  /** Clears the plan of the caller's preview that can no longer be imported (an import found it expired). */
+  async clearPlan(id: string, actorId: string, tx: Client): Promise<void> {
+    await tx.importJob.update({
+      where: { id },
+      data: { planJson: Prisma.DbNull, updatedBy: actorId },
+    });
+  }
+
+  /**
+   * Clears the plans of these import types' previews that can no longer be imported: every one created
+   * before `cutoff` (the time limit ago), and any still kept on a job that is not validating. The System
+   * clears them, so no one is stamped. Idempotent: a cleared plan is not matched again. An import applying
+   * a preview holds that job's row lock (`claimPreview`), so this waits for it, then finds the plan gone.
+   * Answers how many it cleared.
+   */
+  async clearExpiredPlans(importTypes: readonly ImportType[], cutoff: Date): Promise<number> {
+    const { count } = await this.prisma.importJob.updateMany({
+      where: {
+        importType: { in: [...importTypes] },
+        planJson: { not: Prisma.DbNull },
+        OR: [{ createdAt: { lt: cutoff } }, { status: { not: "validating" } }],
+      },
+      data: { planJson: Prisma.DbNull },
+    });
+    return count;
+  }
+
   /** Marks the preview imported with the import's report, and clears its plan. */
   async finishImport(
     id: string,

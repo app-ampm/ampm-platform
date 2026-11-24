@@ -212,8 +212,11 @@ describe("HotelImportService: importing a hotels preview", () => {
     });
     const built = buildImportService({}, { transaction: async () => Promise.reject(taken) });
     const preview = await built.service.preview("hotels", csv(HEADER, CREATED), HT);
+    // The next step is the one every other 409 here names, and the one the staff app takes.
     await expect(built.service.apply("hotels", preview.importJobId, HT)).rejects.toMatchObject({
       code: "conflict",
+      message:
+        "Another change took one of these web addresses while the import ran; validate the file again",
     });
     expect(built.media.registerImportedImage).not.toHaveBeenCalled();
   });
@@ -261,8 +264,13 @@ describe("HotelImportService: the uploader's own keys, at preview and again at i
   it("re-checks the keys at import: a row the uploader may no longer write is refused", async () => {
     const built = buildImportService();
     const preview = await built.service.preview("hotels", csv(HEADER, UPDATED), HT);
-    // The same person (every test principal shares one user id), now holding the create key alone.
-    const demoted = staffPrincipal([], [READ, CREATE]);
+    // The same person (every test principal shares one user id), now holding the create key alone. It
+    // keeps the notes read, so its token reads the hotel as the preview's did: losing that too would
+    // refuse the row as changed since the preview instead, which is as safe.
+    const demoted = staffPrincipal(
+      [],
+      [READ, CREATE, "hotels.hotel_internal_rating_notes.read:all"],
+    );
     const result = await built.service.apply("hotels", preview.importJobId, demoted);
     expect(result.rejected).toEqual([
       { line: 2, errors: [expect.objectContaining({ field: "slug" })] },

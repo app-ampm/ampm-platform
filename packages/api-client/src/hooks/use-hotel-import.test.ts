@@ -102,10 +102,12 @@ beforeEach(() => {
 });
 
 describe("the import addresses", () => {
-  it("previews each kind at its own address, with no query: every upload is a preview", () => {
-    expect(hotelImportPreviewPath("hotels")).toBe("/hotels-admin/imports/hotels");
-    expect(hotelImportPreviewPath("rooms")).toBe("/hotels-admin/imports/rooms");
-    expect(hotelImportPreviewPath("venues")).toBe("/hotels-admin/imports/venues");
+  // The previous API image imports a bare upload, so a Validate sent to it during a rollback must still
+  // say it is a dry run; this API takes `dryRun=true` for that one release (core `hotelImportQuery`).
+  it("previews each kind at its own address, always as a dry run", () => {
+    expect(hotelImportPreviewPath("hotels")).toBe("/hotels-admin/imports/hotels?dryRun=true");
+    expect(hotelImportPreviewPath("rooms")).toBe("/hotels-admin/imports/rooms?dryRun=true");
+    expect(hotelImportPreviewPath("venues")).toBe("/hotels-admin/imports/venues?dryRun=true");
   });
 
   it("imports a preview of a kind by its job id", () => {
@@ -125,7 +127,7 @@ describe("useHotelImportPreview", () => {
       expect(seen.sent).toEqual([
         {
           via: "upload",
-          path: `/hotels-admin/imports/${kind}`,
+          path: `/hotels-admin/imports/${kind}?dryRun=true`,
           options: {
             body: CSV,
             contentType: "application/octet-stream",

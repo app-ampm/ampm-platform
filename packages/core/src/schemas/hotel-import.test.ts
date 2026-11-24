@@ -102,7 +102,7 @@ describe("HOTEL_IMPORT_TEMPLATES", () => {
 });
 
 describe("hotelImportQuery", () => {
-  it("takes nothing, or dryRun=true from the previous bundle's Validate", () => {
+  it("takes nothing, or the dryRun=true this bundle's Validate sends (a dry run on the previous API too)", () => {
     expect(hotelImportQuery.parse({})).toEqual({});
     expect(hotelImportQuery.parse({ dryRun: "true" })).toEqual({ dryRun: "true" });
   });

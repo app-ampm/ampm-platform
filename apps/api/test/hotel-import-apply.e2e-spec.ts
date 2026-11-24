@@ -109,6 +109,11 @@ describe("Importing an import preview (e2e)", () => {
     });
     const expired = await imports.apply(admin, "rooms", old).expect(409);
     expect(expired.body.error.message).toBe("This preview has expired; validate the file again");
+    // The refusal cleared the plan (the file's values) and kept the job, though it imported nothing.
+    expect(await prisma.importJob.findUniqueOrThrow({ where: { id: old } })).toMatchObject({
+      status: "validating",
+      planJson: null,
+    });
     const replaced = await preview(file(ROOMS, `${HOTEL},${ROOM},13`));
     const newest = await preview(file(ROOMS, `${HOTEL},${ROOM},14`));
     expect(await prisma.importJob.findUniqueOrThrow({ where: { id: replaced } })).toMatchObject({

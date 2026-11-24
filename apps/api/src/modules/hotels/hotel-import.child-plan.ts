@@ -10,6 +10,7 @@ import {
 
 import { settleAreas } from "./hotel-areas.js";
 import type { ChildImportGrants } from "./hotel-audience.js";
+import { atScale } from "./hotel-changes.js";
 import type { ImportRow } from "./hotel-import.file.js";
 import type { FieldError } from "./hotel-import.plan.js";
 
@@ -18,7 +19,8 @@ import type { FieldError } from "./hotel-import.plan.js";
  * row names its hotel by web address, which must be a live hotel, and matches one of the hotel's live rows
  * by name, exactly once normalised (core `matchRowsByName`); a soft-deleted row never matches, so a retired
  * name is created again. A matched row keeps its stored name (no rename by import) and updates only the
- * filled cells that differ (core `fieldChanges` with the units rule), so a blank never clears; no match
+ * filled cells that differ (core `fieldChanges` with the units rule, each decimal at its column's scale,
+ * so a value the column rounds is compared as it will be stored), so a blank never clears; no match
  * creates the row. Nothing is ever deleted or recreated: rate items point at rooms and venues. A row is
  * refused when its hotel is missing or deleted, its name repeats an earlier line's for the hotel, two live
  * rows share its name, a new row lacks what its kind needs, or it does what the uploader's keys do not
@@ -65,6 +67,12 @@ export interface ChildPlanRules<Row, K extends string, Create, Patch> {
   readonly plural: string;
   readonly fields: HotelFieldKinds<K>;
   readonly areas: readonly HotelAreaPair<K>[];
+  /**
+   * The decimal places of each fixed-point column (a venue's metres keep two): a row's value is taken at
+   * that scale before it is compared or written, so a value its column rounds plans no change it cannot
+   * make, and importing the same file again settles.
+   */
+  readonly scales: Readonly<Partial<Record<K, number>>>;
   /** A new row's columns from its settled cells, or what it lacks. */
   toCreate(row: Row): ChildCreate<Create>;
   /** A matched row's changed columns from its settled cells. */
@@ -136,8 +144,24 @@ export function planChildRows<
     const where = located[index] ?? NO_HOTEL;
     const key = { line, slug: row.hotelSlug, name: row.name };
     if ("field" in where) return { ...key, outcome: "error", errors: [where] };
-    return planMatched(key, row, where, context.grants, rules);
+    return planMatched(key, atColumnScale(row, rules.scales), where, context.grants, rules);
   });
+}
+
+/** The row with each fixed-point value at its column's scale, as the column will store it. */
+function atColumnScale<Row extends PlannedRow<K>, K extends string>(
+  row: Row,
+  scales: Readonly<Partial<Record<K, number>>>,
+): Row {
+  let scaled: Row = row;
+  for (const key of Object.keys(scales).filter((field): field is K => field in scales)) {
+    const value = scaled[key];
+    const scale = scales[key];
+    if (typeof value === "number" && scale !== undefined) {
+      scaled = { ...scaled, [key]: atScale(value, scale) };
+    }
+  }
+  return scaled;
 }
 
 /** Each row's hotel and its match among the hotel's live rows (matched per hotel, in file order). */

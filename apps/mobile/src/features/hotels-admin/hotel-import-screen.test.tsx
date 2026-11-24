@@ -46,7 +46,7 @@ describe("HotelImportScreen", () => {
     // The file goes up as it is, raw bytes on the kind's preview address, never wrapped in JSON.
     expect(requests).toEqual([
       {
-        path: "/hotels-admin/imports/hotels",
+        path: "/hotels-admin/imports/hotels?dryRun=true",
         body: IMPORT_CSV,
         contentType: "application/octet-stream",
       },
@@ -107,7 +107,32 @@ describe("HotelImportScreen", () => {
     expect(requests).toHaveLength(1);
   });
 
-  it("keeps Import off when the preview would neither add nor update anything", async () => {
+  it("lets Import register the images of a file whose rows all match the catalogue", async () => {
+    const requests: ImportRequest[] = [];
+    const rows = [
+      {
+        line: 2,
+        slug: "synthetic-lake-hotel",
+        name: "Synthetic Lake Hotel",
+        outcome: "unchanged" as const,
+        changedFields: [],
+      },
+    ];
+    const images = { totalRows: 1, created: 0, updated: 0, unchanged: 1, rejected: [], rows };
+    const dry = dryRunResult({ ...images, mediaRegistered: 1 });
+    const applied = appliedResult({ ...images, mediaRegistered: 1, destinationsCreated: 0 });
+    await renderImport(importFetch(requests, { dry: { hotels: dry }, applied }));
+    await validate();
+    await screen.findByText("Validated — all rows valid");
+    expect(screen.queryByTestId("hotel-import-locked")).toBeNull();
+    await fireEvent.press(screen.getByTestId("hotel-import-run"));
+    expect(
+      await screen.findByText("Imported 0 created · 0 updated · 1 unchanged · 1 image."),
+    ).toBeOnTheScreen();
+    expect(requests).toHaveLength(2);
+  });
+
+  it("keeps Import off when the preview would neither add, update nor register anything", async () => {
     const nothing = dryRunResult({ created: 0, updated: 0, unchanged: 2, rows: [] });
     await renderImport(importFetch([], { dry: { hotels: nothing } }));
     await validate();

@@ -56,12 +56,12 @@ describe("HotelImportScreen's kinds", () => {
     );
     await validate(ROOMS_CSV);
     expect(await screen.findByText("2 room categories to add or update")).toBeOnTheScreen();
-    expect(requests[0]?.path).toBe("/hotels-admin/imports/rooms");
+    expect(requests[0]?.path).toBe("/hotels-admin/imports/rooms?dryRun=true");
     expect(screen.getByTestId("hotel-import-row-2")).toHaveTextContent(
-      "Line 2 · synthetic-lake-hotel · Synthetic Garden Suite · Update: sizeSqft, sizeSqm",
+      "Line 2 · synthetic-lake-hotel · Synthetic Garden Suite · Update: sizeSqm, sizeSqft",
     );
     expect(screen.getByTestId("hotel-import-row-3")).toHaveTextContent(
-      "Line 3 · synthetic-lake-hotel · Synthetic Tent · New room category: hotelSlug, name, unitType",
+      "Line 3 · synthetic-lake-hotel · Synthetic Tent · New room category: name, unitType",
     );
     await fireEvent.press(screen.getByTestId("hotel-import-run"));
     expect(await screen.findByText("Room categories imported")).toBeOnTheScreen();
@@ -97,6 +97,12 @@ describe("HotelImportScreen when an import is refused", () => {
   it.each([
     ["conflict", 409, "This preview was already imported"],
     ["conflict", 409, "This preview has expired; validate the file again"],
+    // A race for a web address rolled the import back; the API's word now matches what the screen does.
+    [
+      "conflict",
+      409,
+      "Another change took one of these web addresses while the import ran; validate the file again",
+    ],
     ["not_found", 404, "Not found"],
   ])(
     "clears the validation on a %s (%i) and says why, until Validate runs again",
@@ -116,9 +122,9 @@ describe("HotelImportScreen when an import is refused", () => {
       await screen.findByTestId("hotel-import-result");
       expect(screen.getByTestId("hotel-import-run")).toBeEnabled();
       expect(requests.map((request) => request.path)).toEqual([
-        "/hotels-admin/imports/hotels",
+        "/hotels-admin/imports/hotels?dryRun=true",
         `/hotels-admin/imports/hotels/${IMPORT_JOB_ID}/apply`,
-        "/hotels-admin/imports/hotels",
+        "/hotels-admin/imports/hotels?dryRun=true",
       ]);
     },
   );

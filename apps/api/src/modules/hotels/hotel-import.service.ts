@@ -13,7 +13,13 @@ import { ROOM_KIND, VENUE_KIND } from "./hotel-import.child-kinds.js";
 import { ChildRowsImporter } from "./hotel-import.children.js";
 import { readImportFile, type RejectedRow } from "./hotel-import.file.js";
 import { HotelRowsImporter } from "./hotel-import.hotels.js";
-import { previewRefusal, readStoredPlan, storedPlanJson } from "./hotel-import.job.js";
+import {
+  previewRefusal,
+  readStoredPlan,
+  refusalError,
+  storedPlanJson,
+  type PreviewRefusal,
+} from "./hotel-import.job.js";
 import type { AppliedRows, KindImporter, PlannedRows } from "./hotel-import.kinds.js";
 import { importResult, reportJson, summarise, type ImportSummary } from "./hotel-import.report.js";
 import { HotelImportRepository } from "./hotel-import.repository.js";
@@ -28,9 +34,18 @@ interface Imported {
   readonly summary: ImportSummary;
 }
 
-/** Why an import lost a race for a unique key (a web address taken meanwhile); its preview stays importable. */
+/** Why an import's transaction imported nothing: the caller cannot import that preview. */
+interface Refused {
+  readonly refusal: PreviewRefusal;
+}
+
+/**
+ * Why an import lost a race for a unique key (a web address taken meanwhile). Its transaction rolled back,
+ * so nothing was written; the next step is the one every other refusal here names (and the staff app
+ * takes): validate the file again, which plans each row against the hotel or destination now there.
+ */
 const RACED =
-  "Another change took one of these web addresses while the import ran; import the preview again";
+  "Another change took one of these web addresses while the import ran; validate the file again";
 
 /**
  * The staff spreadsheet import (TW-25; AC-35.1; D-181), the same two steps for every kind (hotels, rooms,
@@ -112,7 +127,8 @@ export class HotelImportService {
       planJson,
     });
     await this.jobs.supersedePreviews(spec.importType, actorId, importJobId);
-    return importResult(importJobId, spec.kind, summary, { dryRun: true, mediaRegistered: 0 });
+    const mediaRegistered = planned.newImages;
+    return importResult(importJobId, spec.kind, summary, { dryRun: true, mediaRegistered });
   }
 
   private async applyWith<Row>(
@@ -126,14 +142,18 @@ export class HotelImportService {
     return importResult(jobId, importer.spec.kind, summary, { dryRun: false, mediaRegistered });
   }
 
-  /** The import's transaction; a web address taken meanwhile by another write answers 409. */
+  /**
+   * The import's transaction. A refused preview is answered once the transaction has committed, so the
+   * clearing of an expired plan holds; a web address taken meanwhile by another write answers 409.
+   */
   private async importIn<Row>(
     importer: KindImporter<Row>,
     jobId: string,
     principal: Principal,
   ): Promise<Imported> {
+    let outcome: Imported | Refused;
     try {
-      return await this.jobs.transaction(
+      outcome = await this.jobs.transaction(
         (tx) => this.importWithin(importer, jobId, principal, tx),
         { timeout: APPLY_TIMEOUT_MS, maxWait: APPLY_MAX_WAIT_MS },
       );
@@ -143,21 +163,34 @@ export class HotelImportService {
       }
       throw error;
     }
+    if ("refusal" in outcome) throw refusalError(outcome.refusal);
+    return outcome;
   }
 
-  /** Claims the preview, re-plans and writes its rows, and records the job, all in one transaction. */
+  /**
+   * Claims the preview, re-plans and writes its rows, and records the job, all in one transaction; or,
+   * when the caller cannot import it, says why, first clearing the plan of their preview that can never be
+   * imported now (it holds the file's values, internal notes included: RESTRICTED-NOTES). Another
+   * person's preview is never touched.
+   */
   private async importWithin<Row>(
     importer: KindImporter<Row>,
     jobId: string,
     principal: Principal,
     tx: Prisma.TransactionClient,
-  ): Promise<Imported> {
+  ): Promise<Imported | Refused> {
     const actorId = staffId(principal);
     const { spec } = importer;
     const job = await this.jobs.claimPreview(jobId, tx);
-    const refusal = previewRefusal(job, { actorId, importType: spec.importType }, new Date());
-    if (refusal) throw refusal;
-    const plan = readStoredPlan(job?.planJson ?? null, spec);
+    const refused = previewRefusal(job, { actorId, importType: spec.importType }, new Date());
+    const plan = refused === null && job !== null ? readStoredPlan(job.planJson, spec) : null;
+    if (plan === null) {
+      const refusal = refused ?? "expired";
+      if (refusal === "expired" && job !== null && job.planJson !== null) {
+        await this.jobs.clearPlan(jobId, actorId, tx);
+      }
+      return { refusal };
+    }
     const applied = await importer.apply(plan.rows, principal, { importJobId: jobId, actorId }, tx);
     const summary = summarise({ ...applied, totalRows: plan.totalRows, refused: plan.refused });
     const errorReportJson = reportJson(summary, false);

@@ -205,6 +205,18 @@ describe("Safe hotel import (e2e)", () => {
     expect(res.body.error.details).toEqual([expect.objectContaining({ path: "dryRun" })]);
   });
 
+  it("takes the dryRun=true the staff app's Validate sends, as the same preview", async () => {
+    const res = await http()
+      .post(ROUTE)
+      .query({ dryRun: "true" })
+      .set("Authorization", admin)
+      .set("Content-Type", "application/octet-stream")
+      .send(Buffer.from(csv(`${COAST},E2E CSV Dry,${PREFIX}dry,,,,,,,`)))
+      .expect(200);
+    expect(res.body.data).toMatchObject({ dryRun: true, applied: false, created: 1 });
+    expect(await prisma.hotel.count({ where: { slug: `${PREFIX}dry` } })).toBe(0);
+  });
+
   it("takes a file well over the old 100 KB JSON cap, read as the raw file", async () => {
     const notes = "x".repeat(9_000);
     const rows = Array.from(

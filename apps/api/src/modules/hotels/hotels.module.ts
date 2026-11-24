@@ -4,6 +4,7 @@ import { NotificationModule } from "../admin/notification/notification.module.js
 import { DocumentsModule } from "../documents/documents.module.js";
 import { MediaModule } from "../media/media.module.js";
 import { HotelFreshnessService } from "./hotel-freshness.service.js";
+import { HotelImportPlanSweepService } from "./hotel-import-plan-sweep.service.js";
 import { ChildRowsImporter } from "./hotel-import.children.js";
 import { HotelImportController } from "./hotel-import.controller.js";
 import { HotelRowsImporter } from "./hotel-import.hotels.js";
@@ -60,6 +61,7 @@ import { SavedHotelsStaffService } from "./saved-hotels-staff.service.js";
     HotelsAdminRepository,
     HotelImportService,
     HotelImportRepository,
+    HotelImportPlanSweepService,
     HotelRowsImporter,
     HotelRowsWriter,
     ChildRowsImporter,

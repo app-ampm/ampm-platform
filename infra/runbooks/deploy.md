@@ -24,7 +24,9 @@ host (over SSH) to migrate, bring the stack up behind a health gate, and roll ba
 Run the **Deploy** workflow manually (`workflow_dispatch`) with `environment: production` and `image_tag`
 set to the previous release tag. It resolves that tag to its digest and redeploys it without rebuilding,
 and skips the migration step. Because migrations are expand-and-contract, the previous image is compatible
-with the current (expanded) schema; contract steps ship only in a later release.
+with the current (expanded) schema; contract steps ship only in a later release. A value only the new release
+writes can still break the previous image's reads (a new enum value, such as the venue types of D-178): check the
+release's note in `docs/data-model.md` for the rows to remap first, or fix forward.
 
 ## Deploy freeze (no deploys while a wedding is live)
 

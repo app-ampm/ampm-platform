@@ -1303,6 +1303,7 @@ The developer chose to build everything in one go (decision 3). The slices still
 5. Check the `/hotel-form` headers with GET, and run the test_only smoke test on the synthetic test hotel.
 6. Then run `deploy-web.sh` for the portal, built from merged main.
 7. Contract changes deploy back to back: the staff views and import route of Slice 2, and the client views of Slices 3 and 12. A staff tab still on the old bundle shows errors until it reloads. An API rollback of such a slice must take the portal bundle back with it, and `deploy-web.sh` keeps no copy of `httpdocs`, so take one by hand before deploying. Once clients are live, ship new keys in the bundle one release ahead.
+8. A migration that only adds still limits a rollback once the new release has written values the previous image cannot read. After Slice 3, the previous image answers 500 for any hotel with a venue of the five new types, and for a second primary contact or a room occupancy of 0. Before redeploying it, remap those venues and keep their ids to restore them, or fix forward; the SQL is in the Module C note of `docs/data-model.md` ("Rolling back past this migration").
 
 ---
 

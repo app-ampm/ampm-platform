@@ -117,6 +117,7 @@ export const ROOM_KIND: ChildKindRules<
   plural: "rooms",
   fields: ROOM_IMPORT_COMPARED_FIELDS,
   areas: ROOM_AREA_PAIRS,
+  scales: {},
   toCreate: ({ hotelSlug: _hotelSlug, ...fields }) => ({ data: fields }),
   toPatch: roomPatch,
   filled: (row) =>
@@ -195,6 +196,8 @@ export const VENUE_KIND: ChildKindRules<
   plural: "venues",
   fields: VENUE_IMPORT_COMPARED_FIELDS,
   areas: VENUE_AREA_PAIRS,
+  // numeric(6,2): the metres a venue keeps, so 30.000000000000004 compares and writes as 30.
+  scales: { lengthM: 2, widthM: 2, ceilingHeightM: 2 },
   toCreate: venueCreate,
   toPatch: venuePatch,
   filled: (row) =>

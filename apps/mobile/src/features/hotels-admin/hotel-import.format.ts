@@ -112,6 +112,15 @@ export function dryRunDestinationsNote(result: HotelImportResult): string | null
   return text ? `Importing ${text}.` : null;
 }
 
+/**
+ * What a dry run's images would become: "would register 2 images", or null when none would. An image
+ * never makes a row an update, so a file that only adds images says so here.
+ */
+function newImagesText(result: HotelImportResult): string | null {
+  const count = result.mediaRegistered;
+  return count > 0 ? `would register ${counted(count, "image")}` : null;
+}
+
 function dryRunSummary(result: HotelImportResult): string {
   const counts = [
     `${result.created} to add`,
@@ -119,8 +128,10 @@ function dryRunSummary(result: HotelImportResult): string {
     `${result.unchanged} unchanged`,
     `${result.rejected.length} rejected`,
   ];
-  const destinations = newDestinationsText(result);
-  const tail = destinations ? `${destinations}; nothing saved yet` : "nothing saved yet";
+  const would = [newDestinationsText(result), newImagesText(result)].filter(
+    (text) => text !== null,
+  );
+  const tail = [...would, "nothing saved yet"].join("; ");
   return `Checked ${rows(result.totalRows)}: ${counts.join(", ")} — ${tail}.`;
 }
 
@@ -175,9 +186,12 @@ export function changingRows(result: HotelImportResult): HotelImportRowReport[] 
     .sort((a, b) => a.line - b.line);
 }
 
-/** Whether a preview would create or update anything, so its Import can write something. */
+/**
+ * Whether a preview would write anything, so its Import is worth pressing: a row to create or update,
+ * or an image to register (a hotels row whose cells all match still adds its image).
+ */
 export function hasChanges(result: HotelImportResult): boolean {
-  return result.created + result.updated > 0;
+  return result.created + result.updated + result.mediaRegistered > 0;
 }
 
 /** A headline for the changing block, e.g. "3 venues to add or update", or null when none would. */

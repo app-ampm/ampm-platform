@@ -24,8 +24,9 @@ Each template has an example file with the same header and synthetic rows for a 
   - The API reads the body only after the sign-in, rate-limit and permission checks have passed, through the shared post-guard reader ([architecture §6](../architecture.md)).
 - **Every upload is a preview.** Every row is checked and planned, and the report gives each one an outcome: **create**, **update** (naming the columns that would change), **unchanged**, or **error** (naming the column and the reason).
   - The preview changes no hotel, room or venue. It records itself in `import_jobs` with its report, which names fields and never holds their values, and with its planned rows, values included, which are kept for the import and never shown.
-  - Its counts say what importing would do. A preview with no valid row cannot be imported.
-  - For one release, `?dryRun=true`, which the previous version of the team app sends, is still accepted and changes nothing; `dryRun=false` is refused (400).
+  - The planned rows are kept only while they can be imported. They are cleared on import, when a newer preview replaces them, when an import finds the preview expired, and by a daily clean-up once they are more than 24 hours old; the job and its report stay.
+  - Its counts say what importing would do, the images it would register included. A preview with no valid row cannot be imported.
+  - For one release the team app's Validate sends `?dryRun=true`, and the API takes it as the same preview. Should the API be rolled back to the previous version, which imports a file sent without it, a Validate from this team app still changes nothing there. The previous version of the team app cannot read this API's answers at all (its checks of a result are strict), so reload the team app after a deploy. `dryRun=false`, the previous team app's import, is refused (400). Slice 4 removes the query from both.
 - **Import applies the preview by its job id.** Import sends no file: `POST /hotels-admin/imports/<kind>/<jobId>/apply`, with an empty body, loads the rows the preview planned.
   - It answers with the preview's own job id, which is then `applied`; no second job is created.
   - Error rows never load; the valid rows still do (48 of 50 in the acceptance test).
@@ -36,7 +37,8 @@ Each template has an example file with the same header and synthetic rows for a 
   - When the preview can no longer be imported, Import changes nothing, and the next step is always to validate the file again:
     - a preview that is another person's, of another kind, or does not exist answers 404;
     - a preview imported already answers 409, "This preview was already imported";
-    - a preview older than 24 hours, or replaced by a newer one, answers 409, "This preview has expired; validate the file again".
+    - a preview older than 24 hours, or replaced by a newer one, answers 409, "This preview has expired; validate the file again";
+    - an import that another change raced for a web address (a hotel or destination created meanwhile with one the file uses) writes nothing and answers 409, "Another change took one of these web addresses while the import ran; validate the file again".
 - **Changed since preview.** Import locks the hotels the file touches and plans each stored row again against the catalogue as it is at that moment. It refuses a row, with "Changed since preview; validate the file again" on its `row` field, and counts it among the rejected rows, when:
   - a value the import compares changed on the row's hotel, room or venue after the preview;
   - the hotel, room or venue the row was to create now exists;
@@ -44,10 +46,10 @@ Each template has an example file with the same header and synthetic rows for a 
 
   The other rows still load, so an import never overwrites what staff changed after the preview. Validate the file again to see the change and load the refused rows.
 - **What counts as changed.** A change is a new value in a column the import compares:
-  - **Hotels:** every template column except `slug`, `destinationName` and `imageRef`; `destinationSlug` compares the hotel's destination.
+  - **Hotels:** every template column except `slug`, `destinationName` and `imageRef`; `destinationSlug` compares the hotel's destination. The internal rating and notes count only for an uploader who reads or writes them, so an edit of the notes never refuses anyone else's row.
   - **Rooms and Venues:** every template column except `hotelSlug` and `name`.
 
-  Values are compared as the import compares them, so spacing never counts. The check is a version token, a hash of those values taken at the preview, not the time of the last edit. Recording a verification, or editing what the template does not carry (contacts, media, rate cards, another room), is therefore not a change.
+  Each check is exactly as fine as its kind's comparison. Rooms and Venues compare text with its spacing evened out, so an edit only in spacing is not a change. The Hotels template compares text trimmed only, and links and list entries exactly, so on a hotel any stored edit counts, spacing and a link's case included. The check is a version token, a hash of those values taken at the preview, not the time of the last edit. Recording a verification, or editing what the template does not carry (contacts, media, rate cards, another room), is therefore not a change.
 - **A blank cell leaves the value unchanged.** On an existing hotel, room or venue an empty cell never clears or resets anything; to clear a value, edit it in the team app. A row that creates something leaves its blank cells empty, apart from the defaults the Hotels section gives.
 - **Permissions are checked row by row**, each on the key the dedicated screen asks; a row the uploader may not write is an error row, and the other rows still load. Each kind's section lists its keys. The Hotel team and the Super Admin hold every one of them, so the row checks matter for custom roles.
 - **Audited, and recorded.** Every hotel, room or venue an import creates or updates writes an audit event. The job keeps the counts and the import's report. A row that changes nothing writes nothing and no audit event, and an import that writes nothing says nothing was imported (the result's `applied` is false).
@@ -74,7 +76,7 @@ Hotels publish sizes in square feet or in square metres. The catalogue keeps the
 - **Square feet win.** A filled sq ft cell stores the m² worked out from it, round(sq ft × 0.09290304), with the converter the team app uses (`sqmFromSqft` in `packages/core`). An m² cell filled in the same row is replaced by the worked-out figure. So `850` sq ft is stored with 79 m², and `5000` with 465 m².
 - **Square metres alone restate the size.** An m² cell filled without its sq ft cell, for a room, venue or hotel that has a sq ft figure stored, makes the m² the published figure and clears the stored sq ft. The report names both columns as changed.
 - **Blank cells leave both figures as they are.**
-- **Metres only for lengths.** Lengths, widths and ceiling heights are in metres, with at most two decimal places (`30.5`, `15.25`).
+- **Metres only for lengths.** Lengths, widths and ceiling heights are in metres, with at most two decimal places (`30.5`, `15.25`). A figure carrying a spreadsheet's rounding noise, such as `30.000000000000004`, is read as the column keeps it, `30`, so importing the file again changes nothing.
 
 ## The Hotels template
 
@@ -97,7 +99,7 @@ One row per hotel. The column list is `HOTEL_IMPORT_COLUMNS` in `packages/core/s
   - A row that names an existing hotel also needs `hotels.hotel_profiles_client_fields.read`. Without it the row is an error with one reason ("you cannot read existing hotels"), whatever its destination or cells, so the report never tells the uploader where a hotel is filed or what it holds.
   - A cell is compared with the internal rating and notes only for a holder of `hotels.hotel_internal_rating_notes.read`. For anyone else a filled notes cell counts as a change, so the report never tells them whether a guess matches a value they cannot see.
 - **The audit event** keeps the hotel's name, status and demo and website flags before and after, as an edit in the team app does, and names the other fields the row changed without their values.
-- **Images by reference.** A filled `imageRef` registers a pending, internal gallery image for the hotel once the import has committed; the reference is kept in the image's audit event, never as a caption. It is registered once per hotel and reference, so a re-import adds none. Images are counted apart from the rows (`mediaRegistered`): a row whose cells all match stays unchanged though it adds an image.
+- **Images by reference.** A filled `imageRef` registers a pending, internal gallery image for the hotel once the import has committed; the reference is kept in the image's audit event, never as a caption. It is registered once per hotel and reference, so a re-import adds none. Images are counted apart from the rows (`mediaRegistered`): a row whose cells all match stays unchanged though it adds an image. A preview counts the images importing would register, leaving out those already registered, so a file that only adds images to hotels whose cells match can still be imported.
 
 | Column | Required | Type | Notes |
 |---|---|---|---|
@@ -160,6 +162,7 @@ A Rooms or Venues row names its hotel by web address in `hotelSlug`, and its roo
 - **Two rooms or venues sharing a name.** When two rooms of the hotel share a name, ignoring case and spacing, a row with that name cannot tell them apart. It is a row error ("Two rooms are named …; rename one in the staff app first", and the same for venues); rename one in the team app, then validate again.
 - **The same name twice in one file**, for the same hotel, is a row error on the second line.
 - **Keys, row by row.** Uploading a Rooms or Venues file needs `hotels.room_categories_venues.create`. A row that creates a room or venue needs that key, and a row that changes one needs `hotels.room_categories_venues.update`.
+- **A preview compares only what the uploader may read.** A row that names an existing room or venue also needs `hotels.room_categories_venues.read`, even with the update key. Without it the row is an error with one reason ("A room already has this name, and you cannot read rooms", and the same for venues), so the report never tells the uploader whether a cell matches a row they cannot read.
 - **Contacts are not imported.** They are RESTRICTED-CONTACT, staff-only data: add them on the hotel's Contacts tab (TW-22).
 
 ## The Rooms template
@@ -217,13 +220,13 @@ One row per venue. The column list is `VENUE_IMPORT_COLUMNS` in the same file, w
 - **Choose the kind** first: Hotels, Rooms or Venues. The picker offers only the kinds you may import.
 - **Download template** saves the chosen kind's header row, built in the app from the core template; the screen shows the kind's column help beside the button. The file starts with the byte-order mark that tells Excel the file is UTF-8, so Excel opens it, and saves it again, as CSV UTF-8 rather than turning ₹ or an Indic name into `?`.
 - **Validate** runs the preview and shows:
-  - the counts: to create, to update, unchanged, rejected, and for Hotels any new destinations importing would add, in its toast too;
+  - the counts: to create, to update, unchanged, rejected, and for Hotels any new destinations (in its toast too) and images importing would add;
   - the rows that would create or update, up to 20: each row's line, the hotel's web address and, for Rooms and Venues, the room or venue name, with the columns that would change (never their values);
   - the rejected rows, up to 20: line, column and reason.
 
   Unchanged rows are only counted. The screen notes that a preview can be imported for 24 hours.
-- **Import is locked** until a fresh preview is on screen. It locks after a change of kind, an edit to the CSV (the report stays on screen, marked as the report of the CSV as it was) or a finished import, until Validate runs again. Import is disabled when the preview would create or update nothing.
-- **Import** imports the preview and shows the same report for what was done. Rows changed since the preview are among the rejected; a run that changed nothing says so. When the preview can no longer be imported (expired, replaced, already imported or not found), the screen clears it and says why: validate the file again.
+- **Import is locked** until a fresh preview is on screen. It locks after a change of kind, an edit to the CSV (the report stays on screen, marked as the report of the CSV as it was) or a finished import, until Validate runs again. Import is disabled when the preview would create, update or register nothing. The kind cannot change while a preview or an import is under way.
+- **Import** imports the preview and shows the same report for what was done. Rows changed since the preview are among the rejected; a run that changed nothing says so. When the preview can no longer be imported (expired, replaced, already imported or not found), or another change raced the import for a web address, the screen clears it and says why: validate the file again.
 - **Download error report** (named **Download report** when no row is rejected) saves the whole report as a CSV, every row included, with its outcome, the columns that change and its errors. A cell that starts with `=`, `+`, `-` or `@` is saved as text, so a spreadsheet never runs it as a formula.
 
 > **Which columns reach a client (R8/R9 defaults, locked by D-064/D-065):**

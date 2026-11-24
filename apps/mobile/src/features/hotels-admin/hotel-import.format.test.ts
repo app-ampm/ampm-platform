@@ -100,6 +100,37 @@ describe("hotel-import.format", () => {
       );
     });
 
+    it("says how many images a dry run would register, beside any new destination", () => {
+      const preview = { dryRun: true, applied: false, created: 0, updated: 0, rejected: [] };
+      expect(
+        importSummary(
+          result({
+            ...preview,
+            totalRows: 1,
+            unchanged: 1,
+            destinationsCreated: 0,
+            mediaRegistered: 1,
+          }),
+        ),
+      ).toBe(
+        "Checked 1 row: 0 to add, 0 to update, 1 unchanged, 0 rejected — would register 1 image; nothing saved yet.",
+      );
+      expect(
+        importSummary(
+          result({
+            ...preview,
+            totalRows: 2,
+            created: 1,
+            unchanged: 1,
+            destinationsCreated: 1,
+            mediaRegistered: 2,
+          }),
+        ),
+      ).toBe(
+        "Checked 2 rows: 1 to add, 0 to update, 1 unchanged, 0 rejected — would add 1 new destination; would register 2 images; nothing saved yet.",
+      );
+    });
+
     it("names one destination and one image in the singular", () => {
       expect(
         importSummary(
@@ -243,9 +274,13 @@ describe("hotel-import.format", () => {
     });
   });
 
-  it("says whether a preview would add or update anything", () => {
+  it("says whether a preview would add, update or register anything", () => {
     expect(hasChanges(result({ created: 0, updated: 1 }))).toBe(true);
     expect(hasChanges(result({ created: 0, updated: 0, unchanged: 3 }))).toBe(false);
+    // An image never makes a row an update: a file that only adds images still imports something.
+    expect(hasChanges(result({ created: 0, updated: 0, unchanged: 3, mediaRegistered: 2 }))).toBe(
+      true,
+    );
   });
 
   it("refuses an empty CSV and one over the 5 MB cap before it is sent", () => {

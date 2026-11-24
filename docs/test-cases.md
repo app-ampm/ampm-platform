@@ -1619,7 +1619,8 @@ All automated suites run against synthetic data from the seed in §7 (V-15). Job
   - The second hotels import leaves blank-cell fields, status and flags unchanged.
   - A deleted hotel's web address is a row error, and so is a rooms or venues row that names no hotel or a deleted one.
   - Step 4: the edited room's row is refused with "Changed since preview; validate the file again"; the other rows load.
-  - Step 5: the venue left out is kept, since an import never deletes. The other venue matches by name and keeps its stored name. The second import of the preview and the expired preview each answer 409 and write nothing.
+  - Step 5: the venue left out is kept, since an import never deletes. The other venue matches by name and keeps its stored name. The second import of the preview and the expired preview each answer 409 and write nothing. The expired preview's stored rows are cleared, as a daily job clears every preview's once it is past 24 hours.
+  - A hotels file whose rows all match but add images previews as unchanged with the images it would register, and can be imported.
   - Every applied row writes an audit event, and each job stores its counts and report.
 - **References.** TW-25, D-181 (one template per kind replaced the single template with column mapping on 23 November 2026; Slice 3 imports a preview by its job id); D-178.
 

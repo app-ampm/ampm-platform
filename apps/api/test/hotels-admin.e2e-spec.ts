@@ -93,7 +93,7 @@ describe("Hotel import (e2e)", () => {
       updated: 0,
       unchanged: 0,
       destinationsCreated: 1,
-      mediaRegistered: 0, // a dry run writes nothing, media included
+      mediaRegistered: 2, // what importing would register: both valid rows carry an imageRef
     });
     expect(res.body.data.rows.map((row: { outcome: string }) => row.outcome)).toEqual([
       "create",
@@ -188,6 +188,11 @@ describe("Hotel import (e2e)", () => {
   });
 
   it("is idempotent — importing the same file again writes nothing (applied: false), the job still applied", async () => {
+    // Its preview already says so: the rows match and their images are registered (D-181).
+    const preview = await importCalls(app)
+      .preview(await sa(), "hotels", CSV)
+      .expect(200);
+    expect(preview.body.data).toMatchObject({ created: 0, updated: 0, mediaRegistered: 0 });
     const res = await importFile(CSV);
     expect(res.body.data).toMatchObject({
       applied: false,

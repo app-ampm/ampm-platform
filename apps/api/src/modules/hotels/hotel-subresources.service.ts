@@ -15,7 +15,7 @@ import {
 import { Prisma } from "../../generated/prisma/client.js";
 import { AuditService } from "../../policy/audit.service.js";
 import { type Principal, staffId } from "../../policy/principal.types.js";
-import { requireContactsRead, requireContactsUpdate } from "./hotel-audience.js";
+import { hotelAudienceOf, requireContactsRead, requireContactsUpdate } from "./hotel-audience.js";
 import {
   roomCreateData,
   roomPatchData,
@@ -196,12 +196,18 @@ export class HotelSubresourcesService {
     }
   }
 
-  /** Demotes the hotel's live primary (not the contact being written), each with its own audit event. */
+  /**
+   * Demotes the hotel's live primary (not the contact being written), each with its own audit event. The
+   * demotion needs the contacts update key. A caller who cannot read the hotel's contacts is held to that
+   * key before anything is read, so the answer never says whether the hotel has a primary (denial equals
+   * absence); a contacts reader is asked for it only when there is one to demote (D-178).
+   */
   private async demotePrimary(
     principal: Principal,
     target: { readonly hotelId: string; readonly contactId: string | null },
     tx: Prisma.TransactionClient,
   ): Promise<void> {
+    if (!hotelAudienceOf(principal).contacts) requireContactsUpdate(principal);
     const primaries = await this.repo.findLivePrimaries(target.hotelId, target.contactId, tx);
     if (primaries.length === 0) return;
     requireContactsUpdate(principal);

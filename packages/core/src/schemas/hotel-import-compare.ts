@@ -6,11 +6,12 @@ import type { RoomImportColumn, VenueImportColumn } from "./hotel-import-rooms-v
 
 /*
  * What each kind of staff import compares (D-181; docs/planning/hotel-information-form-plan.md §4.8):
- * the fields `fieldChanges` checks for a row's changes, and the fields the API hashes, normalised by
- * `canonicalFieldsJson`, into a target's version token. Apply refuses a row whose target's token moved
- * since the preview ("Changed since preview"). The token never covers `updated_at`, which recording a
- * verification bumps. A matched room or venue keeps its stored name, so `name` is not compared; nor is
- * the hotel's web address that keys a row.
+ * the fields `fieldChanges` checks for a row's changes, and the fields the API hashes into a target's
+ * version token: a room's or venue's normalised by `canonicalFieldsJson`, as its planner compares them, a
+ * hotel's exactly as stored, since the hotels planner keeps Slice 2's own comparison (text trimmed only,
+ * lists and links exact). Apply refuses a row whose target's token moved since the preview ("Changed since
+ * preview"). The token never covers `updated_at`, which recording a verification bumps. A matched room or
+ * venue keeps its stored name, so `name` is not compared; nor is the hotel's web address that keys a row.
  */
 
 /** A hotels-template column the import compares: every one but the key and the references. */
@@ -21,7 +22,9 @@ export type HotelImportComparedField = Exclude<
 
 /**
  * The hotels import's compared fields: the hotel's columns and its destination's web address (a row can
- * move the hotel). The hotels planner keeps its own comparison (Slice 2); this list is its version token.
+ * move the hotel). The hotels planner keeps its own comparison (Slice 2); this list is what its version
+ * token covers, each value hashed exactly as stored (the internal rating and notes only for an uploader
+ * who reads or writes them).
  */
 export const HOTEL_IMPORT_COMPARED_FIELDS: HotelFieldKinds<HotelImportComparedField> = {
   destinationSlug: "text",

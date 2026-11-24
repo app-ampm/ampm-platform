@@ -193,6 +193,25 @@ export class MediaRepository {
     });
   }
 
+  /** Which of these object keys a live asset holds, as any of its keys (`findByAnyKey`, in one read). */
+  async heldKeys(keys: readonly string[]): Promise<Set<string>> {
+    if (keys.length === 0) return new Set();
+    const asked = { in: [...keys] };
+    const rows = await this.prisma.mediaAsset.findMany({
+      where: {
+        deletedAt: null,
+        OR: [{ storageKey: asked }, { thumbnailKey: asked }, { webKey: asked }],
+      },
+      select: { storageKey: true, thumbnailKey: true, webKey: true },
+    });
+    const held = rows.flatMap(({ storageKey, thumbnailKey, webKey }) => [
+      storageKey,
+      thumbnailKey,
+      webKey,
+    ]);
+    return new Set(held.filter((key): key is string => key !== null));
+  }
+
   /**
    * One owner's gallery-ready media: clean, within the allowed visibility levels (AC-24.4), ordered for
    * display. Soft-deleted and non-clean rows are scoped out here (security.md: repository scoping). The

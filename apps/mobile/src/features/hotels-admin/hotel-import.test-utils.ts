@@ -60,7 +60,10 @@ export function appliedResult(overrides: Partial<HotelImportResult> = {}): Hotel
   return { ...dryRunResult(), dryRun: false, applied: true, destinationsCreated: 1, ...overrides };
 }
 
-/** What validating {@link ROOMS_CSV} reports. */
+/**
+ * What validating {@link ROOMS_CSV} reports, as the API words it: an update names its fields in the
+ * compared order (m² before sq ft), and a new room names its filled columns but not the hotel's address.
+ */
 export function roomsDryRunResult(overrides: Partial<HotelImportResult> = {}): HotelImportResult {
   return dryRunResult({
     kind: "rooms",
@@ -74,14 +77,14 @@ export function roomsDryRunResult(overrides: Partial<HotelImportResult> = {}): H
         slug: "synthetic-lake-hotel",
         name: "Synthetic Garden Suite",
         outcome: "update",
-        changedFields: ["sizeSqft", "sizeSqm"],
+        changedFields: ["sizeSqm", "sizeSqft"],
       },
       {
         line: 3,
         slug: "synthetic-lake-hotel",
         name: "Synthetic Tent",
         outcome: "create",
-        changedFields: ["hotelSlug", "name", "unitType"],
+        changedFields: ["name", "unitType"],
       },
     ],
     ...overrides,
@@ -105,7 +108,8 @@ export interface ImportAnswers {
   readonly me?: MeResponse;
 }
 
-const PREVIEW = /^\/hotels-admin\/imports\/(hotels|rooms|venues)$/;
+// A preview always says it is a dry run (api-client `hotelImportPreviewPath`); a bare upload is a 404 here.
+const PREVIEW = /^\/hotels-admin\/imports\/(hotels|rooms|venues)\?dryRun=true$/;
 const APPLY = /^\/hotels-admin\/imports\/(hotels|rooms|venues)\/[^/]+\/apply$/;
 
 function dryResult(answers: ImportAnswers, kind: string): HotelImportResult {
