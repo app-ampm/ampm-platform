@@ -18,7 +18,12 @@ export interface Tag {
 }
 
 const TAG_NAME = /^<([^\s/>]+)/;
-const ATTRIBUTE = /([^\s=/>]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/g;
+/*
+ * An attribute's name starts only where a run of name characters starts (after whitespace, `=`, `/`, `>`
+ * or a quote), never inside one: otherwise every position of a long run without `=` would retry the whole
+ * run, in quadratic time, and the content types and package relationships are read before the type check.
+ */
+const ATTRIBUTE = /(?<![^\s=/>"'])([^\s=/>"']+)\s*=\s*(?:"([^"]*)"|'([^']*)')/g;
 
 /** The name, attributes (entities decoded) and form of a start tag as the tokenizer reports it. */
 export function parseTag(raw: string, part: string): Tag {

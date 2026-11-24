@@ -101,4 +101,24 @@ describe("parseTag", () => {
     const tag = '<Relationship TargetMode="Internal" TargetMode="External"/>';
     expect((await refusalOf(() => parseTag(tag, "p"))).reason).toBe("file_damaged");
   });
+
+  it("reads attributes written without a space between them, as before", () => {
+    const tag = parseTag('<Relationship Id="rId1"Type=\'t\' Target = "x"/>', "p");
+    expect([...tag.attributes]).toEqual([
+      ["Id", "rId1"],
+      ["Type", "t"],
+      ["Target", "x"],
+    ]);
+  });
+
+  it.each([
+    ["one attribute name of 1 MB with no value", ` ${"b".repeat(1_000_000)}`],
+    ["quotes and names with no value", ` ${'"b'.repeat(500_000)}`],
+    ["a name before 1 MB of spaces", ` b${" ".repeat(1_000_000)}b`],
+    ["names and equals signs with no quoted value", ` b=${"b=".repeat(500_000)}`],
+  ])("reads %s well under 100 ms (linear time)", (_name, attributes) => {
+    const started = performance.now();
+    parseTag(`<Default${attributes}/>`, "[Content_Types].xml");
+    expect(performance.now() - started).toBeLessThan(100);
+  });
 });

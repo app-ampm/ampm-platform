@@ -68,6 +68,21 @@ describe("inspectOoxml: the main part decides the kind (D-187 §2)", () => {
     expect((await refusalOf(inspectOoxml(pkg, PDF_AND_SLIDES))).reason).toBe("type_not_accepted");
   });
 
+  it("reads a content types tag of nearly 1 MiB in linear time, before the type check", async () => {
+    const zip = writeZip([
+      { name: "[Content_Types].xml", data: `<Types><Default ${"b".repeat(1_000_000)}/></Types>` },
+      {
+        name: "_rels/.rels",
+        data: `<Relationships><Relationship Id="r1" Type="${TRANSITIONAL_RELS}/officeDocument" Target="ppt/presentation.xml"/></Relationships>`,
+      },
+      { name: "ppt/presentation.xml", data: "<p/>" },
+    ]);
+    const started = performance.now();
+    const refusal = await refusalOf(inspectOoxml(zip, PHOTOS));
+    expect(performance.now() - started).toBeLessThan(1000);
+    expect(refusal.reason).toBe("unknown_type");
+  });
+
   it("refuses a package that expands too much, measured while inflating", async () => {
     const pkg = buildPackage({
       parts: [{ name: "ppt/bomb.xml", data: Buffer.alloc(64 * 1024 * 1024, 0x20) }],
