@@ -4,6 +4,7 @@ import {
   HOTEL_DUPLICATE_HINTS_MAX,
   HOTEL_INFO_REQUEST_EVENTS_SHOWN,
   hotelDuplicateHints,
+  hotelFormModeView,
   hotelInfoRequestDetail,
   hotelInfoRequestFullView,
   hotelInfoRequestLinkIssued,
@@ -143,5 +144,16 @@ describe("the duplicate hints", () => {
     );
     const many = Array.from({ length: HOTEL_DUPLICATE_HINTS_MAX + 1 }, () => hint);
     expect(hotelDuplicateHints.safeParse({ hints: many }).success).toBe(false);
+  });
+});
+
+describe("the hotel form's mode, for the Hotel team", () => {
+  it("answers the mode alone, and nothing else of the policy", () => {
+    for (const mode of ["off", "test_only", "on"]) {
+      expect(hotelFormModeView.safeParse({ mode }).success, mode).toBe(true);
+    }
+    expect(hotelFormModeView.safeParse({ mode: "paused" }).success).toBe(false);
+    expect(hotelFormModeView.safeParse({ mode: "on", replyTo: null }).success).toBe(false);
+    expect(hotelFormModeView.safeParse({}).success).toBe(false);
   });
 });

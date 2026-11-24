@@ -1,5 +1,6 @@
 import {
   CONFIG_REGISTRY,
+  hotelFormModeView,
   hotelInfoRequestFullView,
   hotelInfoRequestListQuery,
   hotelInfoRequestPage,
@@ -43,12 +44,16 @@ function build(row: RequestRow | null = requestRow({ expiresAt: EXPIRES })) {
     listForHotel: vi.fn(async () => ({ rows: row ? [row] : [], nextCursor: null })),
     hotelExists: vi.fn(async () => true),
   };
-  const config = { get: vi.fn(async () => CONFIG_REGISTRY["hotel_form.policy"].default) };
+  const policy = CONFIG_REGISTRY["hotel_form.policy"].default;
+  const config = {
+    get: vi.fn(async () => policy),
+    getFresh: vi.fn(async () => ({ ...policy, mode: "test_only" as const })),
+  };
   const reader = new HotelInfoRequestReader(
     repo as unknown as HotelInfoRequestsRepository,
     config as unknown as ConfigService,
   );
-  return { reader, repo };
+  return { reader, repo, config };
 }
 
 describe("HotelInfoRequestReader.detail", () => {
@@ -135,5 +140,17 @@ describe("HotelInfoRequestReader lists", () => {
     await expect(reader.history(HOTEL_ID, { limit: 20 })).rejects.toMatchObject({
       code: "not_found",
     });
+  });
+});
+
+describe("HotelInfoRequestReader.formMode", () => {
+  it("reads the mode past the configuration cache and answers it alone", async () => {
+    const { reader, config } = build();
+    const answer = await reader.formMode();
+    expect(answer).toEqual({ mode: "test_only" });
+    expect(hotelFormModeView.safeParse(answer).success).toBe(true);
+    expect(config.getFresh).toHaveBeenCalledWith("hotel_form.policy");
+    // The cached read could be up to five minutes behind a Super Admin's switch.
+    expect(config.get).not.toHaveBeenCalled();
   });
 });

@@ -8,6 +8,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   newSuiteHotel,
   requestCalls,
+  setFormPolicy,
   startRequestSuite,
   stopRequestSuite,
   type RequestSuite,
@@ -23,7 +24,7 @@ describe("Hotel information requests: reads and duplicate hints (e2e)", () => {
   let suite: RequestSuite;
   let requestId: string;
   let testRequestId: string;
-  const { create, get, list, history, hints } = requestCalls(() => suite);
+  const { create, get, list, history, hints, mode } = requestCalls(() => suite);
 
   beforeAll(async () => {
     suite = await startRequestSuite("e2e-hir-read-");
@@ -119,6 +120,23 @@ describe("Hotel information requests: reads and duplicate hints (e2e)", () => {
         expect(text).not.toContain(forbidden);
       }
     }
+  });
+
+  it("answers every reader the hotel form's mode alone, as switched a moment ago, and 404 to the rest", async () => {
+    await setFormPolicy(suite, {
+      mode: "test_only",
+      replyTo: "desk@synthetic-ampm.example",
+      helpContact: "Synthetic help desk",
+    });
+    for (const role of ["sa", "ht", "sm", "pm"] as const) {
+      const answer = await mode(role).expect(200);
+      // The mode alone: the reply-to, the help contact and the limits stay in the admin console.
+      expect(answer.body.data, role).toEqual({ mode: "test_only" });
+    }
+    // Read past the five-minute configuration cache: a switch shows on the next read.
+    await setFormPolicy(suite, { mode: "on" });
+    expect((await mode("pm").expect(200)).body.data).toEqual({ mode: "on" });
+    for (const role of ["cd", "fa", "client"] as const) await mode(role).expect(404);
   });
 
   it("hints hotels by name and name variant (case and accents aside), web address and host, deleted ones included", async () => {

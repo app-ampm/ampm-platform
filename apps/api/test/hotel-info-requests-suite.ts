@@ -202,5 +202,7 @@ export function requestCalls(suite: () => RequestSuite) {
       http().get(`/hotels-admin/hotels/${hotelId}/info-requests`).set("Authorization", as(role)),
     hints: (role: Role, query: Record<string, string>) =>
       http().get("/hotels-admin/hotel-duplicate-hints").query(query).set("Authorization", as(role)),
+    mode: (role: Role) =>
+      http().get("/hotels-admin/hotel-form-mode").set("Authorization", as(role)),
   };
 }

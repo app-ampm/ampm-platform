@@ -3,6 +3,7 @@ import {
   errors,
   HOTEL_INFO_REQUEST_EVENTS_SHOWN,
   isLiveHotelInfoRequestStatus,
+  type HotelFormModeView,
   type HotelInfoRequestDetail,
   type HotelInfoRequestHistoryQuery,
   type HotelInfoRequestListQuery,
@@ -85,6 +86,16 @@ export class HotelInfoRequestReader {
     const { maxExtensionDays } = await this.config.get("hotel_form.policy");
     const first = firstExpiryOf(await this.repo.firstExtensionDetail(row.id, tx), row.expiresAt);
     return extensionLimit(first, maxExtensionDays);
+  }
+
+  /**
+   * The hotel form's mode alone (`GET /hotels-admin/hotel-form-mode`), read past the configuration cache
+   * as every decision on it is (D-188 §6), so the staff sheets show what "Email it" will do now, not up
+   * to five minutes ago. Nothing else of the policy leaves here.
+   */
+  async formMode(): Promise<HotelFormModeView> {
+    const { mode } = await this.config.getFresh("hotel_form.policy");
+    return { mode };
   }
 
   private summaries(page: RequestPage): HotelInfoRequestPage {

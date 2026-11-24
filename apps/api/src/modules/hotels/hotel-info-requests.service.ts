@@ -4,6 +4,7 @@ import {
   isLiveHotelInfoRequestStatus,
   type HotelDuplicateHints,
   type HotelDuplicateHintsQuery,
+  type HotelFormModeView,
   type HotelInfoRequestDetail,
   type HotelInfoRequestHistoryQuery,
   type HotelInfoRequestListQuery,
@@ -71,6 +72,11 @@ export class HotelInfoRequestsService {
   /** The catalogue hotels a proposed new hotel may already be. */
   async duplicateHints(query: HotelDuplicateHintsQuery): Promise<HotelDuplicateHints> {
     return { hints: duplicateHints(await this.repo.hintCandidates(), query) };
+  }
+
+  /** The hotel form's mode, fresh, for the staff sheets. */
+  formMode(): Promise<HotelFormModeView> {
+    return this.reader.formMode();
   }
 
   list(query: HotelInfoRequestListQuery): Promise<HotelInfoRequestPage> {

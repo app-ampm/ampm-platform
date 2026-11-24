@@ -11,6 +11,7 @@ import {
   uuid,
   type HotelDuplicateHints,
   type HotelDuplicateHintsQuery,
+  type HotelFormModeView,
   type HotelInfoRequestCreateRequest,
   type HotelInfoRequestDetail,
   type HotelInfoRequestHistoryQuery,
@@ -62,6 +63,17 @@ export class HotelInfoRequestsController {
     @ZodQuery(hotelDuplicateHintsQuery) query: HotelDuplicateHintsQuery,
   ): Promise<HotelDuplicateHints> {
     return this.requests.duplicateHints(query);
+  }
+
+  /**
+   * The hotel form's mode alone, read fresh: the Send request and Invite sheets show what "Email it" will
+   * do before staff send. Every reader of the requests may see it; a read, so neither audited nor limited
+   * (only staff hold the key).
+   */
+  @Get("hotel-form-mode")
+  @RequirePermission("hotels.info_requests.read")
+  formMode(): Promise<HotelFormModeView> {
+    return this.requests.formMode();
   }
 
   @Post("info-requests")

@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { isoDateTime, page, uuid } from "./common.js";
+import { hotelFormMode } from "./config.js";
 import {
   hotelInfoRequestActorKind,
   hotelInfoRequestEventType,
@@ -198,3 +199,15 @@ export const hotelDuplicateHints = z
   .object({ hints: z.array(hotelDuplicateHint).max(HOTEL_DUPLICATE_HINTS_MAX) })
   .strict();
 export type HotelDuplicateHints = z.infer<typeof hotelDuplicateHints>;
+
+/**
+ * `GET /hotels-admin/hotel-form-mode`: the hotel form's mode alone, read past the configuration cache, so
+ * the Send request and Invite a new hotel sheets say what "Email it" will do before staff send (D-188 §6
+ * and §7). Every reader of `hotels.info_requests.read` may see it; the rest of `hotel_form.policy` (the
+ * reply-to, the help contact, the limits) stays in the admin console.
+ *
+ * @example
+ * hotelFormModeView.parse({ mode: "test_only" });
+ */
+export const hotelFormModeView = z.object({ mode: hotelFormMode }).strict();
+export type HotelFormModeView = z.infer<typeof hotelFormModeView>;
