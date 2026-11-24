@@ -7,69 +7,72 @@ import { normaliseWebAddress, WEB_ADDRESS_KEY_MAX_LENGTH, webAddressHost } from 
  * duplicate hints compare these, never the text as typed.
  */
 describe("normaliseWebAddress", () => {
-  it("lower-cases the scheme and host and drops www., the trailing slash, the query and the fragment", () => {
+  it("lower-cases the host and drops the scheme, www., the trailing slash, the query and the fragment", () => {
     expect(normaliseWebAddress(" HTTPS://WWW.Synthetic-Hotel.Example/Rooms/?tab=a#top ")).toBe(
-      "https://synthetic-hotel.example/Rooms",
+      "synthetic-hotel.example/Rooms",
     );
-    expect(normaliseWebAddress("https://synthetic-hotel.example/")).toBe(
-      "https://synthetic-hotel.example",
-    );
+    expect(normaliseWebAddress("https://synthetic-hotel.example/")).toBe("synthetic-hotel.example");
     expect(normaliseWebAddress("https://synthetic-hotel.example/rooms///")).toBe(
-      "https://synthetic-hotel.example/rooms",
+      "synthetic-hotel.example/rooms",
     );
   });
 
-  it("reads an address typed without a scheme as https", () => {
-    expect(normaliseWebAddress("www.synthetic-hotel.example")).toBe(
-      "https://synthetic-hotel.example",
-    );
+  it("reads an address typed without a scheme as the same address", () => {
+    expect(normaliseWebAddress("www.synthetic-hotel.example")).toBe("synthetic-hotel.example");
     expect(normaliseWebAddress("synthetic-hotel.example:8080/Stay")).toBe(
-      "https://synthetic-hotel.example:8080/Stay",
+      "synthetic-hotel.example:8080/Stay",
     );
-    expect(normaliseWebAddress("//synthetic-hotel.example/x")).toBe(
-      "https://synthetic-hotel.example/x",
+    expect(normaliseWebAddress("//synthetic-hotel.example/x")).toBe("synthetic-hotel.example/x");
+  });
+
+  it("drops the scheme, so http and https are one hotel's address, typed either way", () => {
+    expect(normaliseWebAddress("http://synthetic-hotel.example")).toBe(
+      normaliseWebAddress("https://synthetic-hotel.example"),
+    );
+    expect(normaliseWebAddress("HTTP://www.Synthetic-Hotel.Example/Rooms/")).toBe(
+      normaliseWebAddress("synthetic-hotel.example/Rooms"),
     );
   });
 
-  it("keeps the scheme, so http and https stay apart, and a port that is not the scheme's default", () => {
+  it("keeps a port that is not its scheme's default", () => {
     expect(normaliseWebAddress("http://Synthetic-Hotel.Example:8080/")).toBe(
-      "http://synthetic-hotel.example:8080",
+      "synthetic-hotel.example:8080",
     );
     expect(normaliseWebAddress("https://synthetic-hotel.example:443/a")).toBe(
-      "https://synthetic-hotel.example/a",
+      "synthetic-hotel.example/a",
     );
-    expect(normaliseWebAddress("http://synthetic-hotel.example")).not.toBe(
-      normaliseWebAddress("https://synthetic-hotel.example"),
+    expect(normaliseWebAddress("http://synthetic-hotel.example:80/a")).toBe(
+      "synthetic-hotel.example/a",
     );
   });
 
   it("turns an internationalised host into punycode and keeps the path's case", () => {
     expect(normaliseWebAddress("https://www.Bücher.example/Zimmer/")).toBe(
-      "https://xn--bcher-kva.example/Zimmer",
+      "xn--bcher-kva.example/Zimmer",
     );
   });
 
   it("drops the user name, the password and a trailing dot of the host", () => {
     expect(normaliseWebAddress("https://user:secret@synthetic-hotel.example/a")).toBe(
-      "https://synthetic-hotel.example/a",
+      "synthetic-hotel.example/a",
     );
     expect(normaliseWebAddress("https://synthetic-hotel.example./")).toBe(
-      "https://synthetic-hotel.example",
+      "synthetic-hotel.example",
     );
   });
 
   it("removes one leading www. only", () => {
     expect(normaliseWebAddress("https://www.www.synthetic-hotel.example")).toBe(
-      "https://www.synthetic-hotel.example",
+      "www.synthetic-hotel.example",
     );
     expect(normaliseWebAddress("https://www2.synthetic-hotel.example")).toBe(
-      "https://www2.synthetic-hotel.example",
+      "www2.synthetic-hotel.example",
     );
   });
 
   it("percent-encodes the path as browsers do", () => {
     expect(normaliseWebAddress("https://synthetic-hotel.example/our rooms")).toBe(
-      "https://synthetic-hotel.example/our%20rooms",
+      "synthetic-hotel.example/our%20rooms",
     );
   });
 

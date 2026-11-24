@@ -1,9 +1,11 @@
 /*
  * A hotel's web address as a key (D-188 §6): the proposed-address key of a new-hotel information request
  * (`hotel_info_requests.proposed_web_address_key`) and the duplicate hints compare these, never the text
- * as typed. Parsing is the WHATWG URL's, so an internationalised host becomes punycode (UTS #46) as a
- * browser would send it: Node's URL (the API computes every stored key) and the browsers do it, and so
- * does Expo's URL on native (whatwg-url-minimum carries the IDNA mapping), so the staff app agrees.
+ * as typed. The key leaves the scheme out: `http://` and `https://` name one hotel's site, so one address
+ * typed both ways can never hold two live requests. Parsing is the WHATWG URL's, so an internationalised
+ * host becomes punycode (UTS #46) as a browser would send it: Node's URL (the API computes every stored
+ * key) and the browsers do it, and so does Expo's URL on native (whatwg-url-minimum carries the IDNA
+ * mapping), so the staff app agrees.
  */
 
 // Core has no DOM or Node types; the WHATWG URL exists in every runtime the package runs in.
@@ -23,7 +25,6 @@ const SCHEME = /^[A-Za-z][A-Za-z0-9+.-]*:([\s\S]*)$/;
 const PORT = /^\d+(?:[/?#]|$)/;
 
 interface ParsedWebAddress {
-  readonly scheme: string;
   readonly host: string;
   readonly port: string;
   readonly path: string;
@@ -50,7 +51,6 @@ function parse(text: string): ParsedWebAddress | null {
   const host = url.hostname.replace(/^www\./, "").replace(/\.$/, "");
   if (host === "") return null;
   return {
-    scheme: url.protocol,
     host,
     port: url.port,
     path: url.pathname.replace(/\/+$/, ""),
@@ -58,21 +58,22 @@ function parse(text: string): ParsedWebAddress | null {
 }
 
 /**
- * A web address as a key: the scheme and host lower-case, the host in punycode without a leading `www.`
- * or a trailing dot, a port only when it is not the scheme's default, the path as browsers encode it
- * without trailing slashes, and no user name, password, query or fragment. Text with no scheme reads as
- * https. http and https stay apart, as D-188 keeps the scheme; {@link webAddressHost} compares hosts
- * alone. Null for text that is not an http or https address, or whose key would not fit its column.
+ * A web address as a key: no scheme (http and https are one address), the host lower-case in punycode
+ * without a leading `www.` or a trailing dot, a port only when it is not its scheme's default (text with
+ * no scheme reads as https), the path as browsers encode it without trailing slashes, and no user name,
+ * password, query or fragment. {@link webAddressHost} compares hosts alone. Null for text that is not an
+ * http or https address, or whose key would not fit its column.
  *
  * @example
- * normaliseWebAddress(" HTTPS://WWW.Synthetic-Hotel.Example/Rooms/?tab=a "); // "https://synthetic-hotel.example/Rooms"
- * normaliseWebAddress("www.Bücher.example"); // "https://xn--bcher-kva.example"
+ * normaliseWebAddress(" HTTPS://WWW.Synthetic-Hotel.Example/Rooms/?tab=a "); // "synthetic-hotel.example/Rooms"
+ * normaliseWebAddress("http://synthetic-hotel.example/rooms"); // "synthetic-hotel.example/rooms"
+ * normaliseWebAddress("www.Bücher.example"); // "xn--bcher-kva.example"
  */
 export function normaliseWebAddress(text: string): string | null {
   const parsed = parse(text);
   if (parsed === null) return null;
   const port = parsed.port === "" ? "" : `:${parsed.port}`;
-  const key = `${parsed.scheme}//${parsed.host}${port}${parsed.path}`;
+  const key = `${parsed.host}${port}${parsed.path}`;
   return key.length > WEB_ADDRESS_KEY_MAX_LENGTH ? null : key;
 }
 
