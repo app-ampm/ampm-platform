@@ -134,8 +134,12 @@ export class HotelInfoRequestsRepository {
   }
 
   /** The latest events of a request, newest first. */
-  latestEvents(requestId: string, limit: number): Promise<RequestEventRow[]> {
-    return this.prisma.hotelInfoRequestEvent.findMany({
+  latestEvents(
+    requestId: string,
+    limit: number,
+    tx?: Prisma.TransactionClient,
+  ): Promise<RequestEventRow[]> {
+    return (tx ?? this.prisma).hotelInfoRequestEvent.findMany({
       where: { requestId, deletedAt: null },
       orderBy: [{ occurredAt: "desc" }, { id: "desc" }],
       take: limit,

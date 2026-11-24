@@ -6,6 +6,7 @@ import {
 } from "@ampm/core";
 import { vi } from "vitest";
 
+import type { AppLogger } from "../../../common/logger.service.js";
 import type { Env } from "../../../env.js";
 import type { Prisma } from "../../../generated/prisma/client.js";
 import type { ConfigService } from "../../admin/config/config.service.js";
@@ -106,7 +107,13 @@ export function buildIssueService(options: IssueFakeOptions = {}) {
       async (..._args: unknown[]): Promise<HotelInfoRequestLinkEmail> => "not_requested",
     ),
   };
-  const reader = { detail: vi.fn(async () => ({ id: REQUEST_ID })) };
+  const reader = {
+    detail: vi.fn(async (..._args: unknown[]): Promise<unknown> => ({ id: REQUEST_ID })),
+  };
+  const logger = {
+    warn: vi.fn((_event: string, _fields?: unknown): void => undefined),
+    info: vi.fn((_event: string, _fields?: unknown): void => undefined),
+  };
   const policy = { ...CONFIG_REGISTRY["hotel_form.policy"].default, ...options.policy };
   const config = { get: vi.fn(async () => policy), getFresh: vi.fn(async () => policy) };
   const service = new HotelInfoRequestIssueService(
@@ -116,8 +123,9 @@ export function buildIssueService(options: IssueFakeOptions = {}) {
     reader as unknown as HotelInfoRequestReader,
     config as unknown as ConfigService,
     { PUBLIC_SITE_URL: SITE } as unknown as Env,
+    logger as unknown as AppLogger,
   );
-  return { service, repo, journal, mailer, reader, config };
+  return { service, repo, journal, mailer, reader, config, logger };
 }
 
 /**

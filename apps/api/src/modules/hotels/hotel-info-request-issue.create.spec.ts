@@ -125,6 +125,36 @@ describe("HotelInfoRequestIssueService.create for an existing hotel", () => {
     );
   });
 
+  it("reads the request it answers in the creating transaction, in the caller's model", async () => {
+    const fakes = build();
+    await fakes.service.create(existing(), HT);
+    expect(fakes.reader.detail).toHaveBeenCalledWith(REQUEST_ID, HT, expect.anything());
+  });
+
+  it("answers the link once the request exists, even when the request cannot be read again after the commit", async () => {
+    const fakes = build();
+    fakes.reader.detail.mockImplementation(async (...args: unknown[]) => {
+      if (args[2] === undefined) throw new Error("database unavailable");
+      return { id: REQUEST_ID, read: "in the transaction" };
+    });
+    const answer = await fakes.service.create(existing(), HT);
+    expect(answer.link.url).toMatch(/#k=hfl_[A-Za-z0-9_-]{43}$/);
+    expect(answer.request).toEqual({ id: REQUEST_ID, read: "in the transaction" });
+    const logged = JSON.stringify(fakes.logger.warn.mock.calls);
+    expect(logged).toContain(REQUEST_ID);
+    expect(logged).not.toContain("hfl_");
+  });
+
+  it("answers the request as it stands after its email when it can be read again", async () => {
+    const fakes = build();
+    fakes.reader.detail.mockImplementation(async (...args: unknown[]) => ({
+      id: REQUEST_ID,
+      read: args[2] === undefined ? "after the email" : "in the transaction",
+    }));
+    const answer = await fakes.service.create(existing(), HT);
+    expect(answer.request).toEqual({ id: REQUEST_ID, read: "after the email" });
+  });
+
   it("refuses a second live request for the hotel with 409, naming the live one", async () => {
     const fakes = build();
     fakes.repo.findLiveForHotel.mockResolvedValueOnce({

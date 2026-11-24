@@ -57,20 +57,24 @@ export class HotelInfoRequestReader {
   }
 
   /**
-   * One request in the caller's model.
+   * One request in the caller's model; inside `tx`, as that transaction has written it (the create and
+   * reissue answer the request as they committed it).
    *
    * @example
    * await reader.detail(id, principal); // SM, PM: the summary; SA, HT: the full view
    */
-  async detail(id: string, principal: Principal): Promise<HotelInfoRequestDetail> {
-    const row = await this.repo.findById(id);
+  async detail(
+    id: string,
+    principal: Principal,
+    tx?: Prisma.TransactionClient,
+  ): Promise<HotelInfoRequestDetail> {
+    const row = await this.repo.findById(id, tx);
     if (!row) throw errors.notFound(NO_SUCH_REQUEST);
     const now = new Date();
     if (!readsFullInfoRequests(principal)) return toRequestSummary(row, now);
-    const [events, limit] = await Promise.all([
-      this.repo.latestEvents(row.id, HOTEL_INFO_REQUEST_EVENTS_SHOWN),
-      this.extendableUntil(row),
-    ]);
+    // One after the other: inside a transaction both share its one connection.
+    const events = await this.repo.latestEvents(row.id, HOTEL_INFO_REQUEST_EVENTS_SHOWN, tx);
+    const limit = await this.extendableUntil(row, tx);
     return toRequestFull(row, events, limit, now);
   }
 

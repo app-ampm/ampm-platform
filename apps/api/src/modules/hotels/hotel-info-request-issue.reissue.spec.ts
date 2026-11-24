@@ -63,6 +63,18 @@ describe("HotelInfoRequestIssueService.reissue", () => {
     );
   });
 
+  it("answers the new link even when the request cannot be read again after the commit", async () => {
+    const fakes = build();
+    fakes.reader.detail.mockImplementation(async (...args: unknown[]) => {
+      if (args[2] === undefined) throw new Error("database unavailable");
+      return { id: REQUEST_ID, read: "in the transaction" };
+    });
+    const answer = await fakes.service.reissue(REQUEST_ID, { emailIt: false }, HT);
+    expect(secretOf(answer.link.url)).toMatch(/^hfl_[A-Za-z0-9_-]{43}$/);
+    expect(answer.request).toEqual({ id: REQUEST_ID, read: "in the transaction" });
+    expect(fakes.reader.detail).toHaveBeenCalledWith(REQUEST_ID, HT, expect.anything());
+  });
+
   it("two links never share a secret: each reissue answers a new one", async () => {
     const first = await build().service.reissue(REQUEST_ID, { emailIt: false }, HT);
     const second = await build().service.reissue(REQUEST_ID, { emailIt: false }, HT);

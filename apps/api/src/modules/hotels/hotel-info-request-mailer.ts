@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import type { HotelInfoRequestLinkEmail } from "@ampm/core";
+import type { HotelFormPolicy, HotelInfoRequestLinkEmail } from "@ampm/core";
 
 import { AppLogger } from "../../common/logger.service.js";
 import { ConfigService } from "../admin/config/config.service.js";
@@ -33,7 +33,8 @@ export interface LinkEmail {
  * Emails a request's link to the recipient AMPM entered (D-188 §5): an external email with the hotel
  * form's reply-to when one is set, queued only when staff asked and the form's mode, read past the cache,
  * admits the request. Otherwise the link stands and the answer says why it was not emailed. Only a queued
- * email marks the request emailed, with its `link_emailed` event.
+ * email marks the request emailed, with its `link_emailed` event. It never throws: it runs after the
+ * request is committed, and a failure answers `failed` so the link is still answered.
  */
 @Injectable()
 export class HotelInfoRequestMailer {
@@ -55,7 +56,8 @@ export class HotelInfoRequestMailer {
     actor: RequestActor,
   ): Promise<HotelInfoRequestLinkEmail> {
     if (!asked) return "not_requested";
-    const policy = await this.config.getFresh("hotel_form.policy");
+    const policy = await this.policyFor(email.requestId);
+    if (policy === null) return "failed";
     if (policy.mode === "off") return "mode_off";
     if (!modeAdmits(policy.mode, email.isTest)) return "mode_test_only";
     if (email.recipientEmail === null || !(await this.queue(email, policy.replyTo))) {
@@ -63,6 +65,19 @@ export class HotelInfoRequestMailer {
     }
     await this.markEmailed(email, actor);
     return "queued";
+  }
+
+  /**
+   * The form's policy, read past the cache; null when it cannot be read. The request and its link are
+   * committed by now, so the link is answered and the email is answered as failed.
+   */
+  private async policyFor(requestId: string): Promise<HotelFormPolicy | null> {
+    try {
+      return await this.config.getFresh("hotel_form.policy");
+    } catch {
+      this.logger.warn("hotel_form.link_email_policy_unread", { requestId });
+      return null;
+    }
   }
 
   private async queue(email: LinkEmail, replyTo: string | null): Promise<boolean> {

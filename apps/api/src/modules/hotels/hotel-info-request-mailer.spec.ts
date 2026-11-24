@@ -134,6 +134,18 @@ describe("HotelInfoRequestMailer.sendLink", () => {
     expect(journal.event).not.toHaveBeenCalled();
   });
 
+  it("answers failed, queuing nothing, when the form's policy cannot be read", async () => {
+    const { mailer, config, notifications, repo, logger } = build("on");
+    config.getFresh.mockRejectedValueOnce(new Error("database unavailable"));
+    expect(await mailer.sendLink(email, true, STAFF)).toBe("failed");
+    expect(notifications.queue).not.toHaveBeenCalled();
+    expect(repo.markEmailed).not.toHaveBeenCalled();
+    const logged = JSON.stringify(logger.warn.mock.calls);
+    expect(logged).toContain(email.requestId);
+    expect(logged).not.toContain("sales@synthetic-hotel.example");
+    expect(logged).not.toContain("hfl_");
+  });
+
   it("answers failed, marking nothing, when the email cannot be queued, and logs no address or link", async () => {
     const { mailer, notifications, repo, logger } = build("on");
     notifications.queue.mockRejectedValueOnce(new Error("database unavailable"));

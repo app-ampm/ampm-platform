@@ -5,21 +5,24 @@ import {
   normaliseWebAddress,
   type AppError,
   type HotelInfoRequestCreateRequest,
+  type HotelInfoRequestDetail,
   type HotelInfoRequestLinkIssued,
   type HotelInfoRequestReissueRequest,
 } from "@ampm/core";
 
+import { AppLogger } from "../../common/logger.service.js";
 import { ENV, type Env } from "../../env.js";
 import { Prisma } from "../../generated/prisma/client.js";
 import { type Principal, staffId } from "../../policy/principal.types.js";
 import { isSuperAdmin } from "../admin/capability-grants.js";
 import { ConfigService } from "../admin/config/config.service.js";
 import {
-  HotelInfoRequestJournal,
-  type RequestActor,
-  type RequestAudit,
-  staffActor,
-} from "./hotel-info-request-journal.js";
+  createColumns,
+  createdAudit,
+  type Issue,
+  type ResolvedTarget,
+} from "./hotel-info-request-columns.js";
+import { HotelInfoRequestJournal, staffActor } from "./hotel-info-request-journal.js";
 import { addDays, hotelFormLinkUrl, mintLinkSecret } from "./hotel-info-request-link.js";
 import { HotelInfoRequestMailer, type LinkEmail } from "./hotel-info-request-mailer.js";
 import { HotelInfoRequestReader, NO_SUCH_REQUEST } from "./hotel-info-request-reader.js";
@@ -31,7 +34,9 @@ import { HotelInfoRequestsRepository, type RequestRow } from "./hotel-info-reque
  * link. Both answer the link once and store only its hash; both are audited with the action `share`, in
  * the transaction that writes them, and write their event there too; neither writes the link anywhere.
  * The email follows the commit, so the send job (inline in development and tests) reads a request that
- * exists.
+ * exists. Once the request is committed its link is always answered: the answer carries the request as
+ * the issuing transaction left it whenever it cannot be read again after the email, and the mailer
+ * answers a failure of its own as `failed` rather than throwing.
  */
 
 const TEST_REQUESTER = "Only the Super Admin can make a test request";
@@ -59,21 +64,19 @@ function emailNameOf(row: RequestRow): string {
   return row.displayLabel ?? row.hotel?.name ?? row.proposedName ?? row.reference;
 }
 
-/** What a create resolved its target to: the columns that name it, and the hotel's name. */
-interface ResolvedTarget {
-  readonly columns: Omit<
-    Prisma.HotelInfoRequestUncheckedCreateInput,
-    "reference" | "kind" | "target" | "expiresAt" | "tokenHash" | "linkIssuedAt"
-  >;
+/** A created request: its id, reference and hotel name, and the request as its transaction committed it. */
+interface Created {
+  readonly id: string;
+  readonly reference: string;
   readonly name: string;
+  readonly committed: HotelInfoRequestDetail;
 }
 
-/** A new link: its hash, its time, its expiry and who issued it. */
-interface Issue {
-  readonly actor: RequestActor;
-  readonly hash: string;
-  readonly at: Date;
-  readonly expiresAt: Date;
+/** A rotated link: the request as read, the new generation, and the request as committed with it. */
+interface Rotated {
+  readonly current: RequestRow;
+  readonly generation: number;
+  readonly committed: HotelInfoRequestDetail;
 }
 
 @Injectable()
@@ -85,6 +88,7 @@ export class HotelInfoRequestIssueService {
     private readonly reader: HotelInfoRequestReader,
     private readonly config: ConfigService,
     @Inject(ENV) private readonly env: Env,
+    private readonly logger: AppLogger,
   ) {}
 
   /**
@@ -101,7 +105,7 @@ export class HotelInfoRequestIssueService {
     const link = mintLinkSecret();
     const actor = staffActor(principal);
     const issue = { actor, hash: link.hash, at, expiresAt: addDays(at, linkValidityDays) };
-    const created = await this.insert(body, issue, staffId(principal));
+    const created = await this.insert(body, issue, principal);
     const email = {
       requestId: created.id,
       isTest: body.isTest,
@@ -111,7 +115,7 @@ export class HotelInfoRequestIssueService {
       expiresAt: issue.expiresAt,
       generation: 1,
     };
-    return this.answer(link.secret, email, body.emailIt, principal);
+    return this.answer(link.secret, email, body.emailIt, principal, created.committed);
   }
 
   /**
@@ -124,7 +128,12 @@ export class HotelInfoRequestIssueService {
     principal: Principal,
   ): Promise<HotelInfoRequestLinkIssued> {
     const link = mintLinkSecret();
-    const { current, generation } = await this.rotate(id, body.emailIt, link.hash, principal);
+    const { current, generation, committed } = await this.rotate(
+      id,
+      body.emailIt,
+      link.hash,
+      principal,
+    );
     const email = {
       requestId: id,
       isTest: current.isTest,
@@ -134,20 +143,41 @@ export class HotelInfoRequestIssueService {
       expiresAt: current.expiresAt,
       generation,
     };
-    return this.answer(link.secret, email, body.emailIt, principal);
+    return this.answer(link.secret, email, body.emailIt, principal, committed);
   }
 
-  /** Emails the link when asked and admitted, then answers it, once, with the request in the caller's model. */
+  /**
+   * Emails the link when asked and admitted, then answers it, once, with the request in the caller's
+   * model: as it stands after the email, else as the issuing transaction committed it.
+   */
   private async answer(
     secret: string,
     email: Omit<LinkEmail, "url">,
     emailIt: boolean,
     principal: Principal,
+    committed: HotelInfoRequestDetail,
   ): Promise<HotelInfoRequestLinkIssued> {
     const url = hotelFormLinkUrl(this.env.PUBLIC_SITE_URL, secret);
     const outcome = await this.mailer.sendLink({ ...email, url }, emailIt, staffActor(principal));
-    const request = await this.reader.detail(email.requestId, principal);
+    const request = await this.standing(email.requestId, principal, committed);
     return { request, link: { url, expiresAt: email.expiresAt.toISOString() }, email: outcome };
+  }
+
+  /**
+   * The request as it stands after its email (marked emailed, with that event); when it cannot be read
+   * again, as its transaction committed it, so the link is answered whatever fails after the commit.
+   */
+  private async standing(
+    id: string,
+    principal: Principal,
+    committed: HotelInfoRequestDetail,
+  ): Promise<HotelInfoRequestDetail> {
+    try {
+      return await this.reader.detail(id, principal);
+    } catch {
+      this.logger.warn("hotel_form.link_answered_as_committed", { requestId: id });
+      return committed;
+    }
   }
 
   /** The new secret's hash in place of the old one, while the link is as read, with its event and audit. */
@@ -156,7 +186,7 @@ export class HotelInfoRequestIssueService {
     emailIt: boolean,
     hash: string,
     principal: Principal,
-  ): Promise<{ current: RequestRow; generation: number }> {
+  ): Promise<Rotated> {
     return this.repo.transaction(async (tx) => {
       const current = await this.requireReissuable(id, emailIt, tx);
       const generation = current.tokenGeneration + 1;
@@ -182,7 +212,7 @@ export class HotelInfoRequestIssueService {
       const before = { tokenGeneration: current.tokenGeneration };
       const after = { issued: "reissued", tokenGeneration: generation };
       await this.journal.record(id, { action: "share", before, after }, tx);
-      return { current, generation };
+      return { current, generation, committed: await this.reader.detail(id, principal, tx) };
     });
   }
 
@@ -209,18 +239,21 @@ export class HotelInfoRequestIssueService {
     return current;
   }
 
-  /** The request, its `created` event and its `share` audit, in one transaction. */
+  /**
+   * The request, its `created` event and its `share` audit, in one transaction, which also reads the
+   * request back in the caller's model for the answer.
+   */
   private async insert(
     body: HotelInfoRequestCreateRequest,
     issue: Issue,
-    actorId: string,
-  ): Promise<{ id: string; reference: string; name: string }> {
+    principal: Principal,
+  ): Promise<Created> {
     try {
       return await this.repo.transaction(async (tx) => {
         const target = await this.resolveTarget(body, tx);
         const reference = await nextHotelInfoRequestReference(tx, issue.at);
         const id = await this.repo.create(
-          createColumns(body, target, issue, reference, actorId),
+          createColumns(body, target, issue, reference, staffId(principal)),
           tx,
         );
         const detail = { generation: 1, expiresAt: issue.expiresAt.toISOString() };
@@ -233,7 +266,8 @@ export class HotelInfoRequestIssueService {
         } as const;
         await this.journal.event(event, tx);
         await this.journal.record(id, createdAudit(body, target, issue, reference), tx);
-        return { id, reference, name: target.name };
+        const committed = await this.reader.detail(id, principal, tx);
+        return { id, reference, name: target.name, committed };
       });
     } catch (error) {
       throw liveConflictOf(error) ?? error;
@@ -293,63 +327,4 @@ export class HotelInfoRequestIssueService {
     };
     return { columns, name: body.proposedName };
   }
-}
-
-/** Every column a create writes: the target's, the staff fields, the link's hash, its expiry and status. */
-function createColumns(
-  body: HotelInfoRequestCreateRequest,
-  target: ResolvedTarget,
-  issue: Issue,
-  reference: string,
-  actorId: string,
-): Prisma.HotelInfoRequestUncheckedCreateInput {
-  return {
-    ...target.columns,
-    ...staffColumnsOf(body),
-    reference,
-    kind: body.kind,
-    target: body.target,
-    isTest: body.isTest,
-    status: "open",
-    expiresAt: issue.expiresAt,
-    tokenHash: issue.hash,
-    tokenGeneration: 1,
-    linkIssuedAt: issue.at,
-    createdBy: actorId,
-    updatedBy: actorId,
-  };
-}
-
-/** A create's `share` audit: what was issued, never the link nor the recipient. */
-function createdAudit(
-  body: HotelInfoRequestCreateRequest,
-  target: ResolvedTarget,
-  issue: Issue,
-  reference: string,
-): RequestAudit {
-  const after = {
-    issued: "created",
-    reference,
-    target: body.target,
-    kind: body.kind,
-    hotelId: target.columns.hotelId ?? null,
-    isTest: body.isTest,
-    status: "open",
-    expiresAt: issue.expiresAt.toISOString(),
-    tokenGeneration: 1,
-  };
-  return { action: "share", after };
-}
-
-/** The fields staff entered, null when not given. */
-function staffColumnsOf(body: HotelInfoRequestCreateRequest) {
-  return {
-    displayLabel: body.displayLabel ?? null,
-    staffNote: body.staffNote ?? null,
-    officialWebsite: body.officialWebsite ?? null,
-    switchboardPhone: body.switchboardPhone ?? null,
-    switchboardSource: body.switchboardSource ?? null,
-    recipientName: body.recipientName ?? null,
-    recipientEmail: body.recipientEmail ?? null,
-  };
 }
