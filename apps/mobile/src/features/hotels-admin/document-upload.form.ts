@@ -2,6 +2,7 @@ import type { HotelDocumentUploadInput } from "@ampm/api-client";
 import {
   documentTypeLabel,
   HOTEL_DOCUMENT_TITLE_MAX,
+  isAppError,
   type HotelDocumentType,
   type HotelDocumentView,
 } from "@ampm/core";
@@ -84,4 +85,24 @@ export function titleHint(
   return type
     ? `Optional. Left blank, it is called “${documentTypeLabel(type)}”.`
     : "Optional. Left blank, it takes the name of its type.";
+}
+
+/**
+ * What the person reads when the API refuses an upload: the reason on the file when it names one (a
+ * refused file, D-187 §3), else its message (a full library, a newer version filed since, a busy server,
+ * a file over the cap).
+ */
+export function uploadRefusalMessage(error: unknown): string {
+  if (!isAppError(error)) return "Could not upload the document. Try again.";
+  return error.details?.find((detail) => detail.path === "file")?.message ?? error.message;
+}
+
+/**
+ * Whether a refusal ends a new version's sheet rather than asking for another file: the document it
+ * replaces is gone (404), or no longer takes this version (409: a newer one was filed since, or it
+ * holds the most versions a document keeps).
+ */
+export function endsReplacement(error: unknown, replacing: HotelDocumentView | null): boolean {
+  if (replacing === null || !isAppError(error)) return false;
+  return error.code === "not_found" || error.code === "conflict";
 }

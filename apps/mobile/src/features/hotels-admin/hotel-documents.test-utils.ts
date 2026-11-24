@@ -86,12 +86,17 @@ export interface SentRequest {
 }
 
 export interface DocumentsApi {
-  readonly documents?: readonly HotelDocumentView[];
+  /** The list, or what it is each time it is read (a refresh after a refusal reads it again). */
+  readonly documents?: readonly HotelDocumentView[] | (() => readonly HotelDocumentView[]);
   readonly roles?: readonly StaffRoleCode[];
   /** A custom role's capability ids (D-164), to grant one action at a time. */
   readonly capabilities?: readonly string[];
-  /** The answer to an upload; a filed new version of the banquet menu otherwise. */
-  readonly upload?: () => Response;
+  /** The answer to an upload, now or later; a filed new version of the banquet menu otherwise. */
+  readonly upload?: () => Response | Promise<Response>;
+  /** The answer to a delete; the document's id otherwise. */
+  readonly remove?: () => Response;
+  /** The answer to a link; a minted link otherwise. */
+  readonly link?: () => Response;
   /** Every write the tab sends (never a read) is pushed here. */
   readonly sent?: SentRequest[];
 }
@@ -108,10 +113,18 @@ function recordOf(path: string, query: string, init: RequestInit | undefined): S
 }
 
 /** The answer to a write under the documents route: an upload, a delete or a link. */
-function documentsWrite(path: string, api: DocumentsApi): Response {
+function documentsWrite(path: string, api: DocumentsApi): Response | Promise<Response> {
   if (path === DOCUMENTS) return api.upload?.() ?? ok(hotelDocumentFixture({ versionNumber: 3 }));
-  if (path.endsWith("/link")) return ok({ url: LINK_PATH, expiresAt: "2026-11-24T12:15:00.000Z" });
-  return ok({ id: path.slice(DOCUMENTS.length + 1) });
+  if (path.endsWith("/link")) {
+    return api.link?.() ?? ok({ url: LINK_PATH, expiresAt: "2026-11-24T12:15:00.000Z" });
+  }
+  return api.remove?.() ?? ok({ id: path.slice(DOCUMENTS.length + 1) });
+}
+
+/** The list as it reads now. */
+function documentsList(api: DocumentsApi): Response {
+  const documents = typeof api.documents === "function" ? api.documents() : (api.documents ?? []);
+  return ok({ items: documents });
 }
 
 /** A new draft rate card as the API files it: the name and source the request sent, no items. */
@@ -130,7 +143,7 @@ function createdCard(init: RequestInit | undefined): Response {
  *   await renderWithApi(<HotelDocumentsScreen hotelId={HOTEL_ID} />, documentsFetch({ documents, sent }));
  */
 export function documentsFetch(api: DocumentsApi = {}): FetchFn {
-  const { documents = [], roles = ["HT"], capabilities = [], sent = [] } = api;
+  const { roles = ["HT"], capabilities = [], sent = [] } = api;
   return (input, init) => {
     const [path = "", query = ""] = String(input).replace(TEST_API_BASE, "").split("?");
     const isWrite = (init?.method ?? "GET") !== "GET";
@@ -143,7 +156,7 @@ export function documentsFetch(api: DocumentsApi = {}): FetchFn {
       return Promise.resolve(isWrite ? createdCard(init) : ok({ items: [] }));
     }
     if (path.startsWith(DOCUMENTS)) {
-      return Promise.resolve(isWrite ? documentsWrite(path, api) : ok({ items: documents }));
+      return Promise.resolve(isWrite ? documentsWrite(path, api) : documentsList(api));
     }
     return Promise.resolve(failure("not_found", 404));
   };

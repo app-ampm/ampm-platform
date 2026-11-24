@@ -1,11 +1,13 @@
-import { CONTENT_KINDS } from "@ampm/core";
+import { AppError, CONTENT_KINDS } from "@ampm/core";
 import type { PickedFile } from "@ampm/ui";
 
 import {
   buildDocumentUpload,
   draftForUpload,
+  endsReplacement,
   fileSizeError,
   titleHint,
+  uploadRefusalMessage,
   validateDocumentUpload,
 } from "./document-upload.form";
 import { DOCUMENT_ID, hotelDocumentFixture } from "./hotel-documents.test-utils";
@@ -116,5 +118,31 @@ describe("buildDocumentUpload", () => {
   it("builds nothing without a type or a file", () => {
     expect(buildDocumentUpload({ type: null, title: "", file: picked() }, null)).toBeNull();
     expect(buildDocumentUpload({ type: "menu", title: "", file: null }, null)).toBeNull();
+  });
+});
+
+describe("an upload's refusal", () => {
+  it("reads the reason on the file when the API names one, and its message otherwise", () => {
+    const onFile = new AppError("validation_failed", "Validation failed", [
+      { path: "file", message: "This file has macros" },
+    ]);
+    expect(uploadRefusalMessage(onFile)).toBe("This file has macros");
+    expect(uploadRefusalMessage(new AppError("conflict", "A newer version was filed"))).toBe(
+      "A newer version was filed",
+    );
+    expect(uploadRefusalMessage(new Error("socket hang up"))).toBe(
+      "Could not upload the document. Try again.",
+    );
+  });
+
+  it("ends a new version's sheet when its document is gone or changed, never a new document's", () => {
+    const gone = new AppError("not_found", "No such document");
+    const changed = new AppError("conflict", "A document can keep at most 50 versions");
+    expect(endsReplacement(gone, hotelDocumentFixture())).toBe(true);
+    expect(endsReplacement(changed, hotelDocumentFixture())).toBe(true);
+    expect(endsReplacement(changed, null)).toBe(false);
+    expect(endsReplacement(new AppError("unavailable", "Busy"), hotelDocumentFixture())).toBe(
+      false,
+    );
   });
 });

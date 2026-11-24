@@ -226,18 +226,4 @@ describe("DocumentUploadSheet: a new version", () => {
     ]);
     await untilSettled(client);
   });
-
-  it("says when a newer version was filed since, and keeps the sheet open", async () => {
-    const message = "A newer version of this document was filed since; reload and try again";
-    jest.mocked(pickFile).mockResolvedValue(pdf());
-    const client = await renderLibrary({
-      documents: [hotelDocumentFixture()],
-      upload: () => jsonResponse({ error: { code: "conflict", message } }, 409),
-    });
-    await fireEvent.press(screen.getByRole("button", { name: "Replace Banquet menu" }));
-    await fireEvent.press(await screen.findByTestId("document-upload-choose"));
-    await fireEvent.press(await screen.findByTestId("document-upload-submit"));
-    expect(await screen.findByTestId("document-upload-error")).toHaveTextContent(message);
-    await untilSettled(client);
-  });
 });

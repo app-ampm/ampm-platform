@@ -242,6 +242,11 @@ export function uploadedMessage(document: HotelDocumentView, replaced: boolean):
     : `${document.title} uploaded`;
 }
 
+/** The toast when an upload is refused after its sheet has closed: which file was not filed. */
+export function notUploadedMessage(fileName: string): string {
+  return `${fileName} was not uploaded`;
+}
+
 /** "4 of 100 documents": how close the hotel is to the library's cap. */
 export function documentCount(count: number): string {
   return `${count} of ${HOTEL_DOCUMENTS_MAX} documents`;

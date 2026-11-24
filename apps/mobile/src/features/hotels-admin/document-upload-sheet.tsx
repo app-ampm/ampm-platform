@@ -112,9 +112,10 @@ export interface DocumentUploadSheetProps {
  * keeps its type), an optional title (at most 120 characters; a new version starts from the current
  * title and keeps it when left blank, a new document takes its type's name), and the file, picked
  * from the kinds the type takes and checked against its limit before anything is sent. The API types
- * the bytes again and its refusal,
- * a busy server or a 409 shows under the file, the sheet kept open. Mount a fresh one for each opening
- * (a `key`), so an upload still in flight never touches the next.
+ * the bytes again: its refusal, a busy server or a full library shows under the file, the sheet kept
+ * open; a new version whose document is gone or changed (404, 409) closes the sheet with the API's
+ * message in a toast. Once the sheet has closed, the answer is a toast. Mount a fresh one for each
+ * opening (a `key`), so an upload still in flight never touches the next.
  */
 export function DocumentUploadSheet({
   hotelId,
@@ -122,7 +123,7 @@ export function DocumentUploadSheet({
   replacing,
   onClose,
 }: DocumentUploadSheetProps) {
-  const form = useDocumentUploadForm(hotelId, replacing, onClose);
+  const form = useDocumentUploadForm({ hotelId, replacing, open, onClose });
   return (
     <Sheet
       open={open}
