@@ -198,7 +198,10 @@ describe("Hotel documents library (e2e)", () => {
   it("removes a document with every version, audited, and no longer lists or opens it", async () => {
     const pdf = await fixture("reportlab-5.0.0-plain.pdf");
     const v1 = (await upload(pdf, { type: "other", title: "Spa menu" }).expect(201)).body.data.id;
-    const v2 = (await upload(pdf, { type: "other", replaces: v1 }).expect(201)).body.data.id;
+    const replaced = await upload(pdf, { type: "other", replaces: v1 }).expect(201);
+    // A replacement sent without a title keeps the document's title, not the type's label.
+    expect(replaced.body.data).toMatchObject({ title: "Spa menu", versionNumber: 2 });
+    const v2 = replaced.body.data.id as string;
 
     await remove(v1, "sa").expect(409); // only the latest version names the document
     expect((await remove(v2, "sa").expect(200)).body.data).toEqual({ id: v2 });

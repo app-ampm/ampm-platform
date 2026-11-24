@@ -23,15 +23,16 @@ const version = {
 };
 
 describe("hotelDocumentUploadQuery (D-187 §6)", () => {
-  it("takes a hotel document type, and titles the document after it when no title is given", () => {
+  it("takes a hotel document type, and leaves an absent or blank title for the API to fill", () => {
+    // The API names a new document after its type and keeps a replacement's current title, which only
+    // it knows, so the contract fills in nothing.
     expect(hotelDocumentUploadQuery.parse({ type: "menu" })).toEqual({
       type: "menu",
-      title: "Food menu",
+      title: null,
       replaces: null,
     });
-    expect(hotelDocumentUploadQuery.parse({ type: "floor_plan", title: "   " }).title).toBe(
-      "Floor plan",
-    );
+    expect(hotelDocumentUploadQuery.parse({ type: "floor_plan", title: "   " }).title).toBeNull();
+    expect(hotelDocumentUploadQuery.parse({ type: "menu", replaces: DOC }).title).toBeNull();
   });
 
   it("trims the title and keeps it to 120 characters", () => {

@@ -73,8 +73,16 @@ describe("the upload sheet's draft", () => {
   });
 
   it("says what a blank title becomes", () => {
-    expect(titleHint("beverage_menu")).toBe("Optional. Left blank, it is called “Beverage menu”.");
-    expect(titleHint(null)).toBe("Optional. Left blank, it takes the name of its type.");
+    expect(titleHint("beverage_menu", null)).toBe(
+      "Optional. Left blank, it is called “Beverage menu”.",
+    );
+    expect(titleHint(null, null)).toBe("Optional. Left blank, it takes the name of its type.");
+  });
+
+  it("says a new version left without a title keeps its document's title", () => {
+    expect(titleHint("menu", hotelDocumentFixture())).toBe(
+      "Optional. Left blank, it keeps its title “Banquet menu”.",
+    );
   });
 });
 

@@ -11,8 +11,9 @@ import { documentFileSizeError } from "./hotel-documents.format";
 
 /*
  * The upload sheet's draft (D-187 §6): what a new document is, or the document a new version replaces;
- * its optional title (at most 120 characters, the type's name when blank) and the picked file; the
- * checks before anything is sent, and the upload it builds. No rendering, no I/O.
+ * its optional title (at most 120 characters; when blank, the type's name for a new document and the
+ * current title for a new version) and the picked file; the checks before anything is sent, and the
+ * upload it builds. No rendering, no I/O.
  */
 
 export interface DocumentUploadDraft {
@@ -54,8 +55,8 @@ export function validateDocumentUpload(draft: DocumentUploadDraft): DocumentUplo
 
 /**
  * The upload a valid draft sends: the type, the title when one is given (trimmed; a blank one is left out
- * so the API names the document after its type), the document a new version replaces, and the file.
- * Null while the draft lacks a type or a file.
+ * so the API names a new document after its type, and a new version keeps its document's title), the
+ * document a new version replaces, and the file. Null while the draft lacks a type or a file.
  */
 export function buildDocumentUpload(
   draft: DocumentUploadDraft,
@@ -71,8 +72,15 @@ export function buildDocumentUpload(
   };
 }
 
-/** The title field's hint: what a blank title becomes. */
-export function titleHint(type: HotelDocumentType | null): string {
+/**
+ * The title field's hint: what a blank title becomes. The API keeps a new version's current title, and
+ * names a new document after its type.
+ */
+export function titleHint(
+  type: HotelDocumentType | null,
+  replacing: HotelDocumentView | null,
+): string {
+  if (replacing) return `Optional. Left blank, it keeps its title “${replacing.title}”.`;
   return type
     ? `Optional. Left blank, it is called “${documentTypeLabel(type)}”.`
     : "Optional. Left blank, it takes the name of its type.";

@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { isoDateTime, storableText, uuid } from "./common.js";
-import { documentTypeLabel, hotelDocumentType } from "./document-types.js";
+import { hotelDocumentType } from "./document-types.js";
 
 /*
  * Contracts for a hotel's documents library (D-187 §6; docs/planning/hotel-information-form-plan.md
@@ -26,13 +26,15 @@ export const HOTEL_DOCUMENT_TITLE_MAX = 120;
 export const HOTEL_DOCUMENTS_MAX = 100;
 
 /**
- * The upload's query. `type` is one of the hotel document types; `title` is trimmed and, when absent
- * or blank, becomes the type's label; `replaces` names the document this file replaces, which must be
- * the latest version of a live document of the same hotel and type, and the upload becomes its next
- * version. The file itself is the request body, never part of the query.
+ * The upload's query. `type` is one of the hotel document types; `title` is trimmed, and null when
+ * absent or blank: the API then keeps the title of the document a replacement follows, or names a new
+ * document after its type (`documentTypeLabel`), which only it can tell apart; `replaces` names the
+ * document this file replaces, which must be the latest version of a live document of the same hotel
+ * and type, and the upload becomes its next version. The file itself is the request body, never part
+ * of the query.
  *
  * @example
- * hotelDocumentUploadQuery.parse({ type: "menu" }); // { type: "menu", title: "Food menu", replaces: null }
+ * hotelDocumentUploadQuery.parse({ type: "menu" }); // { type: "menu", title: null, replaces: null }
  */
 export const hotelDocumentUploadQuery = z
   .object({
@@ -43,10 +45,10 @@ export const hotelDocumentUploadQuery = z
   .strict()
   .transform((query) => ({
     type: query.type,
-    title: query.title ? query.title : documentTypeLabel(query.type),
+    title: query.title ? query.title : null,
     replaces: query.replaces ?? null,
   }));
-/** The query as the API reads it: the title filled in, `replaces` null for a new document. */
+/** The query as the API reads it: `title` and `replaces` null when not given. */
 export type HotelDocumentUploadQuery = z.output<typeof hotelDocumentUploadQuery>;
 /** The query as a client sends it. */
 export type HotelDocumentUploadQueryInput = z.input<typeof hotelDocumentUploadQuery>;

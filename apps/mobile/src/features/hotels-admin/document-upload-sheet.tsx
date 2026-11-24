@@ -109,9 +109,10 @@ export interface DocumentUploadSheetProps {
 
 /**
  * Upload a document to a hotel's library, or a new version of one (D-187 §6): what it is (a new version
- * keeps its type), an optional title (at most 120 characters; blank takes the type's name, and a new
- * version starts from the current title), and the file, picked from the kinds the type takes and
- * checked against its limit before anything is sent. The API types the bytes again and its refusal,
+ * keeps its type), an optional title (at most 120 characters; a new version starts from the current
+ * title and keeps it when left blank, a new document takes its type's name), and the file, picked
+ * from the kinds the type takes and checked against its limit before anything is sent. The API types
+ * the bytes again and its refusal,
  * a busy server or a 409 shows under the file, the sheet kept open. Mount a fresh one for each opening
  * (a `key`), so an upload still in flight never touches the next.
  */
@@ -145,6 +146,15 @@ export function DocumentUploadSheet({
   );
 }
 
+/** What a blank title field shows: the title a blank one becomes. */
+function titlePlaceholder(
+  type: HotelDocumentType | null,
+  replacing: HotelDocumentView | null,
+): string {
+  if (replacing) return replacing.title;
+  return type ? documentTypeLabel(type) : "e.g. Banquet menu 2027";
+}
+
 /** The sheet's fields: the type (or the kept one), the title, then the file and what is wrong with it. */
 function UploadFields({
   form,
@@ -169,8 +179,8 @@ function UploadFields({
         label="Title"
         value={draft.title}
         onChangeText={(title) => patch({ title })}
-        placeholder={draft.type ? documentTypeLabel(draft.type) : "e.g. Banquet menu 2027"}
-        helpText={titleHint(draft.type)}
+        placeholder={titlePlaceholder(draft.type, replacing)}
+        helpText={titleHint(draft.type, replacing)}
         errorText={errors.title}
         testID="document-upload-title"
       />

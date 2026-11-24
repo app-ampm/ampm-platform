@@ -208,6 +208,9 @@ describe("DocumentUploadSheet: a new version", () => {
     expect(screen.getByTestId("document-upload-kept-type")).toHaveTextContent(/Food menu/);
     expect(screen.queryByRole("radio", { name: "Fact sheet" })).toBeNull();
     expect(screen.getByTestId("document-upload-title")).toHaveDisplayValue("Banquet menu");
+    expect(
+      screen.getByText("Optional. Left blank, it keeps its title “Banquet menu”."),
+    ).toBeOnTheScreen();
     await fireEvent.press(screen.getByTestId("document-upload-choose"));
     expect(pickFile).toHaveBeenCalledWith(documentAccept("menu"));
     await fireEvent.press(await screen.findByTestId("document-upload-submit"));

@@ -32,8 +32,9 @@ const documentsPath = (hotelId: string) => `/hotels-admin/hotels/${hotelId}/docu
 
 /**
  * Where an upload goes: the documents route with the type, the title when one is given (trimmed; a
- * blank one is left out, so the API names the document after its type) and the document a replacement
- * follows. The file itself is the request's body, never part of the query.
+ * blank one is left out, so the API names a new document after its type and a replacement keeps its
+ * document's title) and the document a replacement follows. The file itself is the request's body,
+ * never part of the query.
  *
  * @example
  * hotelDocumentUploadPath(hotelId, { type: "menu", title: "Banquet menu" });

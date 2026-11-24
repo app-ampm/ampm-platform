@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import {
+  documentTypeLabel,
   errors,
   HOTEL_DOCUMENTS_MAX,
   type DocumentLinkView,
@@ -30,6 +31,14 @@ const tooMany = () =>
   errors.conflict(
     `A hotel can hold at most ${HOTEL_DOCUMENTS_MAX} documents: remove one, or replace one with its new version`,
   );
+
+/**
+ * The title a new version is filed under: the one given, else the replaced version's (a new version
+ * keeps its document's name), else, for a new document, its type's label.
+ */
+function titleOf(query: HotelDocumentUploadQuery, replaced: OwnedDocument | null): string {
+  return query.title ?? replaced?.latest.title ?? documentTypeLabel(query.type);
+}
 
 /**
  * A hotel's documents library (D-187 §6; permission-matrix §5.3 "Hotel documents"): the fact sheets,
@@ -73,7 +82,7 @@ export class HotelDocumentsService {
         accountId: null,
         projectId: null,
         documentType: query.type,
-        title: query.title,
+        title: titleOf(query, replaced),
         bytes,
         previousVersionId: query.replaces,
       },

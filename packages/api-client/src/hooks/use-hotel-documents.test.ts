@@ -137,7 +137,8 @@ describe("hotelDocumentUploadPath", () => {
     expect(hotelDocumentUploadPath(HOTEL_ID, { type: "fact_sheet" })).toBe(
       `${DOCUMENTS}?type=fact_sheet`,
     );
-    // A blank title is left out, so the API names the document after its type.
+    // A blank title is left out, so the API names the document after its type, or keeps the title of
+    // the document a replacement follows.
     expect(hotelDocumentUploadPath(HOTEL_ID, { type: "menu", title: "   " })).toBe(
       `${DOCUMENTS}?type=menu`,
     );
