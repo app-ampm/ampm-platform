@@ -87,6 +87,22 @@ const CONFIG_EDIT_FIELDS: Record<string, readonly ConfigEditField[]> = {
   "consultancy.milestone_amounts_visible": [
     { path: "milestoneAmountsVisible", label: "Client sees milestone amounts", kind: "boolean" },
   ],
+  "storage.disk_guard": [
+    {
+      path: "floorGiB",
+      label: "Floor (GiB)",
+      kind: "int",
+      min: 9,
+      help: "New hotel-form uploads are refused below it.",
+    },
+    {
+      path: "warnGiB",
+      label: "Warning level (GiB)",
+      kind: "int",
+      min: 10,
+      help: "Above the floor; the alerts start below it.",
+    },
+  ],
 };
 
 /** Whether a configuration key has an editor (so a Super Admin may edit it from the inventory). */

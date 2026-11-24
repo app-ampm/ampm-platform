@@ -13,6 +13,7 @@
 #   5  migrate with a one-off container of the NEW image (prisma migrate deploy)
 #   6  recreate api, worker and web on the new image and wait for them
 #   7  health gate on 127.0.0.1:7101/health; on failure api and worker go back to the previous image
+# After the gate it drops app images older than the rollback target and build cache unused for 7 days.
 # It never seeds demo data: production holds real data only (D-141).
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -152,6 +153,15 @@ if [[ -n "$previous_app" && "$previous_app" != "$AMPM_IMAGE" ]]; then
   done
 else
   log "no new rollback target (${previous_app:-first deploy}): keeping every app image"
+fi
+# Every build grows Docker's build cache, on the one disk that also holds the media, the WAL archive and
+# the backups (23.5 GB on 24 Nov 2026, 15.4 GB of it reclaimable). After every deploy that passed its
+# gate, drop what no build has used for 7 days. A failed prune is reported with the daemon's own error,
+# not fatal: the release is in.
+if pruned="$(docker builder prune -f --filter until=168h 2>&1)"; then
+  log "build cache unused for 7 days pruned (${pruned##*$'\n'})"
+else
+  log "WARNING: the build-cache prune failed (${pruned//$'\n'/ }); the release itself passed its gate"
 fi
 curl -s "http://127.0.0.1:${PORT}/health" && echo
 # The scanner is outside the gate (uploads fail closed while it is down), but say how it stands.

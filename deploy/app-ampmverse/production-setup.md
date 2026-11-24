@@ -18,15 +18,16 @@ Both stacks sit behind Plesk: nginx terminates TLS, Apache applies each docroot'
 
 Box paths outside the source trees (none is served by a web root):
 
-| Path                             | Holds                                                                 | Owner                             |
-| -------------------------------- | --------------------------------------------------------------------- | --------------------------------- |
-| `ampm-prod-secrets/` (700)       | `app.env`, `postgres.env`, `redis.env` (600): every production secret | app_ampmverse                     |
-| `ampm-prod-storage/`             | uploaded media (D-106)                                                | uid 1000 (the containers' `node`) |
-| `ampm-backups/pgbackrest-prod/`  | the encrypted pgBackRest repository (D-139)                           | uid 999 (the image's `postgres`)  |
-| `ampm-backups/pgdump/` (700)     | a logical dump before every deploy, 14 days kept                      | app_ampmverse                     |
-| `ampm-backups/media-prod/` (700) | a nightly archive of the media store, 14 days kept                    | app_ampmverse                     |
-| `ampm-prod-state/app-image`      | the app image that last passed the health gate (the rollback target)  | app_ampmverse                     |
-| `bin/prod-secrets.sh`            | the secrets helper, also at `deploy/app-ampmverse/prod-secrets.sh`    | app_ampmverse                     |
+| Path                             | Holds                                                                     | Owner                             |
+| -------------------------------- | ------------------------------------------------------------------------- | --------------------------------- |
+| `ampm-prod-secrets/` (700)       | `app.env`, `postgres.env`, `redis.env` (600): every production secret     | app_ampmverse                     |
+| `ampm-prod-storage/`             | uploaded media (D-106)                                                    | uid 1000 (the containers' `node`) |
+| `ampm-backups/pgbackrest-prod/`  | the encrypted pgBackRest repository (D-139)                               | uid 999 (the image's `postgres`)  |
+| `ampm-backups/pgdump/` (700)     | a logical dump before every deploy, 14 days kept                          | app_ampmverse                     |
+| `ampm-media-snapshots/` (750)    | 14 nightly hard-link snapshots of the media store (D-177)                 | uid 1000                          |
+| `ampm-backups/media-prod/` (700) | the nightly archives written until 24 Nov 2026, each pruned after 14 days | app_ampmverse                     |
+| `ampm-prod-state/app-image`      | the app image that last passed the health gate (the rollback target)      | app_ampmverse                     |
+| `bin/prod-secrets.sh`            | the secrets helper, also at `deploy/app-ampmverse/prod-secrets.sh`        | app_ampmverse                     |
 
 ### Antivirus
 
@@ -38,6 +39,11 @@ Every upload (gallery media and documents) is streamed to ClamAV and stored only
 How it behaves:
 
 - **Fail closed.** A threat is refused: media is quarantined, and a document gets a 400 ("failed the antivirus scan"). If clamd is down, slow (`CLAMAV_TIMEOUT_MS`, 30 s) or answers anything else, the upload gets a 503 ("The virus scanner is unavailable…") and nothing is stored or changed, so the uploader can retry. The API starts and serves everything else without the scanner.
+- **Limits and alerts** (D-177, set in the base compose's `CLAMD_CONF_*` lines). `StreamMaxLength` and `MaxFileSize` are 32M, `MaxScanSize` 100M, `MaxRecursion` 16 and `MaxFiles` 5000. The image's defaults were 100M, 100M, 400M, 17 and 10000, with every Alert option off (measured 24 Nov 2026). 32M fits every upload: media is capped at 25 MiB, documents at 20 MiB and import CSVs at 5 MiB.
+  - A longer stream gets clamd's size-limit error, which the API treats as no verdict: a 503, and nothing is stored.
+  - `AlertExceedsMax` refuses a file past the scan limits, a ZIP that unpacks past 100M for example, instead of passing it unscanned.
+  - `AlertOLE2Macros` and `AlertEncryptedArchive` refuse Office files with macros and encrypted archives.
+  - `AlertEncryptedDoc` flags only a PDF that needs a password to open (`Heuristics.Encrypted.PDF`). A permission-locked PDF, with an owner password only, as signed contracts often have, passes. Tested on the box on 24 Nov 2026 with the production image, `clamscan` and synthetic PDFs. A password-to-open PDF is refused as a scan rejection ("failed the antivirus scan"); its own wording comes with the hotel form's upload reasons in Slice 9.
 - **First start.** freshclam downloads 113 MB (`main`, `daily`, `bytecode`) and test-loads each set; clamd waits for them, then loads them in about 10 s. On a laptop on 20 Nov 2026 both were healthy 34 s after `up`. `redeploy-prod.sh` starts the pair without waiting and reports the scanner's health at its end.
 - **Memory** (measured with ClamAV 1.5.5 and 3.6 million signatures): clamd uses about 1.0 GB, also through a reload, because `ConcurrentDatabaseReload no` keeps one copy of the signatures (scans pause for a few seconds instead). freshclam idles at about 50 MB and peaks at 0.7 GB while it test-loads a new set. Each is limited to 1.5 GB.
 - **Restarts.** clamd is its container's main process, so a crash or an out-of-memory kill ends the container and Docker restarts it.
@@ -59,6 +65,14 @@ PY
 ```
 
 It must print `stream: Eicar-Signature FOUND`. The same PDF uploaded as a document in the app must be refused with "The file failed the antivirus scan and was not stored", and any photo uploaded to a hotel gallery must be stored, which proves the API reaches clamd. ClamAV flags the EICAR file only at the start of a file or as a PDF stream object. The development stub flags it anywhere, so a JPEG with EICAR hidden after its header is quarantined in tests but clean in production.
+
+After a deploy that changes the `CLAMD_CONF_*` lines (Compose recreates `clamav` for it), check the settings clamd runs with:
+
+```bash
+docker compose -f infra/compose/production/compose.yml -f infra/compose/production/compose.box.yml exec -T clamav clamconf | grep -E '^(StreamMaxLength|MaxFileSize|MaxScanSize|MaxRecursion|MaxFiles|AlertExceedsMax|AlertOLE2Macros|AlertEncryptedArchive|AlertEncryptedDoc|ConcurrentDatabaseReload) '
+```
+
+Each limit must show the value above (a size may print in bytes: 32M is 33554432, 100M is 104857600), each Alert option `yes`, and `ConcurrentDatabaseReload` disabled.
 
 ## 2. Secrets (D-140)
 
@@ -118,7 +132,7 @@ Done on 20 Nov 2026 (UTC): production built at 09:02. The API and worker started
 2. `bash deploy/redeploy-prod.sh` on the box. Its order: preflight (the tree as shipped, checked by `deploy/verify-shipped-source.sh`, so a tree shipped by hand is refused; override; secrets; disk), build, data tier and virus scanner, safety dump, **migrate before the new API**, recreate api/worker/web, health gate, then the scanner's health (reported, not gated). A failed gate puts api and worker back on the previous image. It never seeds demo data.
 3. If the change touched the portal: `AMPM_WEB_TARGET=production … deploy/deploy-web.sh` **after** the API (a contract change needs the new API first). Load a page and read the browser console.
 
-The test stack deploys the same way, with `AMPM_SHIP_TARGET=test` for its source and `AMPM_WEB_TARGET=test` for its web bundle. Keep checking free disk (`df -h /`, `docker system df`) before a build; `redeploy-prod.sh` prunes dangling build cache itself below 15 GB free. Never prune volumes: other tenants' data lives in them.
+The test stack deploys the same way, with `AMPM_SHIP_TARGET=test` for its source and `AMPM_WEB_TARGET=test` for its web bundle. Keep checking free disk (`df -h /`, `docker system df`) before a build. `redeploy-prod.sh` prunes dangling build cache itself below 15 GB free, and after every deploy that passes its gate it drops the build cache no build has used for 7 days (section 6). Never prune volumes: other tenants' data lives in them.
 
 ### Rolling back a release by hand
 
@@ -150,12 +164,114 @@ Coming back to the release is an ordinary ship and deploy of it: `ship-source.sh
 
 ## 5. Backups and restore (D-139)
 
-- **What runs:** Postgres archives WAL every minute into the encrypted pgBackRest repository on this disk; the `pgbackrest` service takes a full backup on first start and then a full on Sundays and a differential on other days at 03:00 UTC, with a check after each (recorded on `job_runs`). Every deploy also writes a `pg_dump` into `ampm-backups/pgdump`. Media is archived nightly at 02:15 UTC by [`backup-media.sh`](backup-media.sh) into `ampm-backups/media-prod` (the SSH user's crontab, installed 20 Nov 2026; the entry is in the script's header; its log is `ampm-backups/media-backup.log`).
-- **What it does not cover:** losing this server. Nothing leaves the box until an off-box copy is chosen (D-139 lists the options). The provider's own VPS backups are the server owner's, not AMPM's.
+- **What runs:** Postgres archives WAL every minute into the encrypted pgBackRest repository on this disk; the `pgbackrest` service takes a full backup on first start and then a full on Sundays and a differential on other days at 03:00 UTC, with a check after each (recorded on `job_runs`). Every deploy also writes a `pg_dump` into `ampm-backups/pgdump`. Media is snapshotted nightly at 02:15 UTC by [`backup-media.sh`](backup-media.sh) into `ampm-media-snapshots` ("Media snapshots", below).
+- **What it does not cover:** losing this server. None of AMPM's own copies leaves the box until an off-box copy is chosen (D-139 lists the options). The one copy off the box is the VPS provider's daily disk backup, the second layer for media (D-177; "Media snapshots", below).
 - **Postgres runs under an init** (`init: true`, D-139): pgBackRest's async archiver leaves an orphaned process that the postmaster, as PID 1, would treat as a crashed backend. On 19–20 Nov 2026 that restarted the test stack's database every ~10 s.
 - **Point-in-time restore:** stop api and worker, then `docker compose -f … -f … --profile restore run --rm restore` with `RESTORE_TARGET_TIME` set for a point in time (see [`infra/runbooks/restore.md`](../../infra/runbooks/restore.md)), start, verify, restart. **From a dump:** `pg_restore --clean --if-exists` into the stopped stack's database.
 - **Rehearse monthly**: restore into a scratch container, run the smoke checks, record the recovery point and time in the vault.
 
-## 6. Going live (when AMPM starts pitching clients)
+### Media snapshots (D-177)
+
+Every night at 02:15 UTC the SSH user's cron runs [`backup-media.sh`](backup-media.sh); the entry is in the script's header and has not changed since 20 Nov 2026. Each run makes `ampm-media-snapshots/<UTC stamp>/`, a copy of `ampm-prod-storage` made of hard links (`cp -al`), and keeps the newest 14. The API never rewrites a stored file: every write replaces the file with a new one (it writes `<key>.<random>.tmp` beside the key and renames it over the key; `LocalStorageAdapter.putObject`), so a snapshot keeps the version it linked. A snapshot costs almost no space until a file is replaced or deleted: then the snapshots that hold the old version keep it, for up to 14 days. A `.tmp` file left in the store is a write the API never finished; the key beside it still holds its last complete version. Each run logs one line to `ampm-backups/media-backup.log`, for example `media snapshot 20261125T021500Z: 0 files, 1 snapshots kept`. The tar.gz archives that the script wrote until 24 Nov 2026 stay in `ampm-backups/media-prod`, each pruned after 14 days; no new one is written.
+
+- **Why a container.** The live files belong to uid 1000, and `fs.protected_hardlinks = 1` lets only their owner, or root, link them; the SSH user (uid 10044) cannot (measured 24 Nov 2026). So the linking runs as uid 1000 in a throwaway container of the running app image (`ampm-prod-state/app-image`). The container has no network, a read-only root, the vhost root's group, and one bind mount of the whole vhost root, because a hard link cannot cross two mounts, even two mounts of one filesystem.
+- **Partial runs.** A run that dies leaves `<stamp>.partial`, which the next run removes: only a complete snapshot gets its final name. Pruning touches only names of the snapshot form (`20261125T021500Z`), so nothing else in the snapshot root is ever removed.
+- **One run at a time.** Each run holds a lock on `ampm-prod-state/backup-media.lock` (`flock`); a second run while one is going stops with a message and exits 1.
+- **Refusals,** each before any container runs, with a message and exit 1: a media directory or snapshot root outside the vhost root or in its web root (`httpdocs`); a snapshot root that is a link, or that holds the store or sits inside it; an existing snapshot root that is not a directory of uid 1000, so a mistyped `SNAPSHOT_DIR` never hands a folder over (remove an empty one made by hand); `OWNER` uid 0; and no image to run.
+- **A clock set back.** A run whose new snapshot is pruned at once, because 14 snapshots have later names, fails with a message, so the log shows that the snapshots stopped moving.
+- **The first run** makes `ampm-media-snapshots` (owner uid 1000, mode 0750) at the vhost root through a root container that mounts the vhost root, and logs a line saying so; it makes it only when it does not exist. It sits beside the store, not in `ampm-backups`: uid 1000 reaches the vhost root (mode 710) through its group, but cannot enter `ampm-backups` (mode 700, the SSH user's alone; measured 24 Nov 2026). Do not make the folder by hand: one of the SSH user's is refused. To see the first run at once rather than at 02:15, run the cron's line by hand as the SSH user, without the `>>` log part; it prints the "made the snapshot root" line, then the snapshot's line.
+
+The snapshots belong to uid 1000, so read and restore them through the same container. The commands below run on the box; `NODE` is set once per shell:
+
+```bash
+V=/var/www/vhosts/app.ampmverse.com
+NODE=(docker run --rm --pull never --network none --read-only --security-opt no-new-privileges --user 1000:1000 --group-add "$(stat -c %g $V)" -v "$V:/v" --entrypoint /bin/sh "$(cat $V/ampm-prod-state/app-image)")
+"${NODE[@]}" -c 'ls -l /v/ampm-media-snapshots'
+```
+
+**Restore one file.** Use its storage key (the media row's `storage_key`, or the document's) and a snapshot's stamp. A photo is three files: the original at `<key>`, and its derivatives `<key>.web` and `<key>.thumb` (`apps/api/src/modules/media/media-content.ts`); a video, a GIF or a document is one. The command links back each of the three that the snapshot holds and prints its name. `ln -f` replaces the live file with the snapshot's, never rewriting a file in place, so the other snapshots keep their versions:
+
+```bash
+"${NODE[@]}" -c 'set -e; cd "/v/ampm-media-snapshots/$1"; for f in "$2" "$2.web" "$2.thumb"; do [ -e "$f" ] || continue; mkdir -p "$(dirname "/v/ampm-prod-storage/$f")"; ln -f "$f" "/v/ampm-prod-storage/$f"; echo "restored $f"; done' sh <stamp> <key>
+```
+
+**Restore the whole store** from a snapshot. `cp -aln` links back every file the snapshot holds that the store no longer has, leaves every file the store still has, and exits 0: files deleted since the snapshot come back, files added since it stay, and a file replaced since it keeps its new version (restore that one with the command above). Plain `cp -a` does not do: for every file the two still share, GNU cp 9.1 (Debian bookworm's, the app image's) prints "are the same file" and exits 1. Newer GNU cp releases changed what `-n` does, so check this again when the image's Debian changes.
+
+```bash
+cd ~/ampm-prod
+docker compose -f infra/compose/production/compose.yml -f infra/compose/production/compose.box.yml stop api worker
+"${NODE[@]}" -c 'cp -aln "/v/ampm-media-snapshots/$1/." /v/ampm-prod-storage/' sh <stamp>
+"${NODE[@]}" -c 'find /v/ampm-prod-storage ! -user 1000 | head -n 5; find /v/ampm-prod-storage -type f | wc -l'
+docker compose -f infra/compose/production/compose.yml -f infra/compose/production/compose.box.yml start api worker
+```
+
+The check after the copy (the fourth line) must print no path, then the number of files. Then open a hotel's gallery in the app and load a photo.
+
+**The second layer, off the box.** The VPS provider's daily disk backup copies the whole disk off the server, so it covers the loss of the server, which the snapshots cannot. It cannot be seen or checked from the box. The developer confirms in the provider's panel that it is on, that it runs daily and when it last ran, and records that in HF-G5's notes. Restoring it brings back the whole disk as it was at that backup.
+
+## 6. Disk space (D-177)
+
+Every store sits on the one filesystem, `/dev/sda1` (193 GB): the media store and its snapshots, the WAL archive, the pgBackRest repository, the dumps, nginx's client-body temporary directory and Docker's data. On 24 Nov 2026 it had 35 GB free, down from 49 GB the day before. Each deploy's image build grows Docker's build cache, which stood at 23.5 GB, 15.4 GB of it reclaimable; images took 13.5 GB. Since D-177, every deploy that passes its gate prunes the build cache unused for 7 days (`docker builder prune -f --filter until=168h`, logged), and below 15 GB free the preflight still prunes dangling cache before it builds.
+
+**The disk check.** Every 15 minutes the worker runs `system.disk_check`: `statfs` of `/data/storage`, the media store's mount, so one figure covers every store above. It compares the free space with configuration `storage.disk_guard`:
+
+| Level      | Free space                       | Default |
+| ---------- | -------------------------------- | ------- |
+| `ok`       | at or above `warnGiB`            | 12 GiB  |
+| `low`      | below `warnGiB`                  |         |
+| `critical` | below `floorGiB`, at least 9 GiB | 9 GiB   |
+
+Below the floor, the hotel form's upload guard will refuse new files (Slice 9).
+
+- **Who is told.** Every active staff user with the Super Admin or the Hotel team role, in-app and by email. Example: "The AMPM server has 8.4 GB of disk free, below the 9 GB floor: new hotel-form uploads are refused until space is freed." The figures are GiB; the notices name no path.
+- **When.** On a move to a worse level, then at most once every 24 hours per level while the space stays there; then one in-app notice when it is back above the warning level. The history is the job's own `job_runs` rows, so a restarted worker neither repeats an alert nor forgets one. The notices follow each person's notification preferences, under the event `system.disk_space`.
+- **A failed measurement** is recorded as a failed run, alerts no one, and the queue retries it.
+- **Changing the levels.** In the admin console, Configuration → "Disk space alerts" (Super Admin; whole GiB, the floor at least 9 and the warning level above it). The worker reads the new values within 5 minutes.
+- **The latest runs:**
+
+  ```bash
+  docker exec -i ampm-postgres-1 sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"' <<'SQL'
+  SELECT started_at, status, detail_json, error FROM job_runs WHERE job_name = 'system.disk_check' ORDER BY started_at DESC LIMIT 5;
+  SQL
+  ```
+
+**Freeing space**, in this order:
+
+1. Build cache that no build has used for a day: `docker builder prune -f --filter until=24h`. The next build of an unchanged layer takes longer.
+2. App images older than the rollback target, if any is left: `docker image ls ampm-prod-app`.
+3. Old safety dumps in `ampm-backups/pgdump`, which already go after 14 days.
+
+Never prune volumes, and never delete from the WAL archive or the pgBackRest repository by hand. When that is not enough, add disk or move media to online storage (the plan's §4.5).
+
+## 7. Edge limits and the client's address (D-177)
+
+On 24 Nov 2026 the edge had no effective size limit. nginx passed at least 40 MiB to an upload route, where Plesk's own limit is 128m. The API cut the body off at 26 MB and Apache answered a 502 page. A 2 MiB JSON body reached the API, which answered its own 413. The SSH user cannot read or change Plesk's generated vhost configuration, so:
+
+- **Someone with Plesk panel access**, in Domains > app.ampmverse.com > Apache & nginx Settings:
+  - pastes [`plesk-nginx-directives.conf`](plesk-nginx-directives.conf) into "Additional nginx directives";
+  - pastes [`plesk-apache-directives.conf`](plesk-apache-directives.conf) into both "Additional directives for HTTP" and "Additional directives for HTTPS";
+  - Plesk tests the configuration before applying it.
+  - If Plesk refuses the nginx file because `client_max_body_size` is a duplicate, the domain's "Maximum allowed HTTP request body size" field on the same page is set, and Plesk writes its own `client_max_body_size`. Use the field instead: set it to 32 MB (1 MB with the optional tier) and delete the file's `client_max_body_size` line, or clear the field and keep the line.
+- **The required tier** is what those files apply as written. nginx takes at most 32m per request and waits at most 30 s between two reads of a body. Apache refuses a body over 32 MiB under `/_api`.
+- **No `RequestReadTimeout` line.** Apache's slow-request timeouts stay the stock ones: mod_reqtimeout's `reqtimeout.conf` on Debian and Ubuntu sets `header=20-40,MinRate=500 body=10,MinRate=500`. A vhost line such as the first draft's `body=30,MinRate=500` would only loosen the body's timeout, and the client's own pauses are cut off by nginx's `client_body_timeout`.
+- **The optional hardening tier** is commented out in the nginx file, with its steps. It keeps every other request to 1m and lets only the upload and import routes take 32m, with per-address request and connection limits. It needs the box's root admin twice:
+  - to install [`nginx-upload-zones.conf`](nginx-upload-zones.conf) in nginx's http context;
+  - to copy Plesk's own proxy lines from the generated vhost configuration into the new location block. Without them, uploads would stop reaching Apache.
+
+**Check the edge** from any machine, before and after: `bash deploy/app-ampmverse/check-edge-limits.sh`, or with `--hardened` once the optional tier is on.
+
+- It sends 40 MiB to an upload route, expecting the edge's 413 (a 502 means no edge limit), and 20 MiB, expecting the API's own 401 or 415.
+- With `--hardened` it also sends 2 MiB of JSON to another API route, expecting the edge's 413.
+- It sends no credentials, so nothing is stored, and it never calls a path behind the password curtain, whose 401s count toward fail2ban.
+
+**The client's address (HF-G8).** With `TRUST_PROXY: "1"` behind Plesk's nginx and Apache, the API's rate limiter must count a request against the caller's real address, and must ignore an `X-Forwarded-For` the caller sends. Both held on 24 Nov 2026. Repeat the check after any change to Plesk's proxy settings or to `TRUST_PROXY`:
+
+```bash
+SHIP_SSH=app_ampmverse@31.97.62.74 SHIP_SSH_KEY=~/.ssh/ampm_test_vps bash deploy/app-ampmverse/check-client-ip.sh
+```
+
+It reads the limiter's counters for `POST /_api/auth/activate` over SSH, sends that route two empty requests, the second with a spoofed `X-Forwarded-For`, and reads the counters again. It prints `match` (as it should), `spoofable` or `differs`. It never prints an address.
+
+## 8. Going live (when AMPM starts pitching clients)
 
 The password curtain came off on 20 Nov 2026 (D-148); both sites are public and send `X-Robots-Tag: noindex, nofollow`. Going live means working through the list in [production-readiness.md](../../docs/planning/production-readiness.md), **switching the on-screen client code off ("Wiring SMS") first**, then removing the `X-Robots-Tag` lines (the curtain blocks are already commented out) from both production `.htaccess` files. Before that, confirm two things: `POST https://app.ampmverse.com/_api/auth/dev-login` with a well-formed body (`{"email":"nobody@example.com"}`) answers 404 (an empty body gets validation's 400 first: the route exists everywhere and refuses outside a local, non-production build), and the API runs with `NODE_ENV=production`. Both held on 20 Nov 2026.

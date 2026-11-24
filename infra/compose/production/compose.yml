@@ -183,6 +183,25 @@ services:
       # engine, which would double memory and break the limit below. Measured on 20 Nov 2026 (ClamAV
       # 1.5.5, 3.6 million signatures): 0.97 GB steady, 0.98 GB peak through a reload.
       CLAMD_CONF_ConcurrentDatabaseReload: "no"
+      # Sized to the uploads (D-177; measured 24 Nov 2026): media is capped at 25 MiB, documents at 20 MiB
+      # and import CSVs at 5 MiB, so a 32M stream fits them all. A longer stream gets clamd's size-limit
+      # error, which the API treats as no verdict (503, fail closed), so it is never stored. The scan
+      # limits are explicit, and a file past them (a ZIP that unpacks past 100M, say) is flagged by
+      # AlertExceedsMax instead of passing unscanned; the image's defaults were 100M stream and file, 400M
+      # scan, 17 levels and 10000 files, with every alert off. Office macros and encrypted archives are
+      # flagged too. AlertEncryptedDoc flags only a PDF that needs a password to open
+      # (Heuristics.Encrypted.PDF): a permission-locked PDF with an owner password only, as signed
+      # contracts often are, passes (tested on the box with this image, clamscan and synthetic PDFs). The
+      # image's /init renders these into clamd.conf even under the `command` above.
+      CLAMD_CONF_StreamMaxLength: "32M"
+      CLAMD_CONF_MaxFileSize: "32M"
+      CLAMD_CONF_MaxScanSize: "100M"
+      CLAMD_CONF_MaxRecursion: "16"
+      CLAMD_CONF_MaxFiles: "5000"
+      CLAMD_CONF_AlertExceedsMax: "yes"
+      CLAMD_CONF_AlertOLE2Macros: "yes"
+      CLAMD_CONF_AlertEncryptedArchive: "yes"
+      CLAMD_CONF_AlertEncryptedDoc: "yes"
     networks: [internal]
     healthcheck:
       test: ["CMD-SHELL", '[ "$$(echo PING | nc -w 5 127.0.0.1 3310)" = PONG ]']

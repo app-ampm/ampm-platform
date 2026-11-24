@@ -1,5 +1,5 @@
-import { createHmac, timingSafeEqual } from "node:crypto";
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
+import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { dirname, join, resolve, sep } from "node:path";
 
 import { errors } from "@ampm/core";
@@ -21,10 +21,26 @@ export class LocalStorageAdapter implements StorageAdapter {
     private readonly signingSecret: string,
   ) {}
 
+  /**
+   * Every write is a new file renamed over the key, never a rewrite of the old one. The nightly media
+   * snapshots hard-link the live files (deploy/app-ampmverse/backup-media.sh, D-177), so rewriting a file
+   * in place would change the copy every snapshot shares, and a crash mid-write would truncate it in all
+   * of them; a reader mid-download keeps the file it opened. The temporary sibling sits in the key's own
+   * directory, so the rename stays on one filesystem and is atomic. Media originals, their `.web` and
+   * `.thumb` derivatives and documents are all written here.
+   */
   async putObject(key: string, body: Buffer, _contentType: string): Promise<void> {
     const path = this.resolveKey(key);
     await mkdir(dirname(path), { recursive: true });
-    await writeFile(path, body);
+    const temporary = `${path}.${randomUUID()}.tmp`;
+    try {
+      await writeFile(temporary, body, { flag: "wx" });
+      await rename(temporary, path);
+    } catch (error) {
+      // Best effort: the write's own error is the one to pass on.
+      await rm(temporary, { force: true }).catch(() => undefined);
+      throw error;
+    }
   }
 
   async getObject(key: string): Promise<Buffer> {

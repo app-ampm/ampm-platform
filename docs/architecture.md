@@ -470,6 +470,7 @@ All jobs are idempotent (safe to run twice) and record their outcome. Source ref
 | Export build | User request | export request id | Manual |
 | Retention (identity documents, guest data, leads, demo reset) | Daily | entity id and date | Next day, alert on failure |
 | Backup verification | Weekly | date | Alert |
+| Disk space check (`system.disk_check`, D-177): free space where uploads are stored, which on the production box is the one disk under the media, the WAL archive, the backups, nginx's upload buffer and Docker, against configuration `storage.disk_guard`; alerts the Super Admin and the Hotel team in-app and by email on a move to a worse level and at most once a day per level after that, with one in-app notice on recovery, reading its alert history back from `job_runs` | Every 15 minutes, worker only | job name and UTC minute | Next run; a failed measurement alerts no one |
 
 ---
 

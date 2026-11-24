@@ -14,7 +14,7 @@
     "test": "turbo run test",
     "check": "turbo run lint typecheck test && pnpm run test:tools && pnpm run test:deploy && pnpm run scan",
     "test:tools": "python3 docs/tools/redact_secrets.py --self-test && python3 docs/tools/scan_secrets.py --self-test && python3 docs/tools/scan_price_literals.py --self-test && bash docs/tools/memory_hook_test.sh && bash docs/tools/setup_memory_test.sh && bash docs/tools/mempalace_global_hook_test.sh && python3 docs/tools/install_global_memory_hooks_test.py && bash docs/tools/checkpoint_test.sh && bash docs/tools/claude_hooks_test.sh && python3 docs/tools/monday_sync_test.py",
-    "test:deploy": "bash deploy/ship-source.test.sh && bash deploy/redeploy-prod.test.sh",
+    "test:deploy": "bash deploy/ship-source.test.sh && bash deploy/redeploy-prod.test.sh && bash deploy/backup-media.test.sh",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "tokens:build": "pnpm --filter @ampm/tokens build",

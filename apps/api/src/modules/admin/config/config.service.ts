@@ -14,6 +14,7 @@ import {
   type NotificationChannelDefaults,
   type NotificationTemplates,
   type SessionIdleTimeouts,
+  type StorageDiskGuard,
   type SubscriptionPolicy,
 } from "@ampm/core";
 
@@ -50,6 +51,7 @@ export class ConfigService {
   get(key: "hotel.cuisine_options"): Promise<HotelCuisineOptions>;
   get(key: "consultancy.chargeable_services"): Promise<ConsultancyChargeablePolicy>;
   get(key: "consultancy.milestone_amounts_visible"): Promise<ConsultancyMilestoneVisibilityPolicy>;
+  get(key: "storage.disk_guard"): Promise<StorageDiskGuard>;
   async get(key: ConfigKey): Promise<unknown> {
     return this.resolve(key);
   }

@@ -76,6 +76,12 @@ const CONFIG_META: Record<string, ConfigMeta> = {
     area: "Consultancy",
     description: "Whether booking-milestone amounts are shown to the client.",
   },
+  "storage.disk_guard": {
+    label: "Disk space alerts",
+    area: "Platform",
+    description:
+      "Free disk space on the server, in GiB: below the warning level the Super Admin and the Hotel team are alerted; below the floor (at least 9) new hotel-form uploads are refused.",
+  },
 };
 
 /** Turn a dotted or camelCase identifier into a spaced, capitalised label (`staffMinutes` → "Staff minutes"). */

@@ -104,6 +104,22 @@ export type ConsultancyMilestoneVisibilityPolicy = z.infer<
   typeof consultancyMilestoneVisibilityPolicy
 >;
 
+/**
+ * The disk guard (D-177), in GiB: the worker's disk check (`system.disk_check`) alerts the Super Admin and
+ * the Hotel team below `warnGiB` free, and calls it critical below `floorGiB`, where the hotel form's new
+ * uploads are refused (Slice 9). The floor is never under 9 GiB, 1 GiB above the 8 GB a deploy needs.
+ */
+export const storageDiskGuard = z
+  .object({
+    floorGiB: z.number().min(9).max(1000),
+    warnGiB: z.number().max(1000),
+  })
+  .refine((guard) => guard.warnGiB > guard.floorGiB, {
+    message: "The warning level must be above the floor",
+    path: ["warnGiB"],
+  });
+export type StorageDiskGuard = z.infer<typeof storageDiskGuard>;
+
 /** One registry entry; the helper makes the compiler check the baseline against its own schema. */
 function entry<S extends z.ZodType>(
   schema: S,
@@ -152,6 +168,7 @@ export const CONFIG_REGISTRY = {
     // the hotel directly.
     milestoneAmountsVisible: false,
   }),
+  "storage.disk_guard": entry(storageDiskGuard, { floorGiB: 9, warnGiB: 12 }),
   "notification.templates": entry(notificationTemplates, {
     "staff.invite": {
       email: {
@@ -172,6 +189,22 @@ export const CONFIG_REGISTRY = {
         subject: "Reset your AMPM password",
         html: '<p>Hi {{name}},</p>\n<p>Someone asked to reset the password of your AMPM account. <a href="{{resetUrl}}">Choose a new password</a>.</p>\n<p>The link works once and expires in 60 minutes. If you did not ask for this, ignore this email: your password stays the same.</p>',
         text: "Hi {{name}},\n\nSomeone asked to reset the password of your AMPM account. Choose a new password:\n{{resetUrl}}\n\nThe link works once and expires in 60 minutes. If you did not ask for this, ignore this email: your password stays the same.",
+      },
+    },
+    // The worker's disk check (D-177), to the Super Admin and the Hotel team, in-app and by email. The
+    // figures are GiB, as people say GB. Its recovery notice is in-app only, so it has no block here.
+    "system.disk_low": {
+      email: {
+        subject: "AMPM server disk space is low",
+        html: "<p>The AMPM server has {{freeGb}} GB of disk free, below the {{warnGb}} GB warning level.</p>\n<p>Below the {{floorGb}} GB floor, new hotel-form uploads are refused until space is freed.</p>",
+        text: "The AMPM server has {{freeGb}} GB of disk free, below the {{warnGb}} GB warning level.\n\nBelow the {{floorGb}} GB floor, new hotel-form uploads are refused until space is freed.",
+      },
+    },
+    "system.disk_critical": {
+      email: {
+        subject: "AMPM server disk space is below the floor",
+        html: "<p>The AMPM server has {{freeGb}} GB of disk free, below the {{floorGb}} GB floor: new hotel-form uploads are refused until space is freed.</p>",
+        text: "The AMPM server has {{freeGb}} GB of disk free, below the {{floorGb}} GB floor: new hotel-form uploads are refused until space is freed.",
       },
     },
     // The client sign-in code (D-147). DLT registers this text with {#var#} in place of {{code}}; the

@@ -143,5 +143,20 @@ describe("configuration.edit", () => {
       expect(result.value).toBeUndefined();
       expect(result.formError).toBe("That value isn't valid for this setting");
     });
+
+    it("edits the disk guard in whole GiB, refusing a floor under 9 or a warning level not above it", () => {
+      expect(isEditableConfigKey("storage.disk_guard")).toBe(true);
+      expect(configEditFields("storage.disk_guard").map((field) => field.path)).toEqual([
+        "floorGiB",
+        "warnGiB",
+      ]);
+      const valid = validateConfigDraft("storage.disk_guard", { floorGiB: "10", warnGiB: "15" });
+      expect(valid.value).toEqual({ floorGiB: 10, warnGiB: 15 });
+      const lowFloor = validateConfigDraft("storage.disk_guard", { floorGiB: "8", warnGiB: "12" });
+      expect(lowFloor.fieldErrors["floorGiB"]).toBe("Must be at least 9");
+      const level = validateConfigDraft("storage.disk_guard", { floorGiB: "12", warnGiB: "12" });
+      expect(level.value).toBeUndefined();
+      expect(level.formError).toBe("That value isn't valid for this setting");
+    });
   });
 });
