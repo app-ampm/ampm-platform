@@ -19,6 +19,7 @@ import { useGoToSignIn } from "@/navigation/sign-in";
 
 import { HotelRatesSide } from "./hotel-rates-side";
 import { HotelRecordHeader } from "./hotel-record-header";
+import type { RateItemPlaces } from "./hotels-admin.format";
 import { RateCardEditSheet } from "./rate-card-edit-sheet";
 import { RateCardPanel } from "./rate-card-panel";
 
@@ -47,9 +48,11 @@ function RatesHeading({ onAdd }: { readonly onAdd: () => void }) {
 function HotelRatesList({
   hotelId,
   cards,
+  places,
 }: {
   readonly hotelId: string;
   readonly cards: readonly RateCardView[];
+  readonly places: RateItemPlaces | undefined;
 }) {
   const [creating, setCreating] = useState(false);
   return (
@@ -64,7 +67,7 @@ function HotelRatesList({
       ) : (
         <Stack gap={4}>
           {cards.map((card) => (
-            <RateCardPanel key={card.id} hotelId={hotelId} card={card} />
+            <RateCardPanel key={card.id} hotelId={hotelId} card={card} places={places} />
           ))}
         </Stack>
       )}
@@ -81,9 +84,11 @@ function HotelRatesList({
 function HotelRatesBody({
   hotelId,
   cards,
+  places,
 }: {
   readonly hotelId: string;
   readonly cards: UseQueryResult<RateCardView[]>;
+  readonly places: RateItemPlaces | undefined;
 }) {
   const goToSignIn = useGoToSignIn();
   if (cards.isPending) return <RatesLoading />;
@@ -100,7 +105,7 @@ function HotelRatesBody({
       />
     );
   }
-  return <HotelRatesList hotelId={hotelId} cards={cards.data} />;
+  return <HotelRatesList hotelId={hotelId} cards={cards.data} places={places} />;
 }
 
 export interface HotelRatesScreenProps {
@@ -114,6 +119,7 @@ export interface HotelRatesScreenProps {
  * reaches client discovery only once it is verified and its items are client-visible. HT / SA only.
  * From 1024 the cards sit beside T5's 300 column (verification, media rights); below it the column
  * follows them. The cards stay in the same slot at every width, so an open editor survives a resize.
+ * Each item names the room or venue it prices from the staff hotel the header already reads.
  *
  *   <HotelRatesScreen hotelId={id} tabBar={<AppTabBar />} />
  */
@@ -127,7 +133,7 @@ export function HotelRatesScreen({ hotelId, tabBar }: HotelRatesScreenProps) {
       header={<HotelRecordHeader hotelId={hotelId} section="rates" hotel={hotel.data} />}
     >
       <SplitPane sideWidth="sm" side={<HotelRatesSide hotelId={hotelId} />} testID="rates-split">
-        <HotelRatesBody hotelId={hotelId} cards={cards} />
+        <HotelRatesBody hotelId={hotelId} cards={cards} places={hotel.data} />
       </SplitPane>
     </Screen>
   );

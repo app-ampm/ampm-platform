@@ -103,13 +103,13 @@ TABLES["configurations"] = T(
                  automation="Takes effect on the next job run or request; change audited"),
     scope_id=F(validation="references wedding_projects when scope is project"),
 )
-# D-181: a staff hotel import (hotels, rooms or venues) keeps no file; its preview stores the planned rows, values
+# D-181: a staff hotel import (hotels, rooms, venues or rates) keeps no file; its preview stores the planned rows, values
 # included, in plan_json until it is imported by its job id, superseded or expired (24 hours).
 TABLES["import_jobs"] = T(
-    "Any (import)", "SA; HT (hotels, rooms and venues); VC (vendors); RG and PM (a) (guests)",
-    required=["import_type", "status"], assumptions="A-9 (Q9), GP-22, D-181",
+    "Any (import)", "SA; HT (hotels, rooms, venues and rates); VC (vendors); RG and PM (a) (guests)",
+    required=["import_type", "status"], assumptions="A-9 (Q9), GP-22, D-181, D-184",
     import_type=F(validation="one of the listed options; the staff hotel imports store their kind as hotels, "
-                             "hotel_rooms or hotel_venues"),
+                             "hotel_rooms, hotel_venues or hotel_rates"),
     file_document_id=F(required="At creation for guest and vendor imports; null for the staff hotel imports, which "
                                 "keep no file (D-181)"),
     status=F(automation="Staff hotel imports (D-181): a preview is stored validating, or failed when no row is valid; "

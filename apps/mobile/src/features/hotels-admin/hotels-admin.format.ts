@@ -1,12 +1,16 @@
-import type {
-  DestinationView,
-  HotelRateCardStatus,
-  HotelRateItemUnit,
-  HotelStaffView,
-  HotelStatus,
-  HotelVerificationFieldGroup,
-  HotelVerificationSource,
-  VerificationView,
+import {
+  rateItemTypeLabel,
+  type DestinationView,
+  type HotelRateCardStatus,
+  type HotelRateItemUnit,
+  type HotelStaffView,
+  type HotelStatus,
+  type HotelVerificationFieldGroup,
+  type HotelVerificationSource,
+  type RateItemView,
+  type RoomCategoryView,
+  type VenueView,
+  type VerificationView,
 } from "@ampm/core";
 import type { StatusTone } from "@ampm/ui";
 
@@ -134,13 +138,67 @@ const RATE_UNIT_LABEL: Record<HotelRateItemUnit, string> = {
   per_night: "per night",
   per_plate: "per plate",
   per_event: "per event",
-  percent: "%",
+  percent: "Percent",
 };
-// `percent` is intentionally omitted from the picker: the wire amount is INR money with no agreed
-// percentage convention, so a percent unit would render a percentage as a rupee figure. Money units only.
-export const RATE_UNITS: readonly HotelRateItemUnit[] = ["per_night", "per_plate", "per_event"];
+// A `percent` item's amounts hold the percentage in hundredths (10% is 1000), the convention the Rates
+// import writes and the client views read (core `ratePercentLabel`, D-184). The item sheet types it as a
+// number, as it does rupees, and its row shows the percentage rather than money and a unit.
+export const RATE_UNITS: readonly HotelRateItemUnit[] = [
+  "per_night",
+  "per_plate",
+  "per_event",
+  "percent",
+];
 export function rateUnitLabel(unit: HotelRateItemUnit): string {
   return RATE_UNIT_LABEL[unit];
+}
+
+/** The live room categories and venues of the staff hotel detail, which a rate item's links name. */
+export interface RateItemPlaces {
+  readonly rooms: readonly Pick<RoomCategoryView, "id" | "name">[];
+  readonly venues: readonly Pick<VenueView, "id" | "name">[];
+}
+
+/** A rate item's name on its row: as shown, and as its actions speak it (no separator glyph). */
+export interface RateItemName {
+  readonly title: string;
+  readonly spoken: string;
+}
+
+/**
+ * The room category or venue an item prices, by name; "a removed room" or "a removed venue" when its
+ * link names none of the hotel's live ones (a removed room keeps its id on the item). Null for an item
+ * for neither, and while the hotel is not loaded, so a link is never called removed unread.
+ */
+function rateItemPlace(
+  { roomCategoryId, venueId }: Pick<RateItemView, "roomCategoryId" | "venueId">,
+  places: RateItemPlaces | undefined,
+): string | null {
+  if (places === undefined) return null;
+  if (roomCategoryId !== null) {
+    return places.rooms.find((room) => room.id === roomCategoryId)?.name ?? "a removed room";
+  }
+  if (venueId !== null) {
+    return places.venues.find((venue) => venue.id === venueId)?.name ?? "a removed venue";
+  }
+  return null;
+}
+
+/**
+ * A rate item's type, then the room category or venue it prices (TW-23).
+ *
+ * @example
+ * rateItemName(suiteRate, hotel).title; // "Room rate · Lake View Suite"
+ * rateItemName(suiteRate, hotel).spoken; // "Room rate for Lake View Suite"
+ */
+export function rateItemName(
+  item: Pick<RateItemView, "itemType" | "roomCategoryId" | "venueId">,
+  places: RateItemPlaces | undefined,
+): RateItemName {
+  const type = rateItemTypeLabel(item.itemType);
+  const place = rateItemPlace(item, places);
+  if (place === null) return { title: type, spoken: type };
+  return { title: `${type} · ${place}`, spoken: `${type} for ${place}` };
 }
 
 const VERIFICATION_SOURCE_LABEL: Record<HotelVerificationSource, string> = {

@@ -8,12 +8,16 @@ import { ChildRowsImporter } from "../hotel-import.children.js";
 import { HotelRowsImporter } from "../hotel-import.hotels.js";
 import { HotelRowsWriter } from "../hotel-import.hotels-write.js";
 import type { PreviewJob } from "../hotel-import.job.js";
+import { RatesImporter } from "../hotel-import.rates.js";
+import { RateRowsWriter } from "../hotel-import.rates-write.js";
 import type {
   HotelImportRepository,
+  ImportRateCardRow,
   ImportTargetRow,
   PreviewOutcome,
 } from "../hotel-import.repository.js";
 import { HotelImportService } from "../hotel-import.service.js";
+import type { HotelRatesRepository } from "../hotel-rates.repository.js";
 import type {
   HotelSubresourcesRepository,
   RoomRow,
@@ -32,12 +36,14 @@ import { roomRow, venueRow } from "./subresource-fixtures.js";
 export const NEW_HOTEL_ID = "0192f1a0-0000-7000-8000-0000000000d1";
 export const NEW_DESTINATION_ID = "0192f1a0-0000-7000-8000-0000000000d2";
 export const NEW_ROW_ID = "0192f1a0-0000-7000-8000-0000000000d3";
+export const NEW_CARD_ID = "0192f1a0-0000-7000-8000-0000000000d4";
 
-/** What the fakes read: the hotels a file may name, and their rooms and venues. */
+/** What the fakes read: the hotels a file may name, and their rooms, venues and rate cards. */
 export interface ImportCatalogue {
   hotels: ImportTargetRow[];
   rooms: RoomRow[];
   venues: VenueRow[];
+  rateCards: ImportRateCardRow[];
 }
 
 /**
@@ -94,6 +100,9 @@ function jobStore() {
 /** The import repository over the catalogue and the job table. */
 function importRepository(state: ImportCatalogue, transaction?: () => Promise<never>) {
   const named = (slugs: readonly string[]) => state.hotels.filter((h) => slugs.includes(h.slug));
+  // As the query reads them: the hotels' cards less the retired ones.
+  const liveCards = (ids: readonly string[]) =>
+    state.rateCards.filter((card) => ids.includes(card.hotelId) && card.status !== "retired");
   return {
     findHotelsBySlugs: vi.fn(async (slugs: readonly string[], _tx?: unknown) => named(slugs)),
     findHotelRefsBySlugs: vi.fn(async (slugs: readonly string[], _tx?: unknown) =>
@@ -108,9 +117,16 @@ function importRepository(state: ImportCatalogue, transaction?: () => Promise<ne
     findLiveVenues: vi.fn(async (ids: readonly string[], _tx?: unknown) =>
       state.venues.filter((venue) => ids.includes(venue.hotelId)),
     ),
+    findLiveRateCards: vi.fn(async (ids: readonly string[], _tx?: unknown) => liveCards(ids)),
     lockHotelsBySlug: vi.fn(async (_slugs: readonly string[], _tx: unknown) => {}),
     lockLiveRooms: vi.fn(async (_ids: readonly string[], _tx: unknown) => {}),
     lockLiveVenues: vi.fn(async (_ids: readonly string[], _tx: unknown) => {}),
+    shareLiveRooms: vi.fn(async (_ids: readonly string[], _tx: unknown) => {}),
+    shareLiveVenues: vi.fn(async (_ids: readonly string[], _tx: unknown) => {}),
+    lockLiveRateCards: vi.fn(async (ids: readonly string[], _tx: unknown) =>
+      liveCards(ids).map(({ id }) => id),
+    ),
+    lockLiveRateItems: vi.fn(async (_ids: readonly string[], _tx: unknown) => {}),
     transaction: vi.fn(
       transaction ?? (<T>(work: (tx: unknown) => Promise<T>): Promise<T> => work({})),
     ),
@@ -139,8 +155,25 @@ function writes() {
       venueRow(),
     ),
   };
-  return { hotelsRepo, subresources };
+  const ratesRepo = {
+    createCard: vi.fn(
+      async (_hotelId: string, _data: unknown, _a: string, _tx?: unknown) => NEW_CARD_ID,
+    ),
+    createItem: vi.fn(async (_cardId: string, _data: unknown, _a: string, _tx?: unknown) => ({
+      id: NEW_ROW_ID,
+    })),
+    updateItem: vi.fn(async (id: string, _patch: unknown, _a: string, _tx?: unknown) => ({ id })),
+  };
+  return { hotelsRepo, subresources, ratesRepo };
 }
+
+/** The catalogue a spec starts from: the synthetic hotel, with no rooms, venues or rate cards. */
+const startingCatalogue = (): ImportCatalogue => ({
+  hotels: [storedHotel({ minNights: 2 })],
+  rooms: [],
+  venues: [],
+  rateCards: [],
+});
 
 /**
  * The import service over fakes: the synthetic hotel (with any catalogue the spec gives), its destination,
@@ -154,10 +187,9 @@ export function buildImportService(
   catalogue: Partial<ImportCatalogue> = {},
   options: { readonly transaction?: () => Promise<never> } = {},
 ) {
-  const hotelsOf = { hotels: [storedHotel({ minNights: 2 })], rooms: [], venues: [] };
-  const state: ImportCatalogue = { ...hotelsOf, ...catalogue };
+  const state: ImportCatalogue = { ...startingCatalogue(), ...catalogue };
   const imports = importRepository(state, options.transaction);
-  const { hotelsRepo, subresources } = writes();
+  const { hotelsRepo, subresources, ratesRepo } = writes();
   const audit = { record: vi.fn(async (_input: unknown, _tx?: unknown) => {}) };
   const media = {
     registerImportedImage: vi.fn(async () => ({ created: true })),
@@ -166,7 +198,6 @@ export function buildImportService(
       async (_ownerType: string, refs: readonly { ownerId: string; ref: string }[]) => refs.length,
     ),
   };
-  const config = { get: vi.fn(async () => ({ options: ["Indian"] })) };
   const repo = imports as unknown as HotelImportRepository;
   const auditService = audit as unknown as AuditService;
   const writer = new HotelRowsWriter(hotelsRepo as unknown as HotelsAdminRepository, auditService);
@@ -174,15 +205,29 @@ export function buildImportService(
     repo,
     writer,
     media as unknown as MediaService,
-    config as unknown as ConfigService,
+    { get: vi.fn(async () => ({ options: ["Indian"] })) } as unknown as ConfigService,
   );
-  const children = new ChildRowsImporter(
+  const service = new HotelImportService(
+    hotels,
+    new ChildRowsImporter(
+      repo,
+      subresources as unknown as HotelSubresourcesRepository,
+      auditService,
+    ),
+    ratesImporter(repo, ratesRepo, auditService),
     repo,
-    subresources as unknown as HotelSubresourcesRepository,
-    auditService,
   );
-  const service = new HotelImportService(hotels, children, repo);
-  return { service, state, imports, hotelsRepo, subresources, audit, media };
+  return { service, state, imports, hotelsRepo, subresources, ratesRepo, audit, media };
+}
+
+/** The rates importer over the import repository's fakes and the rates writes'. */
+function ratesImporter(
+  repo: HotelImportRepository,
+  ratesRepo: ReturnType<typeof writes>["ratesRepo"],
+  audit: AuditService,
+): RatesImporter {
+  const writer = new RateRowsWriter(ratesRepo as unknown as HotelRatesRepository, audit);
+  return new RatesImporter(repo, writer);
 }
 
 /** A file's bytes from its lines. */

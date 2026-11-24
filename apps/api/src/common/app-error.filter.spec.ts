@@ -129,22 +129,27 @@ describe("the binary-body gate (D-176)", () => {
   }
 
   it("lets a binary body through to the import, which reads it after the guards", () => {
-    expect(passes("POST", "/hotels-admin/imports/hotels?dryRun=true")).toBe(true);
+    // The path is the URL's before any query (the route itself refuses a query, D-184).
+    expect(passes("POST", "/hotels-admin/imports/hotels?source=sheet")).toBe(true);
     expect(
-      isPostGuardUpload({ method: "POST", url: "/hotels-admin/imports/hotels?dryRun=true" }),
+      isPostGuardUpload({ method: "POST", url: "/hotels-admin/imports/hotels?source=sheet" }),
     ).toBe(true);
   });
 
-  it("reads each kind's preview after the guards, and nothing else under imports (D-181)", () => {
-    for (const kind of ["hotels", "rooms", "venues"]) {
+  it("reads each kind's preview after the guards, and nothing else under imports (D-181, D-183)", () => {
+    for (const kind of ["hotels", "rooms", "venues", "rates"]) {
       expect(isPostGuardUpload({ method: "POST", url: `/hotels-admin/imports/${kind}` })).toBe(
         true,
       );
     }
-    const apply = "/hotels-admin/imports/rooms/0192f1a0-0000-7000-8000-0000000000a1/apply";
-    expect(isPostGuardUpload({ method: "POST", url: apply })).toBe(false);
-    expect(passes("POST", apply)).toBe(false); // the import takes no file: a binary body is a 415
-    expect(isPostGuardUpload({ method: "POST", url: "/hotels-admin/imports/rates" })).toBe(false);
+    for (const kind of ["rooms", "rates"]) {
+      const apply = `/hotels-admin/imports/${kind}/0192f1a0-0000-7000-8000-0000000000a1/apply`;
+      expect(isPostGuardUpload({ method: "POST", url: apply })).toBe(false);
+      expect(passes("POST", apply)).toBe(false); // the import takes no file: a binary body is a 415
+    }
+    expect(isPostGuardUpload({ method: "POST", url: "/hotels-admin/imports/contacts" })).toBe(
+      false,
+    );
   });
 
   it("keeps the buffered upload routes off the post-guard list", () => {

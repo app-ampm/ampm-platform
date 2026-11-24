@@ -28,8 +28,9 @@ export * from "./hotels-admin";
 export * from "./hotel-catalogue"; // the D-178 hotel fields (location, access, booking terms, food)
 export * from "./hotel-rooms-venues"; // the D-178 room and venue fields, staff-only until Slice 12
 export * from "./hotel-import"; // the staff spreadsheet import (D-181): the kinds, the hotels template, results
-export * from "./hotel-import-cells"; // how an import cell reads (lists, enums, layouts, capacities)
+export * from "./hotel-import-cells"; // how an import cell reads (lists, enums, layouts, capacities, money)
 export * from "./hotel-import-rooms-venues"; // the Rooms and Venues templates (Slice 3)
+export * from "./hotel-import-rates"; // the Rates template (Slice 4)
 export * from "./hotel-import-compare"; // what each kind compares and hashes into its version token
 export * from "./hotel-staff-views";
 export * from "./saved-hotels-staff"; // staff read of clients' saved hotels, every name `savedHotelStaff`-prefixed

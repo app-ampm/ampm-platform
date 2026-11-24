@@ -10,14 +10,16 @@ import {
 
 import { csvText } from "../admin/csv";
 import { IMPORT_KIND_COPY, kindCount } from "./hotel-import.kinds";
+import { rateRowNames } from "./hotel-import.rates";
 import { MAX_SIZE_TEXT } from "./hotel-import.rules";
 
 /*
  * Presentation helpers for the staff CSV import (TW-25; D-181), for each kind it imports. A kind's
  * template columns come from core, the lists the server reads, so the template, the help and the server
  * never drift. Also a summary of a result (a preview saves nothing), a line per changing or rejected
- * row (with the room's or venue's name), and the CSV text of the template and of the per-row report.
- * A result names its own kind. No fetching, no file handling (`../admin/download-csv`).
+ * row (with the room's or venue's name, or the rate's card and item), and the CSV text of the template;
+ * the per-row report is `hotel-import.report.ts`. A result names its own kind. No fetching, no file
+ * handling (`../admin/download-csv`).
  */
 
 /**
@@ -208,82 +210,32 @@ function outcomeLabel(kind: HotelImportKind, outcome: HotelImportRowOutcome): st
   return outcome === "unchanged" ? "Unchanged" : "Rejected";
 }
 
-/** Whether a kind's rows are named apart from their hotel: a room's or a venue's name. */
-function namesRows(kind: HotelImportKind): boolean {
-  return kind !== "hotels";
+/** The names a kind's row shows after its hotel: none for a hotel, a room's or venue's, a rate's. */
+function rowNames(row: HotelImportRowReport, kind: HotelImportKind): string[] {
+  if (kind === "hotels") return [];
+  if (kind === "rates") return rateRowNames(row);
+  return row.name ? [row.name] : [];
 }
 
 /**
- * One changing row of a result as a line, with the room's or venue's name after its hotel's address.
+ * One changing row of a result as a line, with the room's or venue's name, or the rate's card, item
+ * type and room or venue, after its hotel's address.
  *
  * @example
  * rowOutcomeText(row, "venues"); // "Line 3 · synthetic-lake-hotel · Synthetic Lawn · Update: setting"
+ * rowOutcomeText(row, "rates"); // "Line 3 · synthetic-lake-hotel · 2026-27 · Room rate · Lake View Suite · New item: amount, unit"
  */
 export function rowOutcomeText(row: HotelImportRowReport, kind: HotelImportKind): string {
   const fields = row.changedFields.length > 0 ? `: ${row.changedFields.join(", ")}` : "";
-  const place = row.slug ? ` · ${row.slug}` : "";
-  const name = namesRows(kind) && row.name ? ` · ${row.name}` : "";
-  return `Line ${row.line}${place}${name} · ${outcomeLabel(kind, row.outcome)}${fields}`;
+  const place = [row.slug ?? "", ...rowNames(row, kind)]
+    .filter((name) => name !== "")
+    .map((name) => ` · ${name}`)
+    .join("");
+  return `Line ${row.line}${place} · ${outcomeLabel(kind, row.outcome)}${fields}`;
 }
 
 /** "N more in the report" under a capped list, or null when every row is shown. */
 export function moreRowsText(total: number): string | null {
   const hidden = total - IMPORT_ROWS_SHOWN;
   return hidden > 0 ? `${hidden} more in the downloaded report.` : null;
-}
-
-interface ReportLine {
-  readonly line: number;
-  readonly slug: string;
-  readonly name: string;
-  readonly outcome: HotelImportRowOutcome;
-  readonly changedFields: string;
-  readonly errors: string;
-}
-
-function errorsText(errors: HotelImportRowError["errors"]): string {
-  return errors.map((e) => `${e.field}: ${e.message}`).join("; ");
-}
-
-function reportLines(result: HotelImportResult): ReportLine[] {
-  const errorsByLine = new Map(result.rejected.map((row) => [row.line, row.errors]));
-  const lines: ReportLine[] = result.rows.map((row) => ({
-    line: row.line,
-    slug: row.slug ?? "",
-    name: row.name ?? "",
-    outcome: row.outcome,
-    changedFields: row.changedFields.join(", "),
-    errors: errorsText(errorsByLine.get(row.line) ?? []),
-  }));
-  // A rejected row the report does not list still belongs in the file.
-  for (const row of result.rejected) {
-    if (lines.some((line) => line.line === row.line)) continue;
-    const errors = errorsText(row.errors);
-    lines.push({ line: row.line, slug: "", name: "", outcome: "error", changedFields: "", errors });
-  }
-  return lines.sort((a, b) => a.line - b.line);
-}
-
-/**
- * The per-row report of a result as CSV: each row's line, web address (the hotel's, as `hotelSlug` for
- * rooms and venues, with the room's or venue's name), outcome, the columns it changes and its errors,
- * so staff can fix the rejected rows in their spreadsheet. Cells are formula-guarded.
- *
- * @example
- * importReportCsv(result); // "line,slug,outcome,changedFields,errors\r\n3,synthetic-lake-hotel,update,city,"
- */
-export function importReportCsv(result: HotelImportResult): string {
-  const named = namesRows(result.kind);
-  const header = named
-    ? ["line", "hotelSlug", "name", "outcome", "changedFields", "errors"]
-    : ["line", "slug", "outcome", "changedFields", "errors"];
-  const body = reportLines(result).map((line) => [
-    String(line.line),
-    line.slug,
-    ...(named ? [line.name] : []),
-    line.outcome,
-    line.changedFields,
-    line.errors,
-  ]);
-  return csvText([header, ...body]);
 }

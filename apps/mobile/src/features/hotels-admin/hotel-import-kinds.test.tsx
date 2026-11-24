@@ -24,11 +24,15 @@ async function validate(csv: string): Promise<void> {
 }
 
 describe("HotelImportScreen's kinds", () => {
-  it("offers Hotels, Rooms and Venues to the Hotel team, Hotels first", async () => {
+  it("offers Hotels, Rooms, Venues and Rates to the Hotel team, in that order", async () => {
     await renderWithApi(<HotelImportScreen />, importFetch([]));
-    expect(await screen.findByTestId("hotel-import-kind-hotels")).toBeOnTheScreen();
-    expect(screen.getByTestId("hotel-import-kind-rooms")).toBeOnTheScreen();
-    expect(screen.getByTestId("hotel-import-kind-venues")).toBeOnTheScreen();
+    await screen.findByTestId("hotel-import-kind-rates");
+    expect(screen.getAllByRole("tab").map((tab) => tab.props.testID)).toEqual([
+      "hotel-import-kind-hotels",
+      "hotel-import-kind-rooms",
+      "hotel-import-kind-venues",
+      "hotel-import-kind-rates",
+    ]);
     expect(screen.getByText("Hotels CSV columns")).toBeOnTheScreen();
   });
 
@@ -56,7 +60,7 @@ describe("HotelImportScreen's kinds", () => {
     );
     await validate(ROOMS_CSV);
     expect(await screen.findByText("2 room categories to add or update")).toBeOnTheScreen();
-    expect(requests[0]?.path).toBe("/hotels-admin/imports/rooms?dryRun=true");
+    expect(requests[0]?.path).toBe("/hotels-admin/imports/rooms");
     expect(screen.getByTestId("hotel-import-row-2")).toHaveTextContent(
       "Line 2 · synthetic-lake-hotel · Synthetic Garden Suite · Update: sizeSqm, sizeSqft",
     );
@@ -122,9 +126,9 @@ describe("HotelImportScreen when an import is refused", () => {
       await screen.findByTestId("hotel-import-result");
       expect(screen.getByTestId("hotel-import-run")).toBeEnabled();
       expect(requests.map((request) => request.path)).toEqual([
-        "/hotels-admin/imports/hotels?dryRun=true",
+        "/hotels-admin/imports/hotels",
         `/hotels-admin/imports/hotels/${IMPORT_JOB_ID}/apply`,
-        "/hotels-admin/imports/hotels?dryRun=true",
+        "/hotels-admin/imports/hotels",
       ]);
     },
   );

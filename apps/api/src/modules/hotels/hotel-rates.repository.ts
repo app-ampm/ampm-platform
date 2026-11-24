@@ -12,11 +12,14 @@ import { PrismaService } from "../../db/prisma.service.js";
 import { Prisma } from "../../generated/prisma/client.js";
 import { moneyToDecimalString } from "../../common/money.js";
 
+type Client = Prisma.TransactionClient;
+
 /*
  * Writes and reads for a hotel's verified pricing (feature 9.2). Owns the money<->Decimal mapping and the
  * card/item/verification selects the staff views map. Ownership is enforced by the controller's
  * `hotels.rate_cards_rate_items.*` / `hotels.verifications.*` keys plus the hotel/card scoping here; a
  * card cannot be set `verified` without a verification of the same hotel (the service enforces AC-04.4).
+ * The card and item writes take an optional transaction, so the rates import writes through them too.
  */
 
 const RATE_ITEM_SELECT = {
@@ -120,8 +123,9 @@ export class HotelRatesRepository {
     hotelId: string,
     request: RateCardCreateRequest,
     actorId: string,
+    tx?: Client,
   ): Promise<string> {
-    const row = await this.prisma.hotelRateCard.create({
+    const row = await (tx ?? this.prisma).hotelRateCard.create({
       data: {
         hotelId,
         name: request.name,
@@ -173,8 +177,9 @@ export class HotelRatesRepository {
     cardId: string,
     request: RateItemCreateRequest,
     actorId: string,
+    tx?: Client,
   ): Promise<RateItemRow> {
-    return this.prisma.hotelRateItem.create({
+    return (tx ?? this.prisma).hotelRateItem.create({
       data: {
         rateCardId: cardId,
         itemType: request.itemType,
@@ -194,8 +199,13 @@ export class HotelRatesRepository {
     });
   }
 
-  updateItem(itemId: string, patch: RateItemUpdateRequest, actorId: string): Promise<RateItemRow> {
-    return this.prisma.hotelRateItem.update({
+  updateItem(
+    itemId: string,
+    patch: RateItemUpdateRequest,
+    actorId: string,
+    tx?: Client,
+  ): Promise<RateItemRow> {
+    return (tx ?? this.prisma).hotelRateItem.update({
       where: { id: itemId },
       data: {
         itemType: patch.itemType,
@@ -219,10 +229,14 @@ export class HotelRatesRepository {
     });
   }
 
-  findItemInCard(cardId: string, itemId: string): Promise<{ id: string } | null> {
+  /** The live item of this card, with the room category and venue an update is checked against. */
+  findItemInCard(
+    cardId: string,
+    itemId: string,
+  ): Promise<Pick<RateItemRow, "id" | "roomCategoryId" | "venueId"> | null> {
     return this.prisma.hotelRateItem.findFirst({
       where: { id: itemId, rateCardId: cardId, deletedAt: null },
-      select: { id: true },
+      select: { id: true, roomCategoryId: true, venueId: true },
     });
   }
 

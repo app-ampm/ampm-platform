@@ -2,6 +2,7 @@ import type { HotelFieldKinds } from "../hotel-change-set.js";
 import type { HotelAreaPair } from "../hotel-units.js";
 
 import type { HotelImportColumn } from "./hotel-import.js";
+import type { RateImportColumn } from "./hotel-import-rates.js";
 import type { RoomImportColumn, VenueImportColumn } from "./hotel-import-rooms-venues.js";
 
 /*
@@ -11,7 +12,8 @@ import type { RoomImportColumn, VenueImportColumn } from "./hotel-import-rooms-v
  * hotel's exactly as stored, since the hotels planner keeps Slice 2's own comparison (text trimmed only,
  * lists and links exact). Apply refuses a row whose target's token moved since the preview ("Changed since
  * preview"). The token never covers `updated_at`, which recording a verification bumps. A matched room or
- * venue keeps its stored name, so `name` is not compared; nor is the hotel's web address that keys a row.
+ * venue keeps its stored name, so `name` is not compared; nor is the hotel's web address that keys a row,
+ * nor a rate item's card, type, room and venue, which key it (Slice 4).
  */
 
 /** A hotels-template column the import compares: every one but the key and the references. */
@@ -131,3 +133,26 @@ export const VENUE_AREA_PAIRS: readonly HotelAreaPair<VenueImportComparedField>[
   { sqm: "areaSqm", sqft: "areaSqft" },
   { sqm: "prefunctionAreaSqm", sqft: "prefunctionAreaSqft" },
 ];
+
+/** A Rates-template column the import compares on a matched rate item: its price and its terms. */
+export type RateImportComparedField = Extract<
+  RateImportColumn,
+  "amount" | "amountMax" | "unit" | "minQuantity" | "isIndicative" | "inclusions"
+>;
+
+/**
+ * The rates import's compared fields on a matched item (D-184), each with its kind: amounts as whole
+ * paise, so a value written as 12,500 or 12500.00 compares equal; the inclusions as text. The same
+ * fields make the item's version token; a card's token is its status and its dates.
+ *
+ * @example
+ * fieldChanges({ amount: 1250000, unit: "per_night" }, { amount: 1300000 }, RATE_IMPORT_COMPARED_FIELDS); // ["amount"]
+ */
+export const RATE_IMPORT_COMPARED_FIELDS: HotelFieldKinds<RateImportComparedField> = {
+  amount: "number",
+  amountMax: "number",
+  unit: "enum",
+  minQuantity: "number",
+  isIndicative: "boolean",
+  inclusions: "text",
+};

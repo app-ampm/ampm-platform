@@ -21,6 +21,7 @@ import {
   type PreviewRefusal,
 } from "./hotel-import.job.js";
 import type { AppliedRows, KindImporter, PlannedRows } from "./hotel-import.kinds.js";
+import { RatesImporter } from "./hotel-import.rates.js";
 import { importResult, reportJson, summarise, type ImportSummary } from "./hotel-import.report.js";
 import { HotelImportRepository } from "./hotel-import.repository.js";
 
@@ -48,17 +49,17 @@ const RACED =
   "Another change took one of these web addresses while the import ran; validate the file again";
 
 /**
- * The staff spreadsheet import (TW-25; AC-35.1; D-181), the same two steps for every kind (hotels, rooms,
- * venues). A preview reads the uploaded CSV, checks every row against its template, plans each row against
- * what is stored (create, update the filled cells that differ, leave unchanged, or refuse with a reason),
- * and writes only its `import_jobs` row: status `validating` with the value-free report and the stored
- * plan, or `failed` with no plan when no row is valid; it clears the plans of the uploader's older
- * previews of the kind. An import applies a preview by its job id, with no file: inside one transaction it
- * claims the job (only its uploader, once, within the time limit), re-plans the stored rows against the
- * catalogue under the uploader's current keys, refuses a row whose target changed since the preview,
- * writes the rest with an audit event each, and marks the job `applied`, its plan cleared and the import's
- * report kept. A hotels import registers its rows' images after the commit. The refused rows never stop
- * the valid ones.
+ * The staff spreadsheet import (TW-25; AC-35.1; D-181, D-183, D-184), the same two steps for every kind
+ * (hotels, rooms, venues, rates). A preview reads the uploaded CSV, checks every row against its
+ * template, plans each row against what is stored (create, update the filled cells that differ, leave
+ * unchanged, or refuse with a reason), and writes only its `import_jobs` row: status `validating` with
+ * the value-free report and the stored plan, or `failed` with no plan when no row is valid; it clears the
+ * plans of the uploader's older previews of the kind. An import applies a preview by its job id, with no
+ * file: inside one transaction it claims the job (only its uploader, once, within the time limit),
+ * re-plans the stored rows against the catalogue under the uploader's current keys, refuses a row whose
+ * target changed since the preview, writes the rest with an audit event each, and marks the job
+ * `applied`, its plan cleared and the import's report kept. A hotels import registers its rows' images
+ * after the commit. The refused rows never stop the valid ones.
  */
 @Injectable()
 export class HotelImportService {
@@ -68,6 +69,7 @@ export class HotelImportService {
   constructor(
     private readonly hotels: HotelRowsImporter,
     children: ChildRowsImporter,
+    private readonly rates: RatesImporter,
     private readonly jobs: HotelImportRepository,
   ) {
     this.rooms = children.importerFor(ROOM_KIND);
@@ -87,6 +89,8 @@ export class HotelImportService {
         return this.previewWith(this.rooms, bytes, principal);
       case "venues":
         return this.previewWith(this.venues, bytes, principal);
+      case "rates":
+        return this.previewWith(this.rates, bytes, principal);
     }
   }
 
@@ -99,6 +103,8 @@ export class HotelImportService {
         return this.applyWith(this.rooms, jobId, principal);
       case "venues":
         return this.applyWith(this.venues, jobId, principal);
+      case "rates":
+        return this.applyWith(this.rates, jobId, principal);
     }
   }
 
@@ -202,8 +208,10 @@ export class HotelImportService {
 /** Every row a preview refused, before or after planning: what its import reports again by line. */
 function refusedRows(rejected: readonly RejectedRow[], planned: PlannedRows): RejectedRow[] {
   const refusedByPlan = planned.reports.flatMap(
-    ({ outcome, line, slug, name, errors: rowErrors }) =>
-      outcome === "error" ? [{ line, slug, name, errors: [...rowErrors] }] : [],
+    ({ outcome, line, slug, name, item, errors: rowErrors }) =>
+      outcome === "error"
+        ? [{ line, slug, name, ...(item === undefined ? {} : { item }), errors: [...rowErrors] }]
+        : [],
   );
   return [...rejected, ...refusedByPlan];
 }

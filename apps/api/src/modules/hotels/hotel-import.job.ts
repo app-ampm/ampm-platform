@@ -2,6 +2,7 @@ import {
   errors,
   HOTEL_IMPORT_PREVIEW_TTL_HOURS,
   hotelImportKind,
+  hotelImportRowItem,
   uuid,
   type HotelImportKind,
 } from "@ampm/core";
@@ -29,12 +30,15 @@ export const PREVIEW_APPLIED = "This preview was already imported";
 export const PREVIEW_EXPIRED = "This preview has expired; validate the file again";
 export const CHANGED_SINCE_PREVIEW = "Changed since preview; validate the file again";
 
-/** The refusal of a row whose hotel, room or venue changed since its preview. */
+/** The refusal of a row whose hotel, room, venue, rate card or rate item changed since its preview. */
 export const CHANGED_ERROR: FieldError = { field: "row", message: CHANGED_SINCE_PREVIEW };
 
 const HOUR_MS = 60 * 60 * 1000;
 
-/** The target a previewed row planned against: its id and version token. A row that creates has none. */
+/**
+ * The target a previewed row planned against: its id and version token. A row that creates has none,
+ * except a rates row adding an item to a stored card, whose target is that card.
+ */
 export interface StoredTarget {
   readonly id: string;
   readonly version: string;
@@ -76,6 +80,7 @@ const storedPlan = z
           line: z.number().int().min(1),
           slug: z.string().nullable(),
           name: z.string().nullable(),
+          item: hotelImportRowItem.optional(),
           errors: z.array(fieldError),
         })
         .strict(),
@@ -102,10 +107,11 @@ export function storedPlanJson(
       row,
       target: target === null ? null : { id: target.id, version: target.version },
     })),
-    refused: plan.refused.map(({ line, slug, name, errors: rowErrors }) => ({
+    refused: plan.refused.map(({ line, slug, name, item, errors: rowErrors }) => ({
       line,
       slug,
       name,
+      ...(item === undefined ? {} : { item: { ...item } }),
       errors: rowErrors.map(({ field, message }) => ({ field, message })),
     })),
   };
@@ -197,31 +203,40 @@ export function refusalError(refusal: PreviewRefusal): Error {
  * What a plan matched for a row, whatever it then decided: one live row (which it updates or leaves, or
  * is refused on, a lost key say), none (it creates, or is refused creating: a new venue without its type),
  * or nothing it got as far as matching (`unmatched`: refused first, its hotel gone or its name repeated or
- * shared by two live rows).
+ * shared by two live rows). A kind whose rows live in a stored container says which one a row matched
+ * no row in (`parentId`: a rates row's rate card, D-184); without it, `none` matched no container either
+ * (a new card).
  */
 export type PlanMatch =
   | { readonly matches: "row"; readonly targetId: string }
-  | { readonly matches: "none" }
+  | { readonly matches: "none"; readonly parentId?: string }
   | { readonly matches: "unmatched" };
 
 /**
  * Whether a stored row's target changed since its preview, decided from what its re-plan matched, not
- * from what it then decided: a row that created now finds a live row of its own; a row that planned
- * against a target finds it gone (its hotel deleted, too) or holding other values, or now matches another
- * row or none, even when the create that would follow is refused. A re-plan refused on the very row it
- * planned against (a key lost since) keeps its own reason, as does one that matched nothing (`unmatched`)
- * while its target stayed as it was, and a create row of a hotel deleted since ("This hotel was deleted").
+ * from what it then decided: a row that created now finds a live row of its own (or, for a new rate card,
+ * a stored card of its name); a row that planned against a target finds it gone (its hotel deleted, too)
+ * or holding other values, or now matches another row, another container or none, even when the create
+ * that would follow is refused. A row adding to a stored container (a rate card) planned against the
+ * container, so the re-plan must match no row in that same one. A re-plan refused on the very row it
+ * planned against (a key lost since) keeps its own reason, as does one that matched nothing
+ * (`unmatched`) while its target stayed as it was, and a create row of a hotel deleted since ("This hotel
+ * was deleted"). Ids are UUIDs, so a row's id never names a container.
  *
  * @example
  * changedSincePreview(stored.target, { matches: "row", targetId }, (id) => versions.get(id) ?? null);
+ * changedSincePreview(cardTarget, { matches: "none", parentId: cardId }, versionOf); // false while the card holds
  */
 export function changedSincePreview(
   stored: StoredTarget | null,
   replanned: PlanMatch,
   currentVersion: (id: string) => string | null,
 ): boolean {
-  if (stored === null) return replanned.matches === "row";
+  if (stored === null) {
+    return replanned.matches === "row" || (replanned.matches === "none" && !!replanned.parentId);
+  }
   if (currentVersion(stored.id) !== stored.version) return true;
   if (replanned.matches === "unmatched") return false;
-  return replanned.matches === "none" || replanned.targetId !== stored.id;
+  const matched = replanned.matches === "row" ? replanned.targetId : replanned.parentId;
+  return matched !== stored.id;
 }

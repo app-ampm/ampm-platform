@@ -27,15 +27,17 @@ const IMPORT_BODY: BoundedBodyOptions = {
 };
 
 /**
- * The staff spreadsheet import (TW-25; AC-35.1; D-181): one CSV template per kind, each with its own route
- * and static key, so the guard holds each kind to its own create key. A preview (`POST imports/<kind>`)
- * takes the file as the raw request body, read only inside the handler (common/bounded-body.ts; D-176):
- * authentication, the upload rate limit, the permission and the query have all been checked before a byte
- * is read, and no parser buffers it first (POST_GUARD_PATHS). It writes nothing but its job. An import
- * (`POST imports/<kind>/:jobId/apply`) is a JSON route with no body: it applies the caller's preview by its
- * job id. Hotels ask the hotel profile create key, rooms and venues the room categories and venues create
- * key; each row is then held to the uploader's own keys. The service audits every row it writes in its own transaction, hence `@SelfAudited`; both steps
- * count against the upload limit, which fails closed. Slice 4 adds the rates kind.
+ * The staff spreadsheet import (TW-25; AC-35.1; D-181, D-183, D-184): one CSV template per kind, each
+ * with its own route and static key, so the guard holds each kind to its own create key. A preview
+ * (`POST imports/<kind>`, no query: any is refused) takes the file as the raw request body, read only
+ * inside the handler (common/bounded-body.ts; D-176): authentication, the upload rate limit, the
+ * permission and the query have all been checked before a byte is read, and no parser buffers it first
+ * (POST_GUARD_PATHS). It writes nothing but its job. An import (`POST imports/<kind>/:jobId/apply`) is a
+ * JSON route with no body: it applies the caller's preview by its job id. Hotels ask the hotel profile
+ * create key, rooms and venues the room categories and venues create key, rates the rate cards and rate
+ * items create key; each row is then held to the uploader's own keys. The service audits every row it
+ * writes in its own transaction, hence `@SelfAudited`; both steps count against the upload limit, which
+ * fails closed.
  */
 @Controller("hotels-admin")
 export class HotelImportController {
@@ -80,6 +82,19 @@ export class HotelImportController {
     return this.preview("venues", req, principal);
   }
 
+  @Post("imports/rates")
+  @RequirePermission("hotels.rate_cards_rate_items.create")
+  @RateLimit(UPLOADS)
+  @HttpCode(200)
+  @SelfAudited()
+  importRates(
+    @ZodQuery(hotelImportQuery) _query: HotelImportQuery,
+    @Req() req: Request,
+    @CurrentPrincipal() principal: Principal,
+  ): Promise<HotelImportResult> {
+    return this.preview("rates", req, principal);
+  }
+
   @Post("imports/hotels/:jobId/apply")
   @RequirePermission("hotels.hotel_profiles_client_fields.create")
   @RateLimit(UPLOADS)
@@ -117,6 +132,19 @@ export class HotelImportController {
     @CurrentPrincipal() principal: Principal,
   ): Promise<HotelImportResult> {
     return this.imports.apply("venues", params.jobId, principal);
+  }
+
+  @Post("imports/rates/:jobId/apply")
+  @RequirePermission("hotels.rate_cards_rate_items.create")
+  @RateLimit(UPLOADS)
+  @HttpCode(200)
+  @SelfAudited()
+  applyRates(
+    @ZodParams(hotelImportApplyParams) params: HotelImportApplyParams,
+    @ZodBody(hotelImportApplyBody) _body: HotelImportApplyBody,
+    @CurrentPrincipal() principal: Principal,
+  ): Promise<HotelImportResult> {
+    return this.imports.apply("rates", params.jobId, principal);
   }
 
   /** Reads the file after the guards, within its limits, and previews it. */

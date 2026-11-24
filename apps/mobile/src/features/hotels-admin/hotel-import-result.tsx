@@ -6,7 +6,6 @@ import {
   changingRows,
   hasRejections,
   IMPORT_ROWS_SHOWN,
-  importReportCsv,
   importSummary,
   moreRowsText,
   rejectedHeadline,
@@ -14,6 +13,7 @@ import {
   rowOutcomeText,
 } from "./hotel-import.format";
 import { importReportFile } from "./hotel-import.kinds";
+import { importReportCsv } from "./hotel-import.report";
 import { useCsvDownload } from "./use-csv-download";
 
 interface RowLine {
@@ -45,7 +45,7 @@ function RowBlock({ headline, lines }: { readonly headline: string; readonly lin
 
 /**
  * The rows that add or update a record, each with the columns it changes (never their values) and, for
- * rooms and venues, the record's name.
+ * rooms and venues, the record's name; for rates, the card's name, the item's type and its room or venue.
  */
 function ChangingRows({ result }: { readonly result: HotelImportResult }) {
   const headline = changingHeadline(result);

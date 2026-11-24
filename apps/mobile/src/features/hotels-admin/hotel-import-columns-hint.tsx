@@ -8,8 +8,8 @@ import { useCsvDownload } from "./use-csv-download";
 
 /**
  * A kind's template help (TW-25): its columns, the rules of its file one per line (list, enum,
- * capacity and layout cells, the units rule, the size and the 24 hours a preview keeps), and its
- * template to download, the header row alone, marked as UTF-8.
+ * capacity, layout and money cells, the units rule, where rates land, the size and the 24 hours a
+ * preview keeps), and its template to download, the header row alone, marked as UTF-8.
  *
  *   <ImportColumnsHint kind="venues" />
  */

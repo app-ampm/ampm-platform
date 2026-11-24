@@ -33,9 +33,11 @@ const COSTLY = [
   "HotelImportController.importHotels",
   "HotelImportController.importRooms",
   "HotelImportController.importVenues",
+  "HotelImportController.importRates",
   "HotelImportController.applyHotels",
   "HotelImportController.applyRooms",
   "HotelImportController.applyVenues",
+  "HotelImportController.applyRates",
 ];
 
 /** Metadata on the handler, else on its controller: the order the guards read it in. */

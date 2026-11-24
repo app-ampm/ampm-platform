@@ -8,6 +8,7 @@ import type {
   VerificationWriteData,
 } from "./hotel-rates.repository.js";
 import { HotelRatesService } from "./hotel-rates.service.js";
+import type { HotelSubresourcesRepository } from "./hotel-subresources.repository.js";
 
 const HOTEL = "0192f1a0-0000-7000-8000-0000000000a1";
 const ACTOR = "018f0000-0000-7000-8000-00000000cafe";
@@ -44,6 +45,7 @@ function build(options: { readonly locked?: boolean } = {}) {
     repo as unknown as HotelRatesRepository,
     {} as unknown as AuditService,
     config as unknown as ConfigService,
+    {} as unknown as HotelSubresourcesRepository,
   );
   return { service, repo, calls };
 }

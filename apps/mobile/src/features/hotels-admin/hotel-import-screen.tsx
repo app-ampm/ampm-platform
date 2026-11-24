@@ -85,7 +85,7 @@ function ImportUnavailable({ access }: { readonly access: ImportKinds }) {
   return (
     <EmptyState
       title="Nothing to import"
-      description="Your role does not add hotels, rooms or venues to the catalogue. A Super Admin can give it the access."
+      description="Your role does not add hotels, rooms, venues or rates to the catalogue. A Super Admin can give it the access."
       testID="hotel-import-none"
     />
   );
@@ -97,14 +97,14 @@ export interface HotelImportScreenProps {
 
 /**
  * Bulk-import the hotel catalogue from a CSV (H1.1, TW-25, D-181; Hotel team and Super Admin): hotels,
- * their room categories or their venues, whichever kinds the staff member's grants allow. Download the
- * kind's template, then paste the CSV or choose a `.csv` file. **Validate** previews it and reports each
- * row: the records it would add or update with the columns that change, and the rejected rows by line
- * and field, downloadable as a report. **Import** then applies that preview by its job id (it keeps 24
- * hours); on a record already in the catalogue a blank cell leaves the value unchanged. The server is
- * the gate. From 1024 the CSV and its actions sit beside a column with the help and the result; the help
- * moves between two fixed slots (it holds no state), and the CSV stays in its slot, so a resize never
- * loses what was pasted.
+ * their room categories, their venues or their rates (into draft rate cards, as hidden items; D-184),
+ * whichever kinds the staff member's grants allow. Download the kind's template, then paste the CSV or
+ * choose a `.csv` file. **Validate** previews it and reports each row: the records it would add or
+ * update with the columns that change, and the rejected rows by line and field, downloadable as a
+ * report. **Import** then applies that preview by its job id (it keeps 24 hours); on a record already
+ * in the catalogue a blank cell leaves the value unchanged. The server is the gate. From 1024 the CSV
+ * and its actions sit beside a column with the help and the result; the help moves between two fixed
+ * slots (it holds no state), and the CSV stays in its slot, so a resize never loses what was pasted.
  *
  *   <HotelImportScreen tabBar={<AppTabBar />} />
  */

@@ -1,5 +1,6 @@
 import {
   HOTEL_IMPORT_COLUMNS,
+  RATE_IMPORT_COLUMNS,
   ROOM_IMPORT_COLUMNS,
   VENUE_IMPORT_COLUMNS,
   type HotelImportRowReport,
@@ -59,10 +60,13 @@ describe("HotelImportScreen downloads", () => {
     await fireEvent.press(screen.getByTestId("hotel-import-template"));
     await fireEvent.press(screen.getByTestId("hotel-import-kind-venues"));
     await fireEvent.press(screen.getByTestId("hotel-import-template"));
+    await fireEvent.press(screen.getByTestId("hotel-import-kind-rates"));
+    await fireEvent.press(screen.getByTestId("hotel-import-template"));
     expect(mockDownloadCsv.mock.calls).toEqual([
       ["hotels-import-template.csv", `\uFEFF${HOTEL_IMPORT_COLUMNS.join(",")}`],
       ["rooms-import-template.csv", `\uFEFF${ROOM_IMPORT_COLUMNS.join(",")}`],
       ["venues-import-template.csv", `\uFEFF${VENUE_IMPORT_COLUMNS.join(",")}`],
+      ["rates-import-template.csv", `\uFEFF${RATE_IMPORT_COLUMNS.join(",")}`],
     ]);
   });
 

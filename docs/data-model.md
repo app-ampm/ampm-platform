@@ -302,7 +302,7 @@ erDiagram
     }
     import_jobs {
         uuid id PK
-        string import_type "enum hotels / guests / vendors / hotel_rooms / hotel_venues (A-9, D-181)"
+        string import_type "enum hotels / guests / vendors / hotel_rooms / hotel_venues / hotel_rates (A-9, D-181)"
         uuid project_id "nullable, required for guests"
         uuid file_document_id FK "null for the staff hotel imports"
         string status "enum uploaded / validating / failed / applied, a hotel import preview stays validating until imported by its id (D-181)"
@@ -359,7 +359,7 @@ Notes:
     COMMIT;
     ```
   - **Never dropped.** Partitions are never dropped; deleting old log rows stays a retention proposal for a Super Admin to approve (§1).
-- **Staff hotel imports (24 November 2026, D-181).** The hotels, rooms and venues imports (`import_type` `hotels`, `hotel_rooms` and `hotel_venues`) keep no file, so their `file_document_id` is null. Each upload is a preview, stored as a `validating` job, or as `failed` with no plan when no row is valid. `error_report_json` holds its value-free report: the counts, the refusals, and each row's outcome with the names of the fields it changes. `plan_json` holds the planned rows with their values and each target's version token. Those values can include a hotel's internal notes, so the column is RESTRICTED-NOTES: written by the System and read only by the import, never selected or returned anywhere else. Importing the preview by its id makes the job `applied`, with the import's report in `error_report_json`, and no second job is created. A newer preview of the same kind by the same person supersedes it. Importing and superseding both clear `plan_json`, and so does expiry: an import that finds its preview past the 24 hours clears it, and a daily job clears every plan older than that or left on a job that is no longer validating, so a file's values are kept no longer than they can be imported. The rules are in the Module C note "Rooms, venues, units and contacts".
+- **Staff hotel imports (24 November 2026, D-181).** The hotels, rooms, venues and rates imports (`import_type` `hotels`, `hotel_rooms`, `hotel_venues` and, from Slice 4, `hotel_rates`; see Module C's notes on Slice 3 and "Rates import and rate items") keep no file, so their `file_document_id` is null. Each upload is a preview, stored as a `validating` job, or as `failed` with no plan when no row is valid. `error_report_json` holds its value-free report: the counts, the refusals, and each row's outcome with the names of the fields it changes. `plan_json` holds the planned rows with their values and each target's version token. Those values can include a hotel's internal notes, so the column is RESTRICTED-NOTES: written by the System and read only by the import, never selected or returned anywhere else. Importing the preview by its id makes the job `applied`, with the import's report in `error_report_json`, and no second job is created. A newer preview of the same kind by the same person supersedes it. Importing and superseding both clear `plan_json`, and so does expiry: an import that finds its preview past the 24 hours clears it, and a daily job clears every plan older than that or left on a job that is no longer validating, so a file's values are kept no longer than they can be imported. The rules are in the Module C note "Rooms, venues, units and contacts".
 
 ---
 
@@ -711,8 +711,8 @@ erDiagram
         uuid id PK
         uuid rate_card_id FK
         string item_type "enum room_rate / venue_rental / per_plate_veg / per_plate_non_veg / wedding_package / beverage_package / service_charge / tax / other (A-9, Q9)"
-        uuid room_category_id FK "nullable"
-        uuid venue_id FK "nullable"
+        uuid room_category_id FK "nullable; the card's hotel's own, never with venue_id (D-184)"
+        uuid venue_id FK "nullable; the card's hotel's own (D-184)"
         decimal amount "lower bound of a range, or the single indicative value"
         decimal amount_max "upper bound of an indicative range, nullable (Q9)"
         bool is_indicative "true for ranges shown to clients; confirmed quotations live in hotel_proposals"
@@ -823,6 +823,11 @@ Notes:
     ```
 
     The staff app can keep the m² (clear the sq ft box and save), but not the sq ft: its editor shows the m² worked out from the stored sq ft, so a save sends no change. A Hotels import row that carries the sq ft settles it too. Until then the stale m² is what a Hotels import compares. None of these statements writes an audit event or moves `updated_at`, so note what you changed in the incident record.
+
+- **Rates import and rate items (24 November 2026, D-184).** Slice 4 of the hotel information form plan, implemented in migration `20261126000000_hotel_rates_import`, which only adds `hotel_rates` to `import_type`. Production held no hotels, rate cards or import jobs before its deploy.
+  - **Rates into draft cards.** A Rates file names each row's hotel by web address, its rate card by name and its item by type and room or venue ([engineering/hotel-import.md](engineering/hotel-import.md)). A card it names that does not exist is created as a `draft` in INR, with its dates from the file; an existing `draft` card takes the rows, and a `verified` or `stale` card refuses them, so an import never changes a priced card a client may see. Items are matched within the card by (`item_type`, `room_category_id`, `venue_id`), created with `client_visible` false, and an import never changes `client_visible`, so nothing imported reaches a client before the card is verified against a current rates verification (D-170) and the item is shown in the staff app. Card and item versions for "changed since preview" are SHA-256 tokens of the card's status and dates and of the item's compared columns.
+  - **A rate item prices its own hotel.** `room_category_id` must be a live room category, and `venue_id` a live venue, of the card's hotel, and an item holds one of the two at most. The staff API enforces it (400 naming the field) and so does the import (a row error); an edit that sends an item's stored link back unchanged is not checked again, since the room or venue may have been removed since. There is no database constraint, as no foreign key can say "the same hotel" here.
+  - **Rolling back past this migration.** Nothing to remap. The previous image never lists import jobs and reads one only by id through a kind's apply route, so a `hotel_rates` job sent there answers 500 rather than 404. Its rate screens read every rate card and item as before. Its daily sweep clears only hotels, rooms and venues plans, so a Rates preview's stored plan, which holds amounts and inclusions, would outlive its 24 hours; after a rollback clear them by hand: `UPDATE import_jobs SET plan_json = NULL WHERE import_type = 'hotel_rates' AND plan_json IS NOT NULL;`. The previous staff bundle sends `?dryRun=true`, which this release refuses, so the portal goes back with the API (plan §10.2 item 7).
 
 ---
 

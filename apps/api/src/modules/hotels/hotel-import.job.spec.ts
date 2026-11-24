@@ -2,6 +2,7 @@ import { HOTEL_IMPORT_PREVIEW_TTL_HOURS } from "@ampm/core";
 import { describe, expect, it } from "vitest";
 
 import type { Prisma } from "../../generated/prisma/client.js";
+import type { RejectedRow } from "./hotel-import.file.js";
 import {
   changedSincePreview,
   PREVIEW_APPLIED,
@@ -13,7 +14,7 @@ import {
   type PlanMatch,
   type PreviewJob,
 } from "./hotel-import.job.js";
-import { ROOMS_IMPORT, VENUES_IMPORT } from "./hotel-import.kinds.js";
+import { RATES_IMPORT, ROOMS_IMPORT, VENUES_IMPORT } from "./hotel-import.kinds.js";
 
 const ACTOR = "0192f1a0-0000-7000-8000-0000000000e1";
 const NOW = new Date("2026-11-24T12:00:00.000Z");
@@ -93,6 +94,27 @@ describe("the stored plan", () => {
     });
   });
 
+  it("keeps a refused rates row's item, so the import reports it as the preview did (D-184)", () => {
+    const rate = { hotelSlug: "synthetic-lake-hotel", cardName: "Synthetic 2027", itemType: "tax" };
+    const refusedRate: RejectedRow = {
+      line: 3,
+      slug: "synthetic-lake-hotel",
+      name: "Synthetic 2027",
+      item: { itemType: "room_rate", roomName: "Synthetic Lake Suite", venueName: null },
+      errors: [{ field: "amount", message: "A new item needs its amount" }],
+    };
+    const json = storedPlanJson("rates", {
+      totalRows: 2,
+      rows: [{ line: 2, row: rate, target: null }],
+      refused: [refusedRate],
+    });
+    expect(readStoredPlan(stored(json), RATES_IMPORT)).toEqual({
+      totalRows: 2,
+      rows: [{ line: 2, row: rate, target: null }],
+      refused: [refusedRate],
+    });
+  });
+
   it("reads nothing back from a plan of another kind, or with a row its kind no longer reads", () => {
     const rooms = storedPlanJson("rooms", { totalRows: 1, rows: [], refused: [] });
     expect(readStoredPlan(stored(rooms), VENUES_IMPORT)).toBeNull();
@@ -133,5 +155,42 @@ describe("changedSincePreview", () => {
     expect(changedSincePreview(null, UNMATCHED, current(null))).toBe(false);
     expect(changedSincePreview(TARGET, UNMATCHED, current(TARGET.version))).toBe(false);
     expect(changedSincePreview(TARGET, UNMATCHED, current(null))).toBe(true);
+  });
+});
+
+describe("changedSincePreview: a target inside a container (a rates row's card, D-184)", () => {
+  const current = (versions: Record<string, string>) => (id: string) => versions[id] ?? null;
+  const CARD = { id: "0192f1a0-0000-7000-8000-0000000000c1", version: "c".repeat(64) };
+  const OTHER_CARD = "0192f1a0-0000-7000-8000-0000000000c2";
+  const ITEM = { id: "0192f1a0-0000-7000-8000-0000000000c3", version: "d".repeat(64) };
+  const live = current({ [CARD.id]: CARD.version, [ITEM.id]: ITEM.version });
+  const inCard = (parentId: string): PlanMatch => ({ matches: "none", parentId });
+  const item = (targetId: string): PlanMatch => ({ matches: "row", targetId });
+
+  it("keeps a row adding an item to the card it planned against, while the card holds", () => {
+    expect(changedSincePreview(CARD, inCard(CARD.id), live)).toBe(false);
+    expect(changedSincePreview(ITEM, item(ITEM.id), live)).toBe(false);
+  });
+
+  it("refuses a row adding an item when its card moved, went, or is no longer the one named", () => {
+    expect(changedSincePreview(CARD, inCard(CARD.id), current({}))).toBe(true);
+    const verified = current({ [CARD.id]: "e".repeat(64) });
+    expect(changedSincePreview(CARD, inCard(CARD.id), verified)).toBe(true);
+    expect(changedSincePreview(CARD, inCard(OTHER_CARD), live)).toBe(true);
+    expect(changedSincePreview(CARD, { matches: "none" }, live)).toBe(true);
+  });
+
+  it("refuses a row adding an item that now matches one, added since", () => {
+    expect(changedSincePreview(CARD, item(ITEM.id), live)).toBe(true);
+  });
+
+  it("refuses a row of a new card that now finds a card of its name, whatever it matched in it", () => {
+    expect(changedSincePreview(null, inCard(CARD.id), live)).toBe(true);
+    expect(changedSincePreview(null, item(ITEM.id), live)).toBe(true);
+    expect(changedSincePreview(null, { matches: "none" }, live)).toBe(false);
+  });
+
+  it("refuses a row of an item that now matches none in its card", () => {
+    expect(changedSincePreview(ITEM, inCard(CARD.id), live)).toBe(true);
   });
 });

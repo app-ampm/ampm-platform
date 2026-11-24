@@ -102,4 +102,64 @@ describe("RateItemEditSheet", () => {
     expect(await screen.findByText("Rate item updated")).toBeOnTheScreen();
     expect(captured.updated).toMatchObject({ amount: { minor: 1800000, currency: "INR" } });
   });
+
+  it("edits a percent item as a percentage, its unit still percent", async () => {
+    const captured: Captured = {};
+    const serviceCharge = rateItemViewFixture({
+      itemType: "service_charge",
+      unit: "percent",
+      amount: { minor: 1000, currency: "INR" },
+      amountMax: null,
+    });
+    await renderWithApi(
+      <RateItemEditSheet
+        hotelId={HOTEL_ID}
+        cardId={RATE_CARD_ID}
+        open
+        item={serviceCharge}
+        onClose={noop}
+      />,
+      itemFetch(captured),
+    );
+    await screen.findByDisplayValue("10");
+    expect(screen.getByText(/^Amount \(%\)/)).toBeOnTheScreen();
+    expect(screen.getByText("Upper amount (%)")).toBeOnTheScreen();
+    expect(screen.getByText("The percentage as a number, e.g. 18")).toBeOnTheScreen();
+    expect(screen.getByTestId("rate-item-unit-percent")).toBeChecked();
+    await fireEvent.changeText(screen.getByTestId("rate-item-amount"), "12.5");
+    await fireEvent.press(screen.getByTestId("rate-item-edit-submit"));
+    expect(await screen.findByText("Rate item updated")).toBeOnTheScreen();
+    expect(captured.updated).toMatchObject({
+      unit: "percent",
+      amount: { minor: 1250, currency: "INR" },
+      amountMax: null,
+    });
+  });
+
+  it("adds a percent item: Percent relabels the amounts, typed as the percentage", async () => {
+    const captured: Captured = {};
+    await renderWithApi(
+      <RateItemEditSheet
+        hotelId={HOTEL_ID}
+        cardId={RATE_CARD_ID}
+        open
+        item={null}
+        onClose={noop}
+      />,
+      itemFetch(captured),
+    );
+    expect(await screen.findByText(/^Amount \(₹\)/)).toBeOnTheScreen();
+    await fireEvent.press(screen.getByTestId("rate-item-unit-percent"));
+    expect(screen.getByText(/^Amount \(%\)/)).toBeOnTheScreen();
+    await fireEvent.changeText(screen.getByTestId("rate-item-amount"), "10%");
+    await fireEvent.press(screen.getByTestId("rate-item-edit-submit"));
+    expect(await screen.findByText("Enter the percentage as a number, e.g. 18")).toBeOnTheScreen();
+    await fireEvent.changeText(screen.getByTestId("rate-item-amount"), "10");
+    await fireEvent.press(screen.getByTestId("rate-item-edit-submit"));
+    expect(await screen.findByText("Rate item added")).toBeOnTheScreen();
+    expect(captured.created).toMatchObject({
+      unit: "percent",
+      amount: { minor: 1000, currency: "INR" },
+    });
+  });
 });

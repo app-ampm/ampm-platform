@@ -151,12 +151,9 @@ export function rateAmounts(item: ClientRateItemView): {
   };
 }
 
-/** A percentage item ("18%", "18–20%"): its amounts hold the percentage in hundredths. */
-export function percentLabel(item: ClientRateItemView): string {
-  const low = item.amount.minor / 100;
-  const high = item.amountMax ? item.amountMax.minor / 100 : low;
-  return high === low ? `${low}%` : `${low}–${high}%`;
-}
+// A percentage item ("18%", "18–20%"; its amounts hold the percentage in hundredths) reads as the staff
+// Rate cards tab reads it: one label, core's.
+export { ratePercentLabel as percentLabel } from "@ampm/core";
 
 /** Whether the rates carry amounts: verified or stale items (on request never shows amounts, AC-04). */
 export function hasRateAmounts(rates: HotelRatesView): boolean {

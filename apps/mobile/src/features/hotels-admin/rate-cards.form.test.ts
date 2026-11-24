@@ -13,6 +13,7 @@ import {
   draftFromRateCard,
   draftFromRateItem,
   emptyVerificationDraft,
+  rateAmountCopy,
   validateRateCard,
   validateRateItem,
 } from "./rate-cards.form";
@@ -106,6 +107,42 @@ describe("rate item form", () => {
 
   it("returns null when the amount does not parse", () => {
     expect(buildRateItemBody({ ...draftFromRateItem(null), amount: "oops" })).toBeNull();
+  });
+
+  it("reads a percent item's amounts as the percentage, kept in hundredths", () => {
+    const percent = rateItemViewFixture({
+      itemType: "service_charge",
+      unit: "percent",
+      amount: { minor: 1000, currency: "INR" },
+      amountMax: { minor: 1250, currency: "INR" },
+    });
+    const draft = draftFromRateItem(percent);
+    expect(draft).toMatchObject({ unit: "percent", amount: "10", amountMax: "12.50" });
+    expect(buildRateItemBody({ ...draft, amount: "12.5", amountMax: "" })).toMatchObject({
+      unit: "percent",
+      amount: { minor: 1250, currency: "INR" },
+      amountMax: null,
+    });
+    expect(validateRateItem({ ...draft, amount: "10%" }).amount).toBe(
+      "Enter the percentage as a number, e.g. 18",
+    );
+    expect(validateRateItem({ ...draft, amountMax: "a lot" }).amountMax).toBe(
+      "Enter the upper percentage as a number",
+    );
+  });
+
+  it("speaks of the amount in rupees, or as the percentage for the percent unit", () => {
+    expect(rateAmountCopy("per_night")).toMatchObject({
+      symbol: "₹",
+      help: "In rupees, e.g. 25000",
+    });
+    expect(rateAmountCopy("percent")).toMatchObject({
+      symbol: "%",
+      help: "The percentage as a number, e.g. 18",
+    });
+    expect(validateRateItem({ ...draftFromRateItem(null), amount: "nope" }).amount).toBe(
+      "Enter the amount in rupees, e.g. 25000",
+    );
   });
 });
 

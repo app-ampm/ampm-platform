@@ -9,6 +9,8 @@ import { ChildRowsImporter } from "./hotel-import.children.js";
 import { HotelImportController } from "./hotel-import.controller.js";
 import { HotelRowsImporter } from "./hotel-import.hotels.js";
 import { HotelRowsWriter } from "./hotel-import.hotels-write.js";
+import { RatesImporter } from "./hotel-import.rates.js";
+import { RateRowsWriter } from "./hotel-import.rates-write.js";
 import { HotelImportRepository } from "./hotel-import.repository.js";
 import { HotelImportService } from "./hotel-import.service.js";
 import { HotelRatesController } from "./hotel-rates.controller.js";
@@ -65,6 +67,8 @@ import { SavedHotelsStaffService } from "./saved-hotels-staff.service.js";
     HotelRowsImporter,
     HotelRowsWriter,
     ChildRowsImporter,
+    RatesImporter,
+    RateRowsWriter,
     HotelSubresourcesService,
     HotelSubresourcesRepository,
     HotelRatesService,

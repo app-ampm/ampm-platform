@@ -1,11 +1,15 @@
 import {
   HOTEL_IMPORT_TEMPLATES,
   hotelImportRow,
+  hotelRateItemType,
+  rateImportRow,
   roomImportRow,
   venueImportRow,
   type HotelImportKind,
   type HotelImportRow,
+  type HotelImportRowItem,
   type HotelImportTemplate,
+  type RateImportRow,
   type RoomImportRow,
   type VenueImportRow,
 } from "@ampm/core";
@@ -19,16 +23,21 @@ import { slugify } from "./hotel-import.js";
 import type { RowReport } from "./hotel-import.report.js";
 
 /*
- * The kinds of staff import (TW-25; D-181): each reads its own CSV template (core `HOTEL_IMPORT_TEMPLATES`)
- * into rows of its own schema, keeps its jobs under its own `import_jobs.import_type`, and plans and writes
- * its rows through its own importer (hotel-import.hotels.ts, hotel-import.children.ts), which the service
- * drives the same way for every kind.
+ * The kinds of staff import (TW-25; D-181, D-183, D-184): each reads its own CSV template (core
+ * `HOTEL_IMPORT_TEMPLATES`) into rows of its own schema, keeps its jobs under its own
+ * `import_jobs.import_type`, and plans and writes its rows through its own importer
+ * (hotel-import.hotels.ts, hotel-import.children.ts, hotel-import.rates.ts), which the service drives the
+ * same way for every kind.
  */
 
-/** What a row names, as far as its cells say: its hotel's web address and its own name. */
+/**
+ * What a row names, as far as its cells say: its hotel's web address and its own name (a rates row, its
+ * card's), and a rates row's item when its type reads.
+ */
 export interface ImportRowKey {
   readonly slug: string | null;
   readonly name: string | null;
+  readonly item?: HotelImportRowItem;
 }
 
 /** One kind of import: its template, its row schema and how a row it refuses is named. */
@@ -140,5 +149,33 @@ export const VENUES_IMPORT: ImportKindSpec<VenueImportRow> = {
   schema: venueImportRow,
   noun: "venue",
   keyOf: childKey,
+  toJson: (row) => row,
+};
+
+/**
+ * A rates row names its hotel by web address, its card by name and its item by type, room and venue: the
+ * item only when its type reads (the reader has turned the cell into a value), so a refused row's report
+ * still says which item it was.
+ */
+function rateKey(values: Readonly<Record<string, unknown>>): ImportRowKey {
+  const key = { slug: text(values["hotelSlug"]), name: text(values["cardName"]) };
+  const itemType = hotelRateItemType.safeParse(values["itemType"]);
+  if (!itemType.success) return key;
+  const item = {
+    itemType: itemType.data,
+    roomName: text(values["roomName"]),
+    venueName: text(values["venueName"]),
+  };
+  return { ...key, item };
+}
+
+/** The Rates template (Slice 4; D-184). */
+export const RATES_IMPORT: ImportKindSpec<RateImportRow> = {
+  kind: "rates",
+  importType: "hotel_rates",
+  template: HOTEL_IMPORT_TEMPLATES.rates,
+  schema: rateImportRow,
+  noun: "rate",
+  keyOf: rateKey,
   toJson: (row) => row,
 };

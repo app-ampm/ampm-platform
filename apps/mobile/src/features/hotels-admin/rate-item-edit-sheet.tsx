@@ -15,6 +15,7 @@ import { MediaOptionPicker } from "./media-option-picker";
 import {
   buildRateItemBody,
   draftFromRateItem,
+  rateAmountCopy,
   validateRateItem,
   type RateItemDraft,
   type RateItemErrors,
@@ -75,30 +76,32 @@ function useRateItemForm(
   };
 }
 
-/** The amount, optional upper bound, unit and minimum quantity of a rate item. */
-function AmountFields({
-  draft,
-  patch,
-  errors,
-}: {
+interface AmountFieldsProps {
   readonly draft: RateItemDraft;
   readonly patch: Patch;
   readonly errors: RateItemErrors;
-}) {
+}
+
+/**
+ * The amount and its optional upper bound: rupees, or the percentage while the unit is percent, which
+ * the labels and the help say.
+ */
+function AmountInputs({ draft, patch, errors }: AmountFieldsProps) {
+  const copy = rateAmountCopy(draft.unit);
   return (
     <>
       <Input
-        label="Amount (₹)"
+        label={`Amount (${copy.symbol})`}
         required
         value={draft.amount}
         onChangeText={(amount) => patch({ amount })}
         keyboardType="decimal-pad"
-        helpText="In rupees, e.g. 25000"
+        helpText={copy.help}
         errorText={errors.amount}
         testID="rate-item-amount"
       />
       <Input
-        label="Upper amount (₹)"
+        label={`Upper amount (${copy.symbol})`}
         value={draft.amountMax}
         onChangeText={(amountMax) => patch({ amountMax })}
         keyboardType="decimal-pad"
@@ -106,6 +109,15 @@ function AmountFields({
         errorText={errors.amountMax}
         testID="rate-item-amount-max"
       />
+    </>
+  );
+}
+
+/** The amount, optional upper bound, unit and minimum quantity of a rate item. */
+function AmountFields({ draft, patch, errors }: AmountFieldsProps) {
+  return (
+    <>
+      <AmountInputs draft={draft} patch={patch} errors={errors} />
       <MediaOptionPicker
         label="Unit"
         value={draft.unit}
