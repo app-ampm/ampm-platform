@@ -129,6 +129,16 @@ describe("hotelInfoRequestCreateRequest", () => {
       officialWebsite: "mailto:sales@synthetic-hotel.example",
     });
     expect(pathsOf(website)).toEqual(["officialWebsite"]);
+    for (const withUser of [
+      "user:secret@synthetic-hotel.example",
+      "sales@synthetic-hotel.example",
+    ]) {
+      const refused = hotelInfoRequestCreateRequest.safeParse({
+        ...proposed,
+        proposedWebAddress: withUser,
+      });
+      expect(pathsOf(refused), withUser).toEqual(["proposedWebAddress"]);
+    }
   });
 
   it("refuses an empty label, note or name, and text with the null character", () => {

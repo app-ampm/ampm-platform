@@ -52,13 +52,29 @@ describe("normaliseWebAddress", () => {
     );
   });
 
-  it("drops the user name, the password and a trailing dot of the host", () => {
-    expect(normaliseWebAddress("https://user:secret@synthetic-hotel.example/a")).toBe(
-      "synthetic-hotel.example/a",
-    );
+  it("drops every trailing dot of the host", () => {
     expect(normaliseWebAddress("https://synthetic-hotel.example./")).toBe(
       "synthetic-hotel.example",
     );
+    expect(normaliseWebAddress("https://synthetic-hotel.example.../rooms")).toBe(
+      "synthetic-hotel.example/rooms",
+    );
+    expect(normaliseWebAddress("www.synthetic-hotel.example..")).toBe("synthetic-hotel.example");
+  });
+
+  it("refuses a user name or password, typed with or without a scheme: no hotel's address has one", () => {
+    for (const text of [
+      "https://user:secret@synthetic-hotel.example/a",
+      "http://user@synthetic-hotel.example",
+      "user:secret@synthetic-hotel.example",
+      "sales:1234@synthetic-hotel.example/rooms",
+      "sales@synthetic-hotel.example",
+      "//user:secret@synthetic-hotel.example",
+      "synthetic-hotel.example:8080@elsewhere.example",
+    ]) {
+      expect(normaliseWebAddress(text), text).toBeNull();
+      expect(webAddressHost(text), text).toBeNull();
+    }
   });
 
   it("removes one leading www. only", () => {
@@ -100,6 +116,10 @@ describe("normaliseWebAddress", () => {
 });
 
 describe("webAddressHost", () => {
+  it("drops every trailing dot, as the key does", () => {
+    expect(webAddressHost("https://synthetic-hotel.example../")).toBe("synthetic-hotel.example");
+  });
+
   it("is the normalised host alone: no scheme, www., port or path", () => {
     expect(webAddressHost("https://WWW.Synthetic-Hotel.Example:8443/Rooms?a=1")).toBe(
       "synthetic-hotel.example",
