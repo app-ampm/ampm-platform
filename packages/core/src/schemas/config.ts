@@ -244,6 +244,16 @@ export const CONFIG_REGISTRY = {
         text: "The AMPM server has {{freeGb}} GB of disk free, below the {{floorGb}} GB floor: new hotel-form uploads are refused until space is freed.",
       },
     },
+    // A hotel information request's link (D-188 §5), to the recipient AMPM entered. It carries the
+    // reference, the catalogue's hotel name or the staff label, the expiry and the link: never text a
+    // hotel typed. The link is a fragment link (`#k=`), so the secret stays out of server logs.
+    "hotel_form.link": {
+      email: {
+        subject: "AMPM hotel information request {{reference}}",
+        html: '<p>Hello,</p>\n<p>AMPM is asking for up-to-date information about {{hotelName}} (request {{reference}}). Please fill in the hotel information form through this secure link:</p>\n<p><a href="{{link}}">Open the hotel information form</a></p>\n<p>The link works until {{expiresOn}}. Share it only with your hotel\'s management and the colleagues who help you fill in the form: anyone who has the link can take part.</p>\n<p>If you were not expecting this email, you can ignore it.</p>',
+        text: "Hello,\n\nAMPM is asking for up-to-date information about {{hotelName}} (request {{reference}}). Please fill in the hotel information form through this secure link:\n{{link}}\n\nThe link works until {{expiresOn}}. Share it only with your hotel's management and the colleagues who help you fill in the form: anyone who has the link can take part.\n\nIf you were not expecting this email, you can ignore it.",
+      },
+    },
     // The client sign-in code (D-147). DLT registers this text with {#var#} in place of {{code}}; the
     // code leads so phones can offer to fill it in. Keep the wording and the registered template equal.
     "auth.client_otp": {

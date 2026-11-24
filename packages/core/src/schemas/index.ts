@@ -64,3 +64,6 @@ export * from "./document-types";
 export * from "./hotel-documents";
 // Hotel information requests (D-188): the words the tables, the §7 machine and the contracts share.
 export * from "./hotel-info-requests";
+// Their staff routes' bodies, queries and answers (D-188 §3).
+export * from "./hotel-info-request-contracts";
+export * from "./hotel-info-request-views";
