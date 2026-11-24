@@ -65,6 +65,21 @@ describe("Hotel documents library (e2e)", () => {
 
     const link = await mintLink(v2).expect(201);
     expect(link.body.data.url).toMatch(/^\/documents\/links\/[0-9a-f-]{36}\/[A-Za-z0-9_-]{43}$/);
+    // Opening access is recorded: who minted a link to which version (security.md).
+    const hotelTeam = await suite.prisma.user.findFirstOrThrow({
+      where: { email: "hotel@example.com" },
+    });
+    const linkAudit = await suite.prisma.auditEvent.findFirstOrThrow({
+      where: {
+        entityType: "document_access_link",
+        entityId: (link.body.data.url as string).split("/")[3] ?? "",
+        action: "create",
+      },
+    });
+    expect(linkAudit).toMatchObject({
+      actorUserId: hotelTeam.id,
+      afterJson: { documentId: v2, maxDownloads: 5 },
+    });
     const served = await http()
       .get(link.body.data.url as string)
       .responseType("blob")
@@ -144,6 +159,18 @@ describe("Hotel documents library (e2e)", () => {
     await upload(pdf, { type: "menu", replaces: menu }).expect(409); // replaced already
   });
 
+  it("answers 404 for another hotel's document, opened or removed through this hotel", async () => {
+    const pdf = await fixture("reportlab-5.0.0-plain.pdf");
+    const elsewhere = await newHotel("elsewhere");
+    const foreign = (await upload(pdf, { type: "other" }, "sa", elsewhere).expect(201)).body.data
+      .id as string;
+    await mintLink(foreign, "sa").expect(404);
+    await remove(foreign, "sa").expect(404);
+    const row = await suite.prisma.document.findUniqueOrThrow({ where: { id: foreign } });
+    expect(row.deletedAt).toBeNull();
+    expect(await suite.prisma.documentAccessLink.count({ where: { documentId: foreign } })).toBe(0);
+  });
+
   it.each([
     ["no type", {}],
     ["a type the library does not file", { type: "contract" }],
@@ -184,8 +211,12 @@ describe("Hotel documents library (e2e)", () => {
     await list("ht", randomUUID()).expect(404);
     await upload(pdf, { type: "other" }, "ht", randomUUID()).expect(404);
     const removed = await newHotel("removed");
+    const filed = (await upload(pdf, { type: "other" }, "sa", removed).expect(201)).body.data
+      .id as string;
     await suite.prisma.hotel.update({ where: { id: removed }, data: { deletedAt: new Date() } });
     await list("ht", removed).expect(404);
     await upload(pdf, { type: "other" }, "ht", removed).expect(404);
+    await mintLink(filed, "ht", removed).expect(404);
+    await remove(filed, "ht", removed).expect(404);
   });
 });

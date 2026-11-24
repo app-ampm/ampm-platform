@@ -6,22 +6,14 @@ import {
   documentCalls,
   fixture,
   newLibraryHotel,
+  seedLibraryDocuments,
   startLibrarySuite,
   stopLibrarySuite,
   type LibrarySuite,
+  type SeededDocument,
 } from "./hotel-documents-suite.js";
 
 const PREFIX = "e2e-hoteldocs-limits-";
-
-/** One seeded row of a hotel's library, as the API would have filed it. */
-interface SeededDocument {
-  readonly id?: string;
-  readonly title: string;
-  readonly documentType: "other" | "menu" | "contract";
-  readonly versionNumber?: number;
-  readonly previousVersionId?: string | null;
-  readonly createdAt?: Date;
-}
 
 /**
  * The library's limits end to end (D-187 §1 and §6): every check that needs no file runs before the
@@ -41,23 +33,8 @@ describe("Hotel documents library: limits (e2e)", () => {
       .set("Content-Type", "text/plain")
       .send("not a file");
 
-  /** Files rows straight into a hotel's library, uploaded by the seeded Hotel team member. */
-  async function seed(hotelId: string, documents: readonly SeededDocument[]): Promise<void> {
-    const uploader = await suite.prisma.user.findFirstOrThrow({
-      where: { email: "hotel@example.com" },
-    });
-    await suite.prisma.document.createMany({
-      data: documents.map((document, index) => ({
-        ...document,
-        ownerType: "hotel",
-        ownerId: hotelId,
-        storageKey: `documents/hotel/${hotelId}/seeded-${index + 1}`,
-        mimeType: "application/pdf",
-        sizeBytes: 15,
-        uploadedBy: uploader.id,
-      })),
-    });
-  }
+  const seed = (hotelId: string, documents: readonly SeededDocument[]) =>
+    seedLibraryDocuments(suite, hotelId, documents);
 
   beforeAll(async () => {
     suite = await startLibrarySuite(PREFIX);

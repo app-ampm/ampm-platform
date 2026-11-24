@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -99,6 +100,38 @@ export async function newLibraryHotel(
     })
     .expect(201);
   return created.body.data.id as string;
+}
+
+/** One row seeded straight into a hotel's library, as the API would have filed it. */
+export interface SeededDocument {
+  readonly id?: string;
+  readonly title: string;
+  readonly documentType: "other" | "menu" | "contract";
+  readonly versionNumber?: number;
+  readonly previousVersionId?: string | null;
+  readonly createdAt?: Date;
+}
+
+/** Files rows straight into a hotel's library, uploaded by the seeded Hotel team member. */
+export async function seedLibraryDocuments(
+  suite: LibrarySuite,
+  hotelId: string,
+  documents: readonly SeededDocument[],
+): Promise<void> {
+  const uploader = await suite.prisma.user.findFirstOrThrow({
+    where: { email: "hotel@example.com" },
+  });
+  await suite.prisma.document.createMany({
+    data: documents.map((document, index) => ({
+      ...document,
+      ownerType: "hotel",
+      ownerId: hotelId,
+      storageKey: `documents/hotel/${hotelId}/seeded-${randomUUID()}-${index + 1}`,
+      mimeType: "application/pdf",
+      sizeBytes: 15,
+      uploadedBy: uploader.id,
+    })),
+  });
 }
 
 /** Removes what the suite made, stops the API and deletes its storage folder. */
