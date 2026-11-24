@@ -56,6 +56,8 @@ const REDACTED_KEYS: ReadonlySet<string> = new Set([
   "linktoken",
   "formsessiontoken",
   "sessiontoken",
+  // A form session's stored hash (Slice 7b): as secret as the link's token hash.
+  "sessiontokenhash",
   "bottoken",
   "codehmac",
   "destinationhash",

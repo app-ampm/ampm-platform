@@ -65,6 +65,7 @@ describe("logger", () => {
       "userAgent",
       "originalName",
       "tokenHash",
+      "sessionTokenHash",
     ];
     const camel = Object.fromEntries(names.map((name) => [name, "synthetic"]));
     const snake = Object.fromEntries(
