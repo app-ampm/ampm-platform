@@ -36,18 +36,20 @@ function readEnd(bytes: Buffer, offset: number): EndRecord {
 }
 
 /**
- * Every end record signature in the last 64 KiB whose comment fits inside the file, latest first. The
- * window is fixed, so the search is linear in at most 65,557 bytes whatever the file's size.
+ * Every end record signature in the last 64 KiB whose comment fits inside the file, latest first. Only
+ * that window is searched (a search of the whole buffer would run back to its start when the window holds
+ * no signature), so the work is at most 65,557 bytes whatever the file's size.
  */
 export function endRecordCandidates(bytes: Buffer): EndRecord[] {
   const windowStart = Math.max(0, bytes.length - END_RECORD_BYTES - MAX_COMMENT_BYTES);
+  const window = bytes.subarray(windowStart);
   const found: EndRecord[] = [];
-  let at = bytes.length - END_RECORD_BYTES;
-  while (at >= windowStart) {
-    at = bytes.lastIndexOf(END_NEEDLE, at);
-    if (at < windowStart) break;
-    const record = readEnd(bytes, at);
-    if (at + END_RECORD_BYTES + record.commentLength <= bytes.length) found.push(record);
+  let at = window.length - END_RECORD_BYTES;
+  while (at >= 0) {
+    at = window.lastIndexOf(END_NEEDLE, at);
+    if (at < 0) break;
+    const record = readEnd(bytes, windowStart + at);
+    if (record.offset + END_RECORD_BYTES + record.commentLength <= bytes.length) found.push(record);
     at -= 1;
   }
   return found;

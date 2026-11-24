@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { writeZip } from "./testing/zip-writer.js";
 import { endRecordCandidates, hasUsableEndRecord, isUsableEndRecord } from "./zip-end.js";
@@ -35,5 +35,23 @@ describe("the ZIP end record search", () => {
     const zip = writeZip([{ name: "a.txt", data: "a" }]);
     const far = Buffer.concat([zip, Buffer.alloc(70 * 1024)]);
     expect(endRecordCandidates(far)).toEqual([]);
+  });
+
+  it("never searches past that window, even in a 25 MiB file with no record", () => {
+    const search = vi.spyOn(Buffer.prototype, "lastIndexOf");
+    try {
+      expect(endRecordCandidates(Buffer.alloc(25 * 1024 * 1024, 0x41))).toEqual([]);
+      const searched = search.mock.contexts.map((buffer) => (buffer as Buffer).length);
+      expect(searched.length).toBeGreaterThan(0);
+      expect(Math.max(...searched)).toBeLessThanOrEqual(22 + 0xffff);
+    } finally {
+      search.mockRestore();
+    }
+  });
+
+  it("still finds a record whose comment fills the whole window", () => {
+    const zip = writeZip([{ name: "a.txt", data: "a" }], { comment: Buffer.alloc(0xffff, 0x41) });
+    const padded = Buffer.concat([Buffer.alloc(1024 * 1024), zip]);
+    expect(endRecordCandidates(padded).map((record) => record.commentLength)).toEqual([0xffff]);
   });
 });
