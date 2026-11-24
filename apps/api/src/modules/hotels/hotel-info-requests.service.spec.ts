@@ -29,7 +29,8 @@ function build(
   const repo = {
     transaction: vi.fn(async <T>(work: (tx: Prisma.TransactionClient) => Promise<T>) => work(TX)),
     findById: vi.fn(async (): Promise<RequestRow | null> => row),
-    update: vi.fn(async (..._args: unknown[]) => undefined),
+    lockById: vi.fn(async (): Promise<RequestRow | null> => row),
+    updateIf: vi.fn(async (..._args: unknown[]): Promise<number> => 1),
     firstExtensionDetail: vi.fn(async (): Promise<unknown> => firstExtension),
     hintCandidates: vi.fn(async () => []),
   };
@@ -64,8 +65,9 @@ describe("HotelInfoRequestsService.update", () => {
       },
       HT,
     );
-    expect(repo.update).toHaveBeenCalledWith(
+    expect(repo.updateIf).toHaveBeenCalledWith(
       REQUEST_ID,
+      { statuses: ["open"] },
       {
         displayLabel: "Lake refresh",
         recipientEmail: "front@synthetic-hotel.example",
@@ -95,7 +97,7 @@ describe("HotelInfoRequestsService.update", () => {
       { recipientName: "Synthetic Sales Desk", staffNote: null },
       HT,
     );
-    expect(repo.update).not.toHaveBeenCalled();
+    expect(repo.updateIf).not.toHaveBeenCalled();
     expect(journal.event).not.toHaveBeenCalled();
     expect(reader.detail).toHaveBeenCalledWith(REQUEST_ID, HT);
   });
@@ -104,8 +106,9 @@ describe("HotelInfoRequestsService.update", () => {
     const { service, repo, journal } = build();
     await service.update(REQUEST_ID, { extendDays: 30 }, HT);
     const to = new Date("2099-03-02T10:00:00.000Z");
-    expect(repo.update).toHaveBeenCalledWith(
+    expect(repo.updateIf).toHaveBeenCalledWith(
       REQUEST_ID,
+      { statuses: ["open"] },
       { expiresAt: to, updatedBy: HT.userId },
       TX,
     );
@@ -134,9 +137,9 @@ describe("HotelInfoRequestsService.update", () => {
       code: "validation_failed",
       details: [{ path: "extendDays" }],
     });
-    expect(repo.update).not.toHaveBeenCalled();
+    expect(repo.updateIf).not.toHaveBeenCalled();
     await service.update(REQUEST_ID, { extendDays: 30 }, HT);
-    expect(repo.update).toHaveBeenCalledOnce();
+    expect(repo.updateIf).toHaveBeenCalledOnce();
   });
 
   it("refuses with 409 a request that is no longer live, and 404 for none", async () => {
@@ -150,12 +153,39 @@ describe("HotelInfoRequestsService.update", () => {
       });
     }
     const missing = build();
-    missing.repo.findById.mockResolvedValueOnce(null);
+    missing.repo.lockById.mockResolvedValueOnce(null);
     await expect(
       missing.service.update(REQUEST_ID, { displayLabel: "X" }, HT),
     ).rejects.toMatchObject({
       code: "not_found",
     });
+  });
+
+  it("locks the request's row in its transaction before reading it, so it waits for a revoke under way", async () => {
+    const { service, repo } = build();
+    await service.update(REQUEST_ID, { displayLabel: "Lake refresh" }, HT);
+    expect(repo.lockById).toHaveBeenCalledWith(REQUEST_ID, TX);
+    expect(repo.findById).not.toHaveBeenCalled();
+  });
+
+  it("refuses with 409 a request revoked by the time its row is locked, writing nothing", async () => {
+    const { service, repo, journal } = build();
+    repo.lockById.mockResolvedValueOnce(requestRow({ status: "revoked" }));
+    await expect(service.update(REQUEST_ID, { staffNote: "Late" }, HT)).rejects.toMatchObject({
+      code: "conflict",
+    });
+    expect(repo.updateIf).not.toHaveBeenCalled();
+    expect(journal.event).not.toHaveBeenCalled();
+    expect(journal.record).not.toHaveBeenCalled();
+  });
+
+  it("refuses with 409, writing no event, when the guarded write finds the request moved", async () => {
+    const { service, repo, journal } = build();
+    repo.updateIf.mockResolvedValueOnce(0);
+    await expect(service.update(REQUEST_ID, { staffNote: "Late" }, HT)).rejects.toMatchObject({
+      code: "conflict",
+    });
+    expect(journal.event).not.toHaveBeenCalled();
   });
 });
 
@@ -186,6 +216,17 @@ describe("HotelInfoRequestsService.recordShare", () => {
     });
     expect(journal.event).not.toHaveBeenCalled();
   });
+
+  it("locks the request's row first, so a share is never recorded on a request revoked meanwhile", async () => {
+    const { service, repo, journal } = build();
+    repo.lockById.mockResolvedValueOnce(requestRow({ status: "revoked" }));
+    await expect(service.recordShare(REQUEST_ID, { channel: "copy" }, HT)).rejects.toMatchObject({
+      code: "conflict",
+    });
+    expect(repo.lockById).toHaveBeenCalledWith(REQUEST_ID, TX);
+    expect(journal.event).not.toHaveBeenCalled();
+    expect(journal.record).not.toHaveBeenCalled();
+  });
 });
 
 describe("HotelInfoRequestsService.revoke", () => {
@@ -201,9 +242,12 @@ describe("HotelInfoRequestsService.revoke", () => {
     expect(reader.detail).toHaveBeenCalledWith(REQUEST_ID, HT);
   });
 
-  it("answers 404 for no such request", async () => {
+  it("reads the request under its row's lock, and answers 404 for no such request", async () => {
     const { service, repo, revoker } = build();
-    repo.findById.mockResolvedValueOnce(null);
+    await service.revoke(REQUEST_ID, { reason: "Sent to the wrong hotel" }, HT);
+    expect(repo.lockById).toHaveBeenCalledWith(REQUEST_ID, TX);
+    revoker.revokeByStaff.mockClear();
+    repo.lockById.mockResolvedValueOnce(null);
     await expect(service.revoke(REQUEST_ID, { reason: "No" }, HT)).rejects.toMatchObject({
       code: "not_found",
     });

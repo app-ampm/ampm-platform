@@ -9,7 +9,9 @@ import type { HintCandidate } from "./hotel-duplicate-hints.js";
  * Hotel information requests and their events (D-188 §1), for the staff routes: Module C reads the
  * hotels and destinations it owns here too. `token_hash` is never selected: the link's hash is written
  * here and read only by Slice 7b's lookup. Soft-deleted requests are left out of every read. Writes take
- * the transaction they belong to, so a change and its event and audit commit together.
+ * the transaction they belong to, so a change and its event and audit commit together; a change reads
+ * its request through `lockById` and writes it through `updateIf`, so it never lands on a request that
+ * moved meanwhile.
  */
 
 /** Every column a view reads, with the hotel's and the proposed destination's names. */
@@ -96,6 +98,18 @@ export class HotelInfoRequestsRepository {
       where: { id, deletedAt: null },
       select: REQUEST_SELECT,
     });
+  }
+
+  /**
+   * Locks a request's row until the transaction ends, then reads it: every change takes this first, so
+   * a change that meets a revoke (or another change) still writing waits for it to commit and then reads
+   * what it left, never the request as it was. A hotel's row is locked before its request's, never after.
+   * Null when there is none, or it was deleted.
+   */
+  async lockById(id: string, tx: Prisma.TransactionClient): Promise<RequestRow | null> {
+    await tx.$queryRaw`
+      SELECT id FROM hotel_info_requests WHERE id = ${id}::uuid AND deleted_at IS NULL FOR UPDATE`;
+    return this.findById(id, tx);
   }
 
   /** Requests newest first (UUID v7 ids follow creation), by cursor. */
@@ -204,14 +218,6 @@ export class HotelInfoRequestsRepository {
   ): Promise<string> {
     const row = await tx.hotelInfoRequest.create({ data, select: { id: true } });
     return row.id;
-  }
-
-  async update(
-    id: string,
-    data: Prisma.HotelInfoRequestUncheckedUpdateInput,
-    tx: Prisma.TransactionClient,
-  ): Promise<void> {
-    await tx.hotelInfoRequest.update({ where: { id }, data });
   }
 
   /**

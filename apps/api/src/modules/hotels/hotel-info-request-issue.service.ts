@@ -186,13 +186,16 @@ export class HotelInfoRequestIssueService {
     });
   }
 
-  /** A request whose link may be reissued: live, not expired, and with a recipient if it is to be emailed. */
+  /**
+   * A request whose link may be reissued, read under its row's lock: live, not expired, and with a
+   * recipient if it is to be emailed.
+   */
   private async requireReissuable(
     id: string,
     emailIt: boolean,
     tx: Prisma.TransactionClient,
   ): Promise<RequestRow> {
-    const current = await this.repo.findById(id, tx);
+    const current = await this.repo.lockById(id, tx);
     if (!current) throw errors.notFound(NO_SUCH_REQUEST);
     if (!isLiveHotelInfoRequestStatus(current.status)) {
       throw errors.conflict(`A ${current.status} request's link cannot be reissued`);

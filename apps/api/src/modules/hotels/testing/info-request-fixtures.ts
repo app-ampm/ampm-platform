@@ -92,6 +92,7 @@ function issueRepo(options: IssueFakeOptions) {
     findLiveForAddress: vi.fn(async (): Promise<LiveRequestRef | null> => null),
     create: vi.fn(async (_data: unknown): Promise<string> => REQUEST_ID),
     findById: vi.fn(async (): Promise<RequestRow | null> => options.row ?? requestRow()),
+    lockById: vi.fn(async (): Promise<RequestRow | null> => options.row ?? requestRow()),
     updateIf: vi.fn(async (..._args: unknown[]): Promise<number> => 1),
   };
 }

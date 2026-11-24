@@ -29,6 +29,7 @@ import { HotelInfoRequestsRepository, type RequestRow } from "./hotel-info-reque
 
 /** The fields an update may change besides the expiry. */
 const EDITABLE = ["displayLabel", "staffNote", "recipientName", "recipientEmail"] as const;
+const CHANGED = "This request changed meanwhile: reload it and try again";
 type EditableField = (typeof EDITABLE)[number];
 
 /** The fields an update sends with a value they do not hold yet: a value sent again is no change. */
@@ -58,7 +59,8 @@ function updateAudit(fields: readonly string[], from: Date, to: Date | null): Re
  * The staff routes of hotel information requests besides issuing a link (D-188 §3): the duplicate
  * hints, the inbox, a hotel's history and one request (through the reader, in the caller's model); and the
  * changes: the label, note, recipient and expiry; a recorded share; the revoke. Each change runs in one
- * transaction with its event and its audit; a request that is no longer live is read-only (409).
+ * transaction with its event and its audit, reading the request under its row's lock; a request that is
+ * no longer live is read-only (409).
  */
 @Injectable()
 export class HotelInfoRequestsService {
@@ -116,7 +118,8 @@ export class HotelInfoRequestsService {
         ...(expiresAt ? { expiresAt } : {}),
         updatedBy: staffId(principal),
       };
-      await this.repo.update(id, data, tx);
+      const written = await this.repo.updateIf(id, { statuses: [current.status] }, data, tx);
+      if (written !== 1) throw errors.conflict(CHANGED);
       if (names.length > 0) {
         await this.journal.event(
           { requestId: id, eventType: "updated", actor, at: now, detail: { fields: names } },
@@ -169,15 +172,19 @@ export class HotelInfoRequestsService {
     principal: Principal,
   ): Promise<HotelInfoRequestDetail> {
     await this.repo.transaction(async (tx) => {
-      const current = await this.repo.findById(id, tx);
+      const current = await this.repo.lockById(id, tx);
       if (!current) throw errors.notFound(NO_SUCH_REQUEST);
       await this.revoker.revokeByStaff(current, body.reason, principal, tx);
     });
     return this.reader.detail(id, principal);
   }
 
+  /**
+   * The request a change may write, read under its row's lock: a change that meets a revoke still
+   * writing waits for it, then finds the request read-only, rather than landing on it.
+   */
   private async requireLive(id: string, tx: Prisma.TransactionClient): Promise<RequestRow> {
-    const current = await this.repo.findById(id, tx);
+    const current = await this.repo.lockById(id, tx);
     if (!current) throw errors.notFound(NO_SUCH_REQUEST);
     if (!isLiveHotelInfoRequestStatus(current.status)) {
       throw errors.conflict(`A ${current.status} request is read-only`);

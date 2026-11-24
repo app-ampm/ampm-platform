@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import { Injectable } from "@nestjs/common";
-import { errors, type HotelInfoRequestStatus } from "@ampm/core";
+import { errors, isLiveHotelInfoRequestStatus, type HotelInfoRequestStatus } from "@ampm/core";
 import { canTransition, MATRIX, type PolicyPrincipal } from "@ampm/policy";
 
 import { requestContext, type RequestContext } from "../../common/request-context.js";
@@ -96,13 +96,17 @@ export class HotelInfoRequestRevoker {
 
   /**
    * Hotel `DELETE`, inside its transaction: locks the hotel's row first (so a request created meanwhile
-   * waits, then finds the hotel gone), then revokes its live request, if any, as the System, audited as
-   * the System under the deletion's request id.
+   * waits, then finds the hotel gone), then its live request's row, which waits out a revoke staff are
+   * still writing; a request no longer live by then is left as it is, and the deletion goes on. A live
+   * one is revoked from the status read under the lock, as the System, audited as the System under the
+   * deletion's request id.
    */
   async revokeForDeletedHotel(hotelId: string, tx: Prisma.TransactionClient): Promise<void> {
     await this.repo.lockHotel(hotelId, tx);
     const live = await this.repo.findLiveForHotel(hotelId, tx);
     if (!live) return;
+    const current = await this.repo.lockById(live.id, tx);
+    if (!current || !isLiveHotelInfoRequestStatus(current.status)) return;
     const revocation: Revocation = {
       actor: SYSTEM_ACTOR,
       principal: { type: "system" },
@@ -110,7 +114,7 @@ export class HotelInfoRequestRevoker {
       cause: "hotel_deleted",
     };
     await requestContext.run(systemContextOf(requestContext.get()), () =>
-      this.revoke(live, revocation, tx),
+      this.revoke(current, revocation, tx),
     );
   }
 
@@ -137,8 +141,11 @@ export class HotelInfoRequestRevoker {
       },
       tx,
     );
-    if (written !== 1)
+    if (written !== 1) {
+      // For a deleted hotel the request is no longer live, so already ended: the deletion goes on.
+      if (by.cause === "hotel_deleted") return;
       throw errors.conflict("This request changed meanwhile: reload it and try again");
+    }
     const detail = { fromStatus: request.status, cause: by.cause };
     await this.journal.event(
       { requestId: request.id, eventType: "revoked", actor: by.actor, at, detail },

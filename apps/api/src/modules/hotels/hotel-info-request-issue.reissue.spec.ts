@@ -118,11 +118,21 @@ describe("HotelInfoRequestIssueService.reissue", () => {
     });
     expect(raced.journal.event).not.toHaveBeenCalled();
     const missing = build();
-    missing.repo.findById.mockResolvedValueOnce(null);
+    missing.repo.lockById.mockResolvedValueOnce(null);
     await expect(missing.service.reissue(REQUEST_ID, { emailIt: false }, HT)).rejects.toMatchObject(
       {
         code: "not_found",
       },
     );
+  });
+
+  it("reads the request under its row's lock, so a reissue waits for a revoke under way and then refuses", async () => {
+    const fakes = build();
+    fakes.repo.lockById.mockResolvedValueOnce(requestRow({ status: "revoked" }));
+    await expect(fakes.service.reissue(REQUEST_ID, { emailIt: false }, HT)).rejects.toMatchObject({
+      code: "conflict",
+    });
+    expect(fakes.repo.lockById).toHaveBeenCalledWith(REQUEST_ID, expect.anything());
+    expect(fakes.repo.updateIf).not.toHaveBeenCalled();
   });
 });

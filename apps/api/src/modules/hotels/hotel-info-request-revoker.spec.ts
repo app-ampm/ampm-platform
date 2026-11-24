@@ -27,6 +27,11 @@ function build(
     updateIf: vi.fn(async () => 1),
     lockHotel: vi.fn(async () => undefined),
     findLiveForHotel: vi.fn(async () => live),
+    // The request as read under its row's lock: by default as findLiveForHotel saw it.
+    lockById: vi.fn(
+      async (): Promise<{ id: string; status: HotelInfoRequestStatus } | null> =>
+        live && { id: live.id, status: live.status },
+    ),
   };
   const principals: (string | undefined)[] = [];
   const journal = {
@@ -141,5 +146,46 @@ describe("HotelInfoRequestRevoker.revokeForDeletedHotel", () => {
       );
       expect(principals, status).toEqual(["system"]);
     }
+  });
+
+  const open = { id: REQUEST_ID, reference: "HIR-2026-0001", status: "open" } as const;
+
+  it("locks the request's row after the hotel's, and revokes from the status it reads there", async () => {
+    const { revoker, repo, journal } = build(open);
+    repo.lockById.mockResolvedValueOnce({ id: REQUEST_ID, status: "submitted" });
+    await revoker.revokeForDeletedHotel(HOTEL_ID, TX);
+    expect(repo.lockById).toHaveBeenCalledWith(REQUEST_ID, TX);
+    expect(repo.lockHotel.mock.invocationCallOrder[0]).toBeLessThan(
+      repo.lockById.mock.invocationCallOrder[0] ?? 0,
+    );
+    expect(repo.updateIf).toHaveBeenCalledWith(
+      REQUEST_ID,
+      { statuses: ["submitted"] },
+      expect.objectContaining({ status: "revoked" }),
+      TX,
+    );
+    expect(journal.event).toHaveBeenCalledWith(
+      expect.objectContaining({ detail: { fromStatus: "submitted", cause: "hotel_deleted" } }),
+      TX,
+    );
+  });
+
+  it("leaves a request staff revoked meanwhile as it is, and lets the deletion go on", async () => {
+    for (const latest of [{ id: REQUEST_ID, status: "revoked" as const }, null]) {
+      const { revoker, repo, journal } = build(open);
+      repo.lockById.mockResolvedValueOnce(latest);
+      await expect(revoker.revokeForDeletedHotel(HOTEL_ID, TX)).resolves.toBeUndefined();
+      expect(repo.updateIf).not.toHaveBeenCalled();
+      expect(journal.event).not.toHaveBeenCalled();
+      expect(journal.record).not.toHaveBeenCalled();
+    }
+  });
+
+  it("treats a guarded write that matched no row as already revoked, not an error", async () => {
+    const { revoker, repo, journal } = build(open);
+    repo.updateIf.mockResolvedValueOnce(0);
+    await expect(revoker.revokeForDeletedHotel(HOTEL_ID, TX)).resolves.toBeUndefined();
+    expect(journal.event).not.toHaveBeenCalled();
+    expect(journal.record).not.toHaveBeenCalled();
   });
 });
