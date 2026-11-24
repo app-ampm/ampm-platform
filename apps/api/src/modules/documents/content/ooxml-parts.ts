@@ -81,7 +81,7 @@ export function parseContentTypes(xml: Buffer): ContentTypes {
     const extension = tag.attributes.get("Extension");
     const partName = tag.attributes.get("PartName");
     if (tag.local === "Default" && extension !== undefined) {
-      setOnce(defaults, extension.toLowerCase(), type, `the extension ${extension}`);
+      setOnce(defaults, opcKey(extension), type, `the extension ${extension}`);
     } else if (tag.local === "Override" && partName !== undefined) {
       setOnce(overrides, opcKey(partName.replace(/^\//, "")), type, partName);
     }
@@ -89,14 +89,18 @@ export function parseContentTypes(xml: Buffer): ContentTypes {
   return { defaults, overrides };
 }
 
-/** A part's content type: its override, else the default for its extension, else null. */
+/**
+ * A part's content type: its override, else the default for its extension, else null. Both are found by
+ * the part's normalised name (`opcKey`), as Office finds them: `a.x%6Dl` takes the default for `xml`.
+ */
 export function contentTypeOf(types: ContentTypes, partName: string): string | null {
-  const override = types.overrides.get(opcKey(partName));
+  const key = opcKey(partName);
+  const override = types.overrides.get(key);
   if (override !== undefined) return override;
-  const lastSegment = partName.slice(partName.lastIndexOf("/") + 1);
+  const lastSegment = key.slice(key.lastIndexOf("/") + 1);
   const dot = lastSegment.lastIndexOf(".");
   if (dot < 0) return null;
-  return types.defaults.get(lastSegment.slice(dot + 1).toLowerCase()) ?? null;
+  return types.defaults.get(lastSegment.slice(dot + 1)) ?? null;
 }
 
 export interface Relationship {
@@ -107,11 +111,15 @@ export interface Relationship {
   readonly external: boolean;
 }
 
-const RELS = /^(?:(.*)\/)?_rels\/([^/]*)\.rels$/i;
+const RELS = /^(?:(.*)\/)?_rels\/([^/]*)\.rels$/;
 
-/** The part a relationship part describes ("" for `_rels/.rels`), or null when `name` is not one. */
+/**
+ * The part a relationship part describes ("" for `_rels/.rels`), or null when `name` is not one. Read from
+ * the normalised name (`opcKey`), as Office reads it: `%5Frels/.rels` is the package relationships, and
+ * the part it names comes back normalised too.
+ */
 export function sourceOfRels(name: string): string | null {
-  const match = RELS.exec(name);
+  const match = RELS.exec(opcKey(name));
   if (!match) return null;
   const [, folder, file = ""] = match;
   return folder === undefined ? file : `${folder}/${file}`;

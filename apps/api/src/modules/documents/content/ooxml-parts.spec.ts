@@ -34,6 +34,17 @@ describe("parseContentTypes and contentTypeOf (OPC [Content_Types].xml)", () => 
     expect(contentTypeOf(types, "ppt/noextension")).toBeNull();
   });
 
+  it("reads a percent-encoded extension as Office does, by its normalised name", () => {
+    expect(contentTypeOf(types, "ppt/slides/slide1.x%6Dl")).toBe("application/xml");
+  });
+
+  it("refuses two defaults for one extension, one of them percent-encoded", async () => {
+    const twice = Buffer.from(
+      '<Types><Default Extension="xml" ContentType="a"/><Default Extension="x%6Dl" ContentType="b"/></Types>',
+    );
+    expect((await refusalOf(() => parseContentTypes(twice))).reason).toBe("archive_unsafe");
+  });
+
   it("refuses two content types for one extension or part", async () => {
     const twice = Buffer.from(
       '<Types><Default Extension="xml" ContentType="a"/><Default Extension="XML" ContentType="b"/></Types>',
@@ -49,6 +60,8 @@ describe("relationship parts", () => {
     ["ppt/slides/_rels/slide1.xml.rels", "ppt/slides/slide1.xml"],
     ["ppt/slides/slide1.xml", null],
     ["ppt/notes.rels", null],
+    ["%5Frels/.rels", ""],
+    ["ppt/slides/%5Frels/Slide1.xml.rels", "ppt/slides/slide1.xml"],
   ])("%s describes %j", (name, source) => {
     expect(sourceOfRels(name)).toBe(source);
   });

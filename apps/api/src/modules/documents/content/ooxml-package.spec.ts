@@ -10,10 +10,18 @@ import {
   TRANSITIONAL_RELS as T,
 } from "./testing/ooxml-builder.js";
 import { EVERY_KIND, refusalOf } from "./testing/refusals.js";
+import { writeZip } from "./testing/zip-writer.js";
 
 const SLIDE = "ppt/slides/slide1.xml";
 const WORKBOOK = "xl/workbook.xml";
 const SML = "application/vnd.openxmlformats-officedocument.spreadsheetml";
+
+/** A hand-written package, for names the builder never writes. */
+const CONTENT_TYPES =
+  '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/></Types>';
+const MAIN_RELATIONSHIP = `<Relationship Id="rId9" Type="${T}/officeDocument" Target="ppt/presentation.xml"/>`;
+const relationships = (items: string): string =>
+  `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${items}</Relationships>`;
 
 const part = (name: string, contentType?: string): ExtraPart =>
   contentType === undefined ? { name, data: "<x/>" } : { name, data: "<x/>", contentType };
@@ -204,6 +212,48 @@ describe("inspectOoxml: refused anywhere in the package (D-187 §2)", () => {
       await expect(inspectOoxml(pkg, EVERY_KIND)).resolves.toBe("pptx");
     },
   );
+
+  it.each<[string, string, string]>([
+    [
+      "a custom ribbon",
+      `<Relationship Id="rId2" Type="${MS_RELS}/ui/extensibility" Target="customUI/customUI.xml"/>`,
+      "active_content",
+    ],
+    [
+      "a file: hyperlink",
+      `<Relationship Id="rId2" Type="${T}/hyperlink" Target="file:///C:/Windows/calc.exe" TargetMode="External"/>`,
+      "external_content",
+    ],
+  ])(
+    "refuses %s in package relationships named with a percent-encoded _rels, as in _rels",
+    async (_name, extra, reason) => {
+      for (const relsName of ["_rels/.rels", "%5Frels/.rels"]) {
+        const zip = writeZip([
+          { name: "[Content_Types].xml", data: CONTENT_TYPES },
+          { name: relsName, data: relationships(`${MAIN_RELATIONSHIP}${extra}`) },
+          { name: "ppt/presentation.xml", data: "<main/>" },
+        ]);
+        expect((await refusalOf(inspectOoxml(zip, EVERY_KIND))).reason).toBe(reason);
+      }
+    },
+  );
+
+  it("refuses a slide's relationships named with a percent-encoded _rels, as under _rels", async () => {
+    const hyperlink = `<Relationship Id="rId1" Type="${T}/hyperlink" Target="file:///C:/Windows/calc.exe" TargetMode="External"/>`;
+    for (const relsName of [
+      "ppt/slides/_rels/slide1.xml.rels",
+      "ppt/slides/%5Frels/slide1.xml.rels",
+    ]) {
+      const zip = writeZip([
+        { name: "[Content_Types].xml", data: CONTENT_TYPES },
+        { name: "_rels/.rels", data: relationships(MAIN_RELATIONSHIP) },
+        { name: "ppt/presentation.xml", data: "<main/>" },
+        { name: "ppt/slides/slide1.xml", data: "<p:sld/>" },
+        { name: relsName, data: relationships(hyperlink) },
+      ]);
+      expect((await refusalOf(inspectOoxml(zip, EVERY_KIND))).reason).toBe("external_content");
+    }
+  });
 
   it("accepts the same rules in a Strict package's namespace", async () => {
     const strict = "http://purl.oclc.org/ooxml/officeDocument/relationships";
