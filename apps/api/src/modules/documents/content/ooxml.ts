@@ -4,8 +4,8 @@ import { type OoxmlKind, wordRefusal } from "./kinds.js";
 import {
   contentTypeOf,
   type ContentTypes,
+  forEachRelationship,
   parseContentTypes,
-  parseRelationships,
   type Relationship,
   resolveTarget,
   sourceOfRels,
@@ -37,58 +37,63 @@ interface OpenPackage {
   readonly byKey: ReadonlyMap<string, ZipEntry>;
   readonly types: ContentTypes;
   readonly main: MainPart;
-  readonly read: Map<string, Buffer>;
+  /** The package relationships (at most 2 MiB), kept for their rules until the kind is decided. */
+  readonly rootRels: Buffer;
+  /** The parts read whole so far, by OPC key: never read twice, never scanned again as content. */
+  readonly done: Set<string>;
 }
 
 /** The kinds an embedded package may be: a non-macro workbook or presentation. */
 const EMBEDDABLE: ReadonlySet<OoxmlKind> = new Set(["xlsx", "xltx", "pptx", "ppsx", "potx"]);
 
+/**
+ * A part read whole (at most 2 MiB) the first time it is asked for; null when the package has no such part
+ * or it was read already. Nothing keeps the bytes: the caller parses them and lets them go.
+ */
 async function readPart(
   bytes: Buffer,
-  open: Pick<OpenPackage, "byKey" | "read">,
+  open: Pick<OpenPackage, "byKey" | "done">,
   name: string,
   budget: ExpansionBudget,
   overCap: UploadRefusalReason,
 ): Promise<Buffer | null> {
   const key = opcKey(name);
   const entry = open.byKey.get(key);
-  if (!entry) return null;
-  const done = open.read.get(key);
-  if (done) return done;
-  const part = await readEntry(bytes, entry, budget, overCap);
-  open.read.set(key, part);
-  return part;
+  if (!entry || open.done.has(key)) return null;
+  open.done.add(key);
+  return readEntry(bytes, entry, budget, overCap);
+}
+
+/** The target of the one main part relationship among the package relationships, or the refusal. */
+function mainTarget(rootRels: Buffer): string {
+  const found = { count: 0, target: "" };
+  forEachRelationship(rootRels, "_rels/.rels", (relationship) => {
+    if (!isOfficeDocument(relationship.type)) return;
+    found.count += 1;
+    if (found.count === 1) found.target = relationship.target;
+  });
+  if (found.count !== 1) {
+    refuse(found.count === 0 ? "unknown_type" : "archive_unsafe", `${found.count} main parts`);
+  }
+  return found.target;
 }
 
 /** Reads the content types and the package relationships, and finds the main part. */
 async function openPackage(bytes: Buffer, budget: ExpansionBudget): Promise<OpenPackage> {
   const entries = readZip(bytes);
   const byKey = new Map(entries.map((entry) => [opcKey(entry.name), entry]));
-  const read = new Map<string, Buffer>();
-  const typesXml = await readPart(
-    bytes,
-    { byKey, read },
-    "[Content_Types].xml",
-    budget,
-    "archive_unsafe",
-  );
-  const rootXml = await readPart(bytes, { byKey, read }, "_rels/.rels", budget, "archive_unsafe");
-  if (!typesXml || !rootXml) refuse("unknown_type", "a ZIP that is not an Office package");
+  const done = new Set<string>();
+  const read = (name: string): Promise<Buffer | null> =>
+    readPart(bytes, { byKey, done }, name, budget, "archive_unsafe");
+  const typesXml = await read("[Content_Types].xml");
+  const rootRels = await read("_rels/.rels");
+  if (!typesXml || !rootRels) refuse("unknown_type", "a ZIP that is not an Office package");
   const types = parseContentTypes(typesXml);
-  const documents = parseRelationships(rootXml, "_rels/.rels").filter((rel) =>
-    isOfficeDocument(rel.type),
-  );
-  if (documents.length !== 1) {
-    refuse(
-      documents.length === 0 ? "unknown_type" : "archive_unsafe",
-      `${documents.length} main parts`,
-    );
-  }
-  const mainName = resolveTarget("", documents[0]?.target ?? "");
+  const mainName = resolveTarget("", mainTarget(rootRels));
   if (mainName === null || !byKey.has(opcKey(mainName))) refuse("file_damaged", "no main part");
   const main = mainPartOf(contentTypeOf(types, mainName) ?? "");
   if (main === null) refuse("unknown_type", `a package whose main part is ${mainName}`);
-  return { entries, byKey, types, main, read };
+  return { entries, byKey, types, main, rootRels, done };
 }
 
 /** The kind a main part makes the package for this upload, or the refusal. */
@@ -102,24 +107,28 @@ function acceptedKind(main: MainPart, accepted: ReadonlySet<ContentKind>): Ooxml
   return main.kind;
 }
 
-/** Reads every relationship part and applies the relationship rules; returns the embedded packages. */
+/**
+ * Applies the relationship rules to the package relationships, then to every other relationship part, each
+ * read once and let go; returns the embedded packages.
+ */
 async function checkRelationships(
   bytes: Buffer,
   open: OpenPackage,
   budget: ExpansionBudget,
 ): Promise<Set<string>> {
   const embedded = new Set<string>();
+  const check = (relationship: Relationship): void => {
+    refuseRelationship(relationship);
+    if (!isEmbeddedPackage(relationship.type)) return;
+    const target = resolveTarget(relationship.source, relationship.target);
+    if (target === null) refuse("archive_unsafe", `an embedded package outside the package`);
+    embedded.add(opcKey(target));
+  };
+  forEachRelationship(open.rootRels, "_rels/.rels", check);
   for (const entry of open.entries) {
     if (sourceOfRels(entry.name) === null) continue;
     const xml = await readPart(bytes, open, entry.name, budget, "archive_unsafe");
-    const relationships: Relationship[] = xml ? parseRelationships(xml, entry.name) : [];
-    for (const relationship of relationships) {
-      refuseRelationship(relationship);
-      if (!isEmbeddedPackage(relationship.type)) continue;
-      const target = resolveTarget(relationship.source, relationship.target);
-      if (target === null) refuse("archive_unsafe", `an embedded package outside the package`);
-      embedded.add(opcKey(target));
-    }
+    if (xml) forEachRelationship(xml, entry.name, check);
   }
   return embedded;
 }
@@ -147,7 +156,7 @@ async function checkPart(
   embedded: ReadonlySet<string>,
 ): Promise<void> {
   const key = opcKey(entry.name);
-  if (entry.isFolder || open.read.has(key)) return;
+  if (entry.isFolder || open.done.has(key)) return;
   const contentType = contentTypeOf(open.types, entry.name) ?? "";
   if (embedded.has(key)) {
     if (depth > 0) refuse("active_content", `a package inside an embedded package: ${entry.name}`);

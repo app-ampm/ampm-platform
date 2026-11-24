@@ -2,9 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import {
   contentTypeOf,
+  forEachRelationship,
   parseContentTypes,
-  parseRelationships,
   parseTag,
+  type Relationship,
   resolveTarget,
   sourceOfRels,
 } from "./ooxml-parts.js";
@@ -70,7 +71,9 @@ describe("relationship parts", () => {
     const xml = Buffer.from(
       '<Relationships><Relationship Id="rId1" Type="t/hyperlink" Target="https://example.com/?a=1&amp;b=2" TargetMode="External"/><Relationship Id="rId2" Type="t/image" Target="../media/a.png"/></Relationships>',
     );
-    expect(parseRelationships(xml, "ppt/slides/_rels/slide1.xml.rels")).toEqual([
+    const read: Relationship[] = [];
+    forEachRelationship(xml, "ppt/slides/_rels/slide1.xml.rels", (item) => read.push(item));
+    expect(read).toEqual([
       {
         source: "ppt/slides/slide1.xml",
         type: "t/hyperlink",

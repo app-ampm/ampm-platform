@@ -6,7 +6,8 @@ import { opcKey } from "./zip-names.js";
  * The two kinds of part that describe an Office package (ECMA-376 Part 2, Open Packaging Conventions):
  * `[Content_Types].xml`, which gives every part its content type, and the relationship parts (`.rels`),
  * which say what each part points to. Both are read whole (each at most 2 MiB) and parsed with the same
- * tokenizer that scans the other parts.
+ * tokenizer that scans the other parts. Their tags are handed on one at a time as they are read, and only
+ * the elements a caller uses are parsed: a part of 2 MiB of empty tags once held 150 MiB of parsed tags.
  */
 
 export interface Tag {
@@ -42,12 +43,25 @@ export function parseTag(raw: string, part: string): Tag {
   };
 }
 
-/** Every start tag of a whole XML part. */
-export function readTags(xml: Buffer, part: string): Tag[] {
-  const tags: Tag[] = [];
+/**
+ * Calls `visit` with each start tag of a whole XML part whose name without its prefix is in `names`, as
+ * the tag is read. Nothing is kept, and no other tag is parsed past its name.
+ *
+ * @example
+ * forEachTag(xml, "_rels/.rels", new Set(["Relationship"]), (tag) => check(tag.attributes));
+ */
+export function forEachTag(
+  xml: Buffer,
+  part: string,
+  names: ReadonlySet<string>,
+  visit: (tag: Tag) => void,
+): void {
   const scanner = new XmlScanner(
     {
-      startTag: (raw) => tags.push(parseTag(raw, part)),
+      startTag: (raw) => {
+        const name = TAG_NAME.exec(raw)?.[1] ?? "";
+        if (names.has(name.slice(name.indexOf(":") + 1))) visit(parseTag(raw, part));
+      },
       endTag: () => undefined,
       text: () => undefined,
     },
@@ -55,8 +69,10 @@ export function readTags(xml: Buffer, part: string): Tag[] {
   );
   scanner.write(xml);
   scanner.end();
-  return tags;
 }
+
+const CONTENT_TYPE_TAGS: ReadonlySet<string> = new Set(["Default", "Override"]);
+const RELATIONSHIP_TAGS: ReadonlySet<string> = new Set(["Relationship"]);
 
 export interface ContentTypes {
   readonly defaults: ReadonlyMap<string, string>;
@@ -75,9 +91,9 @@ function setOnce(map: Map<string, string>, key: string, value: string, what: str
 export function parseContentTypes(xml: Buffer): ContentTypes {
   const defaults = new Map<string, string>();
   const overrides = new Map<string, string>();
-  for (const tag of readTags(xml, "[Content_Types].xml")) {
+  forEachTag(xml, "[Content_Types].xml", CONTENT_TYPE_TAGS, (tag) => {
     const type = tag.attributes.get("ContentType");
-    if (type === undefined) continue;
+    if (type === undefined) return;
     const extension = tag.attributes.get("Extension");
     const partName = tag.attributes.get("PartName");
     if (tag.local === "Default" && extension !== undefined) {
@@ -85,7 +101,7 @@ export function parseContentTypes(xml: Buffer): ContentTypes {
     } else if (tag.local === "Override" && partName !== undefined) {
       setOnce(overrides, opcKey(partName.replace(/^\//, "")), type, partName);
     }
-  }
+  });
   return { defaults, overrides };
 }
 
@@ -125,17 +141,26 @@ export function sourceOfRels(name: string): string | null {
   return folder === undefined ? file : `${folder}/${file}`;
 }
 
-/** The relationships of a relationship part. */
-export function parseRelationships(xml: Buffer, relsName: string): Relationship[] {
+/**
+ * Calls `visit` with each relationship of a relationship part, as it is read; nothing is kept.
+ *
+ * @example
+ * forEachRelationship(xml, "ppt/slides/_rels/slide1.xml.rels", refuseRelationship);
+ */
+export function forEachRelationship(
+  xml: Buffer,
+  relsName: string,
+  visit: (relationship: Relationship) => void,
+): void {
   const source = sourceOfRels(relsName) ?? "";
-  return readTags(xml, relsName)
-    .filter((tag) => tag.local === "Relationship")
-    .map((tag) => ({
+  forEachTag(xml, relsName, RELATIONSHIP_TAGS, (tag) =>
+    visit({
       source,
       type: tag.attributes.get("Type") ?? "",
       target: tag.attributes.get("Target") ?? "",
       external: (tag.attributes.get("TargetMode") ?? "").toLowerCase() === "external",
-    }));
+    }),
+  );
 }
 
 /**
