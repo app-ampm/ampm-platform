@@ -93,6 +93,73 @@ export class DocumentsRepository {
     });
   }
 
+  /** Every live row of this owner, every version included, newest first (D-187 §6). */
+  listByOwner(owner: DocumentOwner): Promise<DocumentRow[]> {
+    return this.prisma.document.findMany({
+      where: { ownerType: owner.ownerType, ownerId: owner.ownerId, deletedAt: null },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      select: DOCUMENT_SELECT,
+    });
+  }
+
+  /**
+   * Locks a live document of this owner until the transaction ends, so a replacement and a removal of
+   * the same document run one after the other. False when there is no such document.
+   */
+  async lockOwned(
+    id: string,
+    owner: DocumentOwner,
+    tx: Prisma.TransactionClient,
+  ): Promise<boolean> {
+    const rows = await tx.$queryRaw<{ id: string }[]>`
+      SELECT id FROM documents
+      WHERE id = ${id}::uuid AND owner_type = ${owner.ownerType} AND owner_id = ${owner.ownerId}::uuid
+        AND deleted_at IS NULL
+      FOR UPDATE`;
+    return rows.length > 0;
+  }
+
+  /** Whether a live row other than `except` follows this document: then it is no longer the latest. */
+  async hasSuccessor(
+    id: string,
+    except: string | null,
+    client: Prisma.TransactionClient | PrismaService = this.prisma,
+  ): Promise<boolean> {
+    const row = await client.document.findFirst({
+      where: { previousVersionId: id, deletedAt: null, ...(except ? { id: { not: except } } : {}) },
+      select: { id: true },
+    });
+    return row !== null;
+  }
+
+  /** How many live documents this owner holds: live rows that no live row follows. */
+  async countLive(
+    owner: DocumentOwner,
+    client: Prisma.TransactionClient | PrismaService = this.prisma,
+  ): Promise<number> {
+    const rows = await client.$queryRaw<{ count: bigint }[]>`
+      SELECT count(*) AS count FROM documents d
+      WHERE d.owner_type = ${owner.ownerType} AND d.owner_id = ${owner.ownerId}::uuid
+        AND d.deleted_at IS NULL
+        AND NOT EXISTS (
+          SELECT 1 FROM documents s WHERE s.previous_version_id = d.id AND s.deleted_at IS NULL
+        )`;
+    return Number(rows[0]?.count ?? 0);
+  }
+
+  /** Soft-deletes these live rows; the number it removed. */
+  async softDelete(
+    ids: readonly string[],
+    actorId: string,
+    tx: Prisma.TransactionClient,
+  ): Promise<number> {
+    const result = await tx.document.updateMany({
+      where: { id: { in: [...ids] }, deletedAt: null },
+      data: { deletedAt: new Date(), updatedBy: actorId },
+    });
+    return result.count;
+  }
+
   async createLink(
     data: LinkWriteData,
     createdBy: string,

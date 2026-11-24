@@ -28,6 +28,7 @@ const UPLOAD_ROUTES = [
   `/consultancy-admin/booking-milestones/${NO_RECORD}/contract`,
   `/crm/service-agreements/${NO_RECORD}/signed-copy`,
   `/hotels-admin/hotels/${NO_RECORD}/wedding-references/${NO_REFERENCE}/consent`,
+  `/hotels-admin/hotels/${NO_RECORD}/documents?type=fact_sheet`,
   "/hotels-admin/imports/hotels",
   "/hotels-admin/imports/rooms",
   "/hotels-admin/imports/venues",

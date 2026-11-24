@@ -31,6 +31,8 @@ const COSTLY = [
   "BookingMilestonesController.attachContract",
   "ServiceAgreementsController.markSignedOffline",
   "HotelReferencesController.attachConsent",
+  // Each hotel document reads, checks, scans and stores up to 25 MiB (D-187 §6).
+  "HotelDocumentsController.upload",
   // Each import preview reads up to 5 MiB and stores its plan; each import writes up to 2,000 rows.
   "HotelImportController.importHotels",
   "HotelImportController.importRooms",

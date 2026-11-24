@@ -38,6 +38,7 @@ const KNOWN_UPLOADS = [
   "BookingMilestonesController.attachContract",
   "ServiceAgreementsController.markSignedOffline",
   "HotelReferencesController.attachConsent",
+  "HotelDocumentsController.upload",
   "HotelImportController.importHotels",
   "HotelImportController.importRooms",
   "HotelImportController.importVenues",
