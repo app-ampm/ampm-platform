@@ -259,3 +259,31 @@ describe("HotelDocumentsService.upload: the checks before the file is read (D-18
     expect(run.calls.slice(0, 3)).toEqual(["count", "read file", "store"]);
   });
 });
+
+describe("HotelDocumentsService.upload: at most 50 versions of a document", () => {
+  const versionId = (n: number) => `0192f1a0-0000-7000-8000-${String(n).padStart(12, "0")}`;
+  /** A document with `count` versions, the newest last filed. */
+  const versionsOf = (count: number) =>
+    Array.from({ length: count }, (_unused, index) =>
+      documentRow(versionId(index + 1), index ? versionId(index) : null, {
+        versionNumber: index + 1,
+        createdAt: new Date(Date.UTC(2026, 10, 24, 10, 0, index)),
+      }),
+    );
+
+  it("refuses a 51st version with 409, without reading the file", async () => {
+    const run = harness({ rows: versionsOf(50) });
+    await expect(upload(run, { type: "other", replaces: versionId(50) })).rejects.toMatchObject({
+      status: 409,
+      message:
+        "A document can keep at most 50 versions: upload this file as a new document instead",
+    });
+    expect(run.readFile).not.toHaveBeenCalled();
+  });
+
+  it("takes the 50th version", async () => {
+    const run = harness({ rows: versionsOf(49) });
+    const view = await upload(run, { type: "other", replaces: versionId(49) });
+    expect(view.versions).toHaveLength(49);
+  });
+});

@@ -26,6 +26,12 @@ export const HOTEL_DOCUMENT_TITLE_MAX = 120;
 export const HOTEL_DOCUMENTS_MAX = 100;
 
 /**
+ * The most versions one document may have, the latest included; a replacement beyond it is refused
+ * with 409, so one document's history stays a bounded list (at most 100 x 50 rows per hotel).
+ */
+export const HOTEL_DOCUMENT_VERSIONS_MAX = 50;
+
+/**
  * The upload's query. `type` is one of the hotel document types; `title` is trimmed, and null when
  * absent or blank: the API then keeps the title of the document a replacement follows, or names a new
  * document after its type (`documentTypeLabel`), which only it can tell apart; `replaces` names the

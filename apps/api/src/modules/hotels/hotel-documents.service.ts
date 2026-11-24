@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common";
 import {
   documentTypeLabel,
   errors,
+  HOTEL_DOCUMENT_VERSIONS_MAX,
   HOTEL_DOCUMENTS_MAX,
   type DocumentLinkView,
   type HotelDocumentList,
@@ -32,6 +33,11 @@ const tooMany = () =>
     `A hotel can hold at most ${HOTEL_DOCUMENTS_MAX} documents: remove one, or replace one with its new version`,
   );
 
+const tooManyVersions = () =>
+  errors.conflict(
+    `A document can keep at most ${HOTEL_DOCUMENT_VERSIONS_MAX} versions: upload this file as a new document instead`,
+  );
+
 /**
  * The title a new version is filed under: the one given, else the replaced version's (a new version
  * keeps its document's name), else, for a new document, its type's label.
@@ -51,9 +57,9 @@ export type ReadUploadedFile = () => Promise<Buffer>;
  * that needs no file before it reads one (D-187 §1: a refused caller never makes the API buffer a
  * file): the hotel, the cap, the update key and the document it replaces. A file is then checked,
  * scanned and stored by DocumentsService under its type's rules; a replacement becomes the next version
- * of a live, latest document of the same type; a hotel holds at most 100 live documents. Within the
- * upload's transaction the hotel's row is locked and the cap and the replacement checked again, so
- * concurrent uploads cannot pass the cap or both replace one document.
+ * of a live, latest document of the same type, up to 50 versions; a hotel holds at most 100 live
+ * documents. Within the upload's transaction the hotel's row is locked and the cap and the replacement
+ * checked again, so concurrent uploads cannot pass the cap or both replace one document.
  */
 @Injectable()
 export class HotelDocumentsService {
@@ -118,7 +124,9 @@ export class HotelDocumentsService {
 
   /**
    * Before the file is read: a new document needs room under the cap; a replacement needs the update
-   * key and a live, latest document of the same type to follow, which it returns.
+   * key and a live, latest document of the same type to follow, with fewer than 50 versions, which it
+   * returns. The version count needs no second look in the transaction: only a version that follows
+   * the latest one adds to it, and the transaction's lock refuses one that another has followed since.
    */
   private async checkUpload(
     owner: DocumentOwner,
@@ -137,6 +145,7 @@ export class HotelDocumentsService {
       const message = "A replacement must be of the same type as the document it replaces";
       throw errors.validation([{ path: "replaces", message }], message);
     }
+    if (current.earlier.length + 1 >= HOTEL_DOCUMENT_VERSIONS_MAX) throw tooManyVersions();
     return current;
   }
 

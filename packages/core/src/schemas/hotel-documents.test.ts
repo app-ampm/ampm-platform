@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   HOTEL_DOCUMENT_TITLE_MAX,
+  HOTEL_DOCUMENT_VERSIONS_MAX,
   HOTEL_DOCUMENTS_MAX,
   hotelDocumentList,
   hotelDocumentRemovedResponse,
@@ -91,5 +92,9 @@ describe("hotelDocumentView", () => {
   it("answers a removal with the document's id, and caps a hotel at 100 live documents", () => {
     expect(hotelDocumentRemovedResponse.parse({ id: DOC })).toEqual({ id: DOC });
     expect(HOTEL_DOCUMENTS_MAX).toBe(100);
+  });
+
+  it("caps a document at 50 versions", () => {
+    expect(HOTEL_DOCUMENT_VERSIONS_MAX).toBe(50);
   });
 });

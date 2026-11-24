@@ -92,8 +92,9 @@ export interface HotelDocumentUploadInput extends HotelDocumentUploadQueryInput 
  * Upload a document, or a new version of one (`POST …/documents?type=&title=&replaces=`, the file as raw
  * `application/octet-stream`). The server types the bytes by content and refuses a file its type does
  * not take: 415 for a kind the type does not take (Word included), 400 for anything refused inside one,
- * each with its message on `file`; 413 over the cap, 409 at 100 documents or when `replaces` is no
- * longer the latest version, and 503 with `Retry-After` while the server is busy with other uploads.
+ * each with its message on `file`; 413 over the cap, 409 at 100 documents, at a document's 50th
+ * version or when `replaces` is no longer the latest version, and 503 with `Retry-After` while the
+ * server is busy with other uploads.
  *
  * @example
  * const upload = useUploadHotelDocument(hotelId);
