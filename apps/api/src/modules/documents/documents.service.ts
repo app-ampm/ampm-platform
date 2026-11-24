@@ -1,11 +1,16 @@
 import { createHash, randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
 
 import { Inject, Injectable } from "@nestjs/common";
-import { errors, type DocumentLinkView } from "@ampm/core";
+import { errors, isAppError, type DocumentLinkView } from "@ampm/core";
 
 import type { Prisma, DocumentType } from "../../generated/prisma/client.js";
 import { AuditService } from "../../policy/audit.service.js";
 import { AV_SCANNER, type AvScanner } from "../../storage/av-scanner.js";
+import {
+  IMAGE_PROCESSOR,
+  type DocumentImageFormat,
+  type ImageProcessor,
+} from "../../storage/image.processor.js";
 import { STORAGE_ADAPTER, type StorageAdapter } from "../../storage/storage.types.js";
 import {
   detectDocument,
@@ -27,6 +32,12 @@ const LINK_TTL_MS = 15 * 60 * 1000;
  * its own download and print buttons; the 15-minute expiry still bounds the link.
  */
 const LINK_MAX_DOWNLOADS = 5;
+
+/** The image types a document keeps re-encoded, each in the format it came in (D-187 §3). */
+const IMAGE_FORMATS: Readonly<Record<string, DocumentImageFormat>> = {
+  "image/jpeg": "jpeg",
+  "image/png": "png",
+};
 
 export interface StoreDocumentInput {
   readonly owner: DocumentOwner;
@@ -54,8 +65,10 @@ const sha256 = (value: string | Buffer): string => createHash("sha256").update(v
  * the principal may act on the owner; this service scopes every read by that owner, so a document is
  * reached only through its record (security.md). Storing validates fully before anything is kept: the
  * type by content, the size, and an antivirus scan — a file that fails is refused outright, since a
- * document has no quarantine state. The bytes are written first, then the row, its audit and the
- * caller's attach step commit in one transaction; if that fails the bytes are removed again.
+ * document has no quarantine state. An image is then re-encoded without its metadata through the shared
+ * image queue (D-187), and those are the bytes kept, sized and checksummed. The bytes are written first,
+ * then the row, its audit and the caller's attach step commit in one transaction; if that fails the
+ * bytes are removed again.
  */
 @Injectable()
 export class DocumentsService {
@@ -64,6 +77,7 @@ export class DocumentsService {
     private readonly audit: AuditService,
     @Inject(STORAGE_ADAPTER) private readonly storage: StorageAdapter,
     @Inject(AV_SCANNER) private readonly scanner: AvScanner,
+    @Inject(IMAGE_PROCESSOR) private readonly images: ImageProcessor,
   ) {}
 
   async store(
@@ -72,11 +86,10 @@ export class DocumentsService {
     attach: (document: DocumentRow, tx: Prisma.TransactionClient) => Promise<void>,
   ): Promise<DocumentRow> {
     const detected = await this.validate(input.bytes);
-    const previous = input.previousVersionId
-      ? await this.repo.findOwned(input.previousVersionId, input.owner)
-      : null;
+    const bytes = await this.keptBytes(input.bytes, detected);
+    const previous = await this.previousVersion(input);
     const storageKey = `documents/${input.owner.ownerType}/${input.owner.ownerId}/${randomUUID()}`;
-    await this.storage.putObject(storageKey, input.bytes, detected.mimeType);
+    await this.storage.putObject(storageKey, bytes, detected.mimeType);
     try {
       return await this.repo.transaction(async (tx) => {
         const row = await this.repo.create(
@@ -88,8 +101,8 @@ export class DocumentsService {
             documentType: input.documentType,
             storageKey,
             mimeType: detected.mimeType,
-            sizeBytes: input.bytes.length,
-            checksum: sha256(input.bytes),
+            sizeBytes: bytes.length,
+            checksum: sha256(bytes),
             versionNumber: previous ? previous.versionNumber + 1 : 1,
             previousVersionId: previous?.id ?? null,
           },
@@ -159,6 +172,29 @@ export class DocumentsService {
       mimeType: blob.mimeType,
       fileName: downloadFileName(blob.documentType, blob.versionNumber, blob.mimeType),
     };
+  }
+
+  /** The document a replacement follows, on the same owner; null for a first version. */
+  private async previousVersion(input: StoreDocumentInput): Promise<DocumentRow | null> {
+    if (!input.previousVersionId) return null;
+    return this.repo.findOwned(input.previousVersionId, input.owner);
+  }
+
+  /**
+   * The bytes a document keeps (D-187 §3): an image re-encoded through the shared image queue, upright,
+   * stripped of its metadata and never downscaled; anything else as uploaded. A refusal of the image
+   * itself (over the pixel limit) keeps its wording; bytes that will not decode are refused.
+   */
+  private async keptBytes(uploaded: Buffer, detected: DetectedDocument): Promise<Buffer> {
+    const format = IMAGE_FORMATS[detected.mimeType];
+    if (!format) return uploaded;
+    try {
+      return await this.images.reencode(uploaded, format);
+    } catch (error) {
+      if (isAppError(error)) throw error;
+      const message = "The file is not a decodable image";
+      throw errors.validation([{ path: "file", message }], message);
+    }
   }
 
   /** Type by content, the size ceiling, then the scan — all before any stored state changes. */

@@ -1,8 +1,10 @@
+import { createHash } from "node:crypto";
 import { mkdtemp, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import type { NestExpressApplication } from "@nestjs/platform-express";
+import sharp from "sharp";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
@@ -172,6 +174,33 @@ describe("Hotel wedding reference consent (e2e)", () => {
     expect(download.headers["content-type"]).toContain("application/pdf");
     expect(download.headers["content-disposition"]).toBe('inline; filename="consent.pdf"');
     expect(Buffer.from(download.body).equals(PDF)).toBe(true);
+  });
+
+  it("keeps a photo of the consent upright and whole, without its metadata (D-187)", async () => {
+    const refId = await newReference();
+    const photo = await sharp({
+      create: { width: 2400, height: 1600, channels: 3, background: { r: 240, g: 236, b: 226 } },
+    })
+      .withMetadata({ orientation: 6 }) // taken on its side, as phones store it
+      .withExif({ IFD0: { Make: "TestCam", Model: "ConsentPhone" } })
+      .jpeg()
+      .toBuffer();
+    expect((await sharp(photo).metadata()).exif).toBeInstanceOf(Buffer); // there is EXIF to strip
+    await attach(refId, photo).expect(200);
+
+    const url = (await mintLink(refId).expect(201)).body.data.url as string;
+    const download = await http().get(url).responseType("blob").expect(200);
+    expect(download.headers["content-type"]).toContain("image/jpeg");
+    const served = Buffer.from(download.body);
+    const meta = await sharp(served).metadata();
+    expect(meta.format).toBe("jpeg");
+    expect([meta.width, meta.height]).toEqual([1600, 2400]); // upright, never downscaled
+    expect(meta.exif).toBeUndefined();
+    expect(served.includes(Buffer.from("TestCam"))).toBe(false);
+    // The record describes the bytes kept, not the ones uploaded.
+    const row = await prisma.document.findFirstOrThrow({ where: { ownerId: refId } });
+    expect(row.sizeBytes).toBe(served.length);
+    expect(row.checksum).toBe(createHash("sha256").update(served).digest("hex"));
   });
 
   it("answers 404 for a reference outside the hotel in the path (denial equals absence)", async () => {
