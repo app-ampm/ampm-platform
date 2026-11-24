@@ -53,6 +53,18 @@ function build(
   return { service, repo, journal, reader, revoker };
 }
 
+describe("HotelInfoRequestsService.duplicateHints", () => {
+  it("answers no hints, reading no catalogue, when nothing typed reads as a name or an address", async () => {
+    const { service, repo } = build();
+    for (const query of [{}, { name: "ab" }, { name: "The Resort" }, { webAddress: "grand" }]) {
+      expect(await service.duplicateHints(query), JSON.stringify(query)).toEqual({ hints: [] });
+    }
+    expect(repo.hintCandidates).not.toHaveBeenCalled();
+    await service.duplicateHints({ name: "Synthetic Lake Palace" });
+    expect(repo.hintCandidates).toHaveBeenCalledOnce();
+  });
+});
+
 describe("HotelInfoRequestsService.update", () => {
   it("changes the label, note and recipient, naming the fields changed and never their values", async () => {
     const { service, repo, journal } = build();

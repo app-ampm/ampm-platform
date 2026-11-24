@@ -91,14 +91,33 @@ interface Typed {
   readonly host: string | null;
 }
 
+/** A typed address's host when it reads as a website's: one with a dot, as no website's host is a word. */
+function typedHost(address: string): string | null {
+  const host = webAddressHost(address);
+  return host !== null && host.includes(".") ? host : null;
+}
+
 function typedOf(query: HotelDuplicateHintsQuery): Typed {
   const words = nameTokens(query.name ?? "");
   const address = query.webAddress ?? "";
+  const host = typedHost(address);
   return {
     words: words.join("").length >= NAME_MIN_LENGTH ? words : [],
-    addressKey: normaliseWebAddress(address),
-    host: webAddressHost(address),
+    addressKey: host === null ? null : normaliseWebAddress(address),
+    host,
   };
+}
+
+/**
+ * Whether what staff typed reads as a name (three telling characters) or a web address (a host with a
+ * dot). When neither does there are no hints, and the catalogue is not read for them.
+ *
+ * @example
+ * hasHintInput({ name: "ab", webAddress: "grand" }); // false
+ */
+export function hasHintInput(query: HotelDuplicateHintsQuery): boolean {
+  const typed = typedOf(query);
+  return typed.words.length > 0 || typed.host !== null;
 }
 
 /** One hotel's evidence: each reason with its weight. */

@@ -16,7 +16,7 @@ import {
 
 import type { Prisma } from "../../generated/prisma/client.js";
 import { type Principal, staffId } from "../../policy/principal.types.js";
-import { duplicateHints } from "./hotel-duplicate-hints.js";
+import { duplicateHints, hasHintInput } from "./hotel-duplicate-hints.js";
 import { nextExpiry } from "./hotel-info-request-expiry.js";
 import {
   HotelInfoRequestJournal,
@@ -71,8 +71,9 @@ export class HotelInfoRequestsService {
     private readonly revoker: HotelInfoRequestRevoker,
   ) {}
 
-  /** The catalogue hotels a proposed new hotel may already be. */
+  /** The catalogue hotels a proposed new hotel may already be; none until a name or address is typed. */
   async duplicateHints(query: HotelDuplicateHintsQuery): Promise<HotelDuplicateHints> {
+    if (!hasHintInput(query)) return { hints: [] };
     return { hints: duplicateHints(await this.repo.hintCandidates(), query) };
   }
 

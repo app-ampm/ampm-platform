@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { duplicateHints, nameTokens, type HintCandidate } from "./hotel-duplicate-hints.js";
+import {
+  duplicateHints,
+  hasHintInput,
+  nameTokens,
+  type HintCandidate,
+} from "./hotel-duplicate-hints.js";
 
 /*
  * The duplicate hints of the Invite a new hotel sheet (D-188 §3; plan §4.1): catalogue hotels whose name
@@ -111,5 +116,39 @@ describe("duplicateHints", () => {
     expect(duplicateHints(candidates, { name: "The Resort" })).toEqual([]);
     expect(duplicateHints(candidates, { name: "g" })).toEqual([]);
     expect(duplicateHints(candidates, { webAddress: "not an address" })).toEqual([]);
+  });
+
+  it("gives no hints for an address whose host is a single word, as no website's host is", () => {
+    const candidates = [hotel({ name: "Synthetic Grand", website: "https://grand" })];
+    expect(duplicateHints(candidates, { webAddress: "grand" })).toEqual([]);
+    expect(duplicateHints(candidates, { webAddress: "https://grand./x" })).toEqual([]);
+  });
+});
+
+describe("hasHintInput", () => {
+  it("is false when nothing typed reads as a name or an address: empty, short, generic or one word", () => {
+    for (const query of [
+      {},
+      { name: "", webAddress: "" },
+      { name: "ab" },
+      { name: "The Resort & Spa" },
+      { webAddress: "ab" },
+      { webAddress: "grand" },
+      { webAddress: "not an address" },
+      { name: "a", webAddress: "www." },
+    ]) {
+      expect(hasHintInput(query), JSON.stringify(query)).toBe(false);
+    }
+  });
+
+  it("is true once a name has three telling characters, or an address has a host with a dot", () => {
+    for (const query of [
+      { name: "Lak" },
+      { name: "The Lake Palace" },
+      { webAddress: "lake.e" },
+      { name: "a", webAddress: "https://www.synthetic-lake.example/rooms" },
+    ]) {
+      expect(hasHintInput(query), JSON.stringify(query)).toBe(true);
+    }
   });
 });

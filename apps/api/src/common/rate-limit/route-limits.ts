@@ -61,3 +61,16 @@ export const HOTEL_FORM_LINKS: RateLimitOptions = {
   windowMs: 10 * MINUTE,
   failClosed: true,
 };
+
+/**
+ * The duplicate hints of the Invite a new hotel sheet (D-188 §3): asked as staff type, after a pause, and
+ * each reads the whole catalogue, so a member of staff asks at most 60 times a minute. A read, so it fails
+ * open: a broken limiter never hides the hints.
+ */
+export const HOTEL_DUPLICATE_HINTS: RateLimitOptions = {
+  name: "hotel_form.hints",
+  limit: 60,
+  perIpLimit: 180,
+  windowMs: MINUTE,
+  failClosed: false,
+};

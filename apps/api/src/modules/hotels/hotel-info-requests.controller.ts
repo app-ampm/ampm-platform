@@ -26,7 +26,7 @@ import {
 import { z } from "zod";
 
 import { RateLimit } from "../../common/rate-limit/rate-limit.decorator.js";
-import { HOTEL_FORM_LINKS } from "../../common/rate-limit/route-limits.js";
+import { HOTEL_DUPLICATE_HINTS, HOTEL_FORM_LINKS } from "../../common/rate-limit/route-limits.js";
 import { ZodBody, ZodParams, ZodQuery } from "../../common/zod.js";
 import { CurrentPrincipal, RequirePermission, SelfAudited } from "../../policy/decorators.js";
 import type { Principal } from "../../policy/principal.types.js";
@@ -48,7 +48,7 @@ const NO_STORE = ["Cache-Control", "no-store"] as const;
  * otherwise capture it. Every change is audited in its service's transaction, and issuing, reissuing and
  * recording a share with the action `share`; the link is answered only by create and reissue, which a
  * member of staff calls at most 30 times in ten minutes, and is never in an audit image, a log or an
- * event.
+ * event. The duplicate hints, asked as staff type, are limited to 60 a minute.
  */
 @Controller("hotels-admin")
 export class HotelInfoRequestsController {
@@ -59,6 +59,7 @@ export class HotelInfoRequestsController {
 
   @Get("hotel-duplicate-hints")
   @RequirePermission("hotels.info_requests.create")
+  @RateLimit(HOTEL_DUPLICATE_HINTS)
   duplicateHints(
     @ZodQuery(hotelDuplicateHintsQuery) query: HotelDuplicateHintsQuery,
   ): Promise<HotelDuplicateHints> {
