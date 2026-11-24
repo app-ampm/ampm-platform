@@ -24,6 +24,20 @@ export function refuse(reason: UploadRefusalReason, detail: string): never {
 }
 
 /**
+ * A value the file chose (a part name, a link's target, a content type, a filter's name, a declared
+ * number), quoted and escaped so that the log line always masks it (`loggableDetail` masks every quoted
+ * value): a refusal's detail names the rule it broke, never what the file said. refusal.spec.ts fails on
+ * any interpolation in a detail that does not come through here, unless it lists the value as one the
+ * checks decided or measured.
+ *
+ * @example
+ * refuse("archive_unsafe", `a part with no content type: ${fromFile(entry.name)}`);
+ */
+export function fromFile(value: string | number): string {
+  return JSON.stringify(String(value));
+}
+
+/**
  * Refuses as damaged unless `length` bytes from `offset` lie inside `bytes`: every read of a declared
  * offset or size goes through here first, so a lying header can never point a read outside the file.
  */

@@ -10,7 +10,7 @@ import {
   stringOf,
 } from "./pdf-objects.js";
 import { rc4 } from "./rc4.js";
-import { refuse } from "./refusal.js";
+import { fromFile, refuse } from "./refusal.js";
 
 /*
  * The PDF standard security handler (ISO 32000-2 §7.6.4), enough to open a file with the empty user
@@ -145,7 +145,7 @@ function streamMethod(dict: PdfDict, version: number): CryptMethod {
     AESV2: "aes128",
     AESV3: "aes256",
   };
-  return methods[method] ?? refuse("pdf_unreadable", `a crypt filter method ${method}`);
+  return methods[method] ?? refuse("pdf_unreadable", `a crypt filter method ${fromFile(method)}`);
 }
 
 function objectKey(fileKey: Buffer, num: number, gen: number, aes: boolean): Buffer {
@@ -168,7 +168,8 @@ function fileKey(dict: PdfDict, version: number, id0: Buffer): Buffer {
     );
   }
   const bits = version === 1 ? 40 : version === 4 ? 128 : (numberOf(entry(dict, "Length")) ?? 40);
-  if (bits < 40 || bits > 128 || bits % 8 !== 0) refuse("pdf_unreadable", `a ${bits}-bit RC4 key`);
+  if (bits < 40 || bits > 128 || bits % 8 !== 0)
+    refuse("pdf_unreadable", `an RC4 key of ${fromFile(bits)} bits`);
   const key = legacyFileKey(dict, id0, bits / 8);
   if (!legacyUserMatches(dict, id0, key))
     refuse("password_protected", "a PDF that needs a password to open");
@@ -185,13 +186,20 @@ function fileKey(dict: PdfDict, version: number, id0: Buffer): Buffer {
 export function openEncryption(dict: PdfDict, id0: Buffer): PdfDecryptor {
   const handler = nameOf(entry(dict, "Filter"));
   if (handler !== "Standard")
-    refuse("password_protected", `the ${handler ?? "unnamed"} security handler`);
+    refuse(
+      "password_protected",
+      `the ${handler === null ? "unnamed" : fromFile(handler)} security handler`,
+    );
   const version = numberOf(entry(dict, "V")) ?? 0;
   const revision = numberOf(entry(dict, "R")) ?? 0;
   const known = [1, 2, 4].includes(version)
     ? revision >= 2 && revision <= 4
     : version === 5 && [5, 6].includes(revision);
-  if (!known) refuse("pdf_unreadable", `an encryption it cannot read (V${version} R${revision})`);
+  if (!known)
+    refuse(
+      "pdf_unreadable",
+      `an encryption it cannot read (V${fromFile(version)} R${fromFile(revision)})`,
+    );
   const key = fileKey(dict, version, id0);
   const method = streamMethod(dict, version);
   return {

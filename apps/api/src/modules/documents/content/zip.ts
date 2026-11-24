@@ -1,4 +1,4 @@
-import { need, refuse } from "./refusal.js";
+import { fromFile, need, refuse } from "./refusal.js";
 import {
   CENTRAL_SIGNATURE,
   END_RECORD_BYTES,
@@ -78,7 +78,7 @@ function refuseOddEnd(bytes: Buffer, end: EndRecord): void {
   if (end.diskNumber !== 0 || end.centralDisk !== 0 || end.entriesOnDisk !== end.entries) {
     refuse("archive_unsafe", "an archive on several disks");
   }
-  if (end.entries > MAX_ZIP_ENTRIES) refuse("archive_unsafe", `${end.entries} entries`);
+  if (end.entries > MAX_ZIP_ENTRIES) refuse("archive_unsafe", `over ${MAX_ZIP_ENTRIES} entries`);
   if (end.entries === 0) refuse("file_damaged", "an archive with no entries");
   if (end.centralOffset + end.centralSize !== end.offset) {
     refuse("archive_unsafe", "bytes between the central directory and the end record");
@@ -96,7 +96,8 @@ function refuseOddCentral(flags: number, method: number, sizes: number[], extra:
   if ((flags & ENCRYPTION_FLAGS) !== 0 || method === WINZIP_AES) {
     refuse("password_protected", "an encrypted entry");
   }
-  if (method !== 0 && method !== 8) refuse("archive_unsafe", `compression method ${method}`);
+  if (method !== 0 && method !== 8)
+    refuse("archive_unsafe", `compression method ${fromFile(method)}`);
   if (sizes.includes(MAX_32) || hasZip64Extra(extra)) refuse("archive_unsafe", "a ZIP64 entry");
 }
 
@@ -158,7 +159,7 @@ function descriptorEnd(bytes: Buffer, entry: CentralEntry, dataEnd: number): num
     bytes.readUInt32LE(fields) === entry.crc &&
     bytes.readUInt32LE(fields + 4) === entry.compressedSize &&
     bytes.readUInt32LE(fields + 8) === entry.uncompressedSize;
-  if (!same) refuse("archive_unsafe", `a data descriptor that differs for ${entry.name}`);
+  if (!same) refuse("archive_unsafe", `a data descriptor that differs for ${fromFile(entry.name)}`);
   return fields + 12;
 }
 
@@ -183,17 +184,17 @@ function localDiffers(bytes: Buffer, entry: CentralEntry, nameEnd: number): bool
 
 function withLocal(bytes: Buffer, entry: CentralEntry): ZipEntry {
   const at = entry.localOffset;
-  need(bytes, at, 30, `the local header of ${entry.name}`);
+  need(bytes, at, 30, `the local header of ${fromFile(entry.name)}`);
   if (bytes.readUInt32LE(at) !== LOCAL_SIGNATURE)
     refuse("archive_unsafe", "a missing local header");
   const nameEnd = at + 30 + bytes.readUInt16LE(at + 26);
   const dataStart = nameEnd + bytes.readUInt16LE(at + 28);
-  need(bytes, at, dataStart - at + entry.compressedSize, `the data of ${entry.name}`);
+  need(bytes, at, dataStart - at + entry.compressedSize, `the data of ${fromFile(entry.name)}`);
   if (localDiffers(bytes, entry, nameEnd)) {
-    refuse("archive_unsafe", `a local header that differs for ${entry.name}`);
+    refuse("archive_unsafe", `a local header that differs for ${fromFile(entry.name)}`);
   }
   if (entry.method === 0 && entry.compressedSize !== entry.uncompressedSize) {
-    refuse("file_damaged", `a stored entry whose sizes differ: ${entry.name}`);
+    refuse("file_damaged", `a stored entry whose sizes differ: ${fromFile(entry.name)}`);
   }
   const dataEnd = dataStart + entry.compressedSize;
   const deferred = (entry.flags & FLAG_DESCRIPTOR) !== 0;
@@ -212,7 +213,8 @@ function refuseLayout(entries: readonly ZipEntry[], centralOffset: number): void
     refuse("polyglot", "bytes before the first local header");
   ordered.forEach((entry, index) => {
     const next = ordered[index + 1]?.localOffset ?? centralOffset;
-    if (entry.end > next) refuse("archive_unsafe", `an entry overlapping another: ${entry.name}`);
+    if (entry.end > next)
+      refuse("archive_unsafe", `an entry overlapping another: ${fromFile(entry.name)}`);
   });
 }
 

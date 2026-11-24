@@ -1,4 +1,4 @@
-import { refuse } from "./refusal.js";
+import { fromFile, refuse } from "./refusal.js";
 import { decodeXmlEntities, XmlScanner } from "./xml-scan.js";
 import { opcKey } from "./zip-names.js";
 
@@ -32,7 +32,8 @@ export function parseTag(raw: string, part: string): Tag {
   const attributes = new Map<string, string>();
   for (const match of raw.slice(name.length + 1).matchAll(ATTRIBUTE)) {
     const [, key = "", double, single] = match;
-    if (attributes.has(key)) refuse("file_damaged", `a repeated attribute ${key} in ${part}`);
+    if (attributes.has(key))
+      refuse("file_damaged", `a repeated attribute ${fromFile(key)} in ${fromFile(part)}`);
     attributes.set(key, decodeXmlEntities(double ?? single ?? ""));
   }
   return {
@@ -82,8 +83,8 @@ export interface ContentTypes {
 /** A content type without parameters, lower-cased (MIME types compare without case). */
 const bareType = (type: string): string => (type.split(";")[0] ?? "").trim().toLowerCase();
 
-function setOnce(map: Map<string, string>, key: string, value: string, what: string): void {
-  if (map.has(key)) refuse("archive_unsafe", `two content types for ${what}`);
+function setOnce(map: Map<string, string>, key: string, value: string, raw: string): void {
+  if (map.has(key)) refuse("archive_unsafe", `two content types for ${fromFile(raw)}`);
   map.set(key, bareType(value));
 }
 
@@ -97,7 +98,7 @@ export function parseContentTypes(xml: Buffer): ContentTypes {
     const extension = tag.attributes.get("Extension");
     const partName = tag.attributes.get("PartName");
     if (tag.local === "Default" && extension !== undefined) {
-      setOnce(defaults, opcKey(extension), type, `the extension ${extension}`);
+      setOnce(defaults, opcKey(extension), type, extension);
     } else if (tag.local === "Override" && partName !== undefined) {
       setOnce(overrides, opcKey(partName.replace(/^\//, "")), type, partName);
     }

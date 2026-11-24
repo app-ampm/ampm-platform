@@ -1,7 +1,7 @@
 import type { UploadRefusalReason } from "@ampm/core";
 import { crc32, createInflateRaw } from "node:zlib";
 
-import { ContentRefusal, refuse } from "./refusal.js";
+import { ContentRefusal, fromFile, refuse } from "./refusal.js";
 import type { ZipEntry } from "./zip.js";
 
 /*
@@ -32,7 +32,10 @@ export class ExpansionBudget {
   spend(bytes: number, name: string): void {
     this.spent += bytes;
     if (this.spent > this.limit) {
-      refuse("archive_expansion", `the package expands past ${this.limit} bytes at ${name}`);
+      refuse(
+        "archive_expansion",
+        `the package expands past ${this.limit} bytes at ${fromFile(name)}`,
+      );
     }
   }
 }
@@ -71,7 +74,7 @@ export async function inflateEntry(
   let crc = 0;
   const take = (chunk: Buffer): void => {
     produced += chunk.length;
-    if (produced > limit) refuse("archive_expansion", `${entry.name} expands over 200:1`);
+    if (produced > limit) refuse("archive_expansion", `${fromFile(entry.name)} expands over 200:1`);
     budget.spend(chunk.length, entry.name);
     crc = crc32(chunk, crc);
     sink?.(chunk);
@@ -80,9 +83,13 @@ export async function inflateEntry(
   if (entry.method === 0) take(data);
   else await inflateChunks(data, take);
   if (produced !== entry.uncompressedSize) {
-    refuse("file_damaged", `${entry.name} inflates to ${produced} bytes, not its declared size`);
+    refuse(
+      "file_damaged",
+      `${fromFile(entry.name)} inflates to ${produced} bytes, not its declared size`,
+    );
   }
-  if (crc >>> 0 !== entry.crc >>> 0) refuse("file_damaged", `a CRC mismatch in ${entry.name}`);
+  if (crc >>> 0 !== entry.crc >>> 0)
+    refuse("file_damaged", `a CRC mismatch in ${fromFile(entry.name)}`);
 }
 
 /**
@@ -96,7 +103,7 @@ export async function readEntry(
   overCap: UploadRefusalReason,
 ): Promise<Buffer> {
   const refuseOver = (): never =>
-    refuse(overCap, `${entry.name} holds over ${MAX_KEPT_PART_BYTES} bytes`);
+    refuse(overCap, `${fromFile(entry.name)} holds over ${MAX_KEPT_PART_BYTES} bytes`);
   if (entry.uncompressedSize > MAX_KEPT_PART_BYTES) refuseOver();
   const chunks: Buffer[] = [];
   let size = 0;

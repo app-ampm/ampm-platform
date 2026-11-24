@@ -1,4 +1,4 @@
-import { refuse } from "./refusal.js";
+import { fromFile, refuse } from "./refusal.js";
 import { decodeXmlEntities, type XmlEvents, XmlScanner } from "./xml-scan.js";
 
 /*
@@ -51,7 +51,10 @@ class PartRules implements XmlEvents {
 
   startTag(raw: string): void {
     if (PROGRAM_ACTION.test(decodeXmlEntities(raw))) {
-      refuse("active_content", `a PowerPoint program, macro or OLE action in ${this.part}`);
+      refuse(
+        "active_content",
+        `a PowerPoint program, macro or OLE action in ${fromFile(this.part)}`,
+      );
     }
     if (raw.endsWith("/>")) return;
     this.depth += 1;
@@ -69,14 +72,15 @@ class PartRules implements XmlEvents {
   text(bytes: Buffer): void {
     this.formulaBytes += bytes.length;
     if (this.formulaBytes > MAX_FORMULA_BYTES) {
-      refuse("file_damaged", `a formula over ${MAX_FORMULA_BYTES} bytes in ${this.part}`);
+      refuse("file_damaged", `a formula over ${MAX_FORMULA_BYTES} bytes in ${fromFile(this.part)}`);
     }
     this.formula.push(Buffer.from(bytes));
   }
 
   private finishFormula(): void {
     const formula = decodeXmlEntities(Buffer.concat(this.formula).toString("utf8"));
-    if (isDdeFormula(formula)) refuse("external_content", `a DDE formula in ${this.part}`);
+    if (isDdeFormula(formula))
+      refuse("external_content", `a DDE formula in ${fromFile(this.part)}`);
     this.formula = [];
     this.formulaBytes = 0;
     this.formulaDepth = -1;

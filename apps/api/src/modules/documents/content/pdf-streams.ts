@@ -2,7 +2,7 @@ import { constants, inflateSync } from "node:zlib";
 
 import type { PdfDecryptor } from "./pdf-crypt.js";
 import { dictOf, entry, nameOf, numberOf, type PdfDict, type PdfValue } from "./pdf-objects.js";
-import { refuse } from "./refusal.js";
+import { fromFile, refuse } from "./refusal.js";
 
 /*
  * Where a PDF stream's data ends, and how an object stream is decoded (D-187 §2). A stream ends where its
@@ -139,7 +139,7 @@ export function decodeObjectStream(
   }
   const isFlate = names.length === 1 && (names[0] === "FlateDecode" || names[0] === "Fl");
   if (!isFlate || hasPredictor(dict)) {
-    refuse("pdf_unreadable", `an object stream with filters ${names.join(", ")}`);
+    refuse("pdf_unreadable", `an object stream with filters ${fromFile(names.join(", "))}`);
   }
   const decoded = inflate(plain);
   budget.spend(decoded.length);

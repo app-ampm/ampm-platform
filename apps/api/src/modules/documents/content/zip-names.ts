@@ -1,4 +1,4 @@
-import { refuse } from "./refusal.js";
+import { fromFile, refuse } from "./refusal.js";
 
 /*
  * Entry names in a ZIP package (D-187 §2). Office reads a part by its name compared case-insensitively
@@ -45,7 +45,7 @@ export function refuseUnsafeName(name: string): void {
       form.includes("\0") ||
       DRIVE_LETTER.test(form) ||
       climbs(form);
-    if (unsafe) refuse("archive_unsafe", `an entry named ${JSON.stringify(name)}`);
+    if (unsafe) refuse("archive_unsafe", `an entry named ${fromFile(name)}`);
   }
 }
 
@@ -54,7 +54,7 @@ export function refuseDuplicateNames(names: readonly string[]): void {
   const seen = new Set<string>();
   for (const name of names) {
     const key = opcKey(name);
-    if (seen.has(key)) refuse("archive_unsafe", `two entries named ${JSON.stringify(key)}`);
+    if (seen.has(key)) refuse("archive_unsafe", `two entries named ${fromFile(key)}`);
     seen.add(key);
   }
 }

@@ -1,4 +1,4 @@
-import { refuse } from "./refusal.js";
+import { fromFile, refuse } from "./refusal.js";
 
 /*
  * Families by the first bytes (D-187 §2): PDF, ZIP (an Office package candidate), compound file (the
@@ -76,7 +76,7 @@ const MAX_FTYP_BYTES = 256;
 export function ftypMedia(bytes: Buffer): "image" | "video" {
   const size = bytes.readUInt32BE(0);
   if (size < 16 || size > MAX_FTYP_BYTES || size > bytes.length || size % 4 !== 0) {
-    refuse("file_damaged", `an ftyp box of ${size} bytes`);
+    refuse("file_damaged", `an ftyp box of ${fromFile(size)} bytes`);
   }
   const brands = [ascii(bytes, 8, 12)];
   for (let offset = 16; offset < size; offset += 4) brands.push(ascii(bytes, offset, offset + 4));

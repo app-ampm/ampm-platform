@@ -1,4 +1,4 @@
-import { refuse } from "./refusal.js";
+import { fromFile, refuse } from "./refusal.js";
 
 /*
  * A streaming XML tokenizer for the parts of an Office package (D-187 §2). It is fed the inflated chunks
@@ -66,7 +66,8 @@ export class XmlScanner {
       this.head = null;
       this.consume(head, this.startOffset(head));
     }
-    if (this.mode !== "text") refuse("file_damaged", `XML that ends inside markup in ${this.part}`);
+    if (this.mode !== "text")
+      refuse("file_damaged", `XML that ends inside markup in ${fromFile(this.part)}`);
   }
 
   /** Skips a UTF-8 byte order mark; refuses UTF-16 and UTF-32, with or without one. */
@@ -77,7 +78,8 @@ export class XmlScanner {
       (head[0] === 0xff && head[1] === 0xfe) ||
       head[0] === 0 ||
       head[1] === 0;
-    if (wide && head.length > 1) refuse("file_damaged", `XML not in UTF-8 in ${this.part}`);
+    if (wide && head.length > 1)
+      refuse("file_damaged", `XML not in UTF-8 in ${fromFile(this.part)}`);
     return 0;
   }
 
@@ -125,7 +127,7 @@ export class XmlScanner {
     if (opened.equals(CDATA_OPEN)) return this.enter("cdata", "", at + 1);
     const prefix = (open: Buffer): boolean => open.subarray(0, opened.length).equals(opened);
     if (!prefix(COMMENT_OPEN) && !prefix(CDATA_OPEN)) {
-      refuse("file_damaged", `a DTD or declaration in ${this.part}`);
+      refuse("file_damaged", `a DTD or declaration in ${fromFile(this.part)}`);
     }
     return at + 1;
   }
@@ -142,7 +144,7 @@ export class XmlScanner {
   private keep(piece: Buffer, limit: number): void {
     this.pieceBytes += piece.length;
     if (this.pieceBytes > limit)
-      refuse("file_damaged", `XML markup over ${limit} bytes in ${this.part}`);
+      refuse("file_damaged", `XML markup over ${limit} bytes in ${fromFile(this.part)}`);
     this.pieces.push(piece);
   }
 
@@ -227,7 +229,7 @@ export class XmlScanner {
     if (!isFirst || !/^<\?xml\s/.test(declaration)) return;
     const encoding = /\bencoding\s*=\s*["']([^"']*)["']/.exec(declaration)?.[1];
     if (encoding !== undefined && !/^utf-?8$/i.test(encoding)) {
-      refuse("file_damaged", `XML declared as ${encoding} in ${this.part}`);
+      refuse("file_damaged", `XML declared as ${fromFile(encoding)} in ${fromFile(this.part)}`);
     }
   }
 

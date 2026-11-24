@@ -121,7 +121,7 @@ function mainStream(file: CompoundFile, accepted: ReadonlySet<ContentKind>) {
   if (found.length > 1) refuse("polyglot", "a compound file with two main streams");
   const [main] = found;
   if (!main) return refuse("unknown_type", "a compound file that is not PowerPoint or Excel");
-  if (main.type !== "stream") refuse("file_damaged", `a ${main.name} storage`);
+  if (main.type !== "stream") refuse("file_damaged", "a main stream stored as a storage");
   if (same(main.name, "WordDocument")) refuse(wordRefusal(accepted), "a Word document");
   const kind: "ppt" | "xls" = same(main.name, "Workbook") ? "xls" : "ppt";
   if (!accepted.has(kind)) refuse("type_not_accepted", `a ${kind}`);
@@ -145,7 +145,7 @@ export function inspectCompoundFile(
   }
   const { main, kind } = mainStream(file, accepted);
   const macro = file.entries.find((entry) => MACRO_STORAGES.some((name) => same(entry.name, name)));
-  if (macro) refuse("macros", `a ${macro.name} storage`);
+  if (macro) refuse("macros", "a VBA or macro storage");
   if (kind === "xls") checkWorkbook(file.read(main));
   else checkPresentation(file, main);
   return kind;

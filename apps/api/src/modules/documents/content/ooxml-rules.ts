@@ -2,7 +2,7 @@ import type { UploadRefusalReason } from "@ampm/core";
 
 import type { OoxmlKind } from "./kinds.js";
 import type { Relationship } from "./ooxml-parts.js";
-import { refuse } from "./refusal.js";
+import { fromFile, refuse } from "./refusal.js";
 
 /*
  * What the OOXML check accepts and refuses (D-187 §2), by relationship type and content type, never by
@@ -111,7 +111,7 @@ export function refuseContentType(part: string, contentType: string): void {
     const matches = pattern.endsWith("*")
       ? contentType.startsWith(pattern.slice(0, -1))
       : contentType === pattern;
-    if (matches) refuse(reason, `${part} is ${contentType}`);
+    if (matches) refuse(reason, `${fromFile(part)} is ${pattern}`);
   }
 }
 
@@ -127,18 +127,27 @@ export function refuseRelationship(relationship: Relationship): void {
   const short = ooxmlRelationship(type);
   const lower = type.trim().toLowerCase();
   const refusedOoxml = short === null ? undefined : REFUSED_OOXML_RELATIONSHIPS.get(short);
-  if (refusedOoxml) refuse(refusedOoxml, `a ${short} relationship from ${source || "the package"}`);
+  if (refusedOoxml) {
+    refuse(
+      refusedOoxml,
+      `a ${short} relationship from ${source ? fromFile(source) : "the package"}`,
+    );
+  }
   if (lower.startsWith(MICROSOFT)) {
     const hit = REFUSED_MICROSOFT_RELATIONSHIPS.find(([path]) => lower.includes(path));
-    if (hit) refuse(hit[1], `a ${type} relationship from ${source || "the package"}`);
+    if (hit)
+      refuse(hit[1], `a ${hit[0]} relationship from ${source ? fromFile(source) : "the package"}`);
   }
   const trimmed = target.trim();
   if (relationship.external) {
     if (short === "hyperlink" && SAFE_LINK.test(trimmed)) return;
-    refuse("external_content", `an external ${short ?? type} target ${JSON.stringify(trimmed)}`);
+    refuse(
+      "external_content",
+      `an external ${fromFile(short ?? type)} target ${fromFile(trimmed)}`,
+    );
   }
   if (HAS_SCHEME.test(trimmed) || trimmed.startsWith("\\\\")) {
-    refuse("external_content", `an internal target that is a URL: ${JSON.stringify(trimmed)}`);
+    refuse("external_content", `an internal target that is a URL: ${fromFile(trimmed)}`);
   }
 }
 

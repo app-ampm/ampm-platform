@@ -20,7 +20,7 @@ import {
   refuseRelationship,
 } from "./ooxml-rules.js";
 import { partScanner } from "./ooxml-scan.js";
-import { ContentRefusal, refuse } from "./refusal.js";
+import { ContentRefusal, fromFile, refuse } from "./refusal.js";
 import { CFB_SIGNATURE, ZIP_LOCAL_SIGNATURE } from "./sniff.js";
 import { readZip, type ZipEntry } from "./zip.js";
 import { ExpansionBudget, inflateEntry, readEntry } from "./zip-inflate.js";
@@ -92,7 +92,7 @@ async function openPackage(bytes: Buffer, budget: ExpansionBudget): Promise<Open
   const mainName = resolveTarget("", mainTarget(rootRels));
   if (mainName === null || !byKey.has(opcKey(mainName))) refuse("file_damaged", "no main part");
   const main = mainPartOf(contentTypeOf(types, mainName) ?? "");
-  if (main === null) refuse("unknown_type", `a package whose main part is ${mainName}`);
+  if (main === null) refuse("unknown_type", `a package whose main part is ${fromFile(mainName)}`);
   return { entries, byKey, types, main, rootRels, done };
 }
 
@@ -141,9 +141,9 @@ function firstBytesSink(name: string): (chunk: Buffer) => void {
     head = Buffer.concat([head, chunk.subarray(0, 8 - head.length)]);
     if (head.length < 4) return;
     if (head.subarray(0, 4).equals(ZIP_LOCAL_SIGNATURE))
-      refuse("active_content", `a hidden package ${name}`);
+      refuse("active_content", `a hidden package ${fromFile(name)}`);
     if (head.length >= 8 && head.equals(CFB_SIGNATURE))
-      refuse("active_content", `an OLE object ${name}`);
+      refuse("active_content", `an OLE object ${fromFile(name)}`);
   };
 }
 
@@ -159,7 +159,8 @@ async function checkPart(
   if (entry.isFolder || open.done.has(key)) return;
   const contentType = contentTypeOf(open.types, entry.name) ?? "";
   if (embedded.has(key)) {
-    if (depth > 0) refuse("active_content", `a package inside an embedded package: ${entry.name}`);
+    if (depth > 0)
+      refuse("active_content", `a package inside an embedded package: ${fromFile(entry.name)}`);
     const inner = await readPart(bytes, open, entry.name, budget, "active_content");
     if (inner) await checkEmbedded(inner, budget, entry.name);
   } else if (isScannedXml(contentType)) {
@@ -182,7 +183,7 @@ async function checkPackage(
     if (entry.isFolder || opcKey(entry.name) === "[content_types].xml") continue;
     const contentType = contentTypeOf(open.types, entry.name);
     if (contentType === null)
-      refuse("archive_unsafe", `a part with no content type: ${entry.name}`);
+      refuse("archive_unsafe", `a part with no content type: ${fromFile(entry.name)}`);
     refuseContentType(entry.name, contentType);
   }
   const embedded = await checkRelationships(bytes, open, budget);
@@ -192,7 +193,10 @@ async function checkPackage(
 /** Opens an embedded package; one that is not an Office package is an embedded object, not a type. */
 async function openEmbedded(inner: Buffer, budget: ExpansionBudget, name: string) {
   const notOffice = (): never =>
-    refuse("active_content", `an embedded package that is not an Office package: ${name}`);
+    refuse(
+      "active_content",
+      `an embedded package that is not an Office package: ${fromFile(name)}`,
+    );
   if (!inner.subarray(0, 4).equals(ZIP_LOCAL_SIGNATURE)) notOffice();
   try {
     return await openPackage(inner, budget);
@@ -205,9 +209,13 @@ async function openEmbedded(inner: Buffer, budget: ExpansionBudget, name: string
 /** An embedded package must be a non-macro workbook or presentation that passes every check. */
 async function checkEmbedded(inner: Buffer, budget: ExpansionBudget, name: string): Promise<void> {
   const open = await openEmbedded(inner, budget, name);
-  if ("macroOf" in open.main) refuse("macros", `a macro-enabled embedded package: ${name}`);
+  if ("macroOf" in open.main)
+    refuse("macros", `a macro-enabled embedded package: ${fromFile(name)}`);
   if (!("kind" in open.main) || !EMBEDDABLE.has(open.main.kind)) {
-    refuse("active_content", `an embedded package that is not a workbook or presentation: ${name}`);
+    refuse(
+      "active_content",
+      `an embedded package that is not a workbook or presentation: ${fromFile(name)}`,
+    );
   }
   await checkPackage(inner, open, budget, 1);
 }

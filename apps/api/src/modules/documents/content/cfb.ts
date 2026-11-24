@@ -1,4 +1,4 @@
-import { need, refuse } from "./refusal.js";
+import { fromFile, need, refuse } from "./refusal.js";
 
 /*
  * The compound file reader for the older .ppt and .xls (D-187 §2; [MS-CFB]). The header, the FAT, the
@@ -77,9 +77,9 @@ function readHeader(bytes: Buffer): Header {
 
 /** A whole sector, which must lie inside the file. */
 function fullSector(bytes: Buffer, header: Header, sector: number): Buffer {
-  if (sector >= header.sectorCount) damaged(`sector ${sector} outside the file`);
+  if (sector >= header.sectorCount) damaged(`sector ${fromFile(sector)} outside the file`);
   const offset = (sector + 1) * header.sectorSize;
-  need(bytes, offset, header.sectorSize, `sector ${sector}`);
+  need(bytes, offset, header.sectorSize, `sector ${fromFile(sector)}`);
   return bytes.subarray(offset, offset + header.sectorSize);
 }
 
