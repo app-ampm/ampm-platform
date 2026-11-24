@@ -1,10 +1,10 @@
 import { Inject, Injectable } from "@nestjs/common";
-import { errors } from "@ampm/core";
+import { errors, isAppError } from "@ampm/core";
 
 import { AuditService } from "../../policy/audit.service.js";
-import { STORAGE_ADAPTER, type StorageAdapter } from "../../storage/storage.types.js";
 import { AV_SCANNER, type AvScanner } from "../../storage/av-scanner.js";
-import { IMAGE_PROCESSOR, type ImageProcessor } from "./image.processor.js";
+import { IMAGE_PROCESSOR, type ImageProcessor } from "../../storage/image.processor.js";
+import { STORAGE_ADAPTER, type StorageAdapter } from "../../storage/storage.types.js";
 import {
   detectMedia,
   isDerivableImage,
@@ -99,17 +99,18 @@ export class MediaUploadService {
    * Derive the web + thumbnail renditions of a clean image IN MEMORY, rejecting bytes that sniffed as an
    * image but cannot be decoded (AC-20.2): a corrupt or crafted file must not be stored as a usable image.
    * Runs before any stored state changes, so the 400 leaves the existing asset untouched. A video or gif is
-   * non-derivable and returns null (it keeps only its original).
+   * non-derivable and returns null (it keeps only its original). The renditions are made one after the
+   * other, as the process works on one image at a time (D-187); an image over the pixel limit is refused
+   * with the processor's own message.
    */
   private async renderImage(bytes: Buffer, detected: DetectedMedia): Promise<Renditions | null> {
     if (!isDerivableImage(detected)) return null;
     try {
-      const [web, thumbnail] = await Promise.all([
-        this.images.derive(bytes, WEB_MAX_EDGE),
-        this.images.derive(bytes, THUMBNAIL_MAX_EDGE),
-      ]);
+      const web = await this.images.derive(bytes, WEB_MAX_EDGE);
+      const thumbnail = await this.images.derive(bytes, THUMBNAIL_MAX_EDGE);
       return { web, thumbnail };
-    } catch {
+    } catch (error) {
+      if (isAppError(error)) throw error;
       throw errors.validation([], `The file is not a decodable ${detected.kind}`);
     }
   }

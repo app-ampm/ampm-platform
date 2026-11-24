@@ -4,14 +4,16 @@ import { AppLogger } from "../common/logger.service.js";
 import { ENV, type Env } from "../env.js";
 import { AV_SCANNER, StubAvScanner, type AvScanner } from "./av-scanner.js";
 import { ClamAvScanner } from "./clamav-scanner.js";
+import { IMAGE_PROCESSOR, SharpImageProcessor } from "./image.processor.js";
 import { LocalStorageAdapter } from "./local.adapter.js";
 import { STORAGE_ADAPTER, type StorageAdapter } from "./storage.types.js";
 
 /**
  * One storage adapter per provider behind one port (api.md); the environment picks it. `local` is the
  * dev/staging filesystem store (refused in production by env.ts); the S3 bucket + CDN arrives in feature
- * 6.4. Global so any module (media now, documents later) injects STORAGE_ADAPTER without importing. The
- * antivirus scanner every upload path shares is chosen here too, by AV_PROVIDER.
+ * 6.4. Global so any module (media, documents) injects STORAGE_ADAPTER without importing. The antivirus
+ * scanner every upload path shares is chosen here too, by AV_PROVIDER, and so is the image processor
+ * (sharp), whose one queue media derivatives and document images share (D-187).
  */
 @Global()
 @Module({
@@ -40,7 +42,8 @@ import { STORAGE_ADAPTER, type StorageAdapter } from "./storage.types.js";
         return new ClamAvScanner(options, logger);
       },
     },
+    { provide: IMAGE_PROCESSOR, useClass: SharpImageProcessor },
   ],
-  exports: [STORAGE_ADAPTER, AV_SCANNER],
+  exports: [STORAGE_ADAPTER, AV_SCANNER, IMAGE_PROCESSOR],
 })
 export class StorageModule {}

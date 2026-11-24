@@ -128,6 +128,25 @@ describe("Media AC-20/AC-24 acceptance (e2e)", () => {
     expect(after.body.data.scanStatus).toBe("pending"); // nothing stored
   });
 
+  it("refuses an image over 25 megapixels from its header, before deriving anything (D-187)", async () => {
+    const id = await newAsset("image", "image/png");
+    // 5001 x 5000: just over the limit, a flat colour so the file itself stays small.
+    const huge = await sharp({
+      create: { width: 5001, height: 5000, channels: 3, background: { r: 9, g: 9, b: 9 } },
+    })
+      .png()
+      .toBuffer();
+    const res = await uploadBytes(id, huge).expect(400);
+    const message = "Images can be at most 25 megapixels: save it as a PDF or a smaller image.";
+    expect(res.body.error).toEqual({
+      code: "validation_failed",
+      message,
+      details: [{ path: "file", message }],
+    });
+    const after = await http().get(`/media/${id}`).set("Authorization", auth).expect(200);
+    expect(after.body.data.scanStatus).toBe("pending"); // nothing stored
+  });
+
   it("stops serving a minted link once the owning asset is removed (AC-20.5, access follows the record)", async () => {
     const id = await newAsset("image", "image/jpeg");
     await uploadBytes(id, await realJpeg()).expect(200);

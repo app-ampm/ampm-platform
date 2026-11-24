@@ -1,9 +1,10 @@
+import { errors } from "@ampm/core";
 import { describe, expect, it, vi } from "vitest";
 
 import type { AuditService } from "../../policy/audit.service.js";
 import type { StorageAdapter } from "../../storage/storage.types.js";
 import type { AvScanner } from "../../storage/av-scanner.js";
-import type { ImageProcessor } from "./image.processor.js";
+import type { ImageProcessor } from "../../storage/image.processor.js";
 import { MediaUploadService } from "./media-upload.service.js";
 import type { MediaAssetRow, MediaRepository } from "./media.repository.js";
 
@@ -41,5 +42,51 @@ describe("MediaUploadService release-on-failure (slice 5c)", () => {
     expect(claimUpload).toHaveBeenCalledWith("id", "actor"); // the claim was acquired
     expect(record).toHaveBeenCalled(); // auditDemotion recorded the committed demotion
     expect(releaseUpload).toHaveBeenCalledWith("id"); // and the claim was released, not left to the TTL
+  });
+});
+
+/** A service whose image processor is `derive`, with the rest mocked as far as rendering. */
+function renderingService(derive: ImageProcessor["derive"]) {
+  const repo = { claimUpload: vi.fn(async () => true) } as unknown as MediaRepository;
+  const audit = { record: vi.fn() } as unknown as AuditService;
+  const storage = { putObject: vi.fn() } as unknown as StorageAdapter;
+  const scanner = { scan: vi.fn(async () => "clean" as const) } as unknown as AvScanner;
+  const images = { derive, reencode: vi.fn() } as unknown as ImageProcessor;
+  const asset = { kind: "image", scanStatus: "pending" } as unknown as MediaAssetRow;
+  return { service: new MediaUploadService(repo, audit, storage, scanner, images), asset };
+}
+
+describe("MediaUploadService renditions (D-187 §4)", () => {
+  it("derives the web rendition, then the thumbnail: one image at a time", async () => {
+    let finishWeb: (web: Buffer) => void = () => undefined;
+    const derive = vi
+      .fn<ImageProcessor["derive"]>()
+      .mockImplementationOnce(() => new Promise<Buffer>((resolve) => (finishWeb = resolve)))
+      .mockImplementationOnce(async () => {
+        throw new Error("vips: thumbnail failed");
+      });
+    const { service, asset } = renderingService(derive);
+    const applying = service.apply("id", asset, JPEG, "actor");
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(derive).toHaveBeenCalledTimes(1); // the thumbnail waits for the web rendition
+    finishWeb(Buffer.from([1]));
+    await expect(applying).rejects.toMatchObject({
+      code: "validation_failed",
+      message: "The file is not a decodable image",
+    });
+    expect(derive.mock.calls.map(([, edge]) => edge)).toEqual([1600, 400]);
+  });
+
+  it("refuses an image over the pixel limit with the processor's own message", async () => {
+    const tooLarge = errors.validation(
+      [{ path: "file", message: "Images can be at most 25 megapixels" }],
+      "Images can be at most 25 megapixels",
+    );
+    const { service, asset } = renderingService(
+      vi.fn<ImageProcessor["derive"]>(async () => {
+        throw tooLarge;
+      }),
+    );
+    await expect(service.apply("id", asset, JPEG, "actor")).rejects.toBe(tooLarge);
   });
 });
