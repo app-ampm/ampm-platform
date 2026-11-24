@@ -23,6 +23,7 @@ import { settleAreas } from "./hotel-areas.js";
 import { hotelAudienceOf, requireNotesWrite } from "./hotel-audience.js";
 import { changedRequestFields, type StoredHotelValues } from "./hotel-changes.js";
 import { auditImageOf } from "./hotel-import.audit.js";
+import { HotelInfoRequestRevoker } from "./hotel-info-request-revoker.js";
 import { slugify } from "./hotel-import.js";
 import {
   allowedCuisines,
@@ -54,7 +55,8 @@ import {
  * key, a postal code fits its destination's country, a cuisine is one the configuration offers and the
  * total event space follows the units rule (D-178) — answers every hotel in the model of the caller's
  * audience (D-171), and records the update/delete
- * audit (create is audited by the interceptor through `@Audited`). The import is `HotelImportService`.
+ * audit (create is audited by the interceptor through `@Audited`). Deleting a hotel revokes its live
+ * information request (D-188 §3). The import is `HotelImportService`.
  */
 @Injectable()
 export class HotelsAdminService {
@@ -62,6 +64,7 @@ export class HotelsAdminService {
     private readonly repo: HotelsAdminRepository,
     private readonly audit: AuditService,
     private readonly config: ConfigService,
+    private readonly requests: HotelInfoRequestRevoker,
   ) {}
 
   async list(query: HotelStaffListQuery, principal: Principal): Promise<HotelStaffPage> {
@@ -143,9 +146,14 @@ export class HotelsAdminService {
     return this.getDetail(hotelId, principal);
   }
 
+  /**
+   * A soft delete, which keeps the slug taken. The hotel's live information request is revoked in the
+   * same transaction, as the System, so a deleted hotel never keeps one (D-188 §3).
+   */
   async remove(hotelId: string, actorId: string): Promise<{ id: string }> {
     const current = await this.require(hotelId);
     await this.repo.transaction(async (tx) => {
+      await this.requests.revokeForDeletedHotel(hotelId, tx);
       await this.repo.softDeleteHotel(hotelId, actorId, tx);
       await this.audit.record(
         {

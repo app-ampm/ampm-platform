@@ -3,6 +3,7 @@ import { vi } from "vitest";
 
 import type { AuditService } from "../../../policy/audit.service.js";
 import type { ConfigService } from "../../admin/config/config.service.js";
+import type { HotelInfoRequestRevoker } from "../hotel-info-request-revoker.js";
 import type {
   HotelsAdminRepository,
   HotelUpdatePatch,
@@ -137,14 +138,19 @@ export function buildHotelsAdminService(overrides: Partial<StaffHotelRow> = {}) 
     updateHotel: vi.fn(
       async (_id: string, _patch: HotelUpdatePatch, _actorId: string) => undefined,
     ),
+    softDeleteHotel: vi.fn(async (_id: string, _actorId: string, _tx?: unknown) => undefined),
     transaction: <T>(fn: (tx: unknown) => Promise<T>): Promise<T> => fn({}),
   };
   const audit = { record: vi.fn(async () => undefined) };
   const config = { get: vi.fn(async () => ({ options: CUISINE_OPTIONS })) };
+  const revoker = {
+    revokeForDeletedHotel: vi.fn(async (_hotelId: string, _tx: unknown) => undefined),
+  };
   const service = new HotelsAdminService(
     repo as unknown as HotelsAdminRepository,
     audit as unknown as AuditService,
     config as unknown as ConfigService,
+    revoker as unknown as HotelInfoRequestRevoker,
   );
-  return { service, repo, audit, config };
+  return { service, repo, audit, config, revoker };
 }
