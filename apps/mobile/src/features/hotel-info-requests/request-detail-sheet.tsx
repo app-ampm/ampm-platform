@@ -3,7 +3,11 @@ import { QueryErrorState, Sheet, Skeleton } from "@ampm/ui";
 
 import { RequestCard } from "./request-card";
 
-/** The request once loaded, its loading skeleton, or why it did not load. */
+/**
+ * The request once loaded, its loading skeleton, or why it did not load. A request already shown stays,
+ * whatever a refetch says: a failed refresh (a window focus, the invalidation after a reissue) must not
+ * unmount the card and its open sheets, nor drop a link shown once.
+ */
 function DetailBody({
   detail,
   canUpdate,
@@ -11,13 +15,13 @@ function DetailBody({
   readonly detail: ReturnType<typeof useHotelInfoRequest>;
   readonly canUpdate: boolean;
 }) {
+  if (detail.data) return <RequestCard request={detail.data} canUpdate={canUpdate} />;
   if (detail.isError) {
     return (
       <QueryErrorState error={detail.error} onRetry={() => void detail.refetch()} blur={false} />
     );
   }
-  if (!detail.data) return <Skeleton className="h-40 w-full" testID="request-detail-loading" />;
-  return <RequestCard request={detail.data} canUpdate={canUpdate} />;
+  return <Skeleton className="h-40 w-full" testID="request-detail-loading" />;
 }
 
 export interface RequestDetailSheetProps {

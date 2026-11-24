@@ -1,3 +1,4 @@
+import { hotelInfoRequestHistoryQueryKey } from "@ampm/api-client";
 import type { HotelInfoRequestDetail, HotelInfoRequestSummaryView } from "@ampm/core";
 import type * as UiModule from "@ampm/ui";
 
@@ -230,6 +231,34 @@ describe("HotelRequestPanel", () => {
     await renderPanel({}, { detail: requestFullFixture({ status: "submitted" }) });
     expect(await screen.findByTestId("request-reissue")).toBeOnTheScreen();
     expect(screen.queryByTestId("request-revoke")).toBeNull();
+  });
+
+  it("keeps a link just reissued when the hotel's requests then fail to refresh", async () => {
+    const reads = { history: 0 };
+    const fetch = routedFetch({
+      "/me": () => ok(staffMeFixture(["HT"])),
+      "/hotels-admin/hotel-form-mode": () => ok({ mode: "on" }),
+      [`/hotels-admin/hotels/${HOTEL_ID}/info-requests`]: () => {
+        reads.history += 1;
+        return reads.history === 1
+          ? ok({ items: [requestSummaryFixture()], nextCursor: null })
+          : failure("internal", 500);
+      },
+      [REQUEST]: () => ok(requestFullFixture()),
+      [`${REQUEST}/reissue`]: () =>
+        ok(linkIssuedFixture({ request: requestFullFixture({ tokenGeneration: 2 }) })),
+    });
+    const client = await renderWithApi(
+      <HotelRequestPanel hotelId={HOTEL_ID} hotel={HOTEL} />,
+      fetch,
+    );
+    await fireEvent.press(await screen.findByTestId("request-reissue"));
+    await fireEvent.press(screen.getByTestId("reissue-submit"));
+    expect(await screen.findByText(ISSUED_URL)).toBeOnTheScreen();
+    const history = hotelInfoRequestHistoryQueryKey(HOTEL_ID);
+    await waitFor(() => expect(client.getQueryState(history)?.status).toBe("error"));
+    expect(screen.getByText(ISSUED_URL)).toBeOnTheScreen();
+    expect(screen.queryByText("Something went wrong")).toBeNull();
   });
 
   it("says when the hotel's requests cannot load", async () => {
