@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 import { uiCopy } from "../../copy";
 import { Button } from "../button";
 import { Stack } from "../layout";
@@ -16,7 +18,42 @@ export interface ConfirmSheetProps {
   readonly destructive?: boolean | undefined;
   readonly loading?: boolean | undefined;
   readonly onConfirm: () => void;
+  /** What the step needs beyond a yes, under the description: a reason to give, say. */
+  readonly children?: ReactNode;
   readonly testID?: string | undefined;
+}
+
+type ActionsProps = Pick<
+  ConfirmSheetProps,
+  "confirmLabel" | "cancelLabel" | "onConfirm" | "onClose" | "testID"
+> & { readonly destructive: boolean; readonly loading: boolean };
+
+/** The step, then Cancel; both wait while it runs. */
+function ConfirmActions({
+  confirmLabel,
+  cancelLabel,
+  destructive,
+  loading,
+  onConfirm,
+  onClose,
+  testID,
+}: ActionsProps) {
+  return (
+    <Stack gap={2}>
+      <Button
+        fullWidth
+        variant={destructive ? "destructive" : "highlight"}
+        loading={loading}
+        onPress={onConfirm}
+        testID={testID ? `${testID}-confirm` : undefined}
+      >
+        {confirmLabel}
+      </Button>
+      <Button fullWidth variant="secondary" disabled={loading} onPress={onClose}>
+        {cancelLabel ?? uiCopy.cancel}
+      </Button>
+    </Stack>
+  );
 }
 
 /**
@@ -26,6 +63,7 @@ export interface ConfirmSheetProps {
  * confirm we have today.)
  *
  *   <ConfirmSheet open={open} onClose={close} title="Disable Eva?" description="…" confirmLabel="Disable" destructive onConfirm={disable} />
+ *   <ConfirmSheet … confirmLabel="Revoke" destructive onConfirm={revoke}><Input label="Reason" … /></ConfirmSheet>
  */
 export function ConfirmSheet({
   open,
@@ -37,6 +75,7 @@ export function ConfirmSheet({
   destructive = false,
   loading = false,
   onConfirm,
+  children,
   testID,
 }: ConfirmSheetProps) {
   return (
@@ -46,25 +85,15 @@ export function ConfirmSheet({
       title={title}
       testID={testID}
       footer={
-        <Stack gap={2}>
-          <Button
-            fullWidth
-            variant={destructive ? "destructive" : "highlight"}
-            loading={loading}
-            onPress={onConfirm}
-            testID={testID ? `${testID}-confirm` : undefined}
-          >
-            {confirmLabel}
-          </Button>
-          <Button fullWidth variant="secondary" disabled={loading} onPress={onClose}>
-            {cancelLabel ?? uiCopy.cancel}
-          </Button>
-        </Stack>
+        <ConfirmActions
+          {...{ confirmLabel, cancelLabel, destructive, loading, onConfirm, onClose, testID }}
+        />
       }
     >
       <Text variant="body" tone="body">
         {description}
       </Text>
+      {children}
     </Sheet>
   );
 }
