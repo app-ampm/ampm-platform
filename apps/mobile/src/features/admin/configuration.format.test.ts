@@ -24,6 +24,11 @@ describe("configuration.format", () => {
     expect(configArea("brand.new_key")).toBe("Other");
   });
 
+  it("labels the disk guard as the platform's disk space alerts", () => {
+    expect(configLabel("storage.disk_guard")).toBe("Disk space alerts");
+    expect(configArea("storage.disk_guard")).toBe("Platform");
+  });
+
   it("renders a scalar value by type", () => {
     expect(formatConfigScalar(true)).toBe("On");
     expect(formatConfigScalar(false)).toBe("Off");

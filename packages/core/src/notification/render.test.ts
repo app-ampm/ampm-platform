@@ -98,6 +98,33 @@ describe("renderTemplate", () => {
   });
 });
 
+describe("disk space template baselines", () => {
+  const templates = CONFIG_REGISTRY["notification.templates"].default;
+  const vars = { freeGb: "8.4", floorGb: "9", warnGb: "12" };
+
+  it("system.disk_critical says plainly that new hotel-form uploads are refused", () => {
+    const template = templates["system.disk_critical"];
+    if (!template) throw new Error("missing baseline system.disk_critical");
+    const out = renderTemplate(template, "email", vars);
+    expect(out.missing).toEqual([]);
+    if (out.content?.kind !== "email") throw new Error("expected email content");
+    expect(out.content.text).toBe(
+      "The AMPM server has 8.4 GB of disk free, below the 9 GB floor: new hotel-form uploads are refused until space is freed.",
+    );
+  });
+
+  it("system.disk_low gives the free space, the warning level and the floor", () => {
+    const template = templates["system.disk_low"];
+    if (!template) throw new Error("missing baseline system.disk_low");
+    const out = renderTemplate(template, "email", { ...vars, freeGb: "11.2" });
+    expect(out.missing).toEqual([]);
+    if (out.content?.kind !== "email") throw new Error("expected email content");
+    expect(out.content.text).toContain("11.2 GB of disk free, below the 12 GB warning level");
+    expect(out.content.text).toContain("9 GB floor");
+    expect(out.content.html).toContain("11.2 GB");
+  });
+});
+
 describe("invite template baselines", () => {
   it("staff.invite and client.invite render fully from { name, activationUrl }", () => {
     const templates = CONFIG_REGISTRY["notification.templates"].default;

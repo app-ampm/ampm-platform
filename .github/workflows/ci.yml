@@ -12,7 +12,7 @@
 #   mobile        mobile or its deps  Expo bundle for web, iOS and Android (Metro resolves what lint/tsc cannot)
 #   matrix        policy or the doc   regenerate packages/policy/src/generated and fail on drift
 #   tools         docs/tools, hooks   the redactor, memory-hook, checkpoint and Claude Code hook self-tests
-#   deploy        deploy changed      shellcheck the deploy scripts + the source-ship test against a stand-in box
+#   deploy        deploy changed      shellcheck the deploy scripts + the source-ship, redeploy-prune and media-snapshot tests
 #   secrets-scan  always              refuse any committed plaintext secret (feature 6.4)
 #   infra         infra changed       shellcheck + Compose/Caddy/monitoring validation + three stack smokes (heavy)
 # `ci-ok` is a single stable status (green when every job that ran passed; skipped jobs are fine) so
@@ -327,8 +327,9 @@ jobs:
         run: pnpm run test:tools
 
   # The deploy scripts run by hand against production, so they are shellchecked, the source ship is
-  # tested end to end against a stand-in box (an ssh shim and a scratch directory; D-156), and the
-  # redeploy's image prune against a docker stub (it must keep the image a rollback by hand needs).
+  # tested end to end against a stand-in box (an ssh shim and a scratch directory; D-156), the
+  # redeploy's image and build-cache prune against a docker stub (it must keep the image a rollback by
+  # hand needs), and the media snapshots' real linking and pruning against a docker stub (D-177).
   deploy:
     needs: changes
     if: ${{ needs.changes.outputs.deploy == 'true' }}
@@ -340,8 +341,10 @@ jobs:
         run: find deploy -type f -name '*.sh' -print0 | xargs -0r shellcheck
       - name: deploy/ship-source.sh against a stand-in box
         run: bash deploy/ship-source.test.sh
-      - name: deploy/redeploy-prod.sh's image prune against a docker stub
+      - name: deploy/redeploy-prod.sh's image and build-cache prune against a docker stub
         run: bash deploy/redeploy-prod.test.sh
+      - name: deploy/app-ampmverse/backup-media.sh's snapshots against a docker stub
+        run: bash deploy/backup-media.test.sh
 
   # A committed plaintext secret could land in any file, so this runs on every change (feature 6.4):
   # reuse the transcript redactor's detector over every tracked file, and refuse any plaintext-secret
