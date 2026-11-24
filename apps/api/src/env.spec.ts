@@ -296,11 +296,39 @@ describe("loadEnv: the public website's address (D-188 §6)", () => {
     }
   });
 
+  it("refuses a local host written with a trailing dot, and the unspecified 0.0.0.0, in production", () => {
+    for (const url of [
+      "https://localhost.",
+      "https://localhost.:3417",
+      "https://site.localhost.",
+      "https://0.0.0.0",
+      "https://0.0.0.0:3417",
+      "https://[::]",
+    ]) {
+      expect(() => loadEnv({ ...prodValid, PUBLIC_SITE_URL: url }), url).toThrow(/PUBLIC_SITE_URL/);
+    }
+  });
+
   it("refuses an address with a path, query or fragment, which the form's link would break", () => {
     for (const url of [
       "https://site.ampm.example/hotel-form",
       "https://site.ampm.example?x=1",
       "https://site.ampm.example#k",
+    ]) {
+      expect(() => loadEnv({ ...development, PUBLIC_SITE_URL: url }), url).toThrow(
+        /PUBLIC_SITE_URL/,
+      );
+    }
+  });
+
+  it("takes the origin alone, as the URL parser writes it: no empty query or fragment, no user name", () => {
+    for (const url of [
+      "https://site.ampm.example?",
+      "https://site.ampm.example#",
+      "https://user:secret@site.ampm.example",
+      "https://user@site.ampm.example",
+      "https://Site.Ampm.Example",
+      "https://site.ampm.example:443",
     ]) {
       expect(() => loadEnv({ ...development, PUBLIC_SITE_URL: url }), url).toThrow(
         /PUBLIC_SITE_URL/,

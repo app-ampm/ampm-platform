@@ -1,9 +1,16 @@
 import { z } from "zod";
 
-/** Whether an address is an origin alone: `https://site.example`, never `.../hotel-form?x#y`. */
+/**
+ * Whether an address is an origin alone, exactly as the URL parser writes it: `https://site.example`,
+ * never `…/hotel-form`, a query or fragment (even an empty `?` or `#`), a user name, upper case or a
+ * default port.
+ */
 function isOriginOnly(value: string): boolean {
-  const url = new URL(value);
-  return url.pathname === "/" && url.search === "" && url.hash === "";
+  try {
+    return new URL(value).origin === value;
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -64,8 +71,9 @@ export const fields = z.object({
   WEB_APP_URL: z.string().url().default("http://localhost:8082"),
   /**
    * The public website's origin (D-188 §6): a hotel information form link is
-   * `<PUBLIC_SITE_URL>/hotel-form#k=<secret>`. The origin alone, with no path, query or fragment; a
-   * trailing slash is dropped. Production refuses an address that is not https or names a local host.
+   * `<PUBLIC_SITE_URL>/hotel-form#k=<secret>`. The origin alone, as the URL parser writes it, with no
+   * path, query, fragment or user name; a trailing slash is dropped. Production refuses an address that
+   * is not https or names a local host.
    */
   PUBLIC_SITE_URL: z
     .string()
@@ -73,7 +81,9 @@ export const fields = z.object({
     .default("http://localhost:3417")
     .transform((value) => value.replace(/\/+$/, ""))
     .refine(isOriginOnly, {
-      message: "must be the website's origin alone, with no path, query or fragment",
+      message:
+        "must be the website's origin alone (scheme, lower-case host, port), with no path, query, " +
+        "fragment or user name",
     }),
   /** Email delivery: `console` logs only (dev/test); `smtp` sends via SES/SMTP (feature 5.3). */
   EMAIL_PROVIDER: z.enum(["smtp", "console"]).default("console"),

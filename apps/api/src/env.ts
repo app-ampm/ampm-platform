@@ -76,13 +76,19 @@ function deliveryIssues(value: EnvFields): EnvIssue[] {
   return issues;
 }
 
-/** Local hosts, which a link sent outside AMPM can never reach. */
+/**
+ * Local hosts, which a link sent outside AMPM can never reach, written with or without a trailing dot
+ * (`localhost.` is localhost), and the unspecified addresses a server listens on.
+ */
 function isLocalHost(hostname: string): boolean {
+  const host = hostname.replace(/\.+$/, "");
   return (
-    hostname === "localhost" ||
-    hostname.endsWith(".localhost") ||
-    hostname === "[::1]" ||
-    /^127\.\d+\.\d+\.\d+$/.test(hostname)
+    host === "localhost" ||
+    host.endsWith(".localhost") ||
+    host === "[::1]" ||
+    host === "0.0.0.0" ||
+    host === "[::]" ||
+    /^127\.\d+\.\d+\.\d+$/.test(host)
   );
 }
 
