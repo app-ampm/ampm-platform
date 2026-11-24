@@ -1,3 +1,5 @@
+import { CONFIG_REGISTRY } from "@ampm/core";
+
 import {
   configDraftFromValue,
   configEditFields,
@@ -157,6 +159,90 @@ describe("configuration.edit", () => {
       const level = validateConfigDraft("storage.disk_guard", { floorGiB: "12", warnGiB: "12" });
       expect(level.value).toBeUndefined();
       expect(level.formError).toBe("That value isn't valid for this setting");
+    });
+  });
+
+  describe("the hotel information form's policy (D-188 §6)", () => {
+    const POLICY = "hotel_form.policy";
+    const base = configDraftFromValue(POLICY, CONFIG_REGISTRY["hotel_form.policy"].default);
+
+    it("edits the mode as a single choice, the limits as whole numbers, the addresses as text", () => {
+      expect(isEditableConfigKey(POLICY)).toBe(true);
+      expect(configEditFields(POLICY).map((field) => [field.path, field.kind])).toEqual([
+        ["mode", "choice"],
+        ["linkValidityDays", "int"],
+        ["maxExtensionDays", "int"],
+        ["statusOnlyDays", "int"],
+        ["maxPeople", "int"],
+        ["replyTo", "text"],
+        ["helpContact", "text"],
+      ]);
+      expect(configEditFields(POLICY)[0]?.options).toEqual(["off", "test_only", "on"]);
+      expect(configOptionLabel("test_only")).toBe("Test only");
+    });
+
+    it("starts from the stored value, empty text where none is set", () => {
+      expect(base).toEqual({
+        mode: "off",
+        linkValidityDays: "30",
+        maxExtensionDays: "60",
+        statusOnlyDays: "7",
+        maxPeople: "10",
+        replyTo: "",
+        helpContact: "",
+      });
+    });
+
+    it("assembles the policy: the chosen mode, the numbers, a blank text as none", () => {
+      const result = validateConfigDraft(POLICY, {
+        ...base,
+        mode: "test_only",
+        replyTo: " Desk@AMPM.example ",
+      });
+      expect(result.fieldErrors).toEqual({});
+      expect(result.value).toEqual({
+        mode: "test_only",
+        linkValidityDays: 30,
+        maxExtensionDays: 60,
+        statusOnlyDays: 7,
+        maxPeople: 10,
+        replyTo: "desk@ampm.example",
+        helpContact: null,
+      });
+    });
+
+    it("holds each number to its bounds, in words", () => {
+      const result = validateConfigDraft(POLICY, {
+        ...base,
+        linkValidityDays: "91",
+        maxExtensionDays: "61",
+        statusOnlyDays: "-1",
+        maxPeople: "0",
+      });
+      expect(result.value).toBeUndefined();
+      expect(result.fieldErrors).toEqual({
+        linkValidityDays: "Must be at most 90",
+        maxExtensionDays: "Must be at most 60",
+        statusOnlyDays: "Cannot be negative",
+        maxPeople: "Must be at least 1",
+      });
+    });
+
+    it("refuses a mode outside the choices, a malformed reply-to and an over-long help contact", () => {
+      const result = validateConfigDraft(POLICY, {
+        ...base,
+        mode: "paused",
+        replyTo: "desk",
+        helpContact: "x".repeat(301),
+      });
+      expect(result.value).toBeUndefined();
+      expect(result.fieldErrors).toEqual({
+        mode: "Choose one of the options",
+        helpContact: "Keep it to 300 characters at most",
+      });
+      const email = validateConfigDraft(POLICY, { ...base, replyTo: "desk" });
+      expect(email.value).toBeUndefined();
+      expect(email.fieldErrors).toEqual({ replyTo: "Enter an email such as desk@ampm.example" });
     });
   });
 });
