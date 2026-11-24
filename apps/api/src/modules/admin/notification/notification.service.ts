@@ -187,7 +187,7 @@ export class NotificationService implements OnModuleInit {
       (payload) => this.deliver(payload.notificationId),
       // After every delivery attempt has failed the job dead-letters: mark the row failed and clear
       // its render variables so no invite token is held at rest on a permanently-queued row (D-044).
-      (payload) => this.failPermanently(payload.notificationId),
+      (payload) => this.failIfQueued(payload.notificationId),
     );
   }
 
@@ -222,13 +222,31 @@ export class NotificationService implements OnModuleInit {
       recipientAddress: input.recipientType === "external" ? input.recipientAddress : null,
       replyTo: input.replyTo ?? null,
     });
-    await this.jobs.enqueue(
-      sendNotificationJob,
-      { notificationId: row.id },
-      // '.' separator, not ':': BullMQ refuses a custom jobId containing ':' (bullmq.driver.ts, A1).
-      { idempotencyKey: `notification.send.${row.id}` },
-    );
+    await this.enqueueSend(row);
     return { suppressed: false, notificationId: row.id };
+  }
+
+  /**
+   * Hands the row to the send job. A queue that refuses it (Redis unreachable) leaves a row no job will
+   * ever send, dead-letter or clear, holding its render data (a link), address and Reply-To at rest; so
+   * the row fails now, all three cleared, and the caller gets the error (D-188 §4).
+   */
+  private async enqueueSend(row: NotificationRow): Promise<void> {
+    try {
+      await this.jobs.enqueue(
+        sendNotificationJob,
+        { notificationId: row.id },
+        // '.' separator, not ':': BullMQ refuses a custom jobId containing ':' (bullmq.driver.ts, A1).
+        { idempotencyKey: `notification.send.${row.id}` },
+      );
+    } catch (error) {
+      const fields = { templateKey: row.templateKey, channel: row.channel };
+      this.logger.warn("notification.enqueue_failed", fields);
+      await this.failIfQueued(row.id).catch(() => {
+        this.logger.error("notification.enqueue_failed_not_cleared", fields);
+      });
+      throw error instanceof Error ? error : new Error(String(error));
+    }
   }
 
   async listOwn(
@@ -356,11 +374,11 @@ export class NotificationService implements OnModuleInit {
   }
 
   /**
-   * The job's dead-letter handler: every send attempt failed, so mark the still-`queued` row failed
-   * and clear its render variables (the invite token), an external recipient's address and the Reply-To.
-   * A no-op if the row has since left `queued`.
+   * The job's dead-letter handler (every send attempt failed), and the end of a row whose job the queue
+   * refused: marks the still-`queued` row failed and clears its render variables (the invite token), an
+   * external recipient's address and the Reply-To. A no-op if the row has since left `queued`.
    */
-  private async failPermanently(notificationId: string): Promise<void> {
+  private async failIfQueued(notificationId: string): Promise<void> {
     const row = await this.repository.findById(notificationId);
     if (!row || row.status !== "queued") return;
     await this.advance(row, { status: "failed", clearData: true });

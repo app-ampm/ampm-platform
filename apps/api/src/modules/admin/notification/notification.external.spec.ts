@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { FakeNotificationRepository, makeService } from "../../../../test/notification-fakes.js";
+import {
+  FakeNotificationRepository,
+  makeService,
+  RefusingJobDriver,
+} from "../../../../test/notification-fakes.js";
 import type { Principal } from "../../../policy/principal.types.js";
 import type { NotificationAdapter, NotificationDelivery } from "./notification.adapter.js";
 
@@ -99,6 +103,18 @@ describe("NotificationService: external recipients and reply-to (D-188 §5)", ()
       replyTo: null,
       data: null,
     });
+  });
+
+  it("fails the row and clears them when the send job cannot be enqueued, then passes the error on", async () => {
+    const repo = new FakeNotificationRepository();
+    const service = makeService(repo, { driver: new RefusingJobDriver() });
+    await expect(service.queue({ ...external, replyTo: "desk@ampm.example" })).rejects.toThrow(
+      "the job queue is unreachable",
+    );
+    // No job will ever send, dead-letter or clear this row, so it must not keep the link at rest.
+    expect([...repo.rows.values()]).toMatchObject([
+      { status: "failed", sentAt: null, recipientAddress: null, replyTo: null, data: null },
+    ]);
   });
 
   it("hands the adapter the Reply-To a notification was queued with, and none otherwise", async () => {
