@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { useHotelFormMode, useReissueHotelInfoRequest } from "@ampm/api-client";
 import type { HotelInfoRequestFullView } from "@ampm/core";
@@ -17,6 +17,8 @@ function useReissue(open: boolean, request: HotelInfoRequestFullView, onClose: (
   const mode = useHotelFormMode({ enabled: open });
   const [emailIt, setEmailIt] = useState(false);
   const [refused, setRefused] = useState<string | null>(null);
+  // Under way from the moment it is sent, before the mutation's pending state reaches a render.
+  const sending = useRef(false);
   const { reset } = reissue;
   useEffect(() => {
     if (!open) return;
@@ -29,12 +31,19 @@ function useReissue(open: boolean, request: HotelInfoRequestFullView, onClose: (
     setRefused(message);
     toast.show({ title: message, tone: "danger" });
   };
-  const submit = (): void => {
-    if (reissue.isPending) return;
-    setRefused(null);
-    reissue.mutate({ requestId: request.id, body: { emailIt } }, { onError });
+  const onSettled = (): void => {
+    sending.current = false;
   };
+  const submit = (): void => {
+    if (sending.current || reissue.isPending) return;
+    setRefused(null);
+    sending.current = true;
+    reissue.mutate({ requestId: request.id, body: { emailIt } }, { onError, onSettled });
+  };
+  // Closing while the reissue is under way would lose the new link the server is issuing (the old one
+  // already stops working), so the scrim, the close button and Escape wait for its answer.
   const close = (): void => {
+    if (sending.current || reissue.isPending) return;
     reset();
     onClose();
   };
@@ -106,6 +115,7 @@ export interface ReissueSheetProps {
  * Reissue a live request's link (D-188 §3 and §7; plan §4.2): the warning that every copy of the current
  * link stops working, the ones the hotel forwarded too, and "Email it" (with the recipient's email only)
  * under the hotel form's mode. The new link then shows here once, with Copy and Share; closing forgets it.
+ * While the reissue is under way the sheet cannot be closed, so the link it issues is always shown.
  *
  *   <ReissueSheet open={action === "reissue"} request={request} onClose={close} />
  */

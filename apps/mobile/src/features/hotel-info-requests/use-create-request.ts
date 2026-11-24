@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { UseQueryResult } from "@tanstack/react-query";
 
 import { useCreateHotelInfoRequest, useHotelFormMode } from "@ampm/api-client";
@@ -27,7 +27,7 @@ export interface CreateRequestSheet<D extends RequestDraft> {
   readonly pending: boolean;
   /** The create answer, which holds the link once; null until created and after close. */
   readonly issued: HotelInfoRequestLinkIssued | null;
-  /** Closes the sheet and forgets the answer, link and all. */
+  /** Closes the sheet and forgets the answer, link and all; ignored while the create is under way. */
   readonly close: () => void;
 }
 
@@ -45,6 +45,28 @@ function useFreshDraft<D extends RequestDraft>(open: boolean, empty: D, reset: (
   }, [open, empty, reset]);
   const patch = (next: Partial<D>): void => setDraft((previous) => ({ ...previous, ...next }));
   return { draft, patch, showErrors, setShowErrors, refusal, setRefusal };
+}
+
+/**
+ * The create's sending, under way from the moment it is sent: the mutation's pending state reaches a
+ * render only later, and a second press, or a close, in between must wait as well.
+ */
+function useSend(
+  create: ReturnType<typeof useCreateHotelInfoRequest>,
+  onRefused: (refusal: RequestRefusal) => void,
+) {
+  const sending = useRef(false);
+  const isSending = (): boolean => sending.current || create.isPending;
+  const send = (body: HotelInfoRequestCreateRequestInput): void => {
+    sending.current = true;
+    create.mutate(body, {
+      onError: (error) => onRefused(refusalOf(error, "Could not create the request")),
+      onSettled: () => {
+        sending.current = false;
+      },
+    });
+  };
+  return { isSending, send };
 }
 
 /**
@@ -67,18 +89,16 @@ export function useCreateRequest<D extends RequestDraft>(
   const mode = useHotelFormMode({ enabled: open });
   const { reset } = create;
   const form = useFreshDraft(open, empty, reset);
+  const sender = useSend(create, (refused) => {
+    form.setRefusal(refused);
+    toast.show({ title: refused.message, tone: "danger" });
+  });
   const body = bodyOf(form.draft);
   const submit = (): void => {
-    if (create.isPending) return;
+    if (sender.isSending()) return;
     if (hasErrors(requestErrors(body))) return form.setShowErrors(true);
     form.setRefusal(null);
-    create.mutate(body, {
-      onError: (error) => {
-        const refused = refusalOf(error, "Could not create the request");
-        form.setRefusal(refused);
-        toast.show({ title: refused.message, tone: "danger" });
-      },
-    });
+    sender.send(body);
   };
   return {
     draft: form.draft,
@@ -89,7 +109,10 @@ export function useCreateRequest<D extends RequestDraft>(
     submit,
     pending: create.isPending,
     issued: create.data ?? null,
+    // Closing while the create is under way would lose the link of a request the server is creating:
+    // the scrim, the close button and Escape wait for its answer.
     close: () => {
+      if (sender.isSending()) return;
       reset();
       onClose();
     },

@@ -169,6 +169,27 @@ describe("SendRequestSheet", () => {
     expect(await screen.findByTestId("issued-link-record")).toBeOnTheScreen();
   });
 
+  it("keeps the sheet open while the create is under way, so the link the server issues is shown", async () => {
+    let give = (_response: Response): void => undefined;
+    const created = new Promise<Response>((resolve) => (give = resolve));
+    const answers = sheetFetch({});
+    const fetch: FetchFn = (input, init) =>
+      init?.method === "POST" && String(input).endsWith("/hotels-admin/info-requests")
+        ? created
+        : answers(input, init);
+    await renderWithApi(<Harness />, fetch);
+    await fireEvent.press(await screen.findByTestId("send-request-submit"));
+    await fireEvent.press(
+      screen.getByTestId("send-request-scrim", { includeHiddenElements: true }),
+    );
+    await fireEvent.press(screen.getByRole("button", { name: "Close" }));
+    // Escape on the web and the back gesture on Android: the modal's close request.
+    await fireEvent(screen.getByTestId("send-request"), "requestClose");
+    expect(screen.getByTestId("send-request-submit")).toBeOnTheScreen();
+    give(ok(linkIssuedFixture()));
+    expect(await screen.findByText(ISSUED_URL)).toBeOnTheScreen();
+  });
+
   it("shows the API's message when the hotel already has a live request", async () => {
     const message = "This hotel already has a live request: HIR-2026-0001";
     const conflict = () =>
