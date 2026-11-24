@@ -6,6 +6,7 @@ import { MediaModule } from "../media/media.module.js";
 import { HotelDocumentsController } from "./hotel-documents.controller.js";
 import { HotelDocumentsRepository } from "./hotel-documents.repository.js";
 import { HotelDocumentsService } from "./hotel-documents.service.js";
+import { HotelFormEmailGate } from "./hotel-form-email-gate.js";
 import { HotelFreshnessService } from "./hotel-freshness.service.js";
 import { HotelImportPlanSweepService } from "./hotel-import-plan-sweep.service.js";
 import { ChildRowsImporter } from "./hotel-import.children.js";
@@ -16,6 +17,14 @@ import { RatesImporter } from "./hotel-import.rates.js";
 import { RateRowsWriter } from "./hotel-import.rates-write.js";
 import { HotelImportRepository } from "./hotel-import.repository.js";
 import { HotelImportService } from "./hotel-import.service.js";
+import { HotelInfoRequestIssueService } from "./hotel-info-request-issue.service.js";
+import { HotelInfoRequestJournal } from "./hotel-info-request-journal.js";
+import { HotelInfoRequestMailer } from "./hotel-info-request-mailer.js";
+import { HotelInfoRequestReader } from "./hotel-info-request-reader.js";
+import { HotelInfoRequestRevoker } from "./hotel-info-request-revoker.js";
+import { HotelInfoRequestsController } from "./hotel-info-requests.controller.js";
+import { HotelInfoRequestsRepository } from "./hotel-info-requests.repository.js";
+import { HotelInfoRequestsService } from "./hotel-info-requests.service.js";
 import { HotelRatesController } from "./hotel-rates.controller.js";
 import { HotelRatesRepository } from "./hotel-rates.repository.js";
 import { HotelRatesService } from "./hotel-rates.service.js";
@@ -42,7 +51,9 @@ import { SavedHotelsStaffService } from "./saved-hotels-staff.service.js";
  * A-28). PrismaService (DbModule), ENV/AppLogger (PlatformModule), JobQueue (JobsModule) and ConfigService
  * (ConfigModule) are @Global; NotificationModule is imported for the freshness job's hotel-team notice
  * (feature 9.2), and DocumentsModule (Module N) files a wedding reference's consent (GP-20) and a hotel's
- * documents library (D-187 §6). The principal with its resolved entitlements arrives on the request context.
+ * documents library (D-187 §6). The hotel information requests (D-188) email hotels through it too, and register
+ * the hotel form's kill switch on its send path. The principal with its resolved entitlements arrives on
+ * the request context.
  *
  * One deliberate deviation from api.md ("a module never queries another module's tables"): the repository
  * resolves the caller's own account by reading the CRM table `account_contacts` directly (shortlist
@@ -59,6 +70,7 @@ import { SavedHotelsStaffService } from "./saved-hotels-staff.service.js";
     HotelRatesController,
     HotelReferencesController,
     HotelDocumentsController,
+    HotelInfoRequestsController,
     SavedHotelsStaffController,
   ],
   providers: [
@@ -84,6 +96,14 @@ import { SavedHotelsStaffService } from "./saved-hotels-staff.service.js";
     HotelDocumentsService,
     HotelDocumentsRepository,
     HotelFreshnessService,
+    HotelInfoRequestsRepository,
+    HotelInfoRequestJournal,
+    HotelInfoRequestReader,
+    HotelInfoRequestMailer,
+    HotelInfoRequestRevoker,
+    HotelInfoRequestIssueService,
+    HotelInfoRequestsService,
+    HotelFormEmailGate,
     SavedHotelsStaffService,
     SavedHotelsStaffRepository,
   ],

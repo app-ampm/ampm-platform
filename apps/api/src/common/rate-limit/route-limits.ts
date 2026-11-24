@@ -48,3 +48,16 @@ export const UPLOADS: RateLimitOptions = {
   windowMs: MINUTE,
   failClosed: true,
 };
+
+/**
+ * Issuing a hotel information request's link (D-188 §5): a create or a reissue can email it to an address
+ * outside AMPM, on the free email plan, so a member of staff issues at most 30 links in ten minutes (a
+ * sheet at a time; Slice 14 brings bulk requests) and the routes fail closed.
+ */
+export const HOTEL_FORM_LINKS: RateLimitOptions = {
+  name: "hotel_form.links",
+  limit: 30,
+  perIpLimit: 90,
+  windowMs: 10 * MINUTE,
+  failClosed: true,
+};
