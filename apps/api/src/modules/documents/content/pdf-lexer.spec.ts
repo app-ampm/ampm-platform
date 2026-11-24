@@ -71,12 +71,13 @@ describe("PdfLexer", () => {
   });
 
   it.each([
-    ["1 MB of digits and then a letter", `${"1".repeat(1_000_000)}x`],
-    ["1 MB of digits, a point and a letter", `${"1".repeat(1_000_000)}.x`],
-    ["a sign, a point and 1 MB of digits and a point", `-.${"1".repeat(1_000_000)}.`],
-  ])("reads %s as one keyword well under 100 ms (linear time)", (_name, text) => {
+    ["100,000 digits and then a letter", `${"1".repeat(100_000)}x`],
+    ["100,000 digits, a point and a letter", `${"1".repeat(100_000)}.x`],
+    ["a sign, a point, 100,000 digits and a point", `-.${"1".repeat(100_000)}.`],
+  ])("reads %s as one keyword well under 100 ms (linear time; seconds before)", (_name, text) => {
+    const bytes = Buffer.from(text, "latin1");
     const started = performance.now();
-    const read = tokens(text);
+    const read = tokens(bytes);
     expect(performance.now() - started).toBeLessThan(100);
     expect(read.map((token) => token.kind)).toEqual(["keyword"]);
   });

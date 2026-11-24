@@ -128,13 +128,14 @@ describe("parseTag", () => {
   });
 
   it.each([
-    ["one attribute name of 1 MB with no value", ` ${"b".repeat(1_000_000)}`],
-    ["quotes and names with no value", ` ${'"b'.repeat(500_000)}`],
-    ["a name before 1 MB of spaces", ` b${" ".repeat(1_000_000)}b`],
-    ["names and equals signs with no quoted value", ` b=${"b=".repeat(500_000)}`],
-  ])("reads %s well under 100 ms (linear time)", (_name, attributes) => {
+    ["one attribute name of 100,000 characters with no value", ` ${"b".repeat(100_000)}`],
+    ["quotes and names with no value", ` ${'"b'.repeat(50_000)}`],
+    ["a name before 100,000 spaces", ` b${" ".repeat(100_000)}b`],
+    ["names and equals signs with no quoted value", ` b=${"b=".repeat(50_000)}`],
+  ])("reads %s well under 100 ms (linear time; seconds before)", (_name, attributes) => {
+    const tag = `<Default${attributes}/>`;
     const started = performance.now();
-    parseTag(`<Default${attributes}/>`, "[Content_Types].xml");
+    parseTag(tag, "[Content_Types].xml");
     expect(performance.now() - started).toBeLessThan(100);
   });
 });

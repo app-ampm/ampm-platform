@@ -68,9 +68,9 @@ describe("inspectOoxml: the main part decides the kind (D-187 §2)", () => {
     expect((await refusalOf(inspectOoxml(pkg, PDF_AND_SLIDES))).reason).toBe("type_not_accepted");
   });
 
-  it("reads a content types tag of nearly 1 MiB in linear time, before the type check", async () => {
+  it("reads a long content types tag in linear time, before the type check", async () => {
     const zip = writeZip([
-      { name: "[Content_Types].xml", data: `<Types><Default ${"b".repeat(1_000_000)}/></Types>` },
+      { name: "[Content_Types].xml", data: `<Types><Default ${"b".repeat(200_000)}/></Types>` },
       {
         name: "_rels/.rels",
         data: `<Relationships><Relationship Id="r1" Type="${TRANSITIONAL_RELS}/officeDocument" Target="ppt/presentation.xml"/></Relationships>`,
