@@ -42,9 +42,9 @@
     "semantic_hash": ""
   },
   "docs/tools/field_rules.py": {
-    "mtime": 1795494667.9613593,
-    "seen": 1795494865.846594,
-    "ast_hash": "af1d390c9c769ead3117bce97f891075",
+    "mtime": 1795503549.4889119,
+    "seen": 1795505582.377253,
+    "ast_hash": "caa0eb5445759b0fbc1d4c3ee0c700f8",
     "semantic_hash": ""
   },
   "docs/tools/git-credential-ampm.sh": {
@@ -96,15 +96,15 @@
     "semantic_hash": ""
   },
   "docs/architecture.md": {
-    "mtime": 1795494667.861273,
-    "seen": 1795494865.857065,
-    "ast_hash": "d1fe0c743d7d73101da4ef9426d67987",
+    "mtime": 1795500725.8025908,
+    "seen": 1795505582.3881202,
+    "ast_hash": "9f65937fdd2e8f733f9b4cf6d997f729",
     "semantic_hash": ""
   },
   "docs/data-model.md": {
-    "mtime": 1795494668.0643814,
-    "seen": 1795494865.857066,
-    "ast_hash": "36fe6c271fd74bc252ddb36c69fb9ecb",
+    "mtime": 1795503705.1848347,
+    "seen": 1795505582.3881202,
+    "ast_hash": "ad59c753660406fa5643d9eece447ed2",
     "semantic_hash": ""
   },
   "docs/decision-log.md": {
@@ -150,9 +150,9 @@
     "semantic_hash": "1cbed98c3458e24892414c2295bd9673"
   },
   "docs/test-cases.md": {
-    "mtime": 1795494667.8652537,
-    "seen": 1795494865.857606,
-    "ast_hash": "c26f1cbd034ea5f855ab6b3176b92641",
+    "mtime": 1795503531.6031766,
+    "seen": 1795505582.3887,
+    "ast_hash": "312e03342022aebf06bbe158f578e285",
     "semantic_hash": ""
   },
   "docs/user-flows.md": {
@@ -162,9 +162,9 @@
     "semantic_hash": "8709515bfa4eb7d76ec50c63d12a08d4"
   },
   "docs/wireframes.md": {
-    "mtime": 1795494668.0654402,
-    "seen": 1795494865.8576488,
-    "ast_hash": "022e624408f183219a2311f5b9cec981",
+    "mtime": 1795505342.732279,
+    "seen": 1795505582.388743,
+    "ast_hash": "80c3d5b7b6e251371d06e5b913796491",
     "semantic_hash": ""
   },
   "graphify-out/converted/AMPM_Developer_Technical_Specification_v1_4babf6ee.md": {
@@ -438,9 +438,9 @@
     "semantic_hash": "e9f794876d725a7d044d809b6f470d76"
   },
   "packages/core/src/index.ts": {
-    "mtime": 1795494667.5835154,
-    "seen": 1795494865.848972,
-    "ast_hash": "264a7b9b4c8f5965f15867aa845c5032",
+    "mtime": 1795504220.6399732,
+    "seen": 1795505582.3798132,
+    "ast_hash": "396b9868b0bb9e457ef09ab6daf26376",
     "semantic_hash": ""
   },
   "packages/core/tsconfig.json": {
@@ -1398,15 +1398,15 @@
     "semantic_hash": "82bf275f6155f648c9e1b54e2b45ae96"
   },
   "apps/api/src/common/app-error.filter.spec.ts": {
-    "mtime": 1795494667.6506412,
-    "seen": 1795494865.825276,
-    "ast_hash": "ba2e206c2349f52d82b715e8aee6f123",
+    "mtime": 1795504740.1087477,
+    "seen": 1795505582.35441,
+    "ast_hash": "114b14a4e1986aa00b07ff06e0582e59",
     "semantic_hash": ""
   },
   "apps/api/src/common/app-error.filter.ts": {
-    "mtime": 1795494667.6509287,
-    "seen": 1795494865.825276,
-    "ast_hash": "c9d124b5e5b97aa7a72bfe6c4f0e96ef",
+    "mtime": 1795499718.015944,
+    "seen": 1795505582.354412,
+    "ast_hash": "bc2bb2dfb64c519bcf66a84894a651b1",
     "semantic_hash": ""
   },
   "apps/api/src/common/envelope.interceptor.ts": {
@@ -1740,9 +1740,9 @@
     "semantic_hash": ""
   },
   "packages/core/src/schemas/index.ts": {
-    "mtime": 1795494667.587538,
-    "seen": 1795494865.849619,
-    "ast_hash": "dadf812aa371d86ea4448b820843b0c9",
+    "mtime": 1795498682.5227697,
+    "seen": 1795505582.3806112,
+    "ast_hash": "f3aff3e17b6eeaef43ae342e0c4585a4",
     "semantic_hash": ""
   },
   "packages/core/tsup.config.ts": {
@@ -3744,9 +3744,9 @@
     "semantic_hash": ""
   },
   "apps/api/src/modules/hotels/hotels.module.ts": {
-    "mtime": 1795494667.8559787,
-    "seen": 1795494865.830935,
-    "ast_hash": "27d1d73db99ff44596415ce106764441",
+    "mtime": 1795499634.8548992,
+    "seen": 1795505582.360548,
+    "ast_hash": "50866457e76b5860affc34c1fb7f9081",
     "semantic_hash": ""
   },
   "apps/api/src/modules/hotels/hotels.repository.ts": {
@@ -3990,9 +3990,9 @@
     "semantic_hash": ""
   },
   "apps/api/src/modules/hotels/hotel-import.service.ts": {
-    "mtime": 1795494667.8548799,
-    "seen": 1795494865.830582,
-    "ast_hash": "153991a8c9a4f3b186d1db91bfcf8740",
+    "mtime": 1795504788.906354,
+    "seen": 1795505582.360068,
+    "ast_hash": "60ac3517cd85a491a9c0b772bc72a5e5",
     "semantic_hash": ""
   },
   "apps/api/src/modules/hotels/hotel-import.spec.ts": {
@@ -4002,9 +4002,9 @@
     "semantic_hash": ""
   },
   "apps/api/src/modules/hotels/hotel-import.ts": {
-    "mtime": 1795494668.0589797,
-    "seen": 1795494865.830583,
-    "ast_hash": "dc6bfd7a402076410fc865a566b6e9e7",
+    "mtime": 1795498866.7399492,
+    "seen": 1795505582.360086,
+    "ast_hash": "a31138ac6b1bd592a43b395fe4219f01",
     "semantic_hash": ""
   },
   "apps/api/src/modules/hotels/hotel-rates.controller.ts": {
@@ -4020,21 +4020,21 @@
     "semantic_hash": ""
   },
   "apps/api/src/modules/hotels/hotel-rates.repository.ts": {
-    "mtime": 1795470953.9558122,
-    "seen": 1795471715.8732748,
-    "ast_hash": "89acca17e2e8b876bff1b63c8b528c81",
+    "mtime": 1795499817.5500062,
+    "seen": 1795505582.360161,
+    "ast_hash": "a0dea745f079bf2b2e43040a3f295ff0",
     "semantic_hash": ""
   },
   "apps/api/src/modules/hotels/hotel-rates.service.ts": {
-    "mtime": 1795466200.658337,
-    "seen": 1795471715.873276,
-    "ast_hash": "c22b724ee44c24ee97a17a38a125542f",
+    "mtime": 1795504740.1078324,
+    "seen": 1795505582.360162,
+    "ast_hash": "bd90fbe70bb18c6fa06c5189c1f739f1",
     "semantic_hash": ""
   },
   "apps/api/src/modules/hotels/hotel-rates.view.ts": {
-    "mtime": 1795395449.9004252,
-    "seen": 1795471715.873276,
-    "ast_hash": "43e79f0ce33b1167d8646418a96c2e2a",
+    "mtime": 1795499361.0253096,
+    "seen": 1795505582.360162,
+    "ast_hash": "9bb97e53e9f8132251ebfa967495948c",
     "semantic_hash": ""
   },
   "apps/api/src/modules/hotels/hotel-references.controller.ts": {
@@ -4326,9 +4326,9 @@
     "semantic_hash": ""
   },
   "docs/engineering/hotel-import.md": {
-    "mtime": 1795494668.0646565,
-    "seen": 1795494865.857159,
-    "ast_hash": "478c8328d246283bf1baa2ba9e5d0455",
+    "mtime": 1795505342.731821,
+    "seen": 1795505582.3882082,
+    "ast_hash": "49323e16864853ca2061e6e48de1c2b5",
     "semantic_hash": ""
   },
   "docs/planning/sprint-9-phase1-hotels-brief.md": {
@@ -6174,9 +6174,9 @@
     "semantic_hash": ""
   },
   "apps/mobile/src/features/hotels/hotels.format.ts": {
-    "mtime": 1795494667.6785343,
-    "seen": 1795494865.841697,
-    "ast_hash": "6f38ba6e3f3ee8149170d498493f6657",
+    "mtime": 1795504231.0918655,
+    "seen": 1795505582.372319,
+    "ast_hash": "71a2a1d558db07d42e110b56a0d7aaa6",
     "semantic_hash": ""
   },
   "apps/mobile/src/features/hotels/hotels.test-utils.tsx": {
@@ -7896,27 +7896,27 @@
     "semantic_hash": ""
   },
   "apps/mobile/src/features/hotels-admin/hotel-import-screen.test.tsx": {
-    "mtime": 1795494667.8585474,
-    "seen": 1795494865.839486,
-    "ast_hash": "3f336ac8cb3c8e78a9138045034c3472",
+    "mtime": 1795501329.695159,
+    "seen": 1795505582.36968,
+    "ast_hash": "c88ea28eddeaed9dab595a052c0a08ba",
     "semantic_hash": ""
   },
   "apps/mobile/src/features/hotels-admin/hotel-import-screen.tsx": {
-    "mtime": 1795494667.8587422,
-    "seen": 1795494865.839487,
-    "ast_hash": "cb46c470d88c46117959fe25e973f1ff",
+    "mtime": 1795504650.242193,
+    "seen": 1795505582.36968,
+    "ast_hash": "a18e73a2383a42ffa0fb719a864f0ab7",
     "semantic_hash": ""
   },
   "apps/mobile/src/features/hotels-admin/hotel-import.format.test.ts": {
-    "mtime": 1795494667.8591595,
-    "seen": 1795494865.839488,
-    "ast_hash": "a75c72d3a1fb2e28468a1cd8ad8cee95",
+    "mtime": 1795501259.5634294,
+    "seen": 1795505582.369699,
+    "ast_hash": "1165e4bd52c4126242eca5502fe96720",
     "semantic_hash": ""
   },
   "apps/mobile/src/features/hotels-admin/hotel-import.format.ts": {
-    "mtime": 1795494667.859492,
-    "seen": 1795494865.839489,
-    "ast_hash": "0d109425537ed7440c1552ef50833468",
+    "mtime": 1795501489.5419319,
+    "seen": 1795505582.3697002,
+    "ast_hash": "73a1a030bc18938a8a8ba73d9034c590",
     "semantic_hash": ""
   },
   "apps/mobile/src/features/hotels-admin/hotel-media-screen.test.tsx": {
@@ -7956,27 +7956,27 @@
     "semantic_hash": ""
   },
   "apps/mobile/src/features/hotels-admin/hotel-rates-screen.test.tsx": {
-    "mtime": 1795428664.6408296,
-    "seen": 1795471715.873597,
-    "ast_hash": "1304004c4c976777ca10179cdb37961b",
+    "mtime": 1795504359.8648722,
+    "seen": 1795505582.370027,
+    "ast_hash": "2356e90862d14b92b4bb962fdc7988e3",
     "semantic_hash": ""
   },
   "apps/mobile/src/features/hotels-admin/hotel-rates-screen.tsx": {
-    "mtime": 1795395449.925862,
-    "seen": 1795471715.8735979,
-    "ast_hash": "d8794790a02fb6c81994ad94543348f3",
+    "mtime": 1795504499.184085,
+    "seen": 1795505582.370028,
+    "ast_hash": "01d739c0bb3fbc081bd3fafdd17780c4",
     "semantic_hash": ""
   },
   "apps/mobile/src/features/hotels-admin/hotels-admin.format.test.ts": {
-    "mtime": 1795494667.6711266,
-    "seen": 1795494865.83994,
-    "ast_hash": "6e620ce164cf772a1bbe5b2e1ed11fc5",
+    "mtime": 1795504282.43229,
+    "seen": 1795505582.3702059,
+    "ast_hash": "c8e25cec54940b64ef2c648adc0ce590",
     "semantic_hash": ""
   },
   "apps/mobile/src/features/hotels-admin/hotels-admin.format.ts": {
-    "mtime": 1795494667.671639,
-    "seen": 1795494865.839941,
-    "ast_hash": "f22b74d26eaddd1995342fc19d219c1b",
+    "mtime": 1795504415.5114725,
+    "seen": 1795505582.3702059,
+    "ast_hash": "65da15442ce0874b0bae041f25c09d93",
     "semantic_hash": ""
   },
   "apps/mobile/src/features/hotels-admin/hotels-admin.test-utils.tsx": {
@@ -8052,39 +8052,39 @@
     "semantic_hash": ""
   },
   "apps/mobile/src/features/hotels-admin/rate-card-panel.tsx": {
-    "mtime": 1795395449.9411001,
-    "seen": 1795471715.873616,
-    "ast_hash": "7f873351b8f0840cc0ca452fdc59c961",
+    "mtime": 1795504479.3069825,
+    "seen": 1795505582.37056,
+    "ast_hash": "b1f8ae669e36d3a0a32242e1ab2414f7",
     "semantic_hash": ""
   },
   "apps/mobile/src/features/hotels-admin/rate-cards.form.test.ts": {
-    "mtime": 1795428650.3988523,
-    "seen": 1795471715.873617,
-    "ast_hash": "fb24149b4a49eeb92cf3e1a31d66f5e1",
+    "mtime": 1795504551.627018,
+    "seen": 1795505582.3705611,
+    "ast_hash": "0c60c9c8c7bfd6ab765b14fcd25d8d17",
     "semantic_hash": ""
   },
   "apps/mobile/src/features/hotels-admin/rate-cards.form.ts": {
-    "mtime": 1795428632.7364855,
-    "seen": 1795471715.873617,
-    "ast_hash": "1a3b902a436e72f20517358f57cad4a1",
+    "mtime": 1795505006.3663065,
+    "seen": 1795505582.3705611,
+    "ast_hash": "21bb9611588bcf4913fd9ccb6c6f0508",
     "semantic_hash": ""
   },
   "apps/mobile/src/features/hotels-admin/rate-item-edit-sheet.test.tsx": {
-    "mtime": 1795395449.941341,
-    "seen": 1795471715.873618,
-    "ast_hash": "36d77854b61c50668d9f95bd13a26c14",
+    "mtime": 1795504340.0500937,
+    "seen": 1795505582.370562,
+    "ast_hash": "a141891ae41745221d2cd15a7ef37d27",
     "semantic_hash": ""
   },
   "apps/mobile/src/features/hotels-admin/rate-item-edit-sheet.tsx": {
-    "mtime": 1795395449.9414268,
-    "seen": 1795471715.873618,
-    "ast_hash": "1b2216f634ce1cb2e775cc8a4a47188d",
+    "mtime": 1795504602.507622,
+    "seen": 1795505582.370563,
+    "ast_hash": "9696af6684feddb009bbfccb46e9f74a",
     "semantic_hash": ""
   },
   "apps/mobile/src/features/hotels-admin/rate-item-row.tsx": {
-    "mtime": 1795395449.9419982,
-    "seen": 1795471715.8736188,
-    "ast_hash": "62051b744c2fb9650fe05f0e49a2495b",
+    "mtime": 1795504440.6392915,
+    "seen": 1795505582.370564,
+    "ast_hash": "ea160e3dcb26aab30d7d4f591e3b115a",
     "semantic_hash": ""
   },
   "apps/mobile/src/features/hotels-admin/room-edit-sheet.test.tsx": {
@@ -8214,9 +8214,9 @@
     "semantic_hash": ""
   },
   "packages/api-client/src/hooks/use-hotel-import.ts": {
-    "mtime": 1795494667.8870602,
-    "seen": 1795494865.847745,
-    "ast_hash": "6ac483ef2c79d3f1dbe86e1764646610",
+    "mtime": 1795505335.4098935,
+    "seen": 1795505582.378428,
+    "ast_hash": "e7ef0bcf8d5f072ca4d7c931830d7547",
     "semantic_hash": ""
   },
   "packages/api-client/src/hooks/use-hotel-media.ts": {
@@ -8304,9 +8304,9 @@
     "semantic_hash": ""
   },
   "packages/core/src/labels.ts": {
-    "mtime": 1795426097.9617147,
-    "seen": 1795471715.87392,
-    "ast_hash": "d2d4c817bf7da80693c799ee1da6dfbc",
+    "mtime": 1795504418.064054,
+    "seen": 1795505582.3798149,
+    "ast_hash": "4481db0029a2a0dad130b7deffc4b9e6",
     "semantic_hash": ""
   },
   "packages/ui/src/components/confirm-sheet/confirm-sheet.stories.tsx": {
@@ -10584,9 +10584,9 @@
     "semantic_hash": ""
   },
   "apps/api/src/policy/rate-limit-coverage.spec.ts": {
-    "mtime": 1795494667.6618173,
-    "seen": 1795494865.831655,
-    "ast_hash": "2d39e4f570b48535dcacc3bd45db04fe",
+    "mtime": 1795499695.3859563,
+    "seen": 1795505582.3613539,
+    "ast_hash": "8244c1578f36eddec89838051d4430d1",
     "semantic_hash": ""
   },
   "apps/api/src/policy/testing/controller-routes.ts": {
@@ -11514,9 +11514,9 @@
     "semantic_hash": ""
   },
   "apps/api/src/modules/hotels/hotel-audience.ts": {
-    "mtime": 1795494667.6515124,
-    "seen": 1795494865.830484,
-    "ast_hash": "55c7b5410319ac465143b940be35e515",
+    "mtime": 1795504740.1058574,
+    "seen": 1795505582.359591,
+    "ast_hash": "8df898f28d355ee4cd88034b7fb64edd",
     "semantic_hash": ""
   },
   "apps/api/src/modules/hotels/hotels-admin.service.spec.ts": {
@@ -11634,9 +11634,9 @@
     "semantic_hash": ""
   },
   "apps/api/src/modules/hotels/hotel-import.controller.ts": {
-    "mtime": 1795494667.6531138,
-    "seen": 1795494865.8305678,
-    "ast_hash": "0c1751f3016220a079906de51a794ccc",
+    "mtime": 1795504740.108953,
+    "seen": 1795505582.3598359,
+    "ast_hash": "c1882f2242f9b2d7e6adefe86b32ea62",
     "semantic_hash": ""
   },
   "apps/api/src/modules/hotels/hotel-import.file.spec.ts": {
@@ -11646,9 +11646,9 @@
     "semantic_hash": ""
   },
   "apps/api/src/modules/hotels/hotel-import.file.ts": {
-    "mtime": 1795494667.6534688,
-    "seen": 1795494865.830569,
-    "ast_hash": "3388702967b8ebbdd5f418c3d5ecb3aa",
+    "mtime": 1795498815.2378733,
+    "seen": 1795505582.359858,
+    "ast_hash": "9119cafe6c8908fdea7cecb71eac7842",
     "semantic_hash": ""
   },
   "apps/api/src/modules/hotels/hotel-import.grants.spec.ts": {
@@ -11676,15 +11676,15 @@
     "semantic_hash": ""
   },
   "apps/api/src/modules/hotels/hotel-import.report.ts": {
-    "mtime": 1795494667.8540869,
-    "seen": 1795494865.83058,
-    "ast_hash": "b103e06cfceaec773a16d694796fa917",
+    "mtime": 1795504788.9065063,
+    "seen": 1795505582.360049,
+    "ast_hash": "3527db3125f3d9e1f90e3ed75e5c15a7",
     "semantic_hash": ""
   },
   "apps/api/src/modules/hotels/hotel-import.repository.ts": {
-    "mtime": 1795494667.854324,
-    "seen": 1795494865.830581,
-    "ast_hash": "419e58f544fc4ad46e9fc0cdfbd68a2c",
+    "mtime": 1795505213.2329195,
+    "seen": 1795505582.36005,
+    "ast_hash": "a7f9ad4b519122bb1e0083ae6bf50630",
     "semantic_hash": ""
   },
   "apps/api/src/modules/hotels/hotel-profile-rules.ts": {
@@ -11694,9 +11694,9 @@
     "semantic_hash": ""
   },
   "apps/api/src/modules/hotels/hotel-rates.service.spec.ts": {
-    "mtime": 1795466200.6582084,
-    "seen": 1795471715.8732748,
-    "ast_hash": "b67f07c6d5d527ac9812c1a57955c27e",
+    "mtime": 1795499782.9203331,
+    "seen": 1795505582.360161,
+    "ast_hash": "5e0dfbd41345a2f31d05e0c98aada5e4",
     "semantic_hash": ""
   },
   "apps/api/src/modules/hotels/hotel-string-lists.spec.ts": {
@@ -11754,9 +11754,9 @@
     "semantic_hash": ""
   },
   "apps/api/test/hotel-import.e2e-spec.ts": {
-    "mtime": 1795494667.857572,
-    "seen": 1795494865.8323781,
-    "ast_hash": "ce9c8f969a1757acfb88eed29f562537",
+    "mtime": 1795504740.1087985,
+    "seen": 1795505582.362176,
+    "ast_hash": "8f24fde1b9cf8fecd790866fefd0a23e",
     "semantic_hash": ""
   },
   "apps/api/test/hotel-verification-dates.e2e-spec.ts": {
@@ -11832,21 +11832,21 @@
     "semantic_hash": ""
   },
   "apps/mobile/src/features/hotels-admin/hotel-import-downloads.test.tsx": {
-    "mtime": 1795494667.85797,
-    "seen": 1795494865.839484,
-    "ast_hash": "e43703d727dbbedb5b4a7cae1560de3c",
+    "mtime": 1795501329.6952515,
+    "seen": 1795505582.369676,
+    "ast_hash": "81d96d11558ce0a6e12569dc1675a35d",
     "semantic_hash": ""
   },
   "apps/mobile/src/features/hotels-admin/hotel-import-result.tsx": {
-    "mtime": 1795494667.668093,
-    "seen": 1795494865.839486,
-    "ast_hash": "3ac900db43ed1b15c611aca87305bd15",
+    "mtime": 1795501500.5820084,
+    "seen": 1795505582.3696792,
+    "ast_hash": "89b87e3690cc38cc9bf785d64dd3fb9e",
     "semantic_hash": ""
   },
   "apps/mobile/src/features/hotels-admin/hotel-import.test-utils.ts": {
-    "mtime": 1795494667.8597157,
-    "seen": 1795494865.8394911,
-    "ast_hash": "1228f5808c4ef1442579672dc336332c",
+    "mtime": 1795501735.3940911,
+    "seen": 1795505582.369706,
+    "ast_hash": "f4fb4e4dd7554917e22f7f246075bb8f",
     "semantic_hash": ""
   },
   "apps/mobile/src/features/hotels-admin/hotel-location-fields.tsx": {
@@ -11946,9 +11946,9 @@
     "semantic_hash": ""
   },
   "packages/api-client/src/hooks/use-hotel-import.test.ts": {
-    "mtime": 1795494667.8868287,
-    "seen": 1795494865.847744,
-    "ast_hash": "677d71aa9d4c00e48d52ebd55296a3b8",
+    "mtime": 1795505335.409813,
+    "seen": 1795505582.3784268,
+    "ast_hash": "f6431d149af60c8fa9cb52a9791563df",
     "semantic_hash": ""
   },
   "packages/api-client/src/hooks/use-hotel-rates.test.ts": {
@@ -11982,21 +11982,21 @@
     "semantic_hash": ""
   },
   "packages/core/src/schemas/hotel-import.test.ts": {
-    "mtime": 1795494667.887545,
-    "seen": 1795494865.8494458,
-    "ast_hash": "b27dbfc00f7c8896ac2f000e2868de98",
+    "mtime": 1795504740.1096585,
+    "seen": 1795505582.3803258,
+    "ast_hash": "7302b3f0c050c673b8598c650513737b",
     "semantic_hash": ""
   },
   "packages/core/src/schemas/hotel-import.ts": {
-    "mtime": 1795494667.887797,
-    "seen": 1795494865.849447,
-    "ast_hash": "041c26244f8c5986621c91b4b8ca99d6",
+    "mtime": 1795504788.9069395,
+    "seen": 1795505582.380327,
+    "ast_hash": "b23a0b4ee4c37ec7126ff089f60889d7",
     "semantic_hash": ""
   },
   "docs/planning/hotel-information-form-plan.md": {
-    "mtime": 1795494667.960953,
-    "seen": 1795494865.8573089,
-    "ast_hash": "dacae23a16c0ca2695d3a198c0c8c776",
+    "mtime": 1795500736.735683,
+    "seen": 1795505582.38835,
+    "ast_hash": "0ac066a5a7f7284b4d1f8b746fa9ab94",
     "semantic_hash": ""
   },
   "docs/planning/hotel-information-form-wording.md": {
@@ -12054,27 +12054,27 @@
     "semantic_hash": ""
   },
   "packages/core/src/schemas/hotel-import-cells.test.ts": {
-    "mtime": 1795494667.5839894,
-    "seen": 1795494865.849442,
-    "ast_hash": "bbd368e41c0d5e8e9b1caa9a37577f7d",
+    "mtime": 1795498565.0744941,
+    "seen": 1795505582.380288,
+    "ast_hash": "d5669157aa9a58221d8477cf04680cc8",
     "semantic_hash": ""
   },
   "packages/core/src/schemas/hotel-import-cells.ts": {
-    "mtime": 1795494667.584239,
-    "seen": 1795494865.849443,
-    "ast_hash": "9e3743e67fe3cc4e4a40f3db6aa97572",
+    "mtime": 1795504740.1097887,
+    "seen": 1795505582.380289,
+    "ast_hash": "4c6244bb3a657d1b947fb87debd6e09b",
     "semantic_hash": ""
   },
   "packages/core/src/schemas/hotel-import-compare.test.ts": {
-    "mtime": 1795494667.5844781,
-    "seen": 1795494865.849443,
-    "ast_hash": "dc49f0e2f2ce6ede3031a1dc0a6d2cc0",
+    "mtime": 1795504740.1097486,
+    "seen": 1795505582.380289,
+    "ast_hash": "45a17f5793537a836d4dc34de2c113af",
     "semantic_hash": ""
   },
   "packages/core/src/schemas/hotel-import-compare.ts": {
-    "mtime": 1795494667.8873055,
-    "seen": 1795494865.8494442,
-    "ast_hash": "044bd1e24593f190d1318b1c0f10f80d",
+    "mtime": 1795504740.109707,
+    "seen": 1795505582.38029,
+    "ast_hash": "d5d5dfbe297c927470a18a2301e19ac7",
     "semantic_hash": ""
   },
   "packages/core/src/schemas/hotel-import-rooms-venues.test.ts": {
@@ -12138,15 +12138,15 @@
     "semantic_hash": ""
   },
   "apps/api/src/modules/hotels/hotel-import-plan-sweep.service.spec.ts": {
-    "mtime": 1795494667.8512745,
-    "seen": 1795494865.8305438,
-    "ast_hash": "80c882c83eea465b962c9d2e2561b147",
+    "mtime": 1795499695.3861737,
+    "seen": 1795505582.359721,
+    "ast_hash": "9b89e88b8a52844975adca96db59d5c2",
     "semantic_hash": ""
   },
   "apps/api/src/modules/hotels/hotel-import-plan-sweep.service.ts": {
-    "mtime": 1795494667.8514802,
-    "seen": 1795494865.830545,
-    "ast_hash": "a961fec2803fb0055c352df422f98150",
+    "mtime": 1795500154.1241426,
+    "seen": 1795505582.359721,
+    "ast_hash": "127c6d65db7b5c0e87e9bbd87d9dee48",
     "semantic_hash": ""
   },
   "apps/api/src/modules/hotels/hotel-import.apply.spec.ts": {
@@ -12204,15 +12204,15 @@
     "semantic_hash": ""
   },
   "apps/api/src/modules/hotels/hotel-import.job.spec.ts": {
-    "mtime": 1795494667.9500952,
-    "seen": 1795494865.830573,
-    "ast_hash": "3a1f5f3e31e5a8780df604ca1d56154a",
+    "mtime": 1795504740.1081216,
+    "seen": 1795505582.359947,
+    "ast_hash": "398c21645c3524320d54d77e1e79780d",
     "semantic_hash": ""
   },
   "apps/api/src/modules/hotels/hotel-import.job.ts": {
-    "mtime": 1795494667.9503365,
-    "seen": 1795494865.830574,
-    "ast_hash": "78dc325c4338e886fda039ebe4b4ae35",
+    "mtime": 1795504740.1080647,
+    "seen": 1795505582.359948,
+    "ast_hash": "0f215a9b21119a6a43a7091dcc96f16e",
     "semantic_hash": ""
   },
   "apps/api/src/modules/hotels/hotel-import.kinds.spec.ts": {
@@ -12222,21 +12222,21 @@
     "semantic_hash": ""
   },
   "apps/api/src/modules/hotels/hotel-import.kinds.ts": {
-    "mtime": 1795494667.853902,
-    "seen": 1795494865.8305762,
-    "ast_hash": "41fba300e0be86de2f0e483b15e92951",
+    "mtime": 1795504740.108013,
+    "seen": 1795505582.359967,
+    "ast_hash": "a22530c71332060ce2f8a95994cf8ef6",
     "semantic_hash": ""
   },
   "apps/api/src/modules/hotels/hotel-import.version.spec.ts": {
-    "mtime": 1795494667.8550713,
-    "seen": 1795494865.830585,
-    "ast_hash": "42ea3607449b127545c68b3124be805d",
+    "mtime": 1795504740.108182,
+    "seen": 1795505582.360105,
+    "ast_hash": "fb268c333a7f19a4a5a7cde4056fdbc3",
     "semantic_hash": ""
   },
   "apps/api/src/modules/hotels/hotel-import.version.ts": {
-    "mtime": 1795494667.9510987,
-    "seen": 1795494865.830585,
-    "ast_hash": "ca39485e6f2345c7ef5b7a04f20641d3",
+    "mtime": 1795504788.9067938,
+    "seen": 1795505582.360106,
+    "ast_hash": "4065cf0a96d183d0751f8c7dc71af5d5",
     "semantic_hash": ""
   },
   "apps/api/src/modules/hotels/hotel-subresources.service.spec.ts": {
@@ -12252,9 +12252,9 @@
     "semantic_hash": ""
   },
   "apps/api/src/modules/hotels/testing/import-service-fixtures.ts": {
-    "mtime": 1795494667.856172,
-    "seen": 1795494865.8311198,
-    "ast_hash": "a65877940102b8dff8a59011f9d117df",
+    "mtime": 1795505222.34965,
+    "seen": 1795505582.360734,
+    "ast_hash": "173e163831f8cabeb50fc383f118a767",
     "semantic_hash": ""
   },
   "apps/api/src/modules/hotels/testing/subresource-fixtures.ts": {
@@ -12342,9 +12342,9 @@
     "semantic_hash": ""
   },
   "apps/mobile/src/features/hotels-admin/hotel-import-columns-hint.tsx": {
-    "mtime": 1795494667.6673245,
-    "seen": 1795494865.8394828,
-    "ast_hash": "517dc0dbbbb7cf15042decc373db5aba",
+    "mtime": 1795501580.907895,
+    "seen": 1795505582.369657,
+    "ast_hash": "b3052c64b8768c9ee5faaea1ee7f78e1",
     "semantic_hash": ""
   },
   "apps/mobile/src/features/hotels-admin/hotel-import-content-input.tsx": {
@@ -12354,15 +12354,15 @@
     "semantic_hash": ""
   },
   "apps/mobile/src/features/hotels-admin/hotel-import-kind-picker.tsx": {
-    "mtime": 1795494667.8581684,
-    "seen": 1795494865.839484,
-    "ast_hash": "fd68944535f047e19cfeb3e556d964cf",
+    "mtime": 1795501580.907799,
+    "seen": 1795505582.369677,
+    "ast_hash": "16a7cab4d4b3586a3fc4ff2dcb9909f7",
     "semantic_hash": ""
   },
   "apps/mobile/src/features/hotels-admin/hotel-import-kinds.test.tsx": {
-    "mtime": 1795494667.8583498,
-    "seen": 1795494865.839485,
-    "ast_hash": "3eb369b410e14b30b8117bc38956796e",
+    "mtime": 1795501329.6950347,
+    "seen": 1795505582.369677,
+    "ast_hash": "2f7f88bc6543c515c46d46c7b0fb9e77",
     "semantic_hash": ""
   },
   "apps/mobile/src/features/hotels-admin/hotel-import-states.test.tsx": {
@@ -12372,21 +12372,21 @@
     "semantic_hash": ""
   },
   "apps/mobile/src/features/hotels-admin/hotel-import.kinds.ts": {
-    "mtime": 1795494667.6690063,
-    "seen": 1795494865.839489,
-    "ast_hash": "19cc9d09ce50f0cf442d67b6d6261ea1",
+    "mtime": 1795501443.1930327,
+    "seen": 1795505582.3697011,
+    "ast_hash": "204345edf8f2d641838579cf2cea55a7",
     "semantic_hash": ""
   },
   "apps/mobile/src/features/hotels-admin/hotel-import.rules.test.ts": {
-    "mtime": 1795494667.6691294,
-    "seen": 1795494865.83949,
-    "ast_hash": "b5b0d96dc173490efa1a4505bfe5ca5f",
+    "mtime": 1795504613.6710165,
+    "seen": 1795505582.369704,
+    "ast_hash": "828c8b456f1dfc48b581981511b080cf",
     "semantic_hash": ""
   },
   "apps/mobile/src/features/hotels-admin/hotel-import.rules.ts": {
-    "mtime": 1795494667.6692905,
-    "seen": 1795494865.8394911,
-    "ast_hash": "fa8ec05e907066b6e23aa91e7b6865f9",
+    "mtime": 1795504637.2582216,
+    "seen": 1795505582.369705,
+    "ast_hash": "34b7a4aa75f28f540bcfc9b10348ba4b",
     "semantic_hash": ""
   },
   "apps/mobile/src/features/hotels-admin/rooms.form.test.ts": {
@@ -12555,6 +12555,150 @@
     "mtime": 1795494668.0636766,
     "seen": 1795494865.846406,
     "ast_hash": "49457a010e9d84df3663d58bb8375133",
+    "semantic_hash": ""
+  },
+  "apps/api/src/modules/hotels/hotel-import.rates-file.spec.ts": {
+    "mtime": 1795504740.1065776,
+    "seen": 1795505582.3600051,
+    "ast_hash": "afe061c066ee1a4ab005da5b67a6e2e4",
+    "semantic_hash": ""
+  },
+  "apps/api/src/modules/hotels/hotel-import.rates-grants.spec.ts": {
+    "mtime": 1795504740.1063993,
+    "seen": 1795505582.3600059,
+    "ast_hash": "b16434ad79069dad797f0b9eee0672b0",
+    "semantic_hash": ""
+  },
+  "apps/api/src/modules/hotels/hotel-import.rates-plan.spec.ts": {
+    "mtime": 1795505261.1383288,
+    "seen": 1795505582.3600068,
+    "ast_hash": "8264b30133a1fe3da34a0ee50b3a6884",
+    "semantic_hash": ""
+  },
+  "apps/api/src/modules/hotels/hotel-import.rates-plan.ts": {
+    "mtime": 1795505268.4478207,
+    "seen": 1795505582.360008,
+    "ast_hash": "50ab0e6ce4d56ad0176580bb624ac928",
+    "semantic_hash": ""
+  },
+  "apps/api/src/modules/hotels/hotel-import.rates-recheck.spec.ts": {
+    "mtime": 1795505259.3316877,
+    "seen": 1795505582.360008,
+    "ast_hash": "5d8e208e8fa615a1510cb7670f775ee8",
+    "semantic_hash": ""
+  },
+  "apps/api/src/modules/hotels/hotel-import.rates-refusals.spec.ts": {
+    "mtime": 1795504740.1070411,
+    "seen": 1795505582.360009,
+    "ast_hash": "f39eea01400d665bc098d56e9edf3495",
+    "semantic_hash": ""
+  },
+  "apps/api/src/modules/hotels/hotel-import.rates-rules.ts": {
+    "mtime": 1795504740.1071773,
+    "seen": 1795505582.36001,
+    "ast_hash": "695f93930db1223b4d3b099b69f71cec",
+    "semantic_hash": ""
+  },
+  "apps/api/src/modules/hotels/hotel-import.rates-write.ts": {
+    "mtime": 1795504740.106739,
+    "seen": 1795505582.36001,
+    "ast_hash": "b80c89ce273b8186fbdb2205f6abe5c0",
+    "semantic_hash": ""
+  },
+  "apps/api/src/modules/hotels/hotel-import.rates.spec.ts": {
+    "mtime": 1795505229.9583335,
+    "seen": 1795505582.360011,
+    "ast_hash": "35dcda02c3542df4ab229b25488c56f9",
+    "semantic_hash": ""
+  },
+  "apps/api/src/modules/hotels/hotel-import.rates.ts": {
+    "mtime": 1795505315.2151747,
+    "seen": 1795505582.360012,
+    "ast_hash": "dc7c34cb1f702022b88fa77fbedd9a64",
+    "semantic_hash": ""
+  },
+  "apps/api/src/modules/hotels/hotel-rates.items.spec.ts": {
+    "mtime": 1795504740.1079671,
+    "seen": 1795505582.360142,
+    "ast_hash": "dd0a0778e035aaf0d0d6e787ef6500ee",
+    "semantic_hash": ""
+  },
+  "apps/api/src/modules/hotels/testing/rate-import-fixtures.ts": {
+    "mtime": 1795499318.3173604,
+    "seen": 1795505582.360735,
+    "ast_hash": "04a6d5c37b1e9a422e32fa7b8bece795",
+    "semantic_hash": ""
+  },
+  "apps/api/src/modules/hotels/testing/rate-plan-fixtures.ts": {
+    "mtime": 1795498923.383006,
+    "seen": 1795505582.360735,
+    "ast_hash": "af8f310641f2a62df793bab953a60728",
+    "semantic_hash": ""
+  },
+  "apps/api/test/hotel-import-rates.e2e-spec.ts": {
+    "mtime": 1795504740.1084776,
+    "seen": 1795505582.362159,
+    "ast_hash": "ab81b732fa86eb416cf0b355bb761684",
+    "semantic_hash": ""
+  },
+  "apps/api/test/hotel-rate-items.e2e-spec.ts": {
+    "mtime": 1795504740.1086965,
+    "seen": 1795505582.3621771,
+    "ast_hash": "356487c64fa5784f99fc81fd5b341650",
+    "semantic_hash": ""
+  },
+  "apps/mobile/src/features/hotels-admin/hotel-import-rates.test.tsx": {
+    "mtime": 1795501349.9131255,
+    "seen": 1795505582.369678,
+    "ast_hash": "0c43cc743895be05fb55c87b26d4fa47",
+    "semantic_hash": ""
+  },
+  "apps/mobile/src/features/hotels-admin/hotel-import.rates.test.ts": {
+    "mtime": 1795501169.8970456,
+    "seen": 1795505582.3697011,
+    "ast_hash": "36acc36445ca80d68f1fd6cb8aed02fb",
+    "semantic_hash": ""
+  },
+  "apps/mobile/src/features/hotels-admin/hotel-import.rates.ts": {
+    "mtime": 1795504650.2437217,
+    "seen": 1795505582.3697019,
+    "ast_hash": "12511afdc1872e97152771e94dc1fd9c",
+    "semantic_hash": ""
+  },
+  "apps/mobile/src/features/hotels-admin/hotel-import.report.test.ts": {
+    "mtime": 1795501248.2632642,
+    "seen": 1795505582.3697028,
+    "ast_hash": "53965d072fb8e076d2af20a02377f581",
+    "semantic_hash": ""
+  },
+  "apps/mobile/src/features/hotels-admin/hotel-import.report.ts": {
+    "mtime": 1795504650.245525,
+    "seen": 1795505582.3697028,
+    "ast_hash": "a0d46ec34073557631aadfada00304ce",
+    "semantic_hash": ""
+  },
+  "apps/mobile/src/features/hotels-admin/rate-item-row.test.tsx": {
+    "mtime": 1795504518.9799557,
+    "seen": 1795505582.370563,
+    "ast_hash": "e0dcccb298cc645ffe13ef80f54df656",
+    "semantic_hash": ""
+  },
+  "packages/core/src/labels.test.ts": {
+    "mtime": 1795504197.484323,
+    "seen": 1795505582.379814,
+    "ast_hash": "35debaf372ace014be09f2170ceb46b2",
+    "semantic_hash": ""
+  },
+  "packages/core/src/schemas/hotel-import-rates.test.ts": {
+    "mtime": 1795504740.1101341,
+    "seen": 1795505582.380291,
+    "ast_hash": "c97a0090107ee2b4e4fb38ec59c61582",
+    "semantic_hash": ""
+  },
+  "packages/core/src/schemas/hotel-import-rates.ts": {
+    "mtime": 1795504740.1099987,
+    "seen": 1795505582.380291,
+    "ast_hash": "1a252488376496f1311c1ef34e7cb32f",
     "semantic_hash": ""
   }
 }
