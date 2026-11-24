@@ -46,6 +46,8 @@ export type {
   HotelFieldKinds,
   HotelFieldValues,
 } from "./hotel-change-set";
+// A hotel's web address as a key (D-188 §6): a new-hotel request's proposed-address key and the hints.
+export { normaliseWebAddress, WEB_ADDRESS_KEY_MAX_LENGTH, webAddressHost } from "./web-address";
 export { matchContact, matchRowsByName } from "./hotel-row-match";
 export type {
   HotelContactMatch,

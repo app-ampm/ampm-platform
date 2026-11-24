@@ -120,6 +120,33 @@ export const storageDiskGuard = z
   });
 export type StorageDiskGuard = z.infer<typeof storageDiskGuard>;
 
+/**
+ * The hotel information form's mode (D-188 §6, plan §4.10): `off` answers 404 on every public route and
+ * sends nothing to a hotel; `test_only` admits only requests marked as tests; `on` admits every request.
+ */
+export const hotelFormMode = z.enum(["off", "test_only", "on"]);
+export type HotelFormMode = z.infer<typeof hotelFormMode>;
+
+/**
+ * The hotel information form's policy (D-188 §6): the mode, read past the configuration cache
+ * (`ConfigService.getFresh`) by the API and the worker; a link's lifetime in days and how far past its
+ * first expiry it may be extended; the days a merged request stays status-only; the people a request may
+ * verify; and the reply-to address of hotel-form email and the help contact the form shows (decision 21).
+ * The reply-to and the help contact start empty: AMPM's admin mailbox is a real address, which the
+ * repository never carries, so a Super Admin sets them. A field this schema does not know is dropped, not
+ * refused, so a release still reads a value a later release wrote (a rollback).
+ */
+export const hotelFormPolicy = z.object({
+  mode: hotelFormMode,
+  linkValidityDays: z.number().int().min(1).max(90),
+  maxExtensionDays: z.number().int().min(0).max(60),
+  statusOnlyDays: z.number().int().min(0).max(30),
+  maxPeople: z.number().int().min(1).max(20),
+  replyTo: z.string().trim().toLowerCase().email().max(255).nullable(),
+  helpContact: z.string().trim().min(1).max(300).nullable(),
+});
+export type HotelFormPolicy = z.infer<typeof hotelFormPolicy>;
+
 /** One registry entry; the helper makes the compiler check the baseline against its own schema. */
 function entry<S extends z.ZodType>(
   schema: S,
@@ -169,6 +196,16 @@ export const CONFIG_REGISTRY = {
     milestoneAmountsVisible: false,
   }),
   "storage.disk_guard": entry(storageDiskGuard, { floorGiB: 9, warnGiB: 12 }),
+  // D-188 §6: off until a Super Admin switches it, so nothing reaches a hotel before then.
+  "hotel_form.policy": entry(hotelFormPolicy, {
+    mode: "off",
+    linkValidityDays: 30,
+    maxExtensionDays: 60,
+    statusOnlyDays: 7,
+    maxPeople: 10,
+    replyTo: null,
+    helpContact: null,
+  }),
   "notification.templates": entry(notificationTemplates, {
     "staff.invite": {
       email: {
