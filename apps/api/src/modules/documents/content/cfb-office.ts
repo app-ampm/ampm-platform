@@ -1,5 +1,7 @@
+import type { ContentKind } from "@ampm/core";
+
 import { type CfbEntry, type CompoundFile, readCompoundFile } from "./cfb.js";
-import { type ContentKind, wordRefusal } from "./kinds.js";
+import { wordRefusal } from "./kinds.js";
 import { refuse } from "./refusal.js";
 
 /*

@@ -29,6 +29,7 @@ describe("UPLOAD_REFUSAL_MESSAGES", () => {
     ["pdf_unreadable", "save it as a plain PDF"],
     ["password_protected", "remove the password and upload it again"],
     ["heif_image", "save it as a JPEG or PNG"],
+    ["image_undecodable", "save a new copy"],
   ])("tells the uploader what to do for %s (D-187)", (reason, advice) => {
     expect(UPLOAD_REFUSAL_MESSAGES[reason]).toContain(advice);
   });
@@ -67,7 +68,24 @@ describe("uploadRefusalErrorCode", () => {
       "external_content",
       "pdf_active_content",
       "pdf_unreadable",
+      "image_too_many_pixels",
+      "image_undecodable",
     ]);
     expect(ERROR_CODES.validation_failed).toBe(400);
+  });
+});
+
+describe("the image refusals (D-187 §4)", () => {
+  it("refuses an image over the pixel limit in D-187's words", () => {
+    expect(UPLOAD_REFUSAL_MESSAGES.image_too_many_pixels).toBe(
+      "Images can be at most 25 megapixels: save it as a PDF or a smaller image.",
+    );
+  });
+
+  it("come last: they are decided after the content checks and the scan", () => {
+    expect(UPLOAD_REFUSAL_REASONS.slice(-2)).toEqual([
+      "image_too_many_pixels",
+      "image_undecodable",
+    ]);
   });
 });

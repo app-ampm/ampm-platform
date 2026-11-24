@@ -1,9 +1,9 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { inflateRawSync } from "node:zlib";
+import type { ContentKind } from "@ampm/core";
 import { describe, expect, it } from "vitest";
 
 import { inspectContent } from "./inspect-content.js";
-import type { ContentKind } from "./kinds.js";
 import { EVERY_KIND } from "./testing/refusals.js";
 import { writeZip } from "./testing/zip-writer.js";
 import { readZip } from "./zip.js";

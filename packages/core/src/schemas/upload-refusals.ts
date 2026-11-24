@@ -45,6 +45,10 @@ export const UPLOAD_REFUSAL_REASONS = [
   "pdf_active_content",
   /** A PDF the checks cannot read: a stream that never ends, or one in a form they cannot decode. */
   "pdf_unreadable",
+  /** An image over 25 megapixels, refused from its header before its pixels are decoded (D-187 §4). */
+  "image_too_many_pixels",
+  /** An image that passed the checks but will not decode, so it cannot be kept or resized. */
+  "image_undecodable",
 ] as const;
 
 export type UploadRefusalReason = (typeof UPLOAD_REFUSAL_REASONS)[number];
@@ -85,6 +89,10 @@ export const UPLOAD_REFUSAL_MESSAGES: Readonly<Record<UploadRefusalReason, strin
   pdf_active_content:
     "This PDF contains scripts, attachments, forms or media, which are not accepted: save it as a plain PDF and upload that.",
   pdf_unreadable: "This PDF could not be checked: save it as a plain PDF and upload that.",
+  image_too_many_pixels:
+    "Images can be at most 25 megapixels: save it as a PDF or a smaller image.",
+  image_undecodable:
+    "This image could not be read and may be damaged: open it, save a new copy and upload that.",
 };
 
 /** The reasons that mean "not a type this upload takes" rather than "refused inside a type it takes". */

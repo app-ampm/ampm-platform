@@ -16,9 +16,10 @@ import { isoDateTime } from "./common.js";
  * window.open(api.resolveUrl(link.url));
  */
 /**
- * The ceiling for one stored document (security.md: size limits per document type) — one value while the
- * signed contract is the only type. Shared so the app refuses an oversized file before uploading it and
- * the API enforces the same number.
+ * The ceiling for a document of a type that takes a PDF, JPEG or PNG only (security.md: size limits per
+ * document type): the milestone contract, the agreement's signed copy and the couple's consent. Shared so
+ * the app refuses an oversized file before uploading it and the API enforces the same number. Every
+ * type's kinds and caps are in DOCUMENT_TYPE_RULES (D-187 §3).
  *
  * @example
  * if (picked.sizeBytes > MAX_DOCUMENT_UPLOAD_BYTES) toast.show({ title: "Over the 20 MB limit" });
@@ -26,7 +27,7 @@ import { isoDateTime } from "./common.js";
 export const MAX_DOCUMENT_UPLOAD_BYTES = 20 * 1024 * 1024;
 
 /**
- * The content types a document may be (the API sniffs the bytes; this list narrows the file dialog).
+ * The content types those documents may be (the API checks the bytes; this list narrows the file dialog).
  *
  * @example
  * await pickFile(DOCUMENT_UPLOAD_TYPES.join(","));

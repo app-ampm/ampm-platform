@@ -1,7 +1,7 @@
+import { CONTENT_KINDS, type ContentKind } from "@ampm/core";
 import { describe, expect, it } from "vitest";
 
 import { inspectContent, MAX_INSPECTED_BYTES } from "./inspect-content.js";
-import { CONTENT_KINDS, type ContentKind } from "./kinds.js";
 import { buildPackage } from "./testing/ooxml-builder.js";
 import { pptFile, xlsFile } from "./testing/office-records.js";
 import { buildPdf } from "./testing/pdf-builder.js";

@@ -1,7 +1,7 @@
+import type { ContentKind } from "@ampm/core";
 import { describe, expect, it } from "vitest";
 
 import { inspectCompoundFile, walkPptRecords } from "./cfb-office.js";
-import type { ContentKind } from "./kinds.js";
 import { writeCompoundFile } from "./testing/cfb-writer.js";
 import {
   currentUserStream,

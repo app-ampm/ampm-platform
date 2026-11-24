@@ -57,3 +57,8 @@ export * from "./booking-milestones";
 // Module N documents (documents.ts), D-132. The first slice: a signed contract on a booking milestone,
 // reached only through a minted 15-minute access link (security.md); the storage key never leaves the API.
 export * from "./documents";
+// What the upload content checks decide a file is (content-kinds.ts), the document types and the kinds
+// and caps each takes (document-types.ts), and a hotel's documents library (hotel-documents.ts); D-187.
+export * from "./content-kinds";
+export * from "./document-types";
+export * from "./hotel-documents";

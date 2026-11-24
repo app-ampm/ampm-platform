@@ -1,5 +1,7 @@
+import type { ContentKind } from "@ampm/core";
+
 import { inspectCompoundFile } from "./cfb-office.js";
-import type { ContentKind, InspectResult } from "./kinds.js";
+import type { InspectResult } from "./kinds.js";
 import { inspectOoxml } from "./ooxml.js";
 import { checkPdf } from "./pdf-check.js";
 import { refusePolyglot } from "./polyglot.js";

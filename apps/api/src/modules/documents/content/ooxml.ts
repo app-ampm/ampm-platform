@@ -1,6 +1,6 @@
-import type { UploadRefusalReason } from "@ampm/core";
+import type { ContentKind, UploadRefusalReason } from "@ampm/core";
 
-import { type ContentKind, type OoxmlKind, wordRefusal } from "./kinds.js";
+import { type OoxmlKind, wordRefusal } from "./kinds.js";
 import {
   contentTypeOf,
   type ContentTypes,

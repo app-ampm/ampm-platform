@@ -1,6 +1,6 @@
+import type { ContentKind } from "@ampm/core";
 import { describe, expect, it } from "vitest";
 
-import type { ContentKind } from "./kinds.js";
 import { inspectOoxml } from "./ooxml.js";
 import { buildPackage, type MainKind, TRANSITIONAL_RELS } from "./testing/ooxml-builder.js";
 import { EVERY_KIND, refusalOf } from "./testing/refusals.js";

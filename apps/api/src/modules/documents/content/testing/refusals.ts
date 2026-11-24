@@ -1,4 +1,5 @@
-import type { ContentKind } from "../kinds.js";
+import { contentKind, type ContentKind } from "@ampm/core";
+
 import { ContentRefusal } from "../refusal.js";
 
 /*
@@ -6,21 +7,7 @@ import { ContentRefusal } from "../refusal.js";
  */
 
 /** Every kind: a slot that takes everything, so a spec sees the content rules and not the slot's. */
-export const EVERY_KIND: ReadonlySet<ContentKind> = new Set<ContentKind>([
-  "pdf",
-  "jpeg",
-  "png",
-  "webp",
-  "gif",
-  "mp4",
-  "pptx",
-  "ppsx",
-  "potx",
-  "ppt",
-  "xlsx",
-  "xltx",
-  "xls",
-]);
+export const EVERY_KIND: ReadonlySet<ContentKind> = new Set<ContentKind>(contentKind.options);
 
 /** The refusal a piece of work ends in; fails the spec when it ends without one. */
 export async function refusalOf(work: Promise<unknown> | (() => unknown)): Promise<ContentRefusal> {
