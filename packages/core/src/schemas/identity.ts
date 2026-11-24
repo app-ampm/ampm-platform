@@ -64,7 +64,7 @@ export const financeReach = z.enum(["own_invoices", "agreement_invoices", "demo_
 export type FinanceReach = z.infer<typeof financeReach>;
 
 /**
- * The kinds of client request, `client_requests.request_type` (data-model.md line 1210).
+ * The kinds of client request, `client_requests.request_type` (data-model.md line 1516).
  *
  * @example
  * const kind = requestType.parse(body.requestType);

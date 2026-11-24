@@ -20,9 +20,9 @@ Global conventions that apply to every row: money is `numeric(14,2)` with a sibl
 
 | Module | Tables | Fields | Required at creation | Client or public visible | Restricted, sensitive or secret |
 |---|---|---|---|---|---|
-| A — Identity, access and administration | 20 | 129 | 61 | 10 | 6 |
+| A — Identity, access and administration | 20 | 131 | 61 | 10 | 7 |
 | B — CRM, subscriptions and commercial agreements | 13 | 143 | 55 | 94 | 4 |
-| C — Hotel intelligence | 10 | 141 | 37 | 115 | 11 |
+| C — Hotel intelligence | 12 | 187 | 48 | 115 | 15 |
 | D — Hotel consultancy | 6 | 70 | 28 | 65 | 3 |
 | E — Wedding project | 3 | 36 | 13 | 29 | 3 |
 | F — Functions, programme and run-of-show | 4 | 43 | 17 | 27 | 1 |
@@ -37,9 +37,9 @@ Global conventions that apply to every row: money is `numeric(14,2)` with a sibl
 | O — Checklists, closure and feedback | 4 | 30 | 17 | 7 | 0 |
 | P — Public website content (dormant) | 2 | 17 | 8 | 17 | 0 |
 | Q — Live chat | 2 | 16 | 6 | 16 | 0 |
-| **Total** | **117** | **1212** | **501** | **683** | **109** |
+| **Total** | **119** | **1260** | **512** | **683** | **114** |
 
-Fields by visibility class: CLIENT 650, INTERNAL 363, Other (per record, recipient or parent) 57, RESTRICTED-NOTES 35, PUBLIC 33, RESTRICTED-FINANCE 31, RESTRICTED-CONTACT 13, RESTRICTED-IDENTITY 13, SECRET 11, RESTRICTED-BANK 4, SENSITIVE-GUEST 2.
+Fields by visibility class: CLIENT 650, INTERNAL 406, Other (per record, recipient or parent) 57, RESTRICTED-NOTES 36, PUBLIC 33, RESTRICTED-FINANCE 31, RESTRICTED-CONTACT 16, RESTRICTED-IDENTITY 13, SECRET 12, RESTRICTED-BANK 4, SENSITIVE-GUEST 2.
 
 ---
 
@@ -216,8 +216,8 @@ Created at stage: **System** · Default editor: SYS · Default visibility: Recip
 | Field | Type and validation | Options | Edited by | Visibility | Required | Automation and report impact |
 |---|---|---|---|---|---|---|
 | `id` (PK) | UUID v7, generated |  | SYS | Recipient only | System | — |
-| `recipient_type` | one of the listed options | user, guest | SYS | Recipient only | At creation | — |
-| `recipient_id` | UUID |  | SYS | Recipient only | At creation | — |
+| `recipient_type` | one of the listed options | user, guest, external | SYS | Recipient only | At creation | — |
+| `recipient_id` | references users (user), the guest token (guest), or the record the message is about, such as a hotel_info_requests row (external) |  | SYS | Recipient only | At creation | — |
 | `channel` | one of the listed options; (A-11) | in_app, email, whatsapp, sms, push | SYS | Recipient only | At creation | — |
 | `template_key` | string, up to 255 characters |  | SYS | Recipient only | At creation | — |
 | `entity_type` | string, up to 255 characters |  | SYS | Recipient only | Optional | — |
@@ -227,6 +227,8 @@ Created at stage: **System** · Default editor: SYS · Default visibility: Recip
 | `sent_at` | timestamp (UTC) |  | SYS (when the action happens) | Recipient only | System | — |
 | `delivered_at` | timestamp (UTC) |  | SYS (when the action happens) | Recipient only | System | — |
 | `data` | valid JSON matching the registered schema; server-only render variables e.g. the activation link (5.2); never in a view |  | SYS | Recipient only | Optional | — |
+| `recipient_address` | an email address for email, an E.164 mobile for SMS; set for, and only for, an external recipient |  | SYS | RESTRICTED-CONTACT | System, for recipient_type external | Cleared with data when the row leaves queued: sent, failed, or dead-lettered (failPermanently); never in a view, and no feed lists an external row |
+| `reply_to` | valid email address |  | SYS | INTERNAL | Optional | The email's Reply-To (hotel-form email: configurations hotel_form.policy replyTo); cleared with data when the row leaves queued |
 
 ### `notification_preferences`
 
@@ -766,6 +768,66 @@ Created at stage: **Discovery (client)** · Default editor: CO, CA, CV (own acco
 | `project_id` (FK) | references wedding_projects; nullable, set when linked to a wedding (GP-27) |  | CO, CA, CV (own account); DP (demo); SYS back-fills project_id | CLIENT | Optional | Back-filled when a project is created (GP-27) |
 | `saved_by_user_id` (FK) | references users |  | SYS (acting user) | CLIENT | At creation | — |
 | `note` | text, up to 10,000 characters |  | CO, CA, CV (own account); DP (demo); SYS back-fills project_id | CLIENT | Optional | — |
+
+### `hotel_info_requests`
+
+Created at stage: **Hotel intake** · Default editor: SA; HT · Default visibility: INTERNAL · Assumptions: D-188, D-172, D-173 · SM and PM read the summary response model, without the recipient or the events (permission-matrix §5.3)
+
+| Field | Type and validation | Options | Edited by | Visibility | Required | Automation and report impact |
+|---|---|---|---|---|---|---|
+| `id` (PK) | UUID v7, generated |  | SYS | INTERNAL | System | — |
+| `reference` (unique) | HIR-<year>-<n>: the creation year (UTC) and a number from the sequence hotel_info_request_ref_seq, four digits at least; unique |  | SYS | INTERNAL | System | Drawn when the request is created; the sequence never resets |
+| `kind` | one of the listed options | onboarding, refresh | SA; HT, at creation | INTERNAL | At creation | — |
+| `target` | one of the listed options | existing, new | SA; HT, at creation | INTERNAL | At creation | — |
+| `hotel_id` (FK) | references hotels; nullable for a new hotel until the merge |  | SA; HT | INTERNAL | At creation for target existing (CHECK hotel_info_requests_existing_has_hotel); set at the merge for target new | One live request per hotel: partial unique index hotel_info_requests_hotel_live_key; live means open, submitted, in_review or changes_requested; a soft-deleted request frees it |
+| `proposed_name` | string, up to 255 characters |  | SA; HT | INTERNAL | At creation for target new (CHECK hotel_info_requests_new_has_proposal) | — |
+| `proposed_destination_id` (FK) | references destinations |  | SA; HT | INTERNAL | At creation for target new | — |
+| `proposed_web_address` | an http or https address, up to 255 characters, as staff typed it |  | SA; HT | INTERNAL | Optional | — |
+| `proposed_web_address_key` | core normaliseWebAddress of proposed_web_address, up to 2,048 characters |  | SYS | INTERNAL | System, for target new | One live new-hotel request per key: partial unique index hotel_info_requests_web_address_live_key; live means open, submitted, in_review or changes_requested; a soft-deleted request frees it |
+| `official_website` | string, up to 255 characters; entered by staff |  | SA; HT | INTERNAL | Optional | — |
+| `switchboard_phone` | E.164 format, default +91 |  | SA; HT | INTERNAL | Optional | — |
+| `switchboard_source` | string, up to 255 characters; where staff found the switchboard number |  | SA; HT | INTERNAL | Optional | — |
+| `is_test` | true or false; a Super Admin's test request |  | SA only, at creation | INTERNAL | Optional | Left out of the queue unless asked for, and out of the measures; a test request targets a draft hotel or a new hotel only |
+| `status` | one of the listed options | open, submitted, in_review, changes_requested, merged, rejected, revoked | SA; HT | INTERNAL | At creation | Per permission-matrix §7 Hotel information request; each change writes an event and is audited; expiry is worked out from expires_at, never stored as a status |
+| `expires_at` | creation plus linkValidityDays (configurations hotel_form.policy); extended by up to maxExtensionDays past the first expiry |  | SYS at creation; SA, HT extend it | INTERNAL | At creation | The link stops working after it; the queue and the expiry sweeps read it with status |
+| `status_only_until` | timestamp (UTC); set at the merge |  | SYS | INTERNAL | Optional | Set at the merge: merged_at plus statusOnlyDays |
+| `display_label` | string, up to 255 characters; the staff label shown in emails and lists |  | SA; HT | INTERNAL | Optional | — |
+| `staff_note` | text, up to 10,000 characters |  | SA; HT | INTERNAL | Optional | — |
+| `token_hash` (unique) | SHA-256 of the link's secret (hfl_ and the base64url of 32 random bytes); unique; the secret itself is never stored, logged or audited |  | SYS | SECRET | At creation | Replaced at each reissue |
+| `token_generation` | integer, 1 or more |  | SYS | INTERNAL | System | Plus 1 at each reissue; sessions opened with an older generation end |
+| `link_issued_at` | timestamp (UTC) |  | SYS | INTERNAL | System | Set at creation and at each reissue |
+| `link_emailed_at` | timestamp (UTC) |  | SYS | INTERNAL | System | Set when the link email is queued to recipient_email |
+| `recipient_name` | string, up to 255 characters, as AMPM entered it |  | SA; HT | RESTRICTED-CONTACT | Optional | — |
+| `recipient_email` | valid email address, stored lowercase; -CONTACT, as AMPM entered it |  | SA; HT | RESTRICTED-CONTACT | Optional | The only address the link and the hotel's later emails go to |
+| `prefill_mode` | one of the listed options | none | SYS | INTERNAL | Optional | none in version 1: the form shows nothing from the catalogue |
+| `revision` | integer, 0 or more; submitted revisions, from 0 |  | SYS | INTERNAL | System | Plus 1 at each submit |
+| `submitted_at` | timestamp (UTC) |  | SYS (when the action happens) | INTERNAL | System | — |
+| `submitted_by_person_id` | references hotel_info_request_people (Slice 7b) |  | SYS | INTERNAL | Optional | — |
+| `reviewer_user_id` (FK) | references users |  | SYS (acting user) | INTERNAL | Optional | The reviewer holding the claim while in_review |
+| `review_started_at` | timestamp (UTC) |  | SYS (when the action happens) | INTERNAL | System | — |
+| `changes_requested_at` | timestamp (UTC) |  | SYS (when the action happens) | INTERNAL | System | — |
+| `rejected_at` | timestamp (UTC) |  | SYS (when the action happens) | INTERNAL | System | — |
+| `reject_reason` | text, up to 10,000 characters; internal |  | SA; HT, when rejecting | RESTRICTED-NOTES | Optional | — |
+| `merged_at` | timestamp (UTC) |  | SYS (when the action happens) | INTERNAL | System | — |
+| `merge_plan_hash` | SHA-256 of the merge plan |  | SYS | INTERNAL | Optional | — |
+| `revoked_at` | timestamp (UTC) |  | SYS (when the action happens) | INTERNAL | System | — |
+| `revoke_reason` | text, up to 10,000 characters |  | SA; HT, when revoking; SYS when the hotel is deleted | INTERNAL | Optional | — |
+| `retention_class` | hotel_intake |  | SYS | INTERNAL | System | Retention candidates are proposed for a Super Admin to approve (A-17) |
+
+### `hotel_info_request_events`
+
+Created at stage: **Hotel intake** · Default editor: SYS · Default visibility: INTERNAL · Assumptions: D-188 · append-only by convention: written in the transaction that makes the change; the Hotel team's history of a request (the audit log stays the Super Admin's)
+
+| Field | Type and validation | Options | Edited by | Visibility | Required | Automation and report impact |
+|---|---|---|---|---|---|---|
+| `id` (PK) | UUID v7, generated |  | SYS | INTERNAL | System | — |
+| `request_id` (FK) | references hotel_info_requests |  | SYS | INTERNAL | At creation | — |
+| `event_type` | one of the listed options | created, link_reissued, link_emailed, share_recorded, updated, expiry_extended, revoked | SYS | INTERNAL | At creation | — |
+| `actor_kind` | one of the listed options | staff, hotel_person, system | SYS | INTERNAL | At creation | — |
+| `actor_user_id` (FK) | references users; the staff user, when staff acted |  | SYS (acting user) | INTERNAL | When actor_kind is staff | — |
+| `actor_person_id` | references hotel_info_request_people (Slice 7b) |  | SYS | INTERNAL | When actor_kind is hotel_person | — |
+| `detail_json` | valid JSON; personal data masked before storage; never the link's secret |  | SYS | INTERNAL | Optional | — |
+| `occurred_at` | timestamp (UTC) |  | SYS | INTERNAL | System | — |
 
 ---
 
