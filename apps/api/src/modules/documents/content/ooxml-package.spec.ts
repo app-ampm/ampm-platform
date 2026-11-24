@@ -144,6 +144,15 @@ describe("inspectOoxml: refused anywhere in the package (D-187 §2)", () => {
       "active_content",
     ],
     [
+      "a customised ribbon and Quick Access Toolbar (userCustomization)",
+      {
+        relationships: [
+          rel("", `${MS_RELS}/ui/userCustomization`, "userCustomization/customUI.xml"),
+        ],
+      },
+      "active_content",
+    ],
+    [
       "a web extension (add-in)",
       {
         parts: [

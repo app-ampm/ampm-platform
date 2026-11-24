@@ -84,6 +84,25 @@ describe("inspectOoxml: DDE formulas in worksheets", () => {
     }
   });
 
+  it("refuses a sheet that ends inside a formula as damaged, never skipping its DDE check", async () => {
+    const body = `<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData><row r="1"><c r="A1"><f>cmd|' /C calc'!A0`;
+    const refusal = await refusalOf(inspectOoxml(buildPackage({ kind: "xlsx", body }), EVERY_KIND));
+    expect(refusal.reason).toBe("file_damaged");
+  });
+
+  it.each(["calculatedColumnFormula", "totalsRowFormula"])(
+    "refuses a DDE formula in a table's %s",
+    async (element) => {
+      const table = {
+        name: "xl/tables/table1.xml",
+        contentType: "application/vnd.openxmlformats-officedocument.spreadsheetml.table+xml",
+        data: `<table xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" id="1" name="Halls" ref="A1:B3"><tableColumns count="2"><tableColumn id="1" name="Hall"/><tableColumn id="2" name="Rate"><${element}>cmd|' /C calc'!A0</${element}></tableColumn></tableColumns></table>`,
+      };
+      const pkg = buildPackage({ kind: "xlsx", parts: [table] });
+      expect((await refusalOf(inspectOoxml(pkg, EVERY_KIND))).reason).toBe("external_content");
+    },
+  );
+
   it("accepts a pipe inside a formula's string literal", async () => {
     const body = sheet(`<c r="A1"><f>CONCAT("Hall A | Hall B", "x""|""y")</f></c>`);
     await expect(inspectOoxml(buildPackage({ kind: "xlsx", body }), EVERY_KIND)).resolves.toBe(

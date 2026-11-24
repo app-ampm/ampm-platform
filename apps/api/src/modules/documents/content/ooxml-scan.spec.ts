@@ -30,6 +30,22 @@ describe("partScanner (D-187 §2: actions and DDE inside a part)", () => {
     const xml = `<c><f>${"A".repeat(MAX_FORMULA_BYTES + 1)}</f></c>`;
     expect((await refusalOf(() => scanPart(xml))).reason).toBe("file_damaged");
   });
+
+  it.each([
+    ["inside a formula, before its DDE check", "<sheetData><row><c><f>cmd|' /C calc'!A0"],
+    ["with an element still open", "<sheetData><row><c><v>1</v>"],
+    ["with an end tag that opened nothing", "<sheetData/></row>"],
+  ])("refuses a part that ends %s as damaged", async (_name, xml) => {
+    expect((await refusalOf(() => scanPart(xml))).reason).toBe("file_damaged");
+  });
+
+  it.each(["calculatedColumnFormula", "totalsRowFormula"])(
+    "finds a DDE formula in a table's %s",
+    async (element) => {
+      const xml = `<table><tableColumns><tableColumn id="1" name="Rate"><${element}>cmd|' /C calc'!A0</${element}></tableColumn></tableColumns></table>`;
+      expect((await refusalOf(() => scanPart(xml))).reason).toBe("external_content");
+    },
+  );
 });
 
 describe("isDdeFormula", () => {

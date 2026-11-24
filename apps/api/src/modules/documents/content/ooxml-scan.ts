@@ -7,16 +7,21 @@ import { decodeXmlEntities, type XmlEvents, XmlScanner } from "./xml-scan.js";
  * - PowerPoint's `ppaction://program`, `ppaction://macro` and `ppaction://ole` actions, in any attribute
  *   once character references are decoded (`&#112;paction://` is the same action to PowerPoint);
  * - DDE formulas (`app|topic!item`) in worksheet cells, defined names, data validation, conditional
- *   formatting, charts and the VML form controls (`x:Fmla…`): a `|` outside a formula's string literals.
+ *   formatting, table columns, charts and the VML form controls (`x:Fmla…`): a `|` outside a formula's
+ *   string literals;
+ * - a part that ends with an element still open, which would end inside a formula before its check ran.
  */
 
 const PROGRAM_ACTION = /ppaction:\/\/(?:program|macro|ole)/i;
+/** Elements whose text is a formula, compared lower-cased; a table's column formulas included. */
 const FORMULA_ELEMENTS: ReadonlySet<string> = new Set([
   "f",
   "formula",
   "formula1",
   "formula2",
   "definedname",
+  "calculatedcolumnformula",
+  "totalsrowformula",
 ]);
 export const MAX_FORMULA_BYTES = 256 * 1024;
 
@@ -67,6 +72,12 @@ class PartRules implements XmlEvents {
   endTag(): void {
     if (this.depth === this.formulaDepth) this.finishFormula();
     this.depth -= 1;
+  }
+
+  end(): void {
+    if (this.depth !== 0) {
+      refuse("file_damaged", `XML whose elements do not all close in ${fromFile(this.part)}`);
+    }
   }
 
   text(bytes: Buffer): void {

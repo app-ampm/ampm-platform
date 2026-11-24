@@ -83,6 +83,7 @@ const REFUSED_MICROSOFT_RELATIONSHIPS: ReadonlyArray<[string, UploadRefusalReaso
   ["/keymapcustomizations", "macros"],
   ["/activexcontrolbinary", "active_content"],
   ["/ui/extensibility", "active_content"],
+  ["/ui/usercustomization", "active_content"],
   ["/webextension", "active_content"],
   ["/xlexternallinkpath/", "external_content"],
 ];

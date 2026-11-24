@@ -14,6 +14,8 @@ export interface XmlEvents {
   endTag(name: string): void;
   /** Character data, text or CDATA, while `capture` is on. Text keeps its entities encoded. */
   text(bytes: Buffer): void;
+  /** The part ended, outside any markup (the scanner has checked that). */
+  end?(): void;
 }
 
 export const MAX_MARKUP_BYTES = 1024 * 1024;
@@ -68,6 +70,7 @@ export class XmlScanner {
     }
     if (this.mode !== "text")
       refuse("file_damaged", `XML that ends inside markup in ${fromFile(this.part)}`);
+    this.events.end?.();
   }
 
   /** Skips a UTF-8 byte order mark; refuses UTF-16 and UTF-32, with or without one. */
