@@ -77,6 +77,42 @@ describe("checkPdf: refused names, outside and inside object streams", () => {
   });
 });
 
+/** An object a viewer could reach through the cross-reference table, whatever surrounds it. */
+const HIDDEN = "9 0 obj << /S /JavaScript /JS (app.alert(1)) >> endobj";
+
+describe("checkPdf: every object header is one the check read", () => {
+  it.each<[string, PdfBuildOptions]>([
+    ["in a comment", { objects: [{ num: 6, body: `<< /Type /Example >>\n% ${HIDDEN}\n` }] }],
+    ["in a string", { objects: [{ num: 6, body: `<< /Title (${HIDDEN}) >>` }] }],
+    [
+      "in an uncompressed stream's data",
+      { objects: [{ num: 6, body: "<< >>", stream: Buffer.from(`${HIDDEN}\n`) }] },
+    ],
+    [
+      "in the data of a stream that only claims to be compressed",
+      {
+        objects: [
+          { num: 6, body: "<< /Filter /FlateDecode >>", stream: Buffer.from(`${HIDDEN}\n`) },
+        ],
+      },
+    ],
+    [
+      "in a string, with a comment between its numbers and obj",
+      { objects: [{ num: 6, body: "<< /Title (9 0 %\nobj << /S /JavaScript >> endobj) >>" }] },
+    ],
+  ])("refuses an object hidden %s", async (_name, options) => {
+    expect((await refusalOf(() => checkPdf(buildPdf(options)))).reason).toBe("pdf_unreadable");
+  });
+
+  it("accepts a header across lines and a comment, and the word obj in text", () => {
+    const pdf = buildPdf({
+      objects: [{ num: 6, body: "<< /Title (an obj file: rooms 1 2 objects) >>" }],
+      tail: Buffer.from("9\n0 % a note\nobj << /Type /Example >> endobj\n"),
+    });
+    expect(() => checkPdf(pdf)).not.toThrow();
+  });
+});
+
 describe("checkPdf: in linear time", () => {
   it("reads a word of 1 MB of digits ending in a letter in under a second", () => {
     const pdf = Buffer.from(`%PDF-1.7\n${"1".repeat(1_000_000)}x\n%%EOF\n`, "latin1");

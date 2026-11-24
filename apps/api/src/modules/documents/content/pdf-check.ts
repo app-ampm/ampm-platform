@@ -1,4 +1,5 @@
 import { firstFileId, openEncryption, type PdfDecryptor } from "./pdf-crypt.js";
+import { refuseUnexaminedHeaders } from "./pdf-headers.js";
 import { PdfLexer, type PdfToken } from "./pdf-lexer.js";
 import {
   dictOf,
@@ -26,8 +27,9 @@ import { refuse } from "./refusal.js";
  * after `#xx` escapes are decoded. /EF is refused with them: an embedded file stream's /Type is optional,
  * and /EF is the file specification key that every embedded file is reached by (a file attachment
  * annotation needs no /EmbeddedFiles tree). A stream without `endstream`, or an object stream it cannot
- * decode, is unreadable. An encrypted file is opened with the empty user password; one that needs a
- * password to open is refused.
+ * decode, is unreadable, and so is an object header a viewer could read where this reading does not pass
+ * (in a comment, a string or stream data: pdf-headers.ts). An encrypted file is opened with the empty user
+ * password; one that needs a password to open is refused.
  */
 
 export const REFUSED_NAMES: ReadonlySet<string> = new Set([
@@ -67,6 +69,8 @@ class PdfScan {
   readonly objects = new Map<number, number>();
   readonly trailers: PdfDict[] = [];
   readonly objectStreams: ObjectStream[] = [];
+  /** Where each `obj` keyword this reading passed through starts, in order. */
+  readonly objKeywords: number[] = [];
   private current: { num: number; gen: number } | null = null;
   private trailerNext = false;
 
@@ -100,12 +104,12 @@ class PdfScan {
   }
 
   private openObject(): void {
+    this.objKeywords.push(this.lexer.position - "obj".length);
+    if (this.objKeywords.length > MAX_OBJECTS) refuse("pdf_unreadable", "over a million objects");
     const id = this.builder.depth === 0 ? objectId(this.builder.top) : null;
     this.builder.clear();
     this.current = id;
-    if (!id) return;
-    this.objects.set(id.num, this.lexer.position);
-    if (this.objects.size > MAX_OBJECTS) refuse("pdf_unreadable", "over a million objects");
+    if (id) this.objects.set(id.num, this.lexer.position);
   }
 
   private closeObject(): void {
@@ -168,6 +172,7 @@ function decryptorOf(bytes: Buffer, scan: PdfScan): PdfDecryptor | null {
 export function checkPdf(bytes: Buffer): void {
   const scan = new PdfScan(bytes, indexIntegerObjects(bytes));
   scan.run();
+  refuseUnexaminedHeaders(bytes, scan.objKeywords);
   const decryptor = decryptorOf(bytes, scan);
   const budget = new ObjectStreamBudget();
   for (const stream of scan.objectStreams) {
