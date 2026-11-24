@@ -2,10 +2,26 @@ import { useState } from "react";
 import { View } from "react-native";
 
 import { formatDay, type HotelInfoRequestLinkIssued } from "@ampm/core";
-import { Button, Callout, copyText, Icon, Row, shareText, Stack, Text } from "@ampm/ui";
+import {
+  announcementText,
+  Button,
+  Callout,
+  copyText,
+  Icon,
+  politeLiveRegion,
+  Row,
+  shareText,
+  Stack,
+  Text,
+  useAnnounce,
+} from "@ampm/ui";
 
 import { emailOutcomeText, infoRequestHotelName } from "./info-requests.format";
 import { RecordShareForm } from "./record-share-form";
+
+const WARNING_TITLE = "Shown only now";
+const WARNING_TEXT =
+  "Copy or share this link now: AMPM keeps no copy of it. If it is lost, reissue it from the request, and this one stops working.";
 
 /** What the last copy did: on the clipboard, refused by the browser, or not tried yet. */
 type CopyOutcome = "copied" | "failed" | null;
@@ -123,8 +139,8 @@ export interface IssuedLinkProps {
 }
 
 /**
- * A request's link, shown once (D-188 §4 and §7; plan §4.2): the warning that AMPM keeps no copy, the
- * link to select, its expiry, what became of its email, Copy and Share, and, once the link may have left
+ * A request's link, shown once (D-188 §4 and §7; plan §4.2): the warning that AMPM keeps no copy, said
+ * to a screen reader as the link appears, the link to select, its expiry, what became of its email, Copy and Share, and, once the link may have left
  * the sheet (a copy, a share, or by hand where neither is offered), the step that records how it went to
  * the hotel. Never a `wa.me` link. The sheet that shows it forgets it on close.
  *
@@ -133,11 +149,19 @@ export interface IssuedLinkProps {
 export function IssuedLink({ issued, canRecordShare }: IssuedLinkProps) {
   const handover = useLinkHandover(issued.link.url);
   const byHandOnly = !copyText && !shareText;
+  // The warning is said as the link appears (VoiceOver and the web by announcement, Android by its live
+  // region); the link itself is never read out.
+  useAnnounce(announcementText(WARNING_TITLE, WARNING_TEXT), true, { web: true });
   return (
     <Stack gap={4} testID="issued-link">
-      <Callout kind="warning" title="Shown only now" blur={false} testID="issued-link-warning">
-        Copy or share this link now: AMPM keeps no copy of it. If it is lost, reissue it from the
-        request, and this one stops working.
+      <Callout
+        kind="warning"
+        title={WARNING_TITLE}
+        blur={false}
+        testID="issued-link-warning"
+        {...politeLiveRegion()}
+      >
+        {WARNING_TEXT}
       </Callout>
       <LinkFacts issued={issued} />
       <LinkActions handover={handover} />
