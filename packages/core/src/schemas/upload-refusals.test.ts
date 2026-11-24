@@ -30,6 +30,7 @@ describe("UPLOAD_REFUSAL_MESSAGES", () => {
     ["password_protected", "remove the password and upload it again"],
     ["heif_image", "save it as a JPEG or PNG"],
     ["image_undecodable", "save a new copy"],
+    ["embedded_too_large", "save the file as a PDF"],
   ])("tells the uploader what to do for %s (D-187)", (reason, advice) => {
     expect(UPLOAD_REFUSAL_MESSAGES[reason]).toContain(advice);
   });
@@ -66,6 +67,7 @@ describe("uploadRefusalErrorCode", () => {
       "macros",
       "active_content",
       "external_content",
+      "embedded_too_large",
       "pdf_active_content",
       "pdf_unreadable",
       "image_too_many_pixels",

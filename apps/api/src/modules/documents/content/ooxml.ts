@@ -161,7 +161,7 @@ async function checkPart(
   if (embedded.has(key)) {
     if (depth > 0)
       refuse("active_content", `a package inside an embedded package: ${fromFile(entry.name)}`);
-    const inner = await readPart(bytes, open, entry.name, budget, "active_content");
+    const inner = await readPart(bytes, open, entry.name, budget, "embedded_too_large");
     if (inner) await checkEmbedded(inner, budget, entry.name);
   } else if (isScannedXml(contentType)) {
     const scanner = partScanner(entry.name);

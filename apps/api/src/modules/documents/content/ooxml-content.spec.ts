@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import { describe, expect, it } from "vitest";
 
 import { inspectOoxml } from "./ooxml.js";
@@ -9,6 +10,7 @@ import {
 } from "./testing/ooxml-builder.js";
 import { EVERY_KIND, refusalOf } from "./testing/refusals.js";
 import { writeZip } from "./testing/zip-writer.js";
+import { MAX_KEPT_PART_BYTES } from "./zip-inflate.js";
 
 const P = 'xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"';
 const A = 'xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"';
@@ -164,6 +166,16 @@ describe("inspectOoxml: embedded packages, one level deep", () => {
   ])("refuses an embedded %s", async (_name, inner, reason) => {
     const refusal = await refusalOf(inspectOoxml(buildPackage(withEmbedded(inner)), EVERY_KIND));
     expect(refusal.reason).toBe(reason);
+  });
+
+  it("refuses a chart's workbook over the 2 MiB read whole as too large to check, not as an object", async () => {
+    const big = buildPackage({
+      kind: "xlsx",
+      defaults: { png: "image/png" },
+      parts: [{ name: "xl/media/image1.png", data: randomBytes(MAX_KEPT_PART_BYTES + 1024) }],
+    });
+    const refusal = await refusalOf(inspectOoxml(buildPackage(withEmbedded(big)), EVERY_KIND));
+    expect(refusal.reason).toBe("embedded_too_large");
   });
 
   it("refuses a part that is a package without being linked as one", async () => {

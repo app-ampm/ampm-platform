@@ -41,6 +41,8 @@ export const UPLOAD_REFUSAL_REASONS = [
   "active_content",
   /** External links, data connections, query tables, external targets and DDE formulas. */
   "external_content",
+  /** An embedded workbook or presentation (a chart's data) too large for the checks to read whole. */
+  "embedded_too_large",
   /** A PDF with JavaScript, launch actions, embedded files, rich media or an XFA form. */
   "pdf_active_content",
   /** A PDF the checks cannot read: a stream that never ends, or one in a form they cannot decode. */
@@ -86,6 +88,8 @@ export const UPLOAD_REFUSAL_MESSAGES: Readonly<Record<UploadRefusalReason, strin
     "This file contains embedded objects, add-ins or program actions, which are not accepted: remove them, or save it as a PDF, and upload that.",
   external_content:
     "This file links to outside data, templates or programs, which is not accepted: remove the links, or save it as a PDF, and upload that.",
+  embedded_too_large:
+    "This file has an embedded workbook or presentation too large to check: paste it in as a picture, or save the file as a PDF, and upload that.",
   pdf_active_content:
     "This PDF contains scripts, attachments, forms or media, which are not accepted: save it as a plain PDF and upload that.",
   pdf_unreadable: "This PDF could not be checked: save it as a plain PDF and upload that.",
