@@ -2,9 +2,27 @@ import { crc32 } from "node:zlib";
 
 import { UPLOAD_REFUSAL_MESSAGES } from "@ampm/core";
 import sharp from "sharp";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { IMAGE_QUEUE, SerialQueue, SHARP_INPUT, SharpImageProcessor } from "./image.processor.js";
+import type { AppLogger } from "../common/logger.service.js";
+import {
+  IMAGE_JOB_TIMEOUT_MS,
+  IMAGE_QUEUE,
+  SerialQueue,
+  SHARP_INPUT,
+  SharpImageProcessor,
+} from "./image.processor.js";
+
+interface LoggedEvent {
+  readonly event: string;
+  readonly fields: unknown;
+}
+
+/** A logger that keeps each event it is given, at any level, in `logged`. */
+function recordingLogger(logged: LoggedEvent[] = []): AppLogger {
+  const record = (event: string, fields: unknown = {}) => void logged.push({ event, fields });
+  return { info: record, warn: record, error: record } as unknown as AppLogger;
+}
 
 const flat = (width: number, height: number) =>
   sharp({ create: { width, height, channels: 3, background: { r: 20, g: 150, b: 90 } } });
@@ -27,7 +45,7 @@ async function claimedPng(width: number, height: number): Promise<Buffer> {
  * source's EXIF: no device or location metadata reaches a stored rendition.
  */
 describe("SharpImageProcessor", () => {
-  const processor = new SharpImageProcessor();
+  const processor = new SharpImageProcessor(recordingLogger());
 
   it("bounds the longest edge and strips image metadata (AC-24.1, AC-20.4)", async () => {
     const source = await sharp({
@@ -69,7 +87,7 @@ describe("SharpImageProcessor", () => {
 });
 
 describe("SharpImageProcessor limits (D-187 §4)", () => {
-  const processor = new SharpImageProcessor();
+  const processor = new SharpImageProcessor(recordingLogger());
 
   it("turns libvips' operation cache off and gives each image one thread", () => {
     const { memory, files, items } = sharp.cache();
@@ -117,7 +135,7 @@ describe("SharpImageProcessor limits (D-187 §4)", () => {
 });
 
 describe("SharpImageProcessor.reencode: an image kept as a document (D-187 §3)", () => {
-  const processor = new SharpImageProcessor();
+  const processor = new SharpImageProcessor(recordingLogger());
 
   it("keeps a JPEG a JPEG at quality 90, turned upright, at full size, without its metadata", async () => {
     const source = await flat(3000, 2000)
@@ -191,5 +209,94 @@ describe("SerialQueue", () => {
     const next = queue.run(async () => "next");
     await expect(failed).rejects.toThrow("a broken image");
     await expect(next).resolves.toBe("next");
+  });
+});
+
+describe("SerialQueue: each job's time limit", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  const never = () => new Promise<never>(() => undefined);
+  const after =
+    <T>(ms: number, value: T) =>
+    () =>
+      new Promise<T>((resolve) => setTimeout(() => resolve(value), ms));
+
+  it("fails a job still running after 60 seconds with a 503, and goes on to the next", async () => {
+    vi.useFakeTimers();
+    const queue = new SerialQueue();
+    const timedOut = vi.fn();
+    const stuck = queue.run(never, timedOut);
+    const outcome = stuck.catch((error: unknown) => error);
+    const next = queue.run(async () => "next");
+    await vi.advanceTimersByTimeAsync(IMAGE_JOB_TIMEOUT_MS - 1);
+    expect(timedOut).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(1);
+    expect(await outcome).toMatchObject({
+      status: 503,
+      code: "unavailable",
+      message: "The server could not process the image in time. Try again.",
+    });
+    expect(timedOut).toHaveBeenCalledTimes(1);
+    await expect(next).resolves.toBe("next");
+    expect(IMAGE_JOB_TIMEOUT_MS).toBe(60_000);
+  });
+
+  it("counts the limit from when a job starts, not while it waits its turn", async () => {
+    vi.useFakeTimers();
+    const queue = new SerialQueue();
+    const first = queue.run(after(40_000, "first"));
+    const second = queue.run(after(40_000, "second")); // done 80 s after it was queued
+    await vi.advanceTimersByTimeAsync(80_000);
+    await expect(Promise.all([first, second])).resolves.toEqual(["first", "second"]);
+  });
+
+  it("drops what a job that ran out of time answers later", async () => {
+    vi.useFakeTimers();
+    const queue = new SerialQueue();
+    const late = queue.run(
+      () =>
+        new Promise<string>((_resolve, reject) =>
+          setTimeout(() => reject(new Error("too late")), IMAGE_JOB_TIMEOUT_MS + 1_000),
+        ),
+    );
+    const outcome = late.catch((error: unknown) => error);
+    await vi.advanceTimersByTimeAsync(IMAGE_JOB_TIMEOUT_MS + 2_000);
+    expect(await outcome).toMatchObject({ status: 503 });
+  });
+});
+
+describe("SharpImageProcessor: a job past the time limit", () => {
+  it("logs image_queue.timeout with what the job was, never what the image holds", async () => {
+    const logged: LoggedEvent[] = [];
+    const processor = new SharpImageProcessor(recordingLogger(logged));
+    const run = vi.spyOn(IMAGE_QUEUE, "run");
+    try {
+      const png = await flat(8, 8).png().toBuffer();
+      await processor.reencode(png, "png");
+      run.mock.calls[0]?.[1]?.();
+      expect(logged).toEqual([
+        {
+          event: "image_queue.timeout",
+          fields: { job: "reencode", sizeBytes: png.length, timeoutMs: 60_000 },
+        },
+      ]);
+    } finally {
+      run.mockRestore();
+    }
+  });
+
+  it("has libvips stop an image's work at the same limit, so a job left behind ends too", async () => {
+    const processor = new SharpImageProcessor(recordingLogger());
+    const timeout = vi.spyOn(sharp.prototype, "timeout");
+    try {
+      const png = await flat(8, 8).png().toBuffer();
+      await processor.derive(png, 4);
+      await processor.reencode(png, "png");
+      expect(timeout.mock.calls).toEqual([[{ seconds: 60 }], [{ seconds: 60 }]]);
+    } finally {
+      timeout.mockRestore();
+    }
   });
 });

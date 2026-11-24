@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { errors, UPLOAD_REFUSAL_MESSAGES } from "@ampm/core";
 import { describe, expect, it } from "vitest";
 
+import { IMAGE_TIMEOUT_MESSAGE } from "../../storage/image.processor.js";
 import type { DocumentsService } from "./documents.service.js";
 import { documentsHarness, storeInput } from "./testing/documents-service.js";
 
@@ -70,6 +71,17 @@ describe("DocumentsService.store: images in documents are re-encoded (D-187 §3)
       },
     });
     await expect(store(service, PNG)).rejects.toBe(tooLarge);
+  });
+
+  it("passes an image queue that ran out of time on as its 503, and keeps nothing", async () => {
+    const timedOut = errors.unavailable(IMAGE_TIMEOUT_MESSAGE);
+    const { service, stored, written } = documentsHarness({
+      reencode: async () => {
+        throw timedOut;
+      },
+    });
+    await expect(store(service, PNG)).rejects.toMatchObject({ status: 503, code: "unavailable" });
+    expect([stored.size, written.length]).toEqual([0, 0]);
   });
 
   it("refuses an infected file after the checks, and keeps nothing", async () => {
