@@ -13,7 +13,7 @@
 #   5  migrate with a one-off container of the NEW image (prisma migrate deploy)
 #   6  recreate api, worker and web on the new image and wait for them
 #   7  health gate on 127.0.0.1:7101/health; on failure api and worker go back to the previous image
-# After the gate it drops app images older than the rollback target and build cache unused for 7 days.
+# After the gate it drops app images older than the rollback target and trims the build cache to 8 GiB.
 # It never seeds demo data: production holds real data only (D-141).
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -155,11 +155,13 @@ else
   log "no new rollback target (${previous_app:-first deploy}): keeping every app image"
 fi
 # Every build grows Docker's build cache, on the one disk that also holds the media, the WAL archive and
-# the backups (23.5 GB on 24 Nov 2026, 15.4 GB of it reclaimable). After every deploy that passed its
-# gate, drop what no build has used for 7 days. A failed prune is reported with the daemon's own error,
-# not fatal: the release is in.
-if pruned="$(docker builder prune -f --filter until=168h 2>&1)"; then
-  log "build cache unused for 7 days pruned (${pruned##*$'\n'})"
+# the backups. The install layer comes after `COPY . .`, so each deploy adds a fresh one (about 5 GB) and
+# no later build uses the old ones again, while Docker's own collection keeps up to a tenth of the disk
+# (18.63 GiB on the box). After every deploy that passed its gate, trim the cache to 8 GiB, least
+# recently used first, which keeps the last build's layers for a rerun (D-186). A failed prune is
+# reported with the daemon's own error, not fatal: the release is in.
+if pruned="$(docker builder prune -f --max-used-space 8GB 2>&1)"; then
+  log "build cache trimmed to 8 GiB, least recently used first (${pruned##*$'\n'})"
 else
   log "WARNING: the build-cache prune failed (${pruned//$'\n'/ }); the release itself passed its gate"
 fi

@@ -132,7 +132,7 @@ Done on 20 Nov 2026 (UTC): production built at 09:02. The API and worker started
 2. `bash deploy/redeploy-prod.sh` on the box. Its order: preflight (the tree as shipped, checked by `deploy/verify-shipped-source.sh`, so a tree shipped by hand is refused; override; secrets; disk), build, data tier and virus scanner, safety dump, **migrate before the new API**, recreate api/worker/web, health gate, then the scanner's health (reported, not gated). A failed gate puts api and worker back on the previous image. It never seeds demo data.
 3. If the change touched the portal: `AMPM_WEB_TARGET=production … deploy/deploy-web.sh` **after** the API (a contract change needs the new API first). Load a page and read the browser console.
 
-The test stack deploys the same way, with `AMPM_SHIP_TARGET=test` for its source and `AMPM_WEB_TARGET=test` for its web bundle. Keep checking free disk (`df -h /`, `docker system df`) before a build. `redeploy-prod.sh` prunes dangling build cache itself below 15 GB free, and after every deploy that passes its gate it drops the build cache no build has used for 7 days (section 6). Never prune volumes: other tenants' data lives in them.
+The test stack deploys the same way, with `AMPM_SHIP_TARGET=test` for its source and `AMPM_WEB_TARGET=test` for its web bundle. Keep checking free disk (`df -h /`, `docker system df`) before a build. `redeploy-prod.sh` prunes dangling build cache itself below 15 GB free, and after every deploy that passes its gate it trims the build cache to 8 GiB, least recently used first (section 6). Never prune volumes: other tenants' data lives in them.
 
 ### Rolling back a release by hand
 
@@ -211,7 +211,11 @@ The check after the copy (the fourth line) must print no path, then the number o
 
 ## 6. Disk space (D-177)
 
-Every store sits on the one filesystem, `/dev/sda1` (193 GB): the media store and its snapshots, the WAL archive, the pgBackRest repository, the dumps, nginx's client-body temporary directory and Docker's data. On 24 Nov 2026 it had 35 GB free, down from 49 GB the day before. Each deploy's image build grows Docker's build cache, which stood at 23.5 GB, 15.4 GB of it reclaimable; images took 13.5 GB. Since D-177, every deploy that passes its gate prunes the build cache unused for 7 days (`docker builder prune -f --filter until=168h`, logged), and below 15 GB free the preflight still prunes dangling cache before it builds.
+Every store sits on the one filesystem, `/dev/sda1` (193 GB): the media store and its snapshots, the WAL archive, the pgBackRest repository, the dumps, nginx's client-body temporary directory and Docker's data. On 24 Nov 2026 it had 35 GB free, down from 49 GB the day before. Each deploy's image build grows Docker's build cache, which stood at 23.5 GB, 15.4 GB of it reclaimable; images took 13.5 GB.
+
+The install layer comes after `COPY . .` in `infra/docker/Dockerfile`, so every deploy adds a fresh one of about 5 GB, and no later build uses the old ones. Docker's own garbage collection (`docker buildx inspect default`) keeps up to 18.63 GiB of that cache, a tenth of the disk, whenever less than 36.32 GiB is free. After the Slice 5 deploy the cache stood at 28.4 GB, 20.4 GB of it reclaimable, with 29.6 GiB free.
+
+Since D-186, every deploy that passes its gate trims the cache to 8 GiB, least recently used first (`docker builder prune -f --max-used-space 8GB`, logged), which keeps the last build's layers for a rerun. The trim replaces D-185's 7-day window, which freed nothing with a deploy a day. Below 15 GB free, the preflight still prunes dangling cache before it builds. Any prune is daemon-wide, so it trims other tenants' build cache too, never their images or volumes.
 
 **The disk check.** Every 15 minutes the worker runs `system.disk_check`: `statfs` of `/data/storage`, the media store's mount, so one figure covers every store above. It compares the free space with configuration `storage.disk_guard`:
 
@@ -237,7 +241,7 @@ Below the floor, the hotel form's upload guard will refuse new files (Slice 9).
 
 **Freeing space**, in this order:
 
-1. Build cache that no build has used for a day: `docker builder prune -f --filter until=24h`. The next build of an unchanged layer takes longer.
+1. The build cache, which the last deploy left at 8 GiB or less: `docker builder prune -f` removes all of it that no running build uses. The next build installs everything again and takes longer.
 2. App images older than the rollback target, if any is left: `docker image ls ampm-prod-app`.
 3. Old safety dumps in `ampm-backups/pgdump`, which already go after 14 days.
 

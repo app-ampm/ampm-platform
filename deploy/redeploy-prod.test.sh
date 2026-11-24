@@ -3,10 +3,11 @@
 # `docker` stub: a release keeps itself and the image it replaced, the rollback target, and drops older
 # ones; a rerun of the same commit (an environment change) and a first deploy name no new target, so they
 # drop nothing. A same-commit rerun used to keep the running image alone and delete the image a rollback
-# by hand needs (the Slice 3 rollback, docs/data-model.md). Every successful deploy also prunes the build
-# cache no build has used for 7 days, once, which bounds the cache's growth from deploy to deploy; a
-# prune that fails is logged with the daemon's own error and the deploy carries on, since the release
-# has passed its gate. The block is cut from the script itself, so the test runs what the box runs.
+# by hand needs (the Slice 3 rollback, docs/data-model.md). Every successful deploy also trims the build
+# cache to 8 GiB, least recently used first, once (D-186). The 7-day window it replaces freed nothing: with
+# a deploy a day, no entry got that old. A prune that fails is logged with the daemon's own error and the
+# deploy carries on, since the release has passed its gate. The block is cut from the script itself, so
+# the test runs what the box runs.
 #   bash deploy/redeploy-prod.test.sh
 set -euo pipefail
 
@@ -70,10 +71,10 @@ prune() {
   if ((status == 0)); then ok "$1 carries on (exit 0)"; else bad "$1 exits $status, not 0"; fi
   if [[ "$removed" == "$4" ]]; then ok "$1 removes '${4:-nothing}'"; else bad "$1 removes '${removed:-nothing}', not '${4:-nothing}'"; fi
   if [[ "$recorded" == "$2" ]]; then ok "$1 records $2"; else bad "$1 records '$recorded', not $2"; fi
-  if [[ "$builder" == "-f --filter until=168h" ]]; then
-    ok "$1 prunes the build cache unused for 7 days, once"
+  if [[ "$builder" == "-f --max-used-space 8GB" ]]; then
+    ok "$1 trims the build cache to 8 GiB, once"
   else
-    bad "$1 runs 'docker builder prune' with '${builder:-nothing}', not once with '-f --filter until=168h'"
+    bad "$1 runs 'docker builder prune' with '${builder:-nothing}', not once with '-f --max-used-space 8GB'"
   fi
 }
 # logged <case> <text>: the case's log holds the text.
@@ -89,7 +90,7 @@ logged() {
 prune "a new release" ampm-prod-app:cccccccccccc ampm-prod-app:bbbbbbbbbbbb ampm-prod-app:aaaaaaaaaaaa
 prune "a rerun of the same commit" ampm-prod-app:cccccccccccc ampm-prod-app:cccccccccccc ""
 prune "a first deploy" ampm-prod-app:cccccccccccc "" ""
-logged "a new release" "build cache unused for 7 days pruned (Total reclaimed space: 0B)"
+logged "a new release" "build cache trimmed to 8 GiB, least recently used first (Total reclaimed space: 0B)"
 prune "a release whose build-cache prune fails" ampm-prod-app:cccccccccccc ampm-prod-app:bbbbbbbbbbbb \
   ampm-prod-app:aaaaaaaaaaaa STUB_PRUNE_ERROR="Error response from daemon: a prune operation is already running"
 logged "a release whose build-cache prune fails" "WARNING: the build-cache prune failed"
