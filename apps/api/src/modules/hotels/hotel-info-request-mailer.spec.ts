@@ -95,6 +95,7 @@ describe("HotelInfoRequestMailer.sendLink", () => {
         expiresOn: "24 December 2026, 15:30 IST",
         link: email.url,
       },
+      gateRef: "1",
     });
     const withReplyTo = build("on", "desk@ampm.example");
     await withReplyTo.mailer.sendLink(email, true, STAFF);
@@ -117,6 +118,20 @@ describe("HotelInfoRequestMailer.sendLink", () => {
       }),
       tx,
     );
+  });
+
+  it("names the link's generation to the send gate, so a link reissued meanwhile is not sent", async () => {
+    const { mailer, notifications } = build("on");
+    await mailer.sendLink({ ...email, generation: 4 }, true, STAFF);
+    expect(notifications.queue).toHaveBeenCalledWith(expect.objectContaining({ gateRef: "4" }));
+  });
+
+  it("writes no link_emailed event when the link was reissued before the request could be marked", async () => {
+    const { mailer, repo, journal } = build("on");
+    repo.markEmailed.mockResolvedValueOnce(0);
+    expect(await mailer.sendLink(email, true, STAFF)).toBe("queued");
+    expect(repo.markEmailed).toHaveBeenCalledOnce();
+    expect(journal.event).not.toHaveBeenCalled();
   });
 
   it("answers failed, marking nothing, when the email cannot be queued, and logs no address or link", async () => {

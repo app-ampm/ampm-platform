@@ -1,4 +1,4 @@
-import { CONFIG_REGISTRY, type HotelFormMode } from "@ampm/core";
+import { CONFIG_REGISTRY, type HotelFormMode, type HotelInfoRequestStatus } from "@ampm/core";
 import { describe, expect, it, vi } from "vitest";
 
 import type { ConfigService } from "../admin/config/config.service.js";
@@ -9,7 +9,8 @@ import type { HotelInfoRequestsRepository } from "./hotel-info-requests.reposito
 
 /*
  * The hotel form's kill switch at send time (D-188 §5): the worker drops a queued `hotel_form.*` email
- * whose mode no longer admits it. The mode is read past the configuration cache, every time.
+ * whose mode no longer admits it, whose request is gone, deleted or no longer live, or whose link was
+ * reissued after it was queued. The mode is read past the configuration cache, every time.
  */
 
 const REQUEST_ID = "0192f1a0-0000-7000-8000-0000000000b1";
@@ -21,12 +22,22 @@ const linkEmail: GatedNotification = {
   channel: "email",
   entityType: "hotel_info_request",
   entityId: REQUEST_ID,
+  gateRef: "1",
 };
 
-function build(mode: HotelFormMode, isTest = false) {
+/** The request as the gate reads it: by default a live, non-test request on its first link. */
+type GateRequest = { isTest: boolean; status: HotelInfoRequestStatus; tokenGeneration: number };
+
+function build(mode: HotelFormMode, request: Partial<GateRequest> | null = {}) {
   const policy = { ...CONFIG_REGISTRY["hotel_form.policy"].default, mode };
   const config = { get: vi.fn(), getFresh: vi.fn(async () => policy) };
-  const repo = { isTestRequest: vi.fn(async () => isTest) };
+  const state: GateRequest | null = request && {
+    isTest: false,
+    status: "open",
+    tokenGeneration: 1,
+    ...request,
+  };
+  const repo = { sendGateState: vi.fn(async (): Promise<GateRequest | null> => state) };
   const notifications = { registerSendGate: vi.fn() };
   const gate = new HotelFormEmailGate(
     notifications as unknown as NotificationService,
@@ -60,21 +71,39 @@ describe("HotelFormEmailGate", () => {
   it("sends when the mode is on, and drops everything when it is off, asking nothing else", async () => {
     const on = build("on");
     expect(await on.gate.admits(linkEmail)).toBe(true);
-    const off = build("off", true);
+    expect(on.repo.sendGateState).toHaveBeenCalledWith(REQUEST_ID);
+    const off = build("off", { isTest: true });
     expect(await off.gate.admits(linkEmail)).toBe(false);
-    expect(off.repo.isTestRequest).not.toHaveBeenCalled();
+    expect(off.repo.sendGateState).not.toHaveBeenCalled();
   });
 
   it("in test_only, sends a test request's email and drops any other", async () => {
-    const test = build("test_only", true);
-    expect(await test.gate.admits(linkEmail)).toBe(true);
-    expect(test.repo.isTestRequest).toHaveBeenCalledWith(REQUEST_ID);
-    expect(await build("test_only", false).gate.admits(linkEmail)).toBe(false);
-    const elsewhere = { ...linkEmail, entityType: "hotel", entityId: REQUEST_ID };
-    expect(await build("test_only", true).gate.admits(elsewhere)).toBe(false);
-    expect(await build("test_only", true).gate.admits({ ...linkEmail, entityId: null })).toBe(
-      false,
-    );
+    expect(await build("test_only", { isTest: true }).gate.admits(linkEmail)).toBe(true);
+    expect(await build("test_only", { isTest: false }).gate.admits(linkEmail)).toBe(false);
+  });
+
+  it("drops an email that is about no request, or about one that is gone or deleted", async () => {
+    const elsewhere = { ...linkEmail, entityType: "hotel" };
+    expect(await build("on").gate.admits(elsewhere)).toBe(false);
+    expect(await build("on").gate.admits({ ...linkEmail, entityId: null })).toBe(false);
+    // The repository reads only a request that exists and is not deleted.
+    expect(await build("on", null).gate.admits(linkEmail)).toBe(false);
+  });
+
+  it("drops a link email once its request is no longer live", async () => {
+    for (const status of ["merged", "rejected", "revoked"] as const) {
+      expect(await build("on", { status }).gate.admits(linkEmail), status).toBe(false);
+    }
+    for (const status of ["open", "submitted", "in_review", "changes_requested"] as const) {
+      expect(await build("on", { status }).gate.admits(linkEmail), status).toBe(true);
+    }
+  });
+
+  it("drops a link email whose link was reissued after it was queued, or that names no link", async () => {
+    const reissued = build("on", { tokenGeneration: 2 });
+    expect(await reissued.gate.admits(linkEmail)).toBe(false);
+    expect(await reissued.gate.admits({ ...linkEmail, gateRef: "2" })).toBe(true);
+    expect(await build("on").gate.admits({ ...linkEmail, gateRef: null })).toBe(false);
   });
 
   it("reads the mode past the cache every time", async () => {

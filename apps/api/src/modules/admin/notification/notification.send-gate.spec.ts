@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { FakeNotificationRepository, makeService } from "../../../../test/notification-fakes.js";
-import type { NotificationAdapter } from "./notification.adapter.js";
+import type { NotificationAdapter, NotificationDelivery } from "./notification.adapter.js";
 import type { GatedNotification } from "./notification-send-gates.js";
 
 /*
@@ -89,8 +89,30 @@ describe("NotificationService send gates", () => {
         channel: "email",
         entityType: "hotel_info_request",
         entityId: REQUEST_ID,
+        gateRef: null,
       },
     ]);
+  });
+
+  it("shows the gate the reference the notification was queued with, never rendering or sending it", async () => {
+    const { repo, send, service } = harness();
+    const seen: GatedNotification[] = [];
+    service.registerSendGate("hotel_form.", async (notification) => {
+      seen.push(notification);
+      return true;
+    });
+    const result = await service.queue({ ...external("hotel_form.link"), gateRef: "3" });
+    if (result.suppressed) throw new Error("an external email is never suppressed");
+    expect(seen.map((notification) => notification.gateRef)).toEqual(["3"]);
+    const [delivery] = send.mock.calls[0] as unknown as [NotificationDelivery];
+    expect(Object.keys(delivery.variables).sort()).toEqual([
+      "expiresOn",
+      "hotelName",
+      "link",
+      "reference",
+    ]);
+    expect(JSON.stringify(delivery.content)).not.toContain("$gateRef");
+    expect(repo.rows.get(result.notificationId)?.data).toBeNull();
   });
 
   it("retries a gate that fails, and clears the row once every attempt has failed", async () => {

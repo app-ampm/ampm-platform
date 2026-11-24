@@ -67,6 +67,13 @@ export interface LiveRequestRef {
   readonly status: HotelInfoRequestStatus;
 }
 
+/** What the hotel form's send gate reads of a request. */
+export interface SendGateState {
+  readonly isTest: boolean;
+  readonly status: HotelInfoRequestStatus;
+  readonly tokenGeneration: number;
+}
+
 /** A hotel a request may name, locked for the transaction. */
 export interface LockedHotel {
   readonly id: string;
@@ -149,13 +156,15 @@ export class HotelInfoRequestsRepository {
     return event?.detail ?? null;
   }
 
-  /** Whether a request is a test: what the hotel form's mode test_only admits (D-188 §5). */
-  async isTestRequest(id: string): Promise<boolean> {
-    const row = await this.prisma.hotelInfoRequest.findFirst({
-      where: { id },
-      select: { isTest: true },
+  /**
+   * What the hotel form's send gate reads of a request (D-188 §5): whether it is a test (what test_only
+   * admits), its status and its link's generation. Null when there is none, or it was deleted.
+   */
+  sendGateState(id: string): Promise<SendGateState | null> {
+    return this.prisma.hotelInfoRequest.findFirst({
+      where: { id, deletedAt: null },
+      select: { isTest: true, status: true, tokenGeneration: true },
     });
-    return row?.isTest === true;
   }
 
   hotelExists(hotelId: string): Promise<boolean> {

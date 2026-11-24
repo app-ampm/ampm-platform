@@ -26,6 +26,7 @@ import {
   type NotificationAdapters,
   type NotificationResult,
 } from "./notification.adapter.js";
+import { gateRefOf, renderVariablesOf, storedDataOf } from "./notification-data.js";
 import {
   NotificationRepository,
   type NotificationRow,
@@ -76,6 +77,12 @@ interface NotificationMessage {
    * until it leaves `queued`, as the render variables are.
    */
   readonly replyTo?: string;
+  /**
+   * A non-secret reference the send gate of the template's family compares at send time (D-188 §5: a
+   * hotel form link email carries its link's generation, so a link reissued meanwhile is never sent).
+   * Held with the render variables until the row leaves `queued`; never rendered or handed to an adapter.
+   */
+  readonly gateRef?: string;
 }
 
 /**
@@ -108,9 +115,6 @@ function canAdvance(from: NotificationStatus, to: NotificationStatus): boolean {
   return ADVANCES[from].includes(to);
 }
 
-/** The render variables a caller may attach to a notification (e.g. the activation link); all strings. */
-const renderVariables = z.record(z.string(), z.string());
-
 /** The channels an external recipient's address can serve: an email address, or a mobile for SMS. */
 const ADDRESSED_CHANNELS: readonly NotificationChannel[] = ["email", "sms"];
 
@@ -132,7 +136,10 @@ function externalChannel(channel: NotificationChannel): ExternalChannel | null {
     : null;
 }
 
-/** What a send gate reads of a row: what it is and is about, never its address or render data. */
+/**
+ * What a send gate reads of a row: what it is and is about, and its gate reference; never its address
+ * or render variables.
+ */
 function gatedOf(row: NotificationRow): GatedNotification {
   return {
     templateKey: row.templateKey,
@@ -141,6 +148,7 @@ function gatedOf(row: NotificationRow): GatedNotification {
     channel: row.channel,
     entityType: row.entityType,
     entityId: row.entityId,
+    gateRef: gateRefOf(row.data),
   };
 }
 
@@ -218,7 +226,7 @@ export class NotificationService implements OnModuleInit {
       templateKey: input.templateKey,
       entityType: input.entityType ?? null,
       entityId: input.entityId ?? null,
-      data: input.variables,
+      data: storedDataOf(input.variables, input.gateRef),
       recipientAddress: input.recipientType === "external" ? input.recipientAddress : null,
       replyTo: input.replyTo ?? null,
     });
@@ -285,7 +293,7 @@ export class NotificationService implements OnModuleInit {
       return;
     }
     const channel = externalChannel(row.channel);
-    const variables = renderVariables.catch({}).parse(row.data);
+    const variables = renderVariablesOf(row.data);
     const content = channel ? await this.render(row.templateKey, channel, variables) : null;
     if (!channel || !content) {
       await this.advance(row, { status: "failed", clearData: true });

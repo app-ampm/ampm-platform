@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { JobQueue } from "../src/jobs/job-queue.js";
+import { NOTIFICATION_GATE_REF_KEY } from "../src/modules/admin/notification/notification-data.js";
 import { sendNotificationJob } from "../src/modules/admin/notification/notification.service.js";
 import {
   newSuiteHotel,
@@ -20,11 +21,12 @@ const RECIPIENT = "sales@synthetic-hotel.example";
  * entered only when the hotel form's mode, read past the configuration cache, admits the request (on, or
  * test_only for a Super Admin's test request); otherwise the request still stands and the answer says
  * why. The send job, inline here, sends it through the console adapter and clears its address and data;
- * and the worker drops a queued hotel-form email whose mode no longer admits it.
+ * and the worker drops a queued hotel-form email whose mode no longer admits it, whose request is no
+ * longer live, or whose link was reissued after it was queued.
  */
 describe("Hotel information requests: the link's email and the kill switch (e2e)", () => {
   let suite: RequestSuite;
-  const { create, reissue } = requestCalls(() => suite);
+  const { create, reissue, revoke } = requestCalls(() => suite);
 
   /** A hotel of the suite with a request created for it, emailed when asked. */
   async function requestFor(suffix: string, emailIt: boolean, role: "sa" | "ht" = "ht") {
@@ -38,6 +40,43 @@ describe("Hotel information requests: the link's email and the kill switch (e2e)
 
   const emailsOf = (requestId: string) =>
     suite.prisma.notification.findMany({ where: { recipientId: requestId } });
+
+  /** A request's link email as the mailer queues it, for the link's generation, not sent yet. */
+  const queuedLink = (
+    issued: { request: { id: string; reference: string }; link: { url: string } },
+    generation: number,
+  ) =>
+    suite.prisma.notification.create({
+      data: {
+        recipientType: "external",
+        recipientId: issued.request.id,
+        recipientAddress: RECIPIENT,
+        replyTo: "desk@ampm.example",
+        channel: "email",
+        templateKey: "hotel_form.link",
+        entityType: "hotel_info_request",
+        entityId: issued.request.id,
+        status: "queued",
+        data: {
+          reference: issued.request.reference,
+          hotelName: "E2E Request Hotel",
+          expiresOn: "24 December 2026, 15:30 IST",
+          link: issued.link.url,
+          [NOTIFICATION_GATE_REF_KEY]: String(generation),
+        },
+      },
+    });
+
+  /** Runs the send job of a queued email, as the worker does, and answers the row it leaves. */
+  async function send(id: string) {
+    const jobs = suite.app.get(JobQueue);
+    await jobs.enqueue(
+      sendNotificationJob,
+      { notificationId: id },
+      { idempotencyKey: `e2e.${id}` },
+    );
+    return suite.prisma.notification.findFirstOrThrow({ where: { id } });
+  }
 
   beforeAll(async () => {
     suite = await startRequestSuite("e2e-hir-mail-");
@@ -107,36 +146,9 @@ describe("Hotel information requests: the link's email and the kill switch (e2e)
 
   it("drops a queued hotel-form email at send time when the mode no longer admits it, clearing it", async () => {
     const data = await requestFor("dropped", false);
-    const jobs = suite.app.get(JobQueue);
-    const queued = async () =>
-      suite.prisma.notification.create({
-        data: {
-          recipientType: "external",
-          recipientId: data.request.id,
-          recipientAddress: RECIPIENT,
-          replyTo: "desk@ampm.example",
-          channel: "email",
-          templateKey: "hotel_form.link",
-          entityType: "hotel_info_request",
-          entityId: data.request.id,
-          status: "queued",
-          data: {
-            reference: data.request.reference,
-            hotelName: "E2E Request Hotel dropped",
-            expiresOn: "24 December 2026, 15:30 IST",
-            link: data.link.url,
-          },
-        },
-      });
-    const send = (id: string) =>
-      jobs.enqueue(sendNotificationJob, { notificationId: id }, { idempotencyKey: `e2e.${id}` });
     for (const mode of ["off", "test_only"] as const) {
       await setFormPolicy(suite, { mode });
-      const row = await queued();
-      await send(row.id);
-      expect(
-        await suite.prisma.notification.findFirstOrThrow({ where: { id: row.id } }),
-      ).toMatchObject({
+      expect(await send((await queuedLink(data, 1)).id)).toMatchObject({
         status: "failed",
         sentAt: null,
         recipientAddress: null,
@@ -145,13 +157,28 @@ describe("Hotel information requests: the link's email and the kill switch (e2e)
       });
     }
     await setFormPolicy(suite, { mode: "on" });
-    const row = await queued();
-    await send(row.id);
-    expect(
-      await suite.prisma.notification.findFirstOrThrow({ where: { id: row.id } }),
-    ).toMatchObject({
+    expect(await send((await queuedLink(data, 1)).id)).toMatchObject({
       status: "sent",
       data: null,
     });
+  });
+
+  it("drops a queued link email whose request was revoked, or whose link was reissued, since it was queued", async () => {
+    await setFormPolicy(suite, { mode: "on" });
+    const revoked = await requestFor("gate-revoked", false);
+    const beforeRevoke = await queuedLink(revoked, 1);
+    await revoke("ht", revoked.request.id, { reason: "E2E revoke" }).expect(200);
+    expect(await send(beforeRevoke.id)).toMatchObject({
+      status: "failed",
+      recipientAddress: null,
+      replyTo: null,
+      data: null,
+    });
+    const rotated = await requestFor("gate-reissued", false);
+    const firstLink = await queuedLink(rotated, 1);
+    const again = await reissue("ht", rotated.request.id, { emailIt: false }).expect(200);
+    expect(await send(firstLink.id)).toMatchObject({ status: "failed", sentAt: null, data: null });
+    const secondLink = await queuedLink({ ...rotated, link: again.body.data.link }, 2);
+    expect(await send(secondLink.id)).toMatchObject({ status: "sent", data: null });
   });
 });

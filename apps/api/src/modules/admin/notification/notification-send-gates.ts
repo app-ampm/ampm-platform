@@ -5,7 +5,8 @@ import type { NotificationChannel, RecipientType } from "@ampm/core";
  * for their template-key prefix, and the send job asks it, at send time in the worker, whether a queued
  * notification may still go. The hotel form's kill switch is one: a `hotel_form.*` email queued while
  * the form's mode admitted it is dropped if the mode no longer does. A gate reads what the notification
- * is and is about, never its address or its render data.
+ * is and is about, and the reference its caller queued it with for the gate; never its address or its
+ * render data.
  */
 
 /** What a gate reads of a queued notification. */
@@ -16,6 +17,11 @@ export interface GatedNotification {
   readonly channel: NotificationChannel;
   readonly entityType: string | null;
   readonly entityId: string | null;
+  /**
+   * The non-secret reference its caller queued it with for the gate to compare (the hotel form's link
+   * email: the link's generation, so a link reissued meanwhile is not sent); null when none.
+   */
+  readonly gateRef: string | null;
 }
 
 /** Whether a queued notification may still be sent; false drops it. A gate that throws is retried. */

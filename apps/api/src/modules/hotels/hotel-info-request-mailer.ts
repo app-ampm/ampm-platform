@@ -4,13 +4,14 @@ import type { HotelInfoRequestLinkEmail } from "@ampm/core";
 import { AppLogger } from "../../common/logger.service.js";
 import { ConfigService } from "../admin/config/config.service.js";
 import { NotificationService } from "../admin/notification/notification.service.js";
-import { HOTEL_INFO_REQUEST_ENTITY, modeAdmits } from "./hotel-form-email-gate.js";
+import {
+  HOTEL_FORM_LINK_TEMPLATE,
+  HOTEL_INFO_REQUEST_ENTITY,
+  modeAdmits,
+} from "./hotel-form-email-gate.js";
 import { HotelInfoRequestJournal, type RequestActor } from "./hotel-info-request-journal.js";
 import { expiryForEmail } from "./hotel-info-request-link.js";
 import { HotelInfoRequestsRepository } from "./hotel-info-requests.repository.js";
-
-/** The template of a request's link email (core CONFIG_REGISTRY `notification.templates`). */
-export const HOTEL_FORM_LINK_TEMPLATE = "hotel_form.link";
 
 /**
  * What a link's email carries: the reference, the hotel's name as AMPM knows it (the staff label, else
@@ -82,6 +83,8 @@ export class HotelInfoRequestMailer {
           link: email.url,
         },
         ...(replyTo ? { replyTo } : {}),
+        // The send gate drops the email if the link is reissued before it goes (D-188 §5).
+        gateRef: String(email.generation),
       });
       return true;
     } catch {
@@ -93,13 +96,15 @@ export class HotelInfoRequestMailer {
 
   /**
    * The request marked emailed, while the link emailed is still its link, and the event, in one
-   * transaction. The email is already queued, so a failure here is logged, not answered.
+   * transaction; a link reissued meanwhile is not marked, and gets no event. The email is already queued,
+   * so a failure here is logged, not answered.
    */
   private async markEmailed(email: LinkEmail, actor: RequestActor): Promise<void> {
     try {
       await this.repo.transaction(async (tx) => {
         const at = new Date();
-        await this.repo.markEmailed(email.requestId, email.generation, at, tx);
+        const marked = await this.repo.markEmailed(email.requestId, email.generation, at, tx);
+        if (marked === 0) return;
         await this.journal.event(
           {
             requestId: email.requestId,
