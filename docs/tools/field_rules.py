@@ -892,12 +892,12 @@ TABLES["incidents"] = T(
 
 # ---------------------------------------------------------------- Module N — documents, media, identity
 TABLES["documents"] = T(
-    "Any", "Uploader; PM (a); SA; sharing per permission-matrix §5.14", "Per the visibility field",
+    "Any", "Uploader; PM (a); SA; sharing per permission-matrix §5.14; a hotel's documents per §5.3 (SA, HT)", "Per the visibility field",
     required=["owner_type", "owner_id", "title", "document_type", "storage_key", "mime_type", "size_bytes", "checksum", "version_number", "visibility", "uploaded_by", "retention_class"],
     assumptions="A-17 (Q17), A-14 (Q14)",
     owner_id=F(validation="must exist; access follows the owning record"),
-    mime_type=F(validation="allowed list per document_type; file scanned on upload"),
-    size_bytes=F(validation="integer; within the configured limit (25 MB for documents)"),
+    mime_type=F(editor=SYS, validation="the kind detected from the bytes (D-187 §2), one the document_type takes in DOCUMENT_TYPE_RULES; file scanned on upload"),
+    size_bytes=F(editor=SYS, validation="integer; within the cap DOCUMENT_TYPE_RULES gives the kind for the document_type (D-187 §3: 10, 20 or 25 MiB)"),
     checksum=F(editor=SYS, validation="SHA-256 hex"),
     version_number=F(editor=SYS, automation="A new upload with previous_version_id increments it"),
     visibility=F(automation="Sharing audited; guest and public need explicit permission"),

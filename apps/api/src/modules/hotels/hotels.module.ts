@@ -3,6 +3,9 @@ import { Module } from "@nestjs/common";
 import { NotificationModule } from "../admin/notification/notification.module.js";
 import { DocumentsModule } from "../documents/documents.module.js";
 import { MediaModule } from "../media/media.module.js";
+import { HotelDocumentsController } from "./hotel-documents.controller.js";
+import { HotelDocumentsRepository } from "./hotel-documents.repository.js";
+import { HotelDocumentsService } from "./hotel-documents.service.js";
 import { HotelFreshnessService } from "./hotel-freshness.service.js";
 import { HotelImportPlanSweepService } from "./hotel-import-plan-sweep.service.js";
 import { ChildRowsImporter } from "./hotel-import.children.js";
@@ -38,7 +41,8 @@ import { SavedHotelsStaffService } from "./saved-hotels-staff.service.js";
  * client's `hotel_discovery` / `saved_hotels` entitlements and scoped by `hotelReach` (demo isolation,
  * A-28). PrismaService (DbModule), ENV/AppLogger (PlatformModule), JobQueue (JobsModule) and ConfigService
  * (ConfigModule) are @Global; NotificationModule is imported for the freshness job's hotel-team notice
- * (feature 9.2), and DocumentsModule (Module N) files a wedding reference's consent (GP-20). The principal with its resolved entitlements arrives on the request context.
+ * (feature 9.2), and DocumentsModule (Module N) files a wedding reference's consent (GP-20) and a hotel's
+ * documents library (D-187 §6). The principal with its resolved entitlements arrives on the request context.
  *
  * One deliberate deviation from api.md ("a module never queries another module's tables"): the repository
  * resolves the caller's own account by reading the CRM table `account_contacts` directly (shortlist
@@ -54,6 +58,7 @@ import { SavedHotelsStaffService } from "./saved-hotels-staff.service.js";
     HotelImportController,
     HotelRatesController,
     HotelReferencesController,
+    HotelDocumentsController,
     SavedHotelsStaffController,
   ],
   providers: [
@@ -76,6 +81,8 @@ import { SavedHotelsStaffService } from "./saved-hotels-staff.service.js";
     HotelReferencesService,
     HotelReferenceConsentService,
     HotelReferencesRepository,
+    HotelDocumentsService,
+    HotelDocumentsRepository,
     HotelFreshnessService,
     SavedHotelsStaffService,
     SavedHotelsStaffRepository,

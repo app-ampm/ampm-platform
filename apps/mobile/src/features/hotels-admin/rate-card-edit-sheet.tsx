@@ -7,7 +7,7 @@ import { Button, InternalPanel, Input, Sheet, Stack, useToast } from "@ampm/ui";
 import { hasErrors } from "./hotel-form-fields";
 import {
   buildRateCardBody,
-  draftFromRateCard,
+  openingRateCardDraft,
   validateRateCard,
   type RateCardDraft,
   type RateCardErrors,
@@ -15,41 +15,46 @@ import {
 
 const NO_ERRORS: RateCardErrors = { name: undefined, validFrom: undefined, validTo: undefined };
 
-/** The rate-card create/edit form's state, validation and submission. */
-function useRateCardForm(
-  hotelId: string,
-  open: boolean,
-  card: RateCardView | null,
-  onClose: () => void,
-) {
+/** Saving the draft: create or update, a toast either way, the created card handed on, then closing. */
+function useRateCardSave({ hotelId, card, onClose, onCreated }: RateCardEditSheetProps) {
   const toast = useToast();
   const create = useCreateRateCard(hotelId);
   const update = useUpdateRateCard(hotelId);
-  const [draft, setDraft] = useState<RateCardDraft>(() => draftFromRateCard(card));
-  const [showErrors, setShowErrors] = useState(false);
-  useEffect(() => {
-    if (open) {
-      setDraft(draftFromRateCard(card));
-      setShowErrors(false);
-    }
-  }, [open, card]);
-  const pending = create.isPending || update.isPending;
   const onError = (error: unknown): void =>
     void toast.show({
       title: isAppError(error) ? error.message : "Could not save the rate card",
       tone: "danger",
     });
-  const onSuccess = (): void => {
+  const onSuccess = (saved: RateCardView): void => {
     toast.show({ title: card ? "Rate card updated" : "Rate card added", tone: "success" });
+    if (!card) onCreated?.(saved);
     onClose();
   };
+  const save = (draft: RateCardDraft): void => {
+    const body = buildRateCardBody(draft);
+    if (card) update.mutate({ cardId: card.id, body }, { onSuccess, onError });
+    else create.mutate(body, { onSuccess, onError });
+  };
+  return { save, pending: create.isPending || update.isPending };
+}
+
+/** The rate-card create/edit form's state and validation; a fresh draft each time the sheet opens. */
+function useRateCardForm(props: RateCardEditSheetProps) {
+  const { open, card, prefill } = props;
+  const { save, pending } = useRateCardSave(props);
+  const [draft, setDraft] = useState<RateCardDraft>(() => openingRateCardDraft(card, prefill));
+  const [showErrors, setShowErrors] = useState(false);
+  useEffect(() => {
+    if (open) {
+      setDraft(openingRateCardDraft(card, prefill));
+      setShowErrors(false);
+    }
+  }, [open, card, prefill]);
   const patch = (next: Partial<RateCardDraft>): void => setDraft((prev) => ({ ...prev, ...next }));
   const submit = (): void => {
     if (pending) return;
     if (hasErrors(validateRateCard(draft))) return setShowErrors(true);
-    const body = buildRateCardBody(draft);
-    if (card) update.mutate({ cardId: card.id, body }, { onSuccess, onError });
-    else create.mutate(body, { onSuccess, onError });
+    save(draft);
   };
   return {
     draft,
@@ -65,15 +70,24 @@ export interface RateCardEditSheetProps {
   readonly open: boolean;
   /** The rate card being edited, or null to add a new one. */
   readonly card: RateCardView | null;
+  /**
+   * What a new card opens with (a menu's draft F&B card: its name and restricted source). Keep it the
+   * same object while the sheet is open: a new one starts the draft again.
+   */
+  readonly prefill?: Partial<RateCardDraft> | undefined;
   readonly onClose: () => void;
+  /** Called with a new card once it is created (never after an edit), before the sheet closes. */
+  readonly onCreated?: ((card: RateCardView) => void) | undefined;
 }
 
 /**
  * Add or edit a rate card (name, validity dates, and the staff-only source and notes). A new card starts
- * as a draft — nothing reaches clients until it is verified. Hotel team / Super Admin only, gated server-side.
+ * as a draft — nothing reaches clients until it is verified — and may open prefilled, as a menu's draft
+ * F&B card does (D-187 §6). Hotel team / Super Admin only, gated server-side.
  */
-export function RateCardEditSheet({ hotelId, open, card, onClose }: RateCardEditSheetProps) {
-  const { draft, patch, errors, pending, submit } = useRateCardForm(hotelId, open, card, onClose);
+export function RateCardEditSheet(props: RateCardEditSheetProps) {
+  const { open, card, onClose } = props;
+  const { draft, patch, errors, pending, submit } = useRateCardForm(props);
   return (
     <Sheet
       open={open}

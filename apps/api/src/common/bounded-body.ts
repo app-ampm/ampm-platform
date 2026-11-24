@@ -4,12 +4,13 @@ import type { Readable } from "node:stream";
 import { errors } from "@ampm/core";
 
 /*
- * The shared post-guard body reader (D-176; plan §4.8). A route that takes a file reads its raw body here,
- * inside its handler, so authentication, the rate limit, the permission and the query pipe have all run
- * before a byte is read: a refused caller never makes the API buffer anything. The global raw parser
- * skips these routes (POST_GUARD_PATHS in app-error.filter.ts), and the reader refuses a body some
- * parser already took. It checks the media type, the declared length against the route's cap before
- * reading, the bytes as they stream, and a deadline. Slice 6 moves every upload route onto it.
+ * The shared post-guard body reader (D-176, D-187; plan §4.5). Every route that takes a file reads its
+ * raw body here, inside its handler, so authentication, the rate limit, the permission and the upload
+ * slot (@UploadRoute) have all been checked before a byte is read: a refused caller never makes the API
+ * buffer anything. No global parser reads a file (only JSON is parsed before the guards), and the
+ * reader refuses a body some parser already took. It checks the media type, the declared length against
+ * the route's cap before reading (a body without one, chunked, is refused), the bytes as they stream,
+ * and a deadline.
  */
 
 /** A request whose body has not been read: the express Request, or a stream in a test. */
@@ -32,6 +33,16 @@ export interface BoundedBodyOptions {
 export const BODY_DEADLINE_MS = 60_000;
 
 /**
+ * An upload route's body (D-187): the file's raw bytes as application/octet-stream, at most `limitBytes`.
+ *
+ * @example
+ * const bytes = await readBoundedBody(req, octetStreamBody(MAX_DOCUMENT_UPLOAD_BYTES));
+ */
+export function octetStreamBody(limitBytes: number): BoundedBodyOptions {
+  return { limitBytes, contentTypes: ["application/octet-stream"] };
+}
+
+/**
  * Reads a route's raw body after the guards, within its limits: 415 for a media type the route does not
  * take, 400 without a Content-Length, 413 before reading when the declared length is over the cap or as
  * soon as the bytes pass it, 400 when the body is cut off or outlasts the deadline. Whatever is left of a
@@ -46,7 +57,7 @@ export async function readBoundedBody(
 ): Promise<Buffer> {
   requireMediaType(req, options.contentTypes);
   if (req.body !== undefined || req.readableEnded) {
-    // A wiring error, not the caller's: the route is missing from POST_GUARD_PATHS, so a parser read it.
+    // A wiring error, not the caller's: some parser read this route's body before its handler did.
     throw errors.internal("The request body was read before its route could check it");
   }
   if (declaredLength(req) > options.limitBytes) throw tooLarge(options.limitBytes);

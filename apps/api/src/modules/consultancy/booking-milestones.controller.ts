@@ -1,8 +1,8 @@
 import { Controller, Get, HttpCode, Patch, Post, Req } from "@nestjs/common";
 import {
   bookingMilestoneCreateRequest,
-  errors,
   bookingMilestoneListQuery,
+  MAX_DOCUMENT_UPLOAD_BYTES,
   bookingMilestoneTransitionRequest,
   bookingMilestoneUpdateRequest,
   uuid,
@@ -17,9 +17,9 @@ import {
 import type { Request } from "express";
 import { z } from "zod";
 
-import { RateLimit } from "../../common/rate-limit/rate-limit.decorator.js";
-import { UPLOADS } from "../../common/rate-limit/route-limits.js";
+import { octetStreamBody, readBoundedBody } from "../../common/bounded-body.js";
 import type { Access } from "../../common/request-context.js";
+import { UploadRoute } from "../../common/upload-slot/upload-route.decorator.js";
 import { ZodBody, ZodParams, ZodQuery } from "../../common/zod.js";
 import {
   CurrentAccess,
@@ -104,25 +104,21 @@ export class BookingMilestonesController {
     return this.milestones.transition(principal, access, params.milestoneId, body);
   }
 
-  // The raw file bytes are the request body (application/octet-stream); content, not extension, decides type.
+  // The raw file bytes are the request body (application/octet-stream), read here, after the guards
+  // and in an upload slot (D-187); content, not extension, decides type.
   @Post("booking-milestones/:milestoneId/contract")
   @HttpCode(200)
   @RequirePermission("consultancy.booking_milestones.update")
-  @RateLimit(UPLOADS)
+  @UploadRoute()
   @SelfAudited()
-  attachContract(
+  async attachContract(
     @ZodParams(milestoneParam) params: { milestoneId: string },
     @Req() req: Request,
     @CurrentPrincipal() principal: Principal,
     @CurrentAccess() access: Access,
   ): Promise<BookingMilestoneStaffView> {
-    if (!Buffer.isBuffer(req.body)) {
-      throw errors.validation(
-        [],
-        "Send the raw file bytes as the request body (application/octet-stream)",
-      );
-    }
-    return this.contracts.attach(principal, access, params.milestoneId, req.body);
+    const bytes = await readBoundedBody(req, octetStreamBody(MAX_DOCUMENT_UPLOAD_BYTES));
+    return this.contracts.attach(principal, access, params.milestoneId, bytes);
   }
 
   @Post("booking-milestones/:milestoneId/contract/link")

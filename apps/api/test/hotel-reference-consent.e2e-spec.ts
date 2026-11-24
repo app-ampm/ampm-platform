@@ -1,8 +1,10 @@
+import { createHash } from "node:crypto";
 import { mkdtemp, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import type { NestExpressApplication } from "@nestjs/platform-express";
+import sharp from "sharp";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
@@ -141,7 +143,8 @@ describe("Hotel wedding reference consent (e2e)", () => {
   it("refuses a file by content, refuses an infected one, and keeps nothing of either", async () => {
     const refId = await newReference();
     const exe = Buffer.concat([Buffer.from("MZ"), Buffer.from("a renamed executable.pdf")]);
-    await attach(refId, exe).expect(400);
+    const refused = await attach(refId, exe).expect(415); // not a type the consent takes (D-187 §3)
+    expect(refused.body.error.code).toBe("unsupported_media_type");
     const eicar = Buffer.concat([PDF, Buffer.from("EICAR-STANDARD-ANTIVIRUS-TEST-FILE")]);
     const infected = await attach(refId, eicar);
     expect(infected.status).toBe(400);
@@ -174,6 +177,38 @@ describe("Hotel wedding reference consent (e2e)", () => {
     expect(Buffer.from(download.body).equals(PDF)).toBe(true);
   });
 
+  it("keeps a photo of the consent upright and whole, without its metadata (D-187)", async () => {
+    const refId = await newReference();
+    const photo = await sharp({
+      create: { width: 2400, height: 1600, channels: 3, background: { r: 240, g: 236, b: 226 } },
+    })
+      .withMetadata({ orientation: 6 }) // taken on its side, as phones store it
+      .withExif({ IFD0: { Make: "TestCam", Model: "ConsentPhone" } })
+      .jpeg()
+      .toBuffer();
+    expect((await sharp(photo).metadata()).exif).toBeInstanceOf(Buffer); // there is EXIF to strip
+    await attach(refId, photo).expect(200);
+
+    const url = (await mintLink(refId).expect(201)).body.data.url as string;
+    const download = await http().get(url).responseType("blob").expect(200);
+    expect(download.headers["content-type"]).toContain("image/jpeg");
+    expect(download.headers).toMatchObject({
+      "content-security-policy": "default-src 'none'; sandbox", // a raster image is sandboxed too
+      "cross-origin-resource-policy": "same-site",
+      "content-disposition": 'inline; filename="consent.jpg"',
+    });
+    const served = Buffer.from(download.body);
+    const meta = await sharp(served).metadata();
+    expect(meta.format).toBe("jpeg");
+    expect([meta.width, meta.height]).toEqual([1600, 2400]); // upright, never downscaled
+    expect(meta.exif).toBeUndefined();
+    expect(served.includes(Buffer.from("TestCam"))).toBe(false);
+    // The record describes the bytes kept, not the ones uploaded.
+    const row = await prisma.document.findFirstOrThrow({ where: { ownerId: refId } });
+    expect(row.sizeBytes).toBe(served.length);
+    expect(row.checksum).toBe(createHash("sha256").update(served).digest("hex"));
+  });
+
   it("answers 404 for a reference outside the hotel in the path (denial equals absence)", async () => {
     const refId = await newReference();
     await attach(refId, PDF, "ht", otherHotelId).expect(404);
@@ -181,13 +216,17 @@ describe("Hotel wedding reference consent (e2e)", () => {
     await mintLink(refId, "ht", otherHotelId).expect(404);
   });
 
-  it("refuses a binary body on any other reference route (415)", async () => {
+  it("never reads a binary body on any other reference route: it carries no record (D-187)", async () => {
     const refId = await newReference();
-    await http()
+    const before = await prisma.hotelWeddingReference.findUniqueOrThrow({ where: { id: refId } });
+    const res = await http()
       .patch(`${base()}/${refId}`)
       .set("Authorization", bearer.ht)
       .set("content-type", OCTET)
       .send(PDF)
-      .expect(415);
+      .expect(400);
+    expect(res.body.error.code).toBe("validation_failed");
+    const after = await prisma.hotelWeddingReference.findUniqueOrThrow({ where: { id: refId } });
+    expect(after).toEqual(before);
   });
 });

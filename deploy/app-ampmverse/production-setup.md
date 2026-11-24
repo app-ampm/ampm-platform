@@ -249,7 +249,11 @@ Never prune volumes, and never delete from the WAL archive or the pgBackRest rep
 
 ## 7. Edge limits and the client's address (D-177)
 
-On 24 Nov 2026 the edge had no effective size limit. nginx passed at least 40 MiB to an upload route, where Plesk's own limit is 128m. The API cut the body off at 26 MB and Apache answered a 502 page. A 2 MiB JSON body reached the API, which answered its own 413. The SSH user cannot read or change Plesk's generated vhost configuration, so:
+On 24 Nov 2026 the edge had no effective size limit. nginx passed at least 40 MiB to an upload route, where Plesk's own limit is 128m. The API's pre-guard parser of the time cut the body off at 26 MB and Apache answered a 502 page. A 2 MiB JSON body reached the API, which answered its own 413.
+
+Since Slice 6 (D-187) the API reads no upload before its guards. Only JSON (100 KB) is parsed before them. Each upload route reads its own body in its handler, with its own cap: media and a PowerPoint fact sheet 25 MiB, other documents 20 MiB, the import CSVs 5 MiB. An anonymous or unauthorised upload is answered 401 or 403 before a byte is read, and a declared length over the cap gets the API's 413. Each API process reads at most 2 uploads per person and 4 in all; past that it answers 503 with `Retry-After: 5`. The edge limits below still matter: they keep oversized and stalled bodies off the box before Apache and the API see them.
+
+The SSH user cannot read or change Plesk's generated vhost configuration, so:
 
 - **Someone with Plesk panel access**, in Domains > app.ampmverse.com > Apache & nginx Settings:
   - pastes [`plesk-nginx-directives.conf`](plesk-nginx-directives.conf) into "Additional nginx directives";
@@ -264,7 +268,7 @@ On 24 Nov 2026 the edge had no effective size limit. nginx passed at least 40 Mi
 
 **Check the edge** from any machine, before and after: `bash deploy/app-ampmverse/check-edge-limits.sh`, or with `--hardened` once the optional tier is on.
 
-- It sends 40 MiB to an upload route, expecting the edge's 413 (a 502 means no edge limit), and 20 MiB, expecting the API's own 401 or 415.
+- It sends 40 MiB to an upload route, expecting the edge's 413 (the API's own answer, or a 502, means no edge limit), and 20 MiB, expecting the API's own 401 or 415.
 - With `--hardened` it also sends 2 MiB of JSON to another API route, expecting the edge's 413.
 - It sends no credentials, so nothing is stored, and it never calls a path behind the password curtain, whose 401s count toward fail2ban.
 

@@ -1,68 +1,56 @@
-import { MAX_MEDIA_UPLOAD_BYTES, type MediaRightsStatus, type MediaVisibility } from "@ampm/core";
+import {
+  CONTENT_KINDS,
+  contentKindOfMimeType,
+  MAX_MEDIA_UPLOAD_BYTES,
+  type ContentKind,
+  type MediaKind,
+  type MediaRightsStatus,
+  type MediaVisibility,
+} from "@ampm/core";
 
 /**
- * Content and rendition rules for gallery media (feature 9.3): how an upload's type is sniffed, how its
- * derivatives are sized and keyed, and which visibility/rights values may reach a client. Pure constants
- * and functions — no I/O, no Prisma — so the service and its tests share one source of these rules.
- * Content-sniffing (AC-20.2) decides the stored type from the bytes' magic number, never the client's
- * extension or Content-Type, so a renamed executable is refused; no sniffing library is needed.
+ * Content and rendition rules for gallery media (feature 9.3): which kinds of file an asset takes, how
+ * its derivatives are sized and keyed, and which visibility/rights values may reach a client. Pure
+ * constants and functions — no I/O, no Prisma — so the service and its tests share one source of these
+ * rules. An upload's kind is decided from its bytes by the content checks (D-187 §2,
+ * `documents/content/inspect-content.ts`), never by the client's extension or Content-Type, so a renamed
+ * executable, a HEIF or AVIF photo and a polyglot are refused.
  */
 
-export interface DetectedMedia {
-  readonly mimeType: string;
-  readonly kind: "image" | "video";
-}
+/**
+ * The kinds an asset of each declared kind takes (AC-20.2, D-187 §2). Every ISO media file that is not a
+ * HEIF or AVIF photo is a video, kept and served as MP4, a QuickTime MOV (`qt` brand) included, as before.
+ */
+export const MEDIA_CONTENT_KINDS: Readonly<Record<MediaKind, readonly ContentKind[]>> = {
+  image: ["jpeg", "png", "webp", "gif"],
+  video: ["mp4"],
+};
 
-const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
-const ascii = (bytes: Buffer, start: number, end: number): string =>
-  bytes.subarray(start, end).toString("ascii");
-
-const SIGNATURES: ReadonlyArray<{ detected: DetectedMedia; match: (b: Buffer) => boolean }> = [
-  {
-    detected: { mimeType: "image/jpeg", kind: "image" },
-    match: (b) => b.length >= 3 && b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff,
-  },
-  {
-    detected: { mimeType: "image/png", kind: "image" },
-    match: (b) => b.length >= 8 && b.subarray(0, 8).equals(PNG),
-  },
-  {
-    detected: { mimeType: "image/webp", kind: "image" },
-    match: (b) => b.length >= 12 && ascii(b, 0, 4) === "RIFF" && ascii(b, 8, 12) === "WEBP",
-  },
-  {
-    detected: { mimeType: "image/gif", kind: "image" },
-    match: (b) => b.length >= 6 && (ascii(b, 0, 6) === "GIF87a" || ascii(b, 0, 6) === "GIF89a"),
-  },
-  {
-    detected: { mimeType: "video/mp4", kind: "video" },
-    match: (b) => b.length >= 12 && ascii(b, 4, 8) === "ftyp",
-  },
-];
-
-/** The detected media type, or null when the bytes are not an allowed image or video (AC-20.2). */
-export function detectMedia(bytes: Buffer): DetectedMedia | null {
-  const hit = SIGNATURES.find((signature) => signature.match(bytes));
-  return hit ? hit.detected : null;
+/**
+ * A media file's name as it is served (D-187 §5): a fixed, PII-free stem by kind and the extension of
+ * its detected type; `media.bin` for a type the gallery does not take.
+ */
+export function mediaFileName(mimeType: string): string {
+  const kind = contentKindOfMimeType(mimeType);
+  if (!kind || !Object.values(MEDIA_CONTENT_KINDS).some((kinds) => kinds.includes(kind))) {
+    return "media.bin";
+  }
+  return `${kind === "mp4" ? "video" : "image"}.${CONTENT_KINDS[kind].extension}`;
 }
 
 /** The flat upload ceiling the API buffers and stores (AC-20.2); one shared constant with the client (core). */
 export const MAX_UPLOAD_BYTES = MAX_MEDIA_UPLOAD_BYTES;
 
 /**
- * The image types the derivative step can downscale and re-encode (feature 9.3c, AC-24.1). GIF is
- * excluded — its animation needs a different path — and video is a separate concern (AC-24.2). A type
+ * The image kinds the derivative step can downscale and re-encode (feature 9.3c, AC-24.1). GIF is
+ * excluded — its animation needs a different path — and video is a separate concern (AC-24.2). A kind
  * outside this set keeps only its original and never reaches the client gallery, which serves a derivative.
  */
-const DERIVABLE_IMAGE_MIMES: ReadonlySet<string> = new Set([
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-]);
+const DERIVABLE_IMAGE_KINDS: ReadonlySet<ContentKind> = new Set(["jpeg", "png", "webp"]);
 
-/** Whether a detected upload can have web/thumbnail derivatives generated (AC-24.1). */
-export function isDerivableImage(detected: DetectedMedia): boolean {
-  return detected.kind === "image" && DERIVABLE_IMAGE_MIMES.has(detected.mimeType);
+/** Whether an upload of this kind can have web/thumbnail derivatives generated (AC-24.1). */
+export function isDerivableImage(kind: ContentKind): boolean {
+  return DERIVABLE_IMAGE_KINDS.has(kind);
 }
 
 /**

@@ -14,8 +14,14 @@ import { startApi } from "./start-api.js";
 const PREFIX = "e2e-mediaac-";
 const OCTET = "application/octet-stream";
 const JPEG_HEADER = Buffer.from([0xff, 0xd8, 0xff, 0xe0]);
-// Sniffs as MP4 (the `ftyp` box sits at offset 4); stored as-is — a video is non-derivable (AC-24.2).
-const MP4 = Buffer.concat([Buffer.from([0, 0, 0, 0]), Buffer.from("ftypisomvideo-bytes")]);
+// An MP4 by its first box (size 20, `ftyp`, major brand isom, one compatible brand); stored as-is — a
+// video is non-derivable (AC-24.2). A box must declare its size: one of 0 bytes is refused as damaged.
+const MP4 = Buffer.concat([
+  Buffer.from([0, 0, 0, 20]),
+  Buffer.from("ftypisom"),
+  Buffer.alloc(4),
+  Buffer.from("isomvideo-bytes"),
+]);
 const realJpeg = (): Promise<Buffer> =>
   sharp({ create: { width: 16, height: 16, channels: 3, background: { r: 1, g: 2, b: 3 } } })
     .jpeg()
@@ -116,15 +122,35 @@ describe("Media AC-20/AC-24 acceptance (e2e)", () => {
 
   it("refuses an upload over the size ceiling (AC-20, size refusal)", async () => {
     const id = await newAsset("image", "image/jpeg");
-    // 25.5 MiB: within the 26 MiB body-parser limit but over the 25 MiB app ceiling, so the service
-    // rejects it (400) rather than the parser (413).
+    // 25.5 MiB, over the 25 MiB ceiling: the route's reader refuses the declared length with 413 before
+    // reading a byte (D-187), so the bytes never reach detection, the scan or sharp.
     const tooBig = Buffer.concat([JPEG_HEADER, Buffer.alloc(Math.floor(25.5 * 1024 * 1024))]);
-    const res = await uploadBytes(id, tooBig).expect(400);
-    // Pin the 400 to the SIZE ceiling, not the decode-reject path. The payload sniffs as JPEG but cannot
-    // decode, and both failures are validation_failed/400 — so the message is the only distinguisher.
-    // Without this assertion, removing the size guard would still pass here (the bytes would 400 at the
-    // sharp decode instead), leaving the AC-20 ceiling untested.
-    expect(res.body.error.message).toMatch(/exceeds the \d+ MB limit/i);
+    const res = await uploadBytes(id, tooBig).expect(413);
+    expect(res.body.error).toEqual({
+      code: "payload_too_large",
+      message: "The file is larger than 25 MB",
+    });
+    const after = await http().get(`/media/${id}`).set("Authorization", auth).expect(200);
+    expect(after.body.data.scanStatus).toBe("pending"); // nothing stored
+  });
+
+  it("refuses an image over 25 megapixels from its header, before deriving anything (D-187)", async () => {
+    const id = await newAsset("image", "image/png");
+    // 5001 x 5000: just over the limit, a flat colour so the file itself stays small.
+    const huge = await sharp({
+      create: { width: 5001, height: 5000, channels: 3, background: { r: 9, g: 9, b: 9 } },
+    })
+      .png()
+      .toBuffer();
+    const res = await uploadBytes(id, huge).expect(400);
+    const message = "Images can be at most 25 megapixels: save it as a PDF or a smaller image.";
+    expect(res.body.error).toEqual({
+      code: "validation_failed",
+      message,
+      details: [{ path: "file", message }],
+    });
+    const after = await http().get(`/media/${id}`).set("Authorization", auth).expect(200);
+    expect(after.body.data.scanStatus).toBe("pending"); // nothing stored
   });
 
   it("stops serving a minted link once the owning asset is removed (AC-20.5, access follows the record)", async () => {
@@ -157,6 +183,12 @@ describe("Media AC-20/AC-24 acceptance (e2e)", () => {
       .get(original.body.data.url as string)
       .expect(200);
     expect(served.headers["content-type"]).toContain("video/mp4");
+    // Not a raster image: a download, never rendered in the API's origin (D-187 §5).
+    expect(served.headers).toMatchObject({
+      "content-security-policy": "default-src 'none'",
+      "cross-origin-resource-policy": "same-site",
+      "content-disposition": 'attachment; filename="video.mp4"',
+    });
 
     await http()
       .get(`/media/${id}/download-url?variant=web`)

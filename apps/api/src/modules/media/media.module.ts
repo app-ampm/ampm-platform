@@ -1,6 +1,5 @@
 import { Module } from "@nestjs/common";
 
-import { IMAGE_PROCESSOR, SharpImageProcessor } from "./image.processor.js";
 import { MediaController } from "./media.controller.js";
 import { MediaRepository } from "./media.repository.js";
 import { MediaUploadService } from "./media-upload.service.js";
@@ -14,14 +13,10 @@ import { MediaService } from "./media.service.js";
  */
 @Module({
   controllers: [MediaController],
-  // The storage adapter and the AV scanner are global (StorageModule; ClamAV in production, AV_PROVIDER).
-  // The image processor (sharp) generates the metadata-stripped derivatives on upload (feature 9.3c).
-  providers: [
-    MediaService,
-    MediaUploadService,
-    MediaRepository,
-    { provide: IMAGE_PROCESSOR, useClass: SharpImageProcessor },
-  ],
+  // The storage adapter, the AV scanner and the image processor are global (StorageModule): ClamAV in
+  // production (AV_PROVIDER), and sharp for the metadata-stripped derivatives (feature 9.3c), one image at
+  // a time for the whole process (D-187).
+  providers: [MediaService, MediaUploadService, MediaRepository],
   exports: [MediaService],
 })
 export class MediaModule {}

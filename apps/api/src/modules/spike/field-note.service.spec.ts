@@ -19,7 +19,7 @@ function member(role: StaffRole): PolicyPrincipal {
   return { type: "staff", userId: `u-${role}`, roles: [role], projectIds: [PROJECT] };
 }
 
-/** A project manager of the wedding: CRUA (a) on incidents (permission-matrix §5.13 line 296). */
+/** A project manager of the wedding: CRUA (a) on incidents (permission-matrix §5.13 line 298). */
 const PM = member("PM");
 
 function write(overrides: Partial<FieldNoteUpsert> = {}): FieldNoteUpsert {
@@ -96,7 +96,7 @@ describe("FieldNoteService (offline spike)", () => {
     expect(service.list(PROJECT, EVERY_PROJECT).items).toHaveLength(1);
   });
 
-  it("§5.13 line 296: CD (a) creates notes, but changing one needs the update key, a 403", () => {
+  it("§5.13 line 298: CD (a) creates notes, but changing one needs the update key, a 403", () => {
     const service = new FieldNoteService();
     const creative = member("CD");
     expect(service.upsert(PROJECT, write({ baseVersion: 0 }), creative).outcome).toBe("applied");
@@ -121,7 +121,7 @@ describe("FieldNoteService (offline spike)", () => {
     const service = new FieldNoteService();
     service.upsert(PROJECT, write({ baseVersion: 0 }), PM);
     service.upsert(PROJECT, write({ baseVersion: 1, body: "PM edited" }), PM);
-    // CD (a) creates and reads incidents only (§5.13 line 296): its change is refused, not dropped.
+    // CD (a) creates and reads incidents only (§5.13 line 298): its change is refused, not dropped.
     const offline = write({ baseVersion: 1, body: "CD offline change", status: "resolved" });
     expect(refusedWith(service, member("CD"), offline)).toBe(403);
     // A writer who may change the note gets the conflict to show, not a silent "duplicate".

@@ -1,15 +1,16 @@
 import { useState, type ReactNode } from "react";
 import { useRouter } from "expo-router";
 
+import { useStaffAccess } from "@ampm/api-client";
 import type { HotelStaffDetail } from "@ampm/core";
 import { Button, ScreenHeader, SegmentedControl, Stack } from "@ampm/ui";
 
 import { HotelProfileEditSheet } from "./hotel-profile-edit-sheet";
 import {
   HOTEL_RECORD_PATHNAME,
-  HOTEL_RECORD_TABS,
   hotelRecordEyebrow,
   hotelRecordSection,
+  visibleHotelRecordTabs,
   type HotelRecordSection,
 } from "./hotel-record.format";
 
@@ -64,16 +65,18 @@ function RecordActions({
 }
 
 /**
- * The top of a staff hotel record (T5), shared by its media, rooms-and-venues and rate-card pages: back
- * to the catalogue, "Hotels · <destination>" over the hotel's name, the record's actions at the right,
- * and the record strip under it. A tab replaces the page rather than stacking it, so back always
- * returns to the catalogue. It owns the profile editor, which the window crossing 1024 never resets:
- * the header sits in the same place at every width.
+ * The top of a staff hotel record (T5), shared by its pages: back to the catalogue, "Hotels ·
+ * <destination>" over the hotel's name, the record's actions at the right, and the record strip under
+ * it, holding the tabs the person's grants open (D-164: Documents only for a reader of documents). A tab
+ * replaces the page rather than stacking it, so back always returns to the catalogue. It owns the
+ * profile editor, which the window crossing 1024 never resets: the header sits in the same place at
+ * every width.
  *
  *   <Screen header={<HotelRecordHeader hotelId={id} section="rates" hotel={hotel.data} />}>…</Screen>
  */
 export function HotelRecordHeader({ hotelId, section, hotel, actions }: HotelRecordHeaderProps) {
   const navigation = useRecordNavigation(hotelId, section);
+  const tabs = visibleHotelRecordTabs(useStaffAccess(), section);
   const [editingProfile, setEditingProfile] = useState(false);
   const onEdit = hotel ? () => setEditingProfile(true) : undefined;
   return (
@@ -91,7 +94,7 @@ export function HotelRecordHeader({ hotelId, section, hotel, actions }: HotelRec
         variant="underline"
         scrollable
         accessibilityLabel="Hotel record sections"
-        options={HOTEL_RECORD_TABS}
+        options={tabs}
         value={section}
         onChange={navigation.openSection}
         testID="hotel-record-tabs"

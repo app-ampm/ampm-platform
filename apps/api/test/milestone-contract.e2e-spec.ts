@@ -1,7 +1,8 @@
-import { mkdtemp, readdir, rm } from "node:fs/promises";
+import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+import { UPLOAD_REFUSAL_MESSAGES } from "@ampm/core";
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -14,6 +15,10 @@ const PREFIX = "e2e-contract";
 const OCTET = "application/octet-stream";
 const PDF = Buffer.from("%PDF-1.4\n% E2E signed contract\n%%EOF\n");
 const PDF_V2 = Buffer.from("%PDF-1.7\n% E2E signed contract, countersigned\n%%EOF\n");
+// Real PDFs from the content-check fixtures (README.md there names their sources): RC4-128, one with
+// only an owner password (opens with none, as permission-locked signed contracts do), one that needs a
+// password to open.
+const fixture = (name: string) => readFile(join(import.meta.dirname, "fixtures", "content", name));
 
 /**
  * The signed contract on a `contract_signed` booking milestone end to end (D-132, Module N's first
@@ -146,7 +151,8 @@ describe("Booking milestone signed contract (e2e)", () => {
   it("refuses a file by content, refuses an infected one, and keeps nothing of either", async () => {
     const milestoneId = await newMilestone();
     const exe = Buffer.concat([Buffer.from("MZ"), Buffer.from("a renamed executable.pdf")]);
-    await attach(milestoneId, exe).expect(400);
+    const refused = await attach(milestoneId, exe).expect(415); // not a type a contract takes (D-187 §3)
+    expect(refused.body.error.code).toBe("unsupported_media_type");
     const eicar = Buffer.concat([PDF, Buffer.from("EICAR-STANDARD-ANTIVIRUS-TEST-FILE")]);
     const infected = await attach(milestoneId, eicar);
     expect(infected.status).toBe(400);
@@ -157,6 +163,31 @@ describe("Booking milestone signed contract (e2e)", () => {
     expect(stored.filter((path) => path.includes(milestoneId))).toEqual([]);
     const row = await prisma.bookingMilestone.findUniqueOrThrow({ where: { id: milestoneId } });
     expect(row.documentId).toBeNull();
+  });
+
+  it("still takes a permission-locked PDF contract, and refuses one that needs a password (D-185, D-187)", async () => {
+    const lockedId = await newMilestone();
+    const locked = await fixture("pypdf-6.13.3-rc4-128-owner-only.pdf");
+    const attached = await attach(lockedId, locked).expect(200);
+    const document = await prisma.document.findUniqueOrThrow({
+      where: { id: attached.body.data.documentId as string },
+    });
+    expect(document).toMatchObject({ mimeType: "application/pdf", sizeBytes: locked.length });
+
+    const passwordId = await newMilestone();
+    const message = UPLOAD_REFUSAL_MESSAGES.password_protected;
+    const refused = await attach(
+      passwordId,
+      await fixture("pypdf-6.13.3-rc4-128-user-password.pdf"),
+    );
+    expect(refused.status).toBe(400);
+    expect(refused.body.error).toEqual({
+      code: "validation_failed",
+      message,
+      details: [{ path: "file", message }],
+    });
+    expect(message).toContain("remove the password and upload it again");
+    expect(await prisma.document.count({ where: { ownerId: passwordId } })).toBe(0);
   });
 
   it("will not mark a contract_signed milestone done before its contract is attached", async () => {
@@ -196,8 +227,14 @@ describe("Booking milestone signed contract (e2e)", () => {
 
     const download = await http().get(url).responseType("blob").expect(200); // public: the link is the capability
     expect(download.headers["content-type"]).toContain("application/pdf");
-    expect(download.headers["content-disposition"]).toBe('inline; filename="contract.pdf"');
-    expect(download.headers["cache-control"]).toBe("private, no-store");
+    // Served restrictively (D-187 §5): no active content, same-site only, a PDF inline but unsandboxed.
+    expect(download.headers).toMatchObject({
+      "x-content-type-options": "nosniff",
+      "content-security-policy": "default-src 'none'",
+      "cross-origin-resource-policy": "same-site",
+      "content-disposition": 'inline; filename="contract.pdf"',
+      "cache-control": "private, no-store",
+    });
     expect(Buffer.from(download.body).equals(PDF)).toBe(true);
 
     await http()
@@ -244,13 +281,17 @@ describe("Booking milestone signed contract (e2e)", () => {
     await attach(milestoneId, PDF).expect(409);
   });
 
-  it("refuses a binary body on any other milestone route (415)", async () => {
+  it("never reads a binary body on any other milestone route: it carries no record (D-187)", async () => {
     const milestoneId = await newMilestone();
-    await http()
+    const before = await prisma.bookingMilestone.findUniqueOrThrow({ where: { id: milestoneId } });
+    const res = await http()
       .patch(`/consultancy-admin/booking-milestones/${milestoneId}`)
       .set("authorization", bearer.ht)
       .set("content-type", OCTET)
       .send(PDF)
-      .expect(415);
+      .expect(400);
+    expect(res.body.error.code).toBe("validation_failed");
+    const after = await prisma.bookingMilestone.findUniqueOrThrow({ where: { id: milestoneId } });
+    expect(after).toEqual(before);
   });
 });

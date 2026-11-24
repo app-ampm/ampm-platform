@@ -1927,24 +1927,24 @@ Created at stage: **Live** · Default editor: Reporter; assignee; PM (a); HL (a)
 
 ### `documents`
 
-Created at stage: **Any** · Default editor: Uploader; PM (a); SA; sharing per permission-matrix §5.14 · Default visibility: Per the visibility field · Assumptions: A-17 (Q17), A-14 (Q14)
+Created at stage: **Any** · Default editor: Uploader; PM (a); SA; sharing per permission-matrix §5.14; a hotel's documents per §5.3 (SA, HT) · Default visibility: Per the visibility field · Assumptions: A-17 (Q17), A-14 (Q14)
 
 | Field | Type and validation | Options | Edited by | Visibility | Required | Automation and report impact |
 |---|---|---|---|---|---|---|
 | `id` (PK) | UUID v7, generated |  | SYS | Per the visibility field | System | — |
-| `project_id` (FK) | references wedding_projects; nullable |  | Uploader; PM (a); SA; sharing per permission-matrix §5.14 | Per the visibility field | Optional | — |
-| `account_id` (FK) | references client_accounts; nullable |  | Uploader; PM (a); SA; sharing per permission-matrix §5.14 | Per the visibility field | Optional | — |
-| `owner_type` | string, up to 255 characters; the record the file belongs to |  | Uploader; PM (a); SA; sharing per permission-matrix §5.14 | Per the visibility field | At creation | — |
-| `owner_id` | must exist; access follows the owning record |  | Uploader; PM (a); SA; sharing per permission-matrix §5.14 | Per the visibility field | At creation | — |
-| `title` | string, up to 255 characters |  | Uploader; PM (a); SA; sharing per permission-matrix §5.14 | Per the visibility field | At creation | — |
-| `document_type` | one of the listed options | proposal, contract, invoice, design, menu, schedule, rooming_list, rider, ticket, consent, other | Uploader; PM (a); SA; sharing per permission-matrix §5.14 | Per the visibility field | At creation | — |
+| `project_id` (FK) | references wedding_projects; nullable |  | Uploader; PM (a); SA; sharing per permission-matrix §5.14; a hotel's documents per §5.3 (SA, HT) | Per the visibility field | Optional | — |
+| `account_id` (FK) | references client_accounts; nullable |  | Uploader; PM (a); SA; sharing per permission-matrix §5.14; a hotel's documents per §5.3 (SA, HT) | Per the visibility field | Optional | — |
+| `owner_type` | string, up to 255 characters; the record the file belongs to |  | Uploader; PM (a); SA; sharing per permission-matrix §5.14; a hotel's documents per §5.3 (SA, HT) | Per the visibility field | At creation | — |
+| `owner_id` | must exist; access follows the owning record |  | Uploader; PM (a); SA; sharing per permission-matrix §5.14; a hotel's documents per §5.3 (SA, HT) | Per the visibility field | At creation | — |
+| `title` | string, up to 255 characters |  | Uploader; PM (a); SA; sharing per permission-matrix §5.14; a hotel's documents per §5.3 (SA, HT) | Per the visibility field | At creation | — |
+| `document_type` | one of the listed options; menu is the food menu (D-187) | proposal, contract, invoice, design, menu, schedule, rooming_list, rider, ticket, consent, other, fact_sheet, beverage_menu, floor_plan | Uploader; PM (a); SA; sharing per permission-matrix §5.14; a hotel's documents per §5.3 (SA, HT) | Per the visibility field | At creation | — |
 | `storage_key` | string, up to 255 characters; private object storage |  | SYS | SECRET | At creation | — |
-| `mime_type` | allowed list per document_type; file scanned on upload |  | Uploader; PM (a); SA; sharing per permission-matrix §5.14 | Per the visibility field | At creation | — |
-| `size_bytes` | integer; within the configured limit (25 MB for documents) |  | Uploader; PM (a); SA; sharing per permission-matrix §5.14 | Per the visibility field | At creation | — |
+| `mime_type` | the kind detected from the bytes (D-187 §2), one the document_type takes in DOCUMENT_TYPE_RULES; file scanned on upload |  | SYS | Per the visibility field | At creation | — |
+| `size_bytes` | integer; within the cap DOCUMENT_TYPE_RULES gives the kind for the document_type (D-187 §3: 10, 20 or 25 MiB) |  | SYS | Per the visibility field | At creation | — |
 | `checksum` | SHA-256 hex |  | SYS | Per the visibility field | At creation | — |
 | `version_number` | integer, 1 or more; increments by 1 within its parent; immutable once shared |  | SYS | Per the visibility field | At creation | A new upload with previous_version_id increments it |
-| `previous_version_id` (FK) | references documents |  | Uploader; PM (a); SA; sharing per permission-matrix §5.14 | Per the visibility field | Optional | — |
-| `visibility` | one of the listed options | internal, client, guest, public | Uploader; PM (a); SA; sharing per permission-matrix §5.14 | Per the visibility field | At creation | Sharing audited; guest and public need explicit permission |
+| `previous_version_id` (FK) | references documents |  | Uploader; PM (a); SA; sharing per permission-matrix §5.14; a hotel's documents per §5.3 (SA, HT) | Per the visibility field | Optional | — |
+| `visibility` | one of the listed options | internal, client, guest, public | Uploader; PM (a); SA; sharing per permission-matrix §5.14; a hotel's documents per §5.3 (SA, HT) | Per the visibility field | At creation | Sharing audited; guest and public need explicit permission |
 | `uploaded_by` (FK) | references users |  | SYS (acting user) | Per the visibility field | At creation | — |
 | `retention_class` | string, up to 255 characters; A-17 |  | SYS from document_type; SA override | Per the visibility field | At creation | — |
 | `retention_until` | timestamp (UTC) |  | SYS | Per the visibility field | Optional | Retention job deletes the file after this date (A-17) |

@@ -41,7 +41,7 @@ export interface StatusMachine {
   readonly terminal: readonly string[];
   /**
    * Who each of the record's people §7 names may be ("The requester" of a client request is a
-   * client, guest or demo principal, §6 line 367); the generator stops on a person not bound here.
+   * client, guest or demo principal, §6 line 370); the generator stops on a person not bound here.
    */
   readonly actors: Readonly<Partial<Record<Actor, readonly ActorPrincipal[]>>>;
 }
@@ -58,7 +58,7 @@ export const STATUS_MACHINES: Readonly<Record<string, StatusMachine>> = {
   subscription: {
     ...PLAIN,
     heading: "Subscription",
-    // §7 line 396: an expired or cancelled row is never reactivated; a new row starts.
+    // §7 line 399: an expired or cancelled row is never reactivated; a new row starts.
     terminal: ["expired", "cancelled"],
     statuses: [
       "trial",
@@ -73,7 +73,7 @@ export const STATUS_MACHINES: Readonly<Record<string, StatusMachine>> = {
   hotel_enquiry: {
     ...PLAIN,
     heading: "Hotel enquiry",
-    // A confirmed enquiry is still closed with its outcome (§7 line 409).
+    // A confirmed enquiry is still closed with its outcome (§7 line 412).
     terminal: ["closed"],
     statuses: [
       "draft",
@@ -104,7 +104,7 @@ export const STATUS_MACHINES: Readonly<Record<string, StatusMachine>> = {
   wedding_project: {
     ...PLAIN,
     heading: "Wedding project",
-    // §7 line 423: closed is left only for closure, by SA, audited.
+    // §7 line 426: closed is left only for closure, by SA, audited.
     terminal: ["closed"],
     statuses: [
       "setup",
@@ -121,10 +121,10 @@ export const STATUS_MACHINES: Readonly<Record<string, StatusMachine>> = {
   approval: {
     ...PLAIN,
     heading: "Approval",
-    // An approved or rejected approval is still superseded by a new version (§7 line 430).
+    // An approved or rejected approval is still superseded by a new version (§7 line 433).
     terminal: ["superseded"],
     statuses: ["draft", "submitted", "revision_requested", "approved", "rejected", "superseded"],
-    // §7 line 428, "The requester per §5.9": line 252 lists staff roles only; clients decide.
+    // §7 line 431, "The requester per §5.9": line 253 lists staff roles only; clients decide.
     actors: { requester: ["staff"] },
   },
   vendor_assignment: {
@@ -171,7 +171,7 @@ export const STATUS_MACHINES: Readonly<Record<string, StatusMachine>> = {
     heading: "Task",
     terminal: ["completed", "cancelled"],
     statuses: ["not_started", "in_progress", "blocked", "completed", "cancelled"],
-    // §6 line 371 gives a client representative R on tasks only, so owners and creators are staff.
+    // §6 line 374 gives a client representative R on tasks only, so owners and creators are staff.
     actors: { owner: ["staff"], creator: ["staff"] },
   },
   room_allocation: {
@@ -196,7 +196,7 @@ export const STATUS_MACHINES: Readonly<Record<string, StatusMachine>> = {
       "withdrawn",
     ],
     kinds: { question: "question", "change request": "change_request" },
-    // §6 line 367: the representatives, a guest (support request) and the demo (routed to Sales)
+    // §6 line 370: the representatives, a guest (support request) and the demo (routed to Sales)
     // create requests; "The assigned staff member" is staff.
     actors: { assignee: ["staff"], requester: ["client", "guest", "demo"] },
   },

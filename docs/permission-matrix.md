@@ -51,7 +51,7 @@ Access is decided in seven layers, in this order. A request must pass every appl
 2. **Global role** (staff only). Roles map to permission keys (`roles`, `permissions`, `role_permissions`). A user may hold several roles; permissions are the union.
 3. **Project scope.** Roles marked *assigned* reach a wedding only through an active `project_members` row. Client users reach a wedding only through their membership and never see another wedding, even on the same account, unless they are members of it too.
 4. **Entitlement** (client principals only). The modules a client may use come from their subscription, service agreements and project memberships combined (§3). Entitlement is computed per request and cached for at most five minutes.
-5. **Record visibility.** A record is reachable when its owning record is reachable and, where it has one, its `visibility` or `client_visible` value admits the principal. A file attached to a proposal is visible exactly when the proposal is.
+5. **Record visibility.** A record is reachable when its owning record is reachable and, where it has one, its `visibility` or `client_visible` value admits the principal. A file attached to a proposal is visible exactly when the proposal is. A hotel's own documents (its fact sheets, menus and floor plans) are the exception: they follow their §5.3 row, "Hotel documents", and are always internal (D-187).
 6. **Field visibility class** (§4). Each field belongs to a class; the API serialises a separate response model per class set, so restricted fields are never sent and then hidden.
 7. **Action.** Create, read, update, delete, approve, share, export, as the matrix states.
 
@@ -175,6 +175,7 @@ Legend: **C** create, **R** read, **U** update, **D** delete (soft), **A** appro
 | Hotel media and rights status | CRUDS | RU rights | CRUDS | R | R | R | — | — | — |
 | Wedding references | CRUD | R | CRUD | R | — | — | — | — | — |
 | Saved hotels (created by clients) | R | R | R | R (a) | — | — | — | — | — |
+| Hotel documents | CRUD | R | CRUD | R | — | — | — | — | — |
 
 ### 5.4 Hotel consultancy
 
@@ -304,6 +305,8 @@ Legend: **C** create, **R** read, **U** update, **D** delete (soft), **A** appro
 | Set client visibility on a document | S | — | S hotel proposals | S (a) | S (a) designs | S proposals | — | — | S invoices, client contracts |
 | Media assets | CRUD | RU rights, showcase | CRUD hotels | R | CRUD (a) designs | CRUD vendors | — | — | — |
 | Expiring access links | CRUD | C (o) | C (o) | C (a) | C (a) | C (o) | C (a) | C (a) | C (o) |
+
+A hotel's documents library (the fact sheets, menus, beverage menus, floor plans and other files a hotel sends, D-187) follows the §5.3 row "Hotel documents" for its documents and their expiring links, not the first and last rows above, and its documents are never set client-visible.
 
 ### 5.15 Closure, feedback and public website
 

@@ -148,7 +148,7 @@ describe("Service agreement signed copy (e2e)", () => {
   it("refuses a copy that is not a document, keeping the agreement waiting on the client", async () => {
     const id = await sentAgreement();
     const exe = Buffer.concat([Buffer.from("MZ"), Buffer.from("a renamed executable.pdf")]);
-    expect((await attach(id, exe)).status).toBe(400);
+    expect((await attach(id, exe)).status).toBe(415); // not a type the signed copy takes (D-187 §3)
     const row = await prisma.serviceAgreement.findUniqueOrThrow({ where: { id } });
     expect(row).toMatchObject({ status: "sent", documentId: null });
     expect(await prisma.document.count({ where: { ownerId: id } })).toBe(0);
@@ -156,11 +156,12 @@ describe("Service agreement signed copy (e2e)", () => {
 
   it("takes only raw bytes, and only from a signed-in staff member", async () => {
     const id = await sentAgreement();
-    await http()
+    const json = await http()
       .post(`/crm/service-agreements/${id}/signed-copy`)
       .set("authorization", await sm())
       .send({ documentId: "00000000-0000-7000-8000-0000000000dd" })
-      .expect(400);
+      .expect(415);
+    expect(json.body.error.code).toBe("unsupported_media_type");
     await http()
       .post(`/crm/service-agreements/${id}/signed-copy`)
       .set("content-type", OCTET)

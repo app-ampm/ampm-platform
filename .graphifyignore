@@ -18,6 +18,9 @@ CLAUDE.md
 # gitignored and so already skipped; the Expo template's binary assets (icons, logos, template images) are
 # tracked but are boilerplate, not AMPM content.
 apps/mobile/assets/
+# The upload content checks' fixtures (D-187): synthetic Office, PDF and image files for the tests, not
+# project content; apps/api/test/fixtures/content/README.md names each one.
+apps/api/test/fixtures/
 # The Peacock Night handoff's HTML mocks and token drafts: inline-styled boards, mapped through docs/design/peacock-night.md instead.
 reference_docs/design/peacock-night/designs/
 reference_docs/design/peacock-night/tokens/

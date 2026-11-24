@@ -3,7 +3,7 @@ import { Readable } from "node:stream";
 
 import { describe, expect, it } from "vitest";
 
-import { readBoundedBody, type BoundedBodyOptions } from "./bounded-body.js";
+import { octetStreamBody, readBoundedBody, type BoundedBodyOptions } from "./bounded-body.js";
 
 const CSV_ONLY: BoundedBodyOptions = { limitBytes: 16, contentTypes: ["text/csv"] };
 
@@ -71,7 +71,16 @@ describe("readBoundedBody", () => {
     expect(req.readableEnded).toBe(true);
   });
 
-  it("refuses a body a parser already read: the route is missing from the post-guard list", async () => {
+  it("takes raw bytes only on an upload route, within its cap (D-187)", async () => {
+    const options = octetStreamBody(8);
+    expect(options).toEqual({ limitBytes: 8, contentTypes: ["application/octet-stream"] });
+    const { req } = request(["%PDF"], sized("%PDF", "application/octet-stream"));
+    await expect(readBoundedBody(req, options)).resolves.toEqual(Buffer.from("%PDF"));
+    const csv = request(["a,b"], sized("a,b", "text/csv"));
+    await expect(readBoundedBody(csv.req, options)).rejects.toMatchObject({ status: 415 });
+  });
+
+  it("refuses a body a parser already read: a wiring error, never the caller's", async () => {
     const { req } = request(["name"], sized("name"), Buffer.from("name"));
     await expect(readBoundedBody(req, CSV_ONLY)).rejects.toMatchObject({ code: "internal" });
   });

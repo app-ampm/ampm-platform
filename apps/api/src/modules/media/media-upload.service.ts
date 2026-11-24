@@ -1,30 +1,39 @@
 import { Inject, Injectable } from "@nestjs/common";
-import { errors } from "@ampm/core";
+import { CONTENT_KINDS, errors, isAppError, type ContentKind } from "@ampm/core";
 
+import { AppLogger } from "../../common/logger.service.js";
+import { loggableDetail, uploadRefusal } from "../../common/upload-refusal.js";
 import { AuditService } from "../../policy/audit.service.js";
-import { STORAGE_ADAPTER, type StorageAdapter } from "../../storage/storage.types.js";
 import { AV_SCANNER, type AvScanner } from "../../storage/av-scanner.js";
-import { IMAGE_PROCESSOR, type ImageProcessor } from "./image.processor.js";
+import { IMAGE_PROCESSOR, type ImageProcessor } from "../../storage/image.processor.js";
+import { STORAGE_ADAPTER, type StorageAdapter } from "../../storage/storage.types.js";
+import { inspectContent } from "../documents/content/inspect-content.js";
 import {
-  detectMedia,
   isDerivableImage,
   MAX_UPLOAD_BYTES,
+  MEDIA_CONTENT_KINDS,
   thumbnailKeyOf,
   THUMBNAIL_MAX_EDGE,
   webKeyOf,
   WEB_MAX_EDGE,
   type DerivativeKeys,
-  type DetectedMedia,
   type Renditions,
 } from "./media-content.js";
 import { MediaRepository, type MediaAssetRow } from "./media.repository.js";
+
+/** What an upload was found to be: its kind, and the type it is stored and served as. */
+interface DetectedMedia {
+  readonly kind: ContentKind;
+  readonly mimeType: string;
+}
 
 /**
  * The media upload pipeline (Module N, feature 9.3b/c): the write path that turns an asset's registered row
  * into stored, scanned, derived bytes. Kept apart from MediaService (which owns CRUD, the gallery and
  * download links) because it is a distinct responsibility with its own collaborators (the AV scanner and
- * image processor). By content (AC-20.2): the magic number decides the type (a renamed executable or a
- * kind mismatch is refused) and the size is bounded. Fail-closed (AC-20.3): only a `clean` asset is
+ * image processor). By content (AC-20.2, D-187 §2): the content checks decide the kind, which must be one
+ * the asset's declared kind takes (a renamed executable, a HEIF or AVIF photo, a polyglot or a kind
+ * mismatch is refused), and the size is bounded. Fail-closed (AC-20.3): only a `clean` asset is
  * downloadable, and the validation that can reject an upload runs BEFORE any stored state changes, so a
  * rejected or undecodable upload leaves an existing clean image exactly as it was.
  */
@@ -36,6 +45,7 @@ export class MediaUploadService {
     @Inject(STORAGE_ADAPTER) private readonly storage: StorageAdapter,
     @Inject(AV_SCANNER) private readonly scanner: AvScanner,
     @Inject(IMAGE_PROCESSOR) private readonly images: ImageProcessor,
+    private readonly logger: AppLogger,
   ) {}
 
   /** Store, scan and derive an upload against an already-resolved asset; returns the updated row. */
@@ -45,16 +55,7 @@ export class MediaUploadService {
     bytes: Buffer,
     actorId: string,
   ): Promise<MediaAssetRow> {
-    const detected = detectMedia(bytes);
-    if (!detected) {
-      throw errors.validation([], "Unsupported file type; allowed: JPEG, PNG, WebP, GIF, MP4");
-    }
-    if (detected.kind !== asset.kind) {
-      throw errors.validation(
-        [],
-        `File content is a ${detected.kind}, not the declared ${asset.kind}`,
-      );
-    }
+    const detected = await this.detect(asset, bytes);
     if (bytes.length > MAX_UPLOAD_BYTES) {
       throw errors.validation([], `File exceeds the ${MAX_UPLOAD_BYTES / (1024 * 1024)} MB limit`);
     }
@@ -99,19 +100,36 @@ export class MediaUploadService {
    * Derive the web + thumbnail renditions of a clean image IN MEMORY, rejecting bytes that sniffed as an
    * image but cannot be decoded (AC-20.2): a corrupt or crafted file must not be stored as a usable image.
    * Runs before any stored state changes, so the 400 leaves the existing asset untouched. A video or gif is
-   * non-derivable and returns null (it keeps only its original).
+   * non-derivable and returns null (it keeps only its original). The renditions are made one after the
+   * other, as the process works on one image at a time (D-187); an image over the pixel limit is refused
+   * with the processor's own message.
    */
   private async renderImage(bytes: Buffer, detected: DetectedMedia): Promise<Renditions | null> {
-    if (!isDerivableImage(detected)) return null;
+    if (!isDerivableImage(detected.kind)) return null;
     try {
-      const [web, thumbnail] = await Promise.all([
-        this.images.derive(bytes, WEB_MAX_EDGE),
-        this.images.derive(bytes, THUMBNAIL_MAX_EDGE),
-      ]);
+      const web = await this.images.derive(bytes, WEB_MAX_EDGE);
+      const thumbnail = await this.images.derive(bytes, THUMBNAIL_MAX_EDGE);
       return { web, thumbnail };
-    } catch {
-      throw errors.validation([], `The file is not a decodable ${detected.kind}`);
+    } catch (error) {
+      if (isAppError(error)) throw error;
+      throw uploadRefusal("image_undecodable");
     }
+  }
+
+  /**
+   * The kind the content checks find, among those the asset's declared kind takes; a refusal is logged
+   * with its rule, never what the file said, and answered with its core message (D-187 §3).
+   */
+  private async detect(asset: MediaAssetRow, bytes: Buffer): Promise<DetectedMedia> {
+    const result = await inspectContent(bytes, new Set(MEDIA_CONTENT_KINDS[asset.kind]));
+    if (result.ok) return { kind: result.kind, mimeType: CONTENT_KINDS[result.kind].mimeType };
+    this.logger.info("upload.refused", {
+      reason: result.reason,
+      detail: loggableDetail(result.detail),
+      mediaKind: asset.kind,
+      sizeBytes: bytes.length,
+    });
+    throw uploadRefusal(result.reason);
   }
 
   /** Store the original (always kept — AC-24.1) and its derivatives; a non-derivable file clears stale ones. */

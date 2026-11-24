@@ -2140,6 +2140,75 @@
       "exclusions": []
     },
     {
+      "section": "5.3",
+      "module": "hotels",
+      "resource": "hotel_documents",
+      "label": "Hotel documents",
+      "provisional": false,
+      "cells": {
+        "SA": "CRUD",
+        "SM": "R",
+        "HT": "CRUD",
+        "PM": "R",
+        "CD": "—",
+        "VC": "—",
+        "RG": "—",
+        "HL": "—",
+        "FA": "—"
+      },
+      "grants": {
+        "SA": [
+          {
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete"
+            ],
+            "scope": "all",
+            "conditions": []
+          }
+        ],
+        "SM": [
+          {
+            "actions": [
+              "read"
+            ],
+            "scope": "all",
+            "conditions": []
+          }
+        ],
+        "HT": [
+          {
+            "actions": [
+              "create",
+              "read",
+              "update",
+              "delete"
+            ],
+            "scope": "all",
+            "conditions": []
+          }
+        ],
+        "PM": [
+          {
+            "actions": [
+              "read"
+            ],
+            "scope": "all",
+            "conditions": []
+          }
+        ],
+        "CD": [],
+        "VC": [],
+        "RG": [],
+        "HL": [],
+        "FA": []
+      },
+      "aliases": [],
+      "exclusions": []
+    },
+    {
       "section": "5.4",
       "module": "consultancy",
       "resource": "enquiries",

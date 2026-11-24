@@ -3,12 +3,7 @@ import { errors, isAppError } from "@ampm/core";
 import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
-import {
-  AppErrorFilter,
-  answerParserRefusal,
-  isPostGuardUpload,
-  refuseBinaryOutsideUpload,
-} from "./app-error.filter.js";
+import { AppErrorFilter, answerParserRefusal } from "./app-error.filter.js";
 import type { AppLogger } from "./logger.service.js";
 
 function run(exception: unknown) {
@@ -114,52 +109,5 @@ describe("AppErrorFilter", () => {
     expect(unexpected.logger.error).toHaveBeenCalled();
     // A status outside 4xx on a non-framework error is never trusted.
     expect(run(Object.assign(new Error("upstream"), { status: 503 })).status).toBe(500);
-  });
-});
-
-describe("the binary-body gate (D-176)", () => {
-  /** Runs the gate on an octet-stream request; true when it lets the request through. */
-  function passes(method: string, url: string): boolean {
-    const path = url.split("?")[0] ?? "";
-    const req = { method, url, path, headers: { "content-type": "application/octet-stream" } };
-    const res = { status: vi.fn().mockReturnThis(), json: vi.fn() };
-    const next = vi.fn();
-    refuseBinaryOutsideUpload(req as never, res as never, next);
-    return next.mock.calls.length === 1;
-  }
-
-  it("lets a binary body through to the import, which reads it after the guards", () => {
-    // The path is the URL's before any query (the route itself refuses a query, D-184).
-    expect(passes("POST", "/hotels-admin/imports/hotels?source=sheet")).toBe(true);
-    expect(
-      isPostGuardUpload({ method: "POST", url: "/hotels-admin/imports/hotels?source=sheet" }),
-    ).toBe(true);
-  });
-
-  it("reads each kind's preview after the guards, and nothing else under imports (D-181, D-183)", () => {
-    for (const kind of ["hotels", "rooms", "venues", "rates"]) {
-      expect(isPostGuardUpload({ method: "POST", url: `/hotels-admin/imports/${kind}` })).toBe(
-        true,
-      );
-    }
-    for (const kind of ["rooms", "rates"]) {
-      const apply = `/hotels-admin/imports/${kind}/0192f1a0-0000-7000-8000-0000000000a1/apply`;
-      expect(isPostGuardUpload({ method: "POST", url: apply })).toBe(false);
-      expect(passes("POST", apply)).toBe(false); // the import takes no file: a binary body is a 415
-    }
-    expect(isPostGuardUpload({ method: "POST", url: "/hotels-admin/imports/contacts" })).toBe(
-      false,
-    );
-  });
-
-  it("keeps the buffered upload routes off the post-guard list", () => {
-    expect(passes("POST", "/media/0192f1a0-0000-7000-8000-0000000000a1/upload")).toBe(true);
-    expect(isPostGuardUpload({ method: "POST", url: "/media/x/upload" })).toBe(false);
-  });
-
-  it("still refuses a binary body on a record route, or on the import with another method", () => {
-    expect(passes("POST", "/hotels-admin/hotels")).toBe(false);
-    expect(passes("PATCH", "/hotels-admin/imports/hotels")).toBe(false);
-    expect(isPostGuardUpload({ method: "PUT", url: "/hotels-admin/imports/hotels" })).toBe(false);
   });
 });

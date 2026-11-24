@@ -13,6 +13,7 @@ import {
   draftFromRateCard,
   draftFromRateItem,
   emptyVerificationDraft,
+  openingRateCardDraft,
   rateAmountCopy,
   validateRateCard,
   validateRateItem,
@@ -30,6 +31,20 @@ describe("rate card form", () => {
       currency: "INR",
       source: "Phone",
     });
+  });
+
+  it("opens a new card with what the caller fills in, and an edit as the card is", () => {
+    const prefill = { name: "F&B · Banquet menu", source: "Food menu v2 (document 1)" };
+    expect(openingRateCardDraft(null, prefill)).toEqual({
+      name: "F&B · Banquet menu",
+      validFrom: "",
+      validTo: "",
+      source: "Food menu v2 (document 1)",
+      internalNotes: "",
+    });
+    expect(openingRateCardDraft(null)).toEqual(draftFromRateCard(null));
+    const card = rateCardViewFixture({ name: "Peak" });
+    expect(openingRateCardDraft(card, prefill)).toEqual(draftFromRateCard(card));
   });
 
   it("requires a name and rejects a malformed date", () => {

@@ -6950,6 +6950,68 @@
     ]
   },
   {
+    "id": "hotels.hotel_documents.create:all",
+    "module": "hotels",
+    "resource": "hotel_documents",
+    "action": "create",
+    "scope": "all",
+    "conditions": [],
+    "isStaffOnly": true,
+    "isEscalationLocked": false,
+    "label": "Create — Hotel documents",
+    "sourceRoles": [
+      "SA",
+      "HT"
+    ]
+  },
+  {
+    "id": "hotels.hotel_documents.delete:all",
+    "module": "hotels",
+    "resource": "hotel_documents",
+    "action": "delete",
+    "scope": "all",
+    "conditions": [],
+    "isStaffOnly": true,
+    "isEscalationLocked": false,
+    "label": "Delete — Hotel documents",
+    "sourceRoles": [
+      "SA",
+      "HT"
+    ]
+  },
+  {
+    "id": "hotels.hotel_documents.read:all",
+    "module": "hotels",
+    "resource": "hotel_documents",
+    "action": "read",
+    "scope": "all",
+    "conditions": [],
+    "isStaffOnly": true,
+    "isEscalationLocked": false,
+    "label": "Read — Hotel documents",
+    "sourceRoles": [
+      "SA",
+      "SM",
+      "HT",
+      "PM"
+    ]
+  },
+  {
+    "id": "hotels.hotel_documents.update:all",
+    "module": "hotels",
+    "resource": "hotel_documents",
+    "action": "update",
+    "scope": "all",
+    "conditions": [],
+    "isStaffOnly": true,
+    "isEscalationLocked": false,
+    "label": "Update — Hotel documents",
+    "sourceRoles": [
+      "SA",
+      "HT"
+    ]
+  },
+  {
     "id": "hotels.hotel_internal_rating_notes.read:all",
     "module": "hotels",
     "resource": "hotel_internal_rating_notes",

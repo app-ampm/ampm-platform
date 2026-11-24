@@ -68,6 +68,7 @@ export type { LogEntry, LogFields, LogLevel, LogSink, Logger, LoggerOptions } fr
 export { parseEnv } from "./env";
 
 export * from "./schemas";
+export * from "./schemas/upload-refusals"; // why an upload's content is refused, and its message (D-187)
 
 export * from "./offline";
 

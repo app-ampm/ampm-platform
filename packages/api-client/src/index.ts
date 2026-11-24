@@ -182,6 +182,15 @@ export {
   weddingReferencesQueryKey,
 } from "./hooks/use-hotel-references";
 export {
+  hotelDocumentsQueryKey,
+  hotelDocumentUploadPath,
+  useDeleteHotelDocument,
+  useHotelDocumentLink,
+  useHotelDocuments,
+  useUploadHotelDocument,
+  type HotelDocumentUploadInput,
+} from "./hooks/use-hotel-documents";
+export {
   hotelMediaQueryKey,
   useAddHotelMedia,
   useDeleteMedia,

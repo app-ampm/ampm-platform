@@ -1,6 +1,6 @@
 import { Controller, Delete, Get, HttpCode, Patch, Post, Req } from "@nestjs/common";
 import {
-  errors,
+  MAX_DOCUMENT_UPLOAD_BYTES,
   uuid,
   weddingReferenceCreateRequest,
   weddingReferenceUpdateRequest,
@@ -13,8 +13,8 @@ import {
 import type { Request } from "express";
 import { z } from "zod";
 
-import { RateLimit } from "../../common/rate-limit/rate-limit.decorator.js";
-import { UPLOADS } from "../../common/rate-limit/route-limits.js";
+import { octetStreamBody, readBoundedBody } from "../../common/bounded-body.js";
+import { UploadRoute } from "../../common/upload-slot/upload-route.decorator.js";
 import { ZodBody, ZodParams } from "../../common/zod.js";
 import {
   Audited,
@@ -92,24 +92,20 @@ export class HotelReferencesController {
     return this.references.remove(params.hotelId, params.referenceId, staffId(principal));
   }
 
-  // The raw file bytes are the request body (application/octet-stream); content, not extension, decides type.
+  // The raw file bytes are the request body (application/octet-stream), read here, after the guards
+  // and in an upload slot (D-187); content, not extension, decides type.
   @Post("hotels/:hotelId/wedding-references/:referenceId/consent")
   @HttpCode(200)
   @RequirePermission("hotels.wedding_references.update")
-  @RateLimit(UPLOADS)
+  @UploadRoute()
   @SelfAudited()
-  attachConsent(
+  async attachConsent(
     @ZodParams(referenceParam) params: ReferenceParam,
     @Req() req: Request,
     @CurrentPrincipal() principal: Principal,
   ): Promise<WeddingReferenceView> {
-    if (!Buffer.isBuffer(req.body)) {
-      throw errors.validation(
-        [],
-        "Send the raw file bytes as the request body (application/octet-stream)",
-      );
-    }
-    return this.consent.attach(params.hotelId, params.referenceId, req.body, staffId(principal));
+    const bytes = await readBoundedBody(req, octetStreamBody(MAX_DOCUMENT_UPLOAD_BYTES));
+    return this.consent.attach(params.hotelId, params.referenceId, bytes, staffId(principal));
   }
 
   // The consent names the couple: only a role that manages references (SA/HT) opens it, not every reader.

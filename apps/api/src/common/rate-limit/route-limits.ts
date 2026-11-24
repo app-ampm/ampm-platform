@@ -36,9 +36,10 @@ export const CLIENT_WRITES: RateLimitOptions = {
 };
 
 /**
- * File uploads (gallery media, a signed contract, a signed agreement copy, a hotel spreadsheet import):
- * each reads up to 25 MiB (the import 5 MiB, D-181), is checked and stored or applied, so they share one
- * bucket per member of staff and fail closed.
+ * File uploads (gallery media, a signed contract, a signed agreement copy, a reference's consent, a hotel
+ * spreadsheet import): each reads up to 25 MiB (the import 5 MiB, D-181), is checked and stored or
+ * applied, so they share one bucket per member of staff and fail closed. A route that reads a file takes
+ * it through @UploadRoute, with an upload slot (D-187).
  */
 export const UPLOADS: RateLimitOptions = {
   name: "uploads",

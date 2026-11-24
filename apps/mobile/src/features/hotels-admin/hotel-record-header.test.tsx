@@ -1,4 +1,7 @@
+import type { StaffRoleCode } from "@ampm/core";
+
 import { fireEvent, screen } from "../../test/render";
+import { staffMeFixture } from "../accounts/accounts.test-utils";
 import { HotelRecordHeader } from "./hotel-record-header";
 import type { HotelRecordSection } from "./hotel-record.format";
 import {
@@ -82,6 +85,38 @@ describe("HotelRecordHeader (T5)", () => {
     await fireEvent.press(screen.getByTestId("hotel-edit-profile"));
     expect(await screen.findByDisplayValue("The Lakeside Palace")).toBeOnTheScreen();
   });
+
+  it("shows the Documents tab to a role that reads documents, and opens it in place", async () => {
+    await renderWithApi(
+      <HotelRecordHeader
+        hotelId={HOTEL_ID}
+        section="rates"
+        hotel={hotelStaffDetailViewFixture()}
+      />,
+      routedFetch({ "/me": () => ok(staffMeFixture(["SM"])) }),
+    );
+    await fireEvent.press(await screen.findByRole("tab", { name: "Documents" }));
+    expect(mockRouter.replace).toHaveBeenCalledWith({
+      pathname: "/hotels-admin/[hotelId]/documents",
+      params: { hotelId: HOTEL_ID },
+    });
+  });
+
+  it.each<StaffRoleCode>(["FA", "CD"])(
+    "hides the Documents tab from %s, which does not read documents",
+    async (role) => {
+      await renderWithApi(
+        <HotelRecordHeader
+          hotelId={HOTEL_ID}
+          section="rates"
+          hotel={hotelStaffDetailViewFixture()}
+        />,
+        routedFetch({ "/me": () => ok(staffMeFixture([role])) }),
+      );
+      expect(await screen.findByRole("tab", { name: "Rate cards" })).toBeSelected();
+      expect(screen.queryByRole("tab", { name: "Documents" })).toBeNull();
+    },
+  );
 
   it("names no hotel and offers no profile edit until the hotel has loaded", async () => {
     await renderHeader("details", false);
