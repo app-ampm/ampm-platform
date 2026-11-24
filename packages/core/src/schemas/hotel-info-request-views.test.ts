@@ -105,7 +105,7 @@ describe("the create and reissue answer", () => {
   const issued = {
     request: full,
     link: {
-      url: "https://site.synthetic.example/hotel-form#k=hfl_0123456789abcdefghijklmnopqrstuvwxyzABCDEFG",
+      url: "https://site.synthetic.example/hotel-form#k=hfl_synthetic-link-secret",
       expiresAt: "2026-12-24T10:00:00.000Z",
     },
     email: "queued",

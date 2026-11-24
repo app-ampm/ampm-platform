@@ -147,7 +147,7 @@ describe("hotel form template baseline (D-188 §5)", () => {
     reference: "HIR-2026-0001",
     hotelName: "Synthetic Lake Hotel",
     expiresOn: "24 December 2026, 15:30 IST",
-    link: "https://site.synthetic.example/hotel-form#k=hfl_0123456789abcdefghijklmnopqrstuvwxyzABCDEFG",
+    link: "https://site.synthetic.example/hotel-form#k=hfl_synthetic-link-secret",
   };
 
   it("hotel_form.link gives the reference, the hotel's name, the expiry and the link", () => {
