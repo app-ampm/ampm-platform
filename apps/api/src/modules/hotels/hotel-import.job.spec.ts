@@ -10,6 +10,7 @@ import {
   readStoredPlan,
   refusalError,
   storedPlanJson,
+  type PlanMatch,
   type PreviewJob,
 } from "./hotel-import.job.js";
 import { ROOMS_IMPORT, VENUES_IMPORT } from "./hotel-import.kinds.js";
@@ -107,26 +108,30 @@ describe("the stored plan", () => {
 
 describe("changedSincePreview", () => {
   const current = (version: string | null) => (_id: string) => version;
+  const row = (targetId: string): PlanMatch => ({ matches: "row", targetId });
+  const NONE: PlanMatch = { matches: "none" };
+  const UNMATCHED: PlanMatch = { matches: "unmatched" };
+  const OTHER_ID = "0192f1a0-0000-7000-8000-0000000000f9";
 
   it("keeps a row whose target holds what it held, and a create whose target is still absent", () => {
-    const replanned = { outcome: "update" as const, targetId: TARGET.id };
-    expect(changedSincePreview(TARGET, replanned, current(TARGET.version))).toBe(false);
-    expect(changedSincePreview(null, { outcome: "create" }, current(null))).toBe(false);
+    expect(changedSincePreview(TARGET, row(TARGET.id), current(TARGET.version))).toBe(false);
+    expect(changedSincePreview(null, NONE, current(null))).toBe(false);
   });
 
   it("refuses a row whose target changed or went, or that now matches another row or none", () => {
-    const update = { outcome: "unchanged" as const, targetId: TARGET.id };
-    expect(changedSincePreview(TARGET, update, current("b".repeat(64)))).toBe(true);
-    expect(changedSincePreview(TARGET, update, current(null))).toBe(true);
-    expect(changedSincePreview(TARGET, { outcome: "create" }, current(TARGET.version))).toBe(true);
-    const other = { outcome: "update" as const, targetId: "0192f1a0-0000-7000-8000-0000000000f9" };
-    expect(changedSincePreview(TARGET, other, current(TARGET.version))).toBe(true);
+    expect(changedSincePreview(TARGET, row(TARGET.id), current("b".repeat(64)))).toBe(true);
+    expect(changedSincePreview(TARGET, row(TARGET.id), current(null))).toBe(true);
+    expect(changedSincePreview(TARGET, NONE, current(TARGET.version))).toBe(true);
+    expect(changedSincePreview(TARGET, row(OTHER_ID), current(TARGET.version))).toBe(true);
   });
 
-  it("refuses a create whose target now exists, and keeps a re-plan's own refusal", () => {
-    const now = { outcome: "update" as const, targetId: TARGET.id };
-    expect(changedSincePreview(null, now, current(TARGET.version))).toBe(true);
-    expect(changedSincePreview(null, { outcome: "error" }, current(null))).toBe(false);
-    expect(changedSincePreview(TARGET, { outcome: "error" }, current(TARGET.version))).toBe(false);
+  it("refuses a create whose target now exists, whatever the re-plan then decided", () => {
+    expect(changedSincePreview(null, row(TARGET.id), current(TARGET.version))).toBe(true);
+  });
+
+  it("keeps the own refusal of a re-plan that matched nothing, or a create, unless its target moved", () => {
+    expect(changedSincePreview(null, UNMATCHED, current(null))).toBe(false);
+    expect(changedSincePreview(TARGET, UNMATCHED, current(TARGET.version))).toBe(false);
+    expect(changedSincePreview(TARGET, UNMATCHED, current(null))).toBe(true);
   });
 });

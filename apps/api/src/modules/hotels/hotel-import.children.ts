@@ -14,7 +14,12 @@ import {
   type StoredChild,
 } from "./hotel-import.child-plan.js";
 import type { ImportRow } from "./hotel-import.file.js";
-import { CHANGED_ERROR, changedSincePreview, type StoredRow } from "./hotel-import.job.js";
+import {
+  CHANGED_ERROR,
+  changedSincePreview,
+  type PlanMatch,
+  type StoredRow,
+} from "./hotel-import.job.js";
 import type { AppliedRows, ImportJobRef, KindImporter, PlannedRows } from "./hotel-import.kinds.js";
 import { refusedReport, type RowReport } from "./hotel-import.report.js";
 import { HotelImportRepository } from "./hotel-import.repository.js";
@@ -110,8 +115,10 @@ export class ChildRowsImporter {
   }
 
   /**
-   * The hotels the rows name (deleted ones included) and their live rows with each one's version token.
-   * Inside an import's transaction the rows are locked before they are read.
+   * The hotels the rows name (deleted ones included) and their live rows with each one's version token,
+   * each row's name in NFC as the file's text is (`decodeCsv`), so two spellings of one name match each
+   * other and two stored rows spelt the two ways are the ambiguity the plan reports. Inside an import's
+   * transaction the rows are locked before they are read.
    */
   private async lookUp<
     Row extends ChildRow<K>,
@@ -136,7 +143,7 @@ export class ChildRowsImporter {
     const versions = new Map<string, string>();
     for (const row of storedRows) {
       const { id, hotelId, name } = kind.keyOf(row);
-      const child = { id, name, values: kind.valuesOf(row) };
+      const child = { id, name: name.normalize("NFC"), values: kind.valuesOf(row) };
       const children = byHotel.get(hotelId);
       if (children) children.push(child);
       else byHotel.set(hotelId, [child]);
@@ -186,23 +193,31 @@ export class ChildRowsImporter {
   }
 }
 
-/** A re-planned row, refused when its target changed since the preview. */
+/** What a plan matched among the hotel's live rows, a refused plan's included. */
+function matchOf<K extends string, Create, Patch>(plan: ChildRowPlan<K, Create, Patch>): PlanMatch {
+  if (plan.outcome === "error") return plan.match;
+  if (plan.outcome === "create") return { matches: "none" };
+  return { matches: "row", targetId: plan.targetId };
+}
+
+/**
+ * A re-planned row, refused when its target changed since the preview: decided from what the re-plan
+ * matched, so a row whose venue was renamed is refused as changed, not for what a new venue would need.
+ */
 function recheck<K extends string, Create, Patch>(
   plan: ChildRowPlan<K, Create, Patch>,
   target: StoredRow<unknown>["target"],
   versions: ReadonlyMap<string, string>,
 ): ChildRowPlan<K, Create, Patch> {
-  const replanned =
-    plan.outcome === "update" || plan.outcome === "unchanged"
-      ? { outcome: plan.outcome, targetId: plan.targetId }
-      : { outcome: plan.outcome };
-  if (!changedSincePreview(target, replanned, (id) => versions.get(id) ?? null)) return plan;
+  const match = matchOf(plan);
+  if (!changedSincePreview(target, match, (id) => versions.get(id) ?? null)) return plan;
   return {
     line: plan.line,
     slug: plan.slug,
     name: plan.name,
     outcome: "error",
     errors: [CHANGED_ERROR],
+    match,
   };
 }
 
@@ -210,7 +225,10 @@ function recheck<K extends string, Create, Patch>(
 function reportOf<K extends HotelImportChangedField, Create, Patch>(
   plan: ChildRowPlan<K, Create, Patch>,
 ): RowReport {
-  if (plan.outcome === "error") return refusedReport(plan, plan.errors);
+  // The key alone: a refused plan's match names a row the uploader may not read, which no report carries.
+  if (plan.outcome === "error") {
+    return refusedReport({ line: plan.line, slug: plan.slug, name: plan.name }, plan.errors);
+  }
   const changedFields = plan.outcome === "unchanged" ? [] : plan.changedFields;
   return {
     line: plan.line,

@@ -84,29 +84,30 @@ export function contactRow(overrides: Partial<ContactRow> = {}): ContactRow {
 /** A decimal column's value, as Prisma reads one back. */
 export const decimal = (value: string): Prisma.Decimal => new Prisma.Decimal(value);
 
-/** The room and venue side of the sub-resources repository: one stored room and one venue. */
+/** The room and venue side of the sub-resources repository: one stored room (500 sq ft) and one venue. */
 function roomsAndVenues() {
   return {
     hotelExists: vi.fn(async (_hotelId: string) => true),
-    createRoom: vi.fn(async (_hotelId: string, _data: unknown, _actorId: string) => roomRow()),
+    createRoom: vi.fn(async (_hotelId: string, _data: unknown, _actorId: string, _tx?: unknown) =>
+      roomRow(),
+    ),
     updateRoom: vi.fn(async (_id: string, _patch: unknown, _actorId: string, _tx?: unknown) =>
       roomRow(),
     ),
-    findRoomInHotel: vi.fn(async (_hotelId: string, _roomId: string) => ({
-      id: ROOM_ID,
-      sizeSqft: 500,
-    })),
-    createVenue: vi.fn(async (_hotelId: string, _data: unknown, _actorId: string) => venueRow()),
+    findRoomInHotel: vi.fn(async (_hotelId: string, _roomId: string): Promise<RoomRow | null> =>
+      roomRow({ sizeSqft: 500 }),
+    ),
+    createVenue: vi.fn(async (_hotelId: string, _data: unknown, _actorId: string, _tx?: unknown) =>
+      venueRow(),
+    ),
     updateVenue: vi.fn(async (_id: string, _patch: unknown, _actorId: string, _tx?: unknown) =>
       venueRow(),
     ),
-    findVenueInHotel: vi.fn(async (_hotelId: string, _venueId: string) => ({
-      id: VENUE_ID,
-      areaSqft: null,
-      prefunctionAreaSqft: 1_000,
-    })),
-    softDeleteRoom: vi.fn(async () => {}),
-    softDeleteVenue: vi.fn(async () => {}),
+    findVenueInHotel: vi.fn(async (_hotelId: string, _venueId: string): Promise<VenueRow | null> =>
+      venueRow({ prefunctionAreaSqft: 1_000 }),
+    ),
+    softDeleteRoom: vi.fn(async (_id: string, _actorId: string, _tx: unknown) => {}),
+    softDeleteVenue: vi.fn(async (_id: string, _actorId: string, _tx: unknown) => {}),
   };
 }
 
@@ -119,15 +120,15 @@ function contacts(primaries: readonly string[]) {
     updateContact: vi.fn(async (_id: string, _patch: unknown, _actorId: string, _tx: unknown) =>
       contactRow(),
     ),
-    findContactInHotel: vi.fn(async (_hotelId: string, _contactId: string) => ({
-      id: CONTACT_ID,
-      phone: "Front desk 0141 234567",
-    })),
+    findContactInHotel: vi.fn(
+      async (_hotelId: string, _contactId: string): Promise<ContactRow | null> =>
+        contactRow({ phone: "Front desk 0141 234567" }),
+    ),
     findLivePrimaries: vi.fn(async (_hotelId: string, _exceptId: string | null, _tx: unknown) =>
       primaries.map((id) => ({ id })),
     ),
     demoteContacts: vi.fn(async (_ids: readonly string[], _actorId: string, _tx: unknown) => {}),
-    softDeleteContact: vi.fn(async () => {}),
+    softDeleteContact: vi.fn(async (_id: string, _actorId: string, _tx: unknown) => {}),
   };
 }
 
@@ -144,7 +145,7 @@ export function buildSubresourcesService(options: { readonly primaries?: readonl
     ...contacts(options.primaries ?? []),
     transaction: vi.fn(<T>(work: (tx: unknown) => Promise<T>): Promise<T> => work({})),
   };
-  const audit = { record: vi.fn(async () => undefined) };
+  const audit = { record: vi.fn(async (_input: unknown, _tx?: unknown) => undefined) };
   const service = new HotelSubresourcesService(
     repo as unknown as HotelSubresourcesRepository,
     audit as unknown as AuditService,

@@ -27,10 +27,9 @@ export function VenueExtrasPanel(props: VenueFieldsProps) {
         sqftTestID="venue-prefunction-sqft"
       />
       <Input
-        label="Facilities"
+        label={VENUE_FIELD_LABEL.facilities}
         helpText="One per line; a | also separates two."
-        value={draft.facilities}
-        onChangeText={(facilities) => patch({ facilities })}
+        {...venueField(props, "facilities")}
         multiline
         testID="venue-facilities"
       />

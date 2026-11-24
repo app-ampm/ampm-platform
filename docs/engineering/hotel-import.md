@@ -42,11 +42,11 @@ Each template has an example file with the same header and synthetic rows for a 
 - **Changed since preview.** Import locks the hotels the file touches and plans each stored row again against the catalogue as it is at that moment. It refuses a row, with "Changed since preview; validate the file again" on its `row` field, and counts it among the rejected rows, when:
   - a value the import compares changed on the row's hotel, room or venue after the preview;
   - the hotel, room or venue the row was to create now exists;
-  - the one the row was to update has been deleted.
+  - the one the row was to update has been deleted or renamed, or its hotel deleted, even when the row could not create a new one instead (a venue row without a type, say).
 
   The other rows still load, so an import never overwrites what staff changed after the preview. Validate the file again to see the change and load the refused rows.
 - **What counts as changed.** A change is a new value in a column the import compares:
-  - **Hotels:** every template column except `slug`, `destinationName` and `imageRef`; `destinationSlug` compares the hotel's destination. The internal rating and notes count only for an uploader who reads or writes them, so an edit of the notes never refuses anyone else's row.
+  - **Hotels:** every template column except `slug`, `destinationName` and `imageRef`; `destinationSlug` compares the hotel's destination. The internal rating and notes count only for an uploader who reads them, or on a row that fills `internalRating` or `internalNotes` (only such a row could write over them), so an edit of the notes never refuses another row, and never tells an uploader who cannot read the notes that they changed.
   - **Rooms and Venues:** every template column except `hotelSlug` and `name`.
 
   Each check is exactly as fine as its kind's comparison. Rooms and Venues compare text with its spacing evened out, so an edit only in spacing is not a change. The Hotels template compares text trimmed only, and links and list entries exactly, so on a hotel any stored edit counts, spacing and a link's case included. The check is a version token, a hash of those values taken at the preview, not the time of the last edit. Recording a verification, or editing what the template does not carry (contacts, media, rate cards, another room), is therefore not a change.
@@ -155,7 +155,7 @@ One row per hotel. The column list is `HOTEL_IMPORT_COLUMNS` in `packages/core/s
 A Rooms or Venues row names its hotel by web address in `hotelSlug`, and its room category or venue by `name`.
 
 - **The hotel must exist.** A web address that names no hotel, or a deleted one, is a row error on `hotelSlug`.
-- **Matched by name within the hotel.** A row matches the hotel's room or venue of the same name, ignoring case and spacing: `example  hillside VILLA` finds `Example Hillside Villa`. Any other difference is a different name, so `Example Hill-side Villa` would create a new room.
+- **Matched by name within the hotel.** A row matches the hotel's room or venue of the same name, ignoring case and spacing: `example  hillside VILLA` finds `Example Hillside Villa`. How an accent is encoded does not count either: a name copied from a PDF with a combining accent finds the same name typed in the team app, since the import reads the file and the stored names in one composed form (Unicode NFC). Any other difference is a different name, so `Example Hill-side Villa` would create a new room.
 - **No renames.** A matched row updates the room or venue in place and keeps its stored name. To rename one, use the team app.
 - **No deletes.** An import never deletes or recreates a room or venue, because rate items point at them. A room or venue the file leaves out stays as it is.
 - **A deleted name is free again.** A row with the name of a deleted room or venue creates a new one.

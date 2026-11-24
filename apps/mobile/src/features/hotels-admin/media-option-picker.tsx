@@ -1,6 +1,6 @@
-import { Pressable, View } from "react-native";
+import { Platform, Pressable, View } from "react-native";
 
-import { cn, groupFocusRingStyles, Row, Stack, Text } from "@ampm/ui";
+import { cn, groupFocusRingStyles, requiredLabel, Row, Stack, Text } from "@ampm/ui";
 
 import { FieldAlert } from "./field-alert";
 
@@ -13,6 +13,8 @@ export interface MediaOptionPickerProps<T extends string> {
   readonly onChange: (option: T) => void;
   /** Shown under the chips in gold, and announced, after a save the checks blocked. */
   readonly errorText?: string | undefined;
+  /** A choice a save needs (a venue's setting): marked as a required Input is. */
+  readonly required?: boolean | undefined;
   readonly testID?: string | undefined;
 }
 
@@ -52,11 +54,30 @@ function OptionChip({ text, selected, onPress, testID }: OptionChipProps) {
   );
 }
 
+interface PickerLabelProps {
+  readonly label: string;
+  /** What a screen reader calls the group: the label, or "…, required" on native. */
+  readonly name: string;
+  readonly required: boolean;
+}
+
+/** The group's eyebrow label; a required group's asterisk is drawn only, never read as "star". */
+function PickerLabel({ label, name, required }: PickerLabelProps) {
+  return (
+    <Text variant="eyebrow" tone="muted" {...(name === label ? {} : { accessibilityLabel: name })}>
+      {label}
+      {required ? <Text aria-hidden>{" *"}</Text> : null}
+    </Text>
+  );
+}
+
 /**
  * A small single-select of one of a short list (a photo's visibility or rights, a venue's type and
  * setting, a room's unit type): a labelled radio group of 44px chips, the chosen one in peacock. The
  * selected state is exposed with `aria-checked` so assistive tech reads it on the web workspace. An
- * error shows under the chips, as under an Input.
+ * error shows under the chips, as under an Input. A required group is marked as a required Input is: an
+ * asterisk drawn for the eye, "…, required" on iOS and Android, `aria-required` on the web, where the
+ * name stays the label alone so it is not said twice.
  */
 export function MediaOptionPicker<T extends string>({
   label,
@@ -65,14 +86,21 @@ export function MediaOptionPicker<T extends string>({
   optionLabel,
   onChange,
   errorText,
+  required = false,
   testID,
 }: MediaOptionPickerProps<T>) {
+  const name = Platform.OS === "web" ? label : requiredLabel(label, required);
   return (
     <Stack gap={2}>
-      <Text variant="eyebrow" tone="muted">
-        {label}
-      </Text>
-      <Row gap={2} wrap accessibilityRole="radiogroup" accessibilityLabel={label} testID={testID}>
+      <PickerLabel label={label} name={name} required={required} />
+      <Row
+        gap={2}
+        wrap
+        accessibilityRole="radiogroup"
+        accessibilityLabel={name}
+        aria-required={required}
+        testID={testID}
+      >
         {options.map((option) => (
           <OptionChip
             key={option}

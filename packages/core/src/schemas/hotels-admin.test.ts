@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
+import type { z } from "zod";
 
+import { NUL_TEXT_MESSAGE } from "./common.js";
 import {
   destinationCreateRequest,
   hotelContactCreateRequest,
+  hotelContactUpdateRequest,
   hotelCreateRequest,
   hotelUpdateRequest,
   roomCategoryCreateRequest,
@@ -142,5 +145,71 @@ describe("hotelContactCreateRequest", () => {
     const c = hotelContactCreateRequest.parse({ name: "Sales desk", email: "SALES@Example.com" });
     expect(c.email).toBe("sales@example.com");
     expect(c.isPrimary).toBe(false);
+  });
+});
+
+// PostgreSQL stores no U+0000 in text, varchar or jsonb, and text copied from a PDF can carry one: the
+// edge refuses it on its field (a 400 the sheet can show) instead of a database error (a bare 500).
+describe("text holding the null character", () => {
+  const NUL = "\u0000";
+  const venue = { name: "Synthetic Hall", venueType: "ballroom", setting: "indoor" };
+  const cases: readonly (readonly [string, z.ZodType, object, readonly (string | number)[]])[] = [
+    ["a room's name", roomCategoryCreateRequest, { name: `Deluxe${NUL}` }, ["name"]],
+    ["a room's view", roomCategoryUpdateRequest, { viewLabel: `Lake${NUL}` }, ["viewLabel"]],
+    [
+      "a room's bed configuration",
+      roomCategoryUpdateRequest,
+      { bedConfiguration: `King${NUL}` },
+      ["bedConfiguration"],
+    ],
+    [
+      "a room's description",
+      roomCategoryUpdateRequest,
+      { description: `Quiet${NUL}` },
+      ["description"],
+    ],
+    [
+      "a facility entry",
+      roomCategoryUpdateRequest,
+      { facilities: ["Pool", `Spa${NUL}`] },
+      ["facilities", 1],
+    ],
+    ["a venue's name", venueCreateRequest, { ...venue, name: `Hall${NUL}` }, ["name"]],
+    [
+      "a venue's capacity notes",
+      venueUpdateRequest,
+      { capacityNotes: `Seated 300${NUL}` },
+      ["capacityNotes"],
+    ],
+    [
+      "a venue's description",
+      venueUpdateRequest,
+      { description: `Pillarless${NUL}` },
+      ["description"],
+    ],
+    [
+      "a layout name",
+      venueUpdateRequest,
+      { otherLayouts: [{ layout: `U${NUL}shape`, max: 40 }] },
+      ["otherLayouts", 0, "layout"],
+    ],
+    ["a contact's name", hotelContactCreateRequest, { name: `Desk${NUL}` }, ["name"]],
+    ["a contact's role", hotelContactUpdateRequest, { roleTitle: `Sales${NUL}` }, ["roleTitle"]],
+    ["a contact's phone", hotelContactUpdateRequest, { phone: `0141 234 5678${NUL}` }, ["phone"]],
+  ];
+
+  it.each(cases)("refuses %s on its own field", (_case, schema, body, path) => {
+    const result = schema.safeParse(body);
+    expect(result.success).toBe(false);
+    expect(result.error?.issues).toContainEqual(
+      expect.objectContaining({ path: [...path], message: NUL_TEXT_MESSAGE }),
+    );
+  });
+
+  it("still takes the same text without it", () => {
+    expect(roomCategoryUpdateRequest.parse({ viewLabel: " Lake view " }).viewLabel).toBe(
+      "Lake view",
+    );
+    expect(venueUpdateRequest.safeParse({ capacityNotes: "Seated 300" }).success).toBe(true);
   });
 });

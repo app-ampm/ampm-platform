@@ -85,14 +85,14 @@ function RoomSizePanel(props: RoomFieldsProps) {
 }
 
 /** The room's amenities, one per line, and its description. */
-function RoomAmenitiesPanel({ draft, patch }: Pick<RoomFieldsProps, "draft" | "patch">) {
+function RoomAmenitiesPanel(props: RoomFieldsProps) {
+  const { draft, patch } = props;
   return (
     <ProfileSection title="Amenities and notes" testID="room-amenities">
       <Input
-        label="Facilities"
+        label={ROOM_FIELD_LABEL.facilities}
         helpText="One per line; a | also separates two."
-        value={draft.facilities}
-        onChangeText={(facilities) => patch({ facilities })}
+        {...roomField(props, "facilities")}
         multiline
         testID="room-facilities"
       />
@@ -141,7 +141,7 @@ export function RoomEditSheet({ hotelId, open, room, onClose }: RoomEditSheetPro
       <Stack gap={4}>
         <RoomIdentityPanel {...fields} />
         <RoomSizePanel {...fields} />
-        <RoomAmenitiesPanel draft={fields.draft} patch={fields.patch} />
+        <RoomAmenitiesPanel {...fields} />
       </Stack>
     </Sheet>
   );

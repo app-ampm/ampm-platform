@@ -47,6 +47,7 @@ export function VenueBasicsPanel(props: VenueFieldsProps) {
         optionLabel={venueSettingLabel}
         onChange={(setting) => patch({ setting })}
         errorText={errors.setting}
+        required
         testID="venue-setting"
       />
     </ProfileSection>

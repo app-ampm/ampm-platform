@@ -65,6 +65,20 @@ describe("VenueEditSheet", () => {
     expect(captured.created).not.toHaveProperty("isIndoor");
   });
 
+  it("blocks a save whose facilities line is too long, naming Facilities", async () => {
+    const captured: Captured = {};
+    await renderNew(captured);
+    const commaList = Array.from({ length: 12 }, (_, i) => `Synthetic amenity ${i}`).join(", ");
+    await fireEvent.changeText(await screen.findByTestId("venue-name"), "Synthetic Lawn");
+    await fireEvent.press(screen.getByTestId("venue-setting-outdoor"));
+    await fireEvent.changeText(screen.getByTestId("venue-facilities"), commaList);
+    await fireEvent.press(screen.getByTestId("venue-edit-submit"));
+    const message = "Each facility is at most 120 characters; put each one on its own line";
+    expect(await screen.findByText(`Facilities: ${message}`)).toBeOnTheScreen();
+    expect(screen.getByText(message)).toBeOnTheScreen();
+    expect(captured.created).toBeUndefined();
+  });
+
   it("asks a new venue for its setting before it saves", async () => {
     const captured: Captured = {};
     await renderNew(captured);

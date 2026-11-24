@@ -56,6 +56,22 @@ describe("rooms.form", () => {
     expect(ROOM_FIELD_ORDER[0]).toBe("name");
   });
 
+  // A comma stays inside an entry (one rule with the import), so a comma list pasted on one line is one
+  // facility: the contract takes 100 of at most 120 characters, and the sheet must say so before a save.
+  it("holds the facilities to the contract's 100 entries of 120 characters, naming the field", () => {
+    const commaList = Array.from({ length: 12 }, (_, i) => `Synthetic amenity ${i}`).join(", ");
+    expect(commaList.length).toBeGreaterThan(120);
+    expect(validateRoom({ ...filled, facilities: commaList }).facilities).toBe(
+      "Each facility is at most 120 characters; put each one on its own line",
+    );
+    const many = Array.from({ length: 101 }, (_, i) => `Synthetic amenity ${i}`).join("\n");
+    expect(validateRoom({ ...filled, facilities: many }).facilities).toBe(
+      "Keep to 100 facilities, one per line",
+    );
+    expect(validateRoom({ ...filled, facilities: "x".repeat(120) }).facilities).toBeUndefined();
+    expect(ROOM_FIELD_ORDER).toContain("facilities");
+  });
+
   it("checks the m² only while there is no sq ft", () => {
     expect(validateRoom({ ...filled, sizeSqm: "abc" }).sizeSqm).toBeUndefined();
     expect(validateRoom({ ...filled, sizeSqm: "abc", sizeSqft: "" }).sizeSqm).toBe(

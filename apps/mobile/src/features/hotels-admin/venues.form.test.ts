@@ -28,6 +28,15 @@ const filled: ValidVenueDraft = {
 };
 
 describe("venues.form", () => {
+  it("holds the facilities to the contract's 100 entries of 120 characters, naming the field", () => {
+    const commaList = Array.from({ length: 12 }, (_, i) => `Synthetic amenity ${i}`).join(", ");
+    expect(validateVenue({ ...filled, facilities: commaList }).facilities).toBe(
+      "Each facility is at most 120 characters; put each one on its own line",
+    );
+    expect(VENUE_FIELD_LABEL.facilities).toBe("Facilities");
+    expect(hasErrors(validateVenue(filled))).toBe(false);
+  });
+
   it("starts a new venue with no setting chosen, which a save refuses", () => {
     const draft = { ...draftFromVenue(null), name: "Synthetic Lawn" };
     expect(draft.setting).toBe("unset");

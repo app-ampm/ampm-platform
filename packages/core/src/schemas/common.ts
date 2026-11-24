@@ -4,6 +4,29 @@ import { z } from "zod";
 export const uuid = z.uuid();
 export const isoDateTime = z.iso.datetime();
 
+/** Why text holding the null character is refused: PostgreSQL stores none in text, varchar or jsonb. */
+export const NUL_TEXT_MESSAGE =
+  "Remove the null character from this text (text copied from a PDF can carry one)";
+
+const NUL = "\u0000";
+
+/**
+ * Text as a request writes it: trimmed, and refused on its own field when it holds the null character
+ * (U+0000), which no PostgreSQL text, varchar or jsonb column stores, so the refusal is a 400 that names
+ * the field rather than a database error. A field-level check: it survives `.partial()`. Chain the bounds
+ * after it.
+ *
+ * @example
+ * storableText().min(1).max(255).parse("  Lake View  "); // "Lake View"
+ * storableText().safeParse("Seated 300\u0000").success; // false
+ */
+export function storableText() {
+  return z
+    .string()
+    .trim()
+    .refine((text) => !text.includes(NUL), NUL_TEXT_MESSAGE);
+}
+
 export const cursorQuery = z.object({
   cursor: z.string().min(1).optional(),
   limit: z.coerce.number().int().min(1).max(100).default(50),

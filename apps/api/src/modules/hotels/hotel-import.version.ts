@@ -40,9 +40,10 @@ export function versionOf<K extends string>(
 }
 
 /**
- * What a hotel's token covers for one uploader: its internal rating and notes only when they read or
- * write them. For anyone else a notes cell is refused whatever it holds, so the notes guard nothing of
- * theirs, and a token that moved with them would tell them the notes changed (D-171).
+ * What a hotel's token covers for one row of one uploader: its internal rating and notes only when the
+ * uploader reads them, or the row fills a notes cell (and may write over them). For any other row the
+ * notes guard nothing, and a token that moved with them would tell an uploader who cannot read them that
+ * they changed (D-171).
  */
 export interface HotelVersionScope {
   readonly notes: boolean;
@@ -73,13 +74,13 @@ export function hotelComparedValues(
 }
 
 /**
- * A stored hotel's version token for one uploader: its compared fields exactly as stored, the notes only
- * within `scope`. A preview and its import compute it the same way, so only a stored change moves it (or
- * a change in what the uploader may read or write, which refuses their row as changed: never a write).
+ * A stored hotel's version token for one row of one uploader: its compared fields exactly as stored, the
+ * notes only within `scope`. A preview and its import compute it the same way, so only a stored change
+ * moves it (or a change in what the uploader may read, which refuses their row as changed: never a write).
  *
  * @example
- * const scope = { notes: grants.readsNotes || grants.canWriteNotes };
- * const versions = new Map(liveHotels.map((hotel) => [hotel.id, hotelVersion(hotel, scope)]));
+ * const scope = { notes: grants.readsNotes || row.internalNotes !== undefined || row.internalRating !== undefined };
+ * versions.set(hotel.id, hotelVersion(hotel, scope));
  */
 export function hotelVersion(row: ImportTargetRow, scope: HotelVersionScope): string {
   const values = hotelComparedValues(row);

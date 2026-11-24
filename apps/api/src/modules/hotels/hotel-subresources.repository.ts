@@ -8,12 +8,7 @@ import type {
 
 import { PrismaService } from "../../db/prisma.service.js";
 import { Prisma } from "../../generated/prisma/client.js";
-import type {
-  StoredRoomArea,
-  StoredVenueAreas,
-  VenuePatchData,
-  VenueWriteData,
-} from "./hotel-child-write.js";
+import type { VenuePatchData, VenueWriteData } from "./hotel-child-write.js";
 import { stringListInput } from "./hotel-string-lists.js";
 import { venueLayoutsInput } from "./hotel-venue-layouts.js";
 
@@ -81,6 +76,9 @@ export type ContactRow = Prisma.HotelContactGetPayload<{ select: typeof CONTACT_
 
 type Client = Prisma.TransactionClient;
 
+/** A child is live only while its hotel is: a soft-deleted hotel keeps its rows, which answer 404 with it. */
+const LIVE_HOTEL = { deletedAt: null } as const satisfies Prisma.HotelWhereInput;
+
 @Injectable()
 export class HotelSubresourcesRepository {
   constructor(private readonly prisma: PrismaService) {}
@@ -126,19 +124,19 @@ export class HotelSubresourcesRepository {
     });
   }
 
-  /** The live room of this hotel with the sq ft an update's units rule reads, or null. */
-  findRoomInHotel(
-    hotelId: string,
-    roomId: string,
-  ): Promise<({ id: string } & StoredRoomArea) | null> {
+  /**
+   * The live room of this live hotel, whole: an update's units rule reads its sq ft and its audit the
+   * fields it changes. Null for a room of a deleted hotel too, which answers 404 as a missing one does.
+   */
+  findRoomInHotel(hotelId: string, roomId: string): Promise<RoomRow | null> {
     return this.prisma.hotelRoomCategory.findFirst({
-      where: { id: roomId, hotelId, deletedAt: null },
-      select: { id: true, sizeSqft: true },
+      where: { id: roomId, hotelId, deletedAt: null, hotel: LIVE_HOTEL },
+      select: ROOM_SELECT,
     });
   }
 
-  async softDeleteRoom(id: string, actorId: string): Promise<void> {
-    await this.prisma.hotelRoomCategory.update({
+  async softDeleteRoom(id: string, actorId: string, tx: Client): Promise<void> {
+    await tx.hotelRoomCategory.update({
       where: { id },
       data: { deletedAt: new Date(), updatedBy: actorId },
     });
@@ -178,19 +176,16 @@ export class HotelSubresourcesRepository {
     });
   }
 
-  /** The live venue of this hotel with the sq ft figures an update's units rule reads, or null. */
-  findVenueInHotel(
-    hotelId: string,
-    venueId: string,
-  ): Promise<({ id: string } & StoredVenueAreas) | null> {
+  /** The live venue of this live hotel, whole (its sq ft figures and the fields an update changes), or null. */
+  findVenueInHotel(hotelId: string, venueId: string): Promise<VenueRow | null> {
     return this.prisma.hotelVenue.findFirst({
-      where: { id: venueId, hotelId, deletedAt: null },
-      select: { id: true, areaSqft: true, prefunctionAreaSqft: true },
+      where: { id: venueId, hotelId, deletedAt: null, hotel: LIVE_HOTEL },
+      select: VENUE_SELECT,
     });
   }
 
-  async softDeleteVenue(id: string, actorId: string): Promise<void> {
-    await this.prisma.hotelVenue.update({
+  async softDeleteVenue(id: string, actorId: string, tx: Client): Promise<void> {
+    await tx.hotelVenue.update({
       where: { id },
       data: { deletedAt: new Date(), updatedBy: actorId },
     });
@@ -223,14 +218,14 @@ export class HotelSubresourcesRepository {
     });
   }
 
-  /** The live contact of this hotel with the phone it stores (a repeated phone is kept as it is), or null. */
-  findContactInHotel(
-    hotelId: string,
-    contactId: string,
-  ): Promise<{ id: string; phone: string | null } | null> {
+  /**
+   * The live contact of this live hotel, whole (its stored phone is kept when an edit repeats it, and the
+   * audit names the fields an update changes), or null.
+   */
+  findContactInHotel(hotelId: string, contactId: string): Promise<ContactRow | null> {
     return this.prisma.hotelContact.findFirst({
-      where: { id: contactId, hotelId, deletedAt: null },
-      select: { id: true, phone: true },
+      where: { id: contactId, hotelId, deletedAt: null, hotel: LIVE_HOTEL },
+      select: CONTACT_SELECT,
     });
   }
 
@@ -258,14 +253,14 @@ export class HotelSubresourcesRepository {
     });
   }
 
-  async softDeleteContact(id: string, actorId: string): Promise<void> {
-    await this.prisma.hotelContact.update({
+  async softDeleteContact(id: string, actorId: string, tx: Client): Promise<void> {
+    await tx.hotelContact.update({
       where: { id },
       data: { deletedAt: new Date(), updatedBy: actorId },
     });
   }
 
-  /** Runs `work` in one transaction, so a write and its audit (and a primary's demotion) land together. */
+  /** Runs `work` in one transaction, so a write or a delete and its audit (and a demotion) land together. */
   transaction<T>(work: (tx: Client) => Promise<T>): Promise<T> {
     return this.prisma.$transaction(work);
   }

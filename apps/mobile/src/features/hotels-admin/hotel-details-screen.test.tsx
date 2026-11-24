@@ -76,7 +76,7 @@ describe("HotelDetailsScreen", () => {
     expect(screen.getByText("20 rooms · sleeps 3 · 45 m²")).toBeOnTheScreen();
     expect(screen.getByText("Grand Ballroom")).toBeOnTheScreen();
     expect(
-      screen.getByText("Ballroom · Indoor · 500 m² · 300 seated · 400 theatre · 500 floating"),
+      screen.getByText("Ballroom · Indoor · 500 m² · 300 seated · 500 floating · 400 theatre"),
     ).toBeOnTheScreen();
     expect(
       screen.getByText("Events Manager · +911234567801 · priya@lakeside.example"),

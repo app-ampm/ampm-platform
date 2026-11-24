@@ -17,15 +17,24 @@ import { AuditService } from "../../policy/audit.service.js";
 import { type Principal, staffId } from "../../policy/principal.types.js";
 import { hotelAudienceOf, requireContactsRead, requireContactsUpdate } from "./hotel-audience.js";
 import {
+  createImages,
+  deleteImages,
+  updateImages,
+  type ChildAuditImages,
+} from "./hotel-child-audit.js";
+import {
   roomCreateData,
   roomPatchData,
   venueCreateData,
   venuePatchData,
-  type StoredRoomArea,
-  type StoredVenueAreas,
 } from "./hotel-child-write.js";
 import { contactPhone } from "./hotel-contact-phone.js";
-import { HotelSubresourcesRepository, type ContactRow } from "./hotel-subresources.repository.js";
+import {
+  HotelSubresourcesRepository,
+  type ContactRow,
+  type RoomRow,
+  type VenueRow,
+} from "./hotel-subresources.repository.js";
 import { toHotelContactView, toRoomCategoryView, toVenueView } from "./hotels-admin.view.js";
 
 /** Which hotel and contact a write names (null for a new one), and whether it makes it the primary. */
@@ -38,15 +47,18 @@ interface ContactWrite {
 /** Why a contact write lost the race for the hotel's one primary (the partial unique index refused it). */
 const PRIMARY_RACE = "Another contact was made primary at the same time; try again";
 
+/** The audited kinds of row, as audit events name them. */
+type ChildEntity = "hotel_room_category" | "hotel_venue" | "hotel_contact";
+
 /**
  * A hotel's room categories, venues and contacts (HT/SA; feature 9.1). Every write confirms the hotel
- * exists, and every update/delete confirms the child belongs to that hotel (a mismatch is a 404 — denial
- * equals absence). Rooms and venues are written as hotel-child-write.ts maps them (the units rule; a
- * venue's setting decides `is_indoor`, D-178), and a room or venue create is audited by the `@Audited`
- * interceptor on the route. A contact's phone is stored in E.164 (a repeated stored phone kept as it is),
- * and a hotel has one live primary contact: a write that names a new one demotes the current one in the
- * same transaction, audited, which needs the contacts update key. Contact writes, and room and venue
- * updates, record their audit in the write's own transaction; deletes record theirs here too.
+ * exists and is live, and every update/delete confirms the child is live and belongs to that live hotel (a
+ * mismatch, or a deleted hotel, is a 404 — denial equals absence). Rooms and venues are written as
+ * hotel-child-write.ts maps them (the units rule; a venue's setting decides `is_indoor`, D-178). A
+ * contact's phone is stored in E.164 (a repeated stored phone kept as it is), and a hotel has one live
+ * primary contact: a write that names a new one demotes the current one in the same transaction, audited,
+ * which needs the contacts update key. Every write and delete records its audit in its own transaction
+ * (the routes are `@SelfAudited`), naming the row and the fields it set or changed (hotel-child-audit.ts).
  */
 @Injectable()
 export class HotelSubresourcesService {
@@ -61,9 +73,13 @@ export class HotelSubresourcesService {
     actorId: string,
   ): Promise<RoomCategoryView> {
     await this.requireHotel(hotelId);
-    return toRoomCategoryView(
-      await this.repo.createRoom(hotelId, roomCreateData(request), actorId),
-    );
+    return this.repo.transaction(async (tx) => {
+      const created = toRoomCategoryView(
+        await this.repo.createRoom(hotelId, roomCreateData(request), actorId, tx),
+      );
+      await this.record("create", "hotel_room_category", created.id, createImages(created), tx);
+      return created;
+    });
   }
 
   async updateRoom(
@@ -73,19 +89,21 @@ export class HotelSubresourcesService {
     actorId: string,
   ): Promise<RoomCategoryView> {
     const stored = await this.requireRoom(hotelId, roomId);
-    const row = await this.repo.transaction(async (tx) => {
-      const updated = await this.repo.updateRoom(roomId, roomPatchData(patch, stored), actorId, tx);
-      await this.record("update", "hotel_room_category", roomId, { name: updated.name }, tx);
+    return this.repo.transaction(async (tx) => {
+      const updated = toRoomCategoryView(
+        await this.repo.updateRoom(roomId, roomPatchData(patch, stored), actorId, tx),
+      );
+      const images = updateImages(toRoomCategoryView(stored), updated);
+      await this.record("update", "hotel_room_category", roomId, images, tx);
       return updated;
     });
-    return toRoomCategoryView(row);
   }
 
   async removeRoom(hotelId: string, roomId: string, actorId: string): Promise<{ id: string }> {
-    await this.requireRoom(hotelId, roomId);
-    await this.repo.softDeleteRoom(roomId, actorId);
-    await this.record("delete", "hotel_room_category", roomId, { deleted: true });
-    return { id: roomId };
+    const stored = await this.requireRoom(hotelId, roomId);
+    return this.softDelete("hotel_room_category", stored, (tx) =>
+      this.repo.softDeleteRoom(roomId, actorId, tx),
+    );
   }
 
   async addVenue(
@@ -94,7 +112,13 @@ export class HotelSubresourcesService {
     actorId: string,
   ): Promise<VenueView> {
     await this.requireHotel(hotelId);
-    return toVenueView(await this.repo.createVenue(hotelId, venueCreateData(request), actorId));
+    return this.repo.transaction(async (tx) => {
+      const created = toVenueView(
+        await this.repo.createVenue(hotelId, venueCreateData(request), actorId, tx),
+      );
+      await this.record("create", "hotel_venue", created.id, createImages(created), tx);
+      return created;
+    });
   }
 
   async updateVenue(
@@ -104,24 +128,21 @@ export class HotelSubresourcesService {
     actorId: string,
   ): Promise<VenueView> {
     const stored = await this.requireVenue(hotelId, venueId);
-    const row = await this.repo.transaction(async (tx) => {
-      const updated = await this.repo.updateVenue(
-        venueId,
-        venuePatchData(patch, stored),
-        actorId,
-        tx,
+    return this.repo.transaction(async (tx) => {
+      const updated = toVenueView(
+        await this.repo.updateVenue(venueId, venuePatchData(patch, stored), actorId, tx),
       );
-      await this.record("update", "hotel_venue", venueId, { name: updated.name }, tx);
+      const images = updateImages(toVenueView(stored), updated);
+      await this.record("update", "hotel_venue", venueId, images, tx);
       return updated;
     });
-    return toVenueView(row);
   }
 
   async removeVenue(hotelId: string, venueId: string, actorId: string): Promise<{ id: string }> {
-    await this.requireVenue(hotelId, venueId);
-    await this.repo.softDeleteVenue(venueId, actorId);
-    await this.record("delete", "hotel_venue", venueId, { deleted: true });
-    return { id: venueId };
+    const stored = await this.requireVenue(hotelId, venueId);
+    return this.softDelete("hotel_venue", stored, (tx) =>
+      this.repo.softDeleteVenue(venueId, actorId, tx),
+    );
   }
 
   /** A new contact, audited here (the route is `@SelfAudited`) with any primary it demotes. */
@@ -137,7 +158,7 @@ export class HotelSubresourcesService {
     return this.writeContact(principal, target, async (tx) => {
       const row = await this.repo.createContact(hotelId, data, actorId, tx);
       const after = { name: row.name, isPrimary: row.isPrimary };
-      await this.record("create", "hotel_contact", row.id, after, tx);
+      await this.record("create", "hotel_contact", row.id, { before: null, after }, tx);
       return row;
     });
   }
@@ -156,7 +177,8 @@ export class HotelSubresourcesService {
     const makesPrimary = data.isPrimary === true;
     return this.writeContact(principal, { hotelId, contactId, makesPrimary }, async (tx) => {
       const row = await this.repo.updateContact(contactId, data, actorId, tx);
-      await this.record("update", "hotel_contact", contactId, { name: row.name }, tx);
+      const images = updateImages(toHotelContactView(stored), toHotelContactView(row));
+      await this.record("update", "hotel_contact", contactId, images, tx);
       return row;
     });
   }
@@ -166,10 +188,23 @@ export class HotelSubresourcesService {
     contactId: string,
     actorId: string,
   ): Promise<{ id: string }> {
-    await this.requireContact(hotelId, contactId);
-    await this.repo.softDeleteContact(contactId, actorId);
-    await this.record("delete", "hotel_contact", contactId, { deleted: true });
-    return { id: contactId };
+    const stored = await this.requireContact(hotelId, contactId);
+    return this.softDelete("hotel_contact", stored, (tx) =>
+      this.repo.softDeleteContact(contactId, actorId, tx),
+    );
+  }
+
+  /** A soft delete and its audit in one transaction, so a delete is never committed unaudited. */
+  private async softDelete(
+    entityType: ChildEntity,
+    stored: { readonly id: string; readonly name: string },
+    remove: (tx: Prisma.TransactionClient) => Promise<void>,
+  ): Promise<{ id: string }> {
+    await this.repo.transaction(async (tx) => {
+      await remove(tx);
+      await this.record("delete", entityType, stored.id, deleteImages(stored), tx);
+    });
+    return { id: stored.id };
   }
 
   /**
@@ -232,15 +267,16 @@ export class HotelSubresourcesService {
     }
   }
 
+  /** One audit event in the write's transaction; its images hold names and field names, no values. */
   private record(
     action: "create" | "update" | "delete",
-    entityType: string,
+    entityType: ChildEntity,
     entityId: string,
-    after: unknown,
-    tx?: Prisma.TransactionClient,
+    { before, after }: ChildAuditImages,
+    tx: Prisma.TransactionClient,
   ): Promise<void> {
     return this.audit.record(
-      { action, entityType, entityId, before: null, after, maskImages: false },
+      { action, entityType, entityId, before, after, maskImages: false },
       tx,
     );
   }
@@ -249,22 +285,19 @@ export class HotelSubresourcesService {
     if (!(await this.repo.hotelExists(hotelId))) throw errors.notFound("No such hotel");
   }
 
-  private async requireRoom(hotelId: string, roomId: string): Promise<StoredRoomArea> {
+  private async requireRoom(hotelId: string, roomId: string): Promise<RoomRow> {
     const room = await this.repo.findRoomInHotel(hotelId, roomId);
     if (!room) throw errors.notFound("No such room category");
     return room;
   }
 
-  private async requireVenue(hotelId: string, venueId: string): Promise<StoredVenueAreas> {
+  private async requireVenue(hotelId: string, venueId: string): Promise<VenueRow> {
     const venue = await this.repo.findVenueInHotel(hotelId, venueId);
     if (!venue) throw errors.notFound("No such venue");
     return venue;
   }
 
-  private async requireContact(
-    hotelId: string,
-    contactId: string,
-  ): Promise<{ readonly phone: string | null }> {
+  private async requireContact(hotelId: string, contactId: string): Promise<ContactRow> {
     const contact = await this.repo.findContactInHotel(hotelId, contactId);
     if (!contact) throw errors.notFound("No such hotel contact");
     return contact;

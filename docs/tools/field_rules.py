@@ -354,7 +354,7 @@ TABLES["hotel_venues"] = T(
     venue_type=F(automation="The client views carry it: a new value is a client contract change, so the API and the "
                             "web bundle deploy back to back; pickers order the types themselves, Other last"),
     setting=F(required="At creation (through the API; a venue written without one, by the previous image or a direct "
-                       "insert, reads it from is_indoor)",
+                       "insert, or with one its is_indoor contradicts, reads it from is_indoor)",
               automation="Sets is_indoor in the same write: true only for indoor, so a semi-open venue reads as "
                          "outdoor to clients until Slice 12"),
     is_indoor=F(editor=SYS, required="System",

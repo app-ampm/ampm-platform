@@ -45,7 +45,15 @@ describe("a venue's setting and its is_indoor flag (D-178)", () => {
     expect(venueSettingOf({ setting: null, isIndoor: true })).toBe("indoor");
     expect(venueSettingOf({ setting: null, isIndoor: false })).toBe("outdoor");
     expect(venueSettingOf({ setting: "semi_open", isIndoor: false })).toBe("semi_open");
-    expect(venueSettingOf({ setting: "outdoor", isIndoor: true })).toBe("outdoor");
+    expect(venueSettingOf({ setting: "outdoor", isIndoor: false })).toBe("outdoor");
+  });
+
+  // The previous image writes is_indoor alone, so a venue edited there after a rollback keeps a stored
+  // setting its flag contradicts; the flag is what clients read, so the newer is_indoor wins.
+  it("reads a stored setting that is_indoor contradicts from is_indoor, as clients do", () => {
+    expect(venueSettingOf({ setting: "outdoor", isIndoor: true })).toBe("indoor");
+    expect(venueSettingOf({ setting: "semi_open", isIndoor: true })).toBe("indoor");
+    expect(venueSettingOf({ setting: "indoor", isIndoor: false })).toBe("outdoor");
   });
 
   it("round-trips every setting through the flag it stores", () => {

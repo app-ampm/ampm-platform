@@ -10,13 +10,14 @@ const MISSING = "0192f1a0-0000-7000-8000-0000000000ff"; // a well-formed uuid th
 
 /**
  * A hotel's room categories, venues and contacts end to end (Module C, feature 9.1). A Super Admin adds
- * each child, sees it on the staff detail, edits and removes it, and a write aimed at the wrong or a
- * missing hotel is a 404 (denial equals absence).
+ * each child, sees it on the staff detail, edits and removes it, and a write aimed at the wrong, a
+ * missing or a deleted hotel is a 404 (denial equals absence).
  */
 describe("Hotel sub-resources (e2e)", () => {
   let app: NestExpressApplication;
   let mint: (subject: string) => Promise<string>;
   let prisma: PrismaService;
+  let destinationId: string;
   let hotelId: string;
 
   async function removeFixtures(): Promise<void> {
@@ -47,10 +48,11 @@ describe("Hotel sub-resources (e2e)", () => {
       .set("Authorization", auth)
       .send({ name: "E2E Sub Destination", slug: `${PREFIX}dest` })
       .expect(201);
+    destinationId = dest.body.data.id;
     const hotel = await http()
       .post("/hotels-admin/hotels")
       .set("Authorization", auth)
-      .send({ destinationId: dest.body.data.id, name: "E2E Sub Hotel", slug: `${PREFIX}hotel` })
+      .send({ destinationId, name: "E2E Sub Hotel", slug: `${PREFIX}hotel` })
       .expect(201);
     hotelId = hotel.body.data.id;
   });
@@ -144,5 +146,42 @@ describe("Hotel sub-resources (e2e)", () => {
       .set("Authorization", auth)
       .send({ roomCount: 99 })
       .expect(404);
+  });
+
+  // A deleted hotel answers 404 (soft delete keeps its children live), so its rooms, venues and contacts
+  // must too: an edit through a stale sheet or a known id writes nothing, as the import refuses it.
+  it("404s on an edit or a removal of a child of a deleted hotel, writing nothing", async () => {
+    const gone = await http()
+      .post("/hotels-admin/hotels")
+      .set("Authorization", auth)
+      .send({ destinationId, name: "E2E Sub Gone Hotel", slug: `${PREFIX}gone` })
+      .expect(201);
+    const goneId: string = gone.body.data.id;
+    const base = `/hotels-admin/hotels/${goneId}`;
+    const add = (path: string, body: object) =>
+      http().post(`${base}/${path}`).set("Authorization", auth).send(body).expect(201);
+    const room = await add("rooms", { name: "Synthetic Gone Suite", roomCount: 4 });
+    const venue = await add("venues", {
+      name: "Synthetic Gone Hall",
+      venueType: "ballroom",
+      setting: "indoor",
+    });
+    const contact = await add("contacts", { name: "Synthetic Gone Desk", isPrimary: true });
+    await http().delete(base).set("Authorization", auth).expect(200);
+
+    const children: readonly (readonly [string, object])[] = [
+      [`rooms/${room.body.data.id}`, { roomCount: 5 }],
+      [`venues/${venue.body.data.id}`, { capacityBanquet: 120 }],
+      [`contacts/${contact.body.data.id}`, { roleTitle: "Synthetic Sales" }],
+    ];
+    for (const [path, body] of children) {
+      await http().patch(`${base}/${path}`).set("Authorization", auth).send(body).expect(404);
+      await http().delete(`${base}/${path}`).set("Authorization", auth).expect(404);
+    }
+    const stored = await prisma.hotelRoomCategory.findUniqueOrThrow({
+      where: { id: room.body.data.id },
+      select: { roomCount: true, deletedAt: true },
+    });
+    expect(stored).toEqual({ roomCount: 4, deletedAt: null });
   });
 });

@@ -176,8 +176,9 @@ function layoutsText(layouts: readonly VenueOtherLayout[] | null): string | null
 }
 
 /**
- * A venue's summary for its row: type, setting, area in both units, dimensions, the seated, theatre and
- * floating capacities, other layouts and pre-function area.
+ * A venue's summary for its row, in TW-22's order: type, setting, area in both units, then the seated,
+ * floating and theatre capacities, and after them the dimensions, other layouts and pre-function area.
+ * The row shows two lines, so on a phone the capacities come before the details that may be cut.
  *
  * @example
  * venueSummary(venue); // "Terrace · Covered or semi-open · 500 m² (5,382 sq ft) · 300 seated · 500 floating"
@@ -188,10 +189,10 @@ export function venueSummary(venue: VenueView): string {
     venueTypeLabel(venue.venueType),
     venueSettingLabel(venue.setting),
     areaText(venue.areaSqm, venue.areaSqft),
-    dimensionsText(venue),
     capacityText(venue.capacityBanquet, "seated"),
-    capacityText(venue.capacityTheatre, "theatre"),
     capacityText(venue.capacityReception, "floating"),
+    capacityText(venue.capacityTheatre, "theatre"),
+    dimensionsText(venue),
     layoutsText(venue.otherLayouts),
     prefunction ? `pre-function ${prefunction}` : null,
   ]);

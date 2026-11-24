@@ -120,6 +120,18 @@ Done on 20 Nov 2026 (UTC): production built at 09:02. The API and worker started
 
 The test stack deploys the same way, with `AMPM_SHIP_TARGET=test` for its source and `AMPM_WEB_TARGET=test` for its web bundle. Keep checking free disk (`df -h /`, `docker system df`) before a build; `redeploy-prod.sh` prunes dangling build cache itself below 15 GB free. Never prune volumes: other tenants' data lives in them.
 
+### Rolling back a release by hand
+
+`redeploy-prod.sh` puts api and worker back on the previous image by itself when the health gate fails. To go back later, do what its rollback does, from `~/ampm-prod`:
+
+1. Read the release's note in [`docs/data-model.md`](../../docs/data-model.md) first. A migration that only adds still limits a rollback once the release has written values the previous image cannot read. For example, the hotel information form's Slice 3 venue types need a remap: see "Rolling back past this migration" and "Rolling forward again". Run that SQL with psql in the postgres container, as [`infra/runbooks/restore.md`](../../infra/runbooks/restore.md) does. When the note says to stop api and worker first, run `docker compose -f infra/compose/production/compose.yml -f infra/compose/production/compose.box.yml stop api worker` before it.
+2. Find the previous image with `docker image ls ampm-prod-app`. The deploy keeps the last two.
+3. Run `AMPM_IMAGE=<previous image> docker compose -f infra/compose/production/compose.yml -f infra/compose/production/compose.box.yml up -d --no-deps --wait api worker`, then check `/health`.
+4. Write the image into `~/ampm-prod-state/app-image` and into the `AMPM_IMAGE` line of `infra/compose/production/.env`. Otherwise the next deploy's rollback, or a manual compose command, brings the release back.
+5. Take the portal bundle back too when the release changed a contract (hotel information form plan §10.2 item 7). `deploy-web.sh` keeps no copy of `httpdocs`, so restore the copy taken before the deploy.
+
+Coming back to the release is an ordinary deploy of it. Then run the note's roll-forward SQL, if it has any.
+
 ## 5. Backups and restore (D-139)
 
 - **What runs:** Postgres archives WAL every minute into the encrypted pgBackRest repository on this disk; the `pgbackrest` service takes a full backup on first start and then a full on Sundays and a differential on other days at 03:00 UTC, with a check after each (recorded on `job_runs`). Every deploy also writes a `pg_dump` into `ampm-backups/pgdump`. Media is archived nightly at 02:15 UTC by [`backup-media.sh`](backup-media.sh) into `ampm-backups/media-prod` (the SSH user's crontab, installed 20 Nov 2026; the entry is in the script's header; its log is `ampm-backups/media-backup.log`).

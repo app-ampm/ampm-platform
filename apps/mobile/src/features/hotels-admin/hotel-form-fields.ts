@@ -1,4 +1,4 @@
-import { hotelListEntries } from "@ampm/core";
+import { FACILITY_LABEL_MAX_LENGTH, FACILITY_LABELS_MAX, hotelListEntries } from "@ampm/core";
 import type { ToastOptions } from "@ampm/ui";
 
 /*
@@ -87,6 +87,24 @@ export function listToLines(list: readonly string[] | null): string {
 export function linesToList(value: string): string[] | null {
   const items = hotelListEntries(value);
   return items.length === 0 ? null : items;
+}
+
+/**
+ * Why a one-per-line facilities list cannot be saved, or undefined when it can: the contract takes at most
+ * 100 entries of at most 120 characters (core `facilityLabels`). A comma stays inside its entry, so a
+ * comma list pasted on one line is one long facility, and the message says to put each on its own line.
+ *
+ * @example
+ * facilitiesError("Pool, spa, gym, …"); // over 120 characters: "Each facility is at most 120 characters; …"
+ */
+export function facilitiesError(value: string): string | undefined {
+  const entries = linesToList(value) ?? [];
+  if (entries.length > FACILITY_LABELS_MAX) {
+    return `Keep to ${FACILITY_LABELS_MAX} facilities, one per line`;
+  }
+  return entries.some((entry) => entry.length > FACILITY_LABEL_MAX_LENGTH)
+    ? `Each facility is at most ${FACILITY_LABEL_MAX_LENGTH} characters; put each one on its own line`
+    : undefined;
 }
 
 /** A yes / no fact the hotel may not have given yet: "unknown" is null, never false. */

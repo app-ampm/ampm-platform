@@ -12,6 +12,7 @@ import { settleAreas } from "./hotel-areas.js";
 import type { ChildImportGrants } from "./hotel-audience.js";
 import { atScale } from "./hotel-changes.js";
 import type { ImportRow } from "./hotel-import.file.js";
+import type { PlanMatch } from "./hotel-import.job.js";
 import type { FieldError } from "./hotel-import.plan.js";
 
 /*
@@ -88,9 +89,16 @@ interface PlanKey {
   readonly name: string;
 }
 
-/** One row's plan. */
+/**
+ * One row's plan. A refused row keeps what it matched among the hotel's live rows (`PlanMatch`), so an
+ * import tells a row that no longer names its target from one refused on that very target.
+ */
 export type ChildRowPlan<K extends string, Create, Patch> =
-  | (PlanKey & { readonly outcome: "error"; readonly errors: readonly FieldError[] })
+  | (PlanKey & {
+      readonly outcome: "error";
+      readonly errors: readonly FieldError[];
+      readonly match: PlanMatch;
+    })
   | (PlanKey & {
       readonly outcome: "create";
       readonly hotelId: string;
@@ -112,6 +120,10 @@ export type ChildRowPlan<K extends string, Create, Patch> =
 
 const NO_HOTEL: FieldError = { field: "hotelSlug", message: "No hotel has this web address" };
 const DELETED_HOTEL: FieldError = { field: "hotelSlug", message: "This hotel was deleted" };
+
+/** The match of a row refused before it matched a live row, and of one refused creating (it matched none). */
+const UNMATCHED: PlanMatch = { matches: "unmatched" };
+const NO_MATCH: PlanMatch = { matches: "none" };
 
 /** A row's live hotel, its match among the hotel's live rows and the lines of the hotel's rows. */
 interface Matched<K extends string> {
@@ -143,7 +155,7 @@ export function planChildRows<
   return rows.map(({ line, row }, index): ChildRowPlan<K, Create, Patch> => {
     const where = located[index] ?? NO_HOTEL;
     const key = { line, slug: row.hotelSlug, name: row.name };
-    if ("field" in where) return { ...key, outcome: "error", errors: [where] };
+    if ("field" in where) return { ...key, outcome: "error", errors: [where], match: UNMATCHED };
     return planMatched(key, atColumnScale(row, rules.scales), where, context.grants, rules);
   });
 }
@@ -202,24 +214,29 @@ function planMatched<Row extends PlannedRow<K>, K extends HotelImportChangedFiel
   rules: ChildPlanRules<Row, K, Create, Patch>,
 ): ChildRowPlan<K, Create, Patch> {
   const { match } = where;
-  const refuse = (message: string): ChildRowPlan<K, Create, Patch> => ({
+  const refuse = (message: string, matched: PlanMatch): ChildRowPlan<K, Create, Patch> => ({
     ...key,
     outcome: "error",
     errors: [{ field: "name", message }],
+    match: matched,
   });
   if (match.match === "repeated") {
     const first = where.lines[match.firstIndex] ?? key.line;
-    return refuse(`Line ${first} already names this ${rules.noun} for this hotel`);
+    return refuse(`Line ${first} already names this ${rules.noun} for this hotel`, UNMATCHED);
   }
   if (match.match === "new") return planCreate(key, row, where.hotelId, grants, rules);
-  if (!grants.readsRows) {
-    return refuse(`A ${rules.noun} already has this name, and you cannot read ${rules.plural}`);
-  }
+  const cannotRead = `A ${rules.noun} already has this name, and you cannot read ${rules.plural}`;
   if (match.match === "ambiguous") {
-    return refuse(`Two ${rules.plural} are named ${key.name}; rename one in the staff app first`);
+    const shared = `Two ${rules.plural} are named ${key.name}; rename one in the staff app first`;
+    return refuse(grants.readsRows ? shared : cannotRead, UNMATCHED);
   }
+  const onRow: PlanMatch = { matches: "row", targetId: match.row.id };
+  if (!grants.readsRows) return refuse(cannotRead, onRow);
   if (!grants.canUpdate && changesOf(row, match.row, rules).length > 0) {
-    return refuse(`A ${rules.noun} already has this name, and you cannot change ${rules.plural}`);
+    return refuse(
+      `A ${rules.noun} already has this name, and you cannot change ${rules.plural}`,
+      onRow,
+    );
   }
   return planExisting(key, row, where.hotelId, match.row, rules);
 }
@@ -245,7 +262,9 @@ function planCreate<Row extends PlannedRow<K>, K extends string, Create, Patch>(
   const created = rules.toCreate(settled);
   const errors = "errors" in created ? [...created.errors] : [];
   if (!grants.canCreate) errors.push({ field: "name", message: `You cannot add ${rules.plural}` });
-  if ("errors" in created || errors.length > 0) return { ...key, outcome: "error", errors };
+  if ("errors" in created || errors.length > 0) {
+    return { ...key, outcome: "error", errors, match: NO_MATCH };
+  }
   const changedFields = rules.filled(settled);
   return { ...key, outcome: "create", hotelId, data: created.data, changedFields };
 }

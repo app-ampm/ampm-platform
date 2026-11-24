@@ -8,6 +8,7 @@ import type {
 import { areaBody, areaErrors, ROOM_SIZE_AREA } from "./hotel-area.form";
 import {
   changedEntries,
+  facilitiesError,
   intOrNull,
   linesToList,
   listToLines,
@@ -62,6 +63,7 @@ export const ROOM_FIELD_ORDER = [
   "maxOccupancy",
   "sizeSqm",
   "sizeSqft",
+  "facilities",
 ] as const satisfies readonly (keyof RoomDraft)[];
 export type RoomField = (typeof ROOM_FIELD_ORDER)[number];
 
@@ -72,6 +74,7 @@ export const ROOM_FIELD_LABEL: Readonly<Record<RoomField, string>> = {
   maxOccupancy: "Max occupancy",
   sizeSqm: "Size (m²)",
   sizeSqft: "Size (sq ft)",
+  facilities: "Facilities",
 };
 
 export type RoomErrors = Readonly<Record<RoomField, string | undefined>>;
@@ -98,6 +101,7 @@ export function validateRoom(draft: RoomDraft): RoomErrors {
     maxOccupancy: numberRuleError(draft.maxOccupancy, MAX_OCCUPANCY_RULE),
     sizeSqm: size.sqm,
     sizeSqft: size.sqft,
+    facilities: facilitiesError(draft.facilities),
   };
 }
 

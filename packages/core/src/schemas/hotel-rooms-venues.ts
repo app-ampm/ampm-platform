@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { hasAtMostDecimals } from "../hotel-units.js";
+import { storableText } from "./common.js";
 
 /*
  * The room and venue facts fact sheets carry (D-178; docs/planning/hotel-information-form-plan.md §5.2,
@@ -46,20 +47,26 @@ export function isIndoorSetting(setting: HotelVenueSetting): boolean {
 }
 
 /**
- * A venue's setting as the staff view shows it and the import compares and hashes it: the stored setting,
- * or, for a venue that has none (saved before Slice 3, or written by the previous image or a direct
- * insert), indoor when `is_indoor` and outdoor otherwise. One fallback, so the view and the version token
- * never disagree.
+ * A venue's setting as the staff view shows it and the import compares and hashes it: the stored setting
+ * while `is_indoor` agrees with it ({@link isIndoorSetting}), else what `is_indoor` says, indoor when true
+ * and outdoor otherwise. A venue has no setting when it was saved before Slice 3 or by a direct insert,
+ * and one its flag contradicts when the previous image edited it after a rollback (that image writes
+ * `is_indoor` alone); the flag is what clients read, so it wins. One rule, so the view, the import's
+ * compare and the version token never disagree with each other or with a client.
  *
  * @example
  * venueSettingOf({ setting: null, isIndoor: true }); // "indoor"
  * venueSettingOf({ setting: "semi_open", isIndoor: false }); // "semi_open"
+ * venueSettingOf({ setting: "indoor", isIndoor: false }); // "outdoor"
  */
 export function venueSettingOf(venue: {
   readonly setting: HotelVenueSetting | null;
   readonly isIndoor: boolean;
 }): HotelVenueSetting {
-  return venue.setting ?? (venue.isIndoor ? "indoor" : "outdoor");
+  if (venue.setting !== null && isIndoorSetting(venue.setting) === venue.isIndoor) {
+    return venue.setting;
+  }
+  return venue.isIndoor ? "indoor" : "outdoor";
 }
 
 /** The most other layouts a venue keeps (other_layouts_json). */
@@ -80,7 +87,7 @@ export const VENUE_CAPACITY_MAX = 100_000;
  */
 export const venueOtherLayout = z
   .object({
-    layout: z.string().trim().min(1).max(VENUE_OTHER_LAYOUT_NAME_MAX),
+    layout: storableText().min(1).max(VENUE_OTHER_LAYOUT_NAME_MAX),
     max: z.number().int().min(1).max(VENUE_CAPACITY_MAX),
     min: z.number().int().min(1).max(VENUE_CAPACITY_MAX).optional(),
   })
@@ -113,7 +120,7 @@ const metres = (max: number) =>
     .max(max)
     .refine((value) => hasAtMostDecimals(value, 2), "At most two decimal places");
 
-const label = z.string().trim().max(255);
+const label = storableText().max(255);
 
 /**
  * The D-178 room fields as a request writes them, each `.nullish()`: absent leaves a value, null clears
@@ -157,7 +164,7 @@ export const venueCatalogueRequestFields = {
   prefunctionAreaSqm: z.number().int().min(0).max(1_000_000).nullish(),
   prefunctionAreaSqft: z.number().int().min(0).max(10_000_000).nullish(),
   otherLayouts: venueOtherLayouts.nullish(),
-  capacityNotes: z.string().trim().max(1_000).nullish(),
+  capacityNotes: storableText().max(1_000).nullish(),
 };
 
 /**

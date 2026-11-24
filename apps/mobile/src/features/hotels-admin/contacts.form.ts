@@ -1,5 +1,6 @@
 import {
   HOTEL_PHONE_REFUSAL,
+  hotelContactCreateRequest,
   normaliseHotelPhone,
   type HotelContactCreateRequest,
   type HotelContactUpdateRequest,
@@ -74,7 +75,9 @@ export type ContactErrors = {
   readonly email: string | undefined;
 };
 
-const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+/** Whether the contract takes the email: the sheet checks it by the rule the API validates with. */
+const isContractEmail = (email: string): boolean =>
+  hotelContactCreateRequest.shape.email.safeParse(email).success;
 
 export function validateContact(
   draft: ContactDraft,
@@ -84,7 +87,7 @@ export function validateContact(
   return {
     name: draft.name.trim() === "" ? "Give the contact a name" : undefined,
     phone: phonePreview(draft, contact).kind === "refused" ? HOTEL_PHONE_REFUSAL : undefined,
-    email: email !== "" && !EMAIL.test(email) ? "Enter a valid email address" : undefined,
+    email: email !== "" && !isContractEmail(email) ? "Enter a valid email address" : undefined,
   };
 }
 

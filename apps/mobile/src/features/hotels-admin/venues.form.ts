@@ -9,6 +9,7 @@ import type {
 import { areaBody, areaErrors, PREFUNCTION_AREA, VENUE_AREA } from "./hotel-area.form";
 import {
   changedEntries,
+  facilitiesError,
   intOrNull,
   linesToList,
   listToLines,
@@ -102,6 +103,7 @@ export const VENUE_FIELD_ORDER = [
   "otherLayouts",
   "prefunctionAreaSqm",
   "prefunctionAreaSqft",
+  "facilities",
 ] as const satisfies readonly (keyof VenueDraft)[];
 export type VenueField = (typeof VENUE_FIELD_ORDER)[number];
 
@@ -118,6 +120,7 @@ export const VENUE_FIELD_LABEL: Readonly<Record<VenueField, string>> = {
   otherLayouts: "Other layouts",
   prefunctionAreaSqm: "Pre-function area (m²)",
   prefunctionAreaSqft: "Pre-function area (sq ft)",
+  facilities: "Facilities",
 };
 
 export type VenueErrors = Readonly<Record<VenueField, string | undefined>>;
@@ -166,6 +169,7 @@ export function validateVenue(draft: VenueDraft): VenueErrors {
     otherLayouts: layoutsError(draft.otherLayouts),
     prefunctionAreaSqm: prefunction.sqm,
     prefunctionAreaSqft: prefunction.sqft,
+    facilities: facilitiesError(draft.facilities),
   };
 }
 

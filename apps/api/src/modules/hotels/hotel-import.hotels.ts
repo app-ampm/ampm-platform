@@ -9,7 +9,12 @@ import { importGrantsOf, type ImportGrants } from "./hotel-audience.js";
 import { auditImageOf, type HotelAuditImage } from "./hotel-import.audit.js";
 import type { ImportRow } from "./hotel-import.file.js";
 import { HotelRowsWriter, newDestinationCount } from "./hotel-import.hotels-write.js";
-import { CHANGED_ERROR, changedSincePreview, type StoredRow } from "./hotel-import.job.js";
+import {
+  CHANGED_ERROR,
+  changedSincePreview,
+  type PlanMatch,
+  type StoredRow,
+} from "./hotel-import.job.js";
 import {
   HOTELS_IMPORT,
   type AppliedRows,
@@ -28,7 +33,7 @@ import {
 } from "./hotel-import.plan.js";
 import { refusedReport, type RowReport } from "./hotel-import.report.js";
 import { HotelImportRepository, type ImportTargetRow } from "./hotel-import.repository.js";
-import { hotelVersion } from "./hotel-import.version.js";
+import { hotelVersion, type HotelVersionScope } from "./hotel-import.version.js";
 import { toHotelStaffView } from "./hotels-admin.view.js";
 
 /*
@@ -143,7 +148,8 @@ export class HotelRowsImporter implements KindImporter<HotelImportRow> {
    * What the plan reads beside the rows (the hotels and destinations they name, deleted ones included,
    * each hotel as its uploader may read it), the named hotels' audit images, and each live hotel's
    * version token, never shown to them: it covers the internal rating and notes only for an uploader who
-   * reads or writes them, so a notes edit refuses no one else's row (hotel-import.version.ts).
+   * reads them or a row that fills them (`notesScopes`), so a notes edit refuses no other row and tells
+   * no one who cannot read the notes that they changed (hotel-import.version.ts).
    */
   private async lookUp(
     rows: readonly ImportRow<HotelImportRow>[],
@@ -166,13 +172,32 @@ export class HotelRowsImporter implements KindImporter<HotelImportRow> {
       destinations: new Map(destinations.map(({ slug, ...destination }) => [slug, destination])),
     };
     const live = hotels.filter((hotel) => hotel.deletedAt === null);
-    const scope = { notes: grants.readsNotes || grants.canWriteNotes };
+    const scopeOf = notesScopes(rows, grants);
     return {
       context,
       images: new Map(hotels.map((hotel) => [hotel.id, auditImageOf(hotel)])),
-      versions: new Map(live.map((hotel) => [hotel.id, hotelVersion(hotel, scope)])),
+      versions: new Map(live.map((hotel) => [hotel.id, hotelVersion(hotel, scopeOf(hotel.slug))])),
     };
   }
+}
+
+/**
+ * What each named hotel's version token covers: the internal rating and notes when the uploader reads
+ * them, or when the row planned against the hotel fills either, since only such a row can write over
+ * them (D-171). That row is the first to use the hotel's web address: `planImport` refuses a later one,
+ * which is never stored, so a preview and its import key the token on the same row.
+ */
+function notesScopes(
+  rows: readonly ImportRow<HotelImportRow>[],
+  grants: Pick<ImportGrants, "readsNotes">,
+): (slug: string) => HotelVersionScope {
+  const fillsNotes = new Map<string, boolean>();
+  for (const { row } of rows) {
+    const slug = importSlug(row);
+    if (fillsNotes.has(slug)) continue;
+    fillsNotes.set(slug, row.internalRating !== undefined || row.internalNotes !== undefined);
+  }
+  return (slug) => ({ notes: grants.readsNotes || fillsNotes.get(slug) === true });
 }
 
 /**
@@ -205,17 +230,23 @@ function liveDestinationIds(context: ImportContext): Map<string, string> {
   return new Map(live.map(([slug, destination]) => [slug, destination.id]));
 }
 
+/**
+ * What a hotels re-plan matched: the hotel its web address names, none (a create), or, for a refused row,
+ * nothing to compare, so it keeps its own reason unless its hotel changed (a deleted one included).
+ */
+function matchOf(plan: RowPlan): PlanMatch {
+  if (plan.outcome === "error") return { matches: "unmatched" };
+  if (plan.outcome === "create") return { matches: "none" };
+  return { matches: "row", targetId: plan.hotelId };
+}
+
 /** A re-planned row, refused when its hotel changed since the preview (or now exists, for a create). */
 function recheck(
   plan: RowPlan,
   target: StoredRow<unknown>["target"],
   versions: ReadonlyMap<string, string>,
 ): RowPlan {
-  const replanned =
-    plan.outcome === "update" || plan.outcome === "unchanged"
-      ? { outcome: plan.outcome, targetId: plan.hotelId }
-      : { outcome: plan.outcome };
-  if (!changedSincePreview(target, replanned, (id) => versions.get(id) ?? null)) return plan;
+  if (!changedSincePreview(target, matchOf(plan), (id) => versions.get(id) ?? null)) return plan;
   const name = plan.outcome === "error" ? plan.name : plan.row.name;
   return { outcome: "error", line: plan.line, slug: plan.slug, name, errors: [CHANGED_ERROR] };
 }

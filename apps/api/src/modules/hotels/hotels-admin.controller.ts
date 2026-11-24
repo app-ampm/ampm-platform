@@ -160,7 +160,7 @@ export class HotelsAdminController {
   @Post("hotels/:hotelId/rooms")
   @RequirePermission("hotels.room_categories_venues.create")
   @HttpCode(201)
-  @Audited({ entityType: "hotel_room_category" })
+  @SelfAudited()
   addRoom(
     @ZodParams(hotelParam) params: HotelParam,
     @ZodBody(roomCategoryCreateRequest) body: RoomCategoryCreateRequest,
@@ -193,7 +193,7 @@ export class HotelsAdminController {
   @Post("hotels/:hotelId/venues")
   @RequirePermission("hotels.room_categories_venues.create")
   @HttpCode(201)
-  @Audited({ entityType: "hotel_venue" })
+  @SelfAudited()
   addVenue(
     @ZodParams(hotelParam) params: HotelParam,
     @ZodBody(venueCreateRequest) body: VenueCreateRequest,

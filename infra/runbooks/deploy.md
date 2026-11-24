@@ -26,7 +26,8 @@ set to the previous release tag. It resolves that tag to its digest and redeploy
 and skips the migration step. Because migrations are expand-and-contract, the previous image is compatible
 with the current (expanded) schema; contract steps ship only in a later release. A value only the new release
 writes can still break the previous image's reads (a new enum value, such as the venue types of D-178): check the
-release's note in `docs/data-model.md` for the rows to remap first, or fix forward.
+release's note in `docs/data-model.md` for the rows to remap first, or fix forward, and for the rows to reconcile
+once the release is back (the previous image writes some columns without their pair).
 
 ## Deploy freeze (no deploys while a wedding is live)
 

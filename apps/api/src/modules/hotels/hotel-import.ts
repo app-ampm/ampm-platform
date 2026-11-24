@@ -33,12 +33,15 @@ export const HAS_NUL =
   "The file holds a null character, which text copied from a PDF or a UTF-16 file can carry; remove it, save the file as UTF-8 CSV and upload it again";
 
 /**
- * The uploaded bytes as text: UTF-8 only, its byte-order mark dropped. Null when the bytes are not valid
+ * The uploaded bytes as text: UTF-8 only, its byte-order mark dropped, in Unicode's composed form (NFC),
+ * so a name spelt with a combining accent, as text copied from some PDFs arrives, reads as the same name
+ * typed in the staff app (the stored names are compared in NFC too). Null when the bytes are not valid
  * UTF-8 or carry the replacement character, the trace a browser leaves when it reads another encoding as
- * UTF-8 (Excel's plain "CSV" is Windows-1252).
+ * UTF-8 (Excel's plain "CSV" is Windows-1252). Composing never touches a comma, a quote or a line break.
  *
  * @example
  * decodeCsv(new TextEncoder().encode("\uFEFFdestinationSlug,name")); // "destinationSlug,name"
+ * decodeCsv(new TextEncoder().encode("name\nCafe\u0301")); // "name\nCaf\u00e9"
  */
 export function decodeCsv(bytes: Uint8Array): string | null {
   let text: string;
@@ -47,7 +50,7 @@ export function decodeCsv(bytes: Uint8Array): string | null {
   } catch {
     return null;
   }
-  return text.includes("\uFFFD") ? null : text;
+  return text.includes("\uFFFD") ? null : text.normalize("NFC");
 }
 
 /**

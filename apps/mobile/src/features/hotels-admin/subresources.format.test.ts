@@ -111,13 +111,15 @@ describe("subresources.format", () => {
   });
 
   describe("venueSummary", () => {
-    it("names the type, the setting, the area and the seated, theatre and floating capacities", () => {
+    it("names the type, the setting, the area and the seated, floating and theatre capacities", () => {
       expect(venueSummary(venueViewFixture())).toBe(
-        "Ballroom · Indoor · 500 m² · 300 seated · 400 theatre · 500 floating",
+        "Ballroom · Indoor · 500 m² · 300 seated · 500 floating · 400 theatre",
       );
     });
 
-    it("adds both units, the dimensions, the other layouts and the pre-function area", () => {
+    // The row shows two lines, which a phone fills after about 65 characters: the capacities TW-22 asks
+    // for come before the dimensions, so a long venue loses only the details.
+    it("adds both units, then the capacities, then the dimensions, layouts and pre-function area", () => {
       const terrace = venueViewFixture({
         venueType: "terrace",
         setting: "semi_open",
@@ -133,8 +135,8 @@ describe("subresources.format", () => {
         prefunctionAreaSqft: null,
       });
       expect(venueSummary(terrace)).toBe(
-        "Terrace · Covered or semi-open · 279 m² (3,000 sq ft) · 30.5 × 9 m, 4.25 m ceiling · " +
-          "300 seated · 500 floating · 1 other layout · pre-function 60 m²",
+        "Terrace · Covered or semi-open · 279 m² (3,000 sq ft) · 300 seated · 500 floating · " +
+          "30.5 × 9 m, 4.25 m ceiling · 1 other layout · pre-function 60 m²",
       );
     });
 

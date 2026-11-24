@@ -101,6 +101,21 @@ describe("RoomEditSheet", () => {
     expect(captured.created).toBeUndefined();
   });
 
+  // The API refuses an entry over 120 characters with a bare "Validation failed"; the sheet must name the
+  // field first, since a comma list pasted on one line stays one entry.
+  it("blocks a save whose facilities line is too long, naming Facilities", async () => {
+    const captured: Captured = {};
+    await renderNew(captured);
+    const commaList = Array.from({ length: 12 }, (_, i) => `Synthetic amenity ${i}`).join(", ");
+    await fireEvent.changeText(await screen.findByTestId("room-name"), "Synthetic Garden Suite");
+    await fireEvent.changeText(screen.getByTestId("room-facilities"), commaList);
+    await fireEvent.press(screen.getByTestId("room-edit-submit"));
+    const message = "Each facility is at most 120 characters; put each one on its own line";
+    expect(await screen.findByText(`Facilities: ${message}`)).toBeOnTheScreen();
+    expect(screen.getByText(message)).toBeOnTheScreen();
+    expect(captured.created).toBeUndefined();
+  });
+
   it("edits a room category: seeds from it and sends only the change", async () => {
     const captured: Captured = {};
     await renderWithApi(

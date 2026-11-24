@@ -71,6 +71,17 @@ describe("contacts.form", () => {
     expect(contactUpdateBody(draftFromContact(contact), contact)).toEqual({});
   });
 
+  // The sheet checks the email by the contract's own rule, so an address the API would refuse with a bare
+  // "Validation failed" is named on its field before the save.
+  it.each(["desk@hotel.c", "desk@hotel..example", "desk.@hotel.example"])(
+    "refuses %s, which the contract refuses too",
+    (email) => {
+      expect(validateContact({ ...blank, name: "Synthetic Desk", email }, null).email).toBe(
+        "Enter a valid email address",
+      );
+    },
+  );
+
   it("names a missing name and a malformed email, and lower-cases the email", () => {
     const errors = validateContact({ ...blank, email: "nope" }, null);
     expect(errors).toEqual({

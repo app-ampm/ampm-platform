@@ -23,6 +23,7 @@ describe("HotelSubresourcesService: rooms and venues (D-178)", () => {
       HOTEL_ID,
       { name: "Synthetic Villa", sizeSqft: 850, sizeSqm: 79 },
       ACTOR,
+      expect.anything(),
     );
   });
 
@@ -65,6 +66,7 @@ describe("HotelSubresourcesService: rooms and venues (D-178)", () => {
         prefunctionAreaSqm: 93,
       }),
       ACTOR,
+      expect.anything(),
     );
   });
 

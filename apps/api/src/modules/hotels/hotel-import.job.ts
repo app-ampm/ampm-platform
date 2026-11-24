@@ -194,29 +194,34 @@ export function refusalError(refusal: PreviewRefusal): Error {
 }
 
 /**
- * What a re-plan at import decided about a stored row's target: the row it updates or leaves, none (it
- * creates), or nothing to compare (it is refused for another reason).
+ * What a plan matched for a row, whatever it then decided: one live row (which it updates or leaves, or
+ * is refused on, a lost key say), none (it creates, or is refused creating: a new venue without its type),
+ * or nothing it got as far as matching (`unmatched`: refused first, its hotel gone or its name repeated or
+ * shared by two live rows).
  */
-export type ReplannedTarget =
-  | { readonly outcome: "create" }
-  | { readonly outcome: "update" | "unchanged"; readonly targetId: string }
-  | { readonly outcome: "error" };
+export type PlanMatch =
+  | { readonly matches: "row"; readonly targetId: string }
+  | { readonly matches: "none" }
+  | { readonly matches: "unmatched" };
 
 /**
- * Whether a stored row's target changed since its preview: a row that created now finds its target there;
- * a row that planned against a target finds it gone or holding other values, or now matches another row
- * or none. A re-plan refused for another reason (a key lost, a hotel removed) keeps its own reason.
+ * Whether a stored row's target changed since its preview, decided from what its re-plan matched, not
+ * from what it then decided: a row that created now finds a live row of its own; a row that planned
+ * against a target finds it gone (its hotel deleted, too) or holding other values, or now matches another
+ * row or none, even when the create that would follow is refused. A re-plan refused on the very row it
+ * planned against (a key lost since) keeps its own reason, as does one that matched nothing (`unmatched`)
+ * while its target stayed as it was, and a create row of a hotel deleted since ("This hotel was deleted").
  *
  * @example
- * changedSincePreview(stored.target, { outcome: "update", targetId }, (id) => versions.get(id) ?? null);
+ * changedSincePreview(stored.target, { matches: "row", targetId }, (id) => versions.get(id) ?? null);
  */
 export function changedSincePreview(
   stored: StoredTarget | null,
-  replanned: ReplannedTarget,
+  replanned: PlanMatch,
   currentVersion: (id: string) => string | null,
 ): boolean {
-  if (stored === null) return replanned.outcome === "update" || replanned.outcome === "unchanged";
+  if (stored === null) return replanned.matches === "row";
   if (currentVersion(stored.id) !== stored.version) return true;
-  if (replanned.outcome === "error") return false;
-  return replanned.outcome === "create" || replanned.targetId !== stored.id;
+  if (replanned.matches === "unmatched") return false;
+  return replanned.matches === "none" || replanned.targetId !== stored.id;
 }
