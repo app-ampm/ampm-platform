@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { checkPdf } from "./pdf-check.js";
+import { checkPdf, REFUSED_NAMES } from "./pdf-check.js";
 import { buildPdf, type PdfBuildOptions } from "./testing/pdf-builder.js";
 import { refusalOf } from "./testing/refusals.js";
 
@@ -61,6 +61,36 @@ describe("checkPdf: refused names, outside and inside object streams", () => {
   ])("refuses %s", async (_name, options) => {
     expect((await refusalOf(() => checkPdf(buildPdf(options)))).reason).toBe("pdf_active_content");
   });
+
+  /** Written out here, not read from REFUSED_NAMES: dropping a name from the set fails its own case. */
+  const EVERY_REFUSED_NAME = [
+    "JavaScript",
+    "JS",
+    "Launch",
+    "EmbeddedFile",
+    "EmbeddedFiles",
+    "EF",
+    "RichMedia",
+    "XFA",
+    "GoToE",
+  ];
+
+  it("has a case below for every refused name", () => {
+    expect([...REFUSED_NAMES].sort()).toEqual([...EVERY_REFUSED_NAME].sort());
+  });
+
+  it.each(EVERY_REFUSED_NAME)(
+    "refuses /%s on its own, outside and inside an object stream",
+    async (name) => {
+      for (const objectStream of [false, true]) {
+        const pdf = buildPdf({
+          objectStream,
+          objects: [{ num: 6, body: `<< /Type /Example /Value /${name} >>` }],
+        });
+        expect((await refusalOf(() => checkPdf(pdf))).reason).toBe("pdf_active_content");
+      }
+    },
+  );
 
   it("does not take a name inside a string for a name", () => {
     const pdf = buildPdf({
