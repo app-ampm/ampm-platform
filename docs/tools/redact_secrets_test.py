@@ -233,6 +233,15 @@ def hotel_form_cases() -> list[Case]:
         ("an hfl_ identifier, not a token", tool_result("const hfl_link_token_generation = 2;"), 0, []),
         ("an hfl_ run inside a longer word", tool_result(f"x{link}"), 0, []),
         ("an hfs_ run longer than a token", tool_result(f"{session}Q"), 0, []),
+        # The link percent-encoded (a redirect's next=, a logged URL) or in a quoted-printable email body,
+        # where the encoded = leaves a letter or digit right before the prefix.
+        ("a percent-encoded link", tool_result(f"https://site.ampm.example/hotel-form%23k%3D{link}"), 1, [secret]),
+        ("a percent-encoded session in lower case", tool_result(f"next=%2Fhotel-form%23k%3d{session}"), 1,
+         [secret]),
+        ("a quoted-printable link", tool_result(f'<a href=3D"https://site.ampm.example/hotel-form#k=3D{link}">'), 1,
+         [secret]),
+        ("an encoded = before a run longer than a token", tool_result(f"k%3D{link}Q"), 0, []),
+        ("an encoded = before an identifier", tool_result("x=3Dhfl_link_token_generation"), 0, []),
     ]
 
 

@@ -192,6 +192,13 @@ PATTERNS: list[tuple[str, re.Pattern[bytes] | Prefiltered, frozenset[int]]] = [
     # The hotel information form's link secret (hfl_) and form session token (hfs_), each the base64url of 32
     # random bytes: 43 characters, never part of a longer base64url run (D-188 §4; the plan's §4.2 and §4.3).
     ("hotel-form-token", re.compile(rb"(?P<secret>hf[ls]_[A-Za-z0-9_-]{43})(?![A-Za-z0-9_-])"), WORD_DASH),
+    # The same token after an encoded = (a link percent-encoded, k%3D or k%3d, or in a quoted-printable
+    # email, k=3D), whose last letter or digit the clean start above would take for the end of a word.
+    (
+        "hotel-form-token-encoded",
+        re.compile(rb"(?:%3[Dd]|=3D)(?P<secret>hf[ls]_[A-Za-z0-9_-]{43})(?![A-Za-z0-9_-])"),
+        ANY,
+    ),
     # An age secret key (sops/age): the master key that decrypts every encrypted secret; never in a transcript.
     ("age-secret-key", re.compile(rb"(?P<secret>AGE-SECRET-KEY-1[0-9A-Z]{50,})"), WORD_DASH),
     # A password inside a connection URL, the user part may be empty (redis://:pw@host); eight characters
