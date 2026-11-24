@@ -7,12 +7,21 @@ import {
   existingHotelBody,
   extendPreview,
   newHotelBody,
+  REQUEST_FIELDS,
   requestErrors,
   revokeReasonError,
 } from "./info-request.form";
 import { HOTEL_ID, requestFullFixture } from "./info-requests.test-utils";
 
 const DESTINATION_ID = "018f0000-0000-7000-8000-0000000c0002";
+
+describe("REQUEST_FIELDS", () => {
+  it("names every field of the drafts that can carry an error, and not the switches", () => {
+    const switches = ["kind", "emailIt", "isTest"];
+    const drafted = Object.keys(EMPTY_NEW_HOTEL_DRAFT).filter((key) => !switches.includes(key));
+    expect([...REQUEST_FIELDS].sort()).toEqual(drafted.sort());
+  });
+});
 
 describe("the Send request body", () => {
   it("sends only what was filled in, trimmed, with the kind and the switches", () => {

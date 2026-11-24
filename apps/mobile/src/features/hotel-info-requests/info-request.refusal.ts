@@ -1,28 +1,11 @@
 import { isAppError } from "@ampm/core";
 
-import type { RequestErrors, RequestField } from "./info-request.form";
+import { isRequestDraftField, type RequestErrors } from "./info-request.form";
 
 /** What a refused write says: the API's message, and the details it placed on fields. */
 export interface RequestRefusal {
   readonly message: string;
   readonly fields: RequestErrors;
-}
-
-const FIELDS: ReadonlySet<string> = new Set<RequestField>([
-  "recipientName",
-  "recipientEmail",
-  "displayLabel",
-  "staffNote",
-  "officialWebsite",
-  "switchboardPhone",
-  "switchboardSource",
-  "proposedName",
-  "proposedDestinationId",
-  "proposedWebAddress",
-]);
-
-function isRequestField(key: string): key is RequestField {
-  return FIELDS.has(key);
 }
 
 /**
@@ -38,7 +21,7 @@ export function refusalOf(error: unknown, fallback: string): RequestRefusal {
   const fields: RequestErrors = {};
   for (const detail of error.details ?? []) {
     const key = detail.path?.split(".")[0] ?? "";
-    if (isRequestField(key)) fields[key] ??= detail.message;
+    if (isRequestDraftField(key)) fields[key] ??= detail.message;
   }
   return { message: error.message, fields };
 }

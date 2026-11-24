@@ -1,5 +1,6 @@
 import { AppError } from "@ampm/core";
 
+import { REQUEST_FIELDS } from "./info-request.form";
 import { refusalOf } from "./info-request.refusal";
 
 describe("refusalOf", () => {
@@ -20,6 +21,15 @@ describe("refusalOf", () => {
       message: "This hotel already has a live request: HIR-2026-0001",
       fields: {},
     });
+  });
+
+  it("places a detail under every field of the sheets' one field list, and none under the switches", () => {
+    const details = [...REQUEST_FIELDS, "kind", "emailIt", "isTest"].map((path) => ({
+      path,
+      message: `Check ${path}`,
+    }));
+    const { fields } = refusalOf(new AppError("validation_failed", "Check", details), "x");
+    expect(Object.keys(fields).sort()).toEqual([...REQUEST_FIELDS].sort());
   });
 
   it("falls back to the sheet's words for anything that is not the API's", () => {

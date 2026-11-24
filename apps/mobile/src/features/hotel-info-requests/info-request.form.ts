@@ -57,9 +57,38 @@ export const EMPTY_NEW_HOTEL_DRAFT: NewHotelDraft = {
   proposedWebAddress: "",
 };
 
-/** A field of either sheet that can carry an error, or the whole form. */
-export type RequestField = Exclude<keyof NewHotelDraft, "kind" | "emailIt" | "isTest"> | "form";
+/**
+ * Every field of either create sheet that can carry an error (the switches cannot): the one list the
+ * form's checks and the API's refusals place errors by.
+ */
+export const REQUEST_FIELDS = [
+  "recipientName",
+  "recipientEmail",
+  "displayLabel",
+  "staffNote",
+  "officialWebsite",
+  "switchboardPhone",
+  "switchboardSource",
+  "proposedName",
+  "proposedDestinationId",
+  "proposedWebAddress",
+] as const satisfies readonly Exclude<keyof NewHotelDraft, "kind" | "emailIt" | "isTest">[];
+
+/** A field that can carry an error. */
+export type RequestDraftField = (typeof REQUEST_FIELDS)[number];
+/** A field that can carry an error, or the whole form. */
+export type RequestField = RequestDraftField | "form";
 export type RequestErrors = Partial<Record<RequestField, string>>;
+
+/**
+ * Whether a path's head names a field that can carry an error.
+ *
+ * @example
+ * isRequestDraftField("recipientEmail"); // true; "emailIt" is a switch: false
+ */
+export function isRequestDraftField(head: unknown): head is RequestDraftField {
+  return REQUEST_FIELDS.some((field) => field === head);
+}
 
 const WEB_ADDRESS = "Enter a web address such as https://www.hotel.example";
 const EMAIL = "Enter an email such as sales@hotel.example";
@@ -85,13 +114,6 @@ const FIELD_MESSAGE: Partial<Record<RequestField, string>> = {
   recipientEmail: EMAIL,
 };
 
-const FIELDS: readonly RequestField[] = [
-  ...(Object.keys(EMPTY_NEW_HOTEL_DRAFT) as (keyof NewHotelDraft)[]).filter(
-    (key): key is Exclude<keyof NewHotelDraft, "kind" | "emailIt" | "isTest"> =>
-      key !== "kind" && key !== "emailIt" && key !== "isTest",
-  ),
-];
-
 /** What placing a refusal reads of the contract's issues. */
 interface ContractIssue {
   readonly code: string;
@@ -103,7 +125,7 @@ interface ContractIssue {
 
 function fieldOf(path: readonly PropertyKey[]): RequestField {
   const head = path[0];
-  return FIELDS.find((field) => field === head) ?? "form";
+  return isRequestDraftField(head) ? head : "form";
 }
 
 /** One refusal in the sheet's words: the contract's own message, a length, or the field's message. */
