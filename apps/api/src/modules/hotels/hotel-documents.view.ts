@@ -20,13 +20,7 @@ const TYPE_ORDER: ReadonlyMap<HotelDocumentType, number> = new Map(
   HOTEL_DOCUMENT_TYPES.map((type, index) => [type, index]),
 );
 
-/** Whether every version of a document is of a type the library files (no other owner's types). */
-export function isHotelDocument(document: OwnedDocument): boolean {
-  return [document.latest, ...document.earlier].every((row) =>
-    isHotelDocumentType(row.documentType),
-  );
-}
-
+/** A row's type, which the library's owner scope keeps to its own types (hotel-documents.service.ts). */
 function hotelTypeOf(row: DocumentRow): HotelDocumentType {
   if (!isHotelDocumentType(row.documentType)) {
     throw errors.internal("A hotel document has a type the library does not file");

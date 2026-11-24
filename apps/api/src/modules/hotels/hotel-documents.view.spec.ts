@@ -2,7 +2,7 @@ import { hotelDocumentView } from "@ampm/core";
 import { describe, expect, it } from "vitest";
 
 import type { DocumentRow } from "../documents/documents.repository.js";
-import { byType, isHotelDocument, toHotelDocumentView } from "./hotel-documents.view.js";
+import { byType, toHotelDocumentView } from "./hotel-documents.view.js";
 
 const HOTEL = "0192f1a0-0000-7000-8000-0000000000a1";
 
@@ -46,8 +46,9 @@ describe("the hotel document view (D-187 §6)", () => {
     expect(views.sort(byType).map((view) => view.id)).toEqual([id(3), id(2), id(4), id(1)]);
   });
 
-  it("leaves out a document of a type the library does not file", () => {
-    expect(isHotelDocument({ latest: row(id(1), "contract"), earlier: [] })).toBe(false);
-    expect(isHotelDocument({ latest: row(id(2), "floor_plan"), earlier: [] })).toBe(true);
+  it("refuses to show a row of a type the library does not file", () => {
+    expect(() =>
+      toHotelDocumentView(HOTEL, { latest: row(id(1), "contract"), earlier: [] }),
+    ).toThrow(/a type the library does not file/);
   });
 });

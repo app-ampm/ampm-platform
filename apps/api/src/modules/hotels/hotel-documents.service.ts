@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common";
 import {
   documentTypeLabel,
   errors,
+  HOTEL_DOCUMENT_TYPES,
   HOTEL_DOCUMENT_VERSIONS_MAX,
   HOTEL_DOCUMENTS_MAX,
   type DocumentLinkView,
@@ -21,12 +22,20 @@ import {
 import type { DocumentOwner } from "../documents/documents.repository.js";
 import { DocumentsService } from "../documents/documents.service.js";
 import { HotelDocumentsRepository } from "./hotel-documents.repository.js";
-import { byType, isHotelDocument, toHotelDocumentView } from "./hotel-documents.view.js";
+import { byType, toHotelDocumentView } from "./hotel-documents.view.js";
 
 /** Replacing a document: what an upload that names `replaces` needs beyond the create key. */
 export const HOTEL_DOCUMENTS_UPDATE = "hotels.hotel_documents.update";
 
-const ownerOf = (hotelId: string): DocumentOwner => ({ ownerType: "hotel", ownerId: hotelId });
+/**
+ * The hotel as the owner of its library: only the library's types, so a row the hotel owns of any other
+ * type is absent to every route (listed, linked, removed, replaced or counted), a 404.
+ */
+const ownerOf = (hotelId: string): DocumentOwner => ({
+  ownerType: "hotel",
+  ownerId: hotelId,
+  documentTypes: HOTEL_DOCUMENT_TYPES,
+});
 
 const tooMany = () =>
   errors.conflict(
@@ -72,9 +81,7 @@ export class HotelDocumentsService {
   async list(hotelId: string): Promise<HotelDocumentList> {
     await this.requireHotel(hotelId);
     const documents = await this.versions.listByOwner(ownerOf(hotelId));
-    const items = documents
-      .filter(isHotelDocument)
-      .map((document) => toHotelDocumentView(hotelId, document));
+    const items = documents.map((document) => toHotelDocumentView(hotelId, document));
     return { items: items.sort(byType) };
   }
 

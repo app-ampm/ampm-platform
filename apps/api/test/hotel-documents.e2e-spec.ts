@@ -7,6 +7,7 @@ import {
   documentCalls,
   fixture,
   newLibraryHotel,
+  seedLibraryDocuments,
   startLibrarySuite,
   stopLibrarySuite,
   type LibrarySuite,
@@ -169,6 +170,21 @@ describe("Hotel documents library (e2e)", () => {
     const row = await suite.prisma.document.findUniqueOrThrow({ where: { id: foreign } });
     expect(row.deletedAt).toBeNull();
     expect(await suite.prisma.documentAccessLink.count({ where: { documentId: foreign } })).toBe(0);
+  });
+
+  it("answers 404 for a hotel's document of a type the library does not file", async () => {
+    const contract = randomUUID();
+    await seedLibraryDocuments(suite, suite.hotelId, [
+      { id: contract, title: "Signed contract", documentType: "contract" },
+    ]);
+    const items = (await list().expect(200)).body.data.items as Array<{ id: string }>;
+    expect(items.some((item) => item.id === contract)).toBe(false);
+    await mintLink(contract, "sa").expect(404);
+    await remove(contract, "sa").expect(404);
+    const pdf = await fixture("reportlab-5.0.0-plain.pdf");
+    await upload(pdf, { type: "other", replaces: contract }, "sa").expect(404);
+    const row = await suite.prisma.document.findUniqueOrThrow({ where: { id: contract } });
+    expect(row.deletedAt).toBeNull();
   });
 
   it.each([
