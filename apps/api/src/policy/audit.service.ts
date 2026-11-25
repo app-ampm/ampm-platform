@@ -1,9 +1,15 @@
 import { Injectable } from "@nestjs/common";
 import { redact } from "@ampm/core";
 
-import { requestContext } from "../common/request-context.js";
+import {
+  hotelFormActorRef,
+  requestContext,
+  type HotelFormActor,
+} from "../common/request-context.js";
 import { PrismaService } from "../db/prisma.service.js";
-import { Prisma, type AuditAction } from "../generated/prisma/client.js";
+import { Prisma, type AuditAction, type ActorType } from "../generated/prisma/client.js";
+import type { Principal } from "./principal.types.js";
+import { hotelFormAuditImage } from "./hotel-form-audit-image.js";
 
 // The audit actions are the AuditAction enum of schema.prisma (via the generated client), so the TS
 // type cannot drift from the database (§9). Re-exported for the services and interceptor that build
@@ -25,9 +31,33 @@ export interface AuditInput {
   readonly maskImages?: boolean;
 }
 
+/** Who an audit event names as its actor. */
+interface AuditActor {
+  readonly actorUserId: string | null;
+  readonly actorType: ActorType;
+  /** Set for a hotel-form contributor only (D-189 §6); left out, so null, for staff and the System. */
+  readonly actorRef?: string;
+}
+
+/** A user, or the System; a write with no principal at all is stored as `user` with no id. */
+function principalActor(principal: Principal | null): AuditActor {
+  return {
+    actorUserId: principal && principal.type !== "system" ? principal.userId : null,
+    actorType: principal?.type === "system" ? "system" : "user",
+  };
+}
+
+/** A hotel-form contributor (D-180): `guest_token`, no user, and their request and person or challenge. */
+function hotelFormAuditActor(actor: HotelFormActor): AuditActor {
+  return { actorUserId: null, actorType: "guest_token", actorRef: hotelFormActorRef(actor) };
+}
+
 /**
  * Step 8: an append-only record of the actions the matrix says must be audited (§9), with actor,
- * request id, address and masked before/after images. Never written to the application log.
+ * request id, address and masked before/after images. Never written to the application log. When a
+ * hotel-form contributor acts (the request context's hotel-form actor, D-189 §6), the event is theirs:
+ * `guest_token`, with its `actor_ref`, and its images are allow-listed (hotelFormAuditImage), whatever
+ * `maskImages` says.
  */
 @Injectable()
 export class AuditService {
@@ -36,18 +66,23 @@ export class AuditService {
   /** `client` lets a caller record inside its own transaction, so a mutation and its audit commit together. */
   async record(input: AuditInput, client: Prisma.TransactionClient = this.prisma): Promise<void> {
     const context = requestContext.get();
-    const principal = context?.principal ?? null;
-    const mask = input.maskImages ?? true;
+    const contributor = context?.hotelFormActor ?? null;
+    const actor = contributor
+      ? hotelFormAuditActor(contributor)
+      : principalActor(context?.principal ?? null);
+    const image = (value: unknown) =>
+      contributor
+        ? jsonImage(hotelFormAuditImage(value), false)
+        : jsonImage(value, input.maskImages ?? true);
     await client.auditEvent.create({
       data: {
-        actorUserId: principal && principal.type !== "system" ? principal.userId : null,
-        actorType: principal?.type === "system" ? "system" : "user",
+        ...actor,
         action: input.action,
         entityType: input.entityType,
         entityId: input.entityId,
         projectId: input.projectId ?? null,
-        beforeJson: jsonImage(input.before, mask),
-        afterJson: jsonImage(input.after, mask),
+        beforeJson: image(input.before),
+        afterJson: image(input.after),
         ipAddress: context?.ip ?? null,
         requestId: context?.requestId ?? null,
       },
