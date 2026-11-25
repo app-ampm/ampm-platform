@@ -159,4 +159,37 @@ describe("ConfigurationEditSheet", () => {
     // The duplicate is rejected, so the field still shows the typed name rather than blanking.
     expect(screen.getByDisplayValue("beta")).toBeOnTheScreen();
   });
+
+  it("switches the hotel information form's mode as a single choice, and saves it", async () => {
+    const captured: Captured = {};
+    const value = {
+      mode: "off",
+      linkValidityDays: 30,
+      maxExtensionDays: 60,
+      statusOnlyDays: 7,
+      maxPeople: 10,
+      replyTo: null,
+      helpContact: null,
+    };
+    await renderSheet(
+      routedFetch({
+        "/admin/configurations/hotel_form.policy": (init) => {
+          captured.put = JSON.parse(String(init?.body));
+          return ok({ key: "hotel_form.policy", value });
+        },
+      }),
+      { key: "hotel_form.policy", value },
+    );
+    await fireEvent.press(await screen.findByTestId("config-field-mode"));
+    expect(
+      await screen.findByText("Only requests marked as tests reach a hotel."),
+    ).toBeOnTheScreen();
+    await fireEvent.press(screen.getByTestId("config-field-mode-option-test_only"));
+    await fireEvent.changeText(screen.getByTestId("config-field-replyTo"), "desk@ampm.example");
+    await fireEvent.press(screen.getByTestId("configuration-edit-submit"));
+    expect(await screen.findByText("Setting saved")).toBeOnTheScreen();
+    expect(captured.put).toEqual({
+      value: { ...value, mode: "test_only", replyTo: "desk@ampm.example" },
+    });
+  });
 });

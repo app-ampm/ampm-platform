@@ -64,7 +64,7 @@ const SIDED = {
 
 const FINANCE_CONTEXTS = {
   ...SIDED,
-  internalCost: on(ROWS.internalCost), // 216: HT "RU hotel lines", VC "RU (a) vendor lines"
+  internalCost: on(ROWS.internalCost), // 221: HT "RU hotel lines", VC "RU (a) vendor lines"
   internalCostHotel: on(ROWS.internalCost, { side: "hotel" }),
   internalCostVendorAssigned: on(ROWS.internalCost, { side: "vendor", assigned: true }),
 };
@@ -87,15 +87,15 @@ const CONTACT_CONTEXTS = {
   assigned: A,
   hotelSide: { side: "hotel" },
   vendorSide: { side: "vendor" },
-  hotelContacts: on(ROWS.hotelContacts, { side: "hotel", assigned: true }), // 170: PM R, HL R (a)
+  hotelContacts: on(ROWS.hotelContacts, { side: "hotel", assigned: true }), // 171: PM R, HL R (a)
   hotelContactsUnassigned: on(ROWS.hotelContacts, { side: "hotel" }),
-  vendorContacts: on(ROWS.vendorContacts, { side: "vendor", assigned: true }), // 231: PM, HL R (a)
-  vendorProfiles: on(ROWS.vendorProfiles, { side: "vendor", assigned: true }), // 230: CD, SM, FA R
-  venues: on(ROWS.venues, A), // 195: PM CRU (a), HL RU (a); CD, VC, RG R (a)
-  venuesHotelSide: on(ROWS.venues, { side: "hotel", assigned: true }), // 195: HT CRU
+  vendorContacts: on(ROWS.vendorContacts, { side: "vendor", assigned: true }), // 236: PM, HL R (a)
+  vendorProfiles: on(ROWS.vendorProfiles, { side: "vendor", assigned: true }), // 235: CD, SM, FA R
+  venues: on(ROWS.venues, A), // 200: PM CRU (a), HL RU (a); CD, VC, RG R (a)
+  venuesHotelSide: on(ROWS.venues, { side: "hotel", assigned: true }), // 200: HT CRU
   venuesUnassigned: on(ROWS.venues),
-  vehicles: on(ROWS.vehicles, A), // 278: drivers' phones; PM RU (a), HL CRUD (a), RG R (a)
-  guests: on(ROWS.guests, A), // 261: no contact columns
+  vehicles: on(ROWS.vehicles, A), // 283: drivers' phones; PM RU (a), HL CRUD (a), RG R (a)
+  guests: on(ROWS.guests, A), // 266: no contact columns
 } satisfies Record<string, ClassContext>;
 
 const CONTACT: ClassGolden = {
@@ -112,7 +112,7 @@ const CONTACT: ClassGolden = {
       ...["hotelContacts", "hotelContactsUnassigned", "vendorContacts", "vendorProfiles"],
       ...["venues", "venuesHotelSide", "vehicles"],
     ],
-    // §5.8 line 233 gives HL "R (a)" on vendor contacts, though §4 line 124 does not list vendors.
+    // §5.8 line 236 gives HL "R (a)" on vendor contacts, though §4 line 124 does not list vendors.
     HL: [
       ...["hotelContacts", "vendorContacts", "vendorProfiles", "venues", "venuesHotelSide"],
       "vehicles",
@@ -125,8 +125,8 @@ const BANK_CONTEXTS = {
   assigned: A,
   vendorSide: { side: "vendor" },
   assignedVendor: { assigned: true, side: "vendor" },
-  bankDetails: on(ROWS.bankDetails, { side: "vendor" }), // 233: SA R, FA RU; VC none (notes.ts)
-  vendorProfiles: on(ROWS.vendorProfiles, { side: "vendor", assigned: true }), // 230: VC CRUD
+  bankDetails: on(ROWS.bankDetails, { side: "vendor" }), // 238: SA R, FA RU; VC none (notes.ts)
+  vendorProfiles: on(ROWS.vendorProfiles, { side: "vendor", assigned: true }), // 235: VC CRUD
   accountsBilling: on(ROWS.accounts, { fields: ["billing"] }), // §5.2 line 155: FA "RU billing"
 } satisfies Record<string, ClassContext>;
 
@@ -134,10 +134,10 @@ const SENSITIVE_CONTEXTS = {
   anywhere: {},
   assigned: A,
   owned: { owned: true },
-  guests: on(ROWS.guests, A), // 261
+  guests: on(ROWS.guests, A), // 266
   guestsUnassigned: on(ROWS.guests),
-  sensitive: on(ROWS.sensitive, A), // 262: SA R, PM R (a), RG RU (a), HL R (a)
-  supportRequests: on(ROWS.support, A), // 268: dietary, accessibility and complaint requests
+  sensitive: on(ROWS.sensitive, A), // 267: SA R, PM R (a), RG RU (a), HL R (a)
+  supportRequests: on(ROWS.support, A), // 273: dietary, accessibility and complaint requests
 } satisfies Record<string, ClassContext>;
 const GUEST_TEAMS = ["assigned", "guests", "sensitive", "supportRequests"];
 
@@ -153,7 +153,7 @@ const IDENTITY_GOLDEN: ClassGolden = {
     checkInUnassigned: { checks: ["check_in"] },
     breakGlass: { checks: ["break_glass"] },
     everyFact: EVERY_FACT,
-    documentsBreakGlass: on(ROWS.identity, { checks: ["break_glass"] }), // 264: SA R break-glass
+    documentsBreakGlass: on(ROWS.identity, { checks: ["break_glass"] }), // 269: SA R break-glass
     documentsExplicit: on(ROWS.identity, { assigned: true, explicitGrant: true }), // RG CRU (a)
     documentsCheckIn: on(ROWS.identity, { assigned: true, checks: ["check_in"] }), // HL R (a)
   },

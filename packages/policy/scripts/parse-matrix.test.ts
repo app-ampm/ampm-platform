@@ -33,7 +33,7 @@ describe("parseMatrix", () => {
     ]);
   });
 
-  it("§5.16 lines 330 and 333: report rows become read and export grants with their exclusions", () => {
+  it("§5.16 lines 334 and 337: report rows become read and export grants with their exclusions", () => {
     const block = [
       "### 5.16 Reports and exports",
       REPORTS,
@@ -82,7 +82,7 @@ describe("parseMatrix", () => {
     expect(() => parseMatrix(unknownHeader.join("\n"), "staff")).toThrow(/layout/);
   });
 
-  it("§5.15 line 319, §6 line 377: stops on an indented row, which GFM still renders in the table", () => {
+  it("§5.15 line 322, §6 line 380: stops on an indented row, which GFM still renders in the table", () => {
     const staffBlock = [
       "### 5.15 Closure, feedback and public website",
       ROLES,
@@ -100,7 +100,7 @@ describe("parseMatrix", () => {
     expect(() => parseMatrix(othersBlock, "others")).toThrow(/indented/);
   });
 
-  it("§10 lines 550, 551 and 556: stops when a §10 key names a row label the section does not have", () => {
+  it("§10 lines 569, 570 and 575: stops when a §10 key names a row label the section does not have", () => {
     const block = [
       "### 5.7 Budget and finance",
       ROLES,
@@ -110,7 +110,7 @@ describe("parseMatrix", () => {
     expect(() => parseMatrix(block, "staff", { partial: true })).toThrow(/vendors\.quotes\.read/);
   });
 
-  it("§4 line 125, §5.8 line 234: a reading of one cell holds there only, and stops once the cell changes", () => {
+  it("§4 line 125, §5.8 line 238: a reading of one cell holds there only, and stops once the cell changes", () => {
     const readUpdate = [{ actions: ["read", "update"], scope: "all", conditions: [] }];
     const vendors = (bankForVC: string) =>
       [
@@ -137,7 +137,7 @@ describe("parseMatrix", () => {
     expect(() => parseMatrix(vendors("R"), "staff")).toThrow(/READINGS/);
   });
 
-  it("§4 line 125, §5.8 line 234: a whole §5 block without the reading's subsection stops", () => {
+  it("§4 line 125, §5.8 line 238: a whole §5 block without the reading's subsection stops", () => {
     // A renumbered or dropped §5.8 must not let VC's "RU" through as written (notes.ts READINGS).
     const block = [
       "### 5.1 Administration",
@@ -154,7 +154,7 @@ describe("parseMatrix", () => {
     ).toHaveLength(1);
   });
 
-  it("§6 line 374: the client, guest and demo table parses with its own columns", () => {
+  it("§6 line 377: the client, guest and demo table parses with its own columns", () => {
     const block = [
       "| Resource | CR (both representatives) | GU | DP |",
       "|---|---|---|---|",

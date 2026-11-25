@@ -17,6 +17,13 @@ describe("@ampm/ui index", () => {
     expect(ui.SEARCH_DEBOUNCE_MS).toBe(300);
   });
 
+  it("exports the copy and share helpers, which a native build does not offer", () => {
+    expect("copyText" in ui).toBe(true);
+    expect("shareText" in ui).toBe(true);
+    expect(ui.copyText).toBeNull();
+    expect(ui.shareText).toBeNull();
+  });
+
   it("exports every component folder", () => {
     const index = readFileSync(join(__dirname, "index.ts"), "utf8");
     const missing = readdirSync(join(__dirname, "components")).filter(

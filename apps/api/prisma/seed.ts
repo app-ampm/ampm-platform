@@ -36,7 +36,7 @@ const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: url 
 export const SEED = {
   superAdmin: { email: "admin@example.com", name: "Asha Admin", subject: "local:admin" },
   projectManager: { email: "pm@example.com", name: "Priya Manager", subject: "local:pm" },
-  // Creative: create and read only on the wedding's incidents (permission-matrix §5.13 line 298).
+  // Creative: create and read only on the wedding's incidents (permission-matrix §5.13 line 301).
   creative: { email: "creative@example.com", name: "Chitra Creative", subject: "local:cd" },
   sales: { email: "sales@example.com", name: "Sameer Sales", subject: "local:sm" },
   // Hotel / Destination team: drives the hotel-enquiry pipeline's early stages (the SA cannot) — Slice 3.

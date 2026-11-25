@@ -261,8 +261,8 @@ erDiagram
     }
     notifications {
         uuid id PK
-        string recipient_type "enum user / guest"
-        uuid recipient_id
+        string recipient_type "enum user / guest / external"
+        uuid recipient_id "the user or guest token; for external, the record the message is about (D-188)"
         string channel "enum in_app / email / whatsapp / sms / push (A-11)"
         string template_key
         string entity_type
@@ -272,6 +272,8 @@ erDiagram
         datetime sent_at
         datetime delivered_at
         json data "server-only render variables e.g. the activation link (5.2); never in a view"
+        string recipient_address "RESTRICTED-CONTACT, an external recipient's address (D-188); cleared with data"
+        string reply_to "the email's Reply-To (D-188); cleared with data"
     }
     notification_preferences {
         uuid id PK
@@ -359,6 +361,7 @@ Notes:
     COMMIT;
     ```
   - **Never dropped.** Partitions are never dropped; deleting old log rows stays a retention proposal for a Super Admin to approve (§1).
+- **External recipients (24 November 2026, D-188).** A notification can go to someone outside AMPM, such as the contact AMPM entered for a hotel information request (Module C): `recipient_type` `external`, `recipient_id` the request's id, and `recipient_address` the address it goes to, RESTRICTED-CONTACT. An email may carry a `reply_to` (hotel-form email uses `hotel_form.policy.replyTo`). Both are written only while the row is `queued` and cleared with `data` when it leaves it: on sending, on a failed render or a missing address, and when every send attempt has failed (`failPermanently`). No channel preference applies to an external recipient, an external email or SMS is refused without an address, and the notification feeds list only `user` rows, the Super Admin's whole log included. Implemented in migration `20261128000000_hotel_info_requests`.
 - **Staff hotel imports (24 November 2026, D-181).** The hotels, rooms, venues and rates imports (`import_type` `hotels`, `hotel_rooms`, `hotel_venues` and, from Slice 4, `hotel_rates`; see Module C's notes on Slice 3 and "Rates import and rate items") keep no file, so their `file_document_id` is null. Each upload is a preview, stored as a `validating` job, or as `failed` with no plan when no row is valid. `error_report_json` holds its value-free report: the counts, the refusals, and each row's outcome with the names of the fields it changes. `plan_json` holds the planned rows with their values and each target's version token. Those values can include a hotel's internal notes, so the column is RESTRICTED-NOTES: written by the System and read only by the import, never selected or returned anywhere else. Importing the preview by its id makes the job `applied`, with the import's report in `error_report_json`, and no second job is created. A newer preview of the same kind by the same person supersedes it. Importing and superseding both clear `plan_json`, and so does expiry: an import that finds its preview past the 24 hours clears it, and a daily job clears every plan older than that or left on a job that is no longer validating, so a file's values are kept no longer than they can be imported. The rules are in the Module C note "Rooms, venues, units and contacts".
 
 ---
@@ -588,6 +591,9 @@ erDiagram
     hotels ||--o{ saved_hotels : saved_as
     client_accounts ||--o{ saved_hotels : saves
     hotels ||--o{ media_assets : gallery
+    hotels |o--o{ hotel_info_requests : asked_through
+    destinations |o--o{ hotel_info_requests : proposes
+    hotel_info_requests ||--o{ hotel_info_request_events : records
 
     destinations {
         uuid id PK
@@ -750,6 +756,56 @@ erDiagram
         uuid saved_by_user_id FK
         text note
     }
+    hotel_info_requests {
+        uuid id PK
+        string reference UK "HIR-year-number, from the sequence hotel_info_request_ref_seq (D-188)"
+        string kind "enum onboarding / refresh"
+        string target "enum existing / new"
+        uuid hotel_id FK "nullable for a new hotel until the merge"
+        string proposed_name "a new hotel's name"
+        uuid proposed_destination_id FK "a new hotel's destination"
+        string proposed_web_address "as staff typed it"
+        string proposed_web_address_key "normalised by core normaliseWebAddress"
+        string official_website "entered by staff"
+        string switchboard_phone "entered by staff"
+        string switchboard_source "where staff found the switchboard number"
+        bool is_test "a Super Admin's test request"
+        string status "enum open / submitted / in_review / changes_requested / merged / rejected / revoked"
+        datetime expires_at "creation plus linkValidityDays"
+        datetime status_only_until "set at the merge"
+        string display_label "the staff label shown in emails and lists"
+        text staff_note
+        string token_hash UK "SHA-256 of the link's secret"
+        int token_generation "starts at 1, plus 1 at each reissue"
+        datetime link_issued_at
+        datetime link_emailed_at
+        string recipient_name "RESTRICTED-CONTACT, as AMPM entered it"
+        string recipient_email "RESTRICTED-CONTACT, as AMPM entered it"
+        string prefill_mode "enum none"
+        int revision "submitted revisions, from 0"
+        datetime submitted_at
+        uuid submitted_by_person_id "the hotel person who submitted, from Slice 7b"
+        uuid reviewer_user_id FK "the reviewer holding the claim"
+        datetime review_started_at
+        datetime changes_requested_at
+        datetime rejected_at
+        text reject_reason "RESTRICTED, internal"
+        datetime merged_at
+        string merge_plan_hash
+        datetime revoked_at
+        text revoke_reason
+        string retention_class "hotel_intake"
+    }
+    hotel_info_request_events {
+        uuid id PK
+        uuid request_id FK
+        string event_type "enum created / link_reissued / link_emailed / share_recorded / updated / expiry_extended / revoked"
+        string actor_kind "enum staff / hotel_person / system"
+        uuid actor_user_id FK "the staff user, when staff acted"
+        uuid actor_person_id "the hotel person, from Slice 7b"
+        json detail_json "masked detail"
+        datetime occurred_at
+    }
 ```
 
 Notes:
@@ -828,6 +884,22 @@ Notes:
   - **Rates into draft cards.** A Rates file names each row's hotel by web address, its rate card by name and its item by type and room or venue ([engineering/hotel-import.md](engineering/hotel-import.md)). A card it names that does not exist is created as a `draft` in INR, with its dates from the file; an existing `draft` card takes the rows, and a `verified` or `stale` card refuses them, so an import never changes a priced card a client may see. Items are matched within the card by (`item_type`, `room_category_id`, `venue_id`), created with `client_visible` false, and an import never changes `client_visible`, so nothing imported reaches a client before the card is verified against a current rates verification (D-170) and the item is shown in the staff app. Card and item versions for "changed since preview" are SHA-256 tokens of the card's status and dates and of the item's compared columns.
   - **A rate item prices its own hotel.** `room_category_id` must be a live room category, and `venue_id` a live venue, of the card's hotel, and an item holds one of the two at most. The staff API enforces it (400 naming the field) and so does the import (a row error); an edit that sends an item's stored link back unchanged is not checked again, since the room or venue may have been removed since. There is no database constraint, as no foreign key can say "the same hotel" here.
   - **Rolling back past this migration.** Nothing to remap. The previous image never lists import jobs and reads one only by id through a kind's apply route, so a `hotel_rates` job sent there answers 500 rather than 404. Its rate screens read every rate card and item as before. Its daily sweep clears only hotels, rooms and venues plans, so a Rates preview's stored plan, which holds amounts and inclusions, would outlive its 24 hours; after a rollback clear them by hand: `UPDATE import_jobs SET plan_json = NULL WHERE import_type = 'hotel_rates' AND plan_json IS NOT NULL;`. The previous staff bundle sends `?dryRun=true`, which this release refuses, so the portal goes back with the API (plan §10.2 item 7).
+
+- **Hotel information requests (24 November 2026, D-188).** Slice 7a of the hotel information form plan, implemented in migration `20261128000000_hotel_info_requests` (expand only: new types, tables and a sequence, and two nullable `notifications` columns, Module A).
+  - **A request** is one round of the hotel information form (§4.2 of the plan): a first onboarding or a seasonal refresh (`kind`), for a hotel the catalogue holds or a proposed new one (`target`). Retention class `hotel_intake`; its events follow it. Two CHECKs hold the target's fields: an existing-hotel request names its hotel (`hotel_info_requests_existing_has_hotel`), and a new-hotel request its proposed name, destination and normalised web address (`hotel_info_requests_new_has_proposal`). A new hotel's request gets its `hotel_id` at the merge.
+  - **The reference** is `HIR-<year>-<n>`: the year of `created_at` in UTC and the next number of the sequence `hotel_info_request_ref_seq`, written with four digits at least (`nextHotelInfoRequestReference` in the API, core `hotelInfoRequestReference`). The sequence never resets, so a number is never reused across years; a rolled-back create leaves a gap.
+  - **Live** means `open`, `submitted`, `in_review` or `changes_requested`. Two partial unique indexes are the race-safe backstop of D-188's one-live-request rules, a soft-deleted request freeing both: one live request per hotel (`hotel_info_requests_hotel_live_key` on `hotel_id`), and one live new-hotel request per normalised web address (`hotel_info_requests_web_address_live_key` on `proposed_web_address_key`, for `target` `new`). Status with `expires_at` and status with `submitted_at` serve the queue and the expiry sweeps. Expiry is worked out from `expires_at`, never stored as a status; the statuses move per permission-matrix §7 "Hotel information request". A deleted hotel never keeps a live request: the hotel's `DELETE` locks the hotel's row and revokes it, whatever its live status, in the same transaction, as the System (§7 lines 505 and 506), with a `revoked` event and its audit.
+  - **The link.** Only the SHA-256 of the link's secret is stored (`token_hash`, unique, SECRET); `token_generation` counts reissues, and the sessions of a later slice are bound to it. The recipient's name and email are RESTRICTED-CONTACT, as AMPM entered them.
+  - **Web addresses** are compared as keys from core `normaliseWebAddress`: no scheme, so http and https are one address and an address typed both ways never holds two live requests; the host lower-case, in punycode, with no leading `www.`; and no trailing slash, query or fragment. The duplicate hints also compare hosts alone (`webAddressHost`).
+  - **Events** (`hotel_info_request_events`) record each change, in the transaction that makes it: the type, the actor's kind and ids, a masked detail, and the time. They are the history the Hotel team reads; the audit log stays the Super Admin's. `actor_person_id` and `submitted_by_person_id` name `hotel_info_request_people` rows, which Slice 7b adds with their foreign keys.
+  - **Rolling back past this migration.** The previous image never reads the request tables. It never lists external notifications either, but its worker cannot read a queued `external` row, whose `recipient_type` it does not know: the send job fails until it dead-letters, and its handler cannot clear the row either, so the address and the link would stay on it. Before starting the previous image, fail and clear such rows:
+
+    ```sql
+    UPDATE notifications SET status = 'failed', data = NULL, recipient_address = NULL, reply_to = NULL
+      WHERE recipient_type = 'external' AND status = 'queued';
+    ```
+
+    With the hotel form's mode `off`, its default, the API queues no external email, so there is normally nothing to clear.
 
 ---
 
@@ -2176,7 +2248,7 @@ Phase numbers follow SPEC §11 as adjusted by A-10. "Restricted" lists the field
 | grantable_capabilities, role_grants, permission_sets, permission_set_grants, role_permission_sets | A | 1 | Dynamic RBAC: Super-Admin custom roles and permission sets (D-036) | — |
 | project_members | A | 2 | Per-wedding staff and client membership | — |
 | auth_tokens | A | 1 | Invites, resets, OTP | token_hash |
-| notifications, notification_preferences | A | 1 | Delivery log and preferences | — |
+| notifications, notification_preferences | A | 1 | Delivery log and preferences | recipient_address (an external recipient's, until sent) |
 | audit_events | A | 1 | Append-only change history | — |
 | configurations | A | 1 | Thresholds, labels, escalation rules | — |
 | import_jobs | A | 1 | Spreadsheet imports for hotels, hotel rooms and venues, guests, vendors | plan_json (a hotel import preview's values) |
@@ -2195,6 +2267,7 @@ Phase numbers follow SPEC §11 as adjusted by A-10. "Restricted" lists the field
 | hotel_verifications | C | 1 | Freshness of each field group | — |
 | hotel_wedding_references | C | 1 | Past weddings at the hotel | consent required |
 | saved_hotels | C | 1 | Client shortlist | — |
+| hotel_info_requests, hotel_info_request_events | C | 1 | Hotel information form requests, their links and their history (D-188) | token_hash; recipient_name, recipient_email |
 | hotel_enquiries | D | 1 | Assistance requests and consultancy | notes_internal |
 | hotel_enquiry_events | D | 1 | Enquiry timeline | internal_only rows |
 | site_visits | D | 1 | Scheduled visits | outcome_internal |

@@ -158,6 +158,8 @@ describe("NotificationService", () => {
       sentAt: new Date("2026-10-28T00:00:00.000Z"),
       deliveredAt: null,
       data: { activationUrl: "https://app.example/activate?token=SECRET" },
+      recipientAddress: null,
+      replyTo: null,
       createdAt: new Date("2026-10-28T00:00:00.000Z"),
     });
     const service = makeService(repo);

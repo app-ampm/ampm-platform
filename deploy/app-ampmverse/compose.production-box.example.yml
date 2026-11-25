@@ -25,6 +25,9 @@ x-prod-env: &prod-env
   # AUTH_TOKEN_SECRET and AUTH_ENCRYPTION_KEY come from app.env.
   IDENTITY_PROVIDER: ampm
   WEB_APP_URL: https://app.ampmverse.com
+  # The public website's origin: hotel information form links are <PUBLIC_SITE_URL>/hotel-form#k=… (D-188).
+  # Production refuses http or a local host, and redeploy-prod.sh stops early when this line is missing.
+  PUBLIC_SITE_URL: https://site.ampmverse.com
   # The client portal (app.) and the website's enquiry form (site.) call the API from the browser.
   CORS_ORIGINS: https://app.ampmverse.com,https://site.ampmverse.com
   # One proxy hop as seen by the API: Plesk's nginx -> Apache -> the loopback port.

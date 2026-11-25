@@ -77,6 +77,39 @@ function deliveryIssues(value: EnvFields): EnvIssue[] {
 }
 
 /**
+ * Local hosts, which a link sent outside AMPM can never reach, written with or without a trailing dot
+ * (`localhost.` is localhost), and the unspecified addresses a server listens on.
+ */
+function isLocalHost(hostname: string): boolean {
+  const host = hostname.replace(/\.+$/, "");
+  return (
+    host === "localhost" ||
+    host.endsWith(".localhost") ||
+    host === "[::1]" ||
+    host === "0.0.0.0" ||
+    host === "[::]" ||
+    /^127\.\d+\.\d+\.\d+$/.test(host)
+  );
+}
+
+/**
+ * The public website (D-188 §6): the hotel information form's links are sent to hotels, so production
+ * refuses an address that is not https or names a local host, the development default among them.
+ */
+function siteIssues(value: EnvFields): EnvIssue[] {
+  if (value.NODE_ENV !== "production") return [];
+  const url = new URL(value.PUBLIC_SITE_URL);
+  if (url.protocol === "https:" && !isLocalHost(url.hostname)) return [];
+  return [
+    {
+      path: ["PUBLIC_SITE_URL"],
+      message:
+        "an https, non-local PUBLIC_SITE_URL is required in production (the hotel form's links point to it)",
+    },
+  ];
+}
+
+/**
  * SMS (D-147): a provider needs its key and the sign-in code's DLT template. In production the console
  * stub is allowed only while the code is also shown on screen, since otherwise no client could ever
  * receive one.
@@ -255,6 +288,7 @@ const schema = fields.superRefine((value, ctx) => {
   for (const issue of [
     ...identityIssues(value),
     ...deliveryIssues(value),
+    ...siteIssues(value),
     ...smsIssues(value),
     ...jobIssues(value),
     ...botCheckIssues(value),

@@ -23,7 +23,7 @@ const LIVE = { deletedAt: null } as const;
 
 /**
  * The scope of one request. Staff reach what their grant's scope reaches: every wedding, their
- * weddings, or their own records. Clients and the demo reach their own weddings only (§6 line 342),
+ * weddings, or their own records. Clients and the demo reach their own weddings only (§6 line 345),
  * through the visibilities addressed to them.
  *
  * @example

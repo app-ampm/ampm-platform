@@ -135,6 +135,8 @@ export {
   useUpdateDestination,
   useUpdateHotel,
 } from "./hooks/use-staff-hotels";
+// Hotel information requests, the staff side (D-188 §3 and §7): listed in their own barrel.
+export * from "./hotel-info-requests";
 export {
   hotelImportApplyPath,
   hotelImportPreviewPath,

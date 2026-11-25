@@ -140,3 +140,35 @@ describe("invite template baselines", () => {
     }
   });
 });
+
+describe("hotel form template baseline (D-188 §5)", () => {
+  const template = CONFIG_REGISTRY["notification.templates"].default["hotel_form.link"];
+  const vars = {
+    reference: "HIR-2026-0001",
+    hotelName: "Synthetic Lake Hotel",
+    expiresOn: "24 December 2026, 15:30 IST",
+    link: "https://site.synthetic.example/hotel-form#k=hfl_synthetic-link-secret",
+  };
+
+  it("hotel_form.link gives the reference, the hotel's name, the expiry and the link", () => {
+    if (!template) throw new Error("missing baseline hotel_form.link");
+    const out = renderTemplate(template, "email", vars);
+    expect(out.missing).toEqual([]);
+    if (out.content?.kind !== "email") throw new Error("expected email content");
+    expect(out.content.subject).toContain("HIR-2026-0001");
+    for (const value of Object.values(vars)) {
+      expect(out.content.text).toContain(value);
+      expect(out.content.html).toContain(value);
+    }
+    expect(out.content.html).toContain(`href="${vars.link}"`);
+  });
+
+  it("hotel_form.link takes those four values and nothing else, so no text a hotel typed fits", () => {
+    if (!template?.email) throw new Error("missing baseline hotel_form.link email");
+    const { subject, html, text } = template.email;
+    const names = [subject, html, text].flatMap((part) =>
+      [...part.matchAll(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g)].map((match) => match[1]),
+    );
+    expect(new Set(names)).toEqual(new Set(Object.keys(vars)));
+  });
+});

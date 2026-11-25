@@ -10,7 +10,6 @@ import {
   type NotificationChannel,
   type NotificationStatus,
   type NotificationView,
-  type RecipientType,
   type RenderedContent,
 } from "@ampm/core";
 import type { Scope } from "@ampm/policy";
@@ -27,11 +26,13 @@ import {
   type NotificationAdapters,
   type NotificationResult,
 } from "./notification.adapter.js";
+import { gateRefOf, renderVariablesOf, storedDataOf } from "./notification-data.js";
 import {
   NotificationRepository,
   type NotificationRow,
   type StatusPatch,
 } from "./notification.repository.js";
+import { SendGates, type GatedNotification, type SendGate } from "./notification-send-gates.js";
 
 /** The send job: loads the row and delivers it. The payload carries only the id (nothing in Redis is the only copy). */
 export const sendNotificationJob = defineJob(
@@ -39,10 +40,26 @@ export const sendNotificationJob = defineJob(
   z.object({ notificationId: uuid }),
 );
 
-/** What a caller asks to notify someone of; `eventType` keys the per-user channel preference. */
-export interface QueueNotification {
-  readonly recipientType: RecipientType;
+/** A user or a guest token: the delivery address is read from their record when the message is sent. */
+interface RecordRecipient {
+  readonly recipientType: "user" | "guest";
   readonly recipientId: string;
+}
+
+/**
+ * Someone outside AMPM (D-188 §5), such as the contact AMPM entered for a hotel: `recipientId` is the
+ * record the message is about (a hotel information request's id) and `recipientAddress` the address it
+ * goes to (an email address for email, a mobile for SMS). The address is held, RESTRICTED-CONTACT, only
+ * until the row leaves `queued`; no channel preference applies, as there is no user to hold one.
+ */
+interface ExternalRecipient {
+  readonly recipientType: "external";
+  readonly recipientId: string;
+  readonly recipientAddress: string;
+}
+
+/** What a caller asks to notify someone of; `eventType` keys the per-user channel preference. */
+interface NotificationMessage {
   readonly channel: NotificationChannel;
   readonly eventType: string;
   readonly templateKey: string;
@@ -55,7 +72,28 @@ export interface QueueNotification {
    * it skips the per-user channel preference.
    */
   readonly required?: boolean;
+  /**
+   * The email's Reply-To (D-188 §5: hotel-form email uses `hotel_form.policy.replyTo`); held on the row
+   * until it leaves `queued`, as the render variables are.
+   */
+  readonly replyTo?: string;
+  /**
+   * A non-secret reference the send gate of the template's family compares at send time (D-188 §5: a
+   * hotel form link email carries its link's generation, so a link reissued meanwhile is never sent).
+   * Held with the render variables until the row leaves `queued`; never rendered or handed to an adapter.
+   */
+  readonly gateRef?: string;
 }
+
+/**
+ * A notification to queue: who it goes to and what it says.
+ *
+ * @example
+ * await notifications.queue({ recipientType: "external", recipientId: request.id,
+ *   recipientAddress: request.recipientEmail, channel: "email", eventType: "hotel_form.link",
+ *   templateKey: "hotel_form.link", variables, ...(policy.replyTo ? { replyTo: policy.replyTo } : {}) });
+ */
+export type QueueNotification = (RecordRecipient | ExternalRecipient) & NotificationMessage;
 
 export type QueueResult = { suppressed: true } | { suppressed: false; notificationId: string };
 
@@ -77,14 +115,41 @@ function canAdvance(from: NotificationStatus, to: NotificationStatus): boolean {
   return ADVANCES[from].includes(to);
 }
 
-/** The render variables a caller may attach to a notification (e.g. the activation link); all strings. */
-const renderVariables = z.record(z.string(), z.string());
+/** The channels an external recipient's address can serve: an email address, or a mobile for SMS. */
+const ADDRESSED_CHANNELS: readonly NotificationChannel[] = ["email", "sms"];
+
+/** An external recipient needs an address, on a channel that delivers to one (fails closed, D-188 §5). */
+function checkExternal(input: QueueNotification): void {
+  if (input.recipientType !== "external") return;
+  if (input.recipientAddress.trim() === "") {
+    throw errors.internal("An external notification needs the recipient's address");
+  }
+  if (!ADDRESSED_CHANNELS.includes(input.channel)) {
+    throw errors.internal(`An external notification cannot go by ${input.channel}`);
+  }
+}
 
 /** The channels delivered through the adapter; in-app is delivered by the service, so it maps to null. */
 function externalChannel(channel: NotificationChannel): ExternalChannel | null {
   return channel === "email" || channel === "sms" || channel === "whatsapp" || channel === "push"
     ? channel
     : null;
+}
+
+/**
+ * What a send gate reads of a row: what it is and is about, and its gate reference; never its address
+ * or render variables.
+ */
+function gatedOf(row: NotificationRow): GatedNotification {
+  return {
+    templateKey: row.templateKey,
+    recipientType: row.recipientType,
+    recipientId: row.recipientId,
+    channel: row.channel,
+    entityType: row.entityType,
+    entityId: row.entityId,
+    gateRef: gateRefOf(row.data),
+  };
 }
 
 function toView(row: NotificationRow): NotificationView {
@@ -114,6 +179,8 @@ function toView(row: NotificationRow): NotificationView {
  */
 @Injectable()
 export class NotificationService implements OnModuleInit {
+  private readonly gates = new SendGates();
+
   constructor(
     private readonly repository: NotificationRepository,
     private readonly jobs: JobQueue,
@@ -128,11 +195,23 @@ export class NotificationService implements OnModuleInit {
       (payload) => this.deliver(payload.notificationId),
       // After every delivery attempt has failed the job dead-letters: mark the row failed and clear
       // its render variables so no invite token is held at rest on a permanently-queued row (D-044).
-      (payload) => this.failPermanently(payload.notificationId),
+      (payload) => this.failIfQueued(payload.notificationId),
     );
   }
 
+  /**
+   * Registers the gate the send path asks before it sends a notification whose template key starts with
+   * `prefix`; one that answers false is dropped (D-188 §5: the hotel form's kill switch).
+   *
+   * @example
+   * notifications.registerSendGate("hotel_form.", (notification) => gate.admits(notification));
+   */
+  registerSendGate(prefix: string, gate: SendGate): void {
+    this.gates.register(prefix, gate);
+  }
+
   async queue(input: QueueNotification): Promise<QueueResult> {
+    checkExternal(input);
     if (
       input.recipientType === "user" &&
       input.required !== true &&
@@ -147,15 +226,35 @@ export class NotificationService implements OnModuleInit {
       templateKey: input.templateKey,
       entityType: input.entityType ?? null,
       entityId: input.entityId ?? null,
-      data: input.variables,
+      data: storedDataOf(input.variables, input.gateRef),
+      recipientAddress: input.recipientType === "external" ? input.recipientAddress : null,
+      replyTo: input.replyTo ?? null,
     });
-    await this.jobs.enqueue(
-      sendNotificationJob,
-      { notificationId: row.id },
-      // '.' separator, not ':': BullMQ refuses a custom jobId containing ':' (bullmq.driver.ts, A1).
-      { idempotencyKey: `notification.send.${row.id}` },
-    );
+    await this.enqueueSend(row);
     return { suppressed: false, notificationId: row.id };
+  }
+
+  /**
+   * Hands the row to the send job. A queue that refuses it (Redis unreachable) leaves a row no job will
+   * ever send, dead-letter or clear, holding its render data (a link), address and Reply-To at rest; so
+   * the row fails now, all three cleared, and the caller gets the error (D-188 §4).
+   */
+  private async enqueueSend(row: NotificationRow): Promise<void> {
+    try {
+      await this.jobs.enqueue(
+        sendNotificationJob,
+        { notificationId: row.id },
+        // '.' separator, not ':': BullMQ refuses a custom jobId containing ':' (bullmq.driver.ts, A1).
+        { idempotencyKey: `notification.send.${row.id}` },
+      );
+    } catch (error) {
+      const fields = { templateKey: row.templateKey, channel: row.channel };
+      this.logger.warn("notification.enqueue_failed", fields);
+      await this.failIfQueued(row.id).catch(() => {
+        this.logger.error("notification.enqueue_failed_not_cleared", fields);
+      });
+      throw error instanceof Error ? error : new Error(String(error));
+    }
   }
 
   async listOwn(
@@ -177,6 +276,15 @@ export class NotificationService implements OnModuleInit {
   private async deliver(notificationId: string): Promise<void> {
     const row = await this.repository.findById(notificationId);
     if (!row || row.status !== "queued") return;
+    if (!(await this.gates.admits(gatedOf(row)))) {
+      // Dropped at send time: never sent, and its render data, address and Reply-To are cleared now.
+      this.logger.info("notification.dropped", {
+        templateKey: row.templateKey,
+        channel: row.channel,
+      });
+      await this.advance(row, { status: "failed", clearData: true });
+      return;
+    }
     // Leaving `queued` also clears the row's render variables: they may carry a single-use invite
     // link, and are only needed while the row is still queued and re-renderable. A replay runs only on
     // a queued row, so this stays deterministic while holding the token at rest for sub-seconds (D-044).
@@ -185,7 +293,7 @@ export class NotificationService implements OnModuleInit {
       return;
     }
     const channel = externalChannel(row.channel);
-    const variables = renderVariables.catch({}).parse(row.data);
+    const variables = renderVariablesOf(row.data);
     const content = channel ? await this.render(row.templateKey, channel, variables) : null;
     if (!channel || !content) {
       await this.advance(row, { status: "failed", clearData: true });
@@ -203,7 +311,7 @@ export class NotificationService implements OnModuleInit {
   ): Promise<void> {
     // Email and SMS need a delivery address; resolve it here (adapters never read persistence) and fail
     // closed when the recipient has none, rather than hand the adapter an unsendable message.
-    const address = await this.addressFor(channel, row.recipientId);
+    const address = await this.addressFor(channel, row);
     if ((channel === "email" || channel === "sms") && !address) {
       this.logger.warn("notification.no_address", { templateKey: row.templateKey, channel });
       await this.advance(row, { status: "failed", clearData: true });
@@ -216,6 +324,7 @@ export class NotificationService implements OnModuleInit {
         recipientType: row.recipientType,
         recipientId: row.recipientId,
         address,
+        ...(row.replyTo ? { replyTo: row.replyTo } : {}),
         templateKey: row.templateKey,
         content,
         variables,
@@ -236,10 +345,16 @@ export class NotificationService implements OnModuleInit {
     });
   }
 
-  /** The address a channel delivers to: the email for email, the mobile for SMS, none otherwise. */
-  private async addressFor(channel: ExternalChannel, recipientId: string): Promise<string | null> {
-    if (channel === "email") return this.repository.recipientEmail(recipientId);
-    if (channel === "sms") return this.repository.recipientPhone(recipientId);
+  /**
+   * The address a channel delivers to: the email for email, the mobile for SMS, none otherwise. An
+   * external recipient's is the one the row was queued with; a user's is read from their record.
+   */
+  private async addressFor(channel: ExternalChannel, row: NotificationRow): Promise<string | null> {
+    if (row.recipientType === "external") {
+      return ADDRESSED_CHANNELS.includes(channel) ? row.recipientAddress : null;
+    }
+    if (channel === "email") return this.repository.recipientEmail(row.recipientId);
+    if (channel === "sms") return this.repository.recipientPhone(row.recipientId);
     return null;
   }
 
@@ -267,10 +382,11 @@ export class NotificationService implements OnModuleInit {
   }
 
   /**
-   * The job's dead-letter handler: every send attempt failed, so mark the still-`queued` row failed
-   * and clear its render variables (the invite token). A no-op if the row has since left `queued`.
+   * The job's dead-letter handler (every send attempt failed), and the end of a row whose job the queue
+   * refused: marks the still-`queued` row failed and clears its render variables (the invite token), an
+   * external recipient's address and the Reply-To. A no-op if the row has since left `queued`.
    */
-  private async failPermanently(notificationId: string): Promise<void> {
+  private async failIfQueued(notificationId: string): Promise<void> {
     const row = await this.repository.findById(notificationId);
     if (!row || row.status !== "queued") return;
     await this.advance(row, { status: "failed", clearData: true });

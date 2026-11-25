@@ -60,7 +60,7 @@ export class FieldNoteService {
    * stored record with no second apply; an in-order write applies and bumps the version; a stale
    * base loses to the server and comes back as a conflict, surfaced to the user and never dropped
    * (offline.md). A write to a note that exists needs the writer to hold the update key
-   * (permission-matrix §5.13 line 298: CD, VC and RG create and read incidents only): without it,
+   * (permission-matrix §5.13 line 301: CD, VC and RG create and read incidents only): without it,
    * a 403, or the 404 of a missing record for a writer who may not see the notes, and nothing
    * changes.
    *

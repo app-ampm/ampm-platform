@@ -50,6 +50,24 @@ const REDACTED_KEYS: ReadonlySet<string> = new Set([
   "phonenumber",
   "ipaddress",
   "identitysubject",
+  // The hotel information form (D-188 §6, plan §6.2): its people, codes, sessions, links and recipients.
+  "mobile",
+  "onetimecode",
+  "linktoken",
+  "formsessiontoken",
+  "sessiontoken",
+  // A form session's stored hash (Slice 7b): as secret as the link's token hash.
+  "sessiontokenhash",
+  "bottoken",
+  "codehmac",
+  "destinationhash",
+  "recipientaddress",
+  "recipientemail",
+  "recipientname",
+  "fullname",
+  "designation",
+  "useragent",
+  "originalname",
 ]);
 
 const normaliseKey = (key: string): string => key.toLowerCase().replace(/[^a-z0-9]/g, "");

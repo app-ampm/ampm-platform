@@ -1,6 +1,6 @@
 /**
  * Golden cases for the §5.16 reports and exports table: who may run and export each report and what
- * its export leaves out, written out by hand from docs/permission-matrix.md lines 327-336, never read
+ * its export leaves out, written out by hand from docs/permission-matrix.md lines 329-339, never read
  * from matrix.json. Report keys are `reports.<report>.read` (May run) and `reports.<report>.export`.
  */
 import { describe, expect, it } from "vitest";
@@ -27,63 +27,63 @@ const FINANCE_UNLESS_FA_SA = {
 
 const GOLDEN: readonly Golden[] = [
   {
-    line: 326,
+    line: 329,
     label: "Lead source and conversion funnel",
     run: ["SA", "SM"],
     export: ["SA", "SM"],
     excluded: [],
   },
   {
-    line: 327,
+    line: 330,
     label: "Subscription status and payment history",
     run: ["SA", "SM", "FA"],
     export: ["SA", "FA"],
     excluded: [],
   },
   {
-    line: 328,
+    line: 331,
     label: "Hotel shortlist, enquiries, site visits, booking milestones",
     run: ["SA", "HT", "SM", "PM (a)"],
     export: ["SA", "HT"],
     excluded: [FINANCE_UNLESS_FA_SA],
   },
   {
-    line: 329,
+    line: 332,
     label: "Wedding progress, deadlines, approval tracker",
     run: ["SA", "PM (a)", "SM"],
     export: ["SA", "PM (a)"],
     excluded: [],
   },
   {
-    line: 330,
+    line: 333,
     label: "Budget estimate, approved, payments, actual, variance (client view)",
     run: ["SA", "FA", "PM (a)"],
     export: ["SA", "FA", "PM (a)"],
     excluded: [],
   },
   {
-    line: 331,
+    line: 334,
     label: "Internal cost and margin variance",
     run: ["SA", "FA", "PM (a)"],
     export: ["SA", "FA"],
     excluded: [],
   },
   {
-    line: 332,
+    line: 335,
     label: "Vendor selection, contracts, deliverables, payment status",
     run: ["SA", "VC", "PM (a)", "FA"],
     export: ["SA", "VC", "FA"],
     excluded: [{ kind: "class", class: "RESTRICTED-BANK", unlessRoles: [] }],
   },
   {
-    line: 333,
+    line: 336,
     label: "RSVP progress and function attendance",
     run: ["SA", "RG (a)", "PM (a)", "HL (a)"],
     export: ["SA", "RG (a)", "PM (a)"],
     excluded: [{ kind: "class", class: "SENSITIVE-GUEST", unlessRoles: [] }],
   },
   {
-    line: 334,
+    line: 337,
     label: "Rooming list and arrival or departure manifests",
     run: ["SA", "HL (a)", "RG (a)", "PM (a)"],
     export: ["SA", "HL (a)"],
@@ -98,14 +98,14 @@ const GOLDEN: readonly Golden[] = [
     ],
   },
   {
-    line: 335,
+    line: 338,
     label: "Function schedules, run-of-show, production readiness",
     run: ["SA", "PM (a)", "HL (a)", "VC (a)"],
     export: ["SA", "PM (a)"],
     excluded: [],
   },
   {
-    line: 336,
+    line: 339,
     label: "Overdue tasks, incidents, final reconciliation, closure report",
     run: ["SA", "PM (a)", "FA"],
     export: ["SA", "PM (a)"],
@@ -145,7 +145,7 @@ describe("§5.16 reports and exports", () => {
     );
   });
 
-  it("§10 line 557: the internal cost and margin export is reports.budget_internal.export (FA, SA)", () => {
+  it("§10 line 576: the internal cost and margin export is reports.budget_internal.export (FA, SA)", () => {
     expect(RESOURCES["5.16"]?.["Internal cost and margin variance"]).toBe("budget_internal");
     expect(decide(staff("FA"), "reports.budget_internal.export").allowed).toBe(true);
     expect(decide(staff("SA"), "reports.budget_internal.export").allowed).toBe(true);

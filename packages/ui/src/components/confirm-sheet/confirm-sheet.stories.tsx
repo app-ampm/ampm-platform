@@ -2,6 +2,7 @@ import { useState } from "react";
 
 import { defineStories } from "../../stories/define";
 import { Button } from "../button";
+import { Input } from "../input";
 import { Stack } from "../layout";
 import { ConfirmSheet } from "./confirm-sheet";
 
@@ -29,10 +30,35 @@ function Interactive({ destructive }: { readonly destructive: boolean }) {
   );
 }
 
+/** A destructive step that needs a reason before it goes ahead. */
+function WithReason() {
+  const [open, setOpen] = useState(false);
+  const [reason, setReason] = useState("");
+  return (
+    <Stack gap={2}>
+      <Button variant="destructive" onPress={() => setOpen(true)}>
+        Revoke request
+      </Button>
+      <ConfirmSheet
+        open={open}
+        onClose={() => setOpen(false)}
+        title="Revoke this request?"
+        description="Its link stops working at once."
+        confirmLabel="Revoke"
+        destructive
+        onConfirm={() => setOpen(false)}
+      >
+        <Input label="Reason" value={reason} onChangeText={setReason} multiline />
+      </ConfirmSheet>
+    </Stack>
+  );
+}
+
 export const stories = defineStories({
   title: "Confirm sheet",
   stories: [
     { name: "Positive", render: () => <Interactive destructive={false} /> },
     { name: "Destructive", render: () => <Interactive destructive /> },
+    { name: "With a reason", render: () => <WithReason /> },
   ],
 });

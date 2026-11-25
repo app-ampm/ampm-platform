@@ -26,7 +26,7 @@ export interface ClassGolden {
  * A context read through one row of §5, with the facts the row's cell needs.
  *
  * @example
- * on(ROWS.functions, { assigned: true, fields: ["theme"] }); // CD's §5.6 cell, line 205
+ * on(ROWS.functions, { assigned: true, fields: ["theme"] }); // CD's §5.6 cell, line 208
  */
 export const on = (resource: string, facts: ClassContext = {}): ClassContext => ({
   ...facts,
@@ -61,25 +61,25 @@ export const EVERY_FACT: ClassContext = {
  * on(ROWS.functions, A);
  */
 export const ROWS = {
-  hotelProfiles: "hotels.hotel_profiles_client_fields", // 168
-  hotelContacts: "hotels.hotel_contacts", // 170
-  enquiries: "consultancy.enquiries", // 182
-  projects: "projects.wedding_projects", // 193
-  projectNotes: "projects.project_internal_notes", // 194
-  venues: "projects.project_hotels_external_venues", // 195
-  functions: "functions.functions", // 203
-  runOfShow: "functions.run_show_items", // 205
-  clientLines: "budget.budget_lines_client_facing", // 215
-  internalCost: "budget.budget_lines_internal_cost", // 216
-  vendorProfiles: "vendors.vendor_profiles_client_fields", // 230
-  vendorContacts: "vendors.vendor_contacts", // 231
-  bankDetails: "vendors.vendor_bank_details", // 233, VC's cell as notes.ts reads it
-  internalComments: "creative.comments_internal", // 248
-  guests: "guests.family_groups_guests_standard", // 261
-  sensitive: "guests.guest_sensitive_fields", // 262
-  identity: "guests.identity_documents", // 264
-  support: "guests.guest_support_requests", // 268
-  vehicles: "rooms.vehicles_transfers_passengers", // 278
-  incidents: "tasks.incidents", // 296
+  hotelProfiles: "hotels.hotel_profiles_client_fields", // 169
+  hotelContacts: "hotels.hotel_contacts", // 171
+  enquiries: "consultancy.enquiries", // 187
+  projects: "projects.wedding_projects", // 198
+  projectNotes: "projects.project_internal_notes", // 199
+  venues: "projects.project_hotels_external_venues", // 200
+  functions: "functions.functions", // 208
+  runOfShow: "functions.run_show_items", // 210
+  clientLines: "budget.budget_lines_client_facing", // 220
+  internalCost: "budget.budget_lines_internal_cost", // 221
+  vendorProfiles: "vendors.vendor_profiles_client_fields", // 235
+  vendorContacts: "vendors.vendor_contacts", // 236
+  bankDetails: "vendors.vendor_bank_details", // 238, VC's cell as notes.ts reads it
+  internalComments: "creative.comments_internal", // 253
+  guests: "guests.family_groups_guests_standard", // 266
+  sensitive: "guests.guest_sensitive_fields", // 267
+  identity: "guests.identity_documents", // 269
+  support: "guests.guest_support_requests", // 273
+  vehicles: "rooms.vehicles_transfers_passengers", // 283
+  incidents: "tasks.incidents", // 301
   accounts: "crm.accounts", // §5.2 line 155
 } as const;

@@ -9,7 +9,7 @@ import type { ClassAction, VerbAction } from "./keys";
  *
  * A key as §10 spells it resolves to its row through DOCUMENT_RESOURCES (document-keys.ts, the §10
  * resource names of the row's own module), OUTSIDE_KEYS (a row named from another module) or a
- * KEY_ALIASES row: `hotels.contacts.read` (§10 line 544) decides on "Hotel contacts". A new §10 key
+ * KEY_ALIASES row: `hotels.contacts.read` (§10 line 563) decides on "Hotel contacts". A new §10 key
  * that none of them covers fails keys.golden.test.ts and document-keys.test.ts.
  *
  * @example
@@ -63,9 +63,12 @@ export const RESOURCES: Record<string, Record<string, string>> = {
     "Payment ledger": "payments",
   },
   // Slice 6 of the hotel information form (D-187 §6) curated the hotel documents library's row; its
-  // keys are `hotels.hotel_documents.*`. The other §5.3 rows keep the slugs their routes already use.
+  // keys are `hotels.hotel_documents.*`. Slice 7a (D-188 §2) curated the requests' row, whose keys are
+  // `hotels.info_requests.*` (its slug would be `hotel_information_requests`). The other §5.3 rows keep
+  // the slugs their routes already use.
   "5.3": {
     "Hotel documents": "hotel_documents",
+    "Hotel information requests": "info_requests",
   },
   // Module D (consultancy): feature 10.1 curated the two enquiry rows, 10.3 the site-visit row, 10.4 the
   // proposals row, 10.5 the booking-milestones row. Only the client-amounts proposal row is curated here —
@@ -226,15 +229,15 @@ export interface OutsideKey {
  * OUTSIDE_KEYS["projects.close"]?.section; // "5.15"
  */
 export const OUTSIDE_KEYS: Record<string, OutsideKey> = {
-  // §10 line 550: raw vendor quotes are the §5.7 (budget) row of line 220.
+  // §10 line 569: raw vendor quotes are the §5.7 (budget) row of line 223.
   "vendors.quotes.read": { section: "5.7", label: "Vendor quotes", as: "read" },
-  // §10 line 551: recording a client decision with evidence is the §5.9 (creative) row of line 254.
+  // §10 line 570: recording a client decision with evidence is the §5.9 (creative) row of line 257.
   "approvals.decisions.create_on_behalf": {
     section: "5.9",
     label: "Approval decisions, on the client's behalf with evidence",
     as: "approve",
   },
-  // §10 line 556: closing a project is the §5.15 (closure) decision of line 316.
+  // §10 line 575: closing a project is the §5.15 (closure) decision of line 319.
   "projects.close": { section: "5.15", label: "Close the project", as: "approve" },
 };
 

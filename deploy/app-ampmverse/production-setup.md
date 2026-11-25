@@ -74,6 +74,10 @@ docker compose -f infra/compose/production/compose.yml -f infra/compose/producti
 
 Each limit must show the value above (a size may print in bytes: 32M is 33554432, 100M is 104857600), each Alert option `yes`, and `ConcurrentDatabaseReload` disabled.
 
+### The website's origin (`PUBLIC_SITE_URL`, D-188)
+
+`PUBLIC_SITE_URL` in `compose.box.yml` is the website's origin, `https://site.ampmverse.com`: every hotel information form link is `<PUBLIC_SITE_URL>/hotel-form#k=…`. It must be the origin exactly as a browser writes it (lower case, no path, query, fragment, user name or default port), and production refuses http and a local host. `redeploy-prod.sh` checks every line that sets it, in a shared block or in the api's and the worker's, and stops before building when one is missing or wrong. Add it to the box's `compose.box.yml` before the first deploy of Slice 7a: the override first, then the API-first redeploy, then `deploy-web.sh`.
+
 ## 2. Secrets (D-140)
 
 Every production secret is in `ampm-prod-secrets/*.env`, written by [`prod-secrets.sh`](prod-secrets.sh) and never printed, committed or passed on a command line:
@@ -89,6 +93,7 @@ Never run `docker compose … config` unfiltered on the box: it prints the env f
 Where the operator values come from (set up on 20 November 2026, both accounts on AMPM's operations Google login):
 
 - **Resend** (`SMTP_PASSWORD`, D-143): the domain `ampmverse.com`, region Tokyo (`ap-northeast-1`), verified on 20 Nov 2026. Resend's **Auto configure** added its three records at GoDaddy through Domain Connect (template `resend.com/mail-mta`, groups `dkim`, `outbound`, `mta`): TXT `resend._domainkey` (the DKIM key), CNAME `send` → `send.forge.rmta.net` and CNAME `rsend` → `rsend-apne1.forge.rmta.net`. The root MX and SPF records (Google) are untouched and receiving is off; DMARC (`p=quarantine`, relaxed alignment) passes on the DKIM signature for `ampmverse.com`. `SMTP_PASSWORD` is the API key "AMPM production server (SMTP)": sending access, `ampmverse.com` only. Resend shows a key once; a lost key is replaced, not recovered.
+  - **Click and open tracking off, once, before the hotel form's mode is switched on (D-188 §5).** Resend sets tracking per sending domain, not per message. With click tracking on, Resend rewrites every link in an email to pass through its own servers, the hotel form link (and its secret) included; open tracking adds a tracking image to mail sent to hotels. In Resend open **Domains → `ampmverse.com`** and switch **Click tracking** and **Open tracking** off. Then check: email a Super Admin's test request to your own address with the mode on `test_only`, and confirm the link in the email that arrives is `https://site.ampmverse.com/hotel-form#k=…` itself, not a Resend redirect. Tick the item in the readiness tracker.
 - **Turnstile** (`BOT_CHECK_SECRET`): the widget "AMPM website", Managed, for `ampmverse.com`, `site.ampmverse.com` and `www.ampmverse.com`. Its site key `0x4AAAAAAGKBfk9-4261LTAN` is public and goes into the website build; the secret is `BOT_CHECK_SECRET`. A secret can be rotated once every two hours (Edit widget → Rotate Secret Key), and the previous one keeps working for two hours.
 - **Pasting a value:** open the `set` prompt only once the value is on the clipboard, with `ssh -t -o ServerAliveInterval=15 …` so an idle prompt is not dropped, and copy commands from this runbook, never from a terminal's wrapped scrollback. On 20 Nov 2026 a prompt left waiting was reset, the pasted Turnstile secret landed in the Mac shell instead, and the secret was rotated.
 

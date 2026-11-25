@@ -11,7 +11,7 @@ function staff(roles: StaffRole[]): PolicyPrincipal {
 }
 
 describe("refusalFor (test-cases.md line 212, denial semantics)", () => {
-  it("§5.13 line 298: a 403 for CD (a), who reads the incidents it may not update", () => {
+  it("§5.13 line 301: a 403 for CD (a), who reads the incidents it may not update", () => {
     expect(refusalFor(staff(["CD"]), "tasks.incidents.update", MEMBER).status).toBe(403);
   });
 
@@ -22,11 +22,11 @@ describe("refusalFor (test-cases.md line 212, denial semantics)", () => {
     expect(refusalFor(staff(["SM"]), "tasks.incidents.update", MEMBER).status).toBe(404);
   });
 
-  it("§5.13 line 295: a 404 where the only read is the principal's own records", () => {
+  it("§5.13 line 298: a 404 where the only read is the principal's own records", () => {
     expect(refusalFor(staff(["FA"]), "tasks.tasks.delete", MEMBER).status).toBe(404);
   });
 
-  it("AC-12.1 (test-cases.md line 854), §5.13 line 295: on its own record, once read, a 403", () => {
+  it("AC-12.1 (test-cases.md line 854), §5.13 line 298: on its own record, once read, a 403", () => {
     // FA and SM read their own tasks: a service that has loaded the task knows whose it is.
     for (const role of ["FA", "SM"] as const) {
       const principal = staff([role]);

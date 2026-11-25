@@ -193,3 +193,32 @@ describe("HotelsAdminService reads the D-178 fields into every profile model", (
     expect(item).toMatchObject({ mapsUrl: null, nameAliases: null, servesAlcohol: null });
   });
 });
+
+describe("HotelsAdminService.remove revokes the hotel's live request (D-188 §3)", () => {
+  it("revokes inside the deletion's transaction, before the hotel is soft-deleted", async () => {
+    const { service, repo, revoker } = build();
+    const order: string[] = [];
+    const tx = { tx: true };
+    repo.transaction = <T>(fn: (client: unknown) => Promise<T>): Promise<T> => fn(tx);
+    revoker.revokeForDeletedHotel.mockImplementation(async () => {
+      order.push("revoke");
+    });
+    repo.softDeleteHotel.mockImplementation(async () => {
+      order.push("delete");
+    });
+    expect(await service.remove(HOTEL, "018f0000-0000-7000-8000-00000000cafe")).toEqual({
+      id: HOTEL,
+    });
+    expect(revoker.revokeForDeletedHotel).toHaveBeenCalledWith(HOTEL, tx);
+    expect(order).toEqual(["revoke", "delete"]);
+  });
+
+  it("deletes nothing when the revoke is refused: the transaction fails whole", async () => {
+    const { service, repo, revoker } = build();
+    revoker.revokeForDeletedHotel.mockRejectedValueOnce(new Error("refused"));
+    await expect(service.remove(HOTEL, "018f0000-0000-7000-8000-00000000cafe")).rejects.toThrow(
+      "refused",
+    );
+    expect(repo.softDeleteHotel).not.toHaveBeenCalled();
+  });
+});

@@ -16,7 +16,7 @@ import type { PrincipalType, StaffRole } from "./roles";
 export interface ExplicitGrant {
   /**
    * The key, as §10 spells it or as its base key: a scope suffix or a §10 alias of the same row
-   * names the same grant (`guests.identity_documents.read:assigned`, line 552).
+   * names the same grant (`guests.identity_documents.read:assigned`, line 571).
    */
   readonly key: string;
   readonly projectId: string;
@@ -34,7 +34,7 @@ export interface PolicyPrincipal {
   readonly roles?: readonly StaffRole[] | undefined;
   /** Projects the principal is an active member of; for a guest token, the wedding of its link. */
   readonly projectIds?: readonly string[] | undefined;
-  /** Client accounts a client principal belongs to: "own" is its wedding or account (§6 line 342). */
+  /** Client accounts a client principal belongs to: "own" is its wedding or account (§6 line 345). */
   readonly accountIds?: readonly string[] | undefined;
   readonly explicitGrants?: readonly ExplicitGrant[] | undefined;
   /**

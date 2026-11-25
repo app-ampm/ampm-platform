@@ -150,7 +150,7 @@ describe("API (e2e)", () => {
       expect(JSON.stringify(response.body.error.details)).toContain("projectId");
     });
 
-    it("§5.13 line 298: CD (a), create-only on incidents, adds notes but changing one is a 403", async () => {
+    it("§5.13 line 301: CD (a), create-only on incidents, adds notes but changing one is a 403", async () => {
       const post = async (subject: string, id: string, baseVersion: number, body: string) =>
         request(app.getHttpServer())
           .post(notes(SEEDED_PROJECT))

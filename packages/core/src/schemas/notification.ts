@@ -10,8 +10,12 @@ export type NotificationChannel = z.infer<typeof notificationChannel>;
 export const notificationStatus = z.enum(["queued", "sent", "delivered", "failed", "read"]);
 export type NotificationStatus = z.infer<typeof notificationStatus>;
 
-/** Who a notification is addressed to (`notifications.recipient_type`): any user, or a guest token. */
-export const recipientType = z.enum(["user", "guest"]);
+/**
+ * Who a notification is addressed to (`notifications.recipient_type`): any user, a guest token, or an
+ * external recipient outside AMPM (D-188 §5), such as a hotel's contact, whose `recipient_id` is the record
+ * the notice is about and whose address the row holds until it leaves `queued`.
+ */
+export const recipientType = z.enum(["user", "guest", "external"]);
 export type RecipientType = z.infer<typeof recipientType>;
 
 /**

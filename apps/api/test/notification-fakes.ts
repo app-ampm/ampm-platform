@@ -3,6 +3,7 @@ import { CONFIG_REGISTRY, createMemoryLogger, type NotificationTemplates } from 
 import type { AppLogger } from "../src/common/logger.service.js";
 import { InlineJobDriver } from "../src/jobs/inline.driver.js";
 import { JobQueue } from "../src/jobs/job-queue.js";
+import type { JobDriver } from "../src/jobs/job.types.js";
 import type { ConfigService } from "../src/modules/admin/config/config.service.js";
 import {
   ConsoleNotificationAdapter,
@@ -49,6 +50,8 @@ export class FakeNotificationRepository extends NotificationRepository {
       sentAt: null,
       deliveredAt: null,
       data: data.data ?? null,
+      recipientAddress: data.recipientAddress ?? null,
+      replyTo: data.replyTo ?? null,
       createdAt: new Date("2026-10-28T00:00:00.000Z"),
     };
     this.rows.set(id, row);
@@ -69,6 +72,8 @@ export class FakeNotificationRepository extends NotificationRepository {
       sentAt: patch.sentAt ?? row.sentAt,
       deliveredAt: patch.deliveredAt ?? row.deliveredAt,
       data: patch.clearData ? null : row.data,
+      recipientAddress: patch.clearData ? null : row.recipientAddress,
+      replyTo: patch.clearData ? null : row.replyTo,
     });
   }
 
@@ -89,12 +94,32 @@ export class FakeNotificationRepository extends NotificationRepository {
   }
 }
 
+/**
+ * A queue that refuses every job, as BullMQ does while Redis is unreachable: what `queue` must survive
+ * without leaving a row that nothing will ever send, dead-letter or clear.
+ */
+export class RefusingJobDriver implements JobDriver {
+  register(): void {}
+
+  async enqueue(): Promise<void> {
+    throw new Error("the job queue is unreachable");
+  }
+
+  async scheduleRepeatable(): Promise<void> {}
+
+  async close(): Promise<void> {}
+}
+
 export function makeService(
   repo: FakeNotificationRepository,
-  options: { adapter?: NotificationAdapter; templates?: NotificationTemplates } = {},
+  options: {
+    adapter?: NotificationAdapter;
+    templates?: NotificationTemplates;
+    driver?: JobDriver;
+  } = {},
 ): NotificationService {
   const { logger } = createMemoryLogger();
-  const jobs = new JobQueue(new InlineJobDriver(logger));
+  const jobs = new JobQueue(options.driver ?? new InlineJobDriver(logger));
   const config = { get: async () => options.templates ?? TEMPLATES } as unknown as ConfigService;
   const adapter = options.adapter ?? new ConsoleNotificationAdapter(logger);
   const adapters: NotificationAdapters = { for: () => adapter };

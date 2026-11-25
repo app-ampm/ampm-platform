@@ -62,9 +62,9 @@ function expectNoGrant(role: StaffRole, key: string): void {
 describe("generated authorisation suite: §5 staff roles", () => {
   it("covers every row of §5, the reports of §5.16 included, as the document's text counts them", () => {
     const rows = documentRows("## 5. Permission matrix: staff roles", "## 6. Permission matrix");
-    // 107 role rows and 11 reports; a new row (the hotel documents library, §5.3, D-187) also needs its
-    // golden case.
-    expect(rows).toBe(118);
+    // 108 role rows and 11 reports; a new row (the hotel information requests, §5.3, D-188) also needs
+    // its golden case.
+    expect(rows).toBe(119);
     expect(MATRIX.staff).toHaveLength(rows);
     expect(MATRIX.staff.filter((row) => row.section === "5.16")).toHaveLength(11);
   });

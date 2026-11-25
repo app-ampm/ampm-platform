@@ -1,12 +1,23 @@
-import type { ExternalChannel, LogFields, Logger, RenderedContent } from "@ampm/core";
+import type {
+  ExternalChannel,
+  LogFields,
+  Logger,
+  RecipientType,
+  RenderedContent,
+} from "@ampm/core";
 
 /** A provider-neutral delivery request for an external channel (in-app is delivered by the service). */
 export interface NotificationDelivery {
   readonly channel: "email" | "whatsapp" | "sms" | "push";
-  readonly recipientType: "user" | "guest";
+  readonly recipientType: RecipientType;
   readonly recipientId: string;
-  /** The recipient's delivery address (the email for the email channel), resolved by the service. */
+  /**
+   * The recipient's delivery address (the email for the email channel), resolved by the service: a user's
+   * from their record, an external recipient's from the row (D-188 §5). Never logged.
+   */
   readonly address: string | null;
+  /** The email's Reply-To, when the notification was queued with one (D-188 §5). Never logged. */
+  readonly replyTo?: string;
   readonly templateKey: string;
   /** The rendered, per-channel content (feature 5.2); the live adapter sends it, the stub ignores it. */
   readonly content: RenderedContent;

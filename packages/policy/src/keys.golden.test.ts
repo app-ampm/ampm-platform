@@ -51,7 +51,7 @@ function expectAliasHolder(role: StaffRole, key: string, holder: AliasHolder | u
 }
 
 describe("§10 permission keys", () => {
-  it("§10 line 538: class-specific reads and the §10 verbs parse as keys", () => {
+  it("§10 line 557: class-specific reads and the §10 verbs parse as keys", () => {
     expect(parsePermissionKey("budget.lines.read_internal_cost")).toEqual({
       module: "budget",
       resource: "lines",
@@ -78,8 +78,8 @@ describe("§10 permission keys", () => {
   });
 
   // §10 spells this key `budget.lines.read_internal_cost`; that spelling waits for the row's
-  // curation (below), so this checks §10 lines 548-549's holders on the row's spelling.
-  it("§5.7 line 218 with §10 lines 548-549's holders: budget.budget_lines_client_facing.read_internal_cost reads the internal-cost row", () => {
+  // curation (below), so this checks §10 lines 567-568's holders on the row's spelling.
+  it("§5.7 line 221 with §10 lines 567-568's holders: budget.budget_lines_client_facing.read_internal_cost reads the internal-cost row", () => {
     const key = "budget.budget_lines_client_facing.read_internal_cost";
     expect(decide(staff(["FA"]), key)).toMatchObject({ allowed: true, scope: "all" });
     expect(decide(staff(["PM"]), key, { projectId: "p-1" })).toMatchObject({
@@ -90,14 +90,14 @@ describe("§10 permission keys", () => {
     expect(decide(staff(["HT"]), key).reason).toBe("condition_unmet");
   });
 
-  it("§10 line 552, §5.10 line 266: read_identity on guests needs RG's explicit grant", () => {
+  it("§10 line 571, §5.10 line 269: read_identity on guests needs RG's explicit grant", () => {
     const key = "guests.family_groups_guests_standard.read_identity";
     expect(decide(staff(["RG"]), key, { projectId: "p-1" }).reason).toBe("condition_unmet");
     const explicitGrants = [{ key: "guests.identity_documents.read", projectId: "p-1" }];
     expect(decide(staff(["RG"], { explicitGrants }), key, { projectId: "p-1" }).allowed).toBe(true);
   });
 
-  it("§10 line 550, §5.7 line 220: vendors.quotes.read reads the vendor quotes row of §5.7 (budget)", () => {
+  it("§10 line 569, §5.7 line 223: vendors.quotes.read reads the vendor quotes row of §5.7 (budget)", () => {
     const key = "vendors.quotes.read";
     for (const role of ["VC", "FA", "SA"] as const) {
       expect(decide(staff([role]), key), role).toMatchObject({ allowed: true, scope: "all" });
@@ -110,7 +110,7 @@ describe("§10 permission keys", () => {
     expect(decide(staff(["CD"]), key, { projectId: "p-1" }).reason).toBe("no_grant");
   });
 
-  it("§10 line 551, §5.9 line 254: approvals.decisions.create_on_behalf records a client decision (creative)", () => {
+  it("§10 line 570, §5.9 line 257: approvals.decisions.create_on_behalf records a client decision (creative)", () => {
     const key = "approvals.decisions.create_on_behalf:assigned";
     expect(decide(staff(["PM"]), key, { projectId: "p-1" })).toMatchObject({
       allowed: true,
@@ -121,7 +121,7 @@ describe("§10 permission keys", () => {
     expect(decide(staff(["CD"]), key, { projectId: "p-1" }).reason).toBe("no_grant");
   });
 
-  it("§10 line 556, §5.15 line 316: projects.close closes a project (closure), PM only when ready", () => {
+  it("§10 line 575, §5.15 line 319: projects.close closes a project (closure), PM only when ready", () => {
     const key = "projects.close:assigned";
     expect(decide(staff(["PM"]), key, { projectId: "p-1" }).reason).toBe("condition_unmet");
     expect(
@@ -131,7 +131,7 @@ describe("§10 permission keys", () => {
     expect(decide(staff(["FA"]), key, { checks: ["closure_ready"] }).reason).toBe("no_grant");
   });
 
-  it("§10 lines 551 and 555, §5.9 line 254, §5.6 line 209: the §10 verbs name their rows' decisions", () => {
+  it("§10 lines 570 and 574, §5.9 line 257, §5.6 line 212: the §10 verbs name their rows' decisions", () => {
     const onBehalf = "creative.approval_decisions_on_client.create_on_behalf";
     expect(decide(staff(["PM"]), onBehalf, { projectId: "p-1" }).allowed).toBe(true);
     expect(decide(staff(["CD"]), onBehalf, { projectId: "p-1" }).reason).toBe("no_grant");
@@ -141,7 +141,7 @@ describe("§10 permission keys", () => {
   });
 });
 
-describe("§10 lines 542-557: the example keys as §10 spells them", () => {
+describe("§10 lines 561-576: the example keys as §10 spells them", () => {
   const keys = documentTableRows("## 10. Permission keys", "## 11. Open questions").map((row) =>
     (row.cells[0] ?? "").replace(/`/g, ""),
   );
@@ -153,7 +153,7 @@ describe("§10 lines 542-557: the example keys as §10 spells them", () => {
   });
 });
 
-describe("§10 line 538: every alias key of resources.ts decides on its §5 row", () => {
+describe("§10 line 557: every alias key of resources.ts decides on its §5 row", () => {
   it("has a golden case for every KEY_ALIASES entry, and for nothing else", () => {
     const entries = Object.entries(KEY_ALIASES).flatMap(([section, labels]) =>
       Object.keys(labels).map((label) => `§${section} ${label}`),

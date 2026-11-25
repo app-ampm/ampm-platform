@@ -86,6 +86,17 @@ TABLES["notifications"] = T(
     assumptions="A-11 (Q11)",
     status=F(editor=SYS, automation="Delivery webhooks update the status; failed sends retry per channel policy"),
     provider_ref=F(validation="provider message identifier"),
+    # D-188 §5: someone outside AMPM, such as a hotel's contact; the address lives only while the row is queued.
+    recipient_id=F(validation="references users (user), the guest token (guest), or the record the message is "
+                              "about, such as a hotel_info_requests row (external)"),
+    recipient_address=F(editor=SYS, visibility="RESTRICTED-CONTACT", required="System, for recipient_type external",
+                        validation="an email address for email, an E.164 mobile for SMS; set for, and only for, an "
+                                   "external recipient",
+                        automation="Cleared with data when the row leaves queued: sent, failed, or dead-lettered "
+                                   "(failPermanently); never in a view, and no feed lists an external row"),
+    reply_to=F(editor=SYS, visibility="INTERNAL", validation="valid email address",
+               automation="The email's Reply-To (hotel-form email: configurations hotel_form.policy replyTo); "
+                          "cleared with data when the row leaves queued"),
 )
 TABLES["notification_preferences"] = T("User self-service", "Owner user", "Owner only",
                                        required=["user_id", "event_type", "channel", "enabled"])
@@ -416,6 +427,78 @@ TABLES["saved_hotels"] = T(
     "Discovery (client)", "CO, CA, CV (own account); DP (demo); SYS back-fills project_id", "CLIENT",
     required=["account_id", "hotel_id", "saved_by_user_id"], assumptions="GP-10, GP-27", note="unique on account_id and hotel_id",
     project_id=F(automation="Back-filled when a project is created (GP-27)"),
+)
+
+# D-188 (Slice 7a): the hotel information form's requests, their links and their history; retention class
+# hotel_intake. SM and PM read a request's summary only (permission-matrix §5.3 note).
+LIVE_REQUEST = "live means open, submitted, in_review or changes_requested; a soft-deleted request frees it"
+TABLES["hotel_info_requests"] = T(
+    "Hotel intake", "SA; HT", "INTERNAL",
+    required=["reference", "kind", "target", "status", "expires_at", "token_hash", "token_generation",
+              "link_issued_at"],
+    assumptions="D-188, D-172, D-173",
+    note="SM and PM read the summary response model, without the recipient or the events (permission-matrix §5.3)",
+    reference=F(editor=SYS, required="System",
+                validation="HIR-<year>-<n>: the creation year (UTC) and a number from the sequence "
+                           "hotel_info_request_ref_seq, four digits at least; unique",
+                automation="Drawn when the request is created; the sequence never resets"),
+    kind=F(editor="SA; HT, at creation"),
+    target=F(editor="SA; HT, at creation"),
+    hotel_id=F(required="At creation for target existing (CHECK hotel_info_requests_existing_has_hotel); set at "
+                        "the merge for target new",
+               automation="One live request per hotel: partial unique index hotel_info_requests_hotel_live_key; "
+                          + LIVE_REQUEST),
+    proposed_name=F(required="At creation for target new (CHECK hotel_info_requests_new_has_proposal)",
+                    validation="string, up to 255 characters"),
+    proposed_destination_id=F(required="At creation for target new", validation="references destinations"),
+    proposed_web_address=F(validation="an http or https address, up to 255 characters, as staff typed it"),
+    proposed_web_address_key=F(editor=SYS, required="System, for target new",
+                               validation="core normaliseWebAddress of proposed_web_address, up to 2,048 characters",
+                               automation="One live new-hotel request per key: partial unique index "
+                                          "hotel_info_requests_web_address_live_key; " + LIVE_REQUEST),
+    switchboard_phone=F(validation="E.164 format, default +91"),
+    is_test=F(editor="SA only, at creation",
+              automation="Left out of the queue unless asked for, and out of the measures; a test request targets "
+                         "a draft hotel or a new hotel only"),
+    status=F(automation="Per permission-matrix §7 Hotel information request; each change writes an event and is "
+                        "audited; expiry is worked out from expires_at, never stored as a status"),
+    expires_at=F(editor="SYS at creation; SA, HT extend it", required="At creation",
+                 validation="creation plus linkValidityDays (configurations hotel_form.policy); extended by up to "
+                            "maxExtensionDays past the first expiry",
+                 automation="The link stops working after it; the queue and the expiry sweeps read it with status"),
+    status_only_until=F(editor=SYS, automation="Set at the merge: merged_at plus statusOnlyDays"),
+    token_hash=F(validation="SHA-256 of the link's secret (hfl_ and the base64url of 32 random bytes); unique; the "
+                            "secret itself is never stored, logged or audited",
+                 automation="Replaced at each reissue"),
+    token_generation=F(editor=SYS, required="System", validation="integer, 1 or more",
+                       automation="Plus 1 at each reissue; sessions opened with an older generation end"),
+    link_issued_at=F(editor=SYS, required="System", automation="Set at creation and at each reissue"),
+    link_emailed_at=F(editor=SYS, automation="Set when the link email is queued to recipient_email"),
+    recipient_name=F(visibility="RESTRICTED-CONTACT", validation="string, up to 255 characters, as AMPM entered it"),
+    recipient_email=F(visibility="RESTRICTED-CONTACT",
+                      automation="The only address the link and the hotel's later emails go to"),
+    prefill_mode=F(editor=SYS, automation="none in version 1: the form shows nothing from the catalogue"),
+    revision=F(editor=SYS, required="System", automation="Plus 1 at each submit"),
+    submitted_by_person_id=F(editor=SYS, validation="references hotel_info_request_people (Slice 7b)"),
+    reviewer_user_id=F(editor="SYS (acting user)", validation="references users",
+                       automation="The reviewer holding the claim while in_review"),
+    reject_reason=F(visibility="RESTRICTED-NOTES", editor="SA; HT, when rejecting"),
+    revoke_reason=F(editor="SA; HT, when revoking; SYS when the hotel is deleted"),
+    merge_plan_hash=F(editor=SYS, validation="SHA-256 of the merge plan"),
+    retention_class=F(editor=SYS, required="System", validation="hotel_intake",
+                      automation="Retention candidates are proposed for a Super Admin to approve (A-17)"),
+)
+TABLES["hotel_info_request_events"] = T(
+    "Hotel intake", SYS, "INTERNAL", required=["request_id", "event_type", "actor_kind", "occurred_at"],
+    assumptions="D-188",
+    note="append-only by convention: written in the transaction that makes the change; the Hotel team's history "
+         "of a request (the audit log stays the Super Admin's)",
+    request_id=F(validation="references hotel_info_requests"),
+    actor_user_id=F(required="When actor_kind is staff"),
+    actor_person_id=F(editor=SYS, required="When actor_kind is hotel_person",
+                      validation="references hotel_info_request_people (Slice 7b)"),
+    detail_json=F(validation="valid JSON; personal data masked before storage; never the link's secret"),
+    occurred_at=F(editor=SYS, required="System"),
 )
 
 # ---------------------------------------------------------------- Module D — hotel consultancy

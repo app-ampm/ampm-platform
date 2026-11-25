@@ -1,4 +1,5 @@
 import { fireEvent, renderWithProviders, screen } from "../../test/render";
+import { Input } from "../input";
 import { ConfirmSheet } from "./confirm-sheet";
 
 describe("ConfirmSheet", () => {
@@ -42,5 +43,26 @@ describe("ConfirmSheet", () => {
     await fireEvent.press(screen.getByText("Cancel"));
     expect(onConfirm).not.toHaveBeenCalled();
     expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("holds what the step needs under its description, such as a reason", async () => {
+    const onChangeText = jest.fn();
+    await renderWithProviders(
+      <ConfirmSheet
+        open
+        onClose={jest.fn()}
+        title="Revoke this request?"
+        description="Its link stops working."
+        confirmLabel="Revoke"
+        destructive
+        onConfirm={jest.fn()}
+        testID="confirm"
+      >
+        <Input label="Reason" value="" onChangeText={onChangeText} testID="confirm-reason" />
+      </ConfirmSheet>,
+    );
+    expect(screen.getByText("Its link stops working.")).toBeOnTheScreen();
+    await fireEvent.changeText(screen.getByTestId("confirm-reason"), "Sent to the wrong hotel");
+    expect(onChangeText).toHaveBeenCalledWith("Sent to the wrong hotel");
   });
 });

@@ -21,7 +21,10 @@ const reflector = new Reflector();
 // The metadata key @Controller stores the controller's path under; a stable framework constant.
 const PATH_METADATA = "path";
 
-/** The routes beyond sign-in that must fail closed: each spends money, storage or Sales' attention. */
+/**
+ * The routes beyond sign-in that must fail closed: each spends money, storage, Sales' attention or email
+ * to someone outside AMPM.
+ */
 const COSTLY = [
   "PortalController.subscribe", // creates a gateway order
   "EnquiriesClientController.request", // notifies Sales
@@ -42,6 +45,9 @@ const COSTLY = [
   "HotelImportController.applyRooms",
   "HotelImportController.applyVenues",
   "HotelImportController.applyRates",
+  // Each issues a hotel information request's link and can email it to an address outside AMPM (D-188 §5).
+  "HotelInfoRequestsController.create",
+  "HotelInfoRequestsController.reissue",
 ];
 
 /** Metadata on the handler, else on its controller: the order the guards read it in. */

@@ -16,6 +16,8 @@ export interface MailTransport {
     readonly subject: string;
     readonly html: string;
     readonly text: string;
+    /** Where replies go instead of `from` (D-188 §5: hotel-form email uses `hotel_form.policy.replyTo`). */
+    readonly replyTo?: string;
   }): Promise<{ readonly messageId: string }>;
 }
 
@@ -45,6 +47,7 @@ export class SmtpEmailAdapter implements NotificationAdapter {
         subject,
         html,
         text,
+        ...(delivery.replyTo ? { replyTo: delivery.replyTo } : {}),
       }));
     } catch (error) {
       // The provider error may echo the recipient address or the message body; drop it and keep only a

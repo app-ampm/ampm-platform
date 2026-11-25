@@ -120,6 +120,37 @@ export const storageDiskGuard = z
   });
 export type StorageDiskGuard = z.infer<typeof storageDiskGuard>;
 
+/**
+ * The hotel information form's mode (D-188 §6, plan §4.10): `off` answers 404 on every public route and
+ * sends nothing to a hotel; `test_only` admits only requests marked as tests; `on` admits every request.
+ */
+export const hotelFormMode = z.enum(["off", "test_only", "on"]);
+export type HotelFormMode = z.infer<typeof hotelFormMode>;
+
+/**
+ * The hotel information form's policy (D-188 §6): the mode, read past the configuration cache
+ * (`ConfigService.getFresh`) by the API and the worker; a link's lifetime in days and how far past its
+ * first expiry it may be extended; the days a merged request stays status-only; the people a request may
+ * verify; and the reply-to address of hotel-form email and the help contact the form shows (decision 21).
+ * The reply-to and the help contact start empty: AMPM's admin mailbox is a real address, which the
+ * repository never carries, so a Super Admin sets them.
+ *
+ * Every field carries a default, its baseline, and a field a later slice adds must carry one too: the
+ * seed never rewrites a stored row, so a value stored before a field existed lacks it, and without a
+ * default `get`, `getFresh` and the admin configuration list would answer 500. A field this schema does
+ * not know is dropped, not refused, so a release still reads a value a later release wrote (a rollback).
+ */
+export const hotelFormPolicy = z.object({
+  mode: hotelFormMode.default("off"),
+  linkValidityDays: z.number().int().min(1).max(90).default(30),
+  maxExtensionDays: z.number().int().min(0).max(60).default(60),
+  statusOnlyDays: z.number().int().min(0).max(30).default(7),
+  maxPeople: z.number().int().min(1).max(20).default(10),
+  replyTo: z.string().trim().toLowerCase().email().max(255).nullable().default(null),
+  helpContact: z.string().trim().min(1).max(300).nullable().default(null),
+});
+export type HotelFormPolicy = z.infer<typeof hotelFormPolicy>;
+
 /** One registry entry; the helper makes the compiler check the baseline against its own schema. */
 function entry<S extends z.ZodType>(
   schema: S,
@@ -169,6 +200,9 @@ export const CONFIG_REGISTRY = {
     milestoneAmountsVisible: false,
   }),
   "storage.disk_guard": entry(storageDiskGuard, { floorGiB: 9, warnGiB: 12 }),
+  // D-188 §6: off until a Super Admin switches it, so nothing reaches a hotel before then. The baseline
+  // is the schema's defaults, so the two can never differ.
+  "hotel_form.policy": entry(hotelFormPolicy, hotelFormPolicy.parse({})),
   "notification.templates": entry(notificationTemplates, {
     "staff.invite": {
       email: {
@@ -205,6 +239,16 @@ export const CONFIG_REGISTRY = {
         subject: "AMPM server disk space is below the floor",
         html: "<p>The AMPM server has {{freeGb}} GB of disk free, below the {{floorGb}} GB floor: new hotel-form uploads are refused until space is freed.</p>",
         text: "The AMPM server has {{freeGb}} GB of disk free, below the {{floorGb}} GB floor: new hotel-form uploads are refused until space is freed.",
+      },
+    },
+    // A hotel information request's link (D-188 §5), to the recipient AMPM entered. It carries the
+    // reference, the catalogue's hotel name or the staff label, the expiry and the link: never text a
+    // hotel typed. The link is a fragment link (`#k=`), so the secret stays out of server logs.
+    "hotel_form.link": {
+      email: {
+        subject: "AMPM hotel information request {{reference}}",
+        html: '<p>Hello,</p>\n<p>AMPM is asking for up-to-date information about {{hotelName}} (request {{reference}}). Please fill in the hotel information form through this secure link:</p>\n<p><a href="{{link}}">Open the hotel information form</a></p>\n<p>The link works until {{expiresOn}}. Share it only with your hotel\'s management and the colleagues who help you fill in the form: anyone who has the link can take part.</p>\n<p>If you were not expecting this email, you can ignore it.</p>',
+        text: "Hello,\n\nAMPM is asking for up-to-date information about {{hotelName}} (request {{reference}}). Please fill in the hotel information form through this secure link:\n{{link}}\n\nThe link works until {{expiresOn}}. Share it only with your hotel's management and the colleagues who help you fill in the form: anyone who has the link can take part.\n\nIf you were not expecting this email, you can ignore it.",
       },
     },
     // The client sign-in code (D-147). DLT registers this text with {#var#} in place of {{code}}; the

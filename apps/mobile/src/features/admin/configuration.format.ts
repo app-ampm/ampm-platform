@@ -76,6 +76,12 @@ const CONFIG_META: Record<string, ConfigMeta> = {
     area: "Consultancy",
     description: "Whether booking-milestone amounts are shown to the client.",
   },
+  "hotel_form.policy": {
+    label: "Hotel information form",
+    area: "Hotels",
+    description:
+      "Whether hotels can use the information form (off, test only or on), how long its links last and how far past their first expiry they may be extended, how long a merged request stays status-only, how many people may take part, and the reply-to and help contact its emails and pages give.",
+  },
   "storage.disk_guard": {
     label: "Disk space alerts",
     area: "Platform",

@@ -33,6 +33,7 @@ AMPM develops and works on production from now on. The password curtain came off
 - [x] ~~Plesk + GoDaddy: test-app. and test-site.ampmverse.com~~: not needed, the test stack is retired (D-144).
 - [x] **The first Super Admin,** activated on 20 Nov 2026: password, authenticator and ten recovery codes, with the first sign-in at 10:00 UTC, all audited. The one-time link file was deleted once its token was spent. Later staff are invited from the app.
 - [ ] Keep an off-box copy of the backup cipher passphrase (`postgres.env`) in a password manager.
+- [ ] **Resend click and open tracking off for `ampmverse.com` (D-188 §5),** before the hotel form's mode leaves `off`: Resend sets tracking per domain, and click tracking would route the hotel form links, secret included, through its servers. Runbook, section 2 ("Where the operator values come from"), with the check that the emailed link is the site's own.
 
 ## 4. Before pitching clients (go-live blockers)
 

@@ -30,6 +30,11 @@ export const ROOMS_VENUES_UPDATE = "hotels.room_categories_venues.update";
 export const ROOMS_VENUES_READ = "hotels.room_categories_venues.read";
 /** Changing a hotel contact: what demoting the current primary contact needs (D-178). */
 export const HOTEL_CONTACTS_UPDATE = "hotels.hotel_contacts.update";
+/**
+ * A hotel information request in full, with its recipient and history (D-188 §3): the holders of the
+ * update key (SA, HT); every other reader gets the summary.
+ */
+export const INFO_REQUESTS_UPDATE = "hotels.info_requests.update";
 /** A hotel's rate cards and items: what the staff rates routes and the rates import ask (D-184). */
 export const RATE_CARDS_CREATE = "hotels.rate_cards_rate_items.create";
 export const RATE_CARDS_UPDATE = "hotels.rate_cards_rate_items.update";
@@ -61,6 +66,17 @@ export interface HotelAudience {
 export function hotelAudienceOf(principal: Principal): HotelAudience {
   const caller = toPolicyPrincipal(principal);
   return { notes: can(caller, HOTEL_NOTES_READ), contacts: can(caller, HOTEL_CONTACTS_READ) };
+}
+
+/**
+ * Whether the principal reads hotel information requests in full: the recipient and the events as well
+ * as the summary. Decided from its grants, a custom role's included (D-164).
+ *
+ * @example
+ * readsFullInfoRequests(staffPrincipal(["HT"])); // true; SM and PM: false
+ */
+export function readsFullInfoRequests(principal: Principal): boolean {
+  return can(toPolicyPrincipal(principal), INFO_REQUESTS_UPDATE);
 }
 
 /**

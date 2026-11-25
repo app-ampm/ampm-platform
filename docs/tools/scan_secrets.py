@@ -200,6 +200,14 @@ def self_test() -> int:
     age = b"AGE-SECRET-KEY-1" + b"ACDEFGHJKLMNPQRSTUVWXYZ023456789" * 2
     assert redact_secrets.find(b"RAZORPAY_KEY_ID=rzp_live_A1b2C3d4E5f6G7h8"), "razorpay key must be detected"
     assert redact_secrets.find(age), "age secret key must be detected by the redactor"
+    hotel_form = b"Aa0-_" * 8 + b"Bb1"  # the base64url of 32 bytes: 43 characters (D-188)
+    assert redact_secrets.find(b"https://site.example/hotel-form#k=hf" + b"l_" + hotel_form), "a form link"
+    assert redact_secrets.find(b"Authorization: Bearer hf" + b"s_" + hotel_form), "a form session"
+    assert redact_secrets.find(b"next=%2Fhotel-form%23k%3Dhf" + b"l_" + hotel_form), "a percent-encoded form link"
+    assert redact_secrets.find(b'href=3D"https://site.example/hotel-form#k=3Dhf' + b"l_" + hotel_form + b'"'), (
+        "a quoted-printable form link"
+    )
+    assert not redact_secrets.find(b"const hfl_link_token_generation = 2;"), "an identifier stays clean"
     assert not redact_secrets.find(b"PGPASSWORD=change-me-via-sops\n"), "placeholder must stay clean"
     assert PRIVATE_KEY.search(age) and PRIVATE_KEY.search(b"-----BEGIN OPENSSH PRIVATE KEY-----")
     assert is_forbidden_file("infra/compose/production/app.env")
