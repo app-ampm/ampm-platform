@@ -17,6 +17,9 @@ import type { SaveOutcome } from "./use-hotel-form-flow";
 
 const COPY = HOTEL_FORM_COPY.signedIn;
 const FIELDS = HOTEL_FORM_COPY.details;
+
+/** Save's id: the page moves focus back to it once a new code was entered in place. */
+export const EDIT_SAVE_ID = "hf-edit-save";
 const OPTIONS = HOTEL_FORM_DESIGNATIONS.map((value) => ({ value, label: value }));
 
 export interface YourDetailsProps {
@@ -104,7 +107,7 @@ function EditForm({ edit }: { readonly edit: ReturnType<typeof useEdit> }) {
     <form noValidate onSubmit={(event) => void edit.save(event)} className="flex flex-col gap-4">
       <EditFields fields={edit.fields} errors={edit.errors} onChange={edit.setFields} />
       <div className="flex flex-row flex-wrap gap-3">
-        <FormButton type="submit" variant="secondary" isBusy={edit.isSaving}>
+        <FormButton id={EDIT_SAVE_ID} type="submit" variant="secondary" isBusy={edit.isSaving}>
           {edit.isSaving ? COPY.saving : COPY.save}
         </FormButton>
         <FormButton variant="ghost" onClick={() => edit.setFields(null)}>

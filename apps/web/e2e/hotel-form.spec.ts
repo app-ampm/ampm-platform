@@ -145,7 +145,10 @@ test("an ended session asks for a new code in place, keeping what was typed, and
   await endFormSession(session ?? "");
   await page.getByRole("button", { name: "Save" }).click();
   const panel = page.getByRole("region", { name: "Enter a new code to continue" });
+  const panelHeading = panel.getByRole("heading", { name: "Enter a new code to continue" });
   await expect(panel).toBeVisible();
+  // Focus moves into the panel, to its heading, so a keyboard and a screen reader start at the new step.
+  await expect(panelHeading).toBeFocused();
   await expect(panel.getByText("You were signed out. Enter a new code to continue.")).toBeVisible();
   await expect(page.locator("#hf-edit-name")).toHaveValue("Asha R. (e2e)");
   await expect(panel.getByLabel("Your name")).toHaveValue("Asha Rao");
@@ -163,9 +166,14 @@ test("an ended session asks for a new code in place, keeping what was typed, and
     timeout: 45_000,
   });
   await panel.getByRole("button", { name: "Send me a code" }).click();
+  // The code step, the code on screen: focus moves to the panel's heading again, above the code.
+  await expect(panel.getByRole("button", { name: "Use this code" })).toBeVisible();
+  await expect(panelHeading).toBeFocused();
   await panel.getByRole("button", { name: "Use this code" }).click();
   await panel.getByRole("button", { name: "Continue" }).click();
   await expect(panel).toBeHidden();
+  // The panel closed: focus is back on Save, where the person was.
+  await expect(page.getByRole("button", { name: "Save" })).toBeFocused();
 
   // The edit kept its words through the new code, and saves now.
   await expect(page.locator("#hf-edit-name")).toHaveValue("Asha R. (e2e)");

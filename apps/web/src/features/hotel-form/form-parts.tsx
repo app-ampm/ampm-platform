@@ -20,6 +20,8 @@ import { HOTEL_FORM_COPY as COPY } from "./hotel-form-copy";
 
 export interface FormButtonProps {
   readonly children: ReactNode;
+  /** The button's id, for a page that moves focus back to it. */
+  readonly id?: string | undefined;
   readonly onClick?: (() => void) | undefined;
   readonly type?: "button" | "submit" | undefined;
   /** primary (gold, one per step), secondary (pearl outline) or ghost. */
@@ -38,6 +40,7 @@ export interface FormButtonProps {
  */
 export function FormButton({
   children,
+  id,
   onClick,
   type = "button",
   variant = "primary",
@@ -50,6 +53,7 @@ export function FormButton({
   const size = isPrimary ? "lg" : "md";
   return (
     <button
+      id={id}
       type={type}
       onClick={onClick}
       disabled={isDisabled || isBusy}

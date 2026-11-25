@@ -98,6 +98,11 @@ describe("signed in", () => {
     expect(html).toContain("Seasonal refresh 2027");
   });
 
+  it("lets the page move focus to the panel's heading, which only the page can focus", () => {
+    const [heading] = tagsWith(signedIn({ step: "details" }), "h2", 'id="hf-reverify-heading"');
+    expect(heading).toContain('tabindex="-1"');
+  });
+
   it("makes the new code the page when there is no request to show yet", () => {
     const empty: MeView = {
       data: undefined,
@@ -108,6 +113,24 @@ describe("signed in", () => {
     const html = signedIn({ step: "details" }, empty);
     expect(html).toMatch(/<h1 [^>]*>Enter a new code to continue<\/h1>/);
     expect(html).toContain('id="hf-full-name"');
+  });
+
+  it("gives that page's code step a heading of its own, so focus moves to it when the step changes", () => {
+    const empty: MeView = {
+      data: undefined,
+      isLoading: false,
+      error: null,
+      retry: () => undefined,
+    };
+    const details = signedIn({ step: "details" }, empty);
+    const reverify = { step: "code" as const, issued: ON_SCREEN, resendAt: NOW + 30_000 };
+    const code = screenOf(
+      flowAt({ phase: { kind: "signed_in", reverify }, session: null }, { me: empty }),
+    );
+    const idOf = (html: string) => /<h1 id="([^"]+)"/.exec(html)?.[1];
+    expect(idOf(details)).toBeDefined();
+    expect(idOf(code)).toBeDefined();
+    expect(idOf(code)).not.toBe(idOf(details));
   });
 
   it("shows a loading card, and a failure with Try again", () => {

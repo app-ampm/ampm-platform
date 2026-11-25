@@ -18,6 +18,9 @@ const COPY = HOTEL_FORM_COPY.code;
 /** The bot check's widget under "Send a new code"; its status line describes that button. */
 export const RESEND_BOT_CHECK_ID = "hf-resend-check";
 
+/** The code field's id: the field a step moves focus to for an SMS code (its autofill). */
+export const CODE_FIELD_ID = "hf-code";
+
 export interface CodeFormProps {
   readonly identity: Extract<IdentityStep, { readonly step: "code" }>;
   readonly code: string;
@@ -128,7 +131,7 @@ export function CodeForm(props: CodeFormProps) {
         className="flex flex-col gap-4"
       >
         <CodeField
-          id="hf-code"
+          id={CODE_FIELD_ID}
           label={COPY.field}
           value={code}
           onChange={onCodeChange}

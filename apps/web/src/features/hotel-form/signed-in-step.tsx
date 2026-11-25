@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 
 import {
   formatDay,
@@ -10,6 +10,7 @@ import { cn, flatTintStyles, glassStyles, textStyles, type StatusTone } from "@a
 
 import { Chip } from "@/components/site/chip";
 
+import { CODE_FIELD_ID } from "./code-form";
 import type { IdentityStep } from "./flow";
 import { FormButton, FormNotice, QuietLine } from "./form-parts";
 import { HOTEL_FORM_COPY } from "./hotel-form-copy";
@@ -17,9 +18,12 @@ import { IdentityForms } from "./identity-step";
 import { LoadingStep } from "./loading-step";
 import { StepShell } from "./step-shell";
 import type { HotelFormFlow } from "./use-hotel-form-flow";
-import { YourDetails } from "./your-details";
+import { EDIT_SAVE_ID, YourDetails } from "./your-details";
 
 const COPY = HOTEL_FORM_COPY.signedIn;
+
+/** The signed-in page's heading: where focus goes when a new code was asked for with no edit open. */
+const REQUEST_HEADING_ID = "hf-request-heading";
 
 /** The chip each status wears (peacock-night.md §8), seen from the hotel's side; the word carries it. */
 const STATUS_TONE: Readonly<Record<HotelFormRequestStatus, StatusTone>> = {
@@ -35,6 +39,42 @@ export interface SignedInStepProps {
   readonly siteKey: string;
 }
 
+/** Whether a step is an SMS code's, where the code field takes focus (the phone's code autofill). */
+const isSmsCodeStep = (identity: IdentityStep): boolean =>
+  identity.step === "code" && identity.issued.delivery === "sms";
+
+/**
+ * Moves focus as each of the panel's steps appears (the details, a code, a new code): to the code field
+ * for an SMS code, else to the panel's heading, so a keyboard and a screen reader start at the new step
+ * rather than on a button the step took away. The heading is returned for its ref.
+ */
+function usePanelFocus(identity: IdentityStep) {
+  const heading = useRef<HTMLHeadingElement>(null);
+  const isSmsCode = isSmsCodeStep(identity);
+  const stepKey = identity.step === "code" ? identity.issued.challengeId : identity.step;
+  useEffect(() => {
+    const target = isSmsCode ? document.getElementById(CODE_FIELD_ID) : heading.current;
+    target?.focus();
+  }, [stepKey, isSmsCode]);
+  return heading;
+}
+
+/**
+ * Once the panel closes (the new code was entered), puts focus back where the person was: on Save when
+ * their edit is open, else on the page's heading, never on a part of the page that is gone.
+ */
+function useFocusAfterPanel(isPanelOpen: boolean) {
+  const wasOpen = useRef(isPanelOpen);
+  useEffect(() => {
+    if (wasOpen.current && !isPanelOpen) {
+      const back =
+        document.getElementById(EDIT_SAVE_ID) ?? document.getElementById(REQUEST_HEADING_ID);
+      back?.focus();
+    }
+    wasOpen.current = isPanelOpen;
+  }, [isPanelOpen]);
+}
+
 /** A new code asked for in place, over the page: HF-02 or HF-03 in a gold panel. */
 function ReverifyPanel({
   flow,
@@ -43,6 +83,7 @@ function ReverifyPanel({
 }: SignedInStepProps & {
   readonly identity: IdentityStep;
 }) {
+  const heading = usePanelFocus(identity);
   return (
     <section
       aria-labelledby="hf-reverify-heading"
@@ -51,7 +92,12 @@ function ReverifyPanel({
         "flex flex-col gap-4 rounded-lg p-5",
       )}
     >
-      <h2 id="hf-reverify-heading" className={textStyles({ variant: "heading" })}>
+      <h2
+        ref={heading}
+        id="hf-reverify-heading"
+        tabIndex={-1}
+        className={cn(textStyles({ variant: "heading" }), "outline-none")}
+      >
         {COPY.reverifyHeading}
       </h2>
       <IdentityForms flow={flow} identity={identity} siteKey={siteKey} />
@@ -95,9 +141,10 @@ function RequestSummary({
   readonly reverify: ReactNode;
 }) {
   const { person, request } = me;
+  useFocusAfterPanel(reverify !== null);
   return (
     <StepShell
-      headingId="hf-request-heading"
+      headingId={REQUEST_HEADING_ID}
       eyebrow={COPY.eyebrow(person.fullName)}
       title={request.displayLabel ?? COPY.defaultTitle}
     >
@@ -134,14 +181,22 @@ export function SignedInStep({ flow, siteKey }: SignedInStepProps) {
   ) : null;
   if (me.data) return <RequestSummary flow={flow} me={me.data} reverify={reverify} />;
   if (identity)
+    // A heading per step: StepShell moves focus to it as the step changes (the code field takes it for
+    // an SMS code).
     return (
-      <StepShell headingId="hf-reverify-page-heading" title={COPY.reverifyHeading}>
+      <StepShell
+        headingId={
+          identity.step === "code" ? "hf-reverify-page-code-heading" : "hf-reverify-page-heading"
+        }
+        title={COPY.reverifyHeading}
+        isFocusedOnShow={!isSmsCodeStep(identity)}
+      >
         <IdentityForms flow={flow} identity={identity} siteKey={siteKey} />
       </StepShell>
     );
   if (me.error)
     return (
-      <StepShell headingId="hf-request-heading" title={COPY.defaultTitle}>
+      <StepShell headingId={REQUEST_HEADING_ID} title={COPY.defaultTitle}>
         <FormNotice notice={{ message: me.error, retryAt: null, isReload: false }} />
         <FormButton onClick={me.retry}>{HOTEL_FORM_COPY.errors.retry}</FormButton>
       </StepShell>
