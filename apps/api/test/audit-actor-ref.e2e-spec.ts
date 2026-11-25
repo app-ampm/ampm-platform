@@ -74,11 +74,14 @@ describe("audit_events.actor_ref (e2e, D-189 §6)", () => {
     expect(await partitions()).not.toContain("audit_events_2099_01");
   });
 
-  it("was checked against no existing row (NOT VALID), so adding it never scanned the audit", async () => {
-    const rows = await prisma.$queryRaw<{ validated: boolean }[]>`
-      SELECT convalidated AS validated FROM pg_constraint
-      WHERE conrelid = to_regclass('audit_events') AND conname = 'audit_events_actor_ref_guest_only'`;
-    expect(rows).toEqual([{ validated: false }]);
+  it("is validated on the parent and every partition, as on a partition created later", async () => {
+    const rows = await prisma.$queryRaw<{ name: string; validated: boolean }[]>`
+      SELECT conrelid::regclass::text AS name, convalidated AS validated FROM pg_constraint
+      WHERE conname = 'audit_events_actor_ref_guest_only'`;
+    expect(rows.map((row) => row.name)).toEqual(
+      expect.arrayContaining(["audit_events", "audit_events_default", "audit_events_2026_11"]),
+    );
+    for (const row of rows) expect(row.validated, row.name).toBe(true);
   });
 
   it("is held by a guest_token event only: null for staff and the System", async () => {

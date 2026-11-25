@@ -12,12 +12,13 @@
 -- Locks, while the previous API still serves: Prisma 7 applies this file one statement at a time, each
 -- committing on its own, and the SET below holds for every statement after it. No statement waits more than
 -- 5 seconds for its locks, so none keeps the API's writes queued behind it; one that times out stops the
--- deploy with the statements before it applied (docs/data-model.md, the identity step). The two audit_events
--- statements, which take ACCESS EXCLUSIVE on every audit partition, come last, in the order a live staff
--- change takes its locks (a request, its event, then its audit), so a timeout there leaves only them to run,
--- and run as one transaction the file could not deadlock with such a change. Adding the column changes no
--- row, and the CHECK is added NOT VALID: it holds for every row written from then on and reads none of the
--- existing ones, all of them null in the new column.
+-- deploy with the statements before it applied (docs/data-model.md, the identity step). The audit_events
+-- statements come last, in the order a live staff change takes its locks (a request, its event, then its
+-- audit), so a timeout there leaves only them to run, and run as one transaction the file could not
+-- deadlock with such a change. Adding the column changes no row. The CHECK is added NOT VALID, so the two
+-- statements that take ACCESS EXCLUSIVE on every audit partition read no row; then VALIDATE CONSTRAINT reads
+-- the rows (every one null in the new column) under SHARE UPDATE EXCLUSIVE, which lets reads and writes go
+-- on, and leaves the CHECK validated on every partition, as on one the maintenance job creates later.
 
 SET lock_timeout = '5s';
 
@@ -203,7 +204,7 @@ ALTER TABLE "hotel_info_request_consents"
 
 -- Last, the audit (see the locks above). actor_ref names a hotel-form contributor (guest_token) and is null
 -- for staff and the System. A CHECK on the partitioned parent holds on every partition, and each partition
--- created later inherits it. NOT VALID: no existing row is read, every one of them null in the new column.
+-- created later inherits it. Added NOT VALID, under the exclusive lock for an instant, then validated apart.
 
 -- AlterTable
 ALTER TABLE "audit_events" ADD COLUMN     "actor_ref" TEXT;
@@ -211,3 +212,5 @@ ALTER TABLE "audit_events" ADD COLUMN     "actor_ref" TEXT;
 ALTER TABLE "audit_events"
   ADD CONSTRAINT "audit_events_actor_ref_guest_only"
   CHECK ("actor_ref" IS NULL OR "actor_type" = 'guest_token') NOT VALID;
+
+ALTER TABLE "audit_events" VALIDATE CONSTRAINT "audit_events_actor_ref_guest_only";

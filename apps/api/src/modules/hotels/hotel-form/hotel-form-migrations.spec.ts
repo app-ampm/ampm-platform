@@ -7,7 +7,9 @@ import { describe, expect, it } from "vitest";
  * more than 5 seconds for a lock, so none keeps the API's writes queued behind it. The audit's statements,
  * which lock every audit partition, come last, in the order a live staff change takes its locks (a request,
  * its event, then its audit): a timeout there leaves only them to run by hand, and were the file run as one
- * transaction it could not deadlock with such a change. The audit's CHECK reads none of its rows (NOT VALID).
+ * transaction it could not deadlock with such a change. The audit's CHECK is added NOT VALID, reading no row
+ * while the audit is locked, then validated by a statement of its own, which reads the rows while reads and
+ * writes go on, so every partition, old or made later, ends with the same validated CHECK.
  */
 
 const MIGRATIONS = new URL("../../../../prisma/migrations/", import.meta.url);
@@ -44,15 +46,20 @@ describe("migration 20261129000000_hotel_form_identity", () => {
     const audit = placesNaming(statements, ["audit_events"]);
     const live = placesNaming(statements, ["hotel_info_requests", "hotel_info_request_events"]);
     expect(live.length).toBeGreaterThan(0);
-    expect(audit).toEqual([statements.length - 2, statements.length - 1]);
+    const last = statements.length - 1;
+    expect(audit).toEqual([last - 2, last - 1, last]);
     expect(Math.min(...audit)).toBeGreaterThan(Math.max(...live));
   });
 
-  it("adds the audit's CHECK NOT VALID, so no audit row is read while the audit is locked", () => {
-    const check = statements.find((statement) =>
+  it("adds the audit's CHECK NOT VALID, then validates it in a statement of its own", () => {
+    const check = statements.filter((statement) =>
       statement.includes('"audit_events_actor_ref_guest_only"'),
     );
-    expect(check).toMatch(/ NOT VALID$/);
+    expect(check).toHaveLength(2);
+    expect(check[0]).toMatch(/^ALTER TABLE "audit_events" ADD CONSTRAINT .* NOT VALID$/);
+    expect(check[1]).toBe(
+      'ALTER TABLE "audit_events" VALIDATE CONSTRAINT "audit_events_actor_ref_guest_only"',
+    );
   });
 });
 
