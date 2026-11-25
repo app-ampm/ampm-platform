@@ -3,6 +3,7 @@ import { randomInt } from "node:crypto";
 import { Inject, Injectable } from "@nestjs/common";
 import {
   errors,
+  HOTEL_FORM_CODE_ACTION,
   HOTEL_FORM_ERRORS,
   HOTEL_FORM_NOTICE_VERSION,
   maskPhone,
@@ -40,8 +41,6 @@ import type { FormRequest } from "./hotel-form-state.js";
 
 /** The audit's entity for a code challenge. */
 export const HOTEL_FORM_CHALLENGE_ENTITY = "hotel_info_request_challenge";
-/** The Turnstile action the details page (HF-02) solves the bot check for. */
-export const HOTEL_FORM_CODE_ACTION = "hf_code";
 
 /** Who is calling, as the controller read it: the address and the browser, both RESTRICTED-CONTACT. */
 export interface FormClient {

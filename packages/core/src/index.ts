@@ -61,6 +61,7 @@ export type {
 
 export { formatDay, formatDayRange, formatMoment } from "./dates";
 export type { DateFormatOptions, DateStyle, DayReading } from "./dates";
+export { formatCountdown, secondsLeft, spokenCountdown } from "./countdown";
 
 export { AppError, ERROR_CODES, errors, isApiFailure, isAppError } from "./errors";
 export type { ApiEnvelope, ApiFailure, ApiSuccess, ErrorCode, ErrorDetail } from "./errors";

@@ -1,28 +1,9 @@
 import { act, renderHook } from "../../test/render";
 import type { SentCode } from "./client-code-step.types";
-import { formatCountdown, spokenCountdown, useResendCountdown } from "./use-resend-countdown";
+import { useResendCountdown } from "./use-resend-countdown";
 
 const SENT: SentCode = { expiresInSeconds: 300, resendAfterSeconds: 30 };
 const NO_WAIT: SentCode = { expiresInSeconds: 300, resendAfterSeconds: 0 };
-
-describe("the countdown's words", () => {
-  it("shows minutes and seconds, and says them in words", () => {
-    expect([0, 5, 30, 65, 600].map(formatCountdown)).toEqual([
-      "0:00",
-      "0:05",
-      "0:30",
-      "1:05",
-      "10:00",
-    ]);
-    expect([1, 30, 60, 61, 125].map(spokenCountdown)).toEqual([
-      "1 second",
-      "30 seconds",
-      "1 minute",
-      "1 minute 1 second",
-      "2 minutes 5 seconds",
-    ]);
-  });
-});
 
 /**
  * The countdown's own once-a-second timers, started and still running. React and the renderer keep

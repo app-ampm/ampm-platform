@@ -20,6 +20,12 @@ import { totpCode } from "./sign-in.js";
  */
 export const HOTEL_FORM_NOTICE_VERSION = "hf-notice-2026-11-25";
 
+/**
+ * The Turnstile action the details page (HF-02) runs the bot check for: the site draws its widget with
+ * it, and the API refuses a token that names another (D-189 §3).
+ */
+export const HOTEL_FORM_CODE_ACTION = "hf_code";
+
 /** The designations the details page offers (D-189 §4), Other last: choosing it asks for the words. */
 export const HOTEL_FORM_DESIGNATIONS = [
   "General Manager",
