@@ -2,6 +2,9 @@ import path from "node:path";
 
 import type { NextConfig } from "next";
 
+/** Every path but `/hotel-form` and the pages under it (middleware.ts `isHotelFormPath`). */
+const OUTSIDE_HOTEL_FORM = "/((?!hotel-form(?:/|$)).*)";
+
 const nextConfig: NextConfig = {
   // Shared packages ship TypeScript source; Next compiles them (docs/engineering/standards.md §2.2).
   transpilePackages: [
@@ -21,16 +24,21 @@ const nextConfig: NextConfig = {
   // The repository's own rules (CLAUDE.md, .claude/rules) guide the agents; Next's generated AGENTS.md is not wanted.
   agentRules: false,
   // Static security headers (the per-request CSP + nonce are set in middleware.ts); HSTS is Caddy's.
+  // The hotel form's pages send their own referrer policy (no-referrer, with noindex and no-store, from
+  // middleware.ts: D-189 §8), so the site's is left off them rather than sent twice (HF-G10).
   async headers() {
     return [
       {
         source: "/:path*",
         headers: [
           { key: "X-Content-Type-Options", value: "nosniff" },
-          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
           { key: "X-Frame-Options", value: "DENY" },
           { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
         ],
+      },
+      {
+        source: OUTSIDE_HOTEL_FORM,
+        headers: [{ key: "Referrer-Policy", value: "strict-origin-when-cross-origin" }],
       },
     ];
   },
