@@ -2,6 +2,7 @@ import { HOTEL_FORM_ERRORS } from "@ampm/core";
 import { describe, expect, it } from "vitest";
 
 import {
+  FORM_LATER,
   FORM_NOW,
   FORM_REQUEST_ID,
   linkedRequest,
@@ -16,9 +17,10 @@ import {
 
 /*
  * Trying a hotel form code (D-189 §2): a try is reserved atomically before the code is compared, so
- * guesses sent at once share the five; a wrong code that spends the last try retires the challenge at
- * once, clearing its claim; and every refusal reads the same. Only a right code reaches the enrolment
- * (hotel-form-enrolment.service.spec.ts).
+ * guesses sent at once share the five; a refused try that spent the last (a wrong code, or a right one the
+ * enrolment refused) retires the challenge at once, clearing its claim, and a try that finds none left
+ * repairs a retire that failed; and every refusal of the code reads the same. Only a right code reaches the
+ * enrolment (hotel-form-enrolment.service.spec.ts).
  */
 
 describe("HotelFormCodeVerifier", () => {
@@ -46,6 +48,40 @@ describe("HotelFormCodeVerifier", () => {
     const refused = await refusalOf(verify(built));
     expect(refused?.message).toBe(HOTEL_FORM_ERRORS.invalidCode);
     expect(built.challenges.lockClaim).not.toHaveBeenCalled();
+  });
+
+  it("retires a challenge out of tries when no try can be reserved, repairing a retire that failed", async () => {
+    const built = build({ reserved: false });
+    await refusalOf(verify(built));
+    expect(built.challenges.retireIfSpent).toHaveBeenCalledWith(CHALLENGE_ID, FORM_NOW);
+  });
+
+  it.each([
+    ["a removed mobile", { removed: true }, 403, HOTEL_FORM_ERRORS.mobileRemoved],
+    ["a full request", { people: 10 }, 409, HOTEL_FORM_ERRORS.peopleFull],
+    [
+      "a merged request",
+      { found: linkedRequest({ status: "merged", statusOnlyUntil: FORM_LATER }) },
+      409,
+      HOTEL_FORM_ERRORS.closedToNewPeople,
+    ],
+  ] as const)(
+    "retires the challenge if its tries are spent when the enrolment refuses the right code: %s",
+    async (_case, options, status, message) => {
+      const built = build(options);
+      const refused = await refusalOf(verify(built));
+      expect(refused?.status).toBe(status);
+      expect(refused?.message).toBe(message);
+      expect(built.challenges.retireIfSpent).toHaveBeenCalledWith(CHALLENGE_ID, FORM_NOW);
+    },
+  );
+
+  it("answers the enrolment's refusal even when the retire after it fails", async () => {
+    const built = build({ removed: true });
+    built.challenges.retireIfSpent.mockRejectedValueOnce(new Error("connection lost"));
+    const refused = await refusalOf(verify(built));
+    expect(refused?.status).toBe(403);
+    expect(refused?.message).toBe(HOTEL_FORM_ERRORS.mobileRemoved);
   });
 
   it("refuses a challenge of another request, or of an older link, without spending a try", async () => {

@@ -12,9 +12,11 @@ import { invalidCode } from "./hotel-form-refusal.js";
 /**
  * Tries a hotel form code (D-189 §2 and §4). The link must be open to the form (the gate), the challenge
  * this request's and on its current link; a try is then reserved by an atomic increment before the code
- * is compared in constant time, so guesses sent at once share the five. A wrong code that spends the last
- * try retires the challenge at once, clearing its claim. A right one goes to the enrolment, which makes
- * the person, records the consent and opens the session in one transaction.
+ * is compared in constant time, so guesses sent at once share the five. A right code goes to the enrolment,
+ * which makes the person, records the consent and opens the session in one transaction. Whenever a try is
+ * refused (a wrong code, or a right one the enrolment refuses and rolls back) and it was the last, the
+ * challenge is retired at once, clearing its claim; a try that finds no try left retires it too, so a retire
+ * that failed before is repaired then.
  */
 @Injectable()
 export class HotelFormCodeVerifier {
@@ -35,12 +37,32 @@ export class HotelFormCodeVerifier {
     if (challenge === null || challenge.linkGeneration !== request.tokenGeneration) {
       throw invalidCode();
     }
-    if (!(await this.challenges.reserveTry(challenge.id, now))) throw invalidCode();
-    const key = this.keys.hotelFormCode;
-    if (!oneTimeCodeMatches(challenge.id, body.oneTimeCode, challenge.codeHmac, key)) {
-      await this.challenges.retireIfSpent(challenge.id, now);
+    if (!(await this.challenges.reserveTry(challenge.id, now))) {
+      await this.retireIfSpent(challenge.id, now);
       throw invalidCode();
     }
-    return this.enrolment.enrol({ requestId: request.id, policy, challenge, ip: client.ip }, now);
+    const key = this.keys.hotelFormCode;
+    if (!oneTimeCodeMatches(challenge.id, body.oneTimeCode, challenge.codeHmac, key)) {
+      await this.retireIfSpent(challenge.id, now);
+      throw invalidCode();
+    }
+    try {
+      return await this.enrolment.enrol(
+        { requestId: request.id, policy, challenge, ip: client.ip },
+        now,
+      );
+    } catch (refusal) {
+      // The enrolment rolled back but its try stays spent: if that was the last, nothing can use the claim.
+      await this.retireIfSpent(challenge.id, now);
+      throw refusal;
+    }
+  }
+
+  /**
+   * Retires the challenge if its tries are spent, clearing its claim. A retire that fails leaves the answer
+   * as it was: the challenge's next try repairs it, or the hourly sweep once its code expires.
+   */
+  private async retireIfSpent(id: string, now: Date): Promise<void> {
+    await this.challenges.retireIfSpent(id, now).catch(() => false);
   }
 }

@@ -21,9 +21,10 @@ import { requestCalls, secretOf } from "./hotel-info-requests-suite.js";
  * Entering a hotel form code (D-189 §2 and §4), on screen against the test database: a new person is
  * created from the claim with the privacy notice's consent, the claim is cleared and a session opens, all
  * audited as the person with no personal values; a returning person keeps their stored details; five
- * wrong tries retire the code and clear its claim; the request's maxPeople and the status-only window
- * refuse a new person but not a returning one; a reissued link's challenges no longer verify; and no row
- * holds the code but its HMAC.
+ * wrong tries retire the code and clear its claim, as does a right last try the enrolment refuses, and a
+ * try finding no try left repairs a retire that did not land; the request's maxPeople and the status-only
+ * window refuse a new person but not a returning one; a reissued link's challenges no longer verify; and no
+ * row holds the code but its HMAC.
  */
 describe("The hotel form's code verification (e2e, D-189, on screen)", () => {
   let suite: FormSuite;
@@ -166,6 +167,43 @@ describe("The hotel form's code verification (e2e, D-189, on screen)", () => {
     });
     expect(burned.retiredAt).not.toBeNull();
     await calls.verify({ token: link.secret, challengeId, oneTimeCode: code }).expect(401);
+  });
+
+  it("retires the code at once when its right code, on the last try, meets a refusal", async () => {
+    const link = await testLink(suite);
+    await setPolicy(suite, { maxPeople: 1 });
+    await signIn(suite, link.secret, freshMobile());
+    const { challengeId, code } = await issue(link.secret, freshMobile());
+    const wrong = code === "000000" ? "999999" : "000000";
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+      await calls.verify({ token: link.secret, challengeId, oneTimeCode: wrong }).expect(401);
+    }
+    const full = await calls
+      .verify({ token: link.secret, challengeId, oneTimeCode: code })
+      .expect(409);
+    expect(full.body.error.message).toBe(HOTEL_FORM_ERRORS.peopleFull);
+    const spent = await suite.prisma.hotelInfoRequestChallenge.findUniqueOrThrow({
+      where: { id: challengeId },
+    });
+    expect(spent).toMatchObject({ attempts: 5, usedAt: null, claimedPhone: null });
+    expect(spent.retiredAt).not.toBeNull();
+    await setPolicy(suite, {});
+  });
+
+  it("retires a code whose tries ran out but whose retire did not land, at its next try", async () => {
+    const link = await testLink(suite);
+    const { challengeId, code } = await issue(link.secret, freshMobile());
+    // As a retire that failed after the fifth try leaves it: out of tries, still open, its claim held.
+    await suite.prisma.hotelInfoRequestChallenge.update({
+      where: { id: challengeId },
+      data: { attempts: 5 },
+    });
+    await calls.verify({ token: link.secret, challengeId, oneTimeCode: code }).expect(401);
+    const repaired = await suite.prisma.hotelInfoRequestChallenge.findUniqueOrThrow({
+      where: { id: challengeId },
+    });
+    expect(repaired).toMatchObject({ usedAt: null, claimedFullName: null, claimedPhone: null });
+    expect(repaired.retiredAt).not.toBeNull();
   });
 
   it("refuses a new person past maxPeople with 409, and lets a returning one in", async () => {
