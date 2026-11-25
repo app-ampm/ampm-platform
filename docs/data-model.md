@@ -286,6 +286,7 @@ erDiagram
         uuid id PK
         uuid actor_user_id FK
         string actor_type "enum user / guest_token / system"
+        text actor_ref "a hotel-form contributor's request and person or challenge (guest_token only, D-189); null for staff and the System"
         string action "enum create / update / delete / approve / share / export / restricted_read"
         string entity_type
         uuid entity_id
@@ -362,6 +363,7 @@ Notes:
     ```
   - **Never dropped.** Partitions are never dropped; deleting old log rows stays a retention proposal for a Super Admin to approve (§1).
 - **External recipients (24 November 2026, D-188).** A notification can go to someone outside AMPM, such as the contact AMPM entered for a hotel information request (Module C): `recipient_type` `external`, `recipient_id` the request's id, and `recipient_address` the address it goes to, RESTRICTED-CONTACT. An email may carry a `reply_to` (hotel-form email uses `hotel_form.policy.replyTo`). Both are written only while the row is `queued` and cleared with `data` when it leaves it: on sending, on a failed render or a missing address, and when every send attempt has failed (`failPermanently`). No channel preference applies to an external recipient, an external email or SMS is refused without an address, and the notification feeds list only `user` rows, the Super Admin's whole log included. Implemented in migration `20261128000000_hotel_info_requests`.
+- **Hotel-form contributors in the audit (25 November 2026, D-180, D-189 §6).** A hotel form contributor is no `users` row, so their audit events are `actor_type` `guest_token` with no `actor_user_id`, and `actor_ref` says who acted: `hir:<requestId>/person:<personId>`, or `hir:<requestId>/challenge:<challengeId>` before a correct code made them a person (Module C, the identity step). The CHECK `audit_events_actor_ref_guest_only` keeps `actor_ref` null for staff and the System. Their before and after images are allow-listed, not masked: ids, the names of the changed fields (`changedFields`) and masked values, every other key dropped, so the personal values stay in the tables the masking tool reaches. The API sets the actor on the request context (`requestContext.setHotelFormActor`), never from a header. `audit_events` is partitioned by month: the column, added on the parent, is on every partition, DEFAULT included, and a partition created later by the maintenance job inherits it with the CHECK. Implemented in migration `20261129000000_hotel_form_identity`. The SMS code a form person receives in SMS mode goes as an `external` notification to their mobile about the request (template `hotel_form.code`), whose render data holds the code until the row leaves `queued`.
 - **Staff hotel imports (24 November 2026, D-181).** The hotels, rooms, venues and rates imports (`import_type` `hotels`, `hotel_rooms`, `hotel_venues` and, from Slice 4, `hotel_rates`; see Module C's notes on Slice 3 and "Rates import and rate items") keep no file, so their `file_document_id` is null. Each upload is a preview, stored as a `validating` job, or as `failed` with no plan when no row is valid. `error_report_json` holds its value-free report: the counts, the refusals, and each row's outcome with the names of the fields it changes. `plan_json` holds the planned rows with their values and each target's version token. Those values can include a hotel's internal notes, so the column is RESTRICTED-NOTES: written by the System and read only by the import, never selected or returned anywhere else. Importing the preview by its id makes the job `applied`, with the import's report in `error_report_json`, and no second job is created. A newer preview of the same kind by the same person supersedes it. Importing and superseding both clear `plan_json`, and so does expiry: an import that finds its preview past the 24 hours clears it, and a daily job clears every plan older than that or left on a job that is no longer validating, so a file's values are kept no longer than they can be imported. The rules are in the Module C note "Rooms, venues, units and contacts".
 
 ---
@@ -594,6 +596,12 @@ erDiagram
     hotels |o--o{ hotel_info_requests : asked_through
     destinations |o--o{ hotel_info_requests : proposes
     hotel_info_requests ||--o{ hotel_info_request_events : records
+    hotel_info_requests ||--o{ hotel_info_request_people : takes_part
+    hotel_info_requests ||--o{ hotel_info_request_challenges : issues_codes
+    hotel_info_request_people |o--o{ hotel_info_request_challenges : verified_by
+    hotel_info_request_people ||--o{ hotel_info_request_consents : consents
+    hotel_info_request_people |o--o{ hotel_info_request_events : acts_in
+    hotel_info_request_people |o--o{ hotel_info_requests : submits
 
     destinations {
         uuid id PK
@@ -784,7 +792,7 @@ erDiagram
         string prefill_mode "enum none"
         int revision "submitted revisions, from 0"
         datetime submitted_at
-        uuid submitted_by_person_id "the hotel person who submitted, from Slice 7b"
+        uuid submitted_by_person_id FK "the hotel person who submitted (hotel_info_request_people)"
         uuid reviewer_user_id FK "the reviewer holding the claim"
         datetime review_started_at
         datetime changes_requested_at
@@ -802,9 +810,58 @@ erDiagram
         string event_type "enum created / link_reissued / link_emailed / share_recorded / updated / expiry_extended / revoked"
         string actor_kind "enum staff / hotel_person / system"
         uuid actor_user_id FK "the staff user, when staff acted"
-        uuid actor_person_id "the hotel person, from Slice 7b"
+        uuid actor_person_id FK "the hotel person (hotel_info_request_people), when one acted"
         json detail_json "masked detail"
         datetime occurred_at
+    }
+    hotel_info_request_people {
+        uuid id PK
+        uuid request_id FK
+        string full_name "RESTRICTED-CONTACT, as the person gave it"
+        string designation "RESTRICTED-CONTACT, from the core list or Other"
+        string phone "RESTRICTED-CONTACT, E.164; one live person per request and phone"
+        datetime code_entered_at "the latest correct code; a row exists only after one"
+        datetime phone_verified_at "set only by an SMS code"
+        string code_delivery "enum sms / screen, how the latest correct code was delivered"
+        datetime removed_at "AMPM removed the person: their sessions end and their place is freed"
+        uuid removed_by "the staff user who removed them"
+        datetime last_seen_at
+    }
+    hotel_info_request_challenges {
+        uuid id PK
+        uuid request_id FK
+        int link_generation "the link generation the code was issued on"
+        string claimed_full_name "RESTRICTED-CONTACT, cleared once the code is entered or the challenge retired"
+        string claimed_designation "RESTRICTED-CONTACT, cleared likewise"
+        string claimed_phone "RESTRICTED-CONTACT, E.164, cleared likewise"
+        string claimed_notice_version "the privacy notice version the claimant accepted, cleared likewise"
+        string delivery "enum sms / screen"
+        string destination_hash "HMAC of the E.164 mobile under the hotel form's address key"
+        string code_hmac "HMAC of the code bound to this challenge under the hotel form's code key"
+        datetime code_expires_at "5 minutes after issue"
+        int attempts "tries reserved, at most 5"
+        datetime used_at "the code was entered"
+        datetime retired_at "set when the challenge is retired, as when a newer code for the same request and mobile is issued"
+        uuid person_id FK "the person the code verified, set when it is entered"
+        string session_token_hash UK "SHA-256 of the form session's token (hfs_)"
+        datetime session_started_at
+        datetime session_last_seen_at "written at most once a minute"
+        datetime session_ended_at "sign-out, a fourth session, or a removal"
+        string ip_address "RESTRICTED-CONTACT"
+        string user_agent "RESTRICTED-CONTACT"
+    }
+    hotel_info_request_consents {
+        uuid id PK
+        uuid person_id FK
+        string kind "enum privacy_notice (the submit declarations arrive with submit)"
+        string text_version "the version of the text consented to"
+        bool granted
+        string revision_hash "the submitted revision a declaration binds to; null for the notice"
+        datetime recorded_at
+        string ip_address "RESTRICTED-CONTACT"
+        datetime withdrawn_at
+        string withdrawal_source "enum contributor / staff"
+        uuid withdrawn_by_user_id "the staff user, for a staff withdrawal"
     }
 ```
 
@@ -891,7 +948,7 @@ Notes:
   - **Live** means `open`, `submitted`, `in_review` or `changes_requested`. Two partial unique indexes are the race-safe backstop of D-188's one-live-request rules, a soft-deleted request freeing both: one live request per hotel (`hotel_info_requests_hotel_live_key` on `hotel_id`), and one live new-hotel request per normalised web address (`hotel_info_requests_web_address_live_key` on `proposed_web_address_key`, for `target` `new`). Status with `expires_at` and status with `submitted_at` serve the queue and the expiry sweeps. Expiry is worked out from `expires_at`, never stored as a status; the statuses move per permission-matrix §7 "Hotel information request". A deleted hotel never keeps a live request: the hotel's `DELETE` locks the hotel's row and revokes it, whatever its live status, in the same transaction, as the System (§7 lines 505 and 506), with a `revoked` event and its audit.
   - **The link.** Only the SHA-256 of the link's secret is stored (`token_hash`, unique, SECRET); `token_generation` counts reissues, and the sessions of a later slice are bound to it. The recipient's name and email are RESTRICTED-CONTACT, as AMPM entered them.
   - **Web addresses** are compared as keys from core `normaliseWebAddress`: no scheme, so http and https are one address and an address typed both ways never holds two live requests; the host lower-case, in punycode, with no leading `www.`; and no trailing slash, query or fragment. The duplicate hints also compare hosts alone (`webAddressHost`).
-  - **Events** (`hotel_info_request_events`) record each change, in the transaction that makes it: the type, the actor's kind and ids, a masked detail, and the time. They are the history the Hotel team reads; the audit log stays the Super Admin's. `actor_person_id` and `submitted_by_person_id` name `hotel_info_request_people` rows, which Slice 7b adds with their foreign keys.
+  - **Events** (`hotel_info_request_events`) record each change, in the transaction that makes it: the type, the actor's kind and ids, a masked detail, and the time. They are the history the Hotel team reads; the audit log stays the Super Admin's. `actor_person_id` and `submitted_by_person_id` name `hotel_info_request_people` rows, with foreign keys since Slice 7b (D-189).
   - **Rolling back past this migration.** The previous image never reads the request tables. It never lists external notifications either, but its worker cannot read a queued `external` row, whose `recipient_type` it does not know: the send job fails until it dead-letters, and its handler cannot clear the row either, so the address and the link would stay on it. Before starting the previous image, fail and clear such rows:
 
     ```sql
@@ -900,6 +957,13 @@ Notes:
     ```
 
     With the hotel form's mode `off`, its default, the API queues no external email, so there is normally nothing to clear.
+
+- **The hotel form's identity step (25 November 2026, D-189).** Slice 7b of the hotel information form plan (§4.3, §6.1 and §9 of the plan), implemented in migration `20261129000000_hotel_form_identity` (expand only: new types and tables, a nullable `audit_events` column, Module A, and the foreign keys of the two person columns above). Anyone with a request's link may take part. Retention class `hotel_intake`, following their request (D-180: challenges, addresses and user agents 12 months; nothing is deleted automatically).
+  - **A person** (`hotel_info_request_people`) exists only after a correct code, and is never a `users` row. Their name, designation and phone (E.164, the CHECK `hotel_info_request_people_phone_e164`) are RESTRICTED-CONTACT. `code_entered_at` and `code_delivery` describe the latest correct code; `phone_verified_at` is set only by an SMS code (while codes are shown on screen, a code proves nothing about the mobile). The partial unique index `hotel_info_request_people_request_phone_live_key` holds one person per request and phone while neither removed nor deleted, so a returning person is found by request and phone, not created twice. AMPM removing a person sets `removed_at` and `removed_by`, ends their sessions and frees their place among the request's `maxPeople`.
+  - **A code challenge** (`hotel_info_request_challenges`) is one code: issued on the request's link generation, to a mobile known only by its `destination_hash`, the HMAC of the E.164 number under the address key (HKDF `ampm/hotel-form-address`), which the per-mobile limits and the lockout key on. Until the code is entered or the challenge is retired it holds the claim: the name, designation, mobile and notice version typed (RESTRICTED-CONTACT); then they are cleared (the CHECK `hotel_info_request_challenges_claim_cleared`), so nothing a stranger types reaches anyone's record without a code. The code is stored only as `code_hmac`, bound to the challenge's id under the code key (HKDF `ampm/hotel-form-code`); it lives 5 minutes, and `attempts` counts the tries, at most 5 (`hotel_info_request_challenges_attempts_range`), each reserved by an update that increments while the challenge is unused, unretired, unexpired and under 5. A new code for the same request and mobile retires the open one. The index on (`request_id`, `destination_hash`, `created_at`) finds the open challenge and counts the burned ones of the last hour.
+  - **The session** a correct code opens is carried by that challenge: `person_id` is set when the code is entered (`hotel_info_request_challenges_person_on_use`), and only the SHA-256 of the session's `hfs_` token is stored (`session_token_hash`, unique, SECRET), with its start, last sight and end; a session needs its person and start (`hotel_info_request_challenges_session_on_verified`). The address and the user agent are RESTRICTED-CONTACT.
+  - **Consents** (`hotel_info_request_consents`) are the evidence, append-only by repository convention: created, then only withdrawn (time, source and, for staff, who). The privacy notice's consent is recorded when a person's code is entered, with the notice's version and no `revision_hash` (`hotel_info_request_consents_notice_has_no_revision`); the two declarations of a later slice add their kinds and bind to a submitted revision's hash.
+  - **Rolling back past this migration.** The previous image never reads the new tables or the new column, and the hotel form's public routes stay off with the mode. Its audit service writes no `actor_ref`, which the CHECK allows. Nothing to clear.
 
 ---
 
@@ -2268,6 +2332,7 @@ Phase numbers follow SPEC §11 as adjusted by A-10. "Restricted" lists the field
 | hotel_wedding_references | C | 1 | Past weddings at the hotel | consent required |
 | saved_hotels | C | 1 | Client shortlist | — |
 | hotel_info_requests, hotel_info_request_events | C | 1 | Hotel information form requests, their links and their history (D-188) | token_hash; recipient_name, recipient_email |
+| hotel_info_request_people, hotel_info_request_challenges, hotel_info_request_consents | C | 1 | The hotel form's people, their code challenges and sessions, and their consents (D-189) | people's names, designations and phones; the claims; code_hmac, destination_hash, session_token_hash; ip_address, user_agent |
 | hotel_enquiries | D | 1 | Assistance requests and consultancy | notes_internal |
 | hotel_enquiry_events | D | 1 | Enquiry timeline | internal_only rows |
 | site_visits | D | 1 | Scheduled visits | outcome_internal |

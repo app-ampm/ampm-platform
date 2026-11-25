@@ -662,11 +662,15 @@ model NotificationPreference {
 
 /// Append-only, partitioned by month on `occurred_at` (raw SQL migration, data.md); the composite
 /// primary key includes the partition key. Restricted and secret fields are masked before the
-/// before/after images are stored.
+/// before/after images are stored. `actor_ref` (D-189 §1 and §6) names a hotel-form contributor, whose
+/// events are `guest_token` with no user: `hir:<requestId>/person:<personId>`, or
+/// `hir:<requestId>/challenge:<challengeId>` before a person exists; it is null for staff and the System
+/// (a CHECK in 20261129000000_hotel_form_identity), and reaches every partition, as each inherits it.
 model AuditEvent {
   id          String      @default(uuid(7)) @db.Uuid
   actorUserId String?     @map("actor_user_id") @db.Uuid
   actorType   ActorType   @map("actor_type")
+  actorRef    String?     @map("actor_ref") @db.Text
   action      AuditAction
   entityType  String      @map("entity_type") @db.VarChar(255)
   entityId    String      @map("entity_id") @db.Uuid
@@ -1677,7 +1681,7 @@ enum HotelInfoRequestActorKind {
 /// indexes holding one live request per hotel and per proposed web address, are raw SQL in
 /// 20261128000000_hotel_info_requests. A new hotel's request gets its `hotel_id` at the merge. The
 /// submission, review, merge and revoke columns wait, nullable, for their slices; `submitted_by_person_id`
-/// names a hotel_info_request_people row from Slice 7b, which adds that table and its foreign key.
+/// names a hotel_info_request_people row (its foreign key from Slice 7b, D-189).
 model HotelInfoRequest {
   id        String                 @id @default(uuid(7)) @db.Uuid
   reference String                 @unique @db.VarChar(32)
@@ -1730,9 +1734,12 @@ model HotelInfoRequest {
   updatedBy String?   @map("updated_by") @db.Uuid
   deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
 
-  hotel               Hotel?                  @relation(fields: [hotelId], references: [id], onDelete: Restrict)
-  proposedDestination Destination?            @relation(fields: [proposedDestinationId], references: [id], onDelete: Restrict)
+  hotel               Hotel?                      @relation(fields: [hotelId], references: [id], onDelete: Restrict)
+  proposedDestination Destination?                @relation(fields: [proposedDestinationId], references: [id], onDelete: Restrict)
+  submittedBy         HotelInfoRequestPerson?     @relation("HotelInfoRequestSubmittedBy", fields: [submittedByPersonId], references: [id], onDelete: Restrict)
   events              HotelInfoRequestEvent[]
+  people              HotelInfoRequestPerson[]    @relation("HotelInfoRequestPeople")
+  challenges          HotelInfoRequestChallenge[]
 
   @@index([hotelId])
   @@index([proposedDestinationId])
@@ -1747,7 +1754,8 @@ model HotelInfoRequest {
 /// One entry of a request's history (D-188 §1): what happened, the actor's kind and ids, and a masked
 /// detail. Written in the transaction that makes the change; append-only by repository convention (create
 /// and list only), keeping the standard columns as hotel_enquiry_events does. The Hotel team reads it; the
-/// audit log stays the Super Admin's. `actor_person_id` names a hotel_info_request_people row from Slice 7b.
+/// audit log stays the Super Admin's. `actor_person_id` names a hotel_info_request_people row (its foreign
+/// key from Slice 7b, D-189).
 model HotelInfoRequestEvent {
   id            String                    @id @default(uuid(7)) @db.Uuid
   requestId     String                    @map("request_id") @db.Uuid
@@ -1764,13 +1772,154 @@ model HotelInfoRequestEvent {
   updatedBy String?   @map("updated_by") @db.Uuid
   deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
 
-  request HotelInfoRequest @relation(fields: [requestId], references: [id], onDelete: Restrict)
+  request     HotelInfoRequest        @relation(fields: [requestId], references: [id], onDelete: Restrict)
+  actorPerson HotelInfoRequestPerson? @relation(fields: [actorPersonId], references: [id], onDelete: Restrict)
 
   @@index([requestId, occurredAt])
   @@index([actorUserId])
   @@index([actorPersonId])
   @@index([deletedAt])
   @@map("hotel_info_request_events")
+}
+
+// ---------------------------------------------------------------- Module C — the hotel form's identity step
+// (D-189 §1; docs/data-model.md §5; plan §4.3, §6.1 and §9, Slice 7b). Anyone with a request's link may
+// take part: they claim a name, a designation and a mobile on a code challenge, and only a correct code
+// makes them a person of the request, with the privacy notice's consent. A person is never a `users` row
+// and holds no auth token: the challenge that verified them carries their form session. Retention class
+// `hotel_intake`, following their request (D-180). The CHECKs and the partial unique index are raw SQL in
+// 20261129000000_hotel_form_identity. Keep the enums in step with core `hotel-info-requests.ts`.
+
+/// How a hotel-form code reached its person (core `hotelFormCodeDelivery`, D-189 §2): by SMS, or shown on
+/// the page while the form cannot send its own SMS. Only an SMS code checks the mobile.
+enum HotelFormCodeDelivery {
+  sms
+  screen
+}
+
+/// What a contributor consented to: the privacy notice; the two declarations arrive with submit.
+enum HotelInfoRequestConsentKind {
+  privacy_notice
+}
+
+/// Who withdrew a consent: its contributor, or a member of staff for them.
+enum HotelInfoRequestWithdrawalSource {
+  contributor
+  staff
+}
+
+/// A person of a request (D-189 §1): someone who entered a correct code, never a `users` row. Their name,
+/// designation and phone (E.164) are RESTRICTED-CONTACT. `code_entered_at` and `code_delivery` describe
+/// the latest correct code; `phone_verified_at` is set only by an SMS code. One live person per request
+/// and phone: a partial unique index while neither removed nor deleted. AMPM removing a person sets
+/// `removed_at` and `removed_by` (a staff user), which frees their place among the request's `maxPeople`.
+model HotelInfoRequestPerson {
+  id              String                @id @default(uuid(7)) @db.Uuid
+  requestId       String                @map("request_id") @db.Uuid
+  fullName        String                @map("full_name") @db.VarChar(255) // RESTRICTED-CONTACT
+  designation     String                @db.VarChar(255) // RESTRICTED-CONTACT
+  phone           String                @db.VarChar(32) // RESTRICTED-CONTACT, E.164
+  codeEnteredAt   DateTime              @map("code_entered_at") @db.Timestamptz(6)
+  phoneVerifiedAt DateTime?             @map("phone_verified_at") @db.Timestamptz(6)
+  codeDelivery    HotelFormCodeDelivery @map("code_delivery")
+  removedAt       DateTime?             @map("removed_at") @db.Timestamptz(6)
+  removedBy       String?               @map("removed_by") @db.Uuid
+  lastSeenAt      DateTime?             @map("last_seen_at") @db.Timestamptz(6)
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  request    HotelInfoRequest            @relation("HotelInfoRequestPeople", fields: [requestId], references: [id], onDelete: Restrict)
+  challenges HotelInfoRequestChallenge[]
+  consents   HotelInfoRequestConsent[]
+  events     HotelInfoRequestEvent[]
+  submitted  HotelInfoRequest[]          @relation("HotelInfoRequestSubmittedBy")
+
+  @@index([requestId])
+  @@index([removedBy])
+  @@index([deletedAt])
+  @@map("hotel_info_request_people")
+}
+
+/// One code (D-189 §1 and §2): issued on the request's link generation, to a mobile known here only by its
+/// `destination_hash` (HMAC under the address key) and, until the code is entered or the challenge is
+/// retired, by the claim (name, designation, mobile, notice version), which is then cleared (a CHECK).
+/// `code_hmac` binds the code to this challenge under the hotel form's code key (SECRET); `attempts` counts
+/// the tries, at most 5 (a CHECK), each reserved before its code is compared. `used_at` is set when the
+/// code is entered, with `person_id`; a verified challenge carries the session it opens: only its token's
+/// SHA-256 (`session_token_hash`, unique, SECRET), its start, last sight and end. The address and the user
+/// agent are RESTRICTED-CONTACT.
+model HotelInfoRequestChallenge {
+  id                   String                @id @default(uuid(7)) @db.Uuid
+  requestId            String                @map("request_id") @db.Uuid
+  linkGeneration       Int                   @map("link_generation")
+  claimedFullName      String?               @map("claimed_full_name") @db.VarChar(255) // RESTRICTED-CONTACT
+  claimedDesignation   String?               @map("claimed_designation") @db.VarChar(255) // RESTRICTED-CONTACT
+  claimedPhone         String?               @map("claimed_phone") @db.VarChar(32) // RESTRICTED-CONTACT
+  claimedNoticeVersion String?               @map("claimed_notice_version") @db.VarChar(64)
+  delivery             HotelFormCodeDelivery
+  destinationHash      String                @map("destination_hash") @db.VarChar(64) // SECRET
+  codeHmac             String                @map("code_hmac") @db.VarChar(64) // SECRET
+  codeExpiresAt        DateTime              @map("code_expires_at") @db.Timestamptz(6)
+  attempts             Int                   @default(0)
+  usedAt               DateTime?             @map("used_at") @db.Timestamptz(6)
+  retiredAt            DateTime?             @map("retired_at") @db.Timestamptz(6)
+  personId             String?               @map("person_id") @db.Uuid
+  sessionTokenHash     String?               @unique @map("session_token_hash") @db.VarChar(64) // SECRET
+  sessionStartedAt     DateTime?             @map("session_started_at") @db.Timestamptz(6)
+  sessionLastSeenAt    DateTime?             @map("session_last_seen_at") @db.Timestamptz(6)
+  sessionEndedAt       DateTime?             @map("session_ended_at") @db.Timestamptz(6)
+  ipAddress            String?               @map("ip_address") @db.VarChar(64) // RESTRICTED-CONTACT
+  userAgent            String?               @map("user_agent") @db.VarChar(512) // RESTRICTED-CONTACT
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  request HotelInfoRequest        @relation(fields: [requestId], references: [id], onDelete: Restrict)
+  person  HotelInfoRequestPerson? @relation(fields: [personId], references: [id], onDelete: Restrict)
+
+  // The open challenge of a mobile on a request (a new code retires it) and the hour's burned ones.
+  @@index([requestId, destinationHash, createdAt])
+  @@index([personId])
+  @@index([deletedAt])
+  @@map("hotel_info_request_challenges")
+}
+
+/// Consent evidence (D-189 §1), append-only by repository convention: created, then only withdrawn. The
+/// privacy notice's consent is recorded when a person's code is entered, with the notice's `text_version`
+/// and no `revision_hash` (a CHECK); the declarations of a later slice bind to a submitted revision's hash.
+/// `ip_address` is RESTRICTED-CONTACT; a withdrawal sets its time, its source and, for staff, who.
+model HotelInfoRequestConsent {
+  id                String                            @id @default(uuid(7)) @db.Uuid
+  personId          String                            @map("person_id") @db.Uuid
+  kind              HotelInfoRequestConsentKind
+  textVersion       String                            @map("text_version") @db.VarChar(64)
+  granted           Boolean
+  revisionHash      String?                           @map("revision_hash") @db.VarChar(64)
+  recordedAt        DateTime                          @default(now()) @map("recorded_at") @db.Timestamptz(6)
+  ipAddress         String?                           @map("ip_address") @db.VarChar(64) // RESTRICTED-CONTACT
+  withdrawnAt       DateTime?                         @map("withdrawn_at") @db.Timestamptz(6)
+  withdrawalSource  HotelInfoRequestWithdrawalSource? @map("withdrawal_source")
+  withdrawnByUserId String?                           @map("withdrawn_by_user_id") @db.Uuid
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  person HotelInfoRequestPerson @relation(fields: [personId], references: [id], onDelete: Restrict)
+
+  @@index([personId, kind])
+  @@index([withdrawnByUserId])
+  @@index([deletedAt])
+  @@map("hotel_info_request_consents")
 }
 
 // ---------------------------------------------------------------- Module D — Hotel consultancy

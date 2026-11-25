@@ -103,10 +103,18 @@ TABLES["notification_preferences"] = T("User self-service", "Owner user", "Owner
 TABLES["audit_events"] = T(
     "System", "SYS (append-only; never updated or deleted)",
     required=["actor_type", "action", "entity_type", "entity_id", "occurred_at"],
-    before_json=F(validation="valid JSON; restricted and secret fields masked before storage"),
-    after_json=F(validation="valid JSON; restricted and secret fields masked before storage"),
+    before_json=F(validation="valid JSON; restricted and secret fields masked before storage; a hotel-form "
+                             "contributor's image keeps only ids, changed field names and masked values (D-189)"),
+    after_json=F(validation="valid JSON; restricted and secret fields masked before storage; a hotel-form "
+                            "contributor's image keeps only ids, changed field names and masked values (D-189)"),
     project_id=F(validation="references wedding_projects; denormalised", automation="Project-scoped history for PM (a)"),
     occurred_at=F(editor=SYS, required="System"),
+    # D-189 §6: a hotel-form contributor is no users row, so their events say who acted here.
+    actor_ref=F(editor=SYS, required="System, for a hotel-form contributor (actor_type guest_token)",
+                validation="hir:<requestId>/person:<personId>, or hir:<requestId>/challenge:<challengeId> before a "
+                           "person exists; record ids only",
+                automation="Null for staff and the System (CHECK audit_events_actor_ref_guest_only); on every "
+                           "monthly partition, and inherited by each one created later"),
 )
 TABLES["configurations"] = T(
     "Configuration", "SA", required=["config_key", "value_json", "scope"],
@@ -479,7 +487,7 @@ TABLES["hotel_info_requests"] = T(
                       automation="The only address the link and the hotel's later emails go to"),
     prefill_mode=F(editor=SYS, automation="none in version 1: the form shows nothing from the catalogue"),
     revision=F(editor=SYS, required="System", automation="Plus 1 at each submit"),
-    submitted_by_person_id=F(editor=SYS, validation="references hotel_info_request_people (Slice 7b)"),
+    submitted_by_person_id=F(editor=SYS, validation="references hotel_info_request_people (foreign key from Slice 7b)"),
     reviewer_user_id=F(editor="SYS (acting user)", validation="references users",
                        automation="The reviewer holding the claim while in_review"),
     reject_reason=F(visibility="RESTRICTED-NOTES", editor="SA; HT, when rejecting"),
@@ -496,9 +504,117 @@ TABLES["hotel_info_request_events"] = T(
     request_id=F(validation="references hotel_info_requests"),
     actor_user_id=F(required="When actor_kind is staff"),
     actor_person_id=F(editor=SYS, required="When actor_kind is hotel_person",
-                      validation="references hotel_info_request_people (Slice 7b)"),
+                      validation="references hotel_info_request_people (foreign key from Slice 7b)"),
     detail_json=F(validation="valid JSON; personal data masked before storage; never the link's secret"),
     occurred_at=F(editor=SYS, required="System"),
+)
+
+# D-189 (Slice 7b): the hotel form's identity step. A person exists only after a correct code and is never a users
+# row; a challenge holds its claimant's details until the code is entered or it is retired, and carries the session
+# a correct code opens. Retention class hotel_intake, following the request (D-180).
+FORM_PERSON = "The person, inside a form session (PATCH /hotel-form/me)"
+CLAIMANT = "The claimant, at a code request"
+CLAIM_CLEARED = "Cleared when the code is entered or the challenge is retired (CHECK hotel_info_request_challenges_claim_cleared)"
+TABLES["hotel_info_request_people"] = T(
+    "Hotel intake", SYS, "INTERNAL",
+    required=["request_id", "full_name", "designation", "phone", "code_entered_at", "code_delivery"],
+    assumptions="D-189, D-172, D-180",
+    note="created only when a correct code is entered; one live person per request and phone (partial unique index "
+         "hotel_info_request_people_request_phone_live_key, while neither removed nor deleted)",
+    request_id=F(validation="references hotel_info_requests"),
+    full_name=F(editor=FORM_PERSON, visibility="RESTRICTED-CONTACT", validation="string, up to 255 characters",
+                automation="Taken from the claim when a new person's code is entered; a returning person keeps theirs"),
+    designation=F(editor=FORM_PERSON, visibility="RESTRICTED-CONTACT",
+                  validation="one of the core designations, or Other; up to 255 characters"),
+    phone=F(editor=SYS, visibility="RESTRICTED-CONTACT",
+            validation="E.164 format (CHECK hotel_info_request_people_phone_e164)",
+            automation="A returning person is found by request and phone; a new mobile needs a new code"),
+    code_entered_at=F(editor=SYS, required="System", automation="Set by each correct code, the latest kept"),
+    phone_verified_at=F(editor=SYS, required="When an SMS code is entered",
+                        automation="Set only by an SMS code: the review shows Mobile checked by SMS, otherwise Mobile "
+                                   "not checked"),
+    code_delivery=F(editor=SYS, required="System", automation="How the latest correct code reached the person"),
+    removed_at=F(editor="SA; HT", required="When AMPM removes the person",
+                 automation="Ends the person's sessions and frees their place among maxPeople"),
+    removed_by=F(editor="SYS (acting user)", required="With removed_at", validation="references users"),
+    last_seen_at=F(editor=SYS, required="Optional", automation="Written at most once a minute"),
+)
+TABLES["hotel_info_request_challenges"] = T(
+    "Hotel intake", SYS, "INTERNAL",
+    required=["request_id", "link_generation", "delivery", "destination_hash", "code_hmac", "code_expires_at",
+              "attempts"],
+    assumptions="D-189, D-174, D-180",
+    note="one per code; a verified challenge carries the session it opens; never a users row or an auth token",
+    request_id=F(validation="references hotel_info_requests"),
+    link_generation=F(editor=SYS, required="System",
+                      validation="integer, 1 or more: the request's token_generation when the code was issued",
+                      automation="A reissued link ends the challenge and its session; a code SMS names it for the "
+                                 "send gate"),
+    claimed_full_name=F(editor=CLAIMANT, visibility="RESTRICTED-CONTACT", validation="string, up to 255 characters",
+                        automation=CLAIM_CLEARED),
+    claimed_designation=F(editor=CLAIMANT, visibility="RESTRICTED-CONTACT",
+                          validation="one of the core designations, or Other; up to 255 characters",
+                          automation=CLAIM_CLEARED),
+    claimed_phone=F(editor=CLAIMANT, visibility="RESTRICTED-CONTACT",
+                    validation="E.164 format (CHECK hotel_info_request_challenges_claimed_phone_e164)",
+                    automation=CLAIM_CLEARED),
+    claimed_notice_version=F(editor=CLAIMANT, validation="the current privacy notice version (core); a stale one is "
+                                                         "refused with the form was updated",
+                             automation="Recorded on the privacy notice consent when the code is entered; "
+                                        + CLAIM_CLEARED),
+    delivery=F(editor=SYS, required="System",
+               automation="sms exactly while an SMS provider is configured and SMS_HOTEL_FORM_TEMPLATE is set; "
+                          "otherwise the code is shown on screen and no SMS is queued"),
+    destination_hash=F(editor=SYS, visibility="SECRET", required="System",
+                       validation="HMAC-SHA256 of the E.164 mobile under HKDF ampm/hotel-form-address, 64 hex "
+                                  "characters",
+                       automation="Keys the per-mobile limits; after 3 burned challenges for a mobile and request "
+                                  "within an hour, that mobile is locked for an hour"),
+    code_hmac=F(editor=SYS, visibility="SECRET", required="System",
+                validation="HMAC-SHA256 of the code bound to the challenge's id under HKDF ampm/hotel-form-code, 64 "
+                           "hex characters; the code is never stored, logged or returned in SMS mode"),
+    code_expires_at=F(editor=SYS, required="System", validation="5 minutes after issue",
+                      automation="Refused after expiry"),
+    attempts=F(editor=SYS, required="System",
+               validation="integer, 0 to 5 (CHECK hotel_info_request_challenges_attempts_range)",
+               automation="Each try is reserved by an atomic increment while the challenge is unused, unretired, "
+                          "unexpired and under 5"),
+    used_at=F(editor=SYS, required="When the code is entered", automation="Single use: a used code is refused"),
+    retired_at=F(editor=SYS, required="When the challenge is retired",
+                 automation="Set when a newer code for the same request and mobile is issued"),
+    person_id=F(editor=SYS, validation="references hotel_info_request_people; set only when the code is entered "
+                                       "(CHECK hotel_info_request_challenges_person_on_use)"),
+    session_token_hash=F(editor=SYS, visibility="SECRET",
+                         validation="SHA-256 of the form session's token (hfs_ and the base64url of 32 random "
+                                    "bytes); unique; the token itself is never stored",
+                         automation="Only on a challenge that verified a person (CHECK "
+                                    "hotel_info_request_challenges_session_on_verified)"),
+    session_started_at=F(editor=SYS, required="With session_token_hash",
+                         automation="A session ends 12 hours after it starts"),
+    session_last_seen_at=F(editor=SYS, required="Optional",
+                           automation="Written at most once a minute; a session ends after 2 hours idle"),
+    session_ended_at=F(editor=SYS, required="When the session ends",
+                       automation="Set at sign-out, when a person's fourth session ends the oldest, or when the person "
+                                  "is removed"),
+    ip_address=F(editor=SYS, visibility="RESTRICTED-CONTACT", validation="the caller's address"),
+    user_agent=F(editor=SYS, visibility="RESTRICTED-CONTACT", validation="string, up to 512 characters"),
+)
+TABLES["hotel_info_request_consents"] = T(
+    "Hotel intake", SYS, "INTERNAL", required=["person_id", "kind", "text_version", "granted", "recorded_at"],
+    assumptions="D-189, D-180",
+    note="append-only by convention: created, then only withdrawn",
+    person_id=F(validation="references hotel_info_request_people"),
+    kind=F(automation="privacy_notice is recorded when a person's code is entered; the submit declarations arrive "
+                      "with submit"),
+    text_version=F(validation="the version of the text consented to (core constants), up to 64 characters"),
+    revision_hash=F(editor=SYS, validation="SHA-256 of the submitted revision a declaration binds to; null for the "
+                                           "privacy notice (CHECK hotel_info_request_consents_notice_has_no_revision)"),
+    recorded_at=F(editor=SYS, required="System"),
+    ip_address=F(editor=SYS, visibility="RESTRICTED-CONTACT", validation="the caller's address"),
+    withdrawn_at=F(editor="The person, inside a form session; SA", required="When the consent is withdrawn",
+                   automation="Withdrawing is as easy as consenting; a Super Admin review follows"),
+    withdrawal_source=F(editor=SYS, required="With withdrawn_at"),
+    withdrawn_by_user_id=F(editor="SYS (acting user)", validation="references users; set for a staff withdrawal"),
 )
 
 # ---------------------------------------------------------------- Module D — hotel consultancy
