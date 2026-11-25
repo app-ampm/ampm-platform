@@ -93,6 +93,14 @@ describe("a refused call", () => {
       expect(refusalOf(new AppError("conflict", message))).toEqual({ kind: "message", message });
   });
 
+  it("words a failure the API never worded (a proxy's own page) for a person, not its bare status", () => {
+    for (const status of [403, 404, 429])
+      expect(refusalOf(new AppError("validation_failed", `Request failed (${status})`))).toEqual({
+        kind: "message",
+        message: HOTEL_FORM_COPY.errors.unexpected,
+      });
+  });
+
   it("words a lost connection and a failure of the API for a person, never as raw text", () => {
     expect(refusalOf(errors.network())).toEqual({
       kind: "message",

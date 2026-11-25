@@ -3,7 +3,7 @@
  * hand-write fetch calls.
  */
 
-export { createApiClient, retryAfterSecondsOf } from "./client";
+export { createApiClient, isUnwordedFailure, retryAfterSecondsOf } from "./client";
 export type { ApiClient, ApiClientOptions, RequestOptions } from "./client";
 export { ApiProvider, createQueryClient, useApiClient } from "./provider";
 export type { ApiProviderProps } from "./provider";

@@ -1,3 +1,4 @@
+import { isUnwordedFailure } from "@ampm/api-client";
 import {
   HOTEL_FORM_ERRORS,
   errors,
@@ -13,7 +14,7 @@ import { HOTEL_FORM_COPY as COPY } from "./hotel-form-copy";
  * What the page does when a route of the form refuses (D-189 §3 to §5). The API words every refusal of
  * the form for the person (HOTEL_FORM_ERRORS and the session messages), so the page shows those words as
  * they come; only a failure with nothing to say (a lost connection, a crash, a limiter's bare "Too many
- * requests") is worded by the page, never shown raw.
+ * requests", a proxy's own page the API never worded) is worded by the page, never shown raw.
  */
 
 /** The page's answer to a refusal. */
@@ -110,7 +111,8 @@ function linkRefusalOf(error: AppError): Refusal | null {
  * if (refusal.kind === "new_code") askForNewCode(refusal.message);
  */
 export function refusalOf(error: unknown): Refusal {
-  if (!isAppError(error)) return { kind: "message", message: COPY.errors.unexpected };
+  if (!isAppError(error) || isUnwordedFailure(error))
+    return { kind: "message", message: COPY.errors.unexpected };
   const linkRefusal = linkRefusalOf(error);
   if (linkRefusal !== null) return linkRefusal;
   if (error.code === "network_error") return { kind: "message", message: COPY.errors.network };

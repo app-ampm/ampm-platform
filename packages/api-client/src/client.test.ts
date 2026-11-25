@@ -1,7 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
-import { createApiClient, retryAfterSecondsOf } from "./client";
+import { isAppError } from "@ampm/core";
+
+import { createApiClient, isUnwordedFailure, retryAfterSecondsOf } from "./client";
 
 const schema = z.object({ ok: z.boolean() });
 
@@ -116,6 +118,25 @@ describe("createApiClient", () => {
     const error: unknown = await api.get("/x", schema).catch((caught: unknown) => caught);
     expect(error).toMatchObject({ code: "rate_limited" });
     expect(error).toHaveProperty("retryAfterSeconds", undefined);
+  });
+
+  it("marks a failure the API never worded (a proxy's own page), so a page can word it itself", async () => {
+    const proxyPage: typeof fetch = async () =>
+      new Response("<html><body><h1>403 Forbidden</h1></body></html>", {
+        status: 403,
+        headers: { "content-type": "text/html" },
+      });
+    const api = createApiClient({ baseUrl: "http://api.test", fetch: proxyPage });
+    const error: unknown = await api
+      .get("/hotel-form/open", schema)
+      .catch((caught: unknown) => caught);
+    expect(isAppError(error) && isUnwordedFailure(error)).toBe(true);
+    const worded = createApiClient({
+      baseUrl: "http://api.test",
+      fetch: fakeFetch(403, { error: { code: "forbidden", message: "You cannot do that" } }),
+    });
+    const refused: unknown = await worded.get("/x", schema).catch((caught: unknown) => caught);
+    expect(isAppError(refused) && isUnwordedFailure(refused)).toBe(false);
   });
 
   it("reports a network failure as network_error", async () => {

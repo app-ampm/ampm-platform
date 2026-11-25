@@ -71,6 +71,22 @@ export interface ApiClient {
 
 const DELAY_SECONDS = /^\d+$/;
 
+/** The words of a failure whose answer had no envelope to read: the client can only name the status. */
+const unwordedFailureMessage = (status: number): string => `Request failed (${status})`;
+const UNWORDED_FAILURE = /^Request failed \(\d{3}\)$/;
+
+/**
+ * Whether a failure is one the API never worded: its answer had no envelope to read (a proxy's or a
+ * gateway's own page, such as Plesk's HTML 403), so the error carries only the status, never words for a
+ * person. A page words such a failure itself.
+ *
+ * @example
+ * if (isUnwordedFailure(error)) showNotice(COPY.errors.unexpected);
+ */
+export function isUnwordedFailure(error: { readonly message: string }): boolean {
+  return UNWORDED_FAILURE.test(error.message);
+}
+
 /**
  * A `Retry-After` header as whole seconds from `now` (RFC 9110 §10.2.3): delay-seconds as they stand, an
  * HTTP date as the seconds until it (0 once it is past), either cut to a day (`MAX_RETRY_AFTER_SECONDS`) so
@@ -131,7 +147,7 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
         failure?.code ?? (response.status >= 500 ? "internal" : "validation_failed");
       throw new AppError(
         code,
-        failure?.message ?? `Request failed (${response.status})`,
+        failure?.message ?? unwordedFailureMessage(response.status),
         failure?.details,
         undefined,
         retryAfterSecondsOf(response.headers.get("retry-after")),
