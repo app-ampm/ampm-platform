@@ -37,15 +37,20 @@ const wire = vi.hoisted(() => ({
   headers: {} as Record<string, string>,
 }));
 
+/** What a hook handed to useMutation, as these tests call it: its call and the callbacks it set. */
+interface MutationSeen {
+  readonly mutationFn: (variables: unknown) => Promise<unknown>;
+  readonly onSuccess?: (data: unknown) => unknown;
+  readonly onSettled?: () => unknown;
+}
+
 /** The options each hook handed to React Query, and the cache they write to. */
-const hooks = vi.hoisted(() => ({
-  options: [] as { mutationFn: (variables: never) => Promise<unknown>; onSuccess?: unknown }[],
-}));
+const hooks = vi.hoisted(() => ({ options: [] as MutationSeen[] }));
 const cache = new QueryClient();
 
 vi.mock("@tanstack/react-query", async (importOriginal) => ({
   ...(await importOriginal<typeof ReactQuery>()),
-  useMutation: (options: (typeof hooks.options)[number]) => {
+  useMutation: (options: MutationSeen) => {
     hooks.options.push(options);
     return options;
   },
@@ -239,9 +244,9 @@ describe("the hooks", () => {
       token: "hfl_secret",
       challengeId: CHALLENGE,
       oneTimeCode: "482917",
-    } as never);
+    });
     expect(verified).toMatchObject({ sessionToken: SESSION });
-    (verify?.onSuccess as (data: unknown) => void)(verified);
+    verify?.onSuccess?.(verified);
     expect(cache.getQueryData(HOTEL_FORM_ME_QUERY_KEY)).toEqual(ME);
   });
 
@@ -250,10 +255,10 @@ describe("the hooks", () => {
     useSignOutOfHotelForm();
     const [update, signOut] = hooks.options;
     const changed = { ...ME, person: { ...ME.person, designation: "Director of Sales" } };
-    (update?.onSuccess as (data: unknown) => void)(changed);
+    update?.onSuccess?.(changed);
     expect(cache.getQueryData(HOTEL_FORM_ME_QUERY_KEY)).toEqual(changed);
-    const settled = (signOut as unknown as { onSettled: () => void }).onSettled;
-    settled();
+    expect(signOut?.onSettled).toBeTypeOf("function");
+    signOut?.onSettled?.();
     expect(cache.getQueryData(HOTEL_FORM_ME_QUERY_KEY)).toBeUndefined();
   });
 });

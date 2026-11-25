@@ -26,13 +26,37 @@ import {
 const LINK_KEY = "ampm.hotel-form.link";
 const SESSION_KEY = "ampm.hotel-form.session";
 
-/** Every request the page sent to the API, with its body. */
-function apiRequests(page: Page): Request[] {
+/** Every request the page sent, to any host (the API, the site itself, Turnstile), with its body. */
+function everyRequest(page: Page): Request[] {
   const seen: Request[] = [];
-  page.on("request", (request) => {
-    if (request.url().startsWith(API_URL)) seen.push(request);
-  });
+  page.on("request", (request) => seen.push(request));
   return seen;
+}
+
+/** The form's routes that take the link's secret, in a POST body. */
+const SECRET_ROUTES = ["open", "codes", "codes/verify"].map(
+  (route) => `${API_URL}/hotel-form/${route}`,
+);
+
+/**
+ * Checks no request sent the secret anywhere but in a POST body to the form's routes: not in an address
+ * (the fragment, which never leaves the browser, aside), not in a header (a Referer, Next's router state),
+ * and not to another host; and that the page sent no referrer at all.
+ */
+async function expectSecretKept(requests: readonly Request[], secret: string): Promise<void> {
+  expect(requests.length).toBeGreaterThan(0);
+  for (const request of requests) {
+    const address = new URL(request.url());
+    address.hash = "";
+    expect(address.href).not.toContain(secret);
+    const headers = await request.allHeaders();
+    expect(headers["referer"], request.url()).toBeUndefined();
+    expect(Object.values(headers).join("\n")).not.toContain(secret);
+    if ((request.postData() ?? "").includes(secret)) {
+      expect(request.method()).toBe("POST");
+      expect(SECRET_ROUTES).toContain(address.href);
+    }
+  }
 }
 
 function sessionStorageValue(page: Page, key: string): Promise<string | null> {
@@ -65,7 +89,7 @@ test("HF-01 to HF-03: the link opens the welcome, the details ask for a code, th
   page,
   formLink,
 }) => {
-  const sent = apiRequests(page);
+  const sent = everyRequest(page);
   await page.goto(formLink.url);
 
   // The secret leaves the address bar at once and stays with the tab.
@@ -117,15 +141,10 @@ test("HF-01 to HF-03: the link opens the welcome, the details ask for a code, th
   expect(await sessionStorageValue(page, SESSION_KEY)).toMatch(/^hfs_[\w-]{43}$/);
   await expectAccessible(page);
 
-  // The bot check ran for hf_code; the secret went in POST bodies only, never in an address or a
-  // Referer, and the page sent no referrer at all.
+  // The bot check ran for hf_code, and the secret went only where it should, to any host.
   expect(await turnstileActions(page)).toContain("hf_code");
-  expect(sent.length).toBeGreaterThan(0);
-  for (const request of sent) {
-    expect(request.url()).not.toContain(formLink.secret);
-    expect(await request.headerValue("referer")).toBeNull();
-    if ((request.postData() ?? "").includes(formLink.secret)) expect(request.method()).toBe("POST");
-  }
+  await expectSecretKept(sent, formLink.secret);
+  expect(await page.evaluate(() => window.location.hash)).toBe("");
 });
 
 test("a reload keeps the tab signed in, and Sign out returns to the welcome", async ({
