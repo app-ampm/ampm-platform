@@ -68,6 +68,12 @@ const REDACTED_KEYS: ReadonlySet<string> = new Set([
   "designation",
   "useragent",
   "originalname",
+  // Slice 7b (D-189 §1 and §7): a code shown on screen (client sign-in's `screenCode`), and what a
+  // hotel-form code challenge holds of its claimant until the code is entered.
+  "screencode",
+  "claimedfullname",
+  "claimeddesignation",
+  "claimedphone",
 ]);
 
 const normaliseKey = (key: string): string => key.toLowerCase().replace(/[^a-z0-9]/g, "");

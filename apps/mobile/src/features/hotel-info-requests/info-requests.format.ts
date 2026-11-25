@@ -192,6 +192,9 @@ const FIELD_NAME: Record<string, string> = {
   staffNote: "note",
   recipientName: "recipient name",
   recipientEmail: "recipient email",
+  // A hotel person's own details (D-189 §4, `person_updated`).
+  fullName: "name",
+  designation: "designation",
 };
 
 /** "a", "a and b", "a, b and c". */
@@ -232,6 +235,27 @@ function eventWhat(event: HotelInfoRequestEventView): string {
       return textOf(detail, "cause") === "hotel_deleted"
         ? "Revoked: the hotel was deleted"
         : "Revoked";
+    default:
+      return personEventWhat(event);
+  }
+}
+
+/** What a hotel person's event did (D-189 §6): the details name no one, so neither does the line. */
+function personEventWhat(event: HotelInfoRequestEventView): string {
+  const { detail } = event;
+  switch (event.eventType) {
+    case "code_requested":
+      return textOf(detail, "delivery") === "sms"
+        ? "Code requested (sent by SMS)"
+        : "Code requested (shown on screen)";
+    case "person_verified":
+      return detail?.["returning"] === true ? "A person signed in again" : "A new person joined";
+    case "person_updated": {
+      const fields = Array.isArray(detail?.["fields"]) ? detail["fields"] : [];
+      return `A person changed their ${listInWords(fields.map((field) => FIELD_NAME[field] ?? field))}`;
+    }
+    default:
+      return "Request changed";
   }
 }
 

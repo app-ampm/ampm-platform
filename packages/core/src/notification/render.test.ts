@@ -172,3 +172,26 @@ describe("hotel form template baseline (D-188 §5)", () => {
     expect(new Set(names)).toEqual(new Set(Object.keys(vars)));
   });
 });
+
+describe("hotel form code baseline (D-174, D-189 §2)", () => {
+  const template = CONFIG_REGISTRY["notification.templates"].default["hotel_form.code"];
+
+  it("hotel_form.code is an SMS only, worded as D-174's DLT template with the code first", () => {
+    if (!template?.sms) throw new Error("missing baseline hotel_form.code sms");
+    expect(template.email).toBeUndefined();
+    const out = renderTemplate(template, "sms", { code: "048213" });
+    expect(out.missing).toEqual([]);
+    if (out.content?.kind !== "sms") throw new Error("expected sms content");
+    // DLT registers the text with {#var#} where the code goes; the two must stay word for word equal.
+    expect(template.sms.text.replace("{{code}}", "{#var#}")).toBe(
+      "{#var#} is your AMPM verification code for the hotel information form. It is valid for 5 minutes. Do not share it. -AMPM",
+    );
+    expect(out.content.text.startsWith("048213 is your AMPM verification code")).toBe(true);
+  });
+
+  it("hotel_form.code takes the code and nothing else, so no text a hotel typed fits", () => {
+    const text = template?.sms?.text ?? "";
+    const names = [...text.matchAll(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g)].map((match) => match[1]);
+    expect(names).toEqual(["code"]);
+  });
+});

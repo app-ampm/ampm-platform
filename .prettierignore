@@ -5,6 +5,9 @@ dist
 .expo
 .turbo
 coverage
+# Playwright's output (apps/web/e2e): traces and the last run, never committed.
+test-results
+playwright-report
 pnpm-lock.yaml
 docs
 vault

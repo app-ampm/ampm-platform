@@ -4,8 +4,8 @@ import { describe, expect, it } from "vitest";
 import PrivacyPage, {
   dynamic as privacyDynamic,
   metadata as privacyMeta,
-} from "@/app/privacy/page";
-import TermsPage, { dynamic as termsDynamic, metadata as termsMeta } from "@/app/terms/page";
+} from "@/app/(site)/privacy/page";
+import TermsPage, { dynamic as termsDynamic, metadata as termsMeta } from "@/app/(site)/terms/page";
 
 /** Where the privacy and terms links land until AMPM publishes the documents. */
 describe("legal placeholder pages", () => {

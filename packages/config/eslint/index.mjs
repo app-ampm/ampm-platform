@@ -1,6 +1,6 @@
 // AMPM's ESLint flat config (docs/engineering/standards.md §2.2, .claude/rules/code.md). The root
-// eslint.config.mjs re-exports it; every workspace's `lint` script runs `eslint .`, and the two apps
-// and packages/ui then run the Tailwind class audit (../tailwind/class-audit.mjs).
+// eslint.config.mjs re-exports it; every workspace's `lint` script runs `eslint .`, and the two apps,
+// packages/ui and packages/web-forms then run the Tailwind class audit (../tailwind/class-audit.mjs).
 import js from "@eslint/js";
 import { defineConfig, globalIgnores } from "eslint/config";
 import prettier from "eslint-config-prettier";
@@ -105,10 +105,12 @@ export const ampm = defineConfig([
     rules: { "@typescript-eslint/no-require-imports": "off" },
   },
   {
-    // Default exports where the framework demands them: Expo Router and Next.js route files, config files.
+    // Default exports where the framework demands them: Expo Router and Next.js route files, config files,
+    // and Playwright's global setup and teardown.
     files: [
       "apps/web/src/app/**/*.{ts,tsx}",
       "apps/mobile/src/app/**/*.{ts,tsx}",
+      "apps/web/e2e/global-{setup,teardown}.ts",
       "**/*.config.{js,cjs,mjs,ts}",
       "**/*.config.*.{js,cjs,mjs,ts}",
     ],

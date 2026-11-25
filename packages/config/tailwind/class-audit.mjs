@@ -6,10 +6,10 @@
  * (`bg-brand/15`), a retired token (`shadow-sm`) or an arbitrary value simply renders nothing. This
  * audit makes that a lint error (.claude/rules/styling.md: theme values come only from the tokens):
  * the `lint` scripts of apps/mobile and packages/ui run it in native mode on their own `src`, and
- * apps/web's in web mode.
+ * apps/web's and packages/web-forms' (the site's fields, D-175) in web mode.
  *
  *   node class-audit.mjs native src ../../packages/ui/src   # Expo app and packages/ui
- *   node class-audit.mjs web src                            # the Next.js site
+ *   node class-audit.mjs web src                            # the Next.js site and packages/web-forms
  *
  * It reads the class strings with the TypeScript parser: `className` and `*ClassName` props, the
  * arguments of `cn`, `variants`, `cva`, `clsx` and `twMerge`, and every string in a `*.styles.ts`

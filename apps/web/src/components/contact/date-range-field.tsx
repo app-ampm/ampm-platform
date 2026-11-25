@@ -1,6 +1,5 @@
 import { cn, fieldLabelStyles, fieldStyles, fieldTextStyles, textStyles } from "@ampm/ui/styles";
-
-import { FieldMessage, fieldAria } from "./field-message";
+import { FieldMessage, fieldAria } from "@ampm/web-forms";
 
 /** One end of the range: its own input, spoken name and error. */
 export interface DateBound {

@@ -1,0 +1,105 @@
+/*
+ * Cloudflare Turnstile, the site's bot check (the enquiry form, PUB-06, D-145; the hotel form's code
+ * request, D-189 §3; security.md: "a bot check on public forms"). A hand-written loader and the slice of Turnstile's explicit-render API the form
+ * calls, in place of a wrapper package (code.md: no dependency without asking). The script comes
+ * straight from Cloudflare, which requires its exact URL (no proxy, no copy), and only on the page that
+ * draws the widget; the CSP admits its origin (middleware.ts). The API checks each token with Cloudflare.
+ */
+
+/** Turnstile's origin: its script, and the iframe its challenge runs in. */
+export const TURNSTILE_ORIGIN = "https://challenges.cloudflare.com";
+
+/** Explicit rendering: a widget appears only where `turnstile.render` puts one. */
+export const TURNSTILE_SCRIPT_URL = `${TURNSTILE_ORIGIN}/turnstile/v0/api.js?render=explicit`;
+
+/** The render parameters the form sets, under Turnstile's own names; the rest keep their defaults. */
+export interface TurnstileRenderOptions {
+  readonly sitekey: string;
+  /**
+   * The action the token is issued for, which Cloudflare returns with it and the API checks (the hotel
+   * form's `hf_code`): at most 32 letters, digits, `_` and `-`. Left out, the token names none.
+   */
+  readonly action?: string | undefined;
+  readonly theme: "light" | "dark" | "auto";
+  readonly size: "normal" | "flexible" | "compact";
+  /** False: the token reaches the form through `callback`, never through a hidden input. */
+  readonly "response-field": boolean;
+  readonly callback: (token: string) => void;
+  readonly "expired-callback": () => void;
+  readonly "timeout-callback": () => void;
+  /** Returning true tells Turnstile the error is handled: no exception, no console warning. */
+  readonly "error-callback": (code: string | number) => boolean;
+  readonly "unsupported-callback": () => void;
+}
+
+/** The slice of `window.turnstile` the form calls. */
+export interface TurnstileApi {
+  /** Draws a widget in the container (an element or a selector) and returns its id. */
+  render(
+    container: HTMLElement | string,
+    options: TurnstileRenderOptions,
+  ): string | null | undefined;
+  /** Starts a fresh check, dropping the widget's token. */
+  reset(widgetId: string): void;
+  /** Takes the widget off the page; it calls nothing back afterwards. */
+  remove(widgetId: string): void;
+}
+
+declare global {
+  interface Window {
+    turnstile?: TurnstileApi | undefined;
+  }
+}
+
+let loading: Promise<TurnstileApi> | undefined;
+
+/** How long the script may take: a stalled fetch fires neither `load` nor `error`, so it would never fail. */
+export const TURNSTILE_LOAD_TIMEOUT_MS = 15_000;
+
+/**
+ * Turnstile's API, adding its script to the page the first time. Calls made while it loads share that
+ * script; a failed or timed-out load is forgotten, so the next call (the form's "Try again") fetches
+ * it afresh.
+ *
+ *   const turnstile = await loadTurnstile();
+ *   const widgetId = turnstile.render(container, options);
+ */
+export function loadTurnstile(): Promise<TurnstileApi> {
+  const loaded = window.turnstile;
+  if (loaded) return Promise.resolve(loaded);
+  loading ??= addScript().catch((error: unknown) => {
+    loading = undefined;
+    throw error;
+  });
+  return loading;
+}
+
+/**
+ * Appends Turnstile's script; resolves with its API once it has run, or removes it and rejects when
+ * it fails or takes longer than `TURNSTILE_LOAD_TIMEOUT_MS`.
+ */
+function addScript(): Promise<TurnstileApi> {
+  return new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    // `fail` runs only after `timer` exists: from the timer itself, or from a later load or error.
+    const fail = (reason: string): void => {
+      clearTimeout(timer);
+      script.remove();
+      reject(new Error(reason));
+    };
+    const timer = setTimeout(
+      () => fail("Turnstile's script took too long"),
+      TURNSTILE_LOAD_TIMEOUT_MS,
+    );
+    script.addEventListener("load", () => {
+      clearTimeout(timer);
+      const api = window.turnstile;
+      if (api) resolve(api);
+      else fail("Turnstile's script ran without its API");
+    });
+    script.addEventListener("error", () => fail("Turnstile's script did not load"));
+    script.src = TURNSTILE_SCRIPT_URL;
+    script.async = true;
+    document.head.append(script);
+  });
+}

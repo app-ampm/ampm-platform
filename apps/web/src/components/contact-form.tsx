@@ -6,11 +6,12 @@ import { cardStyles, cn } from "@ampm/ui/styles";
 
 import { env } from "@/env";
 
-import { BotCheckField } from "./contact/bot-check-field";
-import { CHAT_ANCHOR_ID, CONTACT_HEADING_ID } from "./contact/contact-ids";
+import { BotCheckField } from "./bot-check/bot-check-field";
+import { useBotCheck } from "./bot-check/use-bot-check";
+import { BOT_CHECK_ID, CHAT_ANCHOR_ID, CONTACT_HEADING_ID } from "./contact/contact-ids";
 import type { ReceivedRequest } from "./contact/contact-request";
 import { formGridStyles } from "./contact/contact.styles";
-import { useBotCheck } from "./contact/use-bot-check";
+import { ENQUIRY_COPY } from "./contact/enquiry-copy";
 import {
   ConsentFields,
   EMPTY,
@@ -172,7 +173,13 @@ function EnquiryCard({
         <WeddingFields {...groupProps} />
       </div>
       <ConsentFields {...groupProps} />
-      <BotCheckField check={botCheck.check} containerRef={botCheck.ref} onRetry={botCheck.reset} />
+      <BotCheckField
+        id={BOT_CHECK_ID}
+        copy={ENQUIRY_COPY.botCheck}
+        check={botCheck.check}
+        containerRef={botCheck.ref}
+        onRetry={botCheck.reset}
+      />
       <FormActions
         isPending={submit.isPending}
         canSend={botCheck.token !== null}

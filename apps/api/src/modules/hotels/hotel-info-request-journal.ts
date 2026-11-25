@@ -13,9 +13,14 @@ import { HotelInfoRequestsRepository } from "./hotel-info-requests.repository.js
  * update changed, never their values.
  */
 
-/** Who made a change: a member of staff, or the System (a deleted hotel's request). */
+/**
+ * Who made a change: a member of staff, the System (a deleted hotel's request), or a hotel person through
+ * the form (D-189 §6), whose person row a code request does not have yet.
+ */
 export type RequestActor =
-  { readonly kind: "staff"; readonly userId: string } | { readonly kind: "system" };
+  | { readonly kind: "staff"; readonly userId: string }
+  | { readonly kind: "system" }
+  | { readonly kind: "hotel_person"; readonly personId: string | null };
 
 /** The System, as a request event's actor. */
 export const SYSTEM_ACTOR: RequestActor = { kind: "system" };
@@ -61,12 +66,14 @@ export class HotelInfoRequestJournal {
   /** Writes an event inside the change's transaction. */
   async event(event: RequestEvent, tx: Prisma.TransactionClient): Promise<void> {
     const actorUserId = event.actor.kind === "staff" ? event.actor.userId : null;
+    const actorPersonId = event.actor.kind === "hotel_person" ? event.actor.personId : null;
     await this.repo.addEvent(
       {
         requestId: event.requestId,
         eventType: event.eventType,
         actorKind: event.actor.kind,
         actorUserId,
+        actorPersonId,
         ...(event.detail === undefined ? {} : { detail: { ...event.detail } }),
         occurredAt: event.at,
         createdBy: actorUserId,

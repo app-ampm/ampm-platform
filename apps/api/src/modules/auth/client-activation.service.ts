@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common";
 import {
   ACTIVATION_ERRORS,
   errors,
+  maskPhone,
   SIGN_IN_ERRORS,
   type ClientActivationCodeSent,
   type ClientActivationConfirmRequest,
@@ -15,14 +16,6 @@ import { AuditService } from "../../policy/audit.service.js";
 import { ClientCodes } from "./client-codes.service.js";
 import { CredentialsRepository, type CredentialRecord } from "./credentials.repository.js";
 import { CLIENT_TOKEN_TTL, SignInGrants } from "./sign-in-grant.js";
-
-/** "+91 ••••• •3210": enough of the number to recognise it, no more. */
-export function maskPhone(phone: string): string {
-  const indian = /^\+91\d{6}(\d{4})$/.exec(phone);
-  if (indian) return `+91 ••••• •${indian[1]}`;
-  const tail = phone.slice(-4);
-  return `${phone.slice(0, 3)} ${"•".repeat(Math.max(phone.length - 7, 1))}${tail}`;
-}
 
 /**
  * Activating an invited client (D-147): the invitation link sends a one-time code to the mobile AMPM has

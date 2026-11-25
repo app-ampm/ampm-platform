@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import NotFound, { metadata } from "./not-found";
 
-/** Every address without a page lands here, inside the site's frame (the root layout draws it). */
+/** Every address without a page lands here, inside the site's frame, which it draws itself. */
 describe("not-found route", () => {
   it("is titled as the missing page, with its one line as the description", () => {
     expect(metadata.title).toBe("Page not found · AMPM");
@@ -19,9 +19,16 @@ describe("not-found route", () => {
     expect(html).toContain("Page not found");
   });
 
-  it("leads back to the home page (the gold action) and on to the contact page", () => {
+  it("keeps the site's frame: the top bar, the footer and the chat pill", () => {
     const html = renderToStaticMarkup(<NotFound />);
-    const links = [...html.matchAll(/<a [^>]*href="([^"]+)"[^>]*>(.*?)<\/a>/g)].map((m) => [
+    expect(html).toContain("<header");
+    expect(html).toContain("<footer");
+    expect(html).toContain('href="/contact#chat"');
+  });
+
+  it("leads back to the home page (the gold action) and on to the contact page", () => {
+    const main = /<main[^>]*>([\s\S]*)<\/main>/.exec(renderToStaticMarkup(<NotFound />))?.[1] ?? "";
+    const links = [...main.matchAll(/<a [^>]*href="([^"]+)"[^>]*>(.*?)<\/a>/g)].map((m) => [
       m[1],
       m[2]?.replace(/<[^>]+>/g, ""),
     ]);

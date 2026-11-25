@@ -133,7 +133,9 @@ export type HotelFormMode = z.infer<typeof hotelFormMode>;
  * first expiry it may be extended; the days a merged request stays status-only; the people a request may
  * verify; and the reply-to address of hotel-form email and the help contact the form shows (decision 21).
  * The reply-to and the help contact start empty: AMPM's admin mailbox is a real address, which the
- * repository never carries, so a Super Admin sets them.
+ * repository never carries, so a Super Admin sets them. `smsDailyCap` (D-189 §3) is the most hotel-form
+ * codes sent by SMS in a day across every request; it applies in SMS mode only, and when it trips the code
+ * routes answer 503 until the next day.
  *
  * Every field carries a default, its baseline, and a field a later slice adds must carry one too: the
  * seed never rewrites a stored row, so a value stored before a field existed lacks it, and without a
@@ -148,6 +150,7 @@ export const hotelFormPolicy = z.object({
   maxPeople: z.number().int().min(1).max(20).default(10),
   replyTo: z.string().trim().toLowerCase().email().max(255).nullable().default(null),
   helpContact: z.string().trim().min(1).max(300).nullable().default(null),
+  smsDailyCap: z.number().int().min(1).max(10_000).default(300),
 });
 export type HotelFormPolicy = z.infer<typeof hotelFormPolicy>;
 
@@ -256,6 +259,14 @@ export const CONFIG_REGISTRY = {
     "auth.client_otp": {
       sms: {
         text: "{{code}} is your AMPM sign-in code. It expires in 5 minutes. Do not share it with anyone. - AMPM",
+      },
+    },
+    // A hotel information form code (D-174, D-189 §2), sent in SMS mode only, to the mobile its person
+    // gave; its own DLT template (SMS_HOTEL_FORM_TEMPLATE) registers this text with {#var#} in place of
+    // {{code}}. Keep the wording and the registered template equal.
+    "hotel_form.code": {
+      sms: {
+        text: "{{code}} is your AMPM verification code for the hotel information form. It is valid for 5 minutes. Do not share it. -AMPM",
       },
     },
   }),

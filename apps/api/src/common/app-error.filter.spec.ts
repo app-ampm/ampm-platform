@@ -7,13 +7,14 @@ import { AppErrorFilter, answerParserRefusal } from "./app-error.filter.js";
 import type { AppLogger } from "./logger.service.js";
 
 function run(exception: unknown) {
-  const response = { status: vi.fn().mockReturnThis(), json: vi.fn() };
+  const response = { status: vi.fn().mockReturnThis(), json: vi.fn(), setHeader: vi.fn() };
   const host = { switchToHttp: () => ({ getResponse: () => response }) };
   const logger = { info: vi.fn(), error: vi.fn() } as unknown as AppLogger;
   new AppErrorFilter(logger).catch(exception, host as never);
   return {
     status: response.status.mock.calls[0]?.[0],
     body: response.json.mock.calls[0]?.[0],
+    headers: response.setHeader.mock.calls,
     logger,
   };
 }
@@ -28,6 +29,16 @@ describe("AppErrorFilter", () => {
     const { status, body } = run(errors.notFound());
     expect(status).toBe(404);
     expect(body).toEqual({ error: { code: "not_found", message: "Not found" } });
+  });
+
+  it("answers an error's retryAfterSeconds as Retry-After, outside the envelope (D-189 §3)", () => {
+    const limited = run(errors.rateLimited("Too many codes", 27));
+    expect(limited.status).toBe(429);
+    expect(limited.headers).toEqual([["Retry-After", "27"]]);
+    expect(limited.body).toEqual({ error: { code: "rate_limited", message: "Too many codes" } });
+    expect(run(errors.unavailable("Try later", 3600)).headers).toEqual([["Retry-After", "3600"]]);
+    expect(run(errors.rateLimited()).headers).toEqual([]);
+    expect(run(errors.notFound()).headers).toEqual([]);
   });
 
   it("keeps the field paths of an edge validation failure", () => {

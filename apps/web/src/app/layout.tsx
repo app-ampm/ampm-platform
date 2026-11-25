@@ -2,8 +2,6 @@ import type { Metadata, Viewport } from "next";
 
 import { colors } from "@ampm/tokens";
 
-import { ChatPill, MAIN_ID, RouteFooter, SiteHeader, SkipLink } from "@/components/site";
-
 import { fontVariables } from "./fonts";
 import "./globals.css";
 
@@ -28,26 +26,15 @@ export const viewport: Viewport = {
 export const dynamic = "force-dynamic";
 
 /**
- * Peacock Night is dark only: the midnight canvas, pearl text and the next/font variables on <html>.
- * Every page sits in one frame between the glass top bar and the footer (the home page's full one,
- * the compact one elsewhere), with the chat pill floating over it; the frame is `relative` so a page's
- * GlowOrbs light it from the bar to the footer. `scroll-pt-28` keeps in-page links (the home page's
- * selected work, the contact page's chat anchor) clear of the sticky bar.
+ * The document every page shares: Peacock Night is dark only, so the midnight canvas, pearl text and the
+ * next/font variables sit on <html> and <body>. The frame around a page is its section's own layout: the
+ * (site) group's for the marketing pages (the top bar, the footer and the chat pill, SiteFrame), the
+ * hotel form's for /hotel-form (D-189 §8), which has no chat pill and none of the site's navigation.
  */
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${fontVariables} scroll-pt-28`}>
-      <body className="min-h-screen bg-surface font-sans text-primary antialiased">
-        <SkipLink />
-        <div className="relative isolate flex min-h-screen flex-col">
-          <SiteHeader />
-          <main id={MAIN_ID} className="flex flex-1 flex-col">
-            {children}
-          </main>
-          <RouteFooter />
-          <ChatPill />
-        </div>
-      </body>
+      <body className="min-h-screen bg-surface font-sans text-primary antialiased">{children}</body>
     </html>
   );
 }

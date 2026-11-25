@@ -30,6 +30,7 @@ export {
 } from "./hotel-units";
 export type { AreaWrite, HotelAreaPair } from "./hotel-units";
 export { HOTEL_PHONE_REFUSAL, normaliseHotelPhone } from "./hotel-phone";
+export { maskPhone } from "./phone-mask";
 // HotelChangeSet (D-178, D-181): the normalisers, the field compare and the row matching the imports and
 // the form's merge share.
 export {
@@ -60,8 +61,16 @@ export type {
 
 export { formatDay, formatDayRange, formatMoment } from "./dates";
 export type { DateFormatOptions, DateStyle, DayReading } from "./dates";
+export { formatCountdown, secondsLeft, spokenCountdown } from "./countdown";
 
-export { AppError, ERROR_CODES, errors, isApiFailure, isAppError } from "./errors";
+export {
+  AppError,
+  ERROR_CODES,
+  errors,
+  isApiFailure,
+  isAppError,
+  MAX_RETRY_AFTER_SECONDS,
+} from "./errors";
 export type { ApiEnvelope, ApiFailure, ApiSuccess, ErrorCode, ErrorDetail } from "./errors";
 
 export { consoleSink, createLogger, createMemoryLogger, redact } from "./logger";

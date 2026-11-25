@@ -80,6 +80,20 @@ describe("logger", () => {
     expect(redact({ "User-Agent": "Synthetic/1.0" })).toEqual({ "User-Agent": "[redacted]" });
   });
 
+  it("redacts an on-screen code and a code challenge's claim (D-189 §1 and §7) in every spelling", () => {
+    const names = ["screenCode", "claimedFullName", "claimedDesignation", "claimedPhone"];
+    for (const name of names) {
+      const snake = name.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
+      expect(redact({ [name]: "synthetic", [snake]: "synthetic" }), name).toEqual({
+        [name]: "[redacted]",
+        [snake]: "[redacted]",
+      });
+    }
+    // What identifies a challenge, and the error code a refusal is logged with, stay readable.
+    const challenge = { challengeId: "c-1", delivery: "screen", attempts: 2, code: "rate_limited" };
+    expect(redact(challenge)).toEqual(challenge);
+  });
+
   it("masks synthetic request and notification rows, keeping what identifies them", () => {
     const request = {
       id: "0196a0b0-0000-7000-8000-000000000001",

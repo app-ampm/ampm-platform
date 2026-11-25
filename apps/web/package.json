@@ -8,12 +8,14 @@
     "start": "next start",
     "lint": "eslint . && node ../../packages/config/tailwind/class-audit.mjs web src",
     "typecheck": "next typegen && tsc --noEmit",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run --passWithNoTests",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@ampm/api-client": "workspace:*",
     "@ampm/core": "workspace:*",
     "@ampm/ui": "workspace:*",
+    "@ampm/web-forms": "workspace:*",
     "@tanstack/react-query": "catalog:",
     "next": "16.4.6",
     "react": "catalog:",
@@ -22,6 +24,8 @@
   },
   "devDependencies": {
     "@ampm/tokens": "workspace:*",
+    "@axe-core/playwright": "4.14.0",
+    "@playwright/test": "1.65.0",
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "^19",

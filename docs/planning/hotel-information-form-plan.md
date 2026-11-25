@@ -448,7 +448,7 @@ Then:
 - `Cache-Control: no-store`;
 - the enforced CSP, with the API origin added to `img-src` for signed thumbnails.
 
-Link previews show generic text and nothing about the hotel. The site's `.htaccess` sets X-Robots-Tag and Referrer-Policy with `Header always set`, which would send a second value next to the page's own. Switch those two lines to `Header setifempty`, or exclude `/hotel-form`, and check the result by GET.
+Link previews show generic text and nothing about the hotel. The site's `.htaccess` sets X-Robots-Tag and Referrer-Policy with `Header always set`, which would send a second value next to the page's own, and so it does X-Content-Type-Options, X-Frame-Options and Permissions-Policy, which Next sends on every page. Switch those five lines to `Header setifempty` (deploy/site-ampmverse/htaccess.production.example), and check the result by GET.
 
 **Field kit**
 
@@ -1247,7 +1247,7 @@ Fixtures are synthetic only: fictitious hotels, example.com addresses and reserv
 
 **Withdrawal** is as easy as giving consent: a session-gated action on the status page. Withdrawing 7.5 flags the photos shown under it, and staff set them back to internal.
 
-**Retention** follows decision 20; nothing is deleted automatically. A Super Admin tool finds, exports, corrects or masks a contributor. Masking reaches people, consents (with their IP addresses), challenges and the change log. Audit images hold no personal values, so masking is complete.
+**Retention** follows decision 20; nothing is deleted automatically. A Super Admin tool finds, exports, corrects or masks a contributor. Masking reaches people, consents (with their IP addresses), challenges and the change log. Audit images hold no personal values, but masking is not complete: a contributor's `guest_token` audit events still store their IP address (`audit_events.ip_address`), in an append-only table the masking tool cannot reach.
 
 **Language.** The notice is in English, with other languages available on request.
 

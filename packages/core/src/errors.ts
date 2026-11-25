@@ -51,18 +51,47 @@ export function isApiFailure(value: unknown): value is ApiFailure {
   );
 }
 
+/**
+ * The longest wait a refusal names, in seconds: a day, the longest window any limit counts (D-189 §3). A
+ * longer figure, from a fault or from a proxy's header, is cut to it, so a page never counts down longer.
+ */
+export const MAX_RETRY_AFTER_SECONDS = 86_400;
+
+/**
+ * Whole seconds from 0, a fraction rounded up and at most a day; anything else (negative, NaN, infinite)
+ * is none.
+ */
+function wholeSeconds(seconds: number | undefined): number | undefined {
+  return seconds !== undefined && Number.isFinite(seconds) && seconds >= 0
+    ? Math.min(Math.ceil(seconds), MAX_RETRY_AFTER_SECONDS)
+    : undefined;
+}
+
 export class AppError extends Error {
   readonly code: ErrorCode;
   readonly status: number;
   readonly details: readonly ErrorDetail[] | undefined;
+  /**
+   * How long to wait before trying again, in whole seconds and at most {@link MAX_RETRY_AFTER_SECONDS},
+   * when the answer said (D-189 §3): the API answers it as a `Retry-After` header, never in the envelope,
+   * and the api-client reads that header back into this field, so a page can count down.
+   */
+  readonly retryAfterSeconds: number | undefined;
 
-  constructor(code: ErrorCode, message: string, details?: readonly ErrorDetail[], status?: number) {
+  constructor(
+    code: ErrorCode,
+    message: string,
+    details?: readonly ErrorDetail[],
+    status?: number,
+    retryAfterSeconds?: number,
+  ) {
     super(message);
     this.name = "AppError";
     this.code = code;
     // The code decides the status; a framework exception with another 4xx status may keep it.
     this.status = status ?? ERROR_CODES[code];
     this.details = details;
+    this.retryAfterSeconds = wholeSeconds(retryAfterSeconds);
   }
 
   toEnvelope(): ApiFailure {
@@ -88,9 +117,13 @@ export const errors = {
     new AppError("payload_too_large", message),
   unsupportedMediaType: (message = "Unsupported media type") =>
     new AppError("unsupported_media_type", message),
-  rateLimited: (message = "Too many requests") => new AppError("rate_limited", message),
+  /** A 429; with `retryAfterSeconds`, the API also answers `Retry-After` (D-189 §3). */
+  rateLimited: (message = "Too many requests", retryAfterSeconds?: number) =>
+    new AppError("rate_limited", message, undefined, undefined, retryAfterSeconds),
   internal: (message = "Something went wrong") => new AppError("internal", message),
-  unavailable: (message = "Service unavailable") => new AppError("unavailable", message),
+  /** A 503; with `retryAfterSeconds`, the API also answers `Retry-After`. */
+  unavailable: (message = "Service unavailable", retryAfterSeconds?: number) =>
+    new AppError("unavailable", message, undefined, undefined, retryAfterSeconds),
   network: (message = "Could not reach the server") => new AppError("network_error", message),
 } as const;
 

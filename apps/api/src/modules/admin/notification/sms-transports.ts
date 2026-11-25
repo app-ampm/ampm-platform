@@ -27,9 +27,22 @@ export class SmsProviderError extends Error {
   }
 }
 
-/** The provider's registered template for a notification template; only the sign-in code so far. */
-function providerTemplate(templateKey: string, otpTemplate: string): string {
-  if (templateKey === "auth.client_otp") return otpTemplate;
+/** The provider templates a transport holds: the sign-in code's, and the hotel form code's once set. */
+interface ProviderTemplates {
+  readonly otpTemplate: string;
+  readonly hotelFormTemplate?: string | undefined;
+}
+
+/**
+ * The provider's registered template for a notification template: the client sign-in code (D-147) and the
+ * hotel form's code (D-189 §2). Any other, or the hotel form's while SMS_HOTEL_FORM_TEMPLATE is unset, is
+ * refused before the provider is called.
+ */
+function providerTemplate(templateKey: string, templates: ProviderTemplates): string {
+  if (templateKey === "auth.client_otp") return templates.otpTemplate;
+  if (templateKey === "hotel_form.code" && templates.hotelFormTemplate) {
+    return templates.hotelFormTemplate;
+  }
   throw new SmsProviderError("sms_template_not_registered");
 }
 
@@ -60,6 +73,8 @@ export interface TwoFactorConfig {
   readonly senderId: string;
   /** The sign-in code's DLT content-template ID (`ctid`). */
   readonly otpTemplate: string;
+  /** The hotel form code's DLT content-template ID (`ctid`); its codes are refused while it is unset. */
+  readonly hotelFormTemplate?: string | undefined;
   /** The DLT principal-entity ID (`peid`), which spares 2Factor's template sync delay. */
   readonly entityId?: string | undefined;
 }
@@ -78,7 +93,7 @@ export class TwoFactorSmsTransport implements SmsTransport {
   ) {}
 
   async sendSms(message: SmsMessage): Promise<{ providerRef: string }> {
-    const ctid = providerTemplate(message.templateKey, this.config.otpTemplate);
+    const ctid = providerTemplate(message.templateKey, this.config);
     const form = new URLSearchParams({
       module: "TRANS_SMS",
       apikey: this.config.apiKey,
@@ -102,6 +117,8 @@ export interface Msg91Config {
   readonly authKey: string;
   /** MSG91's template ID, mapped in its panel to the DLT template and the sender ID. */
   readonly otpTemplate: string;
+  /** MSG91's template ID for the hotel form's code, mapped the same way; refused while it is unset. */
+  readonly hotelFormTemplate?: string | undefined;
 }
 
 const msg91Success = z.object({ type: z.literal("success"), message: z.string().min(1) });
@@ -118,7 +135,7 @@ export class Msg91SmsTransport implements SmsTransport {
   ) {}
 
   async sendSms(message: SmsMessage): Promise<{ providerRef: string }> {
-    const templateId = providerTemplate(message.templateKey, this.config.otpTemplate);
+    const templateId = providerTemplate(message.templateKey, this.config);
     const response = await post(this.fetchFn, "https://control.msg91.com/api/v5/flow", {
       headers: {
         authkey: this.config.authKey,
@@ -137,22 +154,46 @@ export class Msg91SmsTransport implements SmsTransport {
   }
 }
 
+/** The settings that say whether, and through which provider, SMS is sent. */
+export type SmsProviderEnv = Pick<
+  Env,
+  "SMS_PROVIDER" | "SMS_API_KEY" | "SMS_SENDER_ID" | "SMS_OTP_TEMPLATE"
+>;
+
+/**
+ * Whether an SMS provider is configured with what its transport needs (env.ts refuses a provider without
+ * them, so this is the provider being set): exactly when {@link smsTransportFor} builds a transport, and
+ * never true for the console stub. The hotel form's on-screen mode reads it (D-189 §2).
+ */
+export function smsProviderConfigured(env: SmsProviderEnv): boolean {
+  const { SMS_API_KEY: key, SMS_OTP_TEMPLATE: template } = env;
+  if (env.SMS_PROVIDER === "2factor") return Boolean(key && template && env.SMS_SENDER_ID);
+  if (env.SMS_PROVIDER === "msg91") return Boolean(key && template);
+  return false;
+}
+
 /** The configured provider's transport, or null while SMS goes to the console stub. */
 export function smsTransportFor(env: Env, fetchFn: SmsFetch = fetch): SmsTransport | null {
   const { SMS_API_KEY: key, SMS_OTP_TEMPLATE: template } = env;
-  if (env.SMS_PROVIDER === "2factor" && key && template && env.SMS_SENDER_ID) {
+  if (!smsProviderConfigured(env) || !key || !template) return null;
+  const hotelFormTemplate = env.SMS_HOTEL_FORM_TEMPLATE;
+  if (env.SMS_PROVIDER === "2factor" && env.SMS_SENDER_ID) {
     return new TwoFactorSmsTransport(
       {
         apiKey: key,
         senderId: env.SMS_SENDER_ID,
         otpTemplate: template,
+        hotelFormTemplate,
         entityId: env.SMS_DLT_ENTITY_ID,
       },
       fetchFn,
     );
   }
-  if (env.SMS_PROVIDER === "msg91" && key && template) {
-    return new Msg91SmsTransport({ authKey: key, otpTemplate: template }, fetchFn);
+  if (env.SMS_PROVIDER === "msg91") {
+    return new Msg91SmsTransport(
+      { authKey: key, otpTemplate: template, hotelFormTemplate },
+      fetchFn,
+    );
   }
   return null;
 }

@@ -1,3 +1,4 @@
+import { hotelFormPolicy } from "@ampm/core";
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -147,7 +148,9 @@ describe("Configuration (e2e)", () => {
     const row = await prisma.configuration.findUnique({
       where: { configKey: "hotel_form.policy" },
     });
-    expect(row?.valueJson).toEqual({
+    // The seed never rewrites a stored row, so a database seeded before a field existed lacks it: the row
+    // reads as the baseline all the same, the SMS cap's default included (D-189 §3).
+    const baseline = {
       mode: "off",
       linkValidityDays: 30,
       maxExtensionDays: 60,
@@ -155,10 +158,12 @@ describe("Configuration (e2e)", () => {
       maxPeople: 10,
       replyTo: null,
       helpContact: null,
-    });
+      smsDailyCap: 300,
+    };
+    expect(hotelFormPolicy.parse(row?.valueJson)).toEqual(baseline);
     const token = await mint("local:admin");
     const response = await get(token, "hotel_form.policy").expect(200);
-    expect(response.body.data.value.mode).toBe("off");
+    expect(response.body.data.value).toEqual(baseline);
   });
 
   it("lets Finance read the configuration inventory", async () => {

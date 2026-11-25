@@ -87,7 +87,10 @@ const eventDetailValue = z.union([
  * One entry of a request's history. `detail` is masked and holds no link: `created` has `generation` and
  * `expiresAt`; `link_reissued` and `link_emailed` have `generation`; `share_recorded` has `channel` and
  * maybe `note`; `updated` has `fields` (the names changed, never their values); `expiry_extended` has
- * `from` and `to`; `revoked` has `fromStatus` and `cause` (`staff` or `hotel_deleted`).
+ * `from` and `to`; `revoked` has `fromStatus` and `cause` (`staff` or `hotel_deleted`). A hotel person's
+ * (D-189 §6): `code_requested` has `challengeId` and `delivery` (`sms` or `screen`); `person_verified` has
+ * `challengeId`, `delivery` and `returning`; `person_updated` has `fields`. None holds a name, a mobile or
+ * a code.
  */
 export const hotelInfoRequestEventView = z
   .object({

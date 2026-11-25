@@ -94,12 +94,13 @@ A,notification_preferences,User self-service,enabled,bool,,,true or false,Owner 
 A,audit_events,System,id,uuid,PK,,"UUID v7, generated",SYS,INTERNAL,System,—,
 A,audit_events,System,actor_user_id,uuid,FK,,references users,SYS (acting user),INTERNAL,System,—,
 A,audit_events,System,actor_type,string,,"user, guest_token, system",one of the listed options,SYS (append-only; never updated or deleted),INTERNAL,At creation,—,
+A,audit_events,System,actor_ref,text,,,"hir:<requestId>/person:<personId>, or hir:<requestId>/challenge:<challengeId> before a person exists; record ids only",SYS,INTERNAL,"System, for a hotel-form contributor (actor_type guest_token)","Null for staff and the System (CHECK audit_events_actor_ref_guest_only); on every monthly partition, and inherited by each one created later",
 A,audit_events,System,action,string,,"create, update, delete, approve, share, export, restricted_read",one of the listed options,SYS (append-only; never updated or deleted),INTERNAL,At creation,—,
 A,audit_events,System,entity_type,string,,,"string, up to 255 characters",SYS (append-only; never updated or deleted),INTERNAL,At creation,—,
 A,audit_events,System,entity_id,uuid,,,UUID,SYS (append-only; never updated or deleted),INTERNAL,At creation,—,
 A,audit_events,System,project_id,uuid,,,references wedding_projects; denormalised,SYS (append-only; never updated or deleted),INTERNAL,Optional,Project-scoped history for PM (a),
-A,audit_events,System,before_json,json,,,valid JSON; restricted and secret fields masked before storage,SYS (append-only; never updated or deleted),INTERNAL,Optional,—,
-A,audit_events,System,after_json,json,,,valid JSON; restricted and secret fields masked before storage,SYS (append-only; never updated or deleted),INTERNAL,Optional,—,
+A,audit_events,System,before_json,json,,,"valid JSON; restricted and secret fields masked before storage; a hotel-form contributor's image keeps only ids, changed field names and masked values (D-189)",SYS (append-only; never updated or deleted),INTERNAL,Optional,—,
+A,audit_events,System,after_json,json,,,"valid JSON; restricted and secret fields masked before storage; a hotel-form contributor's image keeps only ids, changed field names and masked values (D-189)",SYS (append-only; never updated or deleted),INTERNAL,Optional,—,
 A,audit_events,System,ip_address,string,,,"string, up to 255 characters",SYS (append-only; never updated or deleted),INTERNAL,Optional,—,
 A,audit_events,System,occurred_at,datetime,,,timestamp (UTC),SYS,INTERNAL,System,—,
 A,configurations,Configuration,id,uuid,PK,,"UUID v7, generated",SYS,INTERNAL,System,—,
@@ -441,7 +442,7 @@ C,hotel_info_requests,Hotel intake,recipient_email,string,,,"valid email address
 C,hotel_info_requests,Hotel intake,prefill_mode,string,,none,one of the listed options,SYS,INTERNAL,Optional,none in version 1: the form shows nothing from the catalogue,"D-188, D-172, D-173"
 C,hotel_info_requests,Hotel intake,revision,int,,,"integer, 0 or more; submitted revisions, from 0",SYS,INTERNAL,System,Plus 1 at each submit,"D-188, D-172, D-173"
 C,hotel_info_requests,Hotel intake,submitted_at,datetime,,,timestamp (UTC),SYS (when the action happens),INTERNAL,System,—,"D-188, D-172, D-173"
-C,hotel_info_requests,Hotel intake,submitted_by_person_id,uuid,,,references hotel_info_request_people (Slice 7b),SYS,INTERNAL,Optional,—,"D-188, D-172, D-173"
+C,hotel_info_requests,Hotel intake,submitted_by_person_id,uuid,FK,,references hotel_info_request_people (foreign key from Slice 7b),SYS,INTERNAL,Optional,—,"D-188, D-172, D-173"
 C,hotel_info_requests,Hotel intake,reviewer_user_id,uuid,FK,,references users,SYS (acting user),INTERNAL,Optional,The reviewer holding the claim while in_review,"D-188, D-172, D-173"
 C,hotel_info_requests,Hotel intake,review_started_at,datetime,,,timestamp (UTC),SYS (when the action happens),INTERNAL,System,—,"D-188, D-172, D-173"
 C,hotel_info_requests,Hotel intake,changes_requested_at,datetime,,,timestamp (UTC),SYS (when the action happens),INTERNAL,System,—,"D-188, D-172, D-173"
@@ -454,12 +455,55 @@ C,hotel_info_requests,Hotel intake,revoke_reason,text,,,"text, up to 10,000 char
 C,hotel_info_requests,Hotel intake,retention_class,string,,,hotel_intake,SYS,INTERNAL,System,Retention candidates are proposed for a Super Admin to approve (A-17),"D-188, D-172, D-173"
 C,hotel_info_request_events,Hotel intake,id,uuid,PK,,"UUID v7, generated",SYS,INTERNAL,System,—,D-188
 C,hotel_info_request_events,Hotel intake,request_id,uuid,FK,,references hotel_info_requests,SYS,INTERNAL,At creation,—,D-188
-C,hotel_info_request_events,Hotel intake,event_type,string,,"created, link_reissued, link_emailed, share_recorded, updated, expiry_extended, revoked",one of the listed options,SYS,INTERNAL,At creation,—,D-188
+C,hotel_info_request_events,Hotel intake,event_type,string,,"created, link_reissued, link_emailed, share_recorded, updated, expiry_extended, revoked, code_requested, person_verified, person_updated",one of the listed options,SYS,INTERNAL,At creation,—,D-188
 C,hotel_info_request_events,Hotel intake,actor_kind,string,,"staff, hotel_person, system",one of the listed options,SYS,INTERNAL,At creation,—,D-188
 C,hotel_info_request_events,Hotel intake,actor_user_id,uuid,FK,,"references users; the staff user, when staff acted",SYS (acting user),INTERNAL,When actor_kind is staff,—,D-188
-C,hotel_info_request_events,Hotel intake,actor_person_id,uuid,,,references hotel_info_request_people (Slice 7b),SYS,INTERNAL,When actor_kind is hotel_person,—,D-188
+C,hotel_info_request_events,Hotel intake,actor_person_id,uuid,FK,,references hotel_info_request_people (foreign key from Slice 7b),SYS,INTERNAL,"When actor_kind is hotel_person, except code_requested (no person yet)",—,D-188
 C,hotel_info_request_events,Hotel intake,detail_json,json,,,valid JSON; personal data masked before storage; never the link's secret,SYS,INTERNAL,Optional,—,D-188
 C,hotel_info_request_events,Hotel intake,occurred_at,datetime,,,timestamp (UTC),SYS,INTERNAL,System,—,D-188
+C,hotel_info_request_people,Hotel intake,id,uuid,PK,,"UUID v7, generated",SYS,INTERNAL,System,—,"D-189, D-172, D-180"
+C,hotel_info_request_people,Hotel intake,request_id,uuid,FK,,references hotel_info_requests,SYS,INTERNAL,At creation,—,"D-189, D-172, D-180"
+C,hotel_info_request_people,Hotel intake,full_name,string,,,"string, up to 255 characters","The person, inside a form session (PATCH /hotel-form/me)",RESTRICTED-CONTACT,At creation,Taken from the claim when a new person's code is entered; a returning person keeps theirs,"D-189, D-172, D-180"
+C,hotel_info_request_people,Hotel intake,designation,string,,,"one of the core designations, or Other; up to 255 characters","The person, inside a form session (PATCH /hotel-form/me)",RESTRICTED-CONTACT,At creation,—,"D-189, D-172, D-180"
+C,hotel_info_request_people,Hotel intake,phone,string,,,E.164 format (CHECK hotel_info_request_people_phone_e164),SYS,RESTRICTED-CONTACT,At creation,A returning person is found by request and phone; a new mobile needs a new code,"D-189, D-172, D-180"
+C,hotel_info_request_people,Hotel intake,code_entered_at,datetime,,,timestamp (UTC); the latest correct code; a row exists only after one,SYS,INTERNAL,System,"Set by each correct code, the latest kept","D-189, D-172, D-180"
+C,hotel_info_request_people,Hotel intake,phone_verified_at,datetime,,,timestamp (UTC); set only by an SMS code,SYS,INTERNAL,When an SMS code is entered,"Set only by an SMS code: the review shows Mobile checked by SMS, otherwise Mobile not checked","D-189, D-172, D-180"
+C,hotel_info_request_people,Hotel intake,code_delivery,string,,"sms, screen",one of the listed options; how the latest correct code was delivered,SYS,INTERNAL,System,How the latest correct code reached the person,"D-189, D-172, D-180"
+C,hotel_info_request_people,Hotel intake,removed_at,datetime,,,timestamp (UTC); AMPM removed the person: their sessions end and their place is freed,SA; HT,INTERNAL,When AMPM removes the person,Ends the person's sessions and frees their place among maxPeople,"D-189, D-172, D-180"
+C,hotel_info_request_people,Hotel intake,removed_by,uuid,,,references users,SYS (acting user),INTERNAL,With removed_at,—,"D-189, D-172, D-180"
+C,hotel_info_request_people,Hotel intake,last_seen_at,datetime,,,timestamp (UTC),SYS,INTERNAL,Optional,Written at most once a minute,"D-189, D-172, D-180"
+C,hotel_info_request_challenges,Hotel intake,id,uuid,PK,,"UUID v7, generated",SYS,INTERNAL,System,—,"D-189, D-174, D-180"
+C,hotel_info_request_challenges,Hotel intake,request_id,uuid,FK,,references hotel_info_requests,SYS,INTERNAL,At creation,—,"D-189, D-174, D-180"
+C,hotel_info_request_challenges,Hotel intake,link_generation,int,,,"integer, 1 or more: the request's token_generation when the code was issued",SYS,INTERNAL,System,A reissued link ends the challenge and its session; a code SMS names it for the send gate,"D-189, D-174, D-180"
+C,hotel_info_request_challenges,Hotel intake,claimed_full_name,string,,,"string, up to 255 characters","The claimant, at a code request",RESTRICTED-CONTACT,Optional,Cleared when the code is entered or the challenge is retired (CHECK hotel_info_request_challenges_claim_cleared),"D-189, D-174, D-180"
+C,hotel_info_request_challenges,Hotel intake,claimed_designation,string,,,"one of the core designations, or Other; up to 255 characters","The claimant, at a code request",RESTRICTED-CONTACT,Optional,Cleared when the code is entered or the challenge is retired (CHECK hotel_info_request_challenges_claim_cleared),"D-189, D-174, D-180"
+C,hotel_info_request_challenges,Hotel intake,claimed_phone,string,,,E.164 format (CHECK hotel_info_request_challenges_claimed_phone_e164),"The claimant, at a code request",RESTRICTED-CONTACT,Optional,Cleared when the code is entered or the challenge is retired (CHECK hotel_info_request_challenges_claim_cleared),"D-189, D-174, D-180"
+C,hotel_info_request_challenges,Hotel intake,claimed_notice_version,string,,,the current privacy notice version (core); a stale one is refused with the form was updated,"The claimant, at a code request",INTERNAL,Optional,Recorded on the privacy notice consent when the code is entered; Cleared when the code is entered or the challenge is retired (CHECK hotel_info_request_challenges_claim_cleared),"D-189, D-174, D-180"
+C,hotel_info_request_challenges,Hotel intake,delivery,string,,"sms, screen",one of the listed options,SYS,INTERNAL,System,sms exactly while an SMS provider is configured and SMS_HOTEL_FORM_TEMPLATE is set; otherwise the code is shown on screen and no SMS is queued,"D-189, D-174, D-180"
+C,hotel_info_request_challenges,Hotel intake,destination_hash,string,,,"HMAC-SHA256 of the E.164 mobile under HKDF ampm/hotel-form-address, 64 hex characters",SYS,SECRET,System,"Keys the per-mobile limits; after 3 burned challenges for a mobile and request within an hour, that mobile is locked for an hour","D-189, D-174, D-180"
+C,hotel_info_request_challenges,Hotel intake,code_hmac,string,,,"HMAC-SHA256 of the code bound to the challenge's id under HKDF ampm/hotel-form-code, 64 hex characters; the code is never logged, is returned only in on-screen mode, and is stored nowhere else, except that in SMS mode its queued SMS notification holds it in its render data until the SMS is sent or fails, when that data is cleared, as for a client sign-in code (D-044)",SYS,SECRET,System,—,"D-189, D-174, D-180"
+C,hotel_info_request_challenges,Hotel intake,code_expires_at,datetime,,,5 minutes after issue,SYS,INTERNAL,System,Refused after expiry,"D-189, D-174, D-180"
+C,hotel_info_request_challenges,Hotel intake,attempts,int,,,"integer, 0 to 5 (CHECK hotel_info_request_challenges_attempts_range)",SYS,INTERNAL,System,"Each try is reserved by an atomic increment while the challenge is unused, unretired, unexpired and under 5","D-189, D-174, D-180"
+C,hotel_info_request_challenges,Hotel intake,used_at,datetime,,,timestamp (UTC); the code was entered,SYS,INTERNAL,When the code is entered,Single use: a used code is refused,"D-189, D-174, D-180"
+C,hotel_info_request_challenges,Hotel intake,retired_at,datetime,,,"timestamp (UTC); set when the challenge is retired, as when a newer code for the same request and mobile is issued",SYS,INTERNAL,When the challenge is retired,Set when a newer code for the same request and mobile is issued,"D-189, D-174, D-180"
+C,hotel_info_request_challenges,Hotel intake,person_id,uuid,FK,,references hotel_info_request_people; set only when the code is entered (CHECK hotel_info_request_challenges_person_on_use),SYS,INTERNAL,Optional,—,"D-189, D-174, D-180"
+C,hotel_info_request_challenges,Hotel intake,session_token_hash,string,UK,,SHA-256 of the form session's token (hfs_ and the base64url of 32 random bytes); unique; the token itself is never stored,SYS,SECRET,Optional,Only on a challenge that verified a person (CHECK hotel_info_request_challenges_session_on_verified),"D-189, D-174, D-180"
+C,hotel_info_request_challenges,Hotel intake,session_started_at,datetime,,,timestamp (UTC),SYS,INTERNAL,With session_token_hash,A session ends 12 hours after it starts,"D-189, D-174, D-180"
+C,hotel_info_request_challenges,Hotel intake,session_last_seen_at,datetime,,,timestamp (UTC); written at most once a minute,SYS,INTERNAL,Optional,Written at most once a minute; a session ends after 2 hours idle,"D-189, D-174, D-180"
+C,hotel_info_request_challenges,Hotel intake,session_ended_at,datetime,,,"timestamp (UTC); sign-out, a fourth session, or a removal",SYS,INTERNAL,When the session ends,"Set at sign-out, when a person's fourth session ends the oldest, or when the person is removed","D-189, D-174, D-180"
+C,hotel_info_request_challenges,Hotel intake,ip_address,string,,,the caller's address,SYS,RESTRICTED-CONTACT,Optional,—,"D-189, D-174, D-180"
+C,hotel_info_request_challenges,Hotel intake,user_agent,string,,,"string, up to 512 characters",SYS,RESTRICTED-CONTACT,Optional,—,"D-189, D-174, D-180"
+C,hotel_info_request_consents,Hotel intake,id,uuid,PK,,"UUID v7, generated",SYS,INTERNAL,System,—,"D-189, D-180"
+C,hotel_info_request_consents,Hotel intake,person_id,uuid,FK,,references hotel_info_request_people,SYS,INTERNAL,At creation,—,"D-189, D-180"
+C,hotel_info_request_consents,Hotel intake,kind,string,,privacy_notice,one of the listed options; (the submit declarations arrive with submit),SYS,INTERNAL,At creation,privacy_notice is recorded when a person's code is entered; the submit declarations arrive with submit,"D-189, D-180"
+C,hotel_info_request_consents,Hotel intake,text_version,string,,,"the version of the text consented to (core constants), up to 64 characters",SYS,INTERNAL,At creation,—,"D-189, D-180"
+C,hotel_info_request_consents,Hotel intake,granted,bool,,,true or false,SYS,INTERNAL,At creation,—,"D-189, D-180"
+C,hotel_info_request_consents,Hotel intake,revision_hash,string,,,SHA-256 of the submitted revision a declaration binds to; null for the privacy notice (CHECK hotel_info_request_consents_notice_has_no_revision),SYS,INTERNAL,Optional,—,"D-189, D-180"
+C,hotel_info_request_consents,Hotel intake,recorded_at,datetime,,,timestamp (UTC),SYS,INTERNAL,System,—,"D-189, D-180"
+C,hotel_info_request_consents,Hotel intake,ip_address,string,,,the caller's address,SYS,RESTRICTED-CONTACT,Optional,—,"D-189, D-180"
+C,hotel_info_request_consents,Hotel intake,withdrawn_at,datetime,,,timestamp (UTC),"The person, inside a form session; SA",INTERNAL,When the consent is withdrawn,Withdrawing is as easy as consenting; a Super Admin review follows,"D-189, D-180"
+C,hotel_info_request_consents,Hotel intake,withdrawal_source,string,,"contributor, staff",one of the listed options,SYS,INTERNAL,With withdrawn_at,—,"D-189, D-180"
+C,hotel_info_request_consents,Hotel intake,withdrawn_by_user_id,uuid,,,references users; set for a staff withdrawal,SYS (acting user),INTERNAL,Optional,—,"D-189, D-180"
 D,hotel_enquiries,Discovery (client request),id,uuid,PK,,"UUID v7, generated",SYS,CLIENT,System,—,"A-9 (Q9), GP-5, GP-27"
 D,hotel_enquiries,Discovery (client request),account_id,uuid,FK,,references client_accounts,"CO, CA (client fields at creation); HT; SA; PM (a)",CLIENT,At creation,—,"A-9 (Q9), GP-5, GP-27"
 D,hotel_enquiries,Discovery (client request),project_id,uuid,FK,,references wedding_projects; nullable before a project exists,"CO, CA (client fields at creation); HT; SA; PM (a)",CLIENT,Optional,Back-filled when the project is created (GP-27),"A-9 (Q9), GP-5, GP-27"

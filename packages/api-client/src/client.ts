@@ -1,4 +1,11 @@
-import { AppError, errors, isApiFailure, type ApiEnvelope, type ErrorCode } from "@ampm/core";
+import {
+  AppError,
+  errors,
+  isApiFailure,
+  MAX_RETRY_AFTER_SECONDS,
+  type ApiEnvelope,
+  type ErrorCode,
+} from "@ampm/core";
 import type { ZodType } from "zod";
 
 export interface ApiClientOptions {
@@ -62,10 +69,52 @@ export interface ApiClient {
   mediaUrl(url: string | null | undefined): string | null;
 }
 
+const DELAY_SECONDS = /^\d+$/;
+
+/** The words of a failure whose answer had no envelope to read: the client can only name the status. */
+const unwordedFailureMessage = (status: number): string => `Request failed (${status})`;
+const UNWORDED_FAILURE = /^Request failed \(\d{3}\)$/;
+
+/**
+ * Whether a failure is one the API never worded: its answer had no envelope to read (a proxy's or a
+ * gateway's own page, such as Plesk's HTML 403), so the error carries only the status, never words for a
+ * person. A page words such a failure itself.
+ *
+ * @example
+ * if (isUnwordedFailure(error)) showNotice(COPY.errors.unexpected);
+ */
+export function isUnwordedFailure(error: { readonly message: string }): boolean {
+  return UNWORDED_FAILURE.test(error.message);
+}
+
+/**
+ * A `Retry-After` header as whole seconds from `now` (RFC 9110 §10.2.3): delay-seconds as they stand, an
+ * HTTP date as the seconds until it (0 once it is past), either cut to a day (`MAX_RETRY_AFTER_SECONDS`) so
+ * a page never counts down longer. Undefined without the header or when it reads as neither. The API sends
+ * delay-seconds (D-189 §3); a proxy in front of it may send a date.
+ *
+ * @example
+ * retryAfterSecondsOf("30"); // 30
+ * retryAfterSecondsOf(null); // undefined
+ */
+export function retryAfterSecondsOf(
+  header: string | null,
+  now: number = Date.now(),
+): number | undefined {
+  const value = header?.trim() ?? "";
+  const atMostADay = (seconds: number): number => Math.min(seconds, MAX_RETRY_AFTER_SECONDS);
+  if (DELAY_SECONDS.test(value)) return atMostADay(Number.parseInt(value, 10));
+  // A bare number that is not delay-seconds ("-5", "1.5") is malformed, never a date.
+  if (value === "" || /^[\d.+-]+$/.test(value)) return undefined;
+  const at = Date.parse(value);
+  return Number.isNaN(at) ? undefined : atMostADay(Math.max(0, Math.ceil((at - now) / 1000)));
+}
+
 /**
  * The one way the apps talk to the API (api.md): the envelope is unwrapped, failures become
- * `AppError` with the API's code, a network failure becomes `network_error`, and every success is
- * validated against the shared schema.
+ * `AppError` with the API's code (and the seconds of its `Retry-After`, when it sends one, as
+ * `retryAfterSeconds`), a network failure becomes `network_error`, and every success is validated
+ * against the shared schema.
  */
 export function createApiClient(options: ApiClientOptions): ApiClient {
   const doFetch = options.fetch ?? fetch;
@@ -98,8 +147,10 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
         failure?.code ?? (response.status >= 500 ? "internal" : "validation_failed");
       throw new AppError(
         code,
-        failure?.message ?? `Request failed (${response.status})`,
+        failure?.message ?? unwordedFailureMessage(response.status),
         failure?.details,
+        undefined,
+        retryAfterSecondsOf(response.headers.get("retry-after")),
       );
     }
     return schema.parse(envelope.data);

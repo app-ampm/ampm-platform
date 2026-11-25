@@ -80,7 +80,7 @@ const CONFIG_META: Record<string, ConfigMeta> = {
     label: "Hotel information form",
     area: "Hotels",
     description:
-      "Whether hotels can use the information form (off, test only or on), how long its links last and how far past their first expiry they may be extended, how long a merged request stays status-only, how many people may take part, and the reply-to and help contact its emails and pages give.",
+      "Whether hotels can use the information form (off, test only or on), how long its links last and how far past their first expiry they may be extended, how long a merged request stays status-only, how many people may take part, the reply-to and help contact its emails and pages give, and how many codes it may send by SMS in a day.",
   },
   "storage.disk_guard": {
     label: "Disk space alerts",

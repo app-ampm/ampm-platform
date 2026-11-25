@@ -58,7 +58,13 @@ export function isLiveHotelInfoRequestStatus(status: HotelInfoRequestStatus): bo
 export const hotelInfoRequestPrefillMode = z.enum(["none"]);
 export type HotelInfoRequestPrefillMode = z.infer<typeof hotelInfoRequestPrefillMode>;
 
-/** What a request event records (`hotel_info_request_events.event_type`): Slice 7a's; later slices add. */
+/**
+ * What a request event records (`hotel_info_request_events.event_type`): Slice 7a's staff and System
+ * events, then the identity step's (D-189 §6), whose actor is a hotel person: `code_requested` (someone
+ * holding the link asked for a code: the first human step, so a link counts as opened only then; no
+ * person exists yet), `person_verified` (a correct code: a new or a returning person) and
+ * `person_updated` (a person changed their own name or designation). Later slices add theirs.
+ */
 export const hotelInfoRequestEventType = z.enum([
   "created",
   "link_reissued",
@@ -67,12 +73,34 @@ export const hotelInfoRequestEventType = z.enum([
   "updated",
   "expiry_extended",
   "revoked",
+  "code_requested",
+  "person_verified",
+  "person_updated",
 ]);
 export type HotelInfoRequestEventType = z.infer<typeof hotelInfoRequestEventType>;
 
 /** Who wrote a request event: AMPM staff, a person at the hotel, or the System. */
 export const hotelInfoRequestActorKind = z.enum(["staff", "hotel_person", "system"]);
 export type HotelInfoRequestActorKind = z.infer<typeof hotelInfoRequestActorKind>;
+
+/**
+ * How a hotel-form code reached its person (D-189 §2; `hotel_info_request_challenges.delivery` and
+ * `hotel_info_request_people.code_delivery`): sent by SMS, or shown on the page while the form cannot
+ * send its own SMS (no provider, or no `SMS_HOTEL_FORM_TEMPLATE`). Only an SMS code checks the mobile.
+ */
+export const hotelFormCodeDelivery = z.enum(["sms", "screen"]);
+export type HotelFormCodeDelivery = z.infer<typeof hotelFormCodeDelivery>;
+
+/**
+ * What a contributor consented to (`hotel_info_request_consents.kind`, D-189 §1): the privacy notice,
+ * recorded when their code is entered. The two declarations arrive with submit, in a later slice.
+ */
+export const hotelInfoRequestConsentKind = z.enum(["privacy_notice"]);
+export type HotelInfoRequestConsentKind = z.infer<typeof hotelInfoRequestConsentKind>;
+
+/** Who withdrew a consent (`hotel_info_request_consents.withdrawal_source`): its contributor, or staff. */
+export const hotelInfoRequestWithdrawalSource = z.enum(["contributor", "staff"]);
+export type HotelInfoRequestWithdrawalSource = z.infer<typeof hotelInfoRequestWithdrawalSource>;
 
 /** A request's reference: `HIR`, the year it was created (UTC) and its number, four digits at least. */
 export const HOTEL_INFO_REQUEST_REFERENCE = /^HIR-\d{4}-\d{4,}$/;

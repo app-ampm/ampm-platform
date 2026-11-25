@@ -72,6 +72,8 @@ export interface SendGateState {
   readonly isTest: boolean;
   readonly status: HotelInfoRequestStatus;
   readonly tokenGeneration: number;
+  /** Set at the merge: a code SMS still goes until then (D-189 §2). */
+  readonly statusOnlyUntil: Date | null;
 }
 
 /** A hotel a request may name, locked for the transaction. */
@@ -161,13 +163,14 @@ export class HotelInfoRequestsRepository {
   }
 
   /**
-   * What the hotel form's send gate reads of a request (D-188 §5): whether it is a test (what test_only
-   * admits), its status and its link's generation. Null when there is none, or it was deleted.
+   * What the hotel form's send gate reads of a request (D-188 §5, D-189 §2): whether it is a test (what
+   * test_only admits), its status, its link's generation and the end of its status-only window. Null when
+   * there is none, or it was deleted.
    */
   sendGateState(id: string): Promise<SendGateState | null> {
     return this.prisma.hotelInfoRequest.findFirst({
       where: { id, deletedAt: null },
-      select: { isTest: true, status: true, tokenGeneration: true },
+      select: { isTest: true, status: true, tokenGeneration: true, statusOnlyUntil: true },
     });
   }
 

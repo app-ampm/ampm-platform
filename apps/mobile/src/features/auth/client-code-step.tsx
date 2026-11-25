@@ -1,9 +1,9 @@
-import { indianPhone } from "@ampm/core";
+import { formatCountdown, indianPhone, spokenCountdown } from "@ampm/core";
 import { Button, Card, OtpInput, Row, Stack, Text } from "@ampm/ui";
 
 import type { CodeDelivery, CodeStep, SentCode } from "./client-code-step.types";
 import { InlineAlert } from "./inline-alert";
-import { formatCountdown, spokenCountdown, useResendCountdown } from "./use-resend-countdown";
+import { useResendCountdown } from "./use-resend-countdown";
 
 const CODE_LENGTH = 6;
 

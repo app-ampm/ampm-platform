@@ -6,6 +6,7 @@ import {
   ONE_TIME_CODE_TTL_MS,
   oneTimeCodeMatches,
 } from "./one-time-code.js";
+import { signInKeysFor } from "./sign-in-keys.js";
 
 const KEY = Buffer.alloc(32, 7);
 const OTHER_KEY = Buffer.alloc(32, 9);
@@ -30,5 +31,24 @@ describe("one-time codes (D-147)", () => {
     expect(oneTimeCodeMatches("user-1", "654320", stored, KEY)).toBe(false);
     expect(oneTimeCodeMatches("user-2", "654321", stored, KEY)).toBe(false);
     expect(oneTimeCodeMatches("user-1", "654321", "not-a-hash", KEY)).toBe(false);
+  });
+});
+
+describe("one-time codes bound to a hotel-form challenge (D-189 §2)", () => {
+  const keys = signInKeysFor({ IDENTITY_PROVIDER: "local", IDENTITY_LOCAL_SECRET: "l".repeat(40) });
+  const CHALLENGE = "0196a0b0-0000-7000-8000-00000000c001";
+  const OTHER_CHALLENGE = "0196a0b0-0000-7000-8000-00000000c002";
+
+  it("match only on their own challenge, under the hotel form's code key", () => {
+    const stored = hashOneTimeCode(CHALLENGE, "007341", keys.hotelFormCode);
+    expect(oneTimeCodeMatches(CHALLENGE, "007341", stored, keys.hotelFormCode)).toBe(true);
+    expect(oneTimeCodeMatches(OTHER_CHALLENGE, "007341", stored, keys.hotelFormCode)).toBe(false);
+  });
+
+  it("never match under the clients' code key, nor a client's code under the form's", () => {
+    const formCode = hashOneTimeCode(CHALLENGE, "007341", keys.hotelFormCode);
+    expect(oneTimeCodeMatches(CHALLENGE, "007341", formCode, keys.otpKey)).toBe(false);
+    const clientCode = hashOneTimeCode(CHALLENGE, "007341", keys.otpKey);
+    expect(oneTimeCodeMatches(CHALLENGE, "007341", clientCode, keys.hotelFormCode)).toBe(false);
   });
 });

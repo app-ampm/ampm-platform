@@ -1,6 +1,6 @@
 # AMPM Platform — Field Matrix
 
-**Status:** DRAFT v0.1, generated 2026-11-24 from [data-model.md](data-model.md) by `docs/tools/field_matrix_build.py`. Do not edit by hand; change the data model or `docs/tools/field_rules.py` and rebuild.
+**Status:** DRAFT v0.1, generated 2026-11-25 from [data-model.md](data-model.md) by `docs/tools/field_matrix_build.py`. Do not edit by hand; change the data model or `docs/tools/field_rules.py` and rebuild.
 **Companions:** [requirements-audit.md](requirements-audit.md) (Q numbers), [data-model.md](data-model.md) (assumptions A-1 to A-30), [permission-matrix.md](permission-matrix.md) (role codes, visibility classes, assumptions P-1 to P-11).
 **Spreadsheet version:** [field-matrix.csv](field-matrix.csv) has the same rows for filtering.
 
@@ -20,9 +20,9 @@ Global conventions that apply to every row: money is `numeric(14,2)` with a sibl
 
 | Module | Tables | Fields | Required at creation | Client or public visible | Restricted, sensitive or secret |
 |---|---|---|---|---|---|
-| A — Identity, access and administration | 20 | 131 | 61 | 10 | 7 |
+| A — Identity, access and administration | 20 | 132 | 61 | 10 | 7 |
 | B — CRM, subscriptions and commercial agreements | 13 | 143 | 55 | 94 | 4 |
-| C — Hotel intelligence | 12 | 187 | 48 | 115 | 15 |
+| C — Hotel intelligence | 15 | 230 | 57 | 115 | 27 |
 | D — Hotel consultancy | 6 | 70 | 28 | 65 | 3 |
 | E — Wedding project | 3 | 36 | 13 | 29 | 3 |
 | F — Functions, programme and run-of-show | 4 | 43 | 17 | 27 | 1 |
@@ -37,9 +37,9 @@ Global conventions that apply to every row: money is `numeric(14,2)` with a sibl
 | O — Checklists, closure and feedback | 4 | 30 | 17 | 7 | 0 |
 | P — Public website content (dormant) | 2 | 17 | 8 | 17 | 0 |
 | Q — Live chat | 2 | 16 | 6 | 16 | 0 |
-| **Total** | **119** | **1260** | **512** | **683** | **114** |
+| **Total** | **122** | **1304** | **521** | **683** | **126** |
 
-Fields by visibility class: CLIENT 650, INTERNAL 406, Other (per record, recipient or parent) 57, RESTRICTED-NOTES 36, PUBLIC 33, RESTRICTED-FINANCE 31, RESTRICTED-CONTACT 16, RESTRICTED-IDENTITY 13, SECRET 12, RESTRICTED-BANK 4, SENSITIVE-GUEST 2.
+Fields by visibility class: CLIENT 650, INTERNAL 438, Other (per record, recipient or parent) 57, RESTRICTED-NOTES 36, PUBLIC 33, RESTRICTED-FINANCE 31, RESTRICTED-CONTACT 25, SECRET 15, RESTRICTED-IDENTITY 13, RESTRICTED-BANK 4, SENSITIVE-GUEST 2.
 
 ---
 
@@ -251,12 +251,13 @@ Created at stage: **System** · Default editor: SYS (append-only; never updated 
 | `id` (PK) | UUID v7, generated |  | SYS | INTERNAL | System | — |
 | `actor_user_id` (FK) | references users |  | SYS (acting user) | INTERNAL | System | — |
 | `actor_type` | one of the listed options | user, guest_token, system | SYS (append-only; never updated or deleted) | INTERNAL | At creation | — |
+| `actor_ref` | hir:<requestId>/person:<personId>, or hir:<requestId>/challenge:<challengeId> before a person exists; record ids only |  | SYS | INTERNAL | System, for a hotel-form contributor (actor_type guest_token) | Null for staff and the System (CHECK audit_events_actor_ref_guest_only); on every monthly partition, and inherited by each one created later |
 | `action` | one of the listed options | create, update, delete, approve, share, export, restricted_read | SYS (append-only; never updated or deleted) | INTERNAL | At creation | — |
 | `entity_type` | string, up to 255 characters |  | SYS (append-only; never updated or deleted) | INTERNAL | At creation | — |
 | `entity_id` | UUID |  | SYS (append-only; never updated or deleted) | INTERNAL | At creation | — |
 | `project_id` | references wedding_projects; denormalised |  | SYS (append-only; never updated or deleted) | INTERNAL | Optional | Project-scoped history for PM (a) |
-| `before_json` | valid JSON; restricted and secret fields masked before storage |  | SYS (append-only; never updated or deleted) | INTERNAL | Optional | — |
-| `after_json` | valid JSON; restricted and secret fields masked before storage |  | SYS (append-only; never updated or deleted) | INTERNAL | Optional | — |
+| `before_json` | valid JSON; restricted and secret fields masked before storage; a hotel-form contributor's image keeps only ids, changed field names and masked values (D-189) |  | SYS (append-only; never updated or deleted) | INTERNAL | Optional | — |
+| `after_json` | valid JSON; restricted and secret fields masked before storage; a hotel-form contributor's image keeps only ids, changed field names and masked values (D-189) |  | SYS (append-only; never updated or deleted) | INTERNAL | Optional | — |
 | `ip_address` | string, up to 255 characters |  | SYS (append-only; never updated or deleted) | INTERNAL | Optional | — |
 | `occurred_at` | timestamp (UTC) |  | SYS | INTERNAL | System | — |
 
@@ -802,7 +803,7 @@ Created at stage: **Hotel intake** · Default editor: SA; HT · Default visibili
 | `prefill_mode` | one of the listed options | none | SYS | INTERNAL | Optional | none in version 1: the form shows nothing from the catalogue |
 | `revision` | integer, 0 or more; submitted revisions, from 0 |  | SYS | INTERNAL | System | Plus 1 at each submit |
 | `submitted_at` | timestamp (UTC) |  | SYS (when the action happens) | INTERNAL | System | — |
-| `submitted_by_person_id` | references hotel_info_request_people (Slice 7b) |  | SYS | INTERNAL | Optional | — |
+| `submitted_by_person_id` (FK) | references hotel_info_request_people (foreign key from Slice 7b) |  | SYS | INTERNAL | Optional | — |
 | `reviewer_user_id` (FK) | references users |  | SYS (acting user) | INTERNAL | Optional | The reviewer holding the claim while in_review |
 | `review_started_at` | timestamp (UTC) |  | SYS (when the action happens) | INTERNAL | System | — |
 | `changes_requested_at` | timestamp (UTC) |  | SYS (when the action happens) | INTERNAL | System | — |
@@ -822,12 +823,76 @@ Created at stage: **Hotel intake** · Default editor: SYS · Default visibility:
 |---|---|---|---|---|---|---|
 | `id` (PK) | UUID v7, generated |  | SYS | INTERNAL | System | — |
 | `request_id` (FK) | references hotel_info_requests |  | SYS | INTERNAL | At creation | — |
-| `event_type` | one of the listed options | created, link_reissued, link_emailed, share_recorded, updated, expiry_extended, revoked | SYS | INTERNAL | At creation | — |
+| `event_type` | one of the listed options | created, link_reissued, link_emailed, share_recorded, updated, expiry_extended, revoked, code_requested, person_verified, person_updated | SYS | INTERNAL | At creation | — |
 | `actor_kind` | one of the listed options | staff, hotel_person, system | SYS | INTERNAL | At creation | — |
 | `actor_user_id` (FK) | references users; the staff user, when staff acted |  | SYS (acting user) | INTERNAL | When actor_kind is staff | — |
-| `actor_person_id` | references hotel_info_request_people (Slice 7b) |  | SYS | INTERNAL | When actor_kind is hotel_person | — |
+| `actor_person_id` (FK) | references hotel_info_request_people (foreign key from Slice 7b) |  | SYS | INTERNAL | When actor_kind is hotel_person, except code_requested (no person yet) | — |
 | `detail_json` | valid JSON; personal data masked before storage; never the link's secret |  | SYS | INTERNAL | Optional | — |
 | `occurred_at` | timestamp (UTC) |  | SYS | INTERNAL | System | — |
+
+### `hotel_info_request_people`
+
+Created at stage: **Hotel intake** · Default editor: SYS · Default visibility: INTERNAL · Assumptions: D-189, D-172, D-180 · created only when a correct code is entered; one live person per request and phone (partial unique index hotel_info_request_people_request_phone_live_key, while neither removed nor deleted)
+
+| Field | Type and validation | Options | Edited by | Visibility | Required | Automation and report impact |
+|---|---|---|---|---|---|---|
+| `id` (PK) | UUID v7, generated |  | SYS | INTERNAL | System | — |
+| `request_id` (FK) | references hotel_info_requests |  | SYS | INTERNAL | At creation | — |
+| `full_name` | string, up to 255 characters |  | The person, inside a form session (PATCH /hotel-form/me) | RESTRICTED-CONTACT | At creation | Taken from the claim when a new person's code is entered; a returning person keeps theirs |
+| `designation` | one of the core designations, or Other; up to 255 characters |  | The person, inside a form session (PATCH /hotel-form/me) | RESTRICTED-CONTACT | At creation | — |
+| `phone` | E.164 format (CHECK hotel_info_request_people_phone_e164) |  | SYS | RESTRICTED-CONTACT | At creation | A returning person is found by request and phone; a new mobile needs a new code |
+| `code_entered_at` | timestamp (UTC); the latest correct code; a row exists only after one |  | SYS | INTERNAL | System | Set by each correct code, the latest kept |
+| `phone_verified_at` | timestamp (UTC); set only by an SMS code |  | SYS | INTERNAL | When an SMS code is entered | Set only by an SMS code: the review shows Mobile checked by SMS, otherwise Mobile not checked |
+| `code_delivery` | one of the listed options; how the latest correct code was delivered | sms, screen | SYS | INTERNAL | System | How the latest correct code reached the person |
+| `removed_at` | timestamp (UTC); AMPM removed the person: their sessions end and their place is freed |  | SA; HT | INTERNAL | When AMPM removes the person | Ends the person's sessions and frees their place among maxPeople |
+| `removed_by` | references users |  | SYS (acting user) | INTERNAL | With removed_at | — |
+| `last_seen_at` | timestamp (UTC) |  | SYS | INTERNAL | Optional | Written at most once a minute |
+
+### `hotel_info_request_challenges`
+
+Created at stage: **Hotel intake** · Default editor: SYS · Default visibility: INTERNAL · Assumptions: D-189, D-174, D-180 · one per code; a verified challenge carries the session it opens; never a users row or an auth token
+
+| Field | Type and validation | Options | Edited by | Visibility | Required | Automation and report impact |
+|---|---|---|---|---|---|---|
+| `id` (PK) | UUID v7, generated |  | SYS | INTERNAL | System | — |
+| `request_id` (FK) | references hotel_info_requests |  | SYS | INTERNAL | At creation | — |
+| `link_generation` | integer, 1 or more: the request's token_generation when the code was issued |  | SYS | INTERNAL | System | A reissued link ends the challenge and its session; a code SMS names it for the send gate |
+| `claimed_full_name` | string, up to 255 characters |  | The claimant, at a code request | RESTRICTED-CONTACT | Optional | Cleared when the code is entered or the challenge is retired (CHECK hotel_info_request_challenges_claim_cleared) |
+| `claimed_designation` | one of the core designations, or Other; up to 255 characters |  | The claimant, at a code request | RESTRICTED-CONTACT | Optional | Cleared when the code is entered or the challenge is retired (CHECK hotel_info_request_challenges_claim_cleared) |
+| `claimed_phone` | E.164 format (CHECK hotel_info_request_challenges_claimed_phone_e164) |  | The claimant, at a code request | RESTRICTED-CONTACT | Optional | Cleared when the code is entered or the challenge is retired (CHECK hotel_info_request_challenges_claim_cleared) |
+| `claimed_notice_version` | the current privacy notice version (core); a stale one is refused with the form was updated |  | The claimant, at a code request | INTERNAL | Optional | Recorded on the privacy notice consent when the code is entered; Cleared when the code is entered or the challenge is retired (CHECK hotel_info_request_challenges_claim_cleared) |
+| `delivery` | one of the listed options | sms, screen | SYS | INTERNAL | System | sms exactly while an SMS provider is configured and SMS_HOTEL_FORM_TEMPLATE is set; otherwise the code is shown on screen and no SMS is queued |
+| `destination_hash` | HMAC-SHA256 of the E.164 mobile under HKDF ampm/hotel-form-address, 64 hex characters |  | SYS | SECRET | System | Keys the per-mobile limits; after 3 burned challenges for a mobile and request within an hour, that mobile is locked for an hour |
+| `code_hmac` | HMAC-SHA256 of the code bound to the challenge's id under HKDF ampm/hotel-form-code, 64 hex characters; the code is never logged, is returned only in on-screen mode, and is stored nowhere else, except that in SMS mode its queued SMS notification holds it in its render data until the SMS is sent or fails, when that data is cleared, as for a client sign-in code (D-044) |  | SYS | SECRET | System | — |
+| `code_expires_at` | 5 minutes after issue |  | SYS | INTERNAL | System | Refused after expiry |
+| `attempts` | integer, 0 to 5 (CHECK hotel_info_request_challenges_attempts_range) |  | SYS | INTERNAL | System | Each try is reserved by an atomic increment while the challenge is unused, unretired, unexpired and under 5 |
+| `used_at` | timestamp (UTC); the code was entered |  | SYS | INTERNAL | When the code is entered | Single use: a used code is refused |
+| `retired_at` | timestamp (UTC); set when the challenge is retired, as when a newer code for the same request and mobile is issued |  | SYS | INTERNAL | When the challenge is retired | Set when a newer code for the same request and mobile is issued |
+| `person_id` (FK) | references hotel_info_request_people; set only when the code is entered (CHECK hotel_info_request_challenges_person_on_use) |  | SYS | INTERNAL | Optional | — |
+| `session_token_hash` (unique) | SHA-256 of the form session's token (hfs_ and the base64url of 32 random bytes); unique; the token itself is never stored |  | SYS | SECRET | Optional | Only on a challenge that verified a person (CHECK hotel_info_request_challenges_session_on_verified) |
+| `session_started_at` | timestamp (UTC) |  | SYS | INTERNAL | With session_token_hash | A session ends 12 hours after it starts |
+| `session_last_seen_at` | timestamp (UTC); written at most once a minute |  | SYS | INTERNAL | Optional | Written at most once a minute; a session ends after 2 hours idle |
+| `session_ended_at` | timestamp (UTC); sign-out, a fourth session, or a removal |  | SYS | INTERNAL | When the session ends | Set at sign-out, when a person's fourth session ends the oldest, or when the person is removed |
+| `ip_address` | the caller's address |  | SYS | RESTRICTED-CONTACT | Optional | — |
+| `user_agent` | string, up to 512 characters |  | SYS | RESTRICTED-CONTACT | Optional | — |
+
+### `hotel_info_request_consents`
+
+Created at stage: **Hotel intake** · Default editor: SYS · Default visibility: INTERNAL · Assumptions: D-189, D-180 · append-only by convention: created, then only withdrawn
+
+| Field | Type and validation | Options | Edited by | Visibility | Required | Automation and report impact |
+|---|---|---|---|---|---|---|
+| `id` (PK) | UUID v7, generated |  | SYS | INTERNAL | System | — |
+| `person_id` (FK) | references hotel_info_request_people |  | SYS | INTERNAL | At creation | — |
+| `kind` | one of the listed options; (the submit declarations arrive with submit) | privacy_notice | SYS | INTERNAL | At creation | privacy_notice is recorded when a person's code is entered; the submit declarations arrive with submit |
+| `text_version` | the version of the text consented to (core constants), up to 64 characters |  | SYS | INTERNAL | At creation | — |
+| `granted` | true or false |  | SYS | INTERNAL | At creation | — |
+| `revision_hash` | SHA-256 of the submitted revision a declaration binds to; null for the privacy notice (CHECK hotel_info_request_consents_notice_has_no_revision) |  | SYS | INTERNAL | Optional | — |
+| `recorded_at` | timestamp (UTC) |  | SYS | INTERNAL | System | — |
+| `ip_address` | the caller's address |  | SYS | RESTRICTED-CONTACT | Optional | — |
+| `withdrawn_at` | timestamp (UTC) |  | The person, inside a form session; SA | INTERNAL | When the consent is withdrawn | Withdrawing is as easy as consenting; a Super Admin review follows |
+| `withdrawal_source` | one of the listed options | contributor, staff | SYS | INTERNAL | With withdrawn_at | — |
+| `withdrawn_by_user_id` | references users; set for a staff withdrawal |  | SYS (acting user) | INTERNAL | Optional | — |
 
 ---
 

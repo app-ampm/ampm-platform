@@ -16,13 +16,20 @@
 # </RequireAny>
 
 <IfModule mod_headers.c>
-# Not launched yet (D-148): keep search engines from listing the site. Remove this line at launch.
-Header always set X-Robots-Tag "noindex, nofollow"
+# Not launched yet (D-148): X-Robots-Tag keeps search engines from listing the site. Remove it at launch.
+# Every header the site also sends itself is `setifempty`, without `always` (D-189 §8, HF-G10): Next sends
+# X-Content-Type-Options, X-Frame-Options and Permissions-Policy on every page (next.config.ts), and the
+# hotel form's pages send their own X-Robots-Tag and Referrer-Policy (noindex, nofollow, noarchive;
+# no-referrer). A page's own value must win, not be doubled. mod_proxy_http puts the site's headers in the
+# default table, which only the default condition reads, so setifempty adds AMPM's value only where the
+# page sent none; `always` would add a second one. Apache's own error pages (the site down, a 502) then go
+# without these; they run no script. Only HSTS is the box's alone (Next leaves it to the edge).
+Header setifempty X-Robots-Tag "noindex, nofollow"
 Header always set Strict-Transport-Security "max-age=31536000"
-Header always set X-Content-Type-Options "nosniff"
-Header always set Referrer-Policy "strict-origin-when-cross-origin"
-Header always set X-Frame-Options "DENY"
-Header always set Permissions-Policy "camera=(), microphone=(), geolocation=()"
+Header setifempty X-Content-Type-Options "nosniff"
+Header setifempty Referrer-Policy "strict-origin-when-cross-origin"
+Header setifempty X-Frame-Options "DENY"
+Header setifempty Permissions-Policy "camera=(), microphone=(), geolocation=()"
 Header always unset X-Powered-By
 Header unset X-Powered-By
 </IfModule>

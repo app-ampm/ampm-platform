@@ -25,8 +25,22 @@ const linkEmail: GatedNotification = {
   gateRef: "1",
 };
 
+/** A code SMS (D-189 §2) for the same request, queued on its first link. */
+const codeSms: GatedNotification = {
+  ...linkEmail,
+  templateKey: "hotel_form.code",
+  channel: "sms",
+};
+
+const HOUR_MS = 60 * 60 * 1000;
+
 /** The request as the gate reads it: by default a live, non-test request on its first link. */
-type GateRequest = { isTest: boolean; status: HotelInfoRequestStatus; tokenGeneration: number };
+type GateRequest = {
+  isTest: boolean;
+  status: HotelInfoRequestStatus;
+  tokenGeneration: number;
+  statusOnlyUntil: Date | null;
+};
 
 function build(mode: HotelFormMode, request: Partial<GateRequest> | null = {}) {
   const policy = { ...CONFIG_REGISTRY["hotel_form.policy"].default, mode };
@@ -35,6 +49,7 @@ function build(mode: HotelFormMode, request: Partial<GateRequest> | null = {}) {
     isTest: false,
     status: "open",
     tokenGeneration: 1,
+    statusOnlyUntil: null,
     ...request,
   };
   const repo = { sendGateState: vi.fn(async (): Promise<GateRequest | null> => state) };
@@ -104,6 +119,35 @@ describe("HotelFormEmailGate", () => {
     expect(await reissued.gate.admits(linkEmail)).toBe(false);
     expect(await reissued.gate.admits({ ...linkEmail, gateRef: "2" })).toBe(true);
     expect(await build("on").gate.admits({ ...linkEmail, gateRef: null })).toBe(false);
+  });
+
+  it("sends a code SMS for a live request on its current link while the mode admits it (D-189 §2)", async () => {
+    for (const status of ["open", "submitted", "in_review", "changes_requested"] as const) {
+      expect(await build("on", { status }).gate.admits(codeSms), status).toBe(true);
+    }
+    expect(await build("test_only", { isTest: true }).gate.admits(codeSms)).toBe(true);
+    expect(await build("test_only", { isTest: false }).gate.admits(codeSms)).toBe(false);
+    expect(await build("off", { isTest: true }).gate.admits(codeSms)).toBe(false);
+    expect(await build("on", null).gate.admits(codeSms)).toBe(false);
+  });
+
+  it("sends a code SMS for a merged request only inside its status-only window", async () => {
+    const inside = { status: "merged" as const, statusOnlyUntil: new Date(Date.now() + HOUR_MS) };
+    expect(await build("on", inside).gate.admits(codeSms)).toBe(true);
+    const after = { status: "merged" as const, statusOnlyUntil: new Date(Date.now() - HOUR_MS) };
+    expect(await build("on", after).gate.admits(codeSms)).toBe(false);
+    expect(await build("on", { status: "merged" }).gate.admits(codeSms)).toBe(false);
+    for (const status of ["rejected", "revoked"] as const) {
+      const window = { status, statusOnlyUntil: new Date(Date.now() + HOUR_MS) };
+      expect(await build("on", window).gate.admits(codeSms), status).toBe(false);
+    }
+  });
+
+  it("drops a code SMS whose link was reissued after it was queued, or that names no link", async () => {
+    const reissued = build("on", { tokenGeneration: 2 });
+    expect(await reissued.gate.admits(codeSms)).toBe(false);
+    expect(await reissued.gate.admits({ ...codeSms, gateRef: "2" })).toBe(true);
+    expect(await build("on").gate.admits({ ...codeSms, gateRef: null })).toBe(false);
   });
 
   it("reads the mode past the cache every time", async () => {
