@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
-import { createApiClient } from "./client";
+import { createApiClient, retryAfterSecondsOf } from "./client";
 
 const schema = z.object({ ok: z.boolean() });
 
@@ -9,12 +9,13 @@ function fakeFetch(
   status: number,
   body: unknown,
   capture?: { init?: RequestInit | undefined },
+  headers: Record<string, string> = {},
 ): typeof fetch {
   return (async (_input: RequestInfo | URL, init?: RequestInit) => {
     if (capture) capture.init = init;
     return new Response(JSON.stringify(body), {
       status,
-      headers: { "content-type": "application/json" },
+      headers: { "content-type": "application/json", ...headers },
     });
   }) as typeof fetch;
 }
@@ -84,6 +85,39 @@ describe("createApiClient", () => {
     });
   });
 
+  it("carries the Retry-After seconds of a refusal on the error it raises (D-189 §3)", async () => {
+    const limited = { error: { code: "rate_limited", message: "Too many requests" } };
+    const api = createApiClient({
+      baseUrl: "http://api.test",
+      fetch: fakeFetch(429, limited, undefined, { "Retry-After": "27" }),
+    });
+    await expect(api.get("/hotel-form/codes", schema)).rejects.toMatchObject({
+      code: "rate_limited",
+      status: 429,
+      retryAfterSeconds: 27,
+    });
+    const busy = createApiClient({
+      baseUrl: "http://api.test",
+      fetch: fakeFetch(503, { error: { code: "unavailable", message: "Try later" } }, undefined, {
+        "retry-after": "3600",
+      }),
+    });
+    await expect(busy.get("/hotel-form/codes", schema)).rejects.toMatchObject({
+      code: "unavailable",
+      retryAfterSeconds: 3600,
+    });
+  });
+
+  it("raises an error with no retryAfterSeconds when the refusal names none", async () => {
+    const api = createApiClient({
+      baseUrl: "http://api.test",
+      fetch: fakeFetch(429, { error: { code: "rate_limited", message: "Too many requests" } }),
+    });
+    const error: unknown = await api.get("/x", schema).catch((caught: unknown) => caught);
+    expect(error).toMatchObject({ code: "rate_limited" });
+    expect(error).toHaveProperty("retryAfterSeconds", undefined);
+  });
+
   it("reports a network failure as network_error", async () => {
     const failing = (async () => {
       throw new TypeError("offline");
@@ -132,5 +166,25 @@ describe("createApiClient", () => {
     // No URL stays null.
     expect(api.mediaUrl(null)).toBeNull();
     expect(api.mediaUrl(undefined)).toBeNull();
+  });
+});
+
+describe("retryAfterSecondsOf", () => {
+  const now = Date.parse("2026-11-25T10:00:00.000Z");
+
+  it("reads delay-seconds and an HTTP date as whole seconds from now", () => {
+    expect(retryAfterSecondsOf("30", now)).toBe(30);
+    expect(retryAfterSecondsOf(" 0 ", now)).toBe(0);
+    expect(retryAfterSecondsOf("Wed, 25 Nov 2026 10:01:30 GMT", now)).toBe(90);
+    // A date already past means "now", never a negative wait.
+    expect(retryAfterSecondsOf("Wed, 25 Nov 2026 09:00:00 GMT", now)).toBe(0);
+  });
+
+  it("gives none for no header or one it cannot read", () => {
+    expect(retryAfterSecondsOf(null, now)).toBeUndefined();
+    expect(retryAfterSecondsOf("", now)).toBeUndefined();
+    expect(retryAfterSecondsOf("soon", now)).toBeUndefined();
+    expect(retryAfterSecondsOf("-5", now)).toBeUndefined();
+    expect(retryAfterSecondsOf("1.5", now)).toBeUndefined();
   });
 });

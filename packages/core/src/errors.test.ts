@@ -18,6 +18,25 @@ describe("errors", () => {
     expect(errors.unauthenticated().status).toBe(401);
   });
 
+  it("carries the seconds to wait when the answer gave them, never in the envelope (D-189 §3)", () => {
+    const limited = errors.rateLimited("Try again in a minute", 42);
+    expect(limited).toMatchObject({ code: "rate_limited", status: 429, retryAfterSeconds: 42 });
+    expect(limited.toEnvelope()).toEqual({
+      error: { code: "rate_limited", message: "Try again in a minute" },
+    });
+    expect(errors.unavailable("Try later", 3600).retryAfterSeconds).toBe(3600);
+    expect(errors.rateLimited().retryAfterSeconds).toBeUndefined();
+    expect(new AppError("not_found", "Not found").retryAfterSeconds).toBeUndefined();
+    // Whole seconds from 0: a fraction rounds up, and a negative or non-finite figure means none.
+    expect(new AppError("rate_limited", "x", undefined, undefined, 1.2).retryAfterSeconds).toBe(2);
+    expect(new AppError("rate_limited", "x", undefined, undefined, -1).retryAfterSeconds).toBe(
+      undefined,
+    );
+    expect(
+      new AppError("rate_limited", "x", undefined, undefined, Number.NaN).retryAfterSeconds,
+    ).toBeUndefined();
+  });
+
   it("recognises a failure envelope", () => {
     expect(isApiFailure({ error: { code: "not_found", message: "x" } })).toBe(true);
     expect(isApiFailure({ data: 1 })).toBe(false);

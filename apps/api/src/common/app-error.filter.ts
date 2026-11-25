@@ -34,7 +34,8 @@ const PARSER_TYPES: ReadonlyMap<string, number> = new Map([
 
 /**
  * Step 8's companion: every failure leaves as the one envelope (api.md). Typed errors keep their
- * code, edge validation included (the Zod pipes throw validation_failed with the field paths). A
+ * code, edge validation included (the Zod pipes throw validation_failed with the field paths), and their
+ * `retryAfterSeconds` as a `Retry-After` header. A
  * framework exception keeps its 4xx status with the matching code; a body-parser refusal does too,
  * in the fixed wording of PARSER_MESSAGES (answerParserRefusal types it before Nest sees it).
  * Anything else, a ZodError from the API's own response models among it, is logged with the
@@ -53,6 +54,11 @@ export class AppErrorFilter implements ExceptionFilter {
       });
     } else {
       this.logger.info("request.rejected", { code: error.code, status: error.status });
+    }
+    // A typed error that says how long to wait answers it as Retry-After (D-189 §3), so a service that
+    // counts its own limits needs no response object; the api-client reads it back.
+    if (error.retryAfterSeconds !== undefined) {
+      response.setHeader("Retry-After", String(error.retryAfterSeconds));
     }
     const body: ApiFailure = error.toEnvelope();
     response.status(error.status).json(body);

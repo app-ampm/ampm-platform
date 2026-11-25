@@ -62,10 +62,34 @@ export interface ApiClient {
   mediaUrl(url: string | null | undefined): string | null;
 }
 
+const DELAY_SECONDS = /^\d+$/;
+
+/**
+ * A `Retry-After` header as whole seconds from `now` (RFC 9110 §10.2.3): delay-seconds as they stand, an
+ * HTTP date as the seconds until it (0 once it is past). Undefined without the header or when it reads
+ * as neither. The API sends delay-seconds (D-189 §3); a proxy in front of it may send a date.
+ *
+ * @example
+ * retryAfterSecondsOf("30"); // 30
+ * retryAfterSecondsOf(null); // undefined
+ */
+export function retryAfterSecondsOf(
+  header: string | null,
+  now: number = Date.now(),
+): number | undefined {
+  const value = header?.trim() ?? "";
+  if (DELAY_SECONDS.test(value)) return Number.parseInt(value, 10);
+  // A bare number that is not delay-seconds ("-5", "1.5") is malformed, never a date.
+  if (value === "" || /^[\d.+-]+$/.test(value)) return undefined;
+  const at = Date.parse(value);
+  return Number.isNaN(at) ? undefined : Math.max(0, Math.ceil((at - now) / 1000));
+}
+
 /**
  * The one way the apps talk to the API (api.md): the envelope is unwrapped, failures become
- * `AppError` with the API's code, a network failure becomes `network_error`, and every success is
- * validated against the shared schema.
+ * `AppError` with the API's code (and the seconds of its `Retry-After`, when it sends one, as
+ * `retryAfterSeconds`), a network failure becomes `network_error`, and every success is validated
+ * against the shared schema.
  */
 export function createApiClient(options: ApiClientOptions): ApiClient {
   const doFetch = options.fetch ?? fetch;
@@ -100,6 +124,8 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
         code,
         failure?.message ?? `Request failed (${response.status})`,
         failure?.details,
+        undefined,
+        retryAfterSecondsOf(response.headers.get("retry-after")),
       );
     }
     return schema.parse(envelope.data);
