@@ -7,7 +7,14 @@ import {
 import { describe, expect, it } from "vitest";
 
 import { EMPTY_DETAILS } from "./details.form";
-import { INITIAL_FLOW, flowReducer, openingKeyOf, type FlowEvent, type FlowState } from "./flow";
+import {
+  INITIAL_FLOW,
+  flowReducer,
+  openingKeyOf,
+  waitFor,
+  type FlowEvent,
+  type FlowState,
+} from "./flow";
 import { HOTEL_FORM_COPY } from "./hotel-form-copy";
 
 /* The identity step's flow (D-189 §8): HF-01 → HF-02 → HF-03 → signed in, HF-08, and the refusals. */
@@ -162,6 +169,7 @@ describe("your details and the code (HF-02, HF-03)", () => {
         type: "refused",
         refusal: { kind: "field", field: "oneTimeCode", message: HOTEL_FORM_ERRORS.invalidCode },
         now: NOW,
+        call: "verify",
       },
     );
     expect(state.code).toBe("111111");
@@ -173,12 +181,25 @@ describe("your details and the code (HF-02, HF-03)", () => {
       type: "refused",
       refusal: { kind: "wait", message: HOTEL_FORM_ERRORS.tooSoon, seconds: 25 },
       now: NOW,
+      call: "send",
     });
     expect(state.notice).toEqual({
       message: HOTEL_FORM_ERRORS.tooSoon,
       retryAt: NOW + 25_000,
       isReload: false,
+      heldCall: "send",
     });
+  });
+
+  it("holds back only the call a wait refused: entering the code, or asking for one", () => {
+    const wait = { kind: "wait", message: HOTEL_FORM_COPY.errors.tooMany, seconds: 42 } as const;
+    const verify = after(...atCode, { type: "refused", refusal: wait, now: NOW, call: "verify" });
+    expect(waitFor(verify.notice, "verify")).toBe(NOW + 42_000);
+    expect(waitFor(verify.notice, "send")).toBeNull();
+    const send = after(...atCode, { type: "refused", refusal: wait, now: NOW, call: "send" });
+    expect(waitFor(send.notice, "send")).toBe(NOW + 42_000);
+    expect(waitFor(send.notice, "verify")).toBeNull();
+    expect(waitFor(null, "send")).toBeNull();
   });
 
   it("asks for a reload when the notice changed", () => {
@@ -189,6 +210,7 @@ describe("your details and the code (HF-02, HF-03)", () => {
         type: "refused",
         refusal: { kind: "reload", message: HOTEL_FORM_ERRORS.noticeStale },
         now: NOW,
+        call: "send",
       },
     );
     expect(state.notice).toEqual({
@@ -210,6 +232,7 @@ describe("your details and the code (HF-02, HF-03)", () => {
           message: "Enter a 10-digit Indian mobile number",
         },
         now: NOW,
+        call: "send",
       },
     );
     expect(state.errors).toEqual({ mobile: "Enter a 10-digit Indian mobile number" });
@@ -227,6 +250,7 @@ describe("your details and the code (HF-02, HF-03)", () => {
       type: "refused",
       refusal: { kind: "gone", message: HOTEL_FORM_ERRORS.notActive },
       now: NOW,
+      call: "verify",
     });
     expect(state.phase).toEqual({ kind: "gone", message: HOTEL_FORM_ERRORS.notActive });
   });

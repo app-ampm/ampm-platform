@@ -34,6 +34,35 @@ export type Refusal =
 /** The field a refused code belongs to (verify's body names it so). */
 export const CODE_FIELD = "oneTimeCode";
 
+/** A refusal of the session itself: a new code in place, or HF-08. */
+export type SessionRefusal = Extract<Refusal, { readonly kind: "new_code" | "gone" }>;
+
+/** Whether a refusal is the session's own (it ended, or the link is gone), which the flow takes over. */
+export function asksForSession(refusal: Refusal): refusal is SessionRefusal {
+  return refusal.kind === "new_code" || refusal.kind === "gone";
+}
+
+/**
+ * How saving your own details ended: saved; refused in the API's words, with when Save may be pressed
+ * again when the API said (a Retry-After); or the session was refused, which the flow takes over.
+ */
+export type SaveOutcome =
+  | { readonly kind: "saved" }
+  | { readonly kind: "refused"; readonly message: string; readonly retryAt: number | null }
+  | { readonly kind: "session" };
+
+/**
+ * A refused save as the edit shows it: a wait keeps its end, on this device's clock, for Save's countdown.
+ *
+ * @example
+ * saveOutcomeOf({ kind: "wait", message, seconds: 30 }, Date.now()); // { kind: "refused", message, retryAt }
+ */
+export function saveOutcomeOf(refusal: Refusal, now: number): SaveOutcome {
+  if (asksForSession(refusal)) return { kind: "session" };
+  const retryAt = refusal.kind === "wait" ? now + refusal.seconds * 1000 : null;
+  return { kind: "refused", message: refusal.message, retryAt };
+}
+
 /** The session refusals that end at HF-08; the others ask for a new code. */
 const GONE_REASONS: ReadonlySet<HotelFormSessionRefusal> = new Set([
   "link_changed",

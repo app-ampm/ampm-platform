@@ -2,7 +2,6 @@ import {
   HOTEL_FORM_CODE_ACTION,
   HOTEL_FORM_DESIGNATIONS,
   HOTEL_FORM_OTHER_DESIGNATION,
-  formatCountdown,
 } from "@ampm/core";
 import { CheckboxField, MobileField, SelectField, TextField } from "@ampm/web-forms";
 
@@ -10,11 +9,10 @@ import { BotCheckField, botCheckStatusId } from "@/components/bot-check/bot-chec
 import { useBotCheck } from "@/components/bot-check/use-bot-check";
 
 import type { DetailsErrors, DetailsFields } from "./details.form";
-import type { StepNotice } from "./flow";
-import { FormButton, FormNotice } from "./form-parts";
+import { waitFor, type StepNotice } from "./flow";
+import { FormNotice, WaitButton } from "./form-parts";
 import { HOTEL_FORM_COPY } from "./hotel-form-copy";
 import { PrivacyNoticeDisclosure } from "./privacy-notice-disclosure";
-import { useCountdown } from "./use-countdown";
 import type { BotCheckPass } from "./use-hotel-form-flow";
 
 const COPY = HOTEL_FORM_COPY.details;
@@ -100,7 +98,7 @@ function IdentityFields({ claim, errors, onChange }: FieldsProps) {
   );
 }
 
-/** "Send me a code": waits for the bot check, counts down a Retry-After, and says it is sending. */
+/** "Send me a code": waits for the bot check, counts down a code request's Retry-After, says it is sending. */
 function SendButton({
   botToken,
   notice,
@@ -110,21 +108,16 @@ function SendButton({
   readonly notice: StepNotice | null;
   readonly isSending: boolean;
 }) {
-  const left = useCountdown(notice?.retryAt ?? null);
-  const isWaiting = left > 0;
   return (
-    <FormButton
+    <WaitButton
       type="submit"
-      isDisabled={botToken === null || isWaiting}
+      retryAt={waitFor(notice, "send")}
+      isDisabled={botToken === null}
       isBusy={isSending}
       describedBy={botCheckStatusId(DETAILS_BOT_CHECK_ID)}
-    >
-      {isSending
-        ? COPY.sending
-        : isWaiting
-          ? HOTEL_FORM_COPY.errors.retryIn(formatCountdown(left))
-          : COPY.send}
-    </FormButton>
+      words={COPY.send}
+      busyWords={COPY.sending}
+    />
   );
 }
 

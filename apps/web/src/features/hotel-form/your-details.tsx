@@ -10,10 +10,10 @@ import { cn, flatTintStyles, textStyles } from "@ampm/ui/styles";
 import { SelectField, TextField } from "@ampm/web-forms";
 
 import { detailsFromPerson, type DetailsErrors } from "./details.form";
-import { FormButton } from "./form-parts";
+import { FormButton, WaitButton } from "./form-parts";
 import { HOTEL_FORM_COPY } from "./hotel-form-copy";
 import { meChangeStep, type PersonFields } from "./person.form";
-import type { SaveOutcome } from "./use-hotel-form-flow";
+import type { SaveOutcome } from "./refusal";
 
 const COPY = HOTEL_FORM_COPY.signedIn;
 const FIELDS = HOTEL_FORM_COPY.details;
@@ -72,11 +72,15 @@ function EditFields({ fields, errors, onChange }: EditProps) {
   );
 }
 
-/** The edit's state and Save: only what changed is sent; a refused session keeps what was typed. */
+/**
+ * The edit's state and Save: only what changed is sent; a refused session keeps what was typed, and a
+ * wait the API asked for (Retry-After) holds Save back, counted down on it.
+ */
 function useEdit(person: HotelFormPerson, onSave: YourDetailsProps["onSave"]) {
   const [fields, setFields] = useState<PersonFields | null>(null);
   const [errors, setErrors] = useState<DetailsErrors>({});
   const [message, setMessage] = useState<string | null>(null);
+  const [retryAt, setRetryAt] = useState<number | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const save = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -89,6 +93,7 @@ function useEdit(person: HotelFormPerson, onSave: YourDetailsProps["onSave"]) {
     const outcome = await onSave(step.change);
     setIsSaving(false);
     if (outcome.kind === "saved") setFields(null);
+    setRetryAt(outcome.kind === "refused" ? outcome.retryAt : null);
     setMessage(
       outcome.kind === "saved" ? COPY.saved : outcome.kind === "refused" ? outcome.message : null,
     );
@@ -97,7 +102,7 @@ function useEdit(person: HotelFormPerson, onSave: YourDetailsProps["onSave"]) {
     setFields(detailsFromPerson(person));
     setMessage(null);
   };
-  return { fields, setFields, errors, message, isSaving, save, start };
+  return { fields, setFields, errors, message, retryAt, isSaving, save, start };
 }
 
 /** The edit itself: the fields, Save and Cancel. */
@@ -107,9 +112,15 @@ function EditForm({ edit }: { readonly edit: ReturnType<typeof useEdit> }) {
     <form noValidate onSubmit={(event) => void edit.save(event)} className="flex flex-col gap-4">
       <EditFields fields={edit.fields} errors={edit.errors} onChange={edit.setFields} />
       <div className="flex flex-row flex-wrap gap-3">
-        <FormButton id={EDIT_SAVE_ID} type="submit" variant="secondary" isBusy={edit.isSaving}>
-          {edit.isSaving ? COPY.saving : COPY.save}
-        </FormButton>
+        <WaitButton
+          id={EDIT_SAVE_ID}
+          type="submit"
+          variant="secondary"
+          retryAt={edit.retryAt}
+          isBusy={edit.isSaving}
+          words={COPY.save}
+          busyWords={COPY.saving}
+        />
         <FormButton variant="ghost" onClick={() => edit.setFields(null)}>
           {COPY.cancel}
         </FormButton>

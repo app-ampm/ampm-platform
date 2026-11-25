@@ -23,6 +23,7 @@ import {
   openingKeyOf,
   type FlowEvent,
   type FlowState,
+  type HeldCall,
   type IdentityStep,
 } from "./flow";
 import {
@@ -34,19 +35,19 @@ import {
   takeLink,
   type SessionStore,
 } from "./hotel-form-link";
-import { refusalOf, type Refusal } from "./refusal";
+import {
+  asksForSession,
+  refusalOf,
+  saveOutcomeOf,
+  type Refusal,
+  type SaveOutcome,
+} from "./refusal";
 
 /** The bot check as a step hands it over: the token Send carries, and how to start a fresh check. */
 export interface BotCheckPass {
   readonly token: string | null;
   readonly reset: () => void;
 }
-
-/** How saving your own details ended: saved, refused (in the API's words), or the session was refused. */
-export type SaveOutcome =
-  | { readonly kind: "saved" }
-  | { readonly kind: "refused"; readonly message: string }
-  | { readonly kind: "session" };
 
 /** The signed-in page's data: the person and the request, while it loads, and why it failed. */
 export interface MeView {
@@ -79,13 +80,6 @@ export interface HotelFormFlow {
 export function identityOf(state: FlowState): IdentityStep | null {
   if (state.phase.kind === "identity") return state.phase.identity;
   return state.phase.kind === "signed_in" ? state.phase.reverify : null;
-}
-
-/** A refusal of the session itself: a new code in place, or HF-08. */
-type SessionRefusal = Extract<Refusal, { readonly kind: "new_code" | "gone" }>;
-
-function asksForSession(refusal: Refusal): refusal is SessionRefusal {
-  return refusal.kind === "new_code" || refusal.kind === "gone";
 }
 
 /**
@@ -160,9 +154,9 @@ function useSignedIn(state: FlowState, onSessionRefused: OnSessionRefused): MeVi
   };
 }
 
-/** A refusal of a code route, handed to the flow with the time it came. */
-const refusedBy = (dispatch: (event: FlowEvent) => void) => (error: unknown) =>
-  dispatch({ type: "refused", refusal: refusalOf(error), now: Date.now() });
+/** A refusal of a code route, handed to the flow with the time it came and the call it refused. */
+const refusedBy = (dispatch: (event: FlowEvent) => void, call: HeldCall) => (error: unknown) =>
+  dispatch({ type: "refused", refusal: refusalOf(error), now: Date.now(), call });
 
 /** Asking for a code (HF-02, and HF-03's resend), in the main flow or in place. */
 function useSendCode(state: FlowState, dispatch: (event: FlowEvent) => void) {
@@ -177,7 +171,7 @@ function useSendCode(state: FlowState, dispatch: (event: FlowEvent) => void) {
     botCheck.reset();
     requestCode.mutate(step.request, {
       onSuccess: (issued) => dispatch({ type: "code_issued", issued, now: Date.now() }),
-      onError: refusedBy(dispatch),
+      onError: refusedBy(dispatch, "send"),
     });
   };
   return { sendCode, isSendingCode: requestCode.isPending };
@@ -203,7 +197,7 @@ function useVerifyCode(
         keepSession(storage.current, sessionToken);
         dispatch({ type: "verified", sessionToken });
       },
-      onError: refusedBy(dispatch),
+      onError: refusedBy(dispatch, "verify"),
     });
   };
   return { verifyCode, isVerifying: verify.isPending };
@@ -227,9 +221,8 @@ function useSessionCalls(
       return { kind: "saved" };
     } catch (error) {
       const refusal = refusalOf(error);
-      if (!asksForSession(refusal)) return { kind: "refused", message: refusal.message };
-      onSessionRefused(refusal, person);
-      return { kind: "session" };
+      if (asksForSession(refusal)) onSessionRefused(refusal, person);
+      return saveOutcomeOf(refusal, Date.now());
     }
   };
 

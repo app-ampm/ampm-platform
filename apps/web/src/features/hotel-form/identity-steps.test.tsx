@@ -168,7 +168,12 @@ describe("HF-02, Your details", () => {
   });
 
   it("shows the API's refusal and counts its wait down on the button", () => {
-    const notice = { message: HOTEL_FORM_ERRORS.tooSoon, retryAt: NOW + 25_000, isReload: false };
+    const notice = {
+      message: HOTEL_FORM_ERRORS.tooSoon,
+      retryAt: NOW + 25_000,
+      isReload: false,
+      heldCall: "send" as const,
+    };
     const html = details({ notice });
     expect(html).toMatch(/role="alert"[^>]*><p[^>]*>Please wait a few seconds/);
     expect(buttonsIn(html)).toContain("Try again in 0:25");
@@ -215,6 +220,34 @@ describe("HF-03, Enter your code", () => {
     expect(buttonsIn(html)).toContain("Send a new code in 0:30");
     const [resend] = tagsWith(html, "button", 'aria-describedby="hf-resend-check-status"');
     expect(resend).toContain('disabled=""');
+  });
+
+  it("counts a refused code's wait down on Continue, leaving Send a new code to its own pause", () => {
+    const notice = {
+      message: HOTEL_FORM_COPY.errors.tooMany,
+      retryAt: NOW + 42_000,
+      isReload: false,
+      heldCall: "verify" as const,
+    };
+    const html = code(ON_SCREEN, { notice });
+    expect(tagsWith(html, "button", 'type="submit"')[0]).toContain('disabled=""');
+    expect(buttonsIn(html)).toEqual(
+      expect.arrayContaining(["Try again in 0:42", "Send a new code in 0:30"]),
+    );
+  });
+
+  it("counts a code request's wait down on Send a new code, leaving Continue open", () => {
+    const notice = {
+      message: HOTEL_FORM_ERRORS.tooSoon,
+      retryAt: NOW + 45_000,
+      isReload: false,
+      heldCall: "send" as const,
+    };
+    const html = code(ON_SCREEN, { notice });
+    expect(tagsWith(html, "button", 'type="submit"')[0]).not.toContain('disabled=""');
+    expect(buttonsIn(html)).toEqual(
+      expect.arrayContaining(["Continue", "Send a new code in 0:45"]),
+    );
   });
 
   it("keeps a refused code's digits, with the refusal on the field", () => {

@@ -8,7 +8,7 @@ import {
 import { describe, expect, it } from "vitest";
 
 import { HOTEL_FORM_COPY } from "./hotel-form-copy";
-import { refusalOf } from "./refusal";
+import { refusalOf, saveOutcomeOf } from "./refusal";
 
 /* What the page does with each refusal of the form's routes (D-189 §3 to §5). */
 
@@ -105,6 +105,31 @@ describe("a refused call", () => {
     expect(refusalOf(new Error("parse failed"))).toEqual({
       kind: "message",
       message: HOTEL_FORM_COPY.errors.unexpected,
+    });
+  });
+});
+
+describe("saving your own details", () => {
+  const NOW = Date.parse("2026-11-25T10:00:00.000Z");
+
+  it("keeps a wait's end, so Save can count it down", () => {
+    const wait = { kind: "wait", message: HOTEL_FORM_ERRORS.writeLimit, seconds: 30 } as const;
+    expect(saveOutcomeOf(wait, NOW)).toEqual({
+      kind: "refused",
+      message: HOTEL_FORM_ERRORS.writeLimit,
+      retryAt: NOW + 30_000,
+    });
+  });
+
+  it("hands a refused session back to the flow, and words any other refusal as it came", () => {
+    const ended = HOTEL_FORM_SESSION_REFUSAL_MESSAGES.session_ended;
+    expect(saveOutcomeOf({ kind: "new_code", message: ended }, NOW)).toEqual({ kind: "session" });
+    expect(saveOutcomeOf({ kind: "gone", message: null }, NOW)).toEqual({ kind: "session" });
+    const readOnly = { kind: "message", message: HOTEL_FORM_ERRORS.readOnly } as const;
+    expect(saveOutcomeOf(readOnly, NOW)).toEqual({
+      kind: "refused",
+      message: HOTEL_FORM_ERRORS.readOnly,
+      retryAt: null,
     });
   });
 });

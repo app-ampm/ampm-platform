@@ -6,8 +6,8 @@ import { BotCheckField, botCheckStatusId } from "@/components/bot-check/bot-chec
 import { useBotCheck } from "@/components/bot-check/use-bot-check";
 
 import { spokenMobile } from "./code.form";
-import type { IdentityStep, StepNotice } from "./flow";
-import { FormButton, FormNotice } from "./form-parts";
+import { waitFor, type IdentityStep, type StepNotice } from "./flow";
+import { FormButton, FormNotice, WaitButton } from "./form-parts";
 import { HOTEL_FORM_COPY } from "./hotel-form-copy";
 import { ShownCode } from "./shown-code";
 import { useCountdown } from "./use-countdown";
@@ -66,7 +66,10 @@ function Destination({
   );
 }
 
-/** "Send a new code", held back until the API's pause (and any Retry-After) is over, then its bot check. */
+/**
+ * "Send a new code", held back until the API's pause (and a code request's Retry-After) is over, then its
+ * bot check. A wait the API answered to a code entered holds back Continue, not this.
+ */
 function Resend({
   identity,
   notice,
@@ -75,7 +78,7 @@ function Resend({
   onResend,
 }: Pick<CodeFormProps, "identity" | "notice" | "isSending" | "siteKey" | "onResend">) {
   const botCheck = useBotCheck(siteKey, { action: HOTEL_FORM_CODE_ACTION });
-  const deadline = Math.max(identity.resendAt, notice?.retryAt ?? 0);
+  const deadline = Math.max(identity.resendAt, waitFor(notice, "send") ?? 0);
   const left = useCountdown(deadline);
   const time = formatCountdown(left);
   return (
@@ -100,6 +103,46 @@ function Resend({
   );
 }
 
+/** The code field and Continue, which a wait the API answered to a code entered counts down. */
+function CodeEntry({
+  identity,
+  code,
+  codeError,
+  notice,
+  isVerifying,
+  onCodeChange,
+  onVerify,
+}: Omit<CodeFormProps, "siteKey" | "isSending" | "onResend" | "onChangeDetails">) {
+  return (
+    <form
+      noValidate
+      onSubmit={(event) => {
+        event.preventDefault();
+        onVerify();
+      }}
+      className="flex flex-col gap-4"
+    >
+      <CodeField
+        id={CODE_FIELD_ID}
+        label={COPY.field}
+        value={code}
+        onChange={onCodeChange}
+        required
+        autoFocus={identity.issued.delivery === "sms"}
+        help={COPY.lifetime}
+        error={codeError ?? undefined}
+      />
+      <WaitButton
+        type="submit"
+        retryAt={waitFor(notice, "verify")}
+        isBusy={isVerifying}
+        words={COPY.verify}
+        busyWords={COPY.verifying}
+      />
+    </form>
+  );
+}
+
 /**
  * HF-03's form (D-189 §8): where the code went, with Change; in on-screen mode the code itself in a
  * callout with "Use this code", as client sign-in shows it (in SMS mode it is never on the page); the
@@ -109,7 +152,7 @@ function Resend({
  *   <CodeForm identity={identity} code={state.code} codeError={state.codeError} … onVerify={flow.verifyCode} />
  */
 export function CodeForm(props: CodeFormProps) {
-  const { identity, code, codeError, notice, isVerifying, onCodeChange, onVerify } = props;
+  const { identity, code, notice, isVerifying, onCodeChange } = props;
   const shown = identity.issued.delivery === "screen" ? identity.issued.code : null;
   return (
     <div className="flex flex-col gap-4">
@@ -122,28 +165,7 @@ export function CodeForm(props: CodeFormProps) {
         <ShownCode code={shown} isUsed={code === shown} onUse={() => onCodeChange(shown)} />
       ) : null}
       {notice ? <FormNotice notice={notice} /> : null}
-      <form
-        noValidate
-        onSubmit={(event) => {
-          event.preventDefault();
-          onVerify();
-        }}
-        className="flex flex-col gap-4"
-      >
-        <CodeField
-          id={CODE_FIELD_ID}
-          label={COPY.field}
-          value={code}
-          onChange={onCodeChange}
-          required
-          autoFocus={identity.issued.delivery === "sms"}
-          help={COPY.lifetime}
-          error={codeError ?? undefined}
-        />
-        <FormButton type="submit" isBusy={isVerifying}>
-          {isVerifying ? COPY.verifying : COPY.verify}
-        </FormButton>
-      </form>
+      <CodeEntry {...props} />
       <Resend {...props} />
     </div>
   );

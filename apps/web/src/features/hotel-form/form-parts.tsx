@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+import { formatCountdown } from "@ampm/core";
 import {
   buttonLabelStyles,
   buttonStyles,
@@ -12,6 +13,7 @@ import {
 
 import type { StepNotice } from "./flow";
 import { HOTEL_FORM_COPY as COPY } from "./hotel-form-copy";
+import { useCountdown } from "./use-countdown";
 
 /*
  * The small pieces every step of the hotel form shares: its buttons, the notice that carries a refusal,
@@ -64,6 +66,37 @@ export function FormButton({
     >
       <span className={buttonLabelStyles({ variant, size, disabled: isDisabled })}>{children}</span>
     </button>
+  );
+}
+
+export interface WaitButtonProps extends Omit<FormButtonProps, "children"> {
+  /** When the API said the call may be made again (Retry-After), on this device's clock; null for none. */
+  readonly retryAt: number | null;
+  /** The button's words, and its words while its call runs. */
+  readonly words: string;
+  readonly busyWords: string;
+}
+
+/**
+ * A FormButton the API's wait holds back: while it runs, the button is the kit's dashed pill and counts
+ * the wait down in its words ("Try again in 0:42"), once a second; then it says its own words again.
+ *
+ *   <WaitButton type="submit" retryAt={waitFor(notice, "verify")} words="Continue" busyWords="Checking…" />
+ */
+export function WaitButton({
+  retryAt,
+  words,
+  busyWords,
+  isDisabled = false,
+  isBusy = false,
+  ...button
+}: WaitButtonProps) {
+  const left = useCountdown(retryAt);
+  const isWaiting = left > 0;
+  return (
+    <FormButton {...button} isBusy={isBusy} isDisabled={isDisabled || isWaiting}>
+      {isBusy ? busyWords : isWaiting ? COPY.errors.retryIn(formatCountdown(left)) : words}
+    </FormButton>
   );
 }
 

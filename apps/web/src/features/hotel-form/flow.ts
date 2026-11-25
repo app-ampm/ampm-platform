@@ -52,11 +52,16 @@ export interface OpenedLink {
   readonly expiresAt: string | null;
 }
 
+/** A call of the identity step a wait can hold back: asking for a code, or entering one. */
+export type HeldCall = "send" | "verify";
+
 /** A notice over the step on screen: a refusal, or why the page asks again. */
 export interface StepNotice {
   readonly message: string;
   /** When the person may try again, on this device's clock (a Retry-After). */
   readonly retryAt: number | null;
+  /** The call `retryAt` holds back (the one the API refused); the other stays open. */
+  readonly heldCall?: HeldCall | undefined;
   /** The privacy notice changed: the way on is a reload. */
   readonly isReload: boolean;
 }
@@ -95,7 +100,13 @@ export type FlowEvent =
   | { readonly type: "code_invalid"; readonly error: string }
   | { readonly type: "change_details" }
   | { readonly type: "verified"; readonly sessionToken: string }
-  | { readonly type: "refused"; readonly refusal: Refusal; readonly now: number }
+  | {
+      readonly type: "refused";
+      readonly refusal: Refusal;
+      readonly now: number;
+      /** The call the API refused: a wait holds back that one only. */
+      readonly call: HeldCall;
+    }
   | {
       readonly type: "session_refused";
       readonly refusal: Refusal;
@@ -117,11 +128,22 @@ export const INITIAL_FLOW: FlowState = {
   reopens: 0,
 };
 
-const noticeOf = (message: string, retryAt: number | null = null): StepNotice => ({
-  message,
-  retryAt,
-  isReload: false,
-});
+const noticeOf = (
+  message: string,
+  retryAt: number | null = null,
+  heldCall?: HeldCall,
+): StepNotice => ({ message, retryAt, isReload: false, ...(heldCall ? { heldCall } : {}) });
+
+/**
+ * When `call` may be made again, on this device's clock, or null when the notice holds it back for no
+ * wait (a wait the API answered to the other call holds back that one only).
+ *
+ * @example
+ * const left = useCountdown(waitFor(state.notice, "verify")); // Continue's countdown
+ */
+export function waitFor(notice: StepNotice | null, call: HeldCall): number | null {
+  return notice?.heldCall === call ? notice.retryAt : null;
+}
 
 /**
  * The key the page opens the link under: a new one for every open asked for, so a link that arrives while
@@ -167,12 +189,17 @@ function fieldRefused(state: FlowState, field: string, message: string): FlowSta
   return { ...state, notice: noticeOf(message) };
 }
 
-function refused(state: FlowState, refusal: Refusal, now: number): FlowState {
+function refused(
+  state: FlowState,
+  refusal: Refusal,
+  now: number,
+  call: HeldCall = "send",
+): FlowState {
   switch (refusal.kind) {
     case "gone":
       return { ...state, phase: { kind: "gone", message: refusal.message }, session: null };
     case "wait":
-      return { ...state, notice: noticeOf(refusal.message, now + refusal.seconds * 1000) };
+      return { ...state, notice: noticeOf(refusal.message, now + refusal.seconds * 1000, call) };
     case "reload":
       return { ...state, notice: { message: refusal.message, retryAt: null, isReload: true } };
     case "field":
@@ -234,7 +261,7 @@ export function flowReducer(state: FlowState, event: FlowEvent): FlowState {
     case "verified":
       return verified(state, event.sessionToken);
     case "refused":
-      return refused(state, event.refusal, event.now);
+      return refused(state, event.refusal, event.now, event.call);
     case "session_refused":
       return sessionRefused(state, event);
     case "signed_out":
