@@ -4,7 +4,14 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   // Shared packages ship TypeScript source; Next compiles them (docs/engineering/standards.md §2.2).
-  transpilePackages: ["@ampm/tokens", "@ampm/ui", "@ampm/core", "@ampm/policy", "@ampm/api-client"],
+  transpilePackages: [
+    "@ampm/tokens",
+    "@ampm/ui",
+    "@ampm/core",
+    "@ampm/policy",
+    "@ampm/api-client",
+    "@ampm/web-forms",
+  ],
   // The server image (infra/docker/web.Dockerfile) runs Next's traced standalone server, not the whole
   // workspace. Every page renders per request (D-046), so the site needs a Node server, not a static
   // export. Tracing starts at the repository root so the workspace packages and the hoisted

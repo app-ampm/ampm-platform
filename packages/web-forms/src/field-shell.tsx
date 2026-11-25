@@ -17,8 +17,12 @@ export interface FieldShellProps extends FieldMessageOptions {
 }
 
 /**
- * A field of the enquiry form (W6): the label in Manrope 600 13, the control in its pill, and under it
+ * A field of the site's forms (W6): the label in Manrope 600 13, the control in its pill, and under it
  * the gold error or the help line.
+ *
+ *   <FieldShell id="email" label="Email" optionalText="optional" error={error}>
+ *     <div className={fieldStyles()}><input id="email" … /></div>
+ *   </FieldShell>
  */
 export function FieldShell({
   id,

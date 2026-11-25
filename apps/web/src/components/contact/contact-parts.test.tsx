@@ -1,8 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
-import { CheckboxField } from "./checkbox-field";
-import { ChoiceSegments } from "./choice-segments";
 import { ContactChannelList } from "./contact-channel-list";
 import {
   CONTACT_CHANNELS,
@@ -12,16 +10,12 @@ import {
 } from "./contact-channels";
 import { DateRangeField } from "./date-range-field";
 
-/* The contact page's Peacock Night parts, rendered as the server sends them (W6). */
+/*
+ * The contact page's own Peacock Night parts, rendered as the server sends them (W6). The fields it
+ * shares with the hotel form (pill choices, checkbox, text fields) are tested in @ampm/web-forms.
+ */
 
 const noop = () => undefined;
-
-/** The `<input …>` tags carrying `attribute`, whatever order React writes their attributes in. */
-function inputsWith(html: string, attribute: string): string[] {
-  return [...html.matchAll(/<input[^>]*>/g)]
-    .map((match) => match[0])
-    .filter((tag) => tag.includes(attribute));
-}
 
 describe("contact channels", () => {
   it("lists only the channels AMPM has given an address for", () => {
@@ -55,82 +49,6 @@ describe("contact channels", () => {
 
   it("draws nothing without a channel", () => {
     expect(renderToStaticMarkup(<ContactChannelList channels={[]} />)).toBe("");
-  });
-});
-
-describe("pill choices", () => {
-  const options = [
-    { value: "whatsapp", label: "WhatsApp" },
-    { value: "phone", label: "Call" },
-  ];
-
-  it("are native radios in a fieldset named by its legend, the chosen one checked", () => {
-    const html = renderToStaticMarkup(
-      <ChoiceSegments
-        name="reach"
-        legend="Best way to reach you"
-        options={options}
-        value="phone"
-        onChange={noop}
-        look="soft"
-      />,
-    );
-    expect(html).toMatch(/<fieldset[^>]*><legend[^>]*>Best way to reach you<\/legend>/);
-    expect(inputsWith(html, 'name="reach"')).toHaveLength(2);
-    expect(inputsWith(html, 'type="radio"')).toHaveLength(2);
-    expect(inputsWith(html, 'value="phone"')[0]).toContain('checked=""');
-    expect(inputsWith(html, 'value="whatsapp"')[0]).not.toContain('checked=""');
-    // The soft look: peacock glass behind the chosen word, not the switch's solid peacock.
-    expect(html).toContain("bg-highlight/30");
-  });
-
-  it("start with nothing chosen and keep the legend for screen readers when hidden", () => {
-    const html = renderToStaticMarkup(
-      <ChoiceSegments
-        name="type"
-        legend="Type of request"
-        isLegendHidden
-        options={options}
-        value=""
-        onChange={noop}
-      />,
-    );
-    expect(html).not.toContain('checked=""');
-    expect(html).toContain('<legend class="sr-only">Type of request</legend>');
-  });
-
-  it("show an error in gold and point the radios at it", () => {
-    const html = renderToStaticMarkup(
-      <ChoiceSegments
-        name="reach"
-        legend="Reach"
-        options={options}
-        value=""
-        onChange={noop}
-        error="Pick one"
-      />,
-    );
-    expect(html).toContain('<p id="reach-error" role="alert"');
-    expect(html).toContain('aria-describedby="reach-error"');
-  });
-});
-
-describe("checkbox", () => {
-  it("keeps a native checkbox and draws the peacock box with a midnight tick when checked", () => {
-    const html = renderToStaticMarkup(
-      <CheckboxField id="consent" label="Send me news" checked onChange={noop} />,
-    );
-    expect(inputsWith(html, 'type="checkbox"')[0]).toContain('checked=""');
-    expect(html).toContain("bg-highlight");
-    expect(html).toContain("✓");
-  });
-
-  it("draws an empty box when not checked", () => {
-    const html = renderToStaticMarkup(
-      <CheckboxField id="consent" label="Send me news" checked={false} onChange={noop} />,
-    );
-    expect(html).not.toContain("✓");
-    expect(html).toContain("border-primary/34");
   });
 });
 

@@ -8,11 +8,16 @@ import {
   linkStyles,
   textStyles,
 } from "@ampm/ui/styles";
+import {
+  CheckboxField,
+  ChoiceSegments,
+  TextAreaField,
+  TextField,
+  type ChoiceOption,
+} from "@ampm/web-forms";
 
 import { PRIVACY_HREF } from "@/components/site/site-links";
 
-import { CheckboxField } from "./contact/checkbox-field";
-import { ChoiceSegments, type ChoiceOption } from "./contact/choice-segments";
 import { channelHref } from "./contact/contact-channels";
 import { BOT_CHECK_STATUS_ID } from "./contact/contact-ids";
 import { fullRowStyles } from "./contact/contact.styles";
@@ -20,12 +25,10 @@ import { reachOf, type ReceivedRequest } from "./contact/contact-request";
 import { DateRangeField } from "./contact/date-range-field";
 import { ENQUIRY_COPY as COPY } from "./contact/enquiry-copy";
 import { RequestReceived } from "./contact/request-received";
-import { TextAreaField } from "./contact/text-area-field";
-import { TextField } from "./contact/text-field";
 
 /*
- * PUB-06 form parts: the field groups the enquiry form composes, drawn with the Peacock Night pieces
- * in ./contact (W6, W7). Kept apart from the form's state so each piece stays small (code.md). Their
+ * PUB-06 form parts: the field groups the enquiry form composes, drawn with the site's Peacock Night
+ * fields from @ampm/web-forms and the pieces in ./contact (W6, W7). Kept apart from the form's state so each piece stays small (code.md). Their
  * words are ENQUIRY_COPY (./contact/enquiry-copy) pending the public site's i18n; the validation
  * messages are the shared schema's.
  */

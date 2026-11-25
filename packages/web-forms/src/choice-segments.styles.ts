@@ -1,9 +1,9 @@
 import { cn, segmentLabelStyles, segmentStyles, segmentedTrackStyles } from "@ampm/ui/styles";
 
-import { peerFocusRingStyles } from "./contact.styles";
+import { peerFocusRingStyles } from "./peer-focus.styles";
 
 /**
- * The pill choices of the enquiry form (W6), from the kit's SegmentedControl recipes on DOM radios:
+ * The pill choices of the site's forms (W6), from the kit's SegmentedControl recipes on DOM radios:
  *
  *   solid  the request switch: the chosen segment is a peacock pill with a midnight label, the two
  *          segments share the width (the kit's segmented control).
