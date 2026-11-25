@@ -1,9 +1,12 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { errors, type LeadEnquiryRequest, type LeadEnquiryResponse } from "@ampm/core";
 
+import {
+  BOT_CHECK_ADAPTER,
+  type BotCheckAdapter,
+} from "../../../common/bot-check/bot-check.adapter.js";
 import { AppLogger } from "../../../common/logger.service.js";
 import { NotificationService } from "../../admin/notification/notification.service.js";
-import { BOT_CHECK_ADAPTER, type BotCheckAdapter } from "./bot-check.adapter.js";
 import { DEFAULT_SOURCE_KEY, PRIVACY_NOTICE_VERSION } from "./lead-constants.js";
 import { LeadsRepository, type LeadSourceRef, type LeadWriteData } from "./leads.repository.js";
 
@@ -26,7 +29,8 @@ export class LeadEnquiryService {
     request: LeadEnquiryRequest,
     remoteIp: string | undefined,
   ): Promise<LeadEnquiryResponse> {
-    if (!(await this.botCheck.verify(request.botToken, remoteIp))) {
+    // Today's checks only: the website enquiry names no hostname or action (D-189 §7).
+    if (!(await this.botCheck.verify(request.botToken, { remoteIp }))) {
       throw errors.validation([
         { path: "botToken", message: "Complete the bot check to continue" },
       ]);

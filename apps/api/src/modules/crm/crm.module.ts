@@ -1,7 +1,6 @@
 import { Module } from "@nestjs/common";
 
-import { AppLogger } from "../../common/logger.service.js";
-import { ENV, type Env } from "../../env.js";
+import { BotCheckModule } from "../../common/bot-check/bot-check.module.js";
 import { IdentityModule } from "../../identity/identity.module.js";
 import { NotificationModule } from "../admin/notification/notification.module.js";
 import { AccountContactsController } from "./accounts/account-contacts.controller.js";
@@ -10,12 +9,6 @@ import { AccountInviteService } from "./accounts/account-invite.service.js";
 import { AccountsController } from "./accounts/accounts.controller.js";
 import { AccountsRepository } from "./accounts/accounts.repository.js";
 import { AccountsService } from "./accounts/accounts.service.js";
-import {
-  BOT_CHECK_ADAPTER,
-  SiteverifyBotCheckAdapter,
-  StubBotCheckAdapter,
-  type BotCheckAdapter,
-} from "./leads/bot-check.adapter.js";
 import { HotelAssistanceDemoHandler } from "./leads/hotel-assistance-demo.handler.js";
 import { LeadActivitiesRepository } from "./leads/lead-activities.repository.js";
 import { LeadEnquiryService } from "./leads/lead-enquiry.service.js";
@@ -29,11 +22,12 @@ import { LeadsService } from "./leads/leads.service.js";
  * reminder job and the funnel. Feature 8.2 (conversion): convert a lead into a client account with a
  * primary contact and a portal invite (minted through IdentityModule's kernel services). NotificationModule
  * delivers the Sales, reminder and invite notices; the job seam and the policy/audit kernel are global. The
- * bot check adapter is chosen by configuration: the stub in development/staging, a real siteverify provider
- * in production (env.ts refuses the stub there, C1). Subscriptions are feature 8.3.
+ * public enquiry's bot check comes from BotCheckModule, shared with the hotel form (D-189 §7): the stub in
+ * development/staging, a real siteverify provider in production (env.ts refuses the stub there, C1).
+ * Subscriptions are feature 8.3.
  */
 @Module({
-  imports: [NotificationModule, IdentityModule],
+  imports: [NotificationModule, IdentityModule, BotCheckModule],
   controllers: [LeadsController, AccountsController, AccountContactsController],
   providers: [
     LeadsService,
@@ -46,14 +40,6 @@ import { LeadsService } from "./leads/leads.service.js";
     AccountContactsService,
     AccountInviteService,
     AccountsRepository,
-    {
-      provide: BOT_CHECK_ADAPTER,
-      useFactory: (env: Env, logger: AppLogger): BotCheckAdapter =>
-        env.BOT_CHECK_PROVIDER === "siteverify" && env.BOT_CHECK_URL && env.BOT_CHECK_SECRET
-          ? new SiteverifyBotCheckAdapter(env.BOT_CHECK_URL, env.BOT_CHECK_SECRET, logger)
-          : new StubBotCheckAdapter(),
-      inject: [ENV, AppLogger],
-    },
   ],
 })
 export class CrmModule {}
