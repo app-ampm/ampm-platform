@@ -3,12 +3,15 @@ import { describe, expect, it } from "vitest";
 import {
   HOTEL_INFO_REQUEST_LIVE_STATUSES,
   HOTEL_INFO_REQUEST_REFERENCE,
+  hotelFormCodeDelivery,
   hotelInfoRequestActorKind,
+  hotelInfoRequestConsentKind,
   hotelInfoRequestEventType,
   hotelInfoRequestKind,
   hotelInfoRequestReference,
   hotelInfoRequestStatus,
   hotelInfoRequestTarget,
+  hotelInfoRequestWithdrawalSource,
   isLiveHotelInfoRequestStatus,
 } from "./hotel-info-requests";
 
@@ -70,5 +73,17 @@ describe("hotelInfoRequestReference", () => {
     expect(() => hotelInfoRequestReference(2026, 1.5)).toThrow();
     expect(() => hotelInfoRequestReference(999, 1)).toThrow();
     expect(() => hotelInfoRequestReference(10000, 1)).toThrow();
+  });
+});
+
+/* The identity step's words (D-189 §1 and §2), kept in step with the database enums. */
+describe("hotel form identity vocabulary", () => {
+  it("delivers a code by SMS or on screen, and nothing else", () => {
+    expect(hotelFormCodeDelivery.options).toEqual(["sms", "screen"]);
+  });
+
+  it("records the privacy notice consent now, withdrawn by the contributor or by staff", () => {
+    expect(hotelInfoRequestConsentKind.options).toEqual(["privacy_notice"]);
+    expect(hotelInfoRequestWithdrawalSource.options).toEqual(["contributor", "staff"]);
   });
 });

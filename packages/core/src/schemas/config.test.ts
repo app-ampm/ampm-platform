@@ -52,9 +52,10 @@ describe("hotel_form.policy", () => {
     maxPeople: 10,
     replyTo: "admin@ampm.example",
     helpContact: "Call AMPM on +91 22 0000 0000",
+    smsDailyCap: 300,
   } as const;
 
-  it("defaults to mode off, a 30-day link extendable by 60 days, 7 status-only days and 10 people", () => {
+  it("defaults to mode off, a 30-day link extendable by 60 days, 7 status-only days, 10 people and 300 texts a day", () => {
     expect(CONFIG_REGISTRY["hotel_form.policy"].default).toEqual({
       mode: "off",
       linkValidityDays: 30,
@@ -63,7 +64,26 @@ describe("hotel_form.policy", () => {
       maxPeople: 10,
       replyTo: null,
       helpContact: null,
+      smsDailyCap: 300,
     });
+  });
+
+  it("bounds the global SMS cap to 1 to 10,000 codes a day, in whole codes (D-189 §3)", () => {
+    for (const cap of [1, 300, 10_000]) {
+      expect(hotelFormPolicy.safeParse({ ...valid, smsDailyCap: cap }).success, String(cap)).toBe(
+        true,
+      );
+    }
+    for (const cap of [0, -1, 10_001, 2.5, "300", null]) {
+      expect(hotelFormPolicy.safeParse({ ...valid, smsDailyCap: cap }).success, String(cap)).toBe(
+        false,
+      );
+    }
+  });
+
+  it("reads a row stored before the SMS cap existed as the default cap (D-189 §3)", () => {
+    const { smsDailyCap: _omit, ...storedBefore } = valid;
+    expect(hotelFormPolicy.parse(storedBefore)).toEqual({ ...storedBefore, smsDailyCap: 300 });
   });
 
   it("takes the three modes and nothing else", () => {
@@ -129,7 +149,7 @@ describe("hotel_form.policy", () => {
     });
     expect(hotelFormPolicy.parse({})).toEqual(CONFIG_REGISTRY["hotel_form.policy"].default);
     // A later slice adds fields: the release before it must still read the value after a rollback.
-    expect(hotelFormPolicy.parse({ ...valid, smsCap: 300 })).toEqual(valid);
+    expect(hotelFormPolicy.parse({ ...valid, laterField: 300 })).toEqual(valid);
   });
 
   it("still refuses a field it knows that holds a wrong value, rather than defaulting it", () => {

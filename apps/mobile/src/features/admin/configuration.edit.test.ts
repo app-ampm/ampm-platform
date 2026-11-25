@@ -176,6 +176,7 @@ describe("configuration.edit", () => {
         ["maxPeople", "int"],
         ["replyTo", "text"],
         ["helpContact", "text"],
+        ["smsDailyCap", "int"],
       ]);
       expect(configEditFields(POLICY)[0]?.options).toEqual(["off", "test_only", "on"]);
       expect(configOptionLabel("test_only")).toBe("Test only");
@@ -190,6 +191,7 @@ describe("configuration.edit", () => {
         maxPeople: "10",
         replyTo: "",
         helpContact: "",
+        smsDailyCap: "300",
       });
     });
 
@@ -208,7 +210,17 @@ describe("configuration.edit", () => {
         maxPeople: 10,
         replyTo: "desk@ampm.example",
         helpContact: null,
+        smsDailyCap: 300,
       });
+    });
+
+    it("edits the daily SMS cap (D-189 §3), so a save never resets it to the default", () => {
+      const raised = validateConfigDraft(POLICY, { ...base, smsDailyCap: "450" });
+      expect(raised.value).toMatchObject({ smsDailyCap: 450 });
+      const bounds = validateConfigDraft(POLICY, { ...base, smsDailyCap: "0" });
+      expect(bounds.fieldErrors).toEqual({ smsDailyCap: "Must be at least 1" });
+      const over = validateConfigDraft(POLICY, { ...base, smsDailyCap: "10001" });
+      expect(over.fieldErrors).toEqual({ smsDailyCap: "Must be at most 10000" });
     });
 
     it("holds each number to its bounds, in words", () => {

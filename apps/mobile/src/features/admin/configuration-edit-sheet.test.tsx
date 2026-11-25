@@ -170,6 +170,7 @@ describe("ConfigurationEditSheet", () => {
       maxPeople: 10,
       replyTo: null,
       helpContact: null,
+      smsDailyCap: 300,
     };
     await renderSheet(
       routedFetch({

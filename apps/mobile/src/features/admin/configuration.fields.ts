@@ -85,6 +85,14 @@ const HOTEL_FORM_POLICY: readonly ConfigEditField[] = [
     maxLength: 300,
     help: "Shown on the form to a hotel that needs help. Blank: none shown.",
   },
+  {
+    path: "smsDailyCap",
+    label: "Codes sent by SMS a day",
+    kind: "int",
+    min: 1,
+    max: 10000,
+    help: "Across every request, once SMS is wired. When it is reached, code requests wait until the next day.",
+  },
 ];
 
 export const CONFIG_EDIT_FIELDS: Readonly<Record<string, readonly ConfigEditField[]>> = {
