@@ -30,15 +30,17 @@ function memoryStore(entries: Record<string, string> = {}): SessionStore & {
   };
 }
 
-/** A tab at an address, recording every replaceState. */
+/** A tab at an address, recording every replaceState and every address its router is told. */
 function tab(hash: string, store: SessionStore | null = memoryStore()) {
   const replaced: (string | URL | null | undefined)[] = [];
+  const routed: string[] = [];
   const host: LinkHost = {
     location: { hash, pathname: "/hotel-form", search: "" },
     history: { state: null, replaceState: (_data, _unused, url) => void replaced.push(url) },
     storage: store,
+    syncRouter: (url) => void routed.push(url),
   };
-  return { host, replaced };
+  return { host, replaced, routed };
 }
 
 describe("the link in the fragment", () => {
@@ -74,6 +76,15 @@ describe("taking the link", () => {
     const store = memoryStore({ [LINK_KEY]: SECRET, [SESSION_KEY]: SESSION });
     takeLink(tab(`#k=${SECRET}`, store).host);
     expect(store.entries.get(SESSION_KEY)).toBe(SESSION);
+  });
+
+  it("tells the page's router the address without the link, so a refresh never writes it back", () => {
+    const { host, routed } = tab(`#k=${SECRET}`);
+    takeLink(host);
+    expect(routed).toEqual(["/hotel-form"]);
+    const kept = tab("", memoryStore({ [LINK_KEY]: SECRET }));
+    takeLink(kept.host);
+    expect(kept.routed).toEqual([]);
   });
 
   it("finds the tab's link after a reload, when the address bar no longer has it", () => {

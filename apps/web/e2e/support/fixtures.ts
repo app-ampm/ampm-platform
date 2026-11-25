@@ -58,6 +58,26 @@ export async function turnstileActions(page: Page): Promise<(string | null)[]> {
 }
 
 /**
+ * Refreshes Next's router, as `router.refresh()` in the page would, through the router Next exposes on
+ * `window.next` for debugging (app-router-instance), and waits for the page to settle. A refresh writes
+ * the router's own copy of the address back into the address bar.
+ */
+export async function refreshNextRouter(page: Page): Promise<void> {
+  const refreshed = await page.evaluate(() => {
+    const next: unknown = Reflect.get(window, "next");
+    const router: unknown =
+      typeof next === "object" && next !== null ? Reflect.get(next, "router") : null;
+    const refresh: unknown =
+      typeof router === "object" && router !== null ? Reflect.get(router, "refresh") : null;
+    if (typeof refresh !== "function") return false;
+    Reflect.apply(refresh, router, []);
+    return true;
+  });
+  expect(refreshed).toBe(true);
+  await page.waitForLoadState("networkidle");
+}
+
+/**
  * The page passes axe (WCAG 2.1 A and AA, and best practice) as it stands, once its transitions have
  * finished: a button turning gold as it is enabled would otherwise be measured halfway.
  */

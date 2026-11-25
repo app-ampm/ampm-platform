@@ -1,6 +1,12 @@
 import type { Page, Request } from "@playwright/test";
 
-import { expect, expectAccessible, test, turnstileActions } from "./support/fixtures";
+import {
+  expect,
+  expectAccessible,
+  refreshNextRouter,
+  test,
+  turnstileActions,
+} from "./support/fixtures";
 import {
   API_URL,
   E2E_HELP_CONTACT,
@@ -66,6 +72,10 @@ test("HF-01 to HF-03: the link opens the welcome, the details ask for a code, th
   await expect(page).toHaveURL(`${SITE_URL}/hotel-form`);
   expect(await page.evaluate(() => window.location.hash)).toBe("");
   expect(await sessionStorageValue(page, LINK_KEY)).toBe(formLink.secret);
+  // Next's router was told too: a refresh writes its own copy of the address back, without the link.
+  await refreshNextRouter(page);
+  await expect(page).toHaveURL(`${SITE_URL}/hotel-form`);
+  expect(await page.evaluate(() => window.location.hash)).toBe("");
 
   // HF-01
   await expect(
