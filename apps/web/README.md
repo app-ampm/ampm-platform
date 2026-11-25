@@ -4,13 +4,14 @@ The AMPM public website: Next.js 16 with the App Router, Tailwind on the tokens 
 
 - `src/app/` the routes (App Router). The root `layout` is the document alone: it loads the fonts and `globals.css`. The marketing pages live in the `(site)` route group, whose `layout` draws the chrome they share (`SiteFrame`): the glass top bar, the footer (W1's full one on the home page, the compact W2–W6 one elsewhere, plain on a phone as W8 draws it) and the "Chat with AMPM" pill; the root `not-found` draws the same frame. `(site)/page` is the home page (PUB-01), then `how-it-works` (PUB-02 and the plans, PUB-07), `services` (PUB-03), `destinations` (PUB-04), `about` (PUB-05) and `contact`, the enquiry and demo request (PUB-06) with its confirmation (PUB-09); `privacy` and `terms` hold their place until AMPM publishes those documents. Every page repeats `export const dynamic = "force-dynamic"` (D-046).
 - `src/components/site/` the site's chrome and DOM building blocks (`ButtonLink`, `GlassCard`, `SectionHeading`, `SectionIntro`, `PhotoPlaceholder`, `GlowOrbs`, `Chip`, `SiteContainer`…), exported from its `index.ts`. They style plain DOM with the kit's class recipes from `@ampm/ui/styles`; the site never imports `@ampm/ui` itself, which is React Native.
-- `src/features/<feature>/` a page's own sections and content: `home`, `how-it-works`, `services`, `destinations`, `about`.
+- `src/features/<feature>/` a page's own sections and content: `home`, `how-it-works`, `services`, `destinations`, `about`, and `hotel-form`, the hotel information form at `/hotel-form` (D-189 §8) in its own layout without the site's navigation or chat pill; its fields come from `packages/web-forms` (D-175) and its end-to-end tests are in `e2e/`.
 - `src/components/` the enquiry form (`contact-form`, `enquiry-fields`, `enquiry-payload`) and its parts in `components/contact`.
 
 ```bash
 pnpm --filter web dev          # http://localhost:3417 (3000 belongs to another project on the development Mac)
 pnpm --filter web build        # downloads the fonts through next/font, so it needs the network
 pnpm --filter web typecheck
+pnpm --filter web test:e2e     # the hotel form's Playwright and axe tests, against a local API (docs/CONTRIBUTING.md)
 ```
 
 ## Configuration

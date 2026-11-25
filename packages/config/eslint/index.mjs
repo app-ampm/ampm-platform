@@ -105,10 +105,12 @@ export const ampm = defineConfig([
     rules: { "@typescript-eslint/no-require-imports": "off" },
   },
   {
-    // Default exports where the framework demands them: Expo Router and Next.js route files, config files.
+    // Default exports where the framework demands them: Expo Router and Next.js route files, config files,
+    // and Playwright's global setup and teardown.
     files: [
       "apps/web/src/app/**/*.{ts,tsx}",
       "apps/mobile/src/app/**/*.{ts,tsx}",
+      "apps/web/e2e/global-{setup,teardown}.ts",
       "**/*.config.{js,cjs,mjs,ts}",
       "**/*.config.*.{js,cjs,mjs,ts}",
     ],
