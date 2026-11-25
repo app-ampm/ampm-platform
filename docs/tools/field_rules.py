@@ -572,7 +572,10 @@ TABLES["hotel_info_request_challenges"] = T(
                                   "within an hour, that mobile is locked for an hour"),
     code_hmac=F(editor=SYS, visibility="SECRET", required="System",
                 validation="HMAC-SHA256 of the code bound to the challenge's id under HKDF ampm/hotel-form-code, 64 "
-                           "hex characters; the code is never stored, logged or returned in SMS mode"),
+                           "hex characters; the code is never logged, is returned only in on-screen mode, and is "
+                           "stored nowhere else, except that in SMS mode its queued SMS notification holds it in "
+                           "its render data until the SMS is sent or fails, when that data is cleared, as for a "
+                           "client sign-in code (D-044)"),
     code_expires_at=F(editor=SYS, required="System", validation="5 minutes after issue",
                       automation="Refused after expiry"),
     attempts=F(editor=SYS, required="System",
