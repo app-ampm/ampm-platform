@@ -85,7 +85,7 @@ export async function startFormSuite(
     const env = {
       ...loadEnv(),
       SMS_PROVIDER: "msg91" as const,
-      SMS_API_KEY: "e2e-synthetic-key",
+      SMS_API_KEY: "synthetic-key",
       SMS_OTP_TEMPLATE: "e2e-synthetic-otp-template",
       SMS_HOTEL_FORM_TEMPLATE: "e2e-synthetic-form-template",
       LOG_LEVEL: "debug" as const,
@@ -181,7 +181,7 @@ export function claimFor(secret: string, mobile: string, overrides: object = {})
     designation: "General Manager",
     mobile,
     noticeVersion: HOTEL_FORM_NOTICE_VERSION,
-    botToken: "e2e-bot-pass",
+    botToken: "dev-bot-check",
     ...overrides,
   };
 }

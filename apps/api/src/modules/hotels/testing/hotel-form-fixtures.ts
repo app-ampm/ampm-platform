@@ -32,9 +32,7 @@ export const FORM_LINK = mintLinkSecret();
 /** The keys of the local identity provider, as the e2e and development run. */
 export const FORM_KEYS = signInKeysFor({
   IDENTITY_PROVIDER: "local",
-  IDENTITY_LOCAL_SECRET: "unit-local-secret-that-is-long-enough-for-hs256",
-  AUTH_TOKEN_SECRET: undefined,
-  AUTH_ENCRYPTION_KEY: undefined,
+  IDENTITY_LOCAL_SECRET: "l".repeat(40),
 });
 
 /** The environment with no SMS provider: codes are shown on screen. */
