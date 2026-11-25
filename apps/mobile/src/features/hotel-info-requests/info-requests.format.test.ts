@@ -164,6 +164,27 @@ describe("eventLine", () => {
       ),
     ).toMatch(/^Revoked: the hotel was deleted · .* · System$/);
   });
+
+  it("reads a hotel person's events (D-189 §6) without naming anyone", () => {
+    const person = { occurredAt: "2026-11-25T09:00:00.000Z", actorKind: "hotel_person" as const };
+    const line = (event: Parameters<typeof requestEventFixture>[0]) =>
+      eventLine(requestEventFixture({ ...person, actorUserId: null, ...event }));
+    expect(line({ eventType: "code_requested", detail: { delivery: "screen" } })).toMatch(
+      /^Code requested \(shown on screen\) · .* · The hotel$/,
+    );
+    expect(line({ eventType: "code_requested", detail: { delivery: "sms" } })).toMatch(
+      /^Code requested \(sent by SMS\) · /,
+    );
+    expect(line({ eventType: "person_verified", detail: { returning: false } })).toMatch(
+      /^A new person joined · .* · The hotel$/,
+    );
+    expect(line({ eventType: "person_verified", detail: { returning: true } })).toMatch(
+      /^A person signed in again · /,
+    );
+    expect(
+      line({ eventType: "person_updated", detail: { fields: ["fullName", "designation"] } }),
+    ).toMatch(/^A person changed their name and designation · /);
+  });
 });
 
 describe("duplicateHintReasons", () => {

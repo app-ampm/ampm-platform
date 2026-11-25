@@ -807,10 +807,10 @@ erDiagram
     hotel_info_request_events {
         uuid id PK
         uuid request_id FK
-        string event_type "enum created / link_reissued / link_emailed / share_recorded / updated / expiry_extended / revoked"
+        string event_type "enum created / link_reissued / link_emailed / share_recorded / updated / expiry_extended / revoked / code_requested / person_verified / person_updated"
         string actor_kind "enum staff / hotel_person / system"
         uuid actor_user_id FK "the staff user, when staff acted"
-        uuid actor_person_id FK "the hotel person (hotel_info_request_people), when one acted"
+        uuid actor_person_id FK "the hotel person (hotel_info_request_people), when one acted; null on code_requested"
         json detail_json "masked detail"
         datetime occurred_at
     }
@@ -964,6 +964,7 @@ Notes:
   - **The session** a correct code opens is carried by that challenge: `person_id` is set when the code is entered (`hotel_info_request_challenges_person_on_use`), and only the SHA-256 of the session's `hfs_` token is stored (`session_token_hash`, unique, SECRET), with its start, last sight and end; a session needs its person and start (`hotel_info_request_challenges_session_on_verified`). The address and the user agent are RESTRICTED-CONTACT.
   - **Consents** (`hotel_info_request_consents`) are the evidence, append-only by repository convention: created, then only withdrawn (time, source and, for staff, who). The privacy notice's consent is recorded when a person's code is entered, with the notice's version and no `revision_hash` (`hotel_info_request_consents_notice_has_no_revision`); the two declarations of a later slice add their kinds and bind to a submitted revision's hash.
   - **Rolling back past this migration.** The previous image never reads the new tables or the new column, and the hotel form's public routes stay off with the mode. Its audit service writes no `actor_ref`, which the CHECK allows. Nothing to clear.
+  - **A hotel person's request events** (migration `20261130000000_hotel_form_events`, expand only: three values of `HotelInfoRequestEventType`). What a hotel person does through the identity step joins the request's history, with actor kind `hotel_person`: `code_requested` (someone holding the link asked for a code, the first human step, so a link counts as opened only then; no person exists yet, so `actor_person_id` is null and the detail names the challenge and the delivery), `person_verified` (a correct code, from a new or a returning person: `actor_person_id` set, the detail naming the challenge, the delivery and whether the person was returning) and `person_updated` (a person changed their own name or designation: the detail names the fields, never their values). No detail holds a name, a mobile or a code. Rolling back past it: the previous image reads these events in a request's full view, whose response model does not know the three types and answers 500 for a request holding one; delete them first (`DELETE FROM hotel_info_request_events WHERE event_type IN ('code_requested', 'person_verified', 'person_updated');`), or leave the form's mode `off`, which writes none.
 
 ---
 

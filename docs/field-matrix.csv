@@ -455,10 +455,10 @@ C,hotel_info_requests,Hotel intake,revoke_reason,text,,,"text, up to 10,000 char
 C,hotel_info_requests,Hotel intake,retention_class,string,,,hotel_intake,SYS,INTERNAL,System,Retention candidates are proposed for a Super Admin to approve (A-17),"D-188, D-172, D-173"
 C,hotel_info_request_events,Hotel intake,id,uuid,PK,,"UUID v7, generated",SYS,INTERNAL,System,—,D-188
 C,hotel_info_request_events,Hotel intake,request_id,uuid,FK,,references hotel_info_requests,SYS,INTERNAL,At creation,—,D-188
-C,hotel_info_request_events,Hotel intake,event_type,string,,"created, link_reissued, link_emailed, share_recorded, updated, expiry_extended, revoked",one of the listed options,SYS,INTERNAL,At creation,—,D-188
+C,hotel_info_request_events,Hotel intake,event_type,string,,"created, link_reissued, link_emailed, share_recorded, updated, expiry_extended, revoked, code_requested, person_verified, person_updated",one of the listed options,SYS,INTERNAL,At creation,—,D-188
 C,hotel_info_request_events,Hotel intake,actor_kind,string,,"staff, hotel_person, system",one of the listed options,SYS,INTERNAL,At creation,—,D-188
 C,hotel_info_request_events,Hotel intake,actor_user_id,uuid,FK,,"references users; the staff user, when staff acted",SYS (acting user),INTERNAL,When actor_kind is staff,—,D-188
-C,hotel_info_request_events,Hotel intake,actor_person_id,uuid,FK,,references hotel_info_request_people (foreign key from Slice 7b),SYS,INTERNAL,When actor_kind is hotel_person,—,D-188
+C,hotel_info_request_events,Hotel intake,actor_person_id,uuid,FK,,references hotel_info_request_people (foreign key from Slice 7b),SYS,INTERNAL,"When actor_kind is hotel_person, except code_requested (no person yet)",—,D-188
 C,hotel_info_request_events,Hotel intake,detail_json,json,,,valid JSON; personal data masked before storage; never the link's secret,SYS,INTERNAL,Optional,—,D-188
 C,hotel_info_request_events,Hotel intake,occurred_at,datetime,,,timestamp (UTC),SYS,INTERNAL,System,—,D-188
 C,hotel_info_request_people,Hotel intake,id,uuid,PK,,"UUID v7, generated",SYS,INTERNAL,System,—,"D-189, D-172, D-180"

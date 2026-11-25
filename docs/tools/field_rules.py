@@ -503,7 +503,7 @@ TABLES["hotel_info_request_events"] = T(
          "of a request (the audit log stays the Super Admin's)",
     request_id=F(validation="references hotel_info_requests"),
     actor_user_id=F(required="When actor_kind is staff"),
-    actor_person_id=F(editor=SYS, required="When actor_kind is hotel_person",
+    actor_person_id=F(editor=SYS, required="When actor_kind is hotel_person, except code_requested (no person yet)",
                       validation="references hotel_info_request_people (foreign key from Slice 7b)"),
     detail_json=F(validation="valid JSON; personal data masked before storage; never the link's secret"),
     occurred_at=F(editor=SYS, required="System"),

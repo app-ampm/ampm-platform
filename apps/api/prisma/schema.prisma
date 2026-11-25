@@ -1654,7 +1654,8 @@ enum HotelInfoRequestPrefillMode {
   none
 }
 
-/// What a request event records: Slice 7a's; later slices add theirs.
+/// What a request event records: Slice 7a's, then a hotel person's from the identity step (D-189 §6:
+/// code_requested, person_verified, person_updated); later slices add theirs.
 enum HotelInfoRequestEventType {
   created
   link_reissued
@@ -1663,6 +1664,9 @@ enum HotelInfoRequestEventType {
   updated
   expiry_extended
   revoked
+  code_requested
+  person_verified
+  person_updated
 }
 
 /// Who wrote a request event: AMPM staff, a person at the hotel, or the System.

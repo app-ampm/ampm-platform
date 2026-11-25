@@ -823,10 +823,10 @@ Created at stage: **Hotel intake** · Default editor: SYS · Default visibility:
 |---|---|---|---|---|---|---|
 | `id` (PK) | UUID v7, generated |  | SYS | INTERNAL | System | — |
 | `request_id` (FK) | references hotel_info_requests |  | SYS | INTERNAL | At creation | — |
-| `event_type` | one of the listed options | created, link_reissued, link_emailed, share_recorded, updated, expiry_extended, revoked | SYS | INTERNAL | At creation | — |
+| `event_type` | one of the listed options | created, link_reissued, link_emailed, share_recorded, updated, expiry_extended, revoked, code_requested, person_verified, person_updated | SYS | INTERNAL | At creation | — |
 | `actor_kind` | one of the listed options | staff, hotel_person, system | SYS | INTERNAL | At creation | — |
 | `actor_user_id` (FK) | references users; the staff user, when staff acted |  | SYS (acting user) | INTERNAL | When actor_kind is staff | — |
-| `actor_person_id` (FK) | references hotel_info_request_people (foreign key from Slice 7b) |  | SYS | INTERNAL | When actor_kind is hotel_person | — |
+| `actor_person_id` (FK) | references hotel_info_request_people (foreign key from Slice 7b) |  | SYS | INTERNAL | When actor_kind is hotel_person, except code_requested (no person yet) | — |
 | `detail_json` | valid JSON; personal data masked before storage; never the link's secret |  | SYS | INTERNAL | Optional | — |
 | `occurred_at` | timestamp (UTC) |  | SYS | INTERNAL | System | — |
 

@@ -58,7 +58,13 @@ export function isLiveHotelInfoRequestStatus(status: HotelInfoRequestStatus): bo
 export const hotelInfoRequestPrefillMode = z.enum(["none"]);
 export type HotelInfoRequestPrefillMode = z.infer<typeof hotelInfoRequestPrefillMode>;
 
-/** What a request event records (`hotel_info_request_events.event_type`): Slice 7a's; later slices add. */
+/**
+ * What a request event records (`hotel_info_request_events.event_type`): Slice 7a's staff and System
+ * events, then the identity step's (D-189 §6), whose actor is a hotel person: `code_requested` (someone
+ * holding the link asked for a code: the first human step, so a link counts as opened only then; no
+ * person exists yet), `person_verified` (a correct code: a new or a returning person) and
+ * `person_updated` (a person changed their own name or designation). Later slices add theirs.
+ */
 export const hotelInfoRequestEventType = z.enum([
   "created",
   "link_reissued",
@@ -67,6 +73,9 @@ export const hotelInfoRequestEventType = z.enum([
   "updated",
   "expiry_extended",
   "revoked",
+  "code_requested",
+  "person_verified",
+  "person_updated",
 ]);
 export type HotelInfoRequestEventType = z.infer<typeof hotelInfoRequestEventType>;
 

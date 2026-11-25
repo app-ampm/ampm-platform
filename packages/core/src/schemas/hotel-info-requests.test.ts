@@ -17,7 +17,7 @@ import {
 
 /* The words of hotel information requests (D-188 §1 and §2), kept in step with the database enums. */
 describe("hotel information request vocabulary", () => {
-  it("names the kinds, targets, statuses, event types and actor kinds of D-188", () => {
+  it("names the kinds, targets, statuses, event types (D-188, and D-189's hotel people) and actor kinds", () => {
     expect(hotelInfoRequestKind.options).toEqual(["onboarding", "refresh"]);
     expect(hotelInfoRequestTarget.options).toEqual(["existing", "new"]);
     expect(hotelInfoRequestStatus.options).toEqual([
@@ -38,6 +38,9 @@ describe("hotel information request vocabulary", () => {
       "updated",
       "expiry_extended",
       "revoked",
+      "code_requested",
+      "person_verified",
+      "person_updated",
     ]);
   });
 
