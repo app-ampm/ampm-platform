@@ -8,8 +8,8 @@ interface RouteErrorProps {
 }
 
 /**
- * Next's error boundary for every page under the root layout: the top bar and footer stay, and the
- * page says what happened with a way to try again (D-160).
+ * Next's error boundary for every page of the site's group: the top bar and footer stay, and the page
+ * says what happened with a way to try again (D-160).
  */
 export default function RouteError({ error, retry }: RouteErrorProps) {
   return <ErrorPage error={error} retry={retry} scope="page" />;

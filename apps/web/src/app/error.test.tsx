@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
-import RouteError from "./error";
+import RouteError from "./(site)/error";
 import GlobalError from "./global-error";
 
 // next/font runs only under Next's compiler (fonts.test.ts reads its source instead).

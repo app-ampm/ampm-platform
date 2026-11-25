@@ -15,16 +15,17 @@
  *     </SiteContainer>
  *   </>
  *
- * The root layout already draws the top bar, the footer and the chat pill.
+ * The (site) group's layout already draws the top bar, the footer and the chat pill (SiteFrame).
  */
 
-// Chrome (the root layout uses these).
+// Chrome (SiteFrame, which the (site) group's layout and the not-found page draw, uses these).
 export { ChatPill } from "./chat-pill";
 export { MobileMenu } from "./mobile-menu";
 export { NavLinks } from "./nav-links";
 export { RouteFooter } from "./route-footer";
 export { SiteFooter } from "./site-footer";
 export type { SiteFooterVariant } from "./site-footer";
+export { SiteFrame } from "./site-frame";
 export { SiteHeader } from "./site-header";
 export { MAIN_ID, SkipLink } from "./skip-link";
 export { Wordmark } from "./wordmark";
