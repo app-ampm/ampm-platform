@@ -87,7 +87,7 @@ export type FlowEvent =
   | { readonly type: "reopen" }
   | { readonly type: "start" }
   | { readonly type: "claim_changed"; readonly claim: DetailsFields }
-  | { readonly type: "details_invalid"; readonly errors: DetailsErrors }
+  | { readonly type: "details_checked"; readonly errors: DetailsErrors }
   | { readonly type: "code_issued"; readonly issued: HotelFormCodeIssued; readonly now: number }
   | { readonly type: "code_changed"; readonly code: string }
   | { readonly type: "code_invalid"; readonly error: string }
@@ -207,7 +207,7 @@ export function flowReducer(state: FlowState, event: FlowEvent): FlowState {
       return { ...state, notice: null, phase: { kind: "identity", identity: { step: "details" } } };
     case "claim_changed":
       return { ...state, claim: event.claim };
-    case "details_invalid":
+    case "details_checked":
       return { ...state, errors: event.errors, notice: null };
     case "code_issued":
       return codeIssued(state, event.issued, event.now);

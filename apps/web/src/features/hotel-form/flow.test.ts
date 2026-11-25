@@ -110,11 +110,21 @@ describe("your details and the code (HF-02, HF-03)", () => {
     expect(state.claim).toEqual(CLAIM);
   });
 
+  it("clears the details' errors once a try finds the answers complete", () => {
+    const state = after(
+      opened(),
+      { type: "start" },
+      { type: "details_checked", errors: { mobile: "Bad" } },
+      { type: "details_checked", errors: {} },
+    );
+    expect(state.errors).toEqual({});
+  });
+
   it("shows the details' errors until the next try", () => {
     const state = after(
       opened(),
       { type: "start" },
-      { type: "details_invalid", errors: { mobile: "Bad" } },
+      { type: "details_checked", errors: { mobile: "Bad" } },
     );
     expect(state.errors).toEqual({ mobile: "Bad" });
   });

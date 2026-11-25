@@ -27,6 +27,7 @@ import {
   browserLinkHost,
   forgetSession,
   keepSession,
+  linkFromHash,
   storedSession,
   takeLink,
   type SessionStore,
@@ -86,8 +87,23 @@ function asksForSession(refusal: Refusal): refusal is SessionRefusal {
 }
 
 /**
+ * Opens the form afresh when a link arrives in the address bar of a page already open (pasted into the
+ * same tab, or followed from a page there): only the fragment changes then, so the page is not loaded
+ * again. Taking the link out with replaceState fires no hashchange, so this runs once per link.
+ */
+function useLinkArrival(dispatch: (event: FlowEvent) => void) {
+  useEffect(() => {
+    const onHashChange = () => {
+      if (linkFromHash(window.location.hash) !== null) dispatch({ type: "reopen" });
+    };
+    window.addEventListener("hashchange", onHashChange);
+    return () => window.removeEventListener("hashchange", onHashChange);
+  }, [dispatch]);
+}
+
+/**
  * Takes the link out of the address bar and opens it, each time the flow is back at "opening" (the
- * first render, and Try again).
+ * first render, Try again, and a link arriving in the same tab).
  */
 function useOpening(
   state: FlowState,
@@ -150,7 +166,8 @@ function useSendCode(state: FlowState, dispatch: (event: FlowEvent) => void) {
   const sendCode = (botCheck: BotCheckPass) => {
     if (state.link === null) return;
     const step = detailsStep(state.claim, state.link.secret, botCheck.token);
-    if (step.kind === "invalid") dispatch({ type: "details_invalid", errors: step.errors });
+    // Checked on every press: a refused answer shows on its field, and a corrected one clears.
+    dispatch({ type: "details_checked", errors: step.kind === "invalid" ? step.errors : {} });
     if (step.kind !== "send") return;
     // A token is good for one request: spend it now, so the check is already running again.
     botCheck.reset();
@@ -239,6 +256,7 @@ export function useHotelFormFlow(): HotelFormFlow {
     dispatch({ type: "session_refused", refusal, person });
   }, []);
   useOpening(state, dispatch, storage);
+  useLinkArrival(dispatch);
   const me = useSignedIn(state, onSessionRefused);
   return {
     state,
