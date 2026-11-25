@@ -448,7 +448,7 @@ Then:
 - `Cache-Control: no-store`;
 - the enforced CSP, with the API origin added to `img-src` for signed thumbnails.
 
-Link previews show generic text and nothing about the hotel. The site's `.htaccess` sets X-Robots-Tag and Referrer-Policy with `Header always set`, which would send a second value next to the page's own. Switch those two lines to `Header setifempty`, or exclude `/hotel-form`, and check the result by GET.
+Link previews show generic text and nothing about the hotel. The site's `.htaccess` sets X-Robots-Tag and Referrer-Policy with `Header always set`, which would send a second value next to the page's own, and so it does X-Content-Type-Options, X-Frame-Options and Permissions-Policy, which Next sends on every page. Switch those five lines to `Header setifempty` (deploy/site-ampmverse/htaccess.production.example), and check the result by GET.
 
 **Field kit**
 
