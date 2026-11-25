@@ -48,7 +48,16 @@ const COSTLY = [
   // Each issues a hotel information request's link and can email it to an address outside AMPM (D-188 §5).
   "HotelInfoRequestsController.create",
   "HotelInfoRequestsController.reissue",
+  // A hotel form code request costs a bot check, a challenge and, in SMS mode, a text message; a verify
+  // spends one of the challenge's tries (D-189 §3 and §4).
+  "HotelFormController.requestCode",
+  "HotelFormController.verifyCode",
 ];
+
+/** The hotel form's public routes (D-189 §4), whose every limit fails closed but sign-out's. */
+const HOTEL_FORM_ROUTES = ["open", "requestCode", "verifyCode", "getMe", "updateMe", "signOut"];
+/** The one hotel form route that fails open: D-149 keeps sign-out open. */
+const HOTEL_FORM_FAILS_OPEN = "signOut";
 
 /** Metadata on the handler, else on its controller: the order the guards read it in. */
 function metadata<T>(route: ControllerRoute, key: string): T | undefined {
@@ -85,6 +94,20 @@ describe("rate-limit coverage: every route a non-staff caller reaches is limited
   for (const route of routes.filter(isSignIn)) {
     it(`${nameOf(route)} fails closed: no credential is tried uncounted`, () => {
       expect(metadata<RateLimitOptions>(route, RATE_LIMIT)?.failClosed).toBe(true);
+    });
+  }
+
+  const form = routes.filter((route) => route.cls.name === "HotelFormController");
+
+  it("discovers the hotel form's public routes", () => {
+    expect(form.map((route) => route.handler).sort()).toEqual([...HOTEL_FORM_ROUTES].sort());
+  });
+
+  for (const route of form) {
+    const failsOpen = route.handler === HOTEL_FORM_FAILS_OPEN;
+    it(`${nameOf(route)} ${failsOpen ? "fails open (sign-out, D-149)" : "fails closed"}`, () => {
+      expect(isPublic(route)).toBe(true);
+      expect(metadata<RateLimitOptions>(route, RATE_LIMIT)?.failClosed).toBe(!failsOpen);
     });
   }
 

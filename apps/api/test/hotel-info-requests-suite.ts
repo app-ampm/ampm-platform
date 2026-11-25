@@ -6,7 +6,7 @@ import request from "supertest";
 
 import { PrismaService } from "../src/db/prisma.service.js";
 import type { Prisma } from "../src/generated/prisma/client.js";
-import { startApi } from "./start-api.js";
+import { startApi, type CustomiseApi } from "./start-api.js";
 
 /*
  * The hotel information requests' e2e suites (D-188 §3 to §5): a running API with a token for each
@@ -64,13 +64,17 @@ export async function newSuiteHotel(
 }
 
 /**
- * Starts the API, mints each role's token and makes the suite's destination and two hotels.
+ * Starts the API (customised first, when asked), mints each role's token and makes the suite's
+ * destination and two hotels.
  *
  * @example
  * beforeAll(async () => (suite = await startRequestSuite("e2e-hir-a-")));
  */
-export async function startRequestSuite(name: string): Promise<RequestSuite> {
-  const { app, mint } = await startApi();
+export async function startRequestSuite(
+  name: string,
+  customise?: CustomiseApi,
+): Promise<RequestSuite> {
+  const { app, mint } = await startApi(customise);
   const prisma = app.get(PrismaService);
   const prefix = `${name}${randomBytes(3).toString("hex")}-`;
   const bearer: Record<Role, string> = {

@@ -107,7 +107,8 @@ import { SavedHotelsStaffService } from "./saved-hotels-staff.service.js";
     SavedHotelsStaffService,
     SavedHotelsStaffRepository,
   ],
-  // ConsultancyModule (Module D, feature 10.1) injects HotelsService for the enquiry reach check.
-  exports: [HotelsService],
+  // ConsultancyModule (Module D, feature 10.1) injects HotelsService for the enquiry reach check; the
+  // hotel form's module (D-189) writes its requests' events through the journal.
+  exports: [HotelsService, HotelInfoRequestJournal],
 })
 export class HotelsModule {}
