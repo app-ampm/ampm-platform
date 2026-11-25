@@ -74,6 +74,13 @@ describe("audit_events.actor_ref (e2e, D-189 §6)", () => {
     expect(await partitions()).not.toContain("audit_events_2099_01");
   });
 
+  it("was checked against no existing row (NOT VALID), so adding it never scanned the audit", async () => {
+    const rows = await prisma.$queryRaw<{ validated: boolean }[]>`
+      SELECT convalidated AS validated FROM pg_constraint
+      WHERE conrelid = to_regclass('audit_events') AND conname = 'audit_events_actor_ref_guest_only'`;
+    expect(rows).toEqual([{ validated: false }]);
+  });
+
   it("is held by a guest_token event only: null for staff and the System", async () => {
     const id = randomUUID();
     const base = { action: "update" as const, entityType: "e2e_actor_ref", entityId: randomUUID() };

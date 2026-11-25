@@ -8,8 +8,18 @@
 -- columns 7a left without one (hotel_info_requests.submitted_by_person_id and
 -- hotel_info_request_events.actor_person_id, both null in every row so far). audit_events is partitioned by
 -- month: ADD COLUMN on the parent reaches every partition, DEFAULT included, and a partition created later
--- (the maintenance job's CREATE TABLE ... PARTITION OF) inherits the column and the CHECK below. Adding the
--- column changes no row; the CHECK reads every audit row once, all of them null in the new column.
+-- (the maintenance job's CREATE TABLE ... PARTITION OF) inherits the column and the CHECK below.
+-- Locks, while the previous API still serves: Prisma 7 applies this file one statement at a time, each
+-- committing on its own, and the SET below holds for every statement after it. No statement waits more than
+-- 5 seconds for its locks, so none keeps the API's writes queued behind it; one that times out stops the
+-- deploy with the statements before it applied (docs/data-model.md, the identity step). The two audit_events
+-- statements, which take ACCESS EXCLUSIVE on every audit partition, come last, in the order a live staff
+-- change takes its locks (a request, its event, then its audit), so a timeout there leaves only them to run,
+-- and run as one transaction the file could not deadlock with such a change. Adding the column changes no
+-- row, and the CHECK is added NOT VALID: it holds for every row written from then on and reads none of the
+-- existing ones, all of them null in the new column.
+
+SET lock_timeout = '5s';
 
 -- CreateEnum
 CREATE TYPE "HotelFormCodeDelivery" AS ENUM ('sms', 'screen');
@@ -19,9 +29,6 @@ CREATE TYPE "HotelInfoRequestConsentKind" AS ENUM ('privacy_notice');
 
 -- CreateEnum
 CREATE TYPE "HotelInfoRequestWithdrawalSource" AS ENUM ('contributor', 'staff');
-
--- AlterTable
-ALTER TABLE "audit_events" ADD COLUMN     "actor_ref" TEXT;
 
 -- CreateTable
 CREATE TABLE "hotel_info_request_people" (
@@ -194,8 +201,13 @@ ALTER TABLE "hotel_info_request_consents"
   ADD CONSTRAINT "hotel_info_request_consents_notice_has_no_revision"
   CHECK ("kind" <> 'privacy_notice' OR "revision_hash" IS NULL);
 
--- actor_ref names a hotel-form contributor (guest_token) and is null for staff and the System. A CHECK on
--- the partitioned parent holds on every partition, and each partition created later inherits it.
+-- Last, the audit (see the locks above). actor_ref names a hotel-form contributor (guest_token) and is null
+-- for staff and the System. A CHECK on the partitioned parent holds on every partition, and each partition
+-- created later inherits it. NOT VALID: no existing row is read, every one of them null in the new column.
+
+-- AlterTable
+ALTER TABLE "audit_events" ADD COLUMN     "actor_ref" TEXT;
+
 ALTER TABLE "audit_events"
   ADD CONSTRAINT "audit_events_actor_ref_guest_only"
-  CHECK ("actor_ref" IS NULL OR "actor_type" = 'guest_token');
+  CHECK ("actor_ref" IS NULL OR "actor_type" = 'guest_token') NOT VALID;
