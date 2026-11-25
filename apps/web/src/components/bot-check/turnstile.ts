@@ -1,6 +1,6 @@
 /*
- * Cloudflare Turnstile, the enquiry form's bot check (PUB-06, D-145; security.md: "a bot check on
- * public forms"). A hand-written loader and the slice of Turnstile's explicit-render API the form
+ * Cloudflare Turnstile, the site's bot check (the enquiry form, PUB-06, D-145; the hotel form's code
+ * request, D-189 §3; security.md: "a bot check on public forms"). A hand-written loader and the slice of Turnstile's explicit-render API the form
  * calls, in place of a wrapper package (code.md: no dependency without asking). The script comes
  * straight from Cloudflare, which requires its exact URL (no proxy, no copy), and only on the page that
  * draws the widget; the CSP admits its origin (middleware.ts). The API checks each token with Cloudflare.
@@ -15,6 +15,11 @@ export const TURNSTILE_SCRIPT_URL = `${TURNSTILE_ORIGIN}/turnstile/v0/api.js?ren
 /** The render parameters the form sets, under Turnstile's own names; the rest keep their defaults. */
 export interface TurnstileRenderOptions {
   readonly sitekey: string;
+  /**
+   * The action the token is issued for, which Cloudflare returns with it and the API checks (the hotel
+   * form's `hf_code`): at most 32 letters, digits, `_` and `-`. Left out, the token names none.
+   */
+  readonly action?: string | undefined;
   readonly theme: "light" | "dark" | "auto";
   readonly size: "normal" | "flexible" | "compact";
   /** False: the token reaches the form through `callback`, never through a hidden input. */

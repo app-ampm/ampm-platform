@@ -2,12 +2,27 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import type { BotCheck } from "./bot-check";
-import { BotCheckField } from "./bot-check-field";
+import { BotCheckField, botCheckStatusId, type BotCheckCopy } from "./bot-check-field";
+
+/** The enquiry form's words, as the contact page passes them. */
+const COPY: BotCheckCopy = {
+  checking: "Running a quick security check before you send…",
+  passed: "Security check passed. You can send your request.",
+  failed: "The security check did not finish. Check your connection, then try again.",
+  unsupported: "This browser cannot run our security check. Please try another browser.",
+  retry: "Try the check again",
+};
 
 /** The bot check above Send in each of its states, as the server sends it (PUB-06). */
-function render(check: BotCheck): string {
+function render(check: BotCheck, copy: BotCheckCopy = COPY, id = "bot-check"): string {
   return renderToStaticMarkup(
-    <BotCheckField check={check} containerRef={() => undefined} onRetry={() => undefined} />,
+    <BotCheckField
+      id={id}
+      copy={copy}
+      check={check}
+      containerRef={() => undefined}
+      onRetry={() => undefined}
+    />,
   );
 }
 
@@ -41,6 +56,20 @@ describe("bot check field", () => {
     expect(html).toMatch(
       /<button type="button" class="[^"]*min-h-touch[^"]*"><span[^>]*>Try the check again<\/span><\/button>/,
     );
+  });
+
+  it("takes its words and its ids from the form it guards (the hotel form's code request)", () => {
+    const html = render(
+      { status: "failed" },
+      { ...COPY, failed: "The check did not finish.", retry: "Run it again" },
+      "hf-bot-check",
+    );
+    expect(html).toContain('<div id="hf-bot-check"></div>');
+    expect(html).toMatch(
+      /<p id="hf-bot-check-status" role="alert"[^>]*>The check did not finish.<\/p>/,
+    );
+    expect(html).toContain(">Run it again</span>");
+    expect(botCheckStatusId("hf-bot-check")).toBe("hf-bot-check-status");
   });
 
   it("offers no retry to a browser that cannot run the check", () => {

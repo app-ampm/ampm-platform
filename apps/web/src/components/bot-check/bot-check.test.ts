@@ -54,6 +54,18 @@ describe("renderBotCheck", () => {
     expect(options.size).toBe("flexible");
   });
 
+  it("names no action unless the form gives one", () => {
+    const turnstile = fakeTurnstile();
+    renderBotCheck(turnstile.api, TARGET, () => undefined);
+    expect("action" in turnstile.options()).toBe(false);
+  });
+
+  it("names the action the API checks the token for (the hotel form's hf_code, D-189 §3)", () => {
+    const turnstile = fakeTurnstile();
+    renderBotCheck(turnstile.api, { ...TARGET, action: "hf_code" }, () => undefined);
+    expect(turnstile.options().action).toBe("hf_code");
+  });
+
   it("draws the compact widget in a column narrower than the flexible one's 300px", () => {
     const turnstile = fakeTurnstile();
     renderBotCheck(turnstile.api, { ...TARGET, width: 288 }, () => undefined);
@@ -130,6 +142,14 @@ describe("mountBotCheck", () => {
     expect(seen).toEqual([{ status: "passed", token: "token-1" }]);
     expect(mount.reset()).toBe(true);
     expect(turnstile.resets).toEqual(["widget-1"]);
+  });
+
+  it("draws the widget with the form's action", async () => {
+    const turnstile = fakeTurnstile();
+    vi.mocked(loadTurnstile).mockResolvedValue(turnstile.api);
+    mountBotCheck({ ...TARGET, action: "hf_code" }, () => undefined);
+    await settle();
+    expect(turnstile.options().action).toBe("hf_code");
   });
 
   it("reports a failed check when Turnstile's script does not load", async () => {

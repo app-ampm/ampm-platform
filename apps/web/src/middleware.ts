@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { TURNSTILE_ORIGIN } from "./components/contact/turnstile";
+import { TURNSTILE_ORIGIN } from "./components/bot-check/turnstile";
 import { env } from "./env";
 
 /** The API's origin (scheme://host:port) from NEXT_PUBLIC_API_URL, for connect-src. */

@@ -1,7 +1,7 @@
 import { loadTurnstile, type TurnstileApi } from "./turnstile";
 
 /*
- * The enquiry form's bot check (PUB-06) as the form sees it: where the check stands, and the Turnstile
+ * The site's bot check (the enquiry form, PUB-06; the hotel form's code request, D-189 §3) as a form sees it: where the check stands, and the Turnstile
  * widget behind it. Framework-free, so its rules are tested without a browser; `useBotCheck` ties it
  * to the form's lifetime.
  */
@@ -29,6 +29,8 @@ export interface BotCheckTarget {
   /** The container's width in CSS pixels, which picks the widget's size. */
   readonly width: number;
   readonly siteKey: string;
+  /** The action the API checks the token for (the hotel form's `hf_code`); none by default. */
+  readonly action?: string | undefined;
 }
 
 /** One rendered widget. */
@@ -50,7 +52,7 @@ const FLEXIBLE_MIN_WIDTH = 300;
  * error that never clears, such as a hostname the widget does not list. Throws when Turnstile draws
  * nothing (it answers with no widget id rather than an error), so that counts as a failed check.
  *
- *   const widget = renderBotCheck(turnstile, { container, width: 360, siteKey }, setCheck);
+ *   const widget = renderBotCheck(turnstile, { container, width: 360, siteKey, action: "hf_code" }, setCheck);
  */
 export function renderBotCheck(
   turnstile: TurnstileApi,
@@ -61,6 +63,7 @@ export function renderBotCheck(
   if (typeof target.container !== "string") target.container.replaceChildren();
   const widgetId = turnstile.render(target.container, {
     sitekey: target.siteKey,
+    ...(target.action ? { action: target.action } : {}),
     theme: "dark",
     size: target.width >= FLEXIBLE_MIN_WIDTH ? "flexible" : "compact",
     "response-field": false,
