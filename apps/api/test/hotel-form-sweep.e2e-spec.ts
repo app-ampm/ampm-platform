@@ -1,6 +1,7 @@
 import { createHash, randomBytes } from "node:crypto";
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { z } from "zod";
 
 import type { Prisma } from "../src/generated/prisma/client.js";
 import {
@@ -23,6 +24,9 @@ import {
  * live only while the challenge is open); an open, unexpired challenge and a used one are left alone; each
  * run is recorded on job_runs, and a second run retires nothing.
  */
+/** What a sweep run records on job_runs. */
+const runOutcome = z.object({ retired: z.number().int().nonnegative() });
+
 describe("The hotel form's challenge sweep (e2e, D-189 §1)", () => {
   let suite: FormSuite;
   let link: IssuedLink;
@@ -86,12 +90,15 @@ describe("The hotel form's challenge sweep (e2e, D-189 §1)", () => {
     const sweep = suite.app.get(HotelFormChallengeSweepService);
     expect(await sweep.run(new Date())).toBeGreaterThanOrEqual(1);
     expect(await sweep.run(new Date())).toBe(0);
+    // Both runs may start in the same millisecond, so their order is not asserted.
     const runs = await suite.prisma.jobRun.findMany({
       where: { jobName: challengeSweepJob.name },
       orderBy: { startedAt: "desc" },
       take: 2,
     });
     expect(runs.map((run) => run.status)).toEqual(["succeeded", "succeeded"]);
-    expect(runs[0]?.detailJson).toEqual({ retired: 0 });
+    const retired = runs.map((run) => runOutcome.parse(run.detailJson).retired);
+    expect(retired).toContain(0);
+    expect(retired.some((count) => count >= 1)).toBe(true);
   });
 });
