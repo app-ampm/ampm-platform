@@ -8,6 +8,10 @@ import { hotelFormSessionToken } from "@ampm/core";
  * secret is not copied, bookmarked or shown on screen. It is kept in this tab's sessionStorage so a reload
  * still opens the form, and sent only in POST bodies. The form's session token is kept beside it, and goes
  * only in the Bearer header. Both go when the tab closes; nothing is written to localStorage or a cookie.
+ *
+ * Next's router hears the new address through the history API it hooks (Next's shallow routing:
+ * replaceState with no state of its own), not router.replace: called while the page hydrates,
+ * router.replace committed the router's old address and Next wrote the link back.
  */
 
 /** The keys of the tab's link and session in sessionStorage. */
@@ -24,9 +28,8 @@ export interface LinkHost {
   /** The tab's sessionStorage, or null where the browser refuses it. */
   readonly storage: SessionStore | null;
   /**
-   * Tells the page's router the address the tab now shows (Next's `router.replace`), so the router never
-   * writes the link back: it keeps its own copy of the URL, which history.replaceState does not reach
-   * before the router has hydrated.
+   * Tells the page's router the address the tab now shows, so the router never writes the link back: it
+   * keeps its own copy of the URL, which the replaceState above does not reach on the page's first render.
    */
   readonly syncRouter?: ((url: string) => void) | undefined;
 }
@@ -64,7 +67,7 @@ export function linkFromHash(hash: string): string | null {
  * tab (a different link than the one kept drops the old link's session), or else the one kept from
  * before a reload. Null when the tab has neither.
  *
- *   const secret = takeLink(browserLinkHost((url) => router.replace(url, { scroll: false })));
+ *   const secret = takeLink(browserLinkHost());
  */
 export function takeLink(host: LinkHost): string | null {
   const fromAddress = linkFromHash(host.location.hash);
@@ -104,11 +107,24 @@ function tabStorage(): SessionStore | null {
 }
 
 /**
- * The real browser, for the page, with its router told of every address change; call it only in the
- * browser (an effect), never while rendering on the server.
- *
- *   browserLinkHost((url) => router.replace(url, { scroll: false }));
+ * Tells Next's router the address the tab shows, through the history API it hooks: a replaceState with no
+ * state of its own, which Next takes as the router's new address while keeping its own state for the
+ * entry. Deferred to the next task: on the page's first render the form's effects run before the
+ * router's, which hook the history API.
  */
-export function browserLinkHost(syncRouter: (url: string) => void): LinkHost {
-  return { location: window.location, history: window.history, storage: tabStorage(), syncRouter };
+function syncNextRouter(url: string): void {
+  setTimeout(() => window.history.replaceState(null, "", url), 0);
+}
+
+/**
+ * The real browser, for the page, with Next's router told of every address change; call it only in the
+ * browser (an effect), never while rendering on the server.
+ */
+export function browserLinkHost(): LinkHost {
+  return {
+    location: window.location,
+    history: window.history,
+    storage: tabStorage(),
+    syncRouter: syncNextRouter,
+  };
 }

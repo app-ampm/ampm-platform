@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useReducer, useRef } from "react";
-import { useRouter } from "next/navigation";
 import {
   useHotelFormMe,
   useOpenHotelForm,
@@ -108,11 +107,10 @@ function useOpening(
   storage: { current: SessionStore | null },
 ) {
   const { mutate: open } = useOpenHotelForm();
-  const router = useRouter();
   const openingKey = openingKeyOf(state);
   useEffect(() => {
     if (openingKey === null) return;
-    const host = browserLinkHost((url) => router.replace(url, { scroll: false }));
+    const host = browserLinkHost();
     storage.current = host.storage;
     const secret = takeLink(host);
     if (secret === null) {
@@ -130,7 +128,7 @@ function useOpening(
         },
       );
     }
-  }, [openingKey, open, dispatch, storage, router]);
+  }, [openingKey, open, dispatch, storage]);
 }
 
 /** Hands a refused session to the flow, with the signed-in person when the page has them. */

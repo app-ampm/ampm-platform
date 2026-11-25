@@ -1,15 +1,8 @@
-import type * as NextNavigation from "next/navigation";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import HotelFormLayout, { metadata } from "./layout";
 import HotelFormPage, { dynamic } from "./page";
-
-// Next's own server render gives the page its app router; this render of the page alone stands one in.
-vi.mock("next/navigation", async (importOriginal) => ({
-  ...(await importOriginal<typeof NextNavigation>()),
-  useRouter: () => ({ replace: () => undefined }),
-}));
 
 /* /hotel-form as the server sends it (D-189 §8; HF-G10): generic words, no index, the opening card. */
 describe("/hotel-form route", () => {
