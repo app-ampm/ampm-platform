@@ -13,6 +13,7 @@ import { HotelFormEnrolment } from "./hotel-form-enrolment.service.js";
 import { HotelFormGate } from "./hotel-form-gate.js";
 import { HotelFormLimits } from "./hotel-form-limits.js";
 import { HotelFormMe } from "./hotel-form-me.service.js";
+import { HotelFormModeGuard } from "./hotel-form-mode.guard.js";
 import { HotelFormPeopleRepository } from "./hotel-form-people.repository.js";
 import { HotelFormRequestsRepository } from "./hotel-form-requests.repository.js";
 import { HotelFormSessionGuard } from "./hotel-form-session.guard.js";
@@ -44,6 +45,7 @@ import { HotelFormController } from "./hotel-form.controller.js";
     HotelFormCodeVerifier,
     HotelFormEnrolment,
     HotelFormSessions,
+    HotelFormModeGuard,
     HotelFormSessionGuard,
     HotelFormMe,
     HotelFormChallengeSweepService,

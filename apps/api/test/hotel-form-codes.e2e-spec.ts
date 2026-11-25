@@ -58,6 +58,16 @@ describe("The hotel form's code requests (e2e, D-189, on screen)", () => {
     await setPolicy(suite, {});
   });
 
+  it("answers 404 while the mode is off before any body is read, so a malformed one learns nothing", async () => {
+    await setPolicy(suite, { mode: "off" });
+    const empty = await calls.codes({}).expect(404);
+    expect(empty.body.error).toEqual({ code: "not_found", message: "Not found" });
+    await calls.verify({}).expect(404);
+    await calls.open("").expect(404);
+    await calls.patchMe(`hfs_${"a".repeat(43)}`, { fullName: 42 }).expect(404);
+    await setPolicy(suite, {});
+  });
+
   it("admits only test requests under test_only, and every request when on", async () => {
     const real = await requestCalls(() => suite)
       .create("ht", { target: "existing", hotelId: suite.hotelId })

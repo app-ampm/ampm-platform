@@ -23,6 +23,7 @@ import { HotelFormCodeIssuer, type FormClient } from "./hotel-form-code-issuer.s
 import { HotelFormCodeVerifier } from "./hotel-form-code-verifier.service.js";
 import { HotelFormGate } from "./hotel-form-gate.js";
 import { HotelFormMe } from "./hotel-form-me.service.js";
+import { HotelFormModeGuard } from "./hotel-form-mode.guard.js";
 import {
   HOTEL_FORM_CODES,
   HOTEL_FORM_OPEN,
@@ -49,13 +50,15 @@ function clientOf(userAgent: string | undefined): FormClient {
 /**
  * The hotel form's public routes (D-189 §4; plan §7.1), which the website calls. All are @Public: the link's
  * secret, sent in POST bodies only, and then a form session (`Authorization: Bearer hfs_…`, checked by
- * HotelFormSessionGuard) are the keys, never a user. While the form's mode is off every route answers 404;
- * under test_only a request that is not a test is not active. No answer carries anything about the hotel.
+ * HotelFormSessionGuard) are the keys, never a user. While the form's mode is off every route answers 404
+ * (HotelFormModeGuard, before any pipe reads the body); under test_only a request that is not a test is not
+ * active. No answer carries anything about the hotel.
  * Every limit fails closed but sign-out's (rate-limit-coverage.spec.ts); the code routes add the limits of
  * D-189 §3 in their service. A contributor's writes audit as guest_token (D-180, D-189 §6).
  */
 @Controller("hotel-form")
 @Public()
+@UseGuards(HotelFormModeGuard)
 export class HotelFormController {
   constructor(
     private readonly gate: HotelFormGate,
