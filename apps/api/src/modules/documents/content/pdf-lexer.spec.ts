@@ -3,6 +3,13 @@ import { describe, expect, it } from "vitest";
 import { tokensOf as tokens } from "./testing/pdf-tokens.js";
 import { refusalOf } from "./testing/refusals.js";
 
+/**
+ * The bound of the linear-time cases. On 100,000 digits a backtracking number pattern (quadratic) takes over
+ * three seconds and the lexer about a millisecond, which a loaded `pnpm check` has stretched to 136 ms: the
+ * bound leaves room for a busy machine and still sits far below the quadratic cost.
+ */
+const LINEAR_TIME_BOUND_MS = 750;
+
 describe("PdfLexer", () => {
   it("reads names, numbers, keywords and delimiters, skipping comments", () => {
     expect(
@@ -74,11 +81,11 @@ describe("PdfLexer", () => {
     ["100,000 digits and then a letter", `${"1".repeat(100_000)}x`],
     ["100,000 digits, a point and a letter", `${"1".repeat(100_000)}.x`],
     ["a sign, a point, 100,000 digits and a point", `-.${"1".repeat(100_000)}.`],
-  ])("reads %s as one keyword well under 100 ms (linear time; seconds before)", (_name, text) => {
+  ])("reads %s as one keyword in under 750 ms (linear time; seconds before)", (_name, text) => {
     const bytes = Buffer.from(text, "latin1");
     const started = performance.now();
     const read = tokens(bytes);
-    expect(performance.now() - started).toBeLessThan(100);
+    expect(performance.now() - started).toBeLessThan(LINEAR_TIME_BOUND_MS);
     expect(read.map((token) => token.kind)).toEqual(["keyword"]);
   });
 });

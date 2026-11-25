@@ -132,10 +132,12 @@ describe("parseTag", () => {
     ["quotes and names with no value", ` ${'"b'.repeat(50_000)}`],
     ["a name before 100,000 spaces", ` b${" ".repeat(100_000)}b`],
     ["names and equals signs with no quoted value", ` b=${"b=".repeat(50_000)}`],
-  ])("reads %s well under 100 ms (linear time; seconds before)", (_name, attributes) => {
+  ])("reads %s in under 750 ms (linear time; seconds before)", (_name, attributes) => {
+    // About a millisecond on an idle machine; the bound leaves room for a loaded `pnpm check` and still
+    // sits far below the seconds a backtracking parse took.
     const tag = `<Default${attributes}/>`;
     const started = performance.now();
     parseTag(tag, "[Content_Types].xml");
-    expect(performance.now() - started).toBeLessThan(100);
+    expect(performance.now() - started).toBeLessThan(750);
   });
 });
