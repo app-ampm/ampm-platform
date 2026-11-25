@@ -75,7 +75,7 @@ export function flowAt(
 
 /** The screen for a flow, as markup. */
 export function screenOf(flow: HotelFormFlow): string {
-  return renderToStaticMarkup(<HotelFormScreen flow={flow} siteKey="1x00000000000000000000AA" />);
+  return renderToStaticMarkup(<HotelFormScreen flow={flow} siteKey="test-site-key" />);
 }
 
 /** The opening tags of `element` carrying `attribute`, whatever order React writes them in. */
