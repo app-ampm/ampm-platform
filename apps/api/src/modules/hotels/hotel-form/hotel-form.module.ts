@@ -5,6 +5,7 @@ import { IdentityModule } from "../../../identity/identity.module.js";
 import { PolicyModule } from "../../../policy/policy.module.js";
 import { NotificationModule } from "../../admin/notification/notification.module.js";
 import { HotelsModule } from "../hotels.module.js";
+import { HotelFormChallengeSweepService } from "./hotel-form-challenge-sweep.service.js";
 import { HotelFormChallengesRepository } from "./hotel-form-challenges.repository.js";
 import { HotelFormCodeIssuer } from "./hotel-form-code-issuer.service.js";
 import { HotelFormCodeVerifier } from "./hotel-form-code-verifier.service.js";
@@ -22,7 +23,8 @@ import { HotelFormController } from "./hotel-form.controller.js";
 
 /**
  * The hotel form's identity step (D-189; Module C, docs/data-model.md §5): the public `/hotel-form` routes,
- * their code challenges, people, consents and sessions, and the limits of D-189 §3. IdentityModule gives the hotel form's keys (SIGN_IN_KEYS), PolicyModule the limiter's
+ * their code challenges, people, consents and sessions, the limits of D-189 §3, and the hourly sweep of
+ * abandoned claims. IdentityModule gives the hotel form's keys (SIGN_IN_KEYS), PolicyModule the limiter's
  * store, BotCheckModule the bot check, NotificationModule the code's SMS and the cap's alert, and
  * HotelsModule the requests' journal. PrismaService, ConfigService, JobQueue, AuditService, ENV and
  * AppLogger are global.
@@ -44,6 +46,7 @@ import { HotelFormController } from "./hotel-form.controller.js";
     HotelFormSessions,
     HotelFormSessionGuard,
     HotelFormMe,
+    HotelFormChallengeSweepService,
   ],
 })
 export class HotelFormModule {}
