@@ -51,10 +51,19 @@ export function isApiFailure(value: unknown): value is ApiFailure {
   );
 }
 
-/** Whole seconds from 0, a fraction rounded up; anything else (negative, NaN, infinite) is none. */
+/**
+ * The longest wait a refusal names, in seconds: a day, the longest window any limit counts (D-189 §3). A
+ * longer figure, from a fault or from a proxy's header, is cut to it, so a page never counts down longer.
+ */
+export const MAX_RETRY_AFTER_SECONDS = 86_400;
+
+/**
+ * Whole seconds from 0, a fraction rounded up and at most a day; anything else (negative, NaN, infinite)
+ * is none.
+ */
 function wholeSeconds(seconds: number | undefined): number | undefined {
   return seconds !== undefined && Number.isFinite(seconds) && seconds >= 0
-    ? Math.ceil(seconds)
+    ? Math.min(Math.ceil(seconds), MAX_RETRY_AFTER_SECONDS)
     : undefined;
 }
 
@@ -63,9 +72,9 @@ export class AppError extends Error {
   readonly status: number;
   readonly details: readonly ErrorDetail[] | undefined;
   /**
-   * How long to wait before trying again, in whole seconds, when the answer said (D-189 §3): the API
-   * answers it as a `Retry-After` header, never in the envelope, and the api-client reads that header
-   * back into this field, so a page can count down.
+   * How long to wait before trying again, in whole seconds and at most {@link MAX_RETRY_AFTER_SECONDS},
+   * when the answer said (D-189 §3): the API answers it as a `Retry-After` header, never in the envelope,
+   * and the api-client reads that header back into this field, so a page can count down.
    */
   readonly retryAfterSeconds: number | undefined;
 

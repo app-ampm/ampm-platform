@@ -1,4 +1,11 @@
-import { AppError, errors, isApiFailure, type ApiEnvelope, type ErrorCode } from "@ampm/core";
+import {
+  AppError,
+  errors,
+  isApiFailure,
+  MAX_RETRY_AFTER_SECONDS,
+  type ApiEnvelope,
+  type ErrorCode,
+} from "@ampm/core";
 import type { ZodType } from "zod";
 
 export interface ApiClientOptions {
@@ -66,8 +73,9 @@ const DELAY_SECONDS = /^\d+$/;
 
 /**
  * A `Retry-After` header as whole seconds from `now` (RFC 9110 §10.2.3): delay-seconds as they stand, an
- * HTTP date as the seconds until it (0 once it is past). Undefined without the header or when it reads
- * as neither. The API sends delay-seconds (D-189 §3); a proxy in front of it may send a date.
+ * HTTP date as the seconds until it (0 once it is past), either cut to a day (`MAX_RETRY_AFTER_SECONDS`) so
+ * a page never counts down longer. Undefined without the header or when it reads as neither. The API sends
+ * delay-seconds (D-189 §3); a proxy in front of it may send a date.
  *
  * @example
  * retryAfterSecondsOf("30"); // 30
@@ -78,11 +86,12 @@ export function retryAfterSecondsOf(
   now: number = Date.now(),
 ): number | undefined {
   const value = header?.trim() ?? "";
-  if (DELAY_SECONDS.test(value)) return Number.parseInt(value, 10);
+  const atMostADay = (seconds: number): number => Math.min(seconds, MAX_RETRY_AFTER_SECONDS);
+  if (DELAY_SECONDS.test(value)) return atMostADay(Number.parseInt(value, 10));
   // A bare number that is not delay-seconds ("-5", "1.5") is malformed, never a date.
   if (value === "" || /^[\d.+-]+$/.test(value)) return undefined;
   const at = Date.parse(value);
-  return Number.isNaN(at) ? undefined : Math.max(0, Math.ceil((at - now) / 1000));
+  return Number.isNaN(at) ? undefined : atMostADay(Math.max(0, Math.ceil((at - now) / 1000)));
 }
 
 /**

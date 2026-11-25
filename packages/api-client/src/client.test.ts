@@ -180,6 +180,13 @@ describe("retryAfterSecondsOf", () => {
     expect(retryAfterSecondsOf("Wed, 25 Nov 2026 09:00:00 GMT", now)).toBe(0);
   });
 
+  it("never reads a wait longer than a day, however far the header points", () => {
+    expect(retryAfterSecondsOf("86400", now)).toBe(86_400);
+    expect(retryAfterSecondsOf("86401", now)).toBe(86_400);
+    expect(retryAfterSecondsOf("9".repeat(400), now)).toBe(86_400);
+    expect(retryAfterSecondsOf("Thu, 25 Nov 2027 10:00:00 GMT", now)).toBe(86_400);
+  });
+
   it("gives none for no header or one it cannot read", () => {
     expect(retryAfterSecondsOf(null, now)).toBeUndefined();
     expect(retryAfterSecondsOf("", now)).toBeUndefined();

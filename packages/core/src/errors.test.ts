@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { AppError, errors, isApiFailure } from "./errors";
+import { AppError, errors, isApiFailure, MAX_RETRY_AFTER_SECONDS } from "./errors";
 
 describe("errors", () => {
   it("maps each code to its status and envelope", () => {
@@ -35,6 +35,15 @@ describe("errors", () => {
     expect(
       new AppError("rate_limited", "x", undefined, undefined, Number.NaN).retryAfterSeconds,
     ).toBeUndefined();
+  });
+
+  it("never names a wait longer than a day, the longest window any limit counts", () => {
+    expect(MAX_RETRY_AFTER_SECONDS).toBe(86_400);
+    expect(errors.rateLimited("x", 86_400).retryAfterSeconds).toBe(86_400);
+    expect(errors.rateLimited("x", 86_399.5).retryAfterSeconds).toBe(86_400);
+    expect(errors.rateLimited("x", 86_401).retryAfterSeconds).toBe(86_400);
+    expect(errors.unavailable("x", 1e12).retryAfterSeconds).toBe(86_400);
+    expect(errors.unavailable("x", Number.POSITIVE_INFINITY).retryAfterSeconds).toBeUndefined();
   });
 
   it("recognises a failure envelope", () => {
