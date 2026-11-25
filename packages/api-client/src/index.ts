@@ -137,6 +137,8 @@ export {
 } from "./hooks/use-staff-hotels";
 // Hotel information requests, the staff side (D-188 §3 and §7): listed in their own barrel.
 export * from "./hotel-info-requests";
+// The hotel form's public routes, the website's side (D-189 §4, §5): listed in their own barrel.
+export * from "./hotel-form";
 export {
   hotelImportApplyPath,
   hotelImportPreviewPath,
