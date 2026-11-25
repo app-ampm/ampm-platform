@@ -67,3 +67,6 @@ export * from "./hotel-info-requests";
 // Their staff routes' bodies, queries and answers (D-188 §3).
 export * from "./hotel-info-request-contracts";
 export * from "./hotel-info-request-views";
+// The hotel form's public routes (D-189 §4): the identity step's bodies, answers and refusals.
+export * from "./hotel-form";
+export * from "./hotel-form-refusals";

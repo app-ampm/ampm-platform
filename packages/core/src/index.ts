@@ -30,6 +30,7 @@ export {
 } from "./hotel-units";
 export type { AreaWrite, HotelAreaPair } from "./hotel-units";
 export { HOTEL_PHONE_REFUSAL, normaliseHotelPhone } from "./hotel-phone";
+export { maskPhone } from "./phone-mask";
 // HotelChangeSet (D-178, D-181): the normalisers, the field compare and the row matching the imports and
 // the form's merge share.
 export {
