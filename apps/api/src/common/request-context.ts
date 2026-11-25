@@ -1,6 +1,7 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 
 import type { Scope } from "@ampm/policy";
+import { z } from "zod";
 
 import type { Principal } from "../policy/principal.types.js";
 
@@ -35,14 +36,26 @@ export interface RequestContext {
 }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const recordId = z.string().regex(UUID);
 
-/** The actor's ids, each checked to be one, so what someone typed can never become an actor_ref. */
+/** The shapes a hotel-form actor may take, checked at run time: no key but these, every value an id. */
+const hotelFormActorShape = z.union([
+  z.strictObject({ requestId: recordId, personId: recordId }),
+  z.strictObject({ requestId: recordId, challengeId: recordId }),
+]);
+
+/**
+ * A copy of the actor once it is checked to be a request id and exactly one of a person id and a challenge
+ * id, so what someone typed can never become an actor_ref, whatever the caller's types claimed.
+ */
 function checkedActor(actor: HotelFormActor): HotelFormActor {
-  const ids = Object.values(actor);
-  if (!ids.every((id) => typeof id === "string" && UUID.test(id))) {
-    throw new Error("A hotel-form actor is made of record ids only");
+  const checked = hotelFormActorShape.safeParse(actor);
+  if (!checked.success) {
+    throw new Error(
+      "A hotel-form actor is a request id and exactly one of a person id and a challenge id",
+    );
   }
-  return actor;
+  return checked.data;
 }
 
 /**
@@ -83,7 +96,7 @@ export const requestContext = {
   /**
    * Makes a hotel-form contributor this request's actor (D-189 §6): from then on its audits record
    * `guest_token`, no user and the actor's `actor_ref`. Throws outside a request, where no audit could
-   * carry it, and for anything but record ids.
+   * carry it, and for anything but a request id with exactly one of a person id and a challenge id.
    *
    * @example
    * requestContext.setHotelFormActor({ requestId: request.id, challengeId: challenge.id });

@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { hotelFormActorRef, requestContext, type RequestContext } from "./request-context.js";
+import {
+  hotelFormActorRef,
+  requestContext,
+  type HotelFormActor,
+  type RequestContext,
+} from "./request-context.js";
 
 /*
  * The hotel-form actor (D-189 §5 and §6): who acts on a hotel form request when no AMPM user does, set by
@@ -49,6 +54,22 @@ describe("the hotel-form actor", () => {
         { requestId: REQUEST_ID, challengeId: "Synthetic Person" },
       ]) {
         expect(() => requestContext.setHotelFormActor(actor), JSON.stringify(actor)).toThrow(/id/);
+      }
+      expect(requestContext.hotelFormActor()).toBeNull();
+    });
+  });
+
+  it("is a request and exactly one of a person and a challenge, whatever the caller's types say", () => {
+    inRequest(() => {
+      for (const actor of [
+        { requestId: REQUEST_ID, personId: PERSON_ID, challengeId: CHALLENGE_ID },
+        { requestId: REQUEST_ID },
+        { personId: PERSON_ID },
+        { requestId: REQUEST_ID, personId: PERSON_ID, note: "Synthetic Person" },
+        { requestId: REQUEST_ID, challengeId: 42 },
+      ]) {
+        const shaped = actor as unknown as HotelFormActor;
+        expect(() => requestContext.setHotelFormActor(shaped), JSON.stringify(actor)).toThrow(/id/);
       }
       expect(requestContext.hotelFormActor()).toBeNull();
     });

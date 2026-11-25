@@ -187,6 +187,18 @@ describe("AuditService: hotel-form contributors (D-180, D-189 §6)", () => {
     expect(JSON.stringify(data)).not.toMatch(/Synthetic|Sales Manager|free text/);
   });
 
+  it("records nothing when a principal and a hotel-form actor are both set, rather than pick one", async () => {
+    for (const principal of [STAFF, SYSTEM]) {
+      const { service, create } = setup();
+      const both = inRequest(principal, () => {
+        requestContext.setHotelFormActor({ requestId: REQUEST_ID, personId: PERSON_ID });
+        return service.record({ action: "update", entityType: "users", entityId: "u-2" });
+      });
+      await expect(both, principal.type).rejects.toThrow(/one actor/);
+      expect(create).not.toHaveBeenCalled();
+    }
+  });
+
   it("puts no actor_ref on a staff or System event", async () => {
     const { service, create } = setup();
     await inRequest(STAFF, () =>
