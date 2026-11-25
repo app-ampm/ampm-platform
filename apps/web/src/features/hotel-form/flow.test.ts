@@ -7,7 +7,7 @@ import {
 import { describe, expect, it } from "vitest";
 
 import { EMPTY_DETAILS } from "./details.form";
-import { INITIAL_FLOW, flowReducer, type FlowEvent, type FlowState } from "./flow";
+import { INITIAL_FLOW, flowReducer, openingKeyOf, type FlowEvent, type FlowState } from "./flow";
 import { HOTEL_FORM_COPY } from "./hotel-form-copy";
 
 /* The identity step's flow (D-189 §8): HF-01 → HF-02 → HF-03 → signed in, HF-08, and the refusals. */
@@ -100,6 +100,16 @@ describe("opening the link", () => {
       retryAt: NOW + 20_000,
     });
     expect(flowReducer(unreachable, { type: "reopen" }).phase).toEqual({ kind: "opening" });
+  });
+
+  it("opens afresh for every link that arrives, one arriving while another still opens included", () => {
+    const again = after({ type: "reopen" });
+    const twice = after({ type: "reopen" }, { type: "reopen" });
+    expect(twice.phase).toEqual({ kind: "opening" });
+    const keys = [INITIAL_FLOW, again, twice].map(openingKeyOf);
+    expect(keys.every((key) => key !== null)).toBe(true);
+    expect(new Set(keys).size).toBe(3);
+    expect(openingKeyOf(after(opened()))).toBeNull();
   });
 });
 

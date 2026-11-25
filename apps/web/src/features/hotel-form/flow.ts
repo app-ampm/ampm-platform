@@ -73,6 +73,8 @@ export interface FlowState {
   readonly notice: StepNotice | null;
   /** The form session, mirrored in sessionStorage by the page. */
   readonly session: string | null;
+  /** How many times the page was asked to open again: a link that arrives while one opens counts too. */
+  readonly reopens: number;
 }
 
 export type FlowEvent =
@@ -112,6 +114,7 @@ export const INITIAL_FLOW: FlowState = {
   codeError: null,
   notice: null,
   session: null,
+  reopens: 0,
 };
 
 const noticeOf = (message: string, retryAt: number | null = null): StepNotice => ({
@@ -119,6 +122,17 @@ const noticeOf = (message: string, retryAt: number | null = null): StepNotice =>
   retryAt,
   isReload: false,
 });
+
+/**
+ * The key the page opens the link under: a new one for every open asked for, so a link that arrives while
+ * another is still opening is taken out of the address bar and opened too; null once the link is open.
+ *
+ * @example
+ * useEffect(() => { if (key !== null) open(takeLink(host)); }, [key]);
+ */
+export function openingKeyOf(state: FlowState): number | null {
+  return state.phase.kind === "opening" ? state.reopens : null;
+}
 
 /** The flow with the identity step on screen moved on: in the main flow, or in place when signed in. */
 function withIdentity(state: FlowState, identity: IdentityStep): FlowState {
@@ -202,7 +216,7 @@ export function flowReducer(state: FlowState, event: FlowEvent): FlowState {
       if (event.refusal.kind === "gone") return refused(state, event.refusal, event.now);
       return { ...state, phase: unreachable(event.refusal, event.now) };
     case "reopen":
-      return { ...state, phase: { kind: "opening" } };
+      return { ...state, phase: { kind: "opening" }, reopens: state.reopens + 1 };
     case "start":
       return { ...state, notice: null, phase: { kind: "identity", identity: { step: "details" } } };
     case "claim_changed":
@@ -245,6 +259,7 @@ function verified(state: FlowState, sessionToken: string): FlowState {
 function signedOut(state: FlowState): FlowState {
   return {
     ...INITIAL_FLOW,
+    reopens: state.reopens,
     link: state.link,
     helpContact: state.helpContact,
     phase: { kind: "welcome" },

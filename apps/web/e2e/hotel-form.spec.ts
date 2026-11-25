@@ -5,6 +5,7 @@ import {
   API_URL,
   E2E_HELP_CONTACT,
   SITE_URL,
+  createTestLink,
   endFormSession,
   freshMobile,
   revokeTestLink,
@@ -179,6 +180,34 @@ test("an ended session asks for a new code in place, keeping what was typed, and
   await expect(page.locator("#hf-edit-name")).toHaveValue("Asha R. (e2e)");
   await page.getByRole("button", { name: "Save" }).click();
   await expect(page.getByText("Asha R. (e2e) · Chief Engineer")).toBeVisible();
+});
+
+test("a link pasted while the page still opens is taken out of the address bar and opened", async ({
+  page,
+  formLink,
+}) => {
+  const pasted = await createTestLink();
+  try {
+    // The first open is held, as on a slow network, while the second link arrives in the same tab.
+    let isHeld = true;
+    await page.route(`${API_URL}/hotel-form/open`, async (route) => {
+      if (route.request().method() === "POST" && isHeld) {
+        isHeld = false;
+        await new Promise((resolve) => setTimeout(resolve, 2_000));
+      }
+      await route.continue();
+    });
+    await page.goto(formLink.url);
+    await expect(page.getByText("Opening your link…")).toBeVisible();
+    await page.evaluate((secret) => (window.location.hash = `k=${secret}`), pasted.secret);
+    await expect.poll(() => page.evaluate(() => window.location.hash)).toBe("");
+    await expect(
+      page.getByRole("heading", { level: 1, name: "Tell AMPM about your hotel." }),
+    ).toBeVisible();
+    expect(await sessionStorageValue(page, LINK_KEY)).toBe(pasted.secret);
+  } finally {
+    await revokeTestLink(pasted.id);
+  }
 });
 
 test("HF-08: a link that is not active, and a page opened without its link", async ({

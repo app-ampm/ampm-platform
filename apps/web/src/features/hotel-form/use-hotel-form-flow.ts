@@ -19,6 +19,7 @@ import { detailsStep, type DetailsFields } from "./details.form";
 import {
   INITIAL_FLOW,
   flowReducer,
+  openingKeyOf,
   type FlowEvent,
   type FlowState,
   type IdentityStep,
@@ -102,8 +103,9 @@ function useLinkArrival(dispatch: (event: FlowEvent) => void) {
 }
 
 /**
- * Takes the link out of the address bar and opens it, each time the flow is back at "opening" (the
- * first render, Try again, and a link arriving in the same tab).
+ * Takes the link out of the address bar and opens it, each time the flow is asked to open (the first
+ * render, Try again, and a link arriving in the same tab, even while another still opens: the effect is
+ * keyed on each open, not on whether the flow is opening). Only the latest open's answer is taken.
  */
 function useOpening(
   state: FlowState,
@@ -111,9 +113,9 @@ function useOpening(
   storage: { current: SessionStore | null },
 ) {
   const { mutate: open } = useOpenHotelForm();
-  const isOpening = state.phase.kind === "opening";
+  const openingKey = openingKeyOf(state);
   useEffect(() => {
-    if (!isOpening) return;
+    if (openingKey === null) return;
     const host = browserLinkHost();
     storage.current = host.storage;
     const secret = takeLink(host);
@@ -132,7 +134,7 @@ function useOpening(
         },
       );
     }
-  }, [isOpening, open, dispatch, storage]);
+  }, [openingKey, open, dispatch, storage]);
 }
 
 /** Hands a refused session to the flow, with the signed-in person when the page has them. */
