@@ -5,6 +5,7 @@ import type { SmsMessage } from "./gateway-sms.adapter.js";
 import {
   Msg91SmsTransport,
   SmsProviderError,
+  smsProviderConfigured,
   smsTransportFor,
   TwoFactorSmsTransport,
   type SmsFetch,
@@ -23,7 +24,15 @@ const MESSAGE: SmsMessage = {
   templateKey: "auth.client_otp",
   variables: { code: "482913" },
 };
-const SECRETS = ["test-api-key", "9876543210", "482913"];
+const SECRETS = ["test-api-key", "9876543210", "482913", "048213"];
+
+/** A hotel information form code (D-189 §2), on its own DLT template. */
+const HOTEL_FORM_MESSAGE: SmsMessage = {
+  to: "+919000000001",
+  text: "048213 is your AMPM verification code for the hotel information form. It is valid for 5 minutes. Do not share it. -AMPM",
+  templateKey: "hotel_form.code",
+  variables: { code: "048213" },
+};
 
 function fakeFetch(status: number, body: unknown) {
   const calls: { url: string; init: RequestInit }[] = [];
@@ -141,6 +150,48 @@ describe("either transport", () => {
   });
 });
 
+describe("the hotel form's code template (D-189 §2)", () => {
+  const hotelFormTemplate = "1707000000000000002";
+
+  it("sends a hotel form code on its own DLT template with 2Factor", async () => {
+    const { fetchFn, calls } = fakeFetch(200, { Status: "Success", Details: "hf-1" });
+    const transport = new TwoFactorSmsTransport({ ...TWO_FACTOR, hotelFormTemplate }, fetchFn);
+    expect(await transport.sendSms(HOTEL_FORM_MESSAGE)).toEqual({ providerRef: "2factor:hf-1" });
+    const form = new URLSearchParams(String(calls[0]?.init.body));
+    expect(form.get("ctid")).toBe(hotelFormTemplate);
+    expect(form.get("msg")).toBe(HOTEL_FORM_MESSAGE.text);
+    expect(form.get("to")).toBe("919000000001");
+    // The sign-in code keeps its own template beside it.
+    await transport.sendSms(MESSAGE);
+    expect(new URLSearchParams(String(calls[1]?.init.body)).get("ctid")).toBe(
+      TWO_FACTOR.otpTemplate,
+    );
+  });
+
+  it("sends a hotel form code on its own template with MSG91", async () => {
+    const { fetchFn, calls } = fakeFetch(200, { type: "success", message: "hf-2" });
+    const transport = new Msg91SmsTransport(
+      { authKey: "test-api-key", otpTemplate: "tmpl-1", hotelFormTemplate: "tmpl-hf" },
+      fetchFn,
+    );
+    await transport.sendSms(HOTEL_FORM_MESSAGE);
+    expect(JSON.parse(String(calls[0]?.init.body))).toMatchObject({ template_id: "tmpl-hf" });
+  });
+
+  it("refuses a hotel form code while its template is not set, before calling the provider", async () => {
+    const { fetchFn, calls } = fakeFetch(200, { Status: "Success", Details: "x" });
+    const transport = new TwoFactorSmsTransport(TWO_FACTOR, fetchFn);
+    expect(await failureCode(transport.sendSms(HOTEL_FORM_MESSAGE))).toBe(
+      "sms_template_not_registered",
+    );
+    const msg91 = new Msg91SmsTransport({ authKey: "test-api-key", otpTemplate: "t" }, fetchFn);
+    expect(await failureCode(msg91.sendSms(HOTEL_FORM_MESSAGE))).toBe(
+      "sms_template_not_registered",
+    );
+    expect(calls).toHaveLength(0);
+  });
+});
+
 describe("smsTransportFor", () => {
   const base = {
     DATABASE_URL: "postgres://localhost:5432/ampm",
@@ -165,5 +216,46 @@ describe("smsTransportFor", () => {
       SMS_OTP_TEMPLATE: "t",
     });
     expect(smsTransportFor(msg91)).toBeInstanceOf(Msg91SmsTransport);
+  });
+
+  it("hands the transport SMS_HOTEL_FORM_TEMPLATE for the hotel form's codes", async () => {
+    const { fetchFn, calls } = fakeFetch(200, { Status: "Success", Details: "hf-3" });
+    const env = loadEnv({
+      ...base,
+      SMS_PROVIDER: "2factor",
+      SMS_API_KEY: "k",
+      SMS_SENDER_ID: "AMPMVS",
+      SMS_OTP_TEMPLATE: "t",
+      SMS_HOTEL_FORM_TEMPLATE: "hf-template",
+    });
+    await smsTransportFor(env, fetchFn)?.sendSms(HOTEL_FORM_MESSAGE);
+    expect(new URLSearchParams(String(calls[0]?.init.body)).get("ctid")).toBe("hf-template");
+  });
+});
+
+describe("smsProviderConfigured", () => {
+  const base = {
+    DATABASE_URL: "postgres://localhost:5432/ampm",
+    IDENTITY_PROVIDER: "local",
+    IDENTITY_LOCAL_SECRET: "a-development-secret-that-is-32chars",
+  };
+
+  it("is true exactly when smsTransportFor builds a transport", () => {
+    const envs = [
+      loadEnv(base),
+      loadEnv({ ...base, SMS_HOTEL_FORM_TEMPLATE: "hf" }),
+      loadEnv({ ...base, SMS_PROVIDER: "msg91", SMS_API_KEY: "k", SMS_OTP_TEMPLATE: "t" }),
+      loadEnv({
+        ...base,
+        SMS_PROVIDER: "2factor",
+        SMS_API_KEY: "k",
+        SMS_SENDER_ID: "AMPMVS",
+        SMS_OTP_TEMPLATE: "t",
+      }),
+    ];
+    expect(envs.map(smsProviderConfigured)).toEqual([false, false, true, true]);
+    for (const env of envs) {
+      expect(smsProviderConfigured(env)).toBe(smsTransportFor(env) !== null);
+    }
   });
 });

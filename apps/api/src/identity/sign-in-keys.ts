@@ -4,8 +4,9 @@ import { deriveKey, keyFromBase64, SecretBox } from "./secret-box.js";
 
 /**
  * What AMPM's own sign-in (D-142) signs and seals with: the token signer whose tokens the identity
- * adapter accepts, the box that encrypts authenticator secrets at rest, and the key that HMACs the
- * recovery codes (derived from the encryption key, so it needs no secret of its own). Production (`ampm`) uses
+ * adapter accepts, the box that encrypts authenticator secrets at rest, and the keys that HMAC the
+ * recovery codes, the clients' codes and the hotel form's codes and mobiles (each derived from the
+ * encryption key under its own label, so it needs no secret of its own). Production (`ampm`) uses
  * its two dedicated secrets; the development provider derives both from its local secret, so the real
  * flow also runs on the test stack and in the tests. env.ts refuses either provider without its secrets,
  * so the throws below only narrow the types.
@@ -18,7 +19,21 @@ export interface SignInKeys {
   readonly recoveryKey: Buffer;
   /** HMACs the clients' one-time sign-in codes at rest (D-147); derived like the recovery-code key. */
   readonly otpKey: Buffer;
+  /**
+   * HMACs a hotel-form code at rest, bound to its challenge (D-189 §2):
+   * `hashOneTimeCode(challengeId, code, keys.hotelFormCode)`. HKDF label `ampm/hotel-form-code`.
+   */
+  readonly hotelFormCode: Buffer;
+  /**
+   * HMACs a hotel-form mobile into its `destination_hash` (D-189 §1), the key of the per-mobile limits and
+   * lookups: `hashDestination(e164, keys.hotelFormAddress)`. HKDF label `ampm/hotel-form-address`.
+   */
+  readonly hotelFormAddress: Buffer;
 }
+
+/** The hotel form's HKDF labels (D-189 §2), one per purpose. */
+const HOTEL_FORM_CODE_LABEL = "ampm/hotel-form-code";
+const HOTEL_FORM_ADDRESS_LABEL = "ampm/hotel-form-address";
 
 export const SIGN_IN_KEYS = Symbol("SIGN_IN_KEYS");
 
@@ -40,6 +55,8 @@ export function signInKeysFor(env: SignInKeysEnv): SignInKeys {
       box: new SecretBox(keyFromBase64(env.AUTH_ENCRYPTION_KEY)),
       recoveryKey: deriveKey(env.AUTH_ENCRYPTION_KEY, "ampm/recovery-codes"),
       otpKey: deriveKey(env.AUTH_ENCRYPTION_KEY, "ampm/client-otp"),
+      hotelFormCode: deriveKey(env.AUTH_ENCRYPTION_KEY, HOTEL_FORM_CODE_LABEL),
+      hotelFormAddress: deriveKey(env.AUTH_ENCRYPTION_KEY, HOTEL_FORM_ADDRESS_LABEL),
     };
   }
   if (!env.IDENTITY_LOCAL_SECRET) {
@@ -50,5 +67,7 @@ export function signInKeysFor(env: SignInKeysEnv): SignInKeys {
     box: new SecretBox(deriveKey(env.IDENTITY_LOCAL_SECRET, "ampm/totp-secrets")),
     recoveryKey: deriveKey(env.IDENTITY_LOCAL_SECRET, "ampm/recovery-codes"),
     otpKey: deriveKey(env.IDENTITY_LOCAL_SECRET, "ampm/client-otp"),
+    hotelFormCode: deriveKey(env.IDENTITY_LOCAL_SECRET, HOTEL_FORM_CODE_LABEL),
+    hotelFormAddress: deriveKey(env.IDENTITY_LOCAL_SECRET, HOTEL_FORM_ADDRESS_LABEL),
   };
 }

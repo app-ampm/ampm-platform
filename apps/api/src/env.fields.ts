@@ -111,6 +111,13 @@ export const fields = z.object({
    * 2Factor, its own template ID (mapped to the DLT template in its panel) for MSG91.
    */
   SMS_OTP_TEMPLATE: z.string().min(1).optional(),
+  /**
+   * The hotel information form's code template (`hotel_form.code`, D-174, D-189 §2) at the provider, as
+   * SMS_OTP_TEMPLATE is for sign-in: its own DLT content template. The form sends its codes by SMS exactly
+   * while a provider is configured and this is set; otherwise it shows them on screen, with no other
+   * switch.
+   */
+  SMS_HOTEL_FORM_TEMPLATE: z.string().min(1).optional(),
   /** The DLT principal-entity ID (PE ID); 2Factor takes it per message to skip a template sync delay. */
   SMS_DLT_ENTITY_ID: z.string().min(1).optional(),
   /**
