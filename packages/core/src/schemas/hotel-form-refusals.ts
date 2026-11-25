@@ -7,7 +7,8 @@ import { AppError, type ErrorDetail } from "../errors.js";
  * the API raises these exact messages and the page shows them. A session's 401 also carries a reason code,
  * in the envelope's `details` as `{ path: "reason", message: <reason> }`, which the page reads with
  * `hotelFormSessionRefusalOf` to ask for a new code in place, or to show that the link is gone (HF-08).
- * A 429 and a 503 carry `Retry-After`, which the api-client hands the page as `retryAfterSeconds`.
+ * Every 429 carries `Retry-After`, and so does the SMS cap's 503 (the time to the next day in India), which
+ * the api-client hands the page as `retryAfterSeconds`; the other 503s carry none.
  */
 
 /** The messages of the identity step's refusals, by the route that raises each and its status. */
@@ -30,9 +31,15 @@ export const HOTEL_FORM_ERRORS = {
   networkLimit: "Too many codes were asked for from this network today. Please try again later.",
   /** 429 (codes): more than 20 codes an hour, or 50 a day, on this link. */
   requestLimit: "Too many codes were asked for on this link. Please try again later.",
-  /** 503 (codes): the day's SMS budget across every request is spent (SMS mode only). */
+  /**
+   * 503 (codes): the day's SMS budget across every request is spent (SMS mode only); `Retry-After` names the
+   * time to the next day in India.
+   */
   smsCapReached: "Codes can't be sent right now. Please try again later.",
-  /** 503 (codes, verify): the limits cannot be counted, so nothing is issued uncounted. */
+  /**
+   * 503 (codes): the limits cannot be counted, or the code's SMS cannot be queued, so no code is issued;
+   * no `Retry-After`.
+   */
   codesUnavailable: "Codes can't be sent right now. Please try again in a few minutes.",
   /** 409 (verify): a new person beyond the request's `maxPeople`; a returning person still signs in. */
   peopleFull:
@@ -45,6 +52,11 @@ export const HOTEL_FORM_ERRORS = {
   readOnly: "This request is complete, so nothing can be changed.",
   /** 429 (PATCH me): more than 10 changes a minute in one session. */
   writeLimit: "Too many changes in a short time. Please wait a moment and try again.",
+  /**
+   * 503 (PATCH me): the session's write window cannot be counted, so nothing is changed uncounted; no
+   * `Retry-After`.
+   */
+  writesUnavailable: "Your changes can't be saved right now. Please try again in a few minutes.",
 } as const;
 
 /**

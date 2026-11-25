@@ -171,11 +171,12 @@ describe("HotelFormLimits.allowCodeRequest", () => {
     expect(store.keys.some((key) => key.includes("2001:db8:1:2::/64"))).toBe(true);
   });
 
-  it("fails closed with 503 when the store cannot count", async () => {
+  it("fails closed with 503 when the store cannot count, naming no time to wait", async () => {
     const { limits, entries } = build(new BrokenStore());
     const outage = await refusal(limits.allowCodeRequest(scope()));
     expect(outage?.status).toBe(503);
     expect(outage?.message).toBe(HOTEL_FORM_ERRORS.codesUnavailable);
+    expect(outage?.retryAfterSeconds).toBeUndefined();
     expect(entries.map((entry) => entry.event)).toContain("hotel_form.limits_unavailable");
   });
 });
@@ -245,9 +246,11 @@ describe("HotelFormLimits.allowWrite: a session's write window", () => {
     expect(store.keys.at(-1)).toBe("hotel_form:write:me:session-b");
   });
 
-  it("fails closed when the store cannot count", async () => {
+  it("fails closed when the store cannot count, in a write's own words", async () => {
     const outage = await refusal(build(new BrokenStore()).limits.allowWrite("me", "s"));
     expect(outage?.status).toBe(503);
+    expect(outage?.message).toBe(HOTEL_FORM_ERRORS.writesUnavailable);
+    expect(outage?.retryAfterSeconds).toBeUndefined();
   });
 });
 

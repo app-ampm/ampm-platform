@@ -8,10 +8,11 @@ import { HotelFormSmsCapAlert } from "./hotel-form-sms-cap-alert.js";
 
 /*
  * The hotel form's own limits (D-189 §3; plan §4.3), counted in the limiter's store under `hotel_form:*`
- * keys, never the client sign-in's, and all failing closed: a store that cannot count answers 503 and
- * nothing is issued uncounted. A refusal carries `Retry-After` (the time left in the window that refused).
- * The route's @RateLimit holds the per-network 10 code requests a minute; these hold the rest. A mobile is
- * keyed by its destination hash, so no key holds a number.
+ * keys, never the client sign-in's, and all failing closed: a store that cannot count answers 503, in the
+ * words of what it held back (a code, or a write), with no `Retry-After`, and nothing is done uncounted. A
+ * 429 carries `Retry-After` (the time left in the window that refused), and so does the SMS cap's 503 (the
+ * time to the next day in India). The route's @RateLimit holds the per-network 10 code requests a minute;
+ * these hold the rest. A mobile is keyed by its destination hash, so no key holds a number.
  */
 
 const SECOND_MS = 1000;
@@ -103,7 +104,9 @@ export class HotelFormLimits {
    * refuses stops the count, so a refused request spends no later budget.
    */
   async allowCodeRequest(scope: CodeRequestScope): Promise<void> {
-    for (const window of codeWindows(scope)) await this.within(window);
+    for (const window of codeWindows(scope)) {
+      await this.within(window, HOTEL_FORM_ERRORS.codesUnavailable);
+    }
   }
 
   /**
@@ -114,7 +117,11 @@ export class HotelFormLimits {
   async allowSms(cap: number, now: Date): Promise<void> {
     const day = istDayOf(now);
     const left = msUntilNextIstDay(now);
-    const hit = await this.count(`hotel_form:sms:day:${day}`, left);
+    const hit = await this.count(
+      `hotel_form:sms:day:${day}`,
+      left,
+      HOTEL_FORM_ERRORS.codesUnavailable,
+    );
     if (hit.count <= cap) return;
     await this.alertOnce(day, cap, left);
     throw errors.unavailable(HOTEL_FORM_ERRORS.smsCapReached, seconds(left));
@@ -122,29 +129,33 @@ export class HotelFormLimits {
 
   /** A session's write window: 10 changes a minute of `window`. */
   async allowWrite(window: HotelFormWriteWindow, sessionId: string): Promise<void> {
-    await this.within({
+    const counted: CountedWindow = {
       key: `hotel_form:write:${window}:${sessionId}`,
       windowMs: MINUTE_MS,
       limit: HOTEL_FORM_WRITES_PER_MINUTE,
       refusal: HOTEL_FORM_ERRORS.writeLimit,
-    });
+    };
+    await this.within(counted, HOTEL_FORM_ERRORS.writesUnavailable);
   }
 
-  /** Counts a hit and refuses past the window's limit, with the time left in it as Retry-After. */
-  private async within(window: CountedWindow): Promise<void> {
-    const hit = await this.count(window.key, window.windowMs);
+  /**
+   * Counts a hit and refuses past the window's limit, with the time left in it as Retry-After; `outage` is
+   * what a store that cannot count answers.
+   */
+  private async within(window: CountedWindow, outage: string): Promise<void> {
+    const hit = await this.count(window.key, window.windowMs, outage);
     if (hit.count > window.limit) {
       throw errors.rateLimited(window.refusal, seconds(hit.resetMs));
     }
   }
 
-  /** One hit; a store that cannot count fails closed (503), logged without the key. */
-  private async count(key: string, windowMs: number): Promise<RateLimitHit> {
+  /** One hit; a store that cannot count fails closed (503 with `outage`), logged without the key. */
+  private async count(key: string, windowMs: number, outage: string): Promise<RateLimitHit> {
     try {
       return await this.store.hit(key, windowMs);
     } catch {
       this.logger.warn("hotel_form.limits_unavailable", {});
-      throw errors.unavailable(HOTEL_FORM_ERRORS.codesUnavailable);
+      throw errors.unavailable(outage);
     }
   }
 

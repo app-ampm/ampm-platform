@@ -85,7 +85,13 @@ describe("the hotel form's messages", () => {
         "smsCapReached",
         "tooSoon",
         "writeLimit",
+        "writesUnavailable",
       ].sort(),
     );
+  });
+
+  it("tells a person whose change could not be counted that it was not saved, not that codes failed", () => {
+    expect(HOTEL_FORM_ERRORS.writesUnavailable).not.toBe(HOTEL_FORM_ERRORS.codesUnavailable);
+    expect(HOTEL_FORM_ERRORS.writesUnavailable).not.toMatch(/code/i);
   });
 });
