@@ -1247,7 +1247,7 @@ Fixtures are synthetic only: fictitious hotels, example.com addresses and reserv
 
 **Withdrawal** is as easy as giving consent: a session-gated action on the status page. Withdrawing 7.5 flags the photos shown under it, and staff set them back to internal.
 
-**Retention** follows decision 20; nothing is deleted automatically. A Super Admin tool finds, exports, corrects or masks a contributor. Masking reaches people, consents (with their IP addresses), challenges and the change log. Audit images hold no personal values, so masking is complete.
+**Retention** follows decision 20; nothing is deleted automatically. A Super Admin tool finds, exports, corrects or masks a contributor. Masking reaches people, consents (with their IP addresses), challenges and the change log. Audit images hold no personal values, but masking is not complete: a contributor's `guest_token` audit events still store their IP address (`audit_events.ip_address`), in an append-only table the masking tool cannot reach.
 
 **Language.** The notice is in English, with other languages available on request.
 
