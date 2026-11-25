@@ -1,11 +1,13 @@
 import { HOTEL_FORM_NOTICE_VERSION } from "@ampm/core";
 
 /*
+ * DRAFT, for counsel's review and AMPM's approval before real hotels use the form (HF-G2).
+ *
  * The privacy notice a contributor reads on the welcome page (HF-01) and accepts on the details page
  * (HF-02) before a code is issued (plan §9.3, DPDP). The API records the accepted version with the
  * person's consent and refuses an older one ("The form was updated. Reload the page."), so these words
- * and HOTEL_FORM_NOTICE_VERSION change together: whoever edits the words bumps the version in core. The
- * wording awaits counsel's review and AMPM's approval before real hotels use the form (HF-G2).
+ * and HOTEL_FORM_NOTICE_VERSION change together: whoever edits the words bumps the version in core. It
+ * names every processor of plan §9.3 and the retention periods of decision 20.
  */
 
 /** One part of the notice: a heading and its paragraphs. */
@@ -53,13 +55,13 @@ export const PRIVACY_NOTICE: PrivacyNotice = {
     {
       heading: "Who handles the data for AMPM",
       paragraphs: [
-        "Cloudflare runs the security check on this page (Turnstile); Resend sends AMPM's emails; an SMS provider will send the codes once they go by text message; and a hosting company runs AMPM's server and keeps its backups off the server.",
+        "Cloudflare runs the security check on this page (Turnstile). Resend sends AMPM's emails. Once codes go by text message, an SMS provider sends them. A hosting company runs AMPM's server, and its backup service keeps copies of the server's data away from the server.",
       ],
     },
     {
       heading: "How long we keep it",
       paragraphs: [
-        "Code requests, network addresses and browser details: 12 months. The people on a request that expires without being submitted: 12 months after it expires. Once your hotel's answers are merged, your name and contact details are masked after 24 months. Nothing is deleted automatically: AMPM reviews each clean-up.",
+        "Code requests, network addresses and browser details: 12 months. The people on a request that expires without being submitted: 12 months after it expires. A request AMPM rejects or revokes, with the people on it and any file AMPM declines: 12 months after that. Once your hotel's answers are merged, your name and contact details are masked after 24 months. Nothing is deleted automatically: AMPM reviews each clean-up.",
       ],
     },
     {

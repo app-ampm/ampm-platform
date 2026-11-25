@@ -75,12 +75,22 @@ describe("HF-01, Welcome and privacy notice", () => {
   });
 
   it("carries the privacy notice: who sees what, every processor, how long, and whom to ask", () => {
-    const html = welcome();
+    const html = decoded(welcome());
     expect(html).toMatch(/<details[^>]*><summary[^>]*>Read the privacy notice<\/summary>/);
     expect(html).toContain(PRIVACY_NOTICE.dated);
-    for (const processor of ["Cloudflare", "Resend", "an SMS provider", "a hosting company"])
+    // Every processor of plan §9.3: Turnstile, the email sender, the SMS provider once wired, the VPS
+    // host and its off-box backup service.
+    for (const processor of [
+      "Cloudflare",
+      "Resend",
+      "an SMS provider",
+      "A hosting company runs AMPM's server",
+      "its backup service",
+    ])
       expect(html).toContain(processor);
-    expect(html).toContain("12 months");
+    // Decision 20's periods, rejected and revoked requests included.
+    expect(html).toContain("12 months after it expires");
+    expect(html).toContain("A request AMPM rejects or revokes");
     expect(html).toContain("masked after 24 months");
     expect(html).toContain(`To ask about your data, or to complain: ${HELP}`);
   });
