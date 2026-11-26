@@ -1,4 +1,4 @@
-import { useSignOutOfHotelForm, useUpdateHotelFormMe } from "@ampm/api-client";
+import { useForgetHotelForm, useSignOutOfHotelForm, useUpdateHotelFormMe } from "@ampm/api-client";
 import type { HotelFormMeUpdateRequest, HotelFormPerson } from "@ampm/core";
 
 import type { FlowEvent, FlowState } from "./flow";
@@ -19,8 +19,8 @@ export interface SessionCallsContext {
 
 /**
  * Saving your own details and signing out, inside the session. Signing out forgets every query and call
- * of the form (the API's sign-out does on its answer, whatever it is) and the flow's own calls (review fix
- * C3).
+ * of the form (the API's sign-out does on its answer, whatever it is) and the flow's own calls, and with no
+ * session to end (a new code being asked) the form is forgotten all the same (review fixes C3 and E3).
  *
  *   const { saveDetails, signOut, isSigningOut } = useSessionCalls(context);
  */
@@ -28,6 +28,7 @@ export function useSessionCalls(context: SessionCallsContext) {
   const { state, dispatch, onSessionRefused, storage, person, forgetCalls } = context;
   const { mutateAsync: update } = useUpdateHotelFormMe();
   const signOutCall = useSignOutOfHotelForm();
+  const forgetForm = useForgetHotelForm();
 
   const saveDetails = async (change: HotelFormMeUpdateRequest): Promise<SaveOutcome> => {
     if (state.session === null) return { kind: "session" };
@@ -47,8 +48,12 @@ export function useSessionCalls(context: SessionCallsContext) {
       forgetCalls();
       dispatch({ type: "signed_out" });
     };
-    if (state.session === null) done();
-    else signOutCall.mutate({ sessionToken: state.session }, { onSettled: done });
+    if (state.session !== null) {
+      signOutCall.mutate({ sessionToken: state.session }, { onSettled: done });
+      return;
+    }
+    forgetForm();
+    done();
   };
 
   return { saveDetails, signOut, isSigningOut: signOutCall.isPending };

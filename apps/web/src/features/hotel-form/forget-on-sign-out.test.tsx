@@ -16,8 +16,9 @@ import { ME, ON_SCREEN } from "./screen.test-utils";
 import { useHotelFormFlow, type HotelFormFlow } from "./use-hotel-form-flow";
 
 /*
- * Nothing personal stays in the form's query client once the person leaves (D-190 §5, review fix C3):
- * after sign-out, and after "Remove my details". The flow runs for real against a fake API; what is checked is everything the
+ * Nothing personal stays in the form's query client once the person leaves (D-190 §5, review fixes C3 and
+ * E3): after sign-out, after "Remove my details", and after signing out while a new code was being asked
+ * (no session to end). The flow runs for real against a fake API; what is checked is everything the
  * query client holds: every query's data, and every call's variables and answer. Synthetic people only.
  */
 
@@ -189,6 +190,18 @@ describe("the form's query client once the person leaves", () => {
     api.signOutStatus = 401;
     await act(async () => flow().signOut());
     await settle();
+    expectNothingPersonal();
+  });
+
+  it("holds nothing personal after signing out while a new code was being asked, with no session to end", async () => {
+    await signIn();
+    await act(async () => {
+      flow().refuseSession(hotelFormSessionError("session_expired"));
+    });
+    expect(flow().state.session).toBeNull();
+    await act(async () => flow().signOut());
+    await settle();
+    expect(flow().state.phase.kind).toBe("welcome");
     expectNothingPersonal();
   });
 });
