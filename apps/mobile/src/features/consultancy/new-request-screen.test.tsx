@@ -78,6 +78,8 @@ describe("NewRequestScreen", () => {
       datesFlexible: true,
       guestEstimate: 120,
       roomsRequired: null,
+      budgetMin: null,
+      budgetMax: null,
       functionsSummary: null,
       contactPreference: null,
       notesClient: null,
