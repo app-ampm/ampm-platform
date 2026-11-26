@@ -30,6 +30,7 @@ import type {
 } from "../hotel-form/hotel-form-submissions.repository.js";
 import { FORM_SITE } from "./hotel-form-fixtures.js";
 import {
+  formOpenSessions,
   formSubmission,
   formSubmissions,
   formTransactions,
@@ -100,6 +101,8 @@ export interface SubmitOptions {
   readonly written?: number;
   readonly latest?: RevisionRow | null;
   readonly declared?: DeclarationRow[];
+  /** Whether the session is still open under the lock (false: a withdrawal ended it meanwhile). */
+  readonly open?: boolean;
 }
 
 export function buildSubmission(options: SubmitOptions = {}) {
@@ -114,6 +117,7 @@ export function buildSubmission(options: SubmitOptions = {}) {
   const journal = { event: vi.fn(async () => undefined), record: vi.fn(async () => undefined) };
   const submitted = vi.fn(async () => 4);
   const verify = vi.fn(async () => options.human ?? true);
+  const sessions = formOpenSessions(options.open ?? true);
   const service = new HotelFormSubmission(
     formTransactions() as unknown as HotelFormRequestsRepository,
     submissions.typed,
@@ -122,6 +126,7 @@ export function buildSubmission(options: SubmitOptions = {}) {
     { updateIf } as unknown as HotelInfoRequestsRepository,
     journal as unknown as HotelInfoRequestJournal,
     { submitted } as unknown as HotelFormStaffNotices,
+    sessions.typed,
     { verify } as unknown as BotCheckAdapter,
     { PUBLIC_SITE_URL: FORM_SITE } as unknown as Env,
   );
@@ -136,6 +141,7 @@ export function buildSubmission(options: SubmitOptions = {}) {
     journal,
     submitted,
     verify,
+    isOpen: sessions.isOpen,
   };
 }
 

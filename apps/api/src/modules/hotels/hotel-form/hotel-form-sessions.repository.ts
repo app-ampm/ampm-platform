@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common";
 
 import { PrismaService } from "../../../db/prisma.service.js";
 import type { Prisma } from "../../../generated/prisma/client.js";
+import { LIVE_NOTICE_CONSENT } from "./hotel-form-named-person.js";
 import { FORM_REQUEST_SELECT, toFormRequest } from "./hotel-form-requests.repository.js";
 import type { FormRequest } from "./hotel-form-state.js";
 
@@ -113,6 +114,30 @@ export class HotelFormSessionsRepository {
       where: { id: { in: [...ids] }, sessionEndedAt: null },
       data: { sessionEndedAt: at },
     });
+  }
+
+  /**
+   * Whether a session is still open as a call holding its request's lock sees it: not ended, and its person
+   * still holding a live privacy notice consent. Withdrawing every consent ends the person's sessions and
+   * takes that consent back in one transaction under the same lock, so either says the session is over.
+   */
+  async isOpen(
+    challengeId: string,
+    personId: string,
+    tx: Prisma.TransactionClient,
+  ): Promise<boolean> {
+    const row = await tx.hotelInfoRequestChallenge.findFirst({
+      where: {
+        id: challengeId,
+        personId,
+        sessionTokenHash: { not: null },
+        sessionEndedAt: null,
+        deletedAt: null,
+        person: { is: { consents: { some: LIVE_NOTICE_CONSENT } } },
+      },
+      select: { id: true },
+    });
+    return row !== null;
   }
 
   /** Ends one session (sign-out); false when it had already ended. */

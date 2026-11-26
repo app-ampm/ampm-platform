@@ -5,6 +5,7 @@ import { vi } from "vitest";
 
 import type { Prisma } from "../../../generated/prisma/client.js";
 import type { SectionRow } from "../hotel-form/hotel-form-sections.repository.js";
+import type { HotelFormSessionsRepository } from "../hotel-form/hotel-form-sessions.repository.js";
 import type { FormSession } from "../hotel-form/hotel-form-sessions.service.js";
 import type {
   FormSubmission,
@@ -126,6 +127,17 @@ export function formSubmissions(
     })),
   };
   return { repository, typed: repository as unknown as HotelFormSubmissionsRepository };
+}
+
+/**
+ * The sessions repository as a call holding the request's lock checks its session again: still open, unless
+ * `open` is false (a withdrawal of every consent ended it since the guard ran).
+ */
+export function formOpenSessions(open = true) {
+  const isOpen = vi.fn(
+    async (_challengeId: string, _personId: string, _tx: Prisma.TransactionClient) => open,
+  );
+  return { isOpen, typed: { isOpen } as unknown as HotelFormSessionsRepository };
 }
 
 /** A transaction runner as the requests repository's, running `work` at once on the spec client. */

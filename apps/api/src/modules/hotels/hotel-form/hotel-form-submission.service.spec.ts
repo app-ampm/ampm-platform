@@ -30,7 +30,8 @@ import {
 } from "../testing/hotel-form-submission-fakes.js";
 
 /*
- * Submitting the form (D-190 §3) with fakes: under the request's lock, the declarations' versions, the bot
+ * Submitting the form (D-190 §3) with fakes: under the request's lock, the session still open (a
+ * withdrawal of every consent may have ended it since the guard ran), the declarations' versions, the bot
  * check for `hf_submit`, the section versions the review page read (409 sectionsChanged), the strict check,
  * revision n+1 with every section and its hash, both declarations
  * bound to that hash, the System's move with a conditional write, the `submitted` event, an allow-listed
@@ -234,6 +235,17 @@ describe("HotelFormSubmission: what a submit is refused for", () => {
       ),
     );
     expect(refused && hotelFormSessionRefusalOf(refused)).toBe("not_active");
+  });
+
+  it("answers 401 session_ended when the session ended under the lock since the guard ran, writing nothing", async () => {
+    const built = build({ open: false });
+    const refused = await refusalOf(built.service.submit(formSession(), BODY, FORM_IP, FORM_NOW));
+    expect(refused && hotelFormSessionRefusalOf(refused)).toBe("session_ended");
+    expect(built.isOpen).toHaveBeenCalledWith(formSession().challengeId, FORM_PERSON_ID, FORM_TX);
+    expect(built.sub.lock.mock.invocationCallOrder[0]).toBeLessThan(
+      built.isOpen.mock.invocationCallOrder[0] ?? 0,
+    );
+    expectNothingWritten(built);
   });
 
   it("writes nothing that lands when the System's move finds the request moved", async () => {

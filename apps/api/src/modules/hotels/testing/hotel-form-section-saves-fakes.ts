@@ -12,6 +12,7 @@ import type { FormSubmission } from "../hotel-form/hotel-form-submissions.reposi
 import {
   FORM_NOW,
   formSession,
+  formOpenSessions,
   formSubmission,
   formSubmissions,
   formTransactions,
@@ -30,6 +31,7 @@ export interface Built {
   readonly updateIf: ReturnType<typeof vi.fn>;
   readonly allowSectionSave: ReturnType<typeof vi.fn>;
   readonly lock: ReturnType<typeof vi.fn>;
+  readonly isOpen: ReturnType<typeof vi.fn>;
 }
 
 export function build(
@@ -38,6 +40,8 @@ export function build(
     readonly locked?: FormSubmission | null;
     readonly created?: boolean;
     readonly written?: number;
+    /** Whether the session is still open under the lock (false: a withdrawal ended it meanwhile). */
+    readonly open?: boolean;
   } = {},
 ): Built {
   const submissions = formSubmissions(
@@ -47,11 +51,13 @@ export function build(
   const createFirst = vi.fn(async () => options.created ?? true);
   const updateIf = vi.fn(async () => options.written ?? 1);
   const allowSectionSave = vi.fn(async () => undefined);
+  const sessions = formOpenSessions(options.open ?? true);
   const saves = new HotelFormSectionSaves(
     formTransactions() as unknown as HotelFormRequestsRepository,
     submissions.typed,
     { find, createFirst, updateIf } as unknown as HotelFormSectionsRepository,
     { allowSectionSave } as unknown as HotelFormLimits,
+    sessions.typed,
   );
   return {
     saves,
@@ -60,6 +66,7 @@ export function build(
     updateIf,
     allowSectionSave,
     lock: submissions.repository.lock,
+    isOpen: sessions.isOpen,
   };
 }
 

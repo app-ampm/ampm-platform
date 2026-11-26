@@ -17,7 +17,9 @@ import { AuditService } from "../../../policy/audit.service.js";
 import { HotelInfoRequestJournal } from "../hotel-info-request-journal.js";
 import { hotelFormBotPasses, hotelFormBotRefusal } from "./hotel-form-bot-check.js";
 import { HotelFormLimits } from "./hotel-form-limits.js";
+import { requireOpenSession } from "./hotel-form-open-session.js";
 import { HotelFormRequestsRepository } from "./hotel-form-requests.repository.js";
+import { HotelFormSessionsRepository } from "./hotel-form-sessions.repository.js";
 import type { FormSession } from "./hotel-form-sessions.service.js";
 import { HotelFormStaffNotices } from "./hotel-form-staff-notices.js";
 import { inForm } from "./hotel-form-submission-state.js";
@@ -39,9 +41,10 @@ function requireSubmitted(request: FormSubmission): void {
  * submitted, whatever its state since (in review, status-only after the merge, or awaiting changes); a
  * request never submitted is 409 notSubmitted. In order: that check, the Turnstile pass for
  * `hf_correction` (400), the request's 5 corrections a day (429 correctionLimit). Then, under the request's
- * lock, the message is stored in its own row (RESTRICTED-CONTACT, read only in the staff app), the
- * `correction_requested` event names it by id and the audit is the person's, neither holding the message;
- * staff are told after the commit, with nothing the hotel typed.
+ * lock, once the session is checked again (401 session_ended once a withdrawal of every consent ended it
+ * since the guard ran: requireOpenSession), the message is stored in its own row (RESTRICTED-CONTACT,
+ * read only in the staff app), the `correction_requested` event names it by id and the audit is the
+ * person's, neither holding the message; staff are told after the commit, with nothing the hotel typed.
  */
 @Injectable()
 export class HotelFormCorrections {
@@ -52,6 +55,7 @@ export class HotelFormCorrections {
     private readonly journal: HotelInfoRequestJournal,
     private readonly audit: AuditService,
     private readonly notices: HotelFormStaffNotices,
+    private readonly sessions: HotelFormSessionsRepository,
     @Inject(BOT_CHECK_ADAPTER) private readonly botCheck: BotCheckAdapter,
     @Inject(ENV) private readonly env: Env,
   ) {}
@@ -82,6 +86,7 @@ export class HotelFormCorrections {
     tx: Prisma.TransactionClient,
   ): Promise<void> {
     const request = inForm(await this.submissions.lock(session.requestId, tx));
+    await requireOpenSession(this.sessions, session, tx);
     requireSubmitted(request);
     const { personId } = session;
     const correction = { requestId: request.id, personId, message };

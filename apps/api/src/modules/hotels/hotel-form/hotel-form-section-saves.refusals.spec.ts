@@ -18,7 +18,8 @@ import { build, save } from "../testing/hotel-form-section-saves-fakes.js";
 
 /*
  * What a section's autosave refuses (D-190 §3) with fakes: a request no longer open (409 readOnly, naming
- * who submitted and when), one that left the form (401 not_active), No changes on an onboarding request,
+ * who submitted and when), one that left the form (401 not_active), a session a withdrawal ended under the
+ * lock (401 session_ended), No changes on an onboarding request,
  * a section over its cap (400 sectionTooLarge), and a save past its windows (429), each before writing.
  */
 
@@ -55,6 +56,20 @@ describe("HotelFormSectionSaves: what is refused", () => {
       );
       expect(refused && hotelFormSessionRefusalOf(refused)).toBe("not_active");
     }
+  });
+
+  it("answers 401 session_ended when the session ended under the lock since the guard ran, writing nothing", async () => {
+    const built = build({ open: false });
+    const refused = await refusalOf(
+      save(built, "rooms", { answers: { totalRooms: 9 }, expectedVersion: 0, noChanges: false }),
+    );
+    expect(refused && hotelFormSessionRefusalOf(refused)).toBe("session_ended");
+    expect(built.lock.mock.invocationCallOrder[0]).toBeLessThan(
+      built.isOpen.mock.invocationCallOrder[0] ?? 0,
+    );
+    expect(built.find).not.toHaveBeenCalled();
+    expect(built.createFirst).not.toHaveBeenCalled();
+    expect(built.updateIf).not.toHaveBeenCalled();
   });
 
   it("refuses No changes on an onboarding request, on noChanges", async () => {

@@ -11,6 +11,7 @@ import {
   FORM_PERSON_ID,
   FORM_REQUEST_ID,
   FORM_TX,
+  formOpenSessions,
   formSession,
   formSubmission,
   formSubmissions,
@@ -36,7 +37,13 @@ import type { FormSubmission } from "./hotel-form-submissions.repository.js";
 const MESSAGE = "The lawn seats 900 guests, not 600.";
 const CORRECTION_ID = "0192f1a0-0000-7000-8000-0000000000f1";
 
-function build(options: { readonly request?: FormSubmission; readonly human?: boolean } = {}) {
+function build(
+  options: {
+    readonly request?: FormSubmission;
+    readonly human?: boolean;
+    readonly open?: boolean;
+  } = {},
+) {
   const request = options.request ?? submittedRequest();
   const submissions = formSubmissions(request);
   const allowCorrection = vi.fn(async () => undefined);
@@ -44,6 +51,7 @@ function build(options: { readonly request?: FormSubmission; readonly human?: bo
   const audit = { record: vi.fn(async () => undefined) };
   const correction = vi.fn(async () => 4);
   const verify = vi.fn(async () => options.human ?? true);
+  const sessions = formOpenSessions(options.open ?? true);
   const corrections = new HotelFormCorrections(
     formTransactions() as unknown as HotelFormRequestsRepository,
     submissions.typed,
@@ -51,11 +59,13 @@ function build(options: { readonly request?: FormSubmission; readonly human?: bo
     journal as unknown as HotelInfoRequestJournal,
     audit as unknown as AuditService,
     { correction } as unknown as HotelFormStaffNotices,
+    sessions.typed,
     { verify } as unknown as BotCheckAdapter,
     { PUBLIC_SITE_URL: FORM_SITE } as unknown as Env,
   );
   const sub = submissions.repository;
-  return { corrections, sub, allowCorrection, journal, audit, correction, verify };
+  const { isOpen } = sessions;
+  return { corrections, sub, allowCorrection, journal, audit, correction, verify, isOpen };
 }
 
 const send = (built: ReturnType<typeof build>, session = formSession({ state: "locked" })) =>
@@ -148,5 +158,19 @@ describe("HotelFormCorrections", () => {
     const built = build({ request: submittedRequest({ status: "rejected" }) });
     const refused = await refusalOf(send(built));
     expect(refused && hotelFormSessionRefusalOf(refused)).toBe("not_active");
+  });
+
+  it("answers 401 session_ended when the session ended under the lock since the guard ran, storing nothing", async () => {
+    const built = build({ open: false });
+    const refused = await refusalOf(send(built));
+    expect(refused && hotelFormSessionRefusalOf(refused)).toBe("session_ended");
+    expect(built.isOpen).toHaveBeenCalledWith(formSession().challengeId, FORM_PERSON_ID, FORM_TX);
+    expect(built.sub.lock.mock.invocationCallOrder[0]).toBeLessThan(
+      built.isOpen.mock.invocationCallOrder[0] ?? 0,
+    );
+    expect(built.sub.createCorrection).not.toHaveBeenCalled();
+    expect(built.journal.event).not.toHaveBeenCalled();
+    expect(built.audit.record).not.toHaveBeenCalled();
+    expect(built.correction).not.toHaveBeenCalled();
   });
 });

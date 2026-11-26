@@ -23,6 +23,7 @@ import { HotelInfoRequestJournal } from "../hotel-info-request-journal.js";
 import { HotelInfoRequestsRepository } from "../hotel-info-requests.repository.js";
 import { hotelFormBotPasses, hotelFormBotRefusal } from "./hotel-form-bot-check.js";
 import type { CanonicalContent } from "./hotel-form-content.js";
+import { requireOpenSession } from "./hotel-form-open-session.js";
 import { HotelFormPeopleRepository } from "./hotel-form-people.repository.js";
 import { HotelFormRequestsRepository } from "./hotel-form-requests.repository.js";
 import {
@@ -33,6 +34,7 @@ import {
   sectionsChangedRefusal,
 } from "./hotel-form-submission-sections.js";
 import { HotelFormSectionsRepository } from "./hotel-form-sections.repository.js";
+import { HotelFormSessionsRepository } from "./hotel-form-sessions.repository.js";
 import type { FormSession } from "./hotel-form-sessions.service.js";
 import { HotelFormStaffNotices } from "./hotel-form-staff-notices.js";
 import {
@@ -70,10 +72,12 @@ interface Call {
 /**
  * `POST /hotel-form/submit` (D-190 §3). The Turnstile pass for `hf_submit` is verified first, outside the
  * transaction (the provider gets 5 seconds, and no row is held meanwhile); then, under the request's
- * lock: a request still open (or awaiting changes) needs both declarations in the words in force (409
- * noticeStale), the pass (400), every section at the version the review page read (409 sectionsChanged,
- * naming the ones a colleague saved since) and the strict check (400 submitIncomplete, every missing
- * item); then revision n+1 holds every section and its hash, 7.4 and 7.5 are recorded against that hash,
+ * lock: the caller's session still open (401 session_ended once a withdrawal of every consent ended it
+ * since the guard ran: requireOpenSession); a request still open (or awaiting changes) needs both
+ * declarations in the words in force (409 noticeStale), the pass (400), every section at the version the
+ * review page read (409 sectionsChanged, naming the ones a colleague saved since) and the strict check
+ * (400 submitIncomplete, every missing item); then revision n+1 holds every section and its hash, 7.4
+ * and 7.5 are recorded against that hash,
  * the System moves the request to submitted through a conditional write (its revision, time and submitter
  * set), and the `submitted` event and an allow-listed audit are written. Staff are told after the commit.
  * A request no longer open answers a repeat of the submit that locked it with that submit's answer,
@@ -89,6 +93,7 @@ export class HotelFormSubmission {
     private readonly infoRequests: HotelInfoRequestsRepository,
     private readonly journal: HotelInfoRequestJournal,
     private readonly notices: HotelFormStaffNotices,
+    private readonly sessions: HotelFormSessionsRepository,
     @Inject(BOT_CHECK_ADAPTER) private readonly botCheck: BotCheckAdapter,
     @Inject(ENV) private readonly env: Env,
   ) {}
@@ -112,6 +117,7 @@ export class HotelFormSubmission {
 
   private async submitLocked(call: Call, tx: Prisma.TransactionClient): Promise<Outcome> {
     const request = inForm(await this.submissions.lock(call.session.requestId, tx));
+    await requireOpenSession(this.sessions, call.session, tx);
     if (!isEditableStatus(request.status)) {
       return { fresh: false, answer: await this.repeatOf(request, call.body, tx) };
     }

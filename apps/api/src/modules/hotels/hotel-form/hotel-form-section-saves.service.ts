@@ -19,12 +19,14 @@ import type { z } from "zod";
 import type { Prisma } from "../../../generated/prisma/client.js";
 import { canonicalContentOf } from "./hotel-form-content.js";
 import { HotelFormLimits } from "./hotel-form-limits.js";
+import { requireOpenSession } from "./hotel-form-open-session.js";
 import { HotelFormRequestsRepository } from "./hotel-form-requests.repository.js";
 import {
   HotelFormSectionsRepository,
   type SectionRow,
   type SectionWrite,
 } from "./hotel-form-sections.repository.js";
+import { HotelFormSessionsRepository } from "./hotel-form-sessions.repository.js";
 import type { FormSession } from "./hotel-form-sessions.service.js";
 import { inForm, isEditableStatus, readOnlyRefusal } from "./hotel-form-submission-state.js";
 import { HotelFormSubmissionsRepository } from "./hotel-form-submissions.repository.js";
@@ -94,10 +96,12 @@ function conflictWith<K extends HotelFormSectionKey>(key: K, row: SectionRow): A
  * is open or awaiting changes (else 409 readOnly, naming who submitted and when); each save counted
  * against the session's 30 a minute and the request's 600 an hour first. The answers, already read through
  * the section's draft, are kept as their canonical JSON, so a null and a missing answer are one content;
- * over the section's cap is 400 sectionTooLarge. Then, under the request's lock, the first save makes the
- * row at version 1 from `expectedVersion` 0, and a later one writes the next version only from the current
- * one: an unchanged content writes nothing and answers the version as it stands, and a stale version is
- * 409 sectionConflict carrying the colleague's save, as is a first save that lost the race to another.
+ * over the section's cap is 400 sectionTooLarge. Then, under the request's lock, the session is checked
+ * again (401 session_ended once a withdrawal of every consent ended it since the guard ran:
+ * requireOpenSession), the first save makes the row at version 1 from `expectedVersion` 0, and a later
+ * one writes the next version only from the current one: an unchanged content writes nothing and answers
+ * the version as it stands, and a stale version is 409 sectionConflict carrying the colleague's save, as
+ * is a first save that lost the race to another.
  * "No changes" is a refresh's only. A save writes no event and no audit (an autosave of a staged draft).
  */
 @Injectable()
@@ -107,6 +111,7 @@ export class HotelFormSectionSaves {
     private readonly submissions: HotelFormSubmissionsRepository,
     private readonly sections: HotelFormSectionsRepository,
     private readonly limits: HotelFormLimits,
+    private readonly sessions: HotelFormSessionsRepository,
   ) {}
 
   async save<K extends HotelFormSectionKey>(
@@ -148,6 +153,7 @@ export class HotelFormSectionSaves {
     const { session, key, body, write } = call;
     const requestId = session.requestId;
     const request = inForm(await this.submissions.lock(requestId, tx));
+    await requireOpenSession(this.sessions, session, tx);
     if (!isEditableStatus(request.status)) throw readOnlyRefusal(request);
     if (body.noChanges && request.kind !== "refresh") {
       const detail = { path: "noChanges", message: HOTEL_FORM_ERRORS.noChangesOnOnboarding };
