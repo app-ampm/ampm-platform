@@ -15,6 +15,7 @@ import {
   type WithdrawnConsent,
 } from "./hotel-form-people.repository.js";
 import { HotelFormRequestsRepository } from "./hotel-form-requests.repository.js";
+import { HotelFormSessionsRepository } from "./hotel-form-sessions.repository.js";
 import type { FormSession } from "./hotel-form-sessions.service.js";
 import { HotelFormStaffNotices } from "./hotel-form-staff-notices.js";
 import { inForm } from "./hotel-form-submission-state.js";
@@ -32,7 +33,13 @@ interface Withdrawal {
   readonly removalAskedNow: boolean;
   /** Whether the person's details are asked to be removed, now or before. */
   readonly removalRequested: boolean;
+  /** The person's sessions this call ended (a withdrawal of every consent ends them all). */
+  readonly endedSessionIds: readonly string[];
 }
+
+/** Whether a withdrawal changed anything, and so is audited. */
+const changedAnything = (done: Withdrawal): boolean =>
+  done.withdrawn.length > 0 || done.removalAskedNow || done.endedSessionIds.length > 0;
 
 /** The kinds withdrawn, each once, in the order the kinds are listed. */
 const kindsOf = (withdrawn: readonly WithdrawnConsent[]): HotelInfoRequestConsentKind[] =>
@@ -45,6 +52,9 @@ const kindsOf = (withdrawn: readonly WithdrawnConsent[]): HotelInfoRequestConsen
  * with `requestRemoval` a removal request is recorded, once per person, for a Super Admin to review. Each
  * writes its event (`consent_withdrawn` naming the kind asked, `removal_requested`) and one allow-listed
  * audit of the person (the consents' ids and kinds); the Super Admins are told in-app after the commit.
+ * Withdrawing every consent also ends every session of the person, this one included, in the same
+ * transaction: without the notice's consent nothing more is written as them, and the form no longer names
+ * them to the others (hotel-form-named-person.ts); a new code records the notice's consent again.
  * Withdrawing 7.5 is recorded now; the photos it flags arrive in Slice 9. A call that changes nothing
  * writes nothing and tells no one.
  */
@@ -54,6 +64,7 @@ export class HotelFormWithdrawals {
     private readonly requests: HotelFormRequestsRepository,
     private readonly submissions: HotelFormSubmissionsRepository,
     private readonly people: HotelFormPeopleRepository,
+    private readonly sessions: HotelFormSessionsRepository,
     private readonly journal: HotelInfoRequestJournal,
     private readonly audit: AuditService,
     private readonly notices: HotelFormStaffNotices,
@@ -82,6 +93,8 @@ export class HotelFormWithdrawals {
     const request = inForm(await this.submissions.lock(session.requestId, tx));
     const kinds = body.kind === "all" ? ALL_KINDS : DISPLAY_ONLY;
     const withdrawn = await this.people.withdrawLive(session.personId, kinds, now, tx);
+    const endedSessionIds =
+      body.kind === "all" ? await this.endSessionsOf(session.personId, now, tx) : [];
     const askedBefore = await this.submissions.hasRemovalRequest(request.id, session.personId, tx);
     const removalAskedNow = body.requestRemoval && !askedBefore;
     const actor: RequestActor = { kind: "hotel_person", personId: session.personId };
@@ -91,29 +104,41 @@ export class HotelFormWithdrawals {
       await this.journal.event({ ...event, eventType: "consent_withdrawn", detail }, tx);
     }
     if (removalAskedNow) await this.journal.event({ ...event, eventType: "removal_requested" }, tx);
-    if (withdrawn.length > 0 || removalAskedNow) {
-      await this.record(session, request.id, withdrawn, removalAskedNow, tx);
-    }
-    return { withdrawn, removalAskedNow, removalRequested: removalAskedNow || askedBefore };
+    const removalRequested = removalAskedNow || askedBefore;
+    const done = { withdrawn, removalAskedNow, removalRequested, endedSessionIds };
+    if (changedAnything(done)) await this.record(session, request.id, done, tx);
+    return done;
   }
 
-  /** The person's audit: the consents' ids and kinds, and the fields changed; never a value. */
+  /** Ends every open session of the person (expired ones included); answers the ones it ended. */
+  private async endSessionsOf(
+    personId: string,
+    now: Date,
+    tx: Prisma.TransactionClient,
+  ): Promise<string[]> {
+    const ids = (await this.sessions.openSessionsOf(personId, tx)).map((open) => open.id);
+    await this.sessions.endSessions(ids, now, tx);
+    return ids;
+  }
+
+  /** The person's audit: the consents' ids and kinds, the sessions ended, the fields changed; no value. */
   private async record(
     session: FormSession,
     requestId: string,
-    withdrawn: readonly WithdrawnConsent[],
-    removalAskedNow: boolean,
+    { withdrawn, removalAskedNow, endedSessionIds }: Withdrawal,
     tx: Prisma.TransactionClient,
   ): Promise<void> {
     const changedFields = [
       ...(withdrawn.length > 0 ? ["withdrawnAt", "withdrawalSource"] : []),
       ...(removalAskedNow ? ["removalRequested"] : []),
+      ...(endedSessionIds.length > 0 ? ["sessionEndedAt"] : []),
     ];
     const after = {
       id: session.personId,
       requestId,
       consentIds: withdrawn.map((consent) => consent.id),
       kinds: kindsOf(withdrawn),
+      ...(endedSessionIds.length > 0 ? { endedSessionIds: [...endedSessionIds] } : {}),
       changedFields,
     };
     await this.audit.record(

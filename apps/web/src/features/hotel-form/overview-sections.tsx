@@ -64,6 +64,15 @@ export function QuickStart() {
   );
 }
 
+/** Who saved a section last and when, a colleague who withdrew their consent unnamed; null if never. */
+function lastSavedLine(section: HotelFormDraftSections[HotelFormSectionKey]): string | null {
+  if (section.lastEditedAt === null) return null;
+  const moment = momentOf(section.lastEditedAt);
+  return section.lastEditedBy === null
+    ? COPY.sections.lastSavedUnnamed(moment)
+    : COPY.sections.lastSaved(section.lastEditedBy, moment);
+}
+
 /** One section: its title as the link, its status as a word, and who saved it last. */
 function SectionRow({
   sectionKey,
@@ -74,10 +83,7 @@ function SectionRow({
 }) {
   const section = sections[sectionKey];
   const status = sectionStatusOf(section);
-  const saved =
-    section.lastEditedBy && section.lastEditedAt
-      ? COPY.sections.lastSaved(section.lastEditedBy, momentOf(section.lastEditedAt))
-      : null;
+  const saved = lastSavedLine(section);
   return (
     <li>
       <Link

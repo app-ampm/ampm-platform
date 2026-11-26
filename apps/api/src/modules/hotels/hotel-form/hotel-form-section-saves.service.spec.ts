@@ -134,6 +134,16 @@ describe("HotelFormSectionSaves: a later save", () => {
     expect(built.createFirst).not.toHaveBeenCalled();
   });
 
+  it("answers an unchanged save with who saved it last and when, unnamed once they withdrew consent", async () => {
+    const unnamed = sectionRow("property", stored, { version: 5, lastEditedBy: null });
+    const saved = await save(build({ current: unnamed }), "property", {
+      answers: stored,
+      expectedVersion: 5,
+      noChanges: false,
+    });
+    expect(saved).toMatchObject({ lastEditedBy: null, lastEditedAt: FORM_EARLIER.toISOString() });
+  });
+
   it("counts an unchanged section's completeness from its stored answers, never the stored flag", async () => {
     const cuisines = { cuisines: ["Indian"] };
     const stale = sectionRow("food_beverage", cuisines, { version: 2, isComplete: false });

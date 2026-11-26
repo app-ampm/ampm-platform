@@ -5,10 +5,17 @@ import { OVERVIEW_COPY } from "./overview-copy";
 
 const COPY = OVERVIEW_COPY.helpers;
 
+/** A person helping in words: name and designation, "(you)" for the person, a colleague unnamed. */
+function helperLine(person: HotelFormContributor): string {
+  if (person.fullName === null) return COPY.unnamed;
+  const name = person.isYou ? COPY.you(person.fullName) : person.fullName;
+  return person.designation === null ? name : COPY.person(name, person.designation);
+}
+
 /**
  * "Who is helping" (HF-04; D-190 §3): the name and designation of each person who signed in on this
- * request, the signed-in person marked as you; never a mobile. Alone, the person is told colleagues can
- * help with the same link.
+ * request, the signed-in person marked as you; never a mobile, and a colleague who withdrew their consent
+ * named nowhere. Alone, the person is told colleagues can help with the same link.
  *
  *   <Helpers contributors={draft.contributors} />
  */
@@ -27,15 +34,10 @@ export function Helpers({
         {COPY.heading}
       </h2>
       <ul className="flex flex-col gap-1">
-        {contributors.map((person) => (
-          <li
-            key={`${person.fullName}·${person.designation}`}
-            className={textStyles({ variant: "bodySmall", tone: "body" })}
-          >
-            {COPY.person(
-              person.isYou ? COPY.you(person.fullName) : person.fullName,
-              person.designation,
-            )}
+        {contributors.map((person, place) => (
+          // The list is the API's, oldest first, and holds no id: two unnamed colleagues read alike.
+          <li key={place} className={textStyles({ variant: "bodySmall", tone: "body" })}>
+            {helperLine(person)}
           </li>
         ))}
       </ul>

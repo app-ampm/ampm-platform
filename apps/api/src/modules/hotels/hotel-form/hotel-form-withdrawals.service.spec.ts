@@ -5,6 +5,7 @@ import type { AuditInput, AuditService } from "../../../policy/audit.service.js"
 import type { HotelInfoRequestJournal } from "../hotel-info-request-journal.js";
 import { refusalOf } from "../testing/hotel-form-fixtures.js";
 import {
+  FORM_CHALLENGE_ID,
   FORM_NOW,
   FORM_PERSON_ID,
   FORM_REQUEST_ID,
@@ -17,6 +18,7 @@ import {
 import { HOTEL_FORM_PERSON_ENTITY } from "./hotel-form-enrolment.service.js";
 import type { HotelFormPeopleRepository } from "./hotel-form-people.repository.js";
 import type { HotelFormRequestsRepository } from "./hotel-form-requests.repository.js";
+import type { HotelFormSessionsRepository, OpenSession } from "./hotel-form-sessions.repository.js";
 import type { HotelFormStaffNotices } from "./hotel-form-staff-notices.js";
 import type { FormSubmission } from "./hotel-form-submissions.repository.js";
 import { HotelFormWithdrawals } from "./hotel-form-withdrawals.service.js";
@@ -35,11 +37,19 @@ const ALL: HotelInfoRequestConsentKind[] = [
   "display_authorisation",
 ];
 
+/** The person's two open sessions: this one, and one on another device. */
+const OTHER_SESSION = "0192f1a0-0000-7000-8000-0000000000c2";
+const OPEN: OpenSession[] = [
+  { id: FORM_CHALLENGE_ID, startedAt: FORM_NOW, lastSeenAt: FORM_NOW },
+  { id: OTHER_SESSION, startedAt: FORM_NOW, lastSeenAt: null },
+];
+
 function build(
   options: {
     readonly request?: FormSubmission;
     readonly live?: { id: string; kind: HotelInfoRequestConsentKind }[];
     readonly asked?: boolean;
+    readonly open?: OpenSession[];
   } = {},
 ) {
   const submissions = formSubmissions(options.request ?? submittedRequest());
@@ -53,15 +63,28 @@ function build(
   const journal = { event: vi.fn(async () => undefined) };
   const audit = { record: vi.fn(async (_input: AuditInput, _tx?: unknown) => undefined) };
   const withdrawal = vi.fn(async () => 1);
+  const sessions = {
+    openSessionsOf: vi.fn(async (_personId: string, _tx: unknown) => options.open ?? OPEN),
+    endSessions: vi.fn(async (_ids: readonly string[], _at: Date, _tx: unknown) => undefined),
+  };
   const withdrawals = new HotelFormWithdrawals(
     formTransactions() as unknown as HotelFormRequestsRepository,
     submissions.typed,
     { withdrawLive } as unknown as HotelFormPeopleRepository,
+    sessions as unknown as HotelFormSessionsRepository,
     journal as unknown as HotelInfoRequestJournal,
     audit as unknown as AuditService,
     { withdrawal } as unknown as HotelFormStaffNotices,
   );
-  return { withdrawals, withdrawLive, journal, audit, withdrawal, sub: submissions.repository };
+  return {
+    withdrawals,
+    withdrawLive,
+    journal,
+    audit,
+    withdrawal,
+    sessions,
+    sub: submissions.repository,
+  };
 }
 
 const event = (eventType: string, detail?: object) => ({
@@ -130,14 +153,55 @@ describe("HotelFormWithdrawals", () => {
       after: {
         consentIds: ["consent-notice", "consent-7-4", "consent-7-5"],
         kinds: ALL,
-        changedFields: ["withdrawnAt", "withdrawalSource", "removalRequested"],
+        endedSessionIds: [FORM_CHALLENGE_ID, OTHER_SESSION],
+        changedFields: ["withdrawnAt", "withdrawalSource", "removalRequested", "sessionEndedAt"],
       },
     });
     expect(built.withdrawal).toHaveBeenCalledTimes(1);
   });
 
-  it("writes nothing and tells no one when nothing was live and the removal was asked already", async () => {
+  it("ends every session of a person withdrawing all, this one included, in the same transaction", async () => {
+    const built = build();
+    await built.withdrawals.withdraw(
+      formSession(),
+      { kind: "all", requestRemoval: false },
+      FORM_NOW,
+    );
+    expect(built.sessions.openSessionsOf).toHaveBeenCalledWith(FORM_PERSON_ID, FORM_TX);
+    expect(built.sessions.endSessions).toHaveBeenCalledWith(
+      [FORM_CHALLENGE_ID, OTHER_SESSION],
+      FORM_NOW,
+      FORM_TX,
+    );
+  });
+
+  it("ends no session for 7.5 alone, which leaves the privacy notice's consent live", async () => {
+    const built = build();
+    await built.withdrawals.withdraw(
+      formSession(),
+      { kind: "display_authorisation", requestRemoval: false },
+      FORM_NOW,
+    );
+    expect(built.sessions.endSessions).not.toHaveBeenCalled();
+  });
+
+  it("still ends the sessions of all when nothing was live, auditing that alone and telling no one", async () => {
     const built = build({ live: [], asked: true });
+    const answer = await built.withdrawals.withdraw(
+      formSession(),
+      { kind: "all", requestRemoval: true },
+      FORM_NOW,
+    );
+    expect(answer).toEqual({ withdrawn: [], removalRequested: true });
+    expect(built.journal.event).not.toHaveBeenCalled();
+    expect(built.audit.record.mock.calls[0]?.[0]).toMatchObject({
+      after: { consentIds: [], endedSessionIds: OPEN.map((open) => open.id) },
+    });
+    expect(built.withdrawal).not.toHaveBeenCalled();
+  });
+
+  it("writes nothing and tells no one when nothing was live, no session open and the removal asked already", async () => {
+    const built = build({ live: [], asked: true, open: [] });
     const answer = await built.withdrawals.withdraw(
       formSession(),
       { kind: "all", requestRemoval: true },

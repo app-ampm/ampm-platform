@@ -66,6 +66,7 @@ const draft = {
   contributors: [
     { fullName: "Synthetic Person", designation: "General Manager", isYou: true },
     { fullName: "Synthetic Colleague", designation: "Sales Manager", isYou: false },
+    { fullName: null, designation: null, isYou: false },
   ],
   caps: HOTEL_FORM_CAPS,
   options: {
@@ -92,7 +93,8 @@ describe("hotelFormDraftView", () => {
       state: "ready",
       staffNote: "Please start with the rooms.",
     });
-    expect(parsed.contributors).toHaveLength(2);
+    expect(parsed.contributors).toHaveLength(3);
+    expect(parsed.contributors[2]).toEqual({ fullName: null, designation: null, isYou: false });
     expect(parsed.caps.roomRows).toBe(60);
     expect(parsed.options.facilities.other).toBe("Other");
   });
@@ -167,6 +169,9 @@ describe("the 409s' details", () => {
     expect(details[0]?.path).toBe(HOTEL_FORM_CONFLICT_PATH);
     const error = new AppError("conflict", "A colleague saved this section", details);
     expect(hotelFormSectionConflictOf(error, "contact")).toEqual(conflict);
+    const unnamed = { ...conflict, editedBy: null };
+    const withdrawn = new AppError("conflict", "x", hotelFormSectionConflictDetails(unnamed));
+    expect(hotelFormSectionConflictOf(withdrawn, "contact")).toEqual(unnamed);
     expect(hotelFormSectionConflictOf(error, "rooms")).toBeNull();
     expect(
       hotelFormSectionConflictOf({ code: "validation_failed", details }, "contact"),

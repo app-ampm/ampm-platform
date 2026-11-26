@@ -3,6 +3,7 @@ import type { HotelInfoRequestKind } from "@ampm/core";
 
 import { PrismaService } from "../../../db/prisma.service.js";
 import type { Prisma } from "../../../generated/prisma/client.js";
+import { formNameOf, NAMED_PERSON_SELECT } from "./hotel-form-named-person.js";
 import { FORM_REQUEST_SELECT, toFormRequest } from "./hotel-form-requests.repository.js";
 import type { FormRequest } from "./hotel-form-state.js";
 
@@ -20,7 +21,7 @@ const SUBMISSION_SELECT = {
   kind: true,
   revision: true,
   submittedAt: true,
-  submittedBy: { select: { fullName: true } },
+  submittedBy: { select: NAMED_PERSON_SELECT },
 } as const satisfies Prisma.HotelInfoRequestSelect;
 
 type SubmissionRow = Prisma.HotelInfoRequestGetPayload<{ select: typeof SUBMISSION_SELECT }>;
@@ -32,7 +33,10 @@ export interface FormSubmission extends FormRequest {
   /** The latest submitted revision's number; 0 until the first submit. */
   readonly revision: number;
   readonly submittedAt: Date | null;
-  /** The name of the person who submitted the latest revision; null until then. */
+  /**
+   * The name of the person who submitted the latest revision: null until then, and null once they
+   * withdrew their privacy notice consent (the form's views only: hotel-form-named-person.ts).
+   */
   readonly submittedBy: string | null;
 }
 
@@ -44,7 +48,7 @@ function toSubmission(row: SubmissionRow): FormSubmission {
     kind,
     revision,
     submittedAt,
-    submittedBy: submittedBy?.fullName ?? null,
+    submittedBy: submittedBy === null ? null : formNameOf(submittedBy),
   };
 }
 

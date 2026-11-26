@@ -136,6 +136,13 @@ describe("a colleague's save", () => {
     expect(html).toContain("Ravi Kumar saved it after you opened it.");
     expect(buttonsIn(html)).toEqual(["Keep mine", "Take theirs"]);
   });
+
+  it("names no one when the colleague withdrew their consent", () => {
+    const unnamed = { ...theirs, editedBy: null };
+    const html = screen(editorAt(ROOMS, { save: { kind: "conflict", theirs: unnamed } }));
+    expect(html).toContain(SECTIONS_COPY.conflict.bodyUnnamed);
+    expect(html).not.toContain("null");
+  });
 });
 
 describe("a locked request", () => {

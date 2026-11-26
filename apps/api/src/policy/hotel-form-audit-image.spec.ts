@@ -107,6 +107,19 @@ describe("hotelFormAuditImage: a submit's and a withdrawal's facts", () => {
     });
   });
 
+  it("keeps the sessions a withdrawal of every consent ended, by their ids", () => {
+    const image = {
+      id: ID,
+      endedSessionIds: [ID, "hfs_not-an-id"],
+      changedFields: ["sessionEndedAt"],
+    };
+    expect(hotelFormAuditImage(image)).toEqual({
+      id: ID,
+      endedSessionIds: [ID],
+      changedFields: ["sessionEndedAt"],
+    });
+  });
+
   it("drops a revision that is not a whole number from 1, and a hash that is not a SHA-256", () => {
     for (const revision of [0, -1, 1.5, "2", Number.NaN]) {
       expect(hotelFormAuditImage({ revision }), String(revision)).toEqual({});

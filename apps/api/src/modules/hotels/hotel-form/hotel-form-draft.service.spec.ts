@@ -23,7 +23,7 @@ import {
   submittedRequest,
 } from "../testing/hotel-form-draft-fixtures.js";
 import { HotelFormDraft } from "./hotel-form-draft.service.js";
-import type { HotelFormPeopleRepository } from "./hotel-form-people.repository.js";
+import type { ContributorRow, HotelFormPeopleRepository } from "./hotel-form-people.repository.js";
 import type { HotelFormSectionsRepository, SectionRow } from "./hotel-form-sections.repository.js";
 import type { FormSubmission } from "./hotel-form-submissions.repository.js";
 
@@ -36,17 +36,33 @@ import type { FormSubmission } from "./hotel-form-submissions.repository.js";
 
 const CUISINES = ["Indian", "Continental"];
 
+const PEOPLE: readonly ContributorRow[] = [
+  {
+    id: FORM_PERSON_ID,
+    fullName: "Synthetic Person",
+    designation: "General Manager",
+    isNamed: true,
+  },
+  {
+    id: FORM_COLLEAGUE_ID,
+    fullName: "Synthetic Colleague",
+    designation: "Sales Manager",
+    isNamed: true,
+  },
+];
+
 function build(
-  options: { readonly request?: FormSubmission | null; readonly rows?: SectionRow[] } = {},
+  options: {
+    readonly request?: FormSubmission | null;
+    readonly rows?: SectionRow[];
+    readonly people?: readonly ContributorRow[];
+  } = {},
 ) {
   const submissions = formSubmissions(
     options.request === undefined ? formSubmission() : options.request,
   );
   const list = vi.fn(async () => options.rows ?? []);
-  const contributors = vi.fn(async () => [
-    { id: FORM_PERSON_ID, fullName: "Synthetic Person", designation: "General Manager" },
-    { id: FORM_COLLEAGUE_ID, fullName: "Synthetic Colleague", designation: "Sales Manager" },
-  ]);
+  const contributors = vi.fn(async () => options.people ?? PEOPLE);
   const get = vi.fn(async () => ({ options: CUISINES }));
   const draft = new HotelFormDraft(
     submissions.typed,
@@ -122,6 +138,28 @@ describe("HotelFormDraft.get", () => {
       { fullName: "Synthetic Person", designation: "General Manager", isYou: true },
       { fullName: "Synthetic Colleague", designation: "Sales Manager", isYou: false },
     ]);
+  });
+
+  it("leaves unnamed another person who withdrew their privacy notice consent, though never the caller", async () => {
+    const withdrawn = PEOPLE.map((person) => ({ ...person, isNamed: false }));
+    const view = await build({ people: withdrawn }).draft.get(formSession());
+    expect(view.contributors).toEqual([
+      { fullName: "Synthetic Person", designation: "General Manager", isYou: true },
+      { fullName: null, designation: null, isYou: false },
+    ]);
+    const unnamed = sectionRow("rooms", { totalRooms: 40 }, { lastEditedBy: null });
+    const rooms = await build({
+      rows: [unnamed],
+      request: submittedRequest({ submittedBy: null }),
+    }).draft.get(formSession());
+    expect(rooms.sections.rooms).toMatchObject({
+      lastEditedBy: null,
+      lastEditedAt: FORM_EARLIER.toISOString(),
+    });
+    expect(rooms.request).toMatchObject({
+      submittedBy: null,
+      submittedAt: FORM_EARLIER.toISOString(),
+    });
   });
 
   it("answers the caps and the cuisine and facility choices, each with its Other", async () => {

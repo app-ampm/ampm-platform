@@ -7,6 +7,7 @@ import type {
 
 import { PrismaService } from "../../../db/prisma.service.js";
 import type { Prisma } from "../../../generated/prisma/client.js";
+import { isNamedOnForm, NAMED_PERSON_SELECT } from "./hotel-form-named-person.js";
 
 /*
  * The people of a hotel information request and their consents (D-189 §1): a person exists only after a
@@ -25,6 +26,11 @@ export interface PersonRow {
 }
 
 const PERSON_SELECT = { id: true, fullName: true, designation: true } as const;
+
+/** A person helping, and whether the form may name them to the request's other people. */
+export interface ContributorRow extends PersonRow {
+  readonly isNamed: boolean;
+}
 
 /** A live person: neither removed by AMPM nor deleted. */
 const LIVE = { removedAt: null, deletedAt: null } as const;
@@ -98,13 +104,20 @@ export class HotelFormPeopleRepository {
     return removed > 0;
   }
 
-  /** The request's live people, oldest first: who is helping, by name and designation only. */
-  contributors(requestId: string): Promise<PersonRow[]> {
-    return this.prisma.hotelInfoRequestPerson.findMany({
+  /**
+   * The request's live people, oldest first: who is helping, by name and designation only, and whether
+   * the form may name them to the others (a live privacy notice consent, hotel-form-named-person.ts).
+   */
+  async contributors(requestId: string): Promise<ContributorRow[]> {
+    const rows = await this.prisma.hotelInfoRequestPerson.findMany({
       where: { requestId, ...LIVE },
-      select: PERSON_SELECT,
+      select: { ...PERSON_SELECT, consents: NAMED_PERSON_SELECT.consents },
       orderBy: [{ createdAt: "asc" }, { id: "asc" }],
     });
+    return rows.map(({ consents, ...person }) => ({
+      ...person,
+      isNamed: isNamedOnForm({ fullName: person.fullName, consents }),
+    }));
   }
 
   /** How many live people the request has: what `maxPeople` caps. */

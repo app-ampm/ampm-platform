@@ -33,7 +33,11 @@ function sectionView<K extends HotelFormSectionKey>(key: K) {
       version: z.number().int().min(0),
       isComplete: z.boolean(),
       noChanges: z.boolean(),
-      /** The name of the person who saved it last; null until a first save. */
+      /**
+       * The name of the person who saved it last: null until a first save, and null for a person who
+       * withdrew their privacy notice consent (`lastEditedAt` still says when), whom the page calls a
+       * colleague.
+       */
       lastEditedBy: z.string().nullable(),
       lastEditedAt: isoDateTime.nullable(),
     })
@@ -73,9 +77,16 @@ export const hotelFormDraftRequest = z
   .strict();
 export type HotelFormDraftRequest = z.infer<typeof hotelFormDraftRequest>;
 
-/** A person helping with the form: their name and designation, never their mobile. */
+/**
+ * A person helping with the form: their name and designation, never their mobile. Both are null for
+ * another person who withdrew their privacy notice consent: the page calls them a colleague.
+ */
 export const hotelFormContributor = z
-  .object({ fullName: z.string(), designation: z.string(), isYou: z.boolean() })
+  .object({
+    fullName: z.string().nullable(),
+    designation: z.string().nullable(),
+    isYou: z.boolean(),
+  })
   .strict();
 export type HotelFormContributor = z.infer<typeof hotelFormContributor>;
 
@@ -138,7 +149,8 @@ export interface HotelFormSectionSaveRequest<K extends HotelFormSectionKey = Hot
 /**
  * A save's answer: the section as it stands after the save, which may be a colleague's when this save
  * changed nothing: its version, whether it is complete, the SHA-256 of its content, and who saved it last
- * and when, which the page caches instead of assuming the saver.
+ * and when (`lastEditedBy` null for a person who withdrew their privacy notice consent), which the page
+ * caches instead of assuming the saver.
  */
 export const hotelFormSectionSaved = z
   .object({
@@ -168,25 +180,29 @@ const conflictEnvelope = z
     version: z.number().int().min(1),
     answers: z.unknown(),
     noChanges: z.boolean(),
-    editedBy: z.string(),
+    editedBy: z.string().nullable(),
     editedAt: isoDateTime,
   })
   .strict();
 
 /**
  * A colleague's newer save of the section (409 `sectionConflict`): its version, answers and No changes,
- * and who saved it when, so the page offers "Keep mine" (saved on their version) or "Take theirs".
+ * and who saved it when (`editedBy` null for a colleague who withdrew their privacy notice consent), so
+ * the page offers "Keep mine" (saved on their version) or "Take theirs".
  */
 export interface HotelFormSectionConflict<K extends HotelFormSectionKey = HotelFormSectionKey> {
   readonly section: K;
   readonly version: number;
   readonly answers: HotelFormSectionAnswers[K];
   readonly noChanges: boolean;
-  readonly editedBy: string;
+  readonly editedBy: string | null;
   readonly editedAt: string;
 }
 
-/** Who submitted a request no longer open to changes, and when (409 `readOnly`). */
+/**
+ * Who submitted a request no longer open to changes, and when (409 `readOnly`): `submittedBy` is null
+ * for a person who withdrew their privacy notice consent, and before a submit.
+ */
 export const hotelFormReadOnly = z
   .object({
     status: hotelFormRequestStatus,

@@ -8,6 +8,7 @@ import {
   HOTEL_FORM_SECTION_DRAFTS,
   hotelFormStateOf,
   isHotelFormSectionComplete,
+  type HotelFormContributor,
   type HotelFormDraftRequest,
   type HotelFormDraftSections,
   type HotelFormDraftView,
@@ -17,7 +18,7 @@ import {
 import type { z } from "zod";
 
 import { ConfigService } from "../../admin/config/config.service.js";
-import { HotelFormPeopleRepository } from "./hotel-form-people.repository.js";
+import { HotelFormPeopleRepository, type ContributorRow } from "./hotel-form-people.repository.js";
 import { HotelFormSectionsRepository, type SectionRow } from "./hotel-form-sections.repository.js";
 import type { FormSession } from "./hotel-form-sessions.service.js";
 import { linkClosesAt } from "./hotel-form-state.js";
@@ -66,6 +67,16 @@ function sectionViewOf<K extends HotelFormSectionKey>(
   };
 }
 
+/**
+ * A person helping as the caller sees them: by name and designation, unless another person who withdrew
+ * their privacy notice consent, whom the page calls a colleague.
+ */
+function contributorOf(person: ContributorRow, session: FormSession): HotelFormContributor {
+  const isYou = person.id === session.personId;
+  if (!isYou && !person.isNamed) return { fullName: null, designation: null, isYou };
+  return { fullName: person.fullName, designation: person.designation, isYou };
+}
+
 /** Every section, saved or not, in the form's model. */
 function sectionsOf(rows: readonly SectionRow[]): HotelFormDraftSections {
   const byKey = new Map(rows.map((row) => [row.sectionKey, row]));
@@ -101,9 +112,9 @@ function requestOf(request: FormSubmission): HotelFormDraftRequest {
 /**
  * `GET /hotel-form/draft` (D-190 §3): what the hub, the section pages, the review page and the status page
  * draw from. Every section with its answers, version, completeness (counted on read), No changes and last
- * editor's name and time; the people helping, by name and designation (never a mobile); AMPM's label and
- * note; the request's
- * reference, kind, status and state, and who submitted it and when; the caps; and the cuisine choices
+ * editor's name and time; the people helping, by name and designation (never a mobile; a colleague who
+ * withdrew their privacy notice consent unnamed, as everywhere on the form); AMPM's label and note; the
+ * request's reference, kind, status and state, and who submitted it and when; the caps; and the cuisine choices
  * (configuration `hotel.cuisine_options`) and facility choices, each with its Other. It reads nothing from
  * the catalogue (plan decision 16): the draft holds only what the hotel's people typed.
  */
@@ -126,11 +137,7 @@ export class HotelFormDraft {
     return {
       request: requestOf(inForm(request)),
       sections: sectionsOf(rows),
-      contributors: people.map((person) => ({
-        fullName: person.fullName,
-        designation: person.designation,
-        isYou: person.id === session.personId,
-      })),
+      contributors: people.map((person) => contributorOf(person, session)),
       caps: HOTEL_FORM_CAPS,
       options: {
         cuisines: { options: cuisines.options, other: HOTEL_CUISINE_OTHER },

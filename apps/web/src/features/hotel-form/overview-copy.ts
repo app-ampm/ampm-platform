@@ -15,6 +15,8 @@ export const OVERVIEW_COPY = {
     heading: "Your form",
     progress: (done: number, all: number) => `${done} of ${all} sections complete`,
     lastSaved: (name: string, moment: string) => `Last saved by ${name} ${moment}`,
+    /** A colleague who withdrew their consent is never named. */
+    lastSavedUnnamed: (moment: string) => `Last saved by a colleague ${moment}`,
     loading: "Loading your sections…",
     failed: "We couldn't load your sections.",
   },
@@ -22,6 +24,8 @@ export const OVERVIEW_COPY = {
     heading: "Who is helping",
     you: (name: string) => `${name} (you)`,
     person: (name: string, designation: string) => `${name} · ${designation}`,
+    /** A colleague who withdrew their consent: still helping, never named. */
+    unnamed: "A colleague",
     onlyYou:
       "Only you so far. Colleagues can help: share this link with them, and each signs in with their own mobile.",
   },

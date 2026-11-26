@@ -87,6 +87,23 @@ describe("HF-04, the overview", () => {
     expect(alone).toContain(OVERVIEW_COPY.helpers.onlyYou);
   });
 
+  it("calls a person who withdrew their consent a colleague, naming them nowhere", () => {
+    const unnamed = { fullName: null, designation: null, isYou: false };
+    const sections = {
+      ...DRAFT.sections,
+      contact: { ...DRAFT.sections.contact, lastEditedBy: null },
+    };
+    const html = overview(
+      draftView({ ...DRAFT, sections, contributors: [DRAFT.contributors[0]!, unnamed] }),
+    );
+    expect(html).toContain(OVERVIEW_COPY.helpers.unnamed);
+    expect(html).toContain(
+      OVERVIEW_COPY.sections.lastSavedUnnamed(momentOf(DRAFT.sections.contact.lastEditedAt!)),
+    );
+    expect(html).not.toContain("null");
+    expect(html).not.toContain(OVERVIEW_COPY.helpers.onlyYou);
+  });
+
   it("leads on to Review and submit, the page's one gold action, while the form is open", () => {
     const html = overview();
     expect(linksIn(html)).toContainEqual(["/hotel-form/review", "Review and submit"]);

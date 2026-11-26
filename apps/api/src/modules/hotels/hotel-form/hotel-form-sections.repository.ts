@@ -3,12 +3,14 @@ import type { HotelFormSectionKey } from "@ampm/core";
 
 import { PrismaService } from "../../../db/prisma.service.js";
 import type { Prisma } from "../../../generated/prisma/client.js";
+import { formNameOf, NAMED_PERSON_SELECT } from "./hotel-form-named-person.js";
 
 /*
  * A request's shared draft (D-190 §1): one row per section, made at its first save, written only through a
  * version check, so a colleague's newer save is never overwritten. The answers are stored as their
  * canonical JSON with its SHA-256 (hotel-form-content.ts); the last editor is a person of the request,
- * read back by name only. Soft-deleted rows are left out. Module C, as the request tables are.
+ * read back by name only, and not even that once they withdrew their privacy notice consent. Soft-deleted
+ * rows are left out. Module C, as the request tables are.
  */
 
 const SECTION_SELECT = {
@@ -20,7 +22,7 @@ const SECTION_SELECT = {
   isComplete: true,
   noChanges: true,
   lastEditedAt: true,
-  lastEditor: { select: { fullName: true } },
+  lastEditor: { select: NAMED_PERSON_SELECT },
 } as const satisfies Prisma.HotelInfoRequestSectionSelect;
 
 type SectionSelected = Prisma.HotelInfoRequestSectionGetPayload<{ select: typeof SECTION_SELECT }>;
@@ -36,12 +38,15 @@ export interface SectionRow {
   readonly isComplete: boolean;
   readonly noChanges: boolean;
   readonly lastEditedAt: Date;
-  /** The last editor's name (RESTRICTED-CONTACT, shown to the request's people). */
-  readonly lastEditedBy: string;
+  /**
+   * The last editor's name (RESTRICTED-CONTACT, shown to the request's people), or null once they
+   * withdrew their privacy notice consent (hotel-form-named-person.ts).
+   */
+  readonly lastEditedBy: string | null;
 }
 
 function toSectionRow({ lastEditor, ...row }: SectionSelected): SectionRow {
-  return { ...row, lastEditedBy: lastEditor.fullName };
+  return { ...row, lastEditedBy: formNameOf(lastEditor) };
 }
 
 /** What a save writes: the content, its completeness and "No changes", by whom and when. */

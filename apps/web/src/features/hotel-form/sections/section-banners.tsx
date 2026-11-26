@@ -143,7 +143,7 @@ export function ConflictBanner({ theirs, onKeepMine, onTakeTheirs }: ConflictBan
       heading={COPY.conflict.heading(timeOfDay(theirs.editedAt), formatDay(theirs.editedAt))}
     >
       <p className={textStyles({ variant: "bodySmall", tone: "primary" })}>
-        {COPY.conflict.body(theirs.editedBy)}
+        {theirs.editedBy === null ? COPY.conflict.bodyUnnamed : COPY.conflict.body(theirs.editedBy)}
       </p>
       <div className="flex flex-row flex-wrap gap-3">
         <FormButton variant="secondary" onClick={onKeepMine}>

@@ -75,6 +75,9 @@ export const SECTIONS_COPY = {
     heading: (time: string, day: string) => `A colleague saved this section at ${time} on ${day}`,
     body: (name: string) =>
       `${name} saved it after you opened it. Keep mine saves what is on this page over their answers; Take theirs replaces what is on this page with their answers.`,
+    /** A colleague who withdrew their consent is never named. */
+    bodyUnnamed:
+      "A colleague saved it after you opened it. Keep mine saves what is on this page over their answers; Take theirs replaces what is on this page with their answers.",
     keepMine: "Keep mine",
     takeTheirs: "Take theirs",
   },
