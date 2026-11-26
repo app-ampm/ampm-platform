@@ -196,6 +196,23 @@ Every component is a folder with its test and stories; the Gallery shows every v
 | `NavRail` | The admin workspace rail: glass, 232 wide, active item a peacock pill; collapses to icons between 768 and 1199. |
 | `Icon` | Lucide through the shared registry, in pearl, gold or peacock (or midnight on a fill). |
 
+### The website's form fields (`packages/web-forms`)
+
+The site's forms (the contact form, the hotel information form) are plain DOM fields on the same recipes
+(D-175). The hotel form added four patterns (D-190 §5):
+
+| Pattern | Peacock Night spec |
+|---|---|
+| `NumberUnitField` | One input pill: the number as typed, a pearl 20% rule, then a native unit list (sq ft, m²) with its own name and a pearl 58% chevron. Both carry the field's error or help. |
+| `ChoiceSegments` with `clearLabel` | The soft pill choice (Yes / No / Depends) plus a ghost "Clear" once answered, described by the question; Clear puts focus on the first pill. |
+| `RepeatableFieldsets` | Each row a flat-tint fieldset (radius 16) named by its legend, which the row's own name renames; secondary "Remove" (named after the row) and "Add" pills, Add giving way to a quiet line at the cap. Focus goes into a new row's first field, or after a removal onto the row that took its place; a polite region says what was removed. |
+| `ChipGroupField` | FilterChip pills as toggle buttons (aria-pressed) in a named group, each 38 tall inside a 46 target; Other last, opening a text field for its words. |
+
+The hotel form's sections also show a save line ("Saved", "Saving…", "Not saved – retry" with a ghost
+Retry) in a polite live region under the section's heading, a gold callout (role alert) for a colleague's
+newer save with Keep mine and Take theirs, and a peacock callout when the request is with AMPM, the
+questions read-only beneath it.
+
 ## 7. Layout and navigation
 
 | Surface | Width | Layout |
