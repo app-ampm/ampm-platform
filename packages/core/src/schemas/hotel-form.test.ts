@@ -190,6 +190,7 @@ describe("the answers", () => {
       status: "open",
       expiresAt: "2026-12-25T10:00:00.000Z",
     },
+    photoPermission: "none",
   } as const;
 
   it("open answers the state, the expiry and the help contact, and nothing about the hotel", () => {
@@ -241,6 +242,20 @@ describe("the answers", () => {
       hotelFormMe.safeParse({ ...view, person: { ...view.person, phone: "+917000001234" } })
         .success,
     ).toBe(false);
+  });
+
+  it("me and verify carry the person's own answer to 7.5: yes, no, or none on record", () => {
+    for (const photoPermission of ["yes", "no", "none"] as const) {
+      expect(hotelFormMe.parse({ ...view, photoPermission }).photoPermission).toBe(photoPermission);
+      expect(
+        hotelFormVerified.parse({ ...view, photoPermission, sessionToken: SESSION })
+          .photoPermission,
+      ).toBe(photoPermission);
+    }
+    const { photoPermission: _answer, ...noAnswer } = view;
+    expect(hotelFormMe.safeParse(noAnswer).success).toBe(false);
+    expect(hotelFormMe.safeParse({ ...view, photoPermission: "withdrawn" }).success).toBe(false);
+    expect(hotelFormMe.safeParse({ ...view, photoPermission: true }).success).toBe(false);
   });
 
   it("a session token is hfs_ and 43 base64url characters", () => {

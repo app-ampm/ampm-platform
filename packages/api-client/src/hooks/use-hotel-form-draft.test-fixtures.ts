@@ -68,6 +68,7 @@ export const ME: HotelFormMe = {
     status: "open",
     expiresAt: "2026-12-26T00:00:00.000Z",
   },
+  photoPermission: "yes",
 };
 export const SUBMIT = {
   accuracy: { accepted: true as const, textVersion: HOTEL_FORM_ACCURACY_VERSION },

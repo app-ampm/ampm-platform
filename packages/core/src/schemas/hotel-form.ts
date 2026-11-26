@@ -233,19 +233,39 @@ export const hotelFormRequestView = z
 export type HotelFormRequestView = z.infer<typeof hotelFormRequestView>;
 
 /**
- * `GET` and `PATCH /hotel-form/me`'s answer: the person signed in, their id on this request, and the
- * request. The id tells the page whether a new code entered in place signed the same person in again
- * (what they chose on the page is kept) or someone else (it starts afresh), which a name cannot: two
- * people may share one, and a person may change theirs. It names the person to themselves only.
+ * The signed-in person's own current answer to 7.5 ("May AMPM show your hotel's details to its
+ * clients?"): `yes` or `no` as their newest display consent still on record (neither withdrawn nor
+ * deleted; newest by when it was recorded) answers it, `none` when they hold no such consent (they never
+ * submitted, or withdrew it). A Yes later withdrawn is therefore `none`; a Yes on one revision and a No on
+ * the next is `no`.
+ *
+ * @example
+ * me.photoPermission === "yes"; // HF-07 offers "Withdraw my permission to show photos"
+ */
+export const hotelFormPhotoPermission = z.enum(["yes", "no", "none"]);
+export type HotelFormPhotoPermission = z.infer<typeof hotelFormPhotoPermission>;
+
+/**
+ * `GET` and `PATCH /hotel-form/me`'s answer: the person signed in, their id on this request, the request,
+ * and their own answer to 7.5 (`photoPermission`, {@link hotelFormPhotoPermission}), which HF-07 reads to
+ * offer withdrawing a permission only when one was given. The id tells the page whether a new code entered
+ * in place signed the same person in again (what they chose on the page is kept) or someone else (it
+ * starts afresh), which a name cannot: two people may share one, and a person may change theirs. It names
+ * the person, and their answer, to themselves only: never a colleague's.
  */
 export const hotelFormMe = z
-  .object({ personId: uuid, person: hotelFormPerson, request: hotelFormRequestView })
+  .object({
+    personId: uuid,
+    person: hotelFormPerson,
+    request: hotelFormRequestView,
+    photoPermission: hotelFormPhotoPermission,
+  })
   .strict();
 export type HotelFormMe = z.infer<typeof hotelFormMe>;
 
 /**
  * `codes/verify`'s answer: the session token (kept in sessionStorage, sent as `Authorization: Bearer`),
- * with the person and the request as `me` answers them.
+ * with the person, the request and their own answer to 7.5 as `me` answers them.
  */
 export const hotelFormVerified = hotelFormMe
   .extend({ sessionToken: hotelFormSessionToken })

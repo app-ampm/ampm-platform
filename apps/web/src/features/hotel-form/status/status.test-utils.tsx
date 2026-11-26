@@ -1,10 +1,11 @@
 import { act } from "react";
-import type { HotelFormDraftView } from "@ampm/core";
+import type { HotelFormDraftView, HotelFormPhotoPermission } from "@ampm/core";
 import { mount, type Mounted } from "@ampm/web-forms/testing";
 
 import { EDITED_AT, draftWith } from "../draft.test-fixtures";
 import { HotelFormSiteContext, type HotelFormSite } from "../hotel-form-provider";
-import { signedInSite } from "../screen.test-utils";
+import { ME, signedInSite } from "../screen.test-utils";
+import type { HotelFormFlow } from "../use-hotel-form-flow";
 import { HotelFormStatusPage } from "./status-page";
 
 /*
@@ -30,8 +31,18 @@ export function mountStatus(site: HotelFormSite): Promise<Mounted> {
   );
 }
 
-/** The form's shared state, signed in with `draft`. */
-export const statusSite = signedInSite;
+/**
+ * The form's shared state, signed in with `draft`, the flow's calls overridable, and `me` giving the
+ * person's own answer to 7.5 as `photoPermission` (Yes unless told: they submitted with Yes).
+ */
+export function statusSite(
+  draft: HotelFormDraftView,
+  overrides: Partial<HotelFormFlow> = {},
+  photoPermission: HotelFormPhotoPermission = "yes",
+): HotelFormSite {
+  const me = { data: { ...ME, photoPermission }, isLoading: false, error: null, retry: () => {} };
+  return signedInSite(draft, { me, ...overrides });
+}
 
 /** Lets a press's call settle: its answer, and what the page does with it. */
 export const settle = () => act(async () => undefined);

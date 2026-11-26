@@ -295,7 +295,7 @@ export function useRequestHotelFormCorrection() {
 
 /**
  * `POST /hotel-form/consent-withdrawal`: withdraw 7.5 or every consent, or ask for removal. After 7.5
- * the draft is read again; withdrawing every consent ends every session of the person, this one included,
+ * the draft and `me` (which carries the person's own answer to 7.5) are read again; withdrawing every consent ends every session of the person, this one included,
  * so every query of the form is forgotten, and the page forgets its session too (the flow's sign-out
  * does both, its own call answered 401).
  *
@@ -309,7 +309,7 @@ export function useWithdrawHotelFormConsent() {
     mutationFn: (call) => hotelFormDraftCalls(api).withdrawConsent(call),
     onSuccess: async (_withdrawn, { withdrawal }) => {
       if (withdrawal.kind === "all") forgetHotelForm(queryClient);
-      else await queryClient.invalidateQueries({ queryKey: HOTEL_FORM_DRAFT_QUERY_KEY });
+      else await readAgain(queryClient);
     },
   });
 }

@@ -3,6 +3,7 @@ import { useWithdrawHotelFormConsent } from "@ampm/api-client";
 import type { HotelFormWithdrawalRequest, HotelFormWithdrawn } from "@ampm/core";
 
 import type { HotelFormSite } from "../hotel-form-provider";
+import { usePersonScoped } from "../use-person-scoped";
 import { STATUS_COPY } from "./status-copy";
 import { pressRefusalOf } from "./status.form";
 import { pressNoticeOf, usePressNotice, type ShownPressNotice } from "./use-press-notice";
@@ -15,6 +16,11 @@ export interface Withdrawal {
   readonly sending: HotelFormWithdrawalRequest["kind"] | null;
   readonly displayNotice: ShownPressNotice | null;
   readonly removalNotice: ShownPressNotice | null;
+  /**
+   * The person withdrew 7.5 here: the block and its notice stay until they leave, though `me`, read
+   * again, now answers none. Theirs only: someone else signing in in place starts without it.
+   */
+  readonly hasWithdrawnDisplay: boolean;
   /** The removal's confirmation step is open, saying what happens next. */
   readonly isConfirming: boolean;
   readonly withdrawDisplay: () => void;
@@ -72,6 +78,10 @@ function useWithdrawalCall(site: HotelFormSite) {
  */
 export function useWithdrawal(site: HotelFormSite, onRemoved: () => void): Withdrawal {
   const { call, sending } = useWithdrawalCall(site);
+  const [hasWithdrawnDisplay, updateWithdrawn] = usePersonScoped(
+    site.flow.me.data?.personId,
+    false,
+  );
   const display = usePressNotice();
   const removal = usePressNotice();
   const [isConfirming, setIsConfirming] = useState(false);
@@ -81,6 +91,7 @@ export function useWithdrawal(site: HotelFormSite, onRemoved: () => void): Withd
     const kind = "display_authorisation";
     const done = await call({ kind, requestRemoval: false }, display, COPY.newCode);
     if (done === null) return;
+    updateWithdrawn(() => true);
     const message = done.withdrawn.includes(kind) ? COPY.display.done : COPY.display.none;
     display.show({ kind: "done", message });
   };
@@ -96,6 +107,7 @@ export function useWithdrawal(site: HotelFormSite, onRemoved: () => void): Withd
     sending,
     displayNotice: display.current,
     removalNotice: removal.current,
+    hasWithdrawnDisplay,
     isConfirming,
     withdrawDisplay: () => void withdrawDisplay(),
     startRemoval: () => setIsConfirming(true),

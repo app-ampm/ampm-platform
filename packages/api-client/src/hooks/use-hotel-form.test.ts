@@ -94,6 +94,7 @@ const ME: HotelFormMe = {
     status: "open",
     expiresAt: "2026-12-25T10:00:00.000Z",
   },
+  photoPermission: "yes",
 };
 
 function answer(data: unknown, status = 200, headers: Record<string, string> = {}): void {

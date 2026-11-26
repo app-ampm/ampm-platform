@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 import type * as ApiClient from "@ampm/api-client";
 import type { HotelFormMe } from "@ampm/core";
-import { byId } from "@ampm/web-forms/testing";
+import { act } from "react";
+import { buttonNamed, byId, press } from "@ampm/web-forms/testing";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { EDITED_AT } from "./draft.test-fixtures";
@@ -19,11 +20,15 @@ import { SUBMITTED, statusSite, typeInto } from "./status/status.test-utils";
  * else does, told by the person's id, never by name. Synthetic people only.
  */
 
+const withdraw = vi.hoisted(() =>
+  vi.fn(async () => ({ withdrawn: ["display_authorisation"], removalRequested: false })),
+);
+
 vi.mock("@ampm/api-client", async (importOriginal) => ({
   ...(await importOriginal<typeof ApiClient>()),
   useSubmitHotelForm: () => ({ mutateAsync: vi.fn() }),
   useRequestHotelFormCorrection: () => ({ mutateAsync: vi.fn() }),
-  useWithdrawHotelFormConsent: () => ({ mutateAsync: vi.fn() }),
+  useWithdrawHotelFormConsent: () => ({ mutateAsync: withdraw }),
 }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ replace: vi.fn() }) }));
 vi.mock("@/components/bot-check/use-bot-check", () => ({
@@ -94,5 +99,21 @@ describe("an unsent correction on the status page across a new code", () => {
     await page.rerender(askingForCode(statusSite(SUBMITTED)));
     await page.rerender(signedInAs(statusSite(SUBMITTED), SOMEONE_ELSE));
     expect(byId("hf-correction")).toHaveProperty("value", "");
+  });
+});
+
+describe("7.5 withdrawn on the status page across a new code", () => {
+  it("keeps its block for the same person, and shows none to someone else holding no permission", async () => {
+    vi.setSystemTime(Date.parse(EDITED_AT));
+    page = await mountLivePage(HotelFormStatusPage, statusSite(SUBMITTED));
+    await press(buttonNamed(page.host, "Withdraw my permission to show photos"));
+    await act(async () => undefined);
+    const none = statusSite(SUBMITTED, {}, "none");
+    await page.rerender(askingForCode(none));
+    await page.rerender(signedInAs(none, { ...ME, photoPermission: "none" }));
+    expect(page.host.textContent).toContain("Showing your hotel's photographs");
+    await page.rerender(askingForCode(none));
+    await page.rerender(signedInAs(none, { ...SOMEONE_ELSE, photoPermission: "none" }));
+    expect(page.host.textContent).not.toContain("Showing your hotel's photographs");
   });
 });

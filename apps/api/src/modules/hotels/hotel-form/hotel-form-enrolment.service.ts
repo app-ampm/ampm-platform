@@ -57,7 +57,8 @@ interface OpenRequest {
  * keeps their stored name and designation: a claim never renames anyone) or created from the claim (not
  * past `maxPeople`, not after the merge, not on a mobile AMPM removed); the privacy notice's consent is
  * recorded; the challenge is spent on the person and its claim cleared; a session opens, ending the
- * person's oldest beyond three; and the event and the audit are the person's.
+ * person's oldest beyond three; and the event and the audit are the person's. It answers as `me` does,
+ * the person's own answer to 7.5 included.
  */
 @Injectable()
 export class HotelFormEnrolment {
@@ -90,11 +91,16 @@ export class HotelFormEnrolment {
       const open = await this.sessions.openSessionsOf(person.id, tx);
       await this.sessions.endSessions(sessionsToEnd(open, now), now, tx);
       await this.record(request, enrolled, input, now, tx);
+      // A person this code created has answered nothing yet; a returning one's 7.5 is as recorded.
+      const photoPermission = enrolled.returning
+        ? await this.people.photoPermissionOf(person.id, tx)
+        : "none";
       return {
         sessionToken: session.token,
         personId: person.id,
         person: { fullName: person.fullName, designation: person.designation },
         request: requestViewOf(request),
+        photoPermission,
       };
     });
   }

@@ -1,4 +1,8 @@
-import { HOTEL_FORM_NOTICE_VERSION, type HotelFormPolicy } from "@ampm/core";
+import {
+  HOTEL_FORM_NOTICE_VERSION,
+  type HotelFormPhotoPermission,
+  type HotelFormPolicy,
+} from "@ampm/core";
 import { vi } from "vitest";
 
 import { hashOneTimeCode } from "../../../identity/one-time-code.js";
@@ -70,6 +74,8 @@ export interface VerifyOptions {
   readonly removed?: boolean;
   readonly people?: number;
   readonly sessions?: OpenSession[];
+  /** A returning person's own answer to 7.5 as their consents hold it. */
+  readonly photoPermission?: HotelFormPhotoPermission;
 }
 
 function fakeChallenges(options: VerifyOptions) {
@@ -104,6 +110,7 @@ function fakePeople(options: VerifyOptions) {
     })),
     markReturning: vi.fn(async () => undefined),
     addNoticeConsent: vi.fn(async () => undefined),
+    photoPermissionOf: vi.fn(async () => options.photoPermission ?? "none"),
   };
 }
 
