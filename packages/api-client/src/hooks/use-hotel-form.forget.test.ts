@@ -7,6 +7,7 @@ import {
   HOTEL_FORM_DRAFT_QUERY_KEY,
   HOTEL_FORM_ME_QUERY_KEY,
   HOTEL_FORM_QUERY_FAMILY,
+  onHotelFormForgotten,
   useOpenHotelForm,
   useRequestHotelFormCode,
   useSignOutOfHotelForm,
@@ -106,5 +107,18 @@ describe("the form's calls", () => {
     for (const personal of [claim.fullName, claim.mobile, claim.token, message.message])
       expect(left).not.toContain(personal);
     expect(left).toContain("staff@ampm.example");
+  });
+});
+
+describe("forgetting the form", () => {
+  it("tells whoever listens on that query client each time, until they stop listening", () => {
+    const heard: string[] = [];
+    const stop = onHotelFormForgotten(cache, () => heard.push("forgotten"));
+    onHotelFormForgotten(new QueryClient(), () => heard.push("another tab's client"));
+    forgetHotelForm(cache);
+    forgetHotelForm(cache);
+    stop();
+    forgetHotelForm(cache);
+    expect(heard).toEqual(["forgotten", "forgotten"]);
   });
 });

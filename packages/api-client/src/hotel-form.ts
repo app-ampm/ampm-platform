@@ -12,6 +12,8 @@ export {
   hotelFormCalls,
   hotelFormMeQueryOptions,
   hotelFormMutationKey,
+  onHotelFormForgotten,
+  useHotelFormForgotten,
   useHotelFormMe,
   useOpenHotelForm,
   useRequestHotelFormCode,

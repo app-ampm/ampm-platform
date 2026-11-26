@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import {
   queryOptions,
   skipToken,
@@ -72,7 +72,8 @@ export function hotelFormMutationKey(call: string): readonly [string, "call", st
  * (`hotelFormMutationKey`), so nothing the person read, typed or sent stays in the query client for the
  * next person on the tab: on sign-out, after a withdrawal of every consent (which ends the session), and
  * when a session ends at HF-08 (the page calls it then). A call's hook still mounted keeps its own copy
- * until it is reset; the flow resets its own on sign-out.
+ * until it is reset; the flow resets its own on sign-out. Whoever listens ({@link onHotelFormForgotten})
+ * is told, so the answers the page holds unsaved go too.
  *
  * @example
  * forgetHotelForm(queryClient);
@@ -81,6 +82,38 @@ export function forgetHotelForm(queryClient: QueryClient): void {
   queryClient.removeQueries({ queryKey: HOTEL_FORM_QUERY_FAMILY });
   const calls = queryClient.getMutationCache();
   for (const call of calls.findAll({ mutationKey: HOTEL_FORM_QUERY_FAMILY })) calls.remove(call);
+  for (const listener of [...(forgetListeners.get(queryClient) ?? [])]) listener();
+}
+
+/** Who hears that the form was forgotten, per query client (one per tab's form). */
+const forgetListeners = new WeakMap<QueryClient, Set<() => void>>();
+
+/**
+ * Calls `listener` each time the form is forgotten on `queryClient` ({@link forgetHotelForm}), until the
+ * function it returns is called: what the page holds outside the query client, such as answers typed but
+ * not saved yet, goes with it (D-190 §5, review fix E1).
+ *
+ * @example
+ * const stop = onHotelFormForgotten(queryClient, () => heldSections.drop());
+ */
+export function onHotelFormForgotten(queryClient: QueryClient, listener: () => void): () => void {
+  const listeners = forgetListeners.get(queryClient) ?? new Set<() => void>();
+  forgetListeners.set(queryClient, listeners);
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+}
+
+/**
+ * {@link onHotelFormForgotten} on the page's query client while the component is mounted; `onForgotten`
+ * should be stable.
+ *
+ *   useHotelFormForgotten(heldSections.drop);
+ */
+export function useHotelFormForgotten(onForgotten: () => void): void {
+  const queryClient = useQueryClient();
+  useEffect(() => onHotelFormForgotten(queryClient, onForgotten), [queryClient, onForgotten]);
 }
 
 /**
