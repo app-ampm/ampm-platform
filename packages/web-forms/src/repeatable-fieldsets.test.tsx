@@ -96,6 +96,32 @@ describe("repeatable fieldsets, as the server sends them", () => {
     expect(html).toContain('<p id="rooms-help"');
   });
 
+  it("ties the list's help, and its error once it has one, to the list itself", () => {
+    expect(tagsWith(html, "fieldset", 'id="rooms"')[0]).toContain('aria-describedby="rooms-help"');
+    const refused = markupOf(
+      <RepeatableFieldsets
+        id="rooms"
+        legend="Room categories"
+        rows={[]}
+        renderRow={() => null}
+        onAdd={noop}
+        onRemove={noop}
+        addLabel="Add a room category"
+        removeText="Remove"
+        removeLabel={(legend) => `Remove ${legend}`}
+        removedText={(legend) => `${legend} removed`}
+        max={3}
+        capText="You can add up to 3 room categories."
+        help="One row for each kind of room."
+        error="Give each room category a name"
+      />,
+    );
+    expect(tagsWith(refused, "fieldset", 'id="rooms"')[0]).toContain(
+      'aria-describedby="rooms-help rooms-error"',
+    );
+    expect(refused).toContain('<p id="rooms-error" role="alert"');
+  });
+
   it("names each Remove after its row, and keeps a polite region for what was removed", () => {
     const [remove] = tagsWith(html, "button", 'aria-label="Remove Deluxe"');
     expect(remove).toContain('type="button"');

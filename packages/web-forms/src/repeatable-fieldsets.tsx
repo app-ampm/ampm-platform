@@ -211,6 +211,16 @@ function ListIntro({
   );
 }
 
+/** What describes the list for screen readers: its help, then its error once it has one. */
+function describedByOf({
+  id,
+  help,
+  error,
+}: Pick<RepeatableFieldsetsProps<RepeatableRow>, "id" | "help" | "error">) {
+  const ids = [help ? `${id}-help` : null, error ? `${id}-error` : null].filter(Boolean);
+  return ids.length === 0 ? undefined : ids.join(" ");
+}
+
 /** Under the rows: Add while there is room, else why there is none; the list's error. */
 function ListFooter<R extends RepeatableRow>({
   props,
@@ -240,6 +250,7 @@ function ListFooter<R extends RepeatableRow>({
  * legend), removed with its Remove, and added up to `max`. Focus moves with each press: into the new
  * row's first field after Add; after Remove, onto the row that took its place (or the one before it, or
  * Add), with what went said in a polite region. Rows are keyed, never placed, so typing survives a removal.
+ * The list's help and error describe the list itself (aria-describedby), as a field's describe it.
  *
  *   <RepeatableFieldsets id="rooms" legend="Room categories" rows={rows} max={60}
  *     renderRow={(row) => <RoomFields row={row} />} onAdd={addRow} onRemove={removeRow}
@@ -250,7 +261,11 @@ export function RepeatableFieldsets<R extends RepeatableRow>(props: RepeatableFi
   const { id, legend, rows, renderRow, help, className } = props;
   const { add, remove, announcement } = useRowPresses(props);
   return (
-    <fieldset id={id} className={cn("flex min-w-0 flex-col gap-4", className)}>
+    <fieldset
+      id={id}
+      aria-describedby={describedByOf(props)}
+      className={cn("flex min-w-0 flex-col gap-4", className)}
+    >
       <legend className={cn(textStyles({ variant: "subheading", tone: "primary" }), "mb-1")}>
         {legend}
       </legend>
