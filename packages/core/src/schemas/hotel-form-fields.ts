@@ -161,7 +161,9 @@ const areaValue = (max: number) =>
 
 /**
  * An area as the hotel gives it: a whole number and its unit, held as given and converted to the
- * catalogue's square metres at the merge (`sqmFromSqft`, Slice 10).
+ * catalogue's square metres at the merge (`sqmFromSqft`, Slice 10). A draft keeps a unit whose number is
+ * not given yet, a half-filled pair that the section's completeness and the submit check name
+ * (hotel-form-pairs.ts), so it never blocks the rest of the section's save.
  *
  * @example
  * hotelFormArea(ROOM_AREA_LIMITS).parse({ value: 450, unit: "sqft" });
@@ -169,8 +171,8 @@ const areaValue = (max: number) =>
 export function hotelFormArea(limits: HotelFormAreaLimits) {
   return z
     .discriminatedUnion("unit", [
-      z.object({ unit: z.literal("sqft"), value: areaValue(limits.sqft) }).strict(),
-      z.object({ unit: z.literal("sqm"), value: areaValue(limits.sqm) }).strict(),
+      z.object({ unit: z.literal("sqft"), value: areaValue(limits.sqft).nullish() }).strict(),
+      z.object({ unit: z.literal("sqm"), value: areaValue(limits.sqm).nullish() }).strict(),
     ])
     .nullish();
 }
@@ -182,19 +184,31 @@ const guests = z
   .min(0, "Use 0 or more")
   .max(VENUE_CAPACITY_MAX, `Use ${VENUE_CAPACITY_MAX} or less`);
 
+/** A range of guests as a draft holds it: either end may not be given yet. */
+export interface HotelFormRange {
+  readonly min?: number | null | undefined;
+  readonly max?: number | null | undefined;
+}
+
+/** Whether a range's two ends, where both are given, run from the fewest to the most. */
+export function isRangeInOrder({ min, max }: HotelFormRange): boolean {
+  return min === null || min === undefined || max === null || max === undefined || min <= max;
+}
+
 /**
  * A venue's seated or floating capacity: a number of guests, or a range as a minimum and a maximum
  * (`{ min, max }`). The merge keeps the maximum in the catalogue's capacity column and the range in its
- * `capacity_notes`.
+ * `capacity_notes`. A draft keeps a range with one end not given yet, a half-filled pair that the
+ * section's completeness and the submit check name (hotel-form-pairs.ts).
  *
  * @example
  * hotelFormCapacity.parse({ min: 250, max: 300 });
  */
 export const hotelFormCapacity = z
-  .union([guests, z.object({ min: guests, max: guests }).strict()], {
+  .union([guests, z.object({ min: guests.nullish(), max: guests.nullish() }).strict()], {
     error: "Give a number of guests, or a minimum and a maximum",
   })
-  .refine((capacity) => typeof capacity === "number" || capacity.min <= capacity.max, {
+  .refine((capacity) => typeof capacity === "number" || isRangeInOrder(capacity), {
     message: "The minimum is above the maximum",
     path: ["min"],
   })

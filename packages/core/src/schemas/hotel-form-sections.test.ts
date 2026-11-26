@@ -239,6 +239,15 @@ describe("venues", () => {
     ]);
     const layouts = Array.from({ length: 13 }, (_, n) => ({ layout: `Layout ${n}`, max: 10 }));
     expect(one({ otherLayouts: layouts }).success).toBe(false);
+    expect(one({ otherLayouts: [{ layout: "U-shape", min: 40, max: 30 }] }).success).toBe(false);
+    expect(
+      one({
+        otherLayouts: [
+          { layout: "U", max: 9 },
+          { layout: "u", max: 8 },
+        ],
+      }).success,
+    ).toBe(false);
     expect(one({ lengthM: 12.345 }).success).toBe(false);
     expect(one({ venueType: "stadium" }).success).toBe(false);
     const rows = Array.from({ length: HOTEL_FORM_VENUE_ROWS_MAX + 1 }, (_, n) => ({
@@ -247,6 +256,25 @@ describe("venues", () => {
     expect(hotelFormVenuesDraft.safeParse({ rows }).error?.issues[0]?.message).toBe(
       "At most 40 venue rows",
     );
+  });
+});
+
+describe("half-filled pairs", () => {
+  it("are kept in a venue, so one half-typed pair never blocks the rest of the section", () => {
+    const half = {
+      ...venue,
+      area: { unit: "sqm" },
+      seated: { min: 250 },
+      floating: { max: 600 },
+      otherLayouts: [{ layout: "U-shape" }, { layout: "Classroom", min: 30 }],
+      prefunctionArea: { unit: "sqft", value: null },
+    };
+    const parsed = hotelFormVenuesDraft.parse({ totalEventSpace: { unit: "sqft" }, rows: [half] });
+    expect(parsed.rows?.[0]).toEqual(half);
+    expect(parsed.totalEventSpace).toEqual({ unit: "sqft" });
+    expect(
+      hotelFormRoomsDraft.parse({ rows: [{ rowId: rowId(2), size: { unit: "sqm" } }] }),
+    ).toEqual({ rows: [{ rowId: rowId(2), size: { unit: "sqm" } }] });
   });
 });
 

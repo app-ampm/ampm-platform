@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { isWellFormedText, LONE_SURROGATE_MESSAGE, storableJsonText } from "./common";
+import { storableJsonText } from "./common";
 import { HOTEL_CUISINES_MAX, hotelCatalogueRequestFields } from "./hotel-catalogue";
 import {
   hotelFormAccessPoint,
@@ -15,6 +15,7 @@ import {
   hotelFormRowId,
   hotelFormText,
   hotelFormWebsite,
+  isRangeInOrder,
   ROOM_AREA_LIMITS,
   VENUE_AREA_LIMITS,
 } from "./hotel-form-fields";
@@ -36,8 +37,9 @@ import {
   hotelRoomUnitType,
   hotelVenueSetting,
   VENUE_CAPACITY_MAX,
+  VENUE_OTHER_LAYOUT_NAME_MAX,
+  VENUE_OTHER_LAYOUTS_MAX,
   venueCatalogueRequestFields,
-  venueOtherLayouts,
 } from "./hotel-rooms-venues";
 import { hotelVenueType } from "./hotels";
 import { indianState } from "./indian-states";
@@ -144,10 +146,35 @@ export const hotelFormRoomsDraft = z
   .strict();
 export type HotelFormRoomsDraft = z.output<typeof hotelFormRoomsDraft>;
 
-/** A venue's other layouts, as the catalogue keeps them (at most 12), in text jsonb can store. */
-const hotelFormOtherLayouts = venueOtherLayouts
-  .refine((layouts) => layouts.every((entry) => isWellFormedText(entry.layout)), {
-    message: LONE_SURROGATE_MESSAGE,
+/** The guests a layout takes, at one end of its range: 1 to the catalogue's largest capacity. */
+const layoutGuests = z
+  .number({ error: "Enter a number of guests" })
+  .int("Give a whole number of guests")
+  .min(1, "Use 1 or more")
+  .max(VENUE_CAPACITY_MAX, `Use ${VENUE_CAPACITY_MAX} or less`);
+
+/**
+ * One of a venue's other layouts as a draft holds it: its name (as the catalogue's `venueOtherLayout`),
+ * and the most guests it takes and, for a range, the fewest. Either number may not be given yet: a
+ * half-filled pair that the section's completeness and the submit check name (hotel-form-pairs.ts).
+ */
+export const hotelFormOtherLayout = z
+  .object({
+    layout: storableJsonText()
+      .min(1, "Name this layout")
+      .max(VENUE_OTHER_LAYOUT_NAME_MAX, `Use at most ${VENUE_OTHER_LAYOUT_NAME_MAX} characters`),
+    max: layoutGuests.nullish(),
+    min: layoutGuests.nullish(),
+  })
+  .strict()
+  .refine(isRangeInOrder, { message: "The minimum is above the maximum", path: ["min"] });
+
+/** A venue's other layouts: at most 12, as the catalogue keeps them, each named once ignoring case. */
+const hotelFormOtherLayouts = z
+  .array(hotelFormOtherLayout)
+  .max(VENUE_OTHER_LAYOUTS_MAX, `At most ${VENUE_OTHER_LAYOUTS_MAX} other layouts`)
+  .refine((layouts) => distinctIgnoringCase(layouts.map((entry) => entry.layout)), {
+    message: "Give each layout once",
   })
   .nullish();
 

@@ -7,6 +7,13 @@ import {
   hotelFormSectionKey,
   type HotelFormSectionKey,
 } from "./hotel-form-section-keys";
+import {
+  isAreaGiven,
+  isCapacityGiven,
+  roomRowGaps,
+  venueRowGaps,
+  venuesTotalGaps,
+} from "./hotel-form-pairs";
 import { HOTEL_FORM_SECTION_DRAFTS, type HotelFormSectionAnswers } from "./hotel-form-sections";
 
 /*
@@ -14,10 +21,11 @@ import { HOTEL_FORM_SECTION_DRAFTS, type HotelFormSectionAnswers } from "./hotel
  * on an onboarding request the hotel's name, city and state and a contact with an email or a phone; on a
  * refresh nothing, since "blanks leave our records unchanged" and the request already names its hotel.
  * On every request a contact, room or venue row that holds an answer needs its name, which the merge
- * matches rows on; a blank row is left out, and a refresh section marked "No changes" asks for nothing.
- * Empty sections only warn, through completeness: a section is complete when every question AMPM's PDF
- * asks in it is answered, or when it is marked "No changes"; the fact sheet section always is until its
- * uploads arrive (Slice 9). Both read the answers as stored through the section's draft, so a saved draft
+ * matches rows on, and a half-filled pair needs its missing half (hotel-form-pairs.ts); a blank row is left
+ * out, and a refresh section marked "No changes" asks for nothing. Empty sections only warn, through
+ * completeness: a section is complete when every question AMPM's PDF asks in it is answered and no pair
+ * is half-filled, or when it is marked "No changes"; the fact sheet section always is until its uploads
+ * arrive (Slice 9). Both read the answers as stored through the section's draft, so a saved draft
  * that no longer reads is named, never trusted.
  */
 
@@ -55,6 +63,7 @@ type Required = {
     kind: HotelInfoRequestKind,
   ) => Missing[];
 };
+type Gaps = { readonly [K in HotelFormSectionKey]: (answers: Answers[K]) => Missing[] };
 
 const DRAFTS: Drafts = HOTEL_FORM_SECTION_DRAFTS;
 
@@ -68,6 +77,10 @@ const hasAnswer = (row: object): boolean =>
 const filled = <T extends object>(rows: readonly T[] | null | undefined): T[] =>
   (rows ?? []).filter(hasAnswer);
 
+/**
+ * Every question of AMPM's PDF in the section answered; its half-filled pairs are counted apart
+ * ({@link GAPS}). A venue gives both its seated and its floating capacity, as the PDF asks both.
+ */
 const COMPLETE: Complete = {
   property: (a) =>
     [a.name, a.street, a.city, a.state, a.postalCode, a.mapsUrl, a.website].every(answered) &&
@@ -79,14 +92,19 @@ const COMPLETE: Complete = {
     (a.contacts ?? []).some((c) => answered(c.name) && answered(c.phone) && answered(c.email)),
   rooms: (a) => {
     const rows = filled(a.rows);
-    const full = rows.every((r) => [r.name, r.roomCount, r.size, r.maxOccupancy].every(answered));
+    const full = rows.every(
+      (r) => [r.name, r.roomCount, r.maxOccupancy].every(answered) && isAreaGiven(r.size),
+    );
     return answered(a.totalRooms) && rows.length > 0 && full;
   },
   venues: (a) => {
     const rows = filled(a.rows);
     const full = rows.every(
       (r) =>
-        [r.name, r.setting, r.area].every(answered) && (answered(r.seated) || answered(r.floating)),
+        [r.name, r.setting].every(answered) &&
+        isAreaGiven(r.area) &&
+        isCapacityGiven(r.seated) &&
+        isCapacityGiven(r.floating),
     );
     return rows.length > 0 && full;
   },
@@ -97,17 +115,28 @@ const COMPLETE: Complete = {
   fact_sheet_media: () => true,
 };
 
+const NONE = (): Missing[] => [];
+
+/** Each section's half-filled pairs (hotel-form-pairs.ts): only rooms and venues have pairs. */
+const GAPS: Gaps = {
+  property: NONE,
+  contact: NONE,
+  rooms: (a) => (a.rows ?? []).flatMap(roomRowGaps),
+  venues: (a) => [...venuesTotalGaps(a), ...(a.rows ?? []).flatMap(venueRowGaps)],
+  booking_terms: NONE,
+  food_beverage: NONE,
+  fact_sheet_media: NONE,
+};
+
 const missing = (field: string, message: string): Missing => ({ field, message });
 
-/** Every row of a list that holds an answer but no name, by its place in the list. */
-function unnamed(
-  rows: readonly { readonly name?: string | null | undefined }[] | null | undefined,
-  list: string,
+/** A row that holds an answer but no name, at its place in the list. */
+function unnamedAt(
+  row: { readonly name?: string | null | undefined },
+  path: string,
   message: string,
 ): Missing[] {
-  return (rows ?? []).flatMap((row, index) =>
-    hasAnswer(row) && !answered(row.name) ? [missing(`${list}.${index}.name`, message)] : [],
-  );
+  return hasAnswer(row) && !answered(row.name) ? [missing(`${path}.name`, message)] : [];
 }
 
 const REQUIRED: Required = {
@@ -126,13 +155,24 @@ const REQUIRED: Required = {
       kind === "onboarding" && !reachable
         ? [missing("contacts", "Add a contact with an email or a phone number")]
         : [];
-    return [...channel, ...unnamed(contacts, "contacts", "Name this contact")];
+    const names = contacts.flatMap((c, i) => unnamedAt(c, `contacts.${i}`, "Name this contact"));
+    return [...channel, ...names];
   },
-  rooms: (a) => unnamed(a.rows, "rows", "Name this room category"),
-  venues: (a) => unnamed(a.rows, "rows", "Name this venue"),
-  booking_terms: () => [],
-  food_beverage: () => [],
-  fact_sheet_media: () => [],
+  rooms: (a) =>
+    (a.rows ?? []).flatMap((row, i) => [
+      ...unnamedAt(row, `rows.${i}`, "Name this room category"),
+      ...roomRowGaps(row, i),
+    ]),
+  venues: (a) => [
+    ...venuesTotalGaps(a),
+    ...(a.rows ?? []).flatMap((row, i) => [
+      ...unnamedAt(row, `rows.${i}`, "Name this venue"),
+      ...venueRowGaps(row, i),
+    ]),
+  ],
+  booking_terms: NONE,
+  food_beverage: NONE,
+  fact_sheet_media: NONE,
 };
 
 /** A section's answers read through its draft, or null when they no longer read. */
@@ -155,7 +195,8 @@ export function isHotelFormSectionComplete<K extends HotelFormSectionKey>(
   noChanges: boolean,
 ): boolean {
   const draft = read(key, answers);
-  return draft !== null && (noChanges || COMPLETE[key](draft));
+  if (draft === null) return false;
+  return noChanges || (COMPLETE[key](draft) && GAPS[key](draft).length === 0);
 }
 
 /**

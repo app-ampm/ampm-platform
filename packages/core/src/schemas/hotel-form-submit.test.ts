@@ -2,12 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import { AppError } from "../errors";
 import { hotelFormRevisionAnswersOf } from "./hotel-form-revision";
-import { HOTEL_FORM_SECTION_KEYS } from "./hotel-form-section-keys";
 import {
   checkSubmit,
   hotelFormMissingItemDetails,
   hotelFormMissingItemsOf,
-  isHotelFormSectionComplete,
   type HotelFormMissingItem,
 } from "./hotel-form-submit";
 
@@ -82,6 +80,57 @@ describe("checkSubmit", () => {
     ]);
   });
 
+  it("lists every half-filled pair on any request: a unit without its number, a range or layout missing an end", () => {
+    const rooms = state({ rows: [{ rowId: rowId(1), name: "Suite", size: { unit: "sqft" } }] });
+    const venues = state({
+      totalEventSpace: { unit: "sqm", value: null },
+      rows: [
+        {
+          rowId: rowId(2),
+          name: "Lawn",
+          area: { unit: "sqm" },
+          seated: { min: 250 },
+          floating: { max: 600 },
+          otherLayouts: [
+            { layout: "U-shape", max: 40 },
+            { layout: "Classroom", min: 30 },
+          ],
+          prefunctionArea: { unit: "sqft" },
+        },
+      ],
+    });
+    const expected = [
+      { section: "rooms", field: "rows.0.size.value", message: "Enter the size" },
+      { section: "venues", field: "totalEventSpace.value", message: "Enter the total event space" },
+      { section: "venues", field: "rows.0.area.value", message: "Enter the area" },
+      { section: "venues", field: "rows.0.seated.max", message: "Give the most guests seated" },
+      {
+        section: "venues",
+        field: "rows.0.floating.min",
+        message: "Give the fewest guests floating",
+      },
+      {
+        section: "venues",
+        field: "rows.0.otherLayouts.1.max",
+        message: "Give the most guests this layout takes",
+      },
+      {
+        section: "venues",
+        field: "rows.0.prefunctionArea.value",
+        message: "Enter the pre-function area",
+      },
+    ];
+    expect(checkSubmit({ kind: "onboarding", sections: { ...ready, rooms, venues } })).toEqual(
+      expected,
+    );
+    expect(checkSubmit({ kind: "refresh", sections: { rooms, venues } })).toEqual(expected);
+    const unnamed = state({ rows: [{ rowId: rowId(3), size: { unit: "sqm" } }] });
+    expect(fieldsOf(checkSubmit({ kind: "refresh", sections: { rooms: unnamed } }))).toEqual([
+      "rooms.rows.0.name",
+      "rooms.rows.0.size.value",
+    ]);
+  });
+
   it("asks a refresh request for nothing but row names, since blanks leave the catalogue as it is", () => {
     expect(checkSubmit({ kind: "refresh", sections: {} })).toEqual([]);
     const rooms = state({ rows: [{ rowId: rowId(1), maxOccupancy: 2 }] });
@@ -143,112 +192,5 @@ describe("the missing items on the wire", () => {
         details: [{ path: "botToken", message: "x" }],
       }),
     ).toEqual([]);
-  });
-});
-
-describe("isHotelFormSectionComplete", () => {
-  it("counts a section complete when every question of AMPM's PDF in it is answered", () => {
-    const property = {
-      name: "Synthetic Lake Palace",
-      isChain: false,
-      street: "1 Lake Road",
-      city: "Udaipur",
-      state: "Rajasthan",
-      postalCode: "313001",
-      mapsUrl: "https://maps.app.goo.gl/AbC123xyz",
-      website: "https://synthetic-lake-palace.example",
-      airport: { km: 22.5 },
-      railwayStation: { km: 4 },
-    };
-    expect(isHotelFormSectionComplete("property", property, false)).toBe(true);
-    expect(isHotelFormSectionComplete("property", { ...property, isChain: true }, false)).toBe(
-      false,
-    );
-    expect(
-      isHotelFormSectionComplete(
-        "property",
-        { ...property, isChain: true, groupName: "Group" },
-        false,
-      ),
-    ).toBe(true);
-    expect(
-      isHotelFormSectionComplete("property", { ...property, railwayStation: null }, false),
-    ).toBe(false);
-  });
-
-  it("wants a full contact, full room and venue rows, the booking terms and a cuisine", () => {
-    const contact = { contacts: [{ name: "S", phone: "0294 242 0000", email: "s@hotel.example" }] };
-    expect(isHotelFormSectionComplete("contact", contact, false)).toBe(true);
-    expect(
-      isHotelFormSectionComplete(
-        "contact",
-        { contacts: [{ name: "S", email: "s@x.example" }] },
-        false,
-      ),
-    ).toBe(false);
-    const room = {
-      rowId: rowId(1),
-      name: "Suite",
-      roomCount: 4,
-      size: { value: 50, unit: "sqm" },
-      maxOccupancy: 2,
-    };
-    expect(
-      isHotelFormSectionComplete(
-        "rooms",
-        { totalRooms: 4, rows: [room, { rowId: rowId(2) }] },
-        false,
-      ),
-    ).toBe(true);
-    expect(
-      isHotelFormSectionComplete(
-        "rooms",
-        { totalRooms: 4, rows: [{ ...room, size: null }] },
-        false,
-      ),
-    ).toBe(false);
-    expect(isHotelFormSectionComplete("rooms", { totalRooms: 4 }, false)).toBe(false);
-    const venue = {
-      rowId: rowId(3),
-      name: "Lawn",
-      setting: "outdoor",
-      area: { value: 900, unit: "sqm" },
-      floating: 600,
-    };
-    expect(isHotelFormSectionComplete("venues", { rows: [venue] }, false)).toBe(true);
-    expect(
-      isHotelFormSectionComplete("venues", { rows: [{ ...venue, floating: null }] }, false),
-    ).toBe(false);
-    const terms = { weddingBuyoutPolicy: "required", minNights: 2, parallelFunctions: "depends" };
-    expect(isHotelFormSectionComplete("booking_terms", terms, false)).toBe(true);
-    expect(
-      isHotelFormSectionComplete(
-        "booking_terms",
-        { ...terms, weddingBuyoutPolicy: "depends" },
-        false,
-      ),
-    ).toBe(false);
-    expect(
-      isHotelFormSectionComplete(
-        "booking_terms",
-        { ...terms, weddingBuyoutPolicy: "depends", minRoomsWithoutBuyout: 30 },
-        false,
-      ),
-    ).toBe(true);
-    expect(isHotelFormSectionComplete("food_beverage", { cuisines: ["Indian"] }, false)).toBe(true);
-    expect(isHotelFormSectionComplete("food_beverage", { servesAlcohol: true }, false)).toBe(false);
-  });
-
-  it("never counts the fact sheet section incomplete before its uploads, and No changes as complete", () => {
-    expect(isHotelFormSectionComplete("fact_sheet_media", {}, false)).toBe(true);
-    for (const key of HOTEL_FORM_SECTION_KEYS) {
-      expect(isHotelFormSectionComplete(key, {}, true), key).toBe(true);
-    }
-    expect(isHotelFormSectionComplete("rooms", {}, false)).toBe(false);
-  });
-
-  it("counts answers that no longer read as incomplete, even marked No changes", () => {
-    expect(isHotelFormSectionComplete("food_beverage", { cuisines: "Indian" }, false)).toBe(false);
-    expect(isHotelFormSectionComplete("food_beverage", { cuisines: "Indian" }, true)).toBe(false);
   });
 });

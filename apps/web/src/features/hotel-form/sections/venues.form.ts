@@ -95,13 +95,19 @@ export const emptyVenue = (rowId: string): VenueRowFields => ({
   notes: "",
 });
 
+/** A layout's guests as its field shows them: the most, or the range from the fewest. */
+function layoutGuestsText(entry: NonNullable<Layouts>[number]): string {
+  const hasMin = entry.min !== null && entry.min !== undefined;
+  return hasMin ? capacityText({ min: entry.min, max: entry.max }) : numberText(entry.max);
+}
+
 function rowFieldsOf(row: Row, newKey: () => string): VenueRowFields {
   const area = areaText(row.area);
   const prefunction = areaText(row.prefunctionArea);
   const layouts = (row.otherLayouts ?? []).map((entry) => ({
     key: newKey(),
     layout: entry.layout,
-    guests: capacityText(entry.min === undefined ? entry.max : { min: entry.min, max: entry.max }),
+    guests: layoutGuestsText(entry),
   }));
   return {
     rowId: row.rowId,
@@ -134,18 +140,22 @@ function fieldsOf(answers: Answers, newKey: () => string): VenuesFields {
   };
 }
 
-/** One layout as the catalogue keeps it, or null when the page cannot read it (said on its field). */
+/**
+ * One layout as the draft keeps it, or null when the page cannot read it (said on its field). A named
+ * layout whose guests are not given yet is kept: submit asks for them.
+ */
 function layoutOf(r: AnswerReader, rowId: string, entry: LayoutFields) {
   const id = (part: string) => venuesId(rowId, "layouts", entry.key, part);
   const layout = entry.layout.trim();
   const guests = capacityInput(entry.guests);
   if (layout === "") r.refuse(id("layout"), COPY.layoutNameMissing);
-  if (guests === null) r.refuse(id("guests"), COPY.layoutGuestsMissing);
-  else if (typeof guests !== "number" && !isRange(guests))
-    r.refuse(id("guests"), COPY.layoutGuestsUnread);
-  if (layout === "") return null;
-  if (typeof guests === "number") return { layout, max: guests };
-  return isRange(guests) ? { layout, min: guests.min, max: guests.max } : null;
+  const isRead = guests === null || typeof guests === "number" || isRange(guests);
+  if (!isRead) r.refuse(id("guests"), COPY.layoutGuestsUnread);
+  if (layout === "" || !isRead) return null;
+  if (guests === null) return { layout };
+  return typeof guests === "number"
+    ? { layout, max: guests }
+    : { layout, min: guests.min, max: guests.max };
 }
 
 function isRange(value: unknown): value is { readonly min: number; readonly max: number } {

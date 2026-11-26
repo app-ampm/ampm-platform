@@ -176,12 +176,47 @@ describe("venues", () => {
       rows: [{ rowId: ROW_A, name: "Hall", otherLayouts: [{ layout: "Boardroom", max: 20 }] }],
     };
     const fields = VENUES_MODEL.fieldsOf(saved, keys());
-    const hall = { ...fields.rows[0]!, layouts: [{ key: "l9", layout: "Cluster", guests: "" }] };
+    const hall = {
+      ...fields.rows[0]!,
+      layouts: [{ key: "l9", layout: "Cluster", guests: "30 to" }],
+    };
     const { answers, errors } = VENUES_MODEL.answersOf({ ...fields, rows: [hall] }, saved);
     expect(answers.rows?.[0]?.otherLayouts).toEqual([{ layout: "Boardroom", max: 20 }]);
     expect(errors[venuesId(ROW_A, "layouts", "l9", "guests")]).toBe(
-      VENUE_FIELDS_COPY.layoutGuestsMissing,
+      VENUE_FIELDS_COPY.layoutGuestsUnread,
     );
+  });
+
+  it("saves a named layout before its guests are given: submit asks for them, not the page", () => {
+    const fields = VENUES_MODEL.fieldsOf({}, keys());
+    const hall = {
+      ...fields.rows[0]!,
+      name: "Hall",
+      layouts: [{ key: "l9", layout: "Cluster", guests: "" }],
+    };
+    const { answers, errors } = VENUES_MODEL.answersOf({ ...fields, rows: [hall] }, {});
+    expect(answers.rows?.[0]?.otherLayouts).toEqual([{ layout: "Cluster" }]);
+    expect(errors).toEqual({});
+  });
+
+  it("shows a half-filled pair a draft holds without writing null into its field", () => {
+    const saved: HotelFormSectionAnswers["venues"] = {
+      totalEventSpace: { unit: "sqm" },
+      rows: [
+        {
+          rowId: ROW_A,
+          name: "Hall",
+          seated: { min: 250 },
+          floating: { min: null, max: 600 },
+          otherLayouts: [{ layout: "U-shape", min: 30 }],
+        },
+      ],
+    };
+    const fields = VENUES_MODEL.fieldsOf(saved, keys());
+    expect(fields.totalSpaceValue).toBe("");
+    expect(fields.totalSpaceUnit).toBe("sqm");
+    expect(fields.rows[0]).toMatchObject({ seated: "250–", floating: "–600" });
+    expect(fields.rows[0]?.layouts[0]).toMatchObject({ layout: "U-shape", guests: "30–" });
   });
 });
 

@@ -136,7 +136,6 @@ export const VENUE_FIELDS_COPY = {
   addLayout: "Add a layout",
   layoutsCap: (max: number) => `This form takes up to ${max} other layouts for a venue.`,
   layoutNameMissing: "Name this layout",
-  layoutGuestsMissing: "Give the most guests this layout takes",
   layoutGuestsUnread: "Give a number of guests, or a range such as 30–40",
   lengthM: "Length in metres",
   widthM: "Width in metres",

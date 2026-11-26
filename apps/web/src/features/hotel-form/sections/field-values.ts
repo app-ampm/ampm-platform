@@ -112,10 +112,10 @@ export interface AreaText {
 /** A new area field's unit: Indian fact sheets mostly give sq ft. */
 export const DEFAULT_AREA_UNIT: HotelFormAreaUnit = "sqft";
 
-/** A saved area as its field shows it. */
+/** A saved area as its field shows it: a unit whose number is not given yet shows with no number. */
 export function areaText(area: HotelFormArea | null | undefined): AreaText {
   return area
-    ? { value: String(area.value), unit: area.unit }
+    ? { value: numberText(area.value), unit: area.unit }
     : { value: "", unit: DEFAULT_AREA_UNIT };
 }
 
@@ -128,14 +128,18 @@ export function areaInput(area: AreaText): unknown {
 const RANGE = /^(\d+)\s*(?:-|–|—|to)\s*(\d+)$/i;
 
 /**
- * A capacity as its field shows it: a number of guests, or a range with an en dash.
+ * A capacity as its field shows it: a number of guests, or a range with an en dash, an end not given yet
+ * left blank beside it.
  *
  * @example
  * capacityText({ min: 250, max: 300 }); // "250–300"
+ * capacityText({ min: 250 }); // "250–"
  */
 export function capacityText(capacity: HotelFormCapacity | null | undefined): string {
   if (capacity === null || capacity === undefined) return "";
-  return typeof capacity === "number" ? String(capacity) : `${capacity.min}–${capacity.max}`;
+  if (typeof capacity === "number") return String(capacity);
+  const [min, max] = [numberText(capacity.min), numberText(capacity.max)];
+  return min === "" && max === "" ? "" : `${min}–${max}`;
 }
 
 /**

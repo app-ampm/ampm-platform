@@ -136,6 +136,11 @@ describe("hotelFormArea", () => {
     expect(room.safeParse({ value: 42, unit: "sqm", note: "x" }).success).toBe(false);
   });
 
+  it("takes a unit whose number is not given yet, as a half-filled answer submit asks to finish", () => {
+    expect(room.parse({ unit: "sqft" })).toEqual({ unit: "sqft" });
+    expect(room.parse({ unit: "sqm", value: null })).toEqual({ unit: "sqm", value: null });
+  });
+
   it("gives a venue the catalogue's larger venue bounds", () => {
     const venue = hotelFormArea(VENUE_AREA_LIMITS);
     expect(venue.safeParse({ value: 40_000, unit: "sqft" }).success).toBe(true);
@@ -151,13 +156,18 @@ describe("hotelFormCapacity", () => {
     expect(hotelFormCapacity.parse(null)).toBeNull();
   });
 
+  it("takes a range with one end not given yet, as a half-filled answer submit asks to finish", () => {
+    expect(hotelFormCapacity.parse({ min: 250 })).toEqual({ min: 250 });
+    expect(hotelFormCapacity.parse({ min: null, max: 300 })).toEqual({ min: null, max: 300 });
+  });
+
   it("refuses a minimum above the maximum on the minimum, and any other shape in words", () => {
     const backwards = hotelFormCapacity.safeParse({ min: 400, max: 300 });
     expect(backwards.error?.issues[0]).toMatchObject({
       path: ["min"],
       message: "The minimum is above the maximum",
     });
-    for (const value of ["300", true, { max: 300 }, { min: 250 }]) {
+    for (const value of ["300", true, [250, 300]]) {
       expect(messageOf(hotelFormCapacity, value), JSON.stringify(value)).toBe(
         "Give a number of guests, or a minimum and a maximum",
       );
