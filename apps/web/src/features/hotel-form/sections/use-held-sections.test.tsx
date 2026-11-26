@@ -92,6 +92,7 @@ function typeRooms(sections: HeldSections, total = "41") {
     "rooms",
     { model: ROOMS_MODEL, check: payloadOf },
     { version: 2, saved: { answers: { totalRooms: 40 }, noChanges: false } },
+    ME.personId,
   );
   rooms.update((fields: RoomsFields) => ({ ...fields, totalRooms: total }));
   return rooms;

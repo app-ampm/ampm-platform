@@ -8,11 +8,13 @@ import {
 import { unitSelectId } from "@ampm/web-forms";
 
 import type { HotelFormSite } from "../hotel-form-provider";
+import type { HotelFormFlow } from "../use-hotel-form-flow";
 import { newRowKey, type HeldSection, type HeldView } from "./held-section";
 import type { HeldSections, SectionFieldsMap } from "./held-sections";
 import type { SaveState } from "./section-autosave";
 import type { SectionModel } from "./section-model";
 import { payloadOf } from "./section-payload";
+import { formSessionOf } from "./use-held-sections";
 
 /** What every section's fields hold besides their own: the refresh note. */
 export interface RefreshNote {
@@ -52,7 +54,7 @@ export interface SectionEditor<F> {
 function useHeldSection<K extends HotelFormSectionKey>(
   key: K,
   model: SectionModel<K, SectionFieldsMap[K]>,
-  sections: HeldSections,
+  { flow, sections }: { readonly flow: HotelFormFlow; readonly sections: HeldSections },
   section: HotelFormDraftSections[K],
 ): HeldSection<K, SectionFieldsMap[K]> {
   useSyncExternalStore(sections.subscribe, sections.generation, sections.generation);
@@ -61,7 +63,8 @@ function useHeldSection<K extends HotelFormSectionKey>(
     version: section.version,
     saved: { answers: section.answers, noChanges: section.noChanges },
   };
-  const held = sections.open(key, reading, opened);
+  // The person as this render knows them: the layout's own copy of the session lags one render behind.
+  const held = sections.open(key, reading, opened, formSessionOf(flow).personId);
   useEffect(() => held.readWith(reading), [held, reading]);
   useEffect(() => {
     held.attach();
@@ -90,7 +93,7 @@ export function useSectionEditor<K extends HotelFormSectionKey>(
   site: HotelFormSite,
   draft: HotelFormDraftView,
 ): SectionEditor<SectionFieldsMap[K]> {
-  const held = useHeldSection(key, model, site.sections, draft.sections[key]);
+  const held = useHeldSection(key, model, site, draft.sections[key]);
   const view = useSyncExternalStore(held.subscribe, held.snapshot, held.snapshot);
   const built = useMemo(
     () => model.answersOf(view.fields, view.saved),

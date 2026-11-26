@@ -103,7 +103,7 @@ const sameStatuses = (a: HeldStatuses, b: HeldStatuses): boolean =>
  * The form's held sections: the layout makes one, every page reaches it through the form's site.
  *
  * @example
- * const held = sections.open("rooms", { model: ROOMS_MODEL, check: payloadOf }, opened);
+ * const held = sections.open("rooms", { model: ROOMS_MODEL, check: payloadOf }, opened, personId);
  * sections.sessionChanged({ token, personId }); // a new code: the same person's text goes on
  */
 export class HeldSections {
@@ -140,18 +140,20 @@ export class HeldSections {
 
   /**
    * The section as held, or as the draft holds it when nothing of it is held: a section left with text
-   * not saved, or with its page still open, is never replaced by an older or newer draft.
+   * not saved, or with its page still open, is never replaced by an older or newer draft. `personId` is
+   * whom the page opens it for (the person signed in as it renders): what is typed from now on is theirs.
    */
   open<K extends HotelFormSectionKey>(
     key: K,
     reading: SectionReading<K, SectionFieldsMap[K]>,
     opened: OpenedSection<K>,
+    personId: string | undefined,
   ): HeldSection<K, SectionFieldsMap[K]> {
     const slot: Slot<K> = this.slots[key];
     const held = slot.section;
     if (held !== undefined && !this.isOutdated(held, opened)) return held;
     held?.stop();
-    this.owner ??= this.deps.session().personId;
+    this.owner ??= personId;
     const created = new HeldSection(key, reading, opened, this.depsOf(key));
     slot.section = created;
     return created;

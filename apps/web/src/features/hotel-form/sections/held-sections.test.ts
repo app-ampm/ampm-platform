@@ -58,10 +58,12 @@ function harness() {
     refuseSession: (error) => refusedSessions.push(error),
   });
   const openRooms = (version = 2, totalRooms = 40) =>
-    sections.open("rooms", ROOMS, {
-      version,
-      saved: { answers: { totalRooms }, noChanges: false },
-    });
+    sections.open(
+      "rooms",
+      ROOMS,
+      { version, saved: { answers: { totalRooms }, noChanges: false } },
+      session.current.personId ?? PERSON,
+    );
   const answer = async (index: number, saved: Partial<HotelFormSectionSaved> = {}) => {
     calls[index]?.resolve({ ...SAVED, ...saved });
     await vi.advanceTimersByTimeAsync(0);
@@ -180,6 +182,7 @@ describe("a contact's refused field (review fix E2)", () => {
       "contact",
       { model: CONTACT_MODEL, check: payloadOf },
       { version: 0, saved: { answers: {}, noChanges: false } },
+      PERSON,
     );
     const typeEmail = (email: string) =>
       contact.update((fields: ContactFields) => ({
@@ -256,6 +259,23 @@ describe("whose typing it is (review fix E1)", () => {
     expect(calls[1]?.call.save.answers).toMatchObject({ totalRooms: 41 });
   });
 
+  it("belongs to the person the page opened it for, though the session it last heard lags behind", async () => {
+    const { sections, calls, session } = harness();
+    // A reload: the layout last heard the session before `me` named its person; the page knows them.
+    session.current = { token: SESSION, personId: undefined };
+    const rooms = sections.open(
+      "rooms",
+      ROOMS,
+      { version: 2, saved: { answers: { totalRooms: 40 }, noChanges: false } },
+      PERSON,
+    );
+    session.current = { token: SESSION, personId: PERSON };
+    rooms.update(typeTotal("41"));
+    rooms.leave(TOTAL_ID);
+    expect(calls).toHaveLength(1);
+    expect(rooms.snapshot().save).toEqual({ kind: "saving" });
+  });
+
   it("never sends one person's typing under another's session, even before it hears of the change", async () => {
     const { calls, session, openRooms, refuse } = harness();
     const rooms = openRooms();
@@ -284,10 +304,12 @@ describe("the page going (review fix E5)", () => {
 
   it("sends what waits when the page is hidden, with keepalive while the bodies fit its limit", async () => {
     const { sections, calls, openRooms } = harness();
-    const property = sections.open("property", PROPERTY, {
-      version: 0,
-      saved: { answers: {}, noChanges: false },
-    });
+    const property = sections.open(
+      "property",
+      PROPERTY,
+      { version: 0, saved: { answers: {}, noChanges: false } },
+      PERSON,
+    );
     property.update((fields: PropertyFields) => ({ ...fields, name: "Synthetic Lake Palace" }));
     const rooms = openRooms();
     // Seven room categories with long notes: more than keepalive takes, so it goes without it.
