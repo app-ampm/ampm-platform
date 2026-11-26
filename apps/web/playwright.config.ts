@@ -15,6 +15,8 @@ import { API_PORT, API_URL, REPO_ROOT, SITE_PORT, SITE_URL } from "./e2e/support
  * - The browser is the machine's Google Chrome (`channel: "chrome"`); `PLAYWRIGHT_BROWSER=chromium` uses
  *   Playwright's own build instead, after `pnpm --filter web exec playwright install chromium`.
  * - globalSetup switches the form's mode to test_only; globalTeardown puts the policy back, mode off.
+ * - The API takes 10 code requests a minute from one network, so the tests pace theirs
+ *   (e2e/support/code-pace.ts); a test may wait for a minute's window, hence the 3-minute timeout.
  */
 const browser = process.env["PLAYWRIGHT_BROWSER"] === "chromium" ? {} : { channel: "chrome" };
 
@@ -23,7 +25,7 @@ export default defineConfig({
   // One worker: the API's per-network limits count every test's code requests together.
   workers: 1,
   fullyParallel: false,
-  timeout: 120_000,
+  timeout: 180_000,
   expect: { timeout: 15_000 },
   reporter: [["list"]],
   globalSetup: "./e2e/global-setup.ts",
