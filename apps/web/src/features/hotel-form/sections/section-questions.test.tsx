@@ -8,7 +8,7 @@ import { DRAFT, draftWith } from "../draft.test-fixtures";
 import { decoded, tagsWith } from "../screen.test-utils";
 import { BOOKING_TERMS_MODEL } from "./booking-terms.form";
 import { BookingTermsSection } from "./booking-terms-section";
-import { CONTACT_MODEL } from "./contact.form";
+import { CONTACT_MODEL, emptyContact, type ContactFields } from "./contact.form";
 import { ContactSection } from "./contact-section";
 import { editorAt } from "./editor.test-utils";
 import { FACT_SHEET_MODEL } from "./fact-sheet.form";
@@ -102,6 +102,16 @@ describe("contacts", () => {
     );
     expect(page).toContain(">Same as me<");
     expect(page).toContain(">Add another contact<");
+  });
+
+  it("names each Same as me after its contact, as each Remove is", () => {
+    const two: ContactFields = {
+      ...fields,
+      contacts: [{ ...fields.contacts[0]!, name: "Ravi Kumar" }, emptyContact(newKey())],
+    };
+    const page = html(<ContactSection editor={editorAt(two)} person={person} mobile="" max={3} />);
+    expect(tagsWith(page, "button", 'aria-label="Same as me for Ravi Kumar"')).toHaveLength(1);
+    expect(tagsWith(page, "button", 'aria-label="Same as me for Contact 2"')).toHaveLength(1);
   });
 
   it("offers no Same as me until the person's details are read", () => {

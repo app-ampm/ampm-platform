@@ -63,6 +63,8 @@ export const CONTACT_FIELDS_COPY = {
   phoneHelp: "A mobile, or a landline with its area code",
   email: "Email",
   sameAsMe: "Same as me",
+  /** Same as me's name for screen readers, after its row, as each Remove is named. */
+  sameAsMeNamed: (legend: string) => `Same as me for ${legend}`,
   add: "Add another contact",
   cap: (max: number) => `This form takes up to ${max} contacts.`,
   empty: "No contacts yet. Add the person AMPM should call first.",

@@ -29,7 +29,7 @@ export interface ContactSectionProps {
 
 interface RowProps {
   readonly editor: Editor;
-  readonly row: ContactRowFields;
+  readonly row: ContactRowFields & { readonly legend: string };
 }
 
 /** The contacts with one changed. */
@@ -95,7 +95,11 @@ function ContactRow({
   return (
     <>
       {person && !isReadOnly ? (
-        <FormButton variant="secondary" onClick={() => fillFromMe(person)}>
+        <FormButton
+          variant="secondary"
+          label={COPY.sameAsMeNamed(row.legend)}
+          onClick={() => fillFromMe(person)}
+        >
           {COPY.sameAsMe}
         </FormButton>
       ) : null}
