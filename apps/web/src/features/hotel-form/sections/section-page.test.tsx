@@ -78,6 +78,8 @@ function siteAt(reverify: IdentityStep | null = null): HotelFormSite {
     rememberReturn: vi.fn(),
     landing: () => "/hotel-form/overview",
     arrived: vi.fn(),
+    carryNotice: vi.fn(),
+    carriedNotice: () => null,
   };
 }
 
@@ -113,6 +115,8 @@ async function openRooms(): Promise<Mounted> {
     rememberReturn: vi.fn(),
     landing: () => "/hotel-form/overview",
     arrived: vi.fn(),
+    carryNotice: vi.fn(),
+    carriedNotice: () => null,
   };
   return mount(
     <HotelFormSiteContext.Provider value={site}>

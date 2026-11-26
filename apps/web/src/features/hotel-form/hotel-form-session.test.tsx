@@ -8,7 +8,7 @@ import { HotelFormSiteContext, useReturnPage, type HotelFormSite } from "./hotel
 import { HotelFormOverviewPage } from "./overview-page";
 import { ME, flowAt } from "./screen.test-utils";
 import { HotelFormSectionPage } from "./sections/section-page";
-import { innerPageStep } from "./use-signed-in-page";
+import { innerPageStep, useSignedInPage } from "./use-signed-in-page";
 
 /*
  * The form's pages sharing one session (D-190 §5): a page behind the sign-in opened without a session goes
@@ -46,6 +46,8 @@ function siteAt(phase: Phase, landing = "/hotel-form/overview"): HotelFormSite {
     rememberReturn: vi.fn(),
     landing: () => landing,
     arrived: vi.fn(),
+    carryNotice: vi.fn(),
+    carriedNotice: () => null,
   };
 }
 
@@ -76,6 +78,22 @@ describe("a page behind the sign-in", () => {
     expect(site.rememberReturn).toHaveBeenCalledWith("/hotel-form/sections/venues");
     expect(router.replace).toHaveBeenCalledWith("/hotel-form");
     expect(mounted.host.textContent).toContain("Opening your form…");
+  });
+
+  it("stays put once it is leaving: its person asked to be removed and was signed out there", async () => {
+    const site = siteAt({ kind: "welcome" });
+    function Leaving() {
+      const shown = useSignedInPage("/hotel-form/status", { isLeaving: true });
+      return <p>{shown === null ? "left" : "shown"}</p>;
+    }
+    mounted = await mount(
+      <HotelFormSiteContext.Provider value={site}>
+        <Leaving />
+      </HotelFormSiteContext.Provider>,
+    );
+    expect(router.replace).not.toHaveBeenCalled();
+    expect(site.rememberReturn).not.toHaveBeenCalled();
+    expect(mounted.host.textContent).toBe("left");
   });
 
   it("does nothing while the link opens, and once signed in says it was arrived at", async () => {
@@ -164,6 +182,28 @@ describe("the page remembered across the sign-in", () => {
       "/hotel-form/overview",
       "/hotel-form/review",
       "/hotel-form/overview",
+    ]);
+  });
+
+  it("carries a notice to the page the person is sent to, read there until that page has arrived", async () => {
+    const seen: (string | null)[] = [];
+    mounted = await mount(
+      <ReturnPage
+        run={({ carryNotice, carriedNotice, arrived }) => {
+          carryNotice("/hotel-form/status", "This form has already been submitted.");
+          seen.push(carriedNotice("/hotel-form/overview"), carriedNotice("/hotel-form/status"));
+          arrived("/hotel-form/overview");
+          seen.push(carriedNotice("/hotel-form/status"));
+          arrived("/hotel-form/status");
+          seen.push(carriedNotice("/hotel-form/status"));
+        }}
+      />,
+    );
+    expect(seen.slice(0, 4)).toEqual([
+      null,
+      "This form has already been submitted.",
+      "This form has already been submitted.",
+      null,
     ]);
   });
 });

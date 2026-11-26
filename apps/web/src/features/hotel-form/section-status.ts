@@ -1,4 +1,5 @@
 import { HOTEL_FORM_SECTION_KEYS, type HotelFormDraftSections } from "@ampm/core";
+import type { StatusTone } from "@ampm/ui/styles";
 
 /*
  * A section's status as the overview and the review show it (D-190 §5): not started until its first save,
@@ -8,6 +9,17 @@ import { HOTEL_FORM_SECTION_KEYS, type HotelFormDraftSections } from "@ampm/core
  */
 
 export type SectionStatus = "not_started" | "in_progress" | "complete" | "no_changes";
+
+/**
+ * The chip each section status wears on the overview and the review; the word carries the meaning
+ * (peacock-night.md §8).
+ */
+export const SECTION_TONE: Readonly<Record<SectionStatus, StatusTone>> = {
+  not_started: "neutral",
+  in_progress: "warning",
+  complete: "success",
+  no_changes: "success",
+};
 
 interface SectionState {
   readonly version: number;

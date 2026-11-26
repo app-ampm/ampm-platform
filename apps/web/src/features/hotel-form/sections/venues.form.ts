@@ -95,8 +95,13 @@ export const emptyVenue = (rowId: string): VenueRowFields => ({
   notes: "",
 });
 
-/** A layout's guests as its field shows them: the most, or the range from the fewest. */
-function layoutGuestsText(entry: NonNullable<Layouts>[number]): string {
+/**
+ * A layout's guests as its field shows them: the most, or the range from the fewest.
+ *
+ * @example
+ * layoutGuestsText({ layout: "Classroom", min: 30, max: 40 }); // "30–40"
+ */
+export function layoutGuestsText(entry: NonNullable<Layouts>[number]): string {
   const hasMin = entry.min !== null && entry.min !== undefined;
   return hasMin ? capacityText({ min: entry.min, max: entry.max }) : numberText(entry.max);
 }

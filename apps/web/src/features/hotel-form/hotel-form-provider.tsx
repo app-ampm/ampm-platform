@@ -17,30 +17,47 @@ export interface HotelFormSite {
   readonly rememberReturn: (path: string) => void;
   /** Where signing in leads: the page remembered, else the overview (HF-04). */
   readonly landing: () => string;
-  /** Forgets the remembered page once the person is back on it. */
+  /** Forgets the remembered page, and a notice carried to it, once the person is on it. */
   readonly arrived: (path: string) => void;
+  /**
+   * Hands the page the person is sent to a notice to show as it opens (a submit refused because the
+   * form was submitted already, shown on the status page), kept in memory only.
+   */
+  readonly carryNotice: (path: string, message: string) => void;
+  /** The notice carried to `path`, until that page has arrived. */
+  readonly carriedNotice: (path: string) => string | null;
 }
 
 /** The form's shared state; a test provides its own. */
 export const HotelFormSiteContext = createContext<HotelFormSite | null>(null);
 
 /**
- * The page remembered across the sign-in, for the tab: held by the layout, which stays mounted while the
- * person moves between the form's pages, so nothing about it is written to storage or the address. Only
- * the form's own pages behind the sign-in are remembered (`innerPathOf`).
+ * The page remembered across the sign-in, for the tab, and a notice carried to the next page: held by the
+ * layout, which stays mounted while the person moves between the form's pages, so nothing about either is
+ * written to storage or the address. Only the form's own pages behind the sign-in are remembered
+ * (`innerPathOf`).
  *
- *   const { rememberReturn, landing, arrived } = useReturnPage();
+ *   const { rememberReturn, landing, arrived, carryNotice, carriedNotice } = useReturnPage();
  */
 export function useReturnPage() {
   const remembered = useRef<string | null>(null);
+  const carried = useRef<{ readonly path: string; readonly message: string } | null>(null);
   const rememberReturn = useCallback((path: string) => {
     remembered.current = innerPathOf(path);
   }, []);
   const landing = useCallback(() => remembered.current ?? HOTEL_FORM_ROUTES.overview, []);
   const arrived = useCallback((path: string) => {
     if (remembered.current === path) remembered.current = null;
+    if (carried.current?.path === path) carried.current = null;
   }, []);
-  return { rememberReturn, landing, arrived };
+  const carryNotice = useCallback((path: string, message: string) => {
+    carried.current = { path, message };
+  }, []);
+  const carriedNotice = useCallback(
+    (path: string) => (carried.current?.path === path ? carried.current.message : null),
+    [],
+  );
+  return { rememberReturn, landing, arrived, carryNotice, carriedNotice };
 }
 
 /** The flow, run once for every page under the layout. */

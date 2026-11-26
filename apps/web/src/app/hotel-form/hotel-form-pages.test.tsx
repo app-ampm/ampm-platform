@@ -10,9 +10,11 @@ import { config, middleware } from "@/middleware";
 import HotelFormLayout from "./layout";
 import NotFound from "./not-found";
 import HotelFormOverview, { dynamic as overviewDynamic } from "./overview/page";
+import HotelFormReview, { dynamic as reviewDynamic } from "./review/page";
 import HotelFormSection, { dynamic as sectionDynamic } from "./sections/[section]/page";
+import HotelFormStatus, { dynamic as statusDynamic } from "./status/page";
 
-/* The form's pages behind the sign-in (D-190 §5): HF-04 and HF-05 as the server sends them. */
+/* The form's pages behind the sign-in (D-190 §5): HF-04 to HF-07 as the server sends them. */
 
 const next = vi.hoisted(() => ({ notFound: new Error("NEXT_HTTP_ERROR_FALLBACK;404") }));
 
@@ -40,16 +42,20 @@ const propsFor = (section: string) => ({
 const pageOf = (element: ReactElement) =>
   renderToStaticMarkup(<HotelFormLayout>{element}</HotelFormLayout>);
 
-describe("the overview and the sections, as the server sends them", () => {
+describe("the overview, the sections, the review and the status, as the server sends them", () => {
   it("render per request (D-046), so the nonce CSP reaches Next's scripts", () => {
     expect(overviewDynamic).toBe("force-dynamic");
     expect(sectionDynamic).toBe("force-dynamic");
+    expect(reviewDynamic).toBe("force-dynamic");
+    expect(statusDynamic).toBe("force-dynamic");
   });
 
   it("send only an opening card: the request and its answers are read in the browser, in the session", async () => {
     for (const html of [
       pageOf(<HotelFormOverview />),
       pageOf(await HotelFormSection(propsFor("rooms"))),
+      pageOf(<HotelFormReview />),
+      pageOf(<HotelFormStatus />),
     ]) {
       expect(html).toMatch(/<p role="status"[^>]*>Opening your form…<\/p>/);
       expect(html).not.toContain("<nav");

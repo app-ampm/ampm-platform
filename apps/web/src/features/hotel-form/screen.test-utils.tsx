@@ -1,8 +1,11 @@
 import { renderToStaticMarkup } from "react-dom/server";
 
-import type { HotelFormCodeIssued, HotelFormMe } from "@ampm/core";
+import type { HotelFormCodeIssued, HotelFormDraftView, HotelFormMe } from "@ampm/core";
+import { vi } from "vitest";
 
+import { draftView } from "./draft.test-fixtures";
 import { INITIAL_FLOW, type FlowState } from "./flow";
+import type { HotelFormSite } from "./hotel-form-provider";
 import { HotelFormScreen } from "./hotel-form-screen";
 import { OverviewScreen } from "./overview-screen";
 import type { HotelFormFlow } from "./use-hotel-form-flow";
@@ -73,6 +76,32 @@ export function flowAt(
     signOut: noop,
     refuseSession: () => false,
     ...overrides,
+  };
+}
+
+/**
+ * The form's shared state for a page behind the sign-in: signed in with `ME` and `draft`, the flow's calls
+ * overridable, and the return page and carried notice as spies.
+ */
+export function signedInSite(
+  draft: HotelFormDraftView,
+  overrides: Partial<HotelFormFlow> = {},
+): HotelFormSite {
+  return {
+    flow: flowAt(
+      { phase: { kind: "signed_in", reverify: null }, session: SESSION },
+      {
+        me: { data: ME, isLoading: false, error: null, retry: noop },
+        draft: draftView(draft),
+        ...overrides,
+      },
+    ),
+    siteKey: "test-site-key",
+    rememberReturn: vi.fn(),
+    landing: () => "/hotel-form/overview",
+    arrived: vi.fn(),
+    carryNotice: vi.fn(),
+    carriedNotice: () => null,
   };
 }
 

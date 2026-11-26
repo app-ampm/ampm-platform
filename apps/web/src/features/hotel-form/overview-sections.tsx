@@ -13,7 +13,6 @@ import {
   listItemStyles,
   skeletonStyles,
   textStyles,
-  type StatusTone,
 } from "@ampm/ui/styles";
 
 import { Chip } from "@/components/site/chip";
@@ -24,21 +23,13 @@ import { sectionPath } from "./hotel-form-routes";
 import { momentOf } from "./hotel-form-time";
 import { OVERVIEW_COPY as COPY } from "./overview-copy";
 import { SECTION_TITLES, SECTIONS_COPY } from "./sections-copy";
-import { doneSectionsOf, sectionStatusOf, type SectionStatus } from "./section-status";
+import { SECTION_TONE, doneSectionsOf, sectionStatusOf } from "./section-status";
 import type { DraftView } from "./use-hotel-form-flow";
 
 /*
  * HF-04's form (D-190 §5; plan §4.4): "Quick start" pointing to the fact sheet section, then the seven
  * sections with their status and who saved each last, each a link to its page.
  */
-
-/** The chip each section status wears; the word carries the meaning (peacock-night.md §8). */
-const SECTION_TONE: Readonly<Record<SectionStatus, StatusTone>> = {
-  not_started: "neutral",
-  in_progress: "warning",
-  complete: "success",
-  no_changes: "success",
-};
 
 /** "Quick start": the fact sheet section first; its uploads arrive in Slice 9, so no upload here yet. */
 export function QuickStart() {
