@@ -37,8 +37,8 @@ const group = (props: Partial<ChipGroupFieldProps> = {}) =>
   );
 
 /** The group with its choice held in state, as a form holds it. */
-function Facilities() {
-  const [value, setValue] = useState<readonly string[]>([]);
+function Facilities({ chosen = [] }: { readonly chosen?: readonly string[] }) {
+  const [value, setValue] = useState<readonly string[]>(chosen);
   return (
     <>
       <ChipGroupField
@@ -82,6 +82,14 @@ describe("chip group, as the server sends it", () => {
     expect(html).toMatch(/<label for="facilities-other"[^>]*>Other facilities<\/label>/);
   });
 
+  it("shows a chosen value the list no longer has as a chip of its own, chosen, before Other", () => {
+    const html = group({ value: ["Gym", "Helipad"], other: other() });
+    expect(tagsWith(html, "button", 'aria-pressed="true"')).toHaveLength(2);
+    expect(html).toContain(">Helipad<");
+    expect(html.indexOf(">Helipad<")).toBeGreaterThan(html.indexOf(">Bar<"));
+    expect(html.lastIndexOf(">Other<")).toBeGreaterThan(html.indexOf(">Helipad<"));
+  });
+
   it("points every chip at the group's error, and Other's words at their own", () => {
     const html = group({
       error: "Give each cuisine once",
@@ -111,6 +119,20 @@ describe("chip group in use", () => {
     expect(mounted.host.querySelector("#chosen")?.textContent).toBe("Bar");
     expect(spa.getAttribute("aria-pressed")).toBe("false");
     expect(document.activeElement).toBe(spa);
+  });
+
+  it("keeps a chosen value the list no longer has when another chip is pressed, until it is unticked", async () => {
+    mounted = await mount(<Facilities chosen={["Helipad", "Gym"]} />);
+    await press(buttonNamed(mounted.host, "Spa"));
+    expect(mounted.host.querySelector("#chosen")?.textContent).toBe("Spa,Gym,Helipad");
+    await press(buttonNamed(mounted.host, "Helipad"));
+    expect(mounted.host.querySelector("#chosen")?.textContent).toBe("Spa,Gym");
+    expect([...mounted.host.querySelectorAll("button")].map((chip) => chip.textContent)).toEqual([
+      "Spa",
+      "Gym",
+      "Bar",
+      "Other",
+    ]);
   });
 
   it("puts Other after the listed chips", async () => {

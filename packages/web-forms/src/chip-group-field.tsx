@@ -40,12 +40,25 @@ export interface ChipGroupFieldProps {
   readonly className?: string | undefined;
 }
 
-/** The choice after pressing `pressed`: toggled, in the options' order with Other last. */
+/**
+ * The chosen values the list does not have (chosen before the list changed): kept, each a chip of its
+ * own after the listed ones, until it is unticked.
+ */
+function unlisted(props: ChipGroupFieldProps): readonly string[] {
+  const listed = new Set([...props.options.map((option) => option.value), props.other?.value]);
+  return props.value.filter((value) => !listed.has(value));
+}
+
+/** The choice after pressing `pressed`: toggled, in the chips' order with Other last. */
 function toggled(props: ChipGroupFieldProps, pressed: string): readonly string[] {
   const chosen = new Set(props.value);
   if (chosen.has(pressed)) chosen.delete(pressed);
   else chosen.add(pressed);
-  const order = [...props.options.map((option) => option.value), props.other?.value];
+  const order = [
+    ...props.options.map((option) => option.value),
+    ...unlisted(props),
+    props.other?.value,
+  ];
   return order.filter((value): value is string => value !== undefined && chosen.has(value));
 }
 
@@ -85,6 +98,8 @@ function Chip({ option, isChosen, describedBy, onPress, onBlur }: ChipProps) {
  * (aria-pressed) in a fieldset its legend names, so a keyboard tabs to a chip and presses it with Space
  * or Enter, and a screen reader hears whether it is chosen. Choosing Other asks for its words in a field
  * of their own; the chosen values keep the options' order with Other last, whatever the order of presses.
+ * A chosen value the options no longer list (they changed after it was saved) stays chosen as a chip of
+ * its own after the listed ones, so pressing another chip never drops it; it goes once it is unticked.
  *
  *   <ChipGroupField id="facilities" legend="Facilities" options={options} value={chosen}
  *     onChange={setChosen} other={{ value: "Other", label: "Other", textId: "facilities-other",
@@ -93,7 +108,12 @@ function Chip({ option, isChosen, describedBy, onPress, onBlur }: ChipProps) {
 export function ChipGroupField(props: ChipGroupFieldProps) {
   const { id, legend, options, value, other, error, help, onBlur, className } = props;
   const describedBy = error ? `${id}-error` : help ? `${id}-help` : undefined;
-  const chips = other ? [...options, { value: other.value, label: other.label }] : options;
+  const kept = unlisted(props).map((chosen) => ({ value: chosen, label: chosen }));
+  const chips = [
+    ...options,
+    ...kept,
+    ...(other ? [{ value: other.value, label: other.label }] : []),
+  ];
   return (
     <fieldset id={id} className={cn("flex min-w-0 flex-col gap-3", className)}>
       <legend className={cn(fieldLabelStyles, "mb-2")}>{legend}</legend>
