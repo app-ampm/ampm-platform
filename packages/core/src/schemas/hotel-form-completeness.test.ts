@@ -155,6 +155,24 @@ describe("isHotelFormSectionComplete", () => {
     expect(isHotelFormSectionComplete("rooms", {}, false)).toBe(false);
   });
 
+  it("reads an empty or all-null object as no answer, as canonical JSON leaves it out of what is stored", () => {
+    const venue = {
+      rowId: rowId(1),
+      name: "Lawn",
+      setting: "outdoor",
+      area: { value: 900, unit: "sqm" },
+      seated: 300,
+      floating: 600,
+    };
+    const blankRow = { rowId: rowId(2), seated: { min: null, max: null } };
+    expect(isHotelFormSectionComplete("venues", { rows: [venue, blankRow] }, false)).toBe(true);
+    expect(
+      isHotelFormSectionComplete("venues", { rows: [venue, { rowId: rowId(3) }] }, false),
+    ).toBe(true);
+    const emptyRange = { rowId: rowId(4), floating: {} };
+    expect(isHotelFormSectionComplete("venues", { rows: [venue, emptyRange] }, false)).toBe(true);
+  });
+
   it("counts answers that no longer read as incomplete, even marked No changes", () => {
     expect(isHotelFormSectionComplete("food_beverage", { cuisines: "Indian" }, false)).toBe(false);
     expect(isHotelFormSectionComplete("food_beverage", { cuisines: "Indian" }, true)).toBe(false);

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { canonicalJson, utf8ByteLength } from "./canonical-json";
+import { canonicalJson, isCanonicalBlank, utf8ByteLength } from "./canonical-json";
 
 /*
  * The canonical JSON the hotel form's sections and revisions are hashed and measured by (D-190 §1 and
@@ -62,6 +62,33 @@ describe("canonicalJson", () => {
       expect(() => canonicalJson({ value }), String(value)).toThrow();
     }
     expect(() => canonicalJson(10n)).toThrow();
+  });
+});
+
+describe("isCanonicalBlank", () => {
+  it("calls blank exactly what canonical JSON leaves out of an object, at any depth", () => {
+    const values: unknown[] = [
+      null,
+      undefined,
+      [],
+      {},
+      { min: null, max: null },
+      { a: { b: [] }, c: undefined },
+      false,
+      0,
+      "",
+      [null],
+      [{}],
+      { unit: "sqft" },
+      { min: 250, max: null },
+    ];
+    for (const value of values) {
+      expect(isCanonicalBlank(value), JSON.stringify(value)).toBe(
+        canonicalJson({ member: value }) === "{}",
+      );
+    }
+    expect(isCanonicalBlank({ min: null, max: null })).toBe(true);
+    expect(isCanonicalBlank({ unit: "sqft" })).toBe(false);
   });
 });
 

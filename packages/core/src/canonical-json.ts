@@ -80,6 +80,23 @@ export function canonicalJson(value: unknown): string {
 }
 
 /**
+ * Whether canonical JSON leaves a value out as blank when it is an object's member: undefined or null, an
+ * empty list, or a plain object whose every member is blank (`{}`, `{ min: null, max: null }`), at any
+ * depth. False, 0, "" and a list with entries (a blank entry included) are kept, so they are not blank.
+ * What a form counts as answered follows it, so a draft and the canonical JSON stored from it agree.
+ *
+ * @example
+ * isCanonicalBlank({ min: null, max: null }); // true
+ * isCanonicalBlank({ unit: "sqft" }); // false
+ */
+export function isCanonicalBlank(value: unknown): boolean {
+  if (value === undefined || value === null) return true;
+  if (Array.isArray(value)) return value.length === 0;
+  if (typeof value !== "object" || !isPlainObject(value)) return false;
+  return Object.values(value).every(isCanonicalBlank);
+}
+
+/**
  * How many bytes text takes in UTF-8, as a section's cap counts its canonical JSON. A lone surrogate
  * counts as the replacement character a UTF-8 encoder writes for it (3 bytes).
  *

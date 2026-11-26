@@ -59,8 +59,9 @@ function sectionViewOf<K extends HotelFormSectionKey>(
   return {
     answers: answers.data,
     version: row.version,
-    // Counted on every read, by the current schema: the stored flag is only as current as its save.
-    isComplete: isHotelFormSectionComplete(key, answers.data, row.noChanges),
+    // Counted on every read from the answers as stored, by the current schema: the stored flag is only
+    // as current as its save.
+    isComplete: isHotelFormSectionComplete(key, row.answers, row.noChanges),
     noChanges: row.noChanges,
     lastEditedBy: row.lastEditedBy,
     lastEditedAt: row.lastEditedAt.toISOString(),

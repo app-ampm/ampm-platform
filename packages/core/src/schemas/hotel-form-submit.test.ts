@@ -80,6 +80,17 @@ describe("checkSubmit", () => {
     ]);
   });
 
+  it("skips a row whose only answers are empty or all-null objects, as canonical JSON stores it blank", () => {
+    const venues = state({
+      rows: [
+        { rowId: rowId(1), name: "Lawn", floating: 90 },
+        { rowId: rowId(2), seated: { min: null, max: null } },
+        { rowId: rowId(3), floating: {} },
+      ],
+    });
+    expect(checkSubmit({ kind: "onboarding", sections: { ...ready, venues } })).toEqual([]);
+  });
+
   it("lists every half-filled pair on any request: a unit without its number, a range or layout missing an end", () => {
     const rooms = state({ rows: [{ rowId: rowId(1), name: "Suite", size: { unit: "sqft" } }] });
     const venues = state({

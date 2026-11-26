@@ -60,7 +60,7 @@ export {
   type HttpsWebsiteReading,
 } from "./web-address";
 // Canonical JSON (D-190 §1): what the hotel form's section and revision hashes are taken of, and its size.
-export { canonicalJson, utf8ByteLength } from "./canonical-json";
+export { canonicalJson, isCanonicalBlank, utf8ByteLength } from "./canonical-json";
 export { matchContact, matchRowsByName } from "./hotel-row-match";
 export type {
   HotelContactMatch,

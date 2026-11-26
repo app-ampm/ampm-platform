@@ -64,6 +64,30 @@ describe("HotelFormSectionSaves: the first save of a section", () => {
     expect(saved.isComplete).toBe(true);
   });
 
+  it("counts completeness from the canonical answers it stores: an all-null range is no answer", async () => {
+    const built = build();
+    const lawn = {
+      rowId: "0192f1a0-0000-4000-8000-000000000001",
+      name: "Synthetic Lawn",
+      setting: "outdoor",
+      area: { value: 900, unit: "sqm" },
+      seated: 300,
+      floating: 600,
+    };
+    const blank = {
+      rowId: "0192f1a0-0000-4000-8000-000000000002",
+      seated: { min: null, max: null },
+    };
+    const answers = { rows: [lawn, blank] };
+    const saved = await save(built, "venues", { answers, expectedVersion: 0, noChanges: false });
+    expect(saved.isComplete).toBe(true);
+    const [, , write] = built.createFirst.mock.calls[0] ?? [];
+    expect(write).toMatchObject({
+      answers: { rows: [lawn, { rowId: blank.rowId }] },
+      isComplete: true,
+    });
+  });
+
   it("refuses a version for a section never saved, on expectedVersion", async () => {
     const built = build();
     const refused = await refusalOf(

@@ -136,7 +136,8 @@ export class HotelFormSectionSaves {
       schemaVersion: HOTEL_FORM_SCHEMA_VERSIONS[key],
       answers: content.json,
       contentHash: content.hash,
-      isComplete: isHotelFormSectionComplete(key, body.answers, body.noChanges),
+      // Counted from the answers as stored, so this answer, the stored flag and the next read agree.
+      isComplete: isHotelFormSectionComplete(key, content.json, body.noChanges),
       noChanges: body.noChanges,
       editorPersonId: session.personId,
       at: now,

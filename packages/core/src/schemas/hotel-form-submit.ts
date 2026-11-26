@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { isCanonicalBlank } from "../canonical-json";
 import type { ErrorDetail } from "../errors";
 import type { HotelInfoRequestKind } from "./hotel-info-requests";
 import {
@@ -67,8 +68,11 @@ type Gaps = { readonly [K in HotelFormSectionKey]: (answers: Answers[K]) => Miss
 
 const DRAFTS: Drafts = HOTEL_FORM_SECTION_DRAFTS;
 
-const answered = (value: unknown): boolean =>
-  value !== undefined && value !== null && !(Array.isArray(value) && value.length === 0);
+/**
+ * An answer is what canonical JSON keeps: an empty or all-null object is no answer, as it is left out of
+ * the stored section, so a save's completeness and the next read's agree.
+ */
+const answered = (value: unknown): boolean => !isCanonicalBlank(value);
 
 /** Whether a row holds any answer besides its key. */
 const hasAnswer = (row: object): boolean =>
