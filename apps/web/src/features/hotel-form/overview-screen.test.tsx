@@ -158,6 +158,7 @@ describe("HF-04, the overview", () => {
       isLoading: true,
       error: null,
       retry: () => undefined,
+      clockSkewMs: 0,
     });
     expect(loading).toMatch(/role="status"[^>]*>Loading your sections…</);
     expect(loading).toContain("Seasonal refresh 2027");
@@ -166,6 +167,7 @@ describe("HF-04, the overview", () => {
       isLoading: false,
       error: HOTEL_FORM_COPY.errors.network,
       retry: () => undefined,
+      clockSkewMs: 0,
     });
     expect(failed).toContain(HOTEL_FORM_COPY.errors.network);
     expect(buttonsIn(failed)).toEqual(["Try again", "Edit your details", "Sign out"]);

@@ -138,8 +138,9 @@ function requestOf(request: FormSubmission): HotelFormDraftRequest {
  * editor's name and time and whether that was the caller (by person, never by name; a section whose stored
  * answers no longer read answered empty and unreadable, and logged without its answers); the people helping, by name and designation (never a mobile; a colleague who
  * withdrew their privacy notice consent unnamed, as everywhere on the form); AMPM's label and note; the
- * request's reference, kind, status and state, and who submitted it and when; the caps; and the cuisine
- * choices (configuration `hotel.cuisine_options`) and facility choices, each with its Other. It reads
+ * request's reference, kind, status and state, and who submitted it and when; the caps; the cuisine
+ * choices (configuration `hotel.cuisine_options`) and facility choices, each with its Other; and the API's
+ * clock when it read them, which the page measures a colleague's recent save against. It reads
  * nothing from the catalogue (plan decision 16): the draft holds only what the hotel's people typed.
  */
 @Injectable()
@@ -152,7 +153,7 @@ export class HotelFormDraft {
     private readonly logger: AppLogger,
   ) {}
 
-  async get(session: FormSession): Promise<HotelFormDraftView> {
+  async get(session: FormSession, now: Date = new Date()): Promise<HotelFormDraftView> {
     const [request, rows, people, cuisines] = await Promise.all([
       this.submissions.find(session.requestId),
       this.sections.list(session.requestId),
@@ -173,6 +174,7 @@ export class HotelFormDraft {
         cuisines: { options: cuisines.options, other: HOTEL_CUISINE_OTHER },
         facilities: { options: [...HOTEL_FACILITY_OPTIONS], other: HOTEL_FACILITY_OTHER },
       },
+      readAt: now.toISOString(),
     };
   }
 }

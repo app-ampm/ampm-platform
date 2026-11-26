@@ -57,6 +57,7 @@ export const DRAFT: HotelFormDraftView = {
     cuisines: { options: ["Indian"], other: "Other" },
     facilities: { options: ["Spa"], other: "Other" },
   },
+  readAt: "2026-11-26T09:31:00.000Z",
 };
 export const ME: HotelFormMe = {
   person: { fullName: "Synthetic Person", designation: "General Manager" },

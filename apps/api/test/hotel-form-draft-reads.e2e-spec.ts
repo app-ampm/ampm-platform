@@ -26,7 +26,8 @@ import {
  * the stored flag and the next read agree; and a stored section that no longer reads under the current
  * schema (saved before a change to its questions), answered as unreadable and empty instead of failing
  * the whole draft, named by the submit check, and replaced by its next save; and whether the last save
- * of each section was the caller's, by person and never by name. Synthetic data only.
+ * of each section was the caller's, by person and never by name; and the API's clock when it read the
+ * draft. Synthetic data only.
  */
 describe("The hotel form's draft as each section reads back (e2e)", () => {
   let suite: FormSuite;
@@ -143,5 +144,15 @@ describe("The hotel form's draft as each section reads back (e2e)", () => {
     // After "Edit your details" the person's earlier saves are still theirs.
     await form.patchMe(mine.sessionToken, { fullName: "E2E Renamed Person" }).expect(200);
     expect((await sectionsOf(mine.sessionToken)).property.isLastSaveYours).toBe(true);
+  });
+
+  it("carries the API's clock when it read the draft", async () => {
+    const link = await testLink(suite);
+    const { sessionToken } = await signIn(suite, link.secret, freshMobile());
+    const before = Date.now();
+    const draft = hotelFormDraftView.parse((await calls.draft(sessionToken).expect(200)).body.data);
+    const readAt = Date.parse(draft.readAt);
+    expect(readAt).toBeGreaterThanOrEqual(before);
+    expect(readAt).toBeLessThanOrEqual(Date.now());
   });
 });

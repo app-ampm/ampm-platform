@@ -77,6 +77,7 @@ const draft = {
     cuisines: { options: ["Indian", "Italian"], other: HOTEL_CUISINE_OTHER },
     facilities: { options: [...HOTEL_FACILITY_OPTIONS], other: HOTEL_FACILITY_OTHER },
   },
+  readAt: "2026-11-26T09:31:00.000Z",
 };
 
 describe("hotelFormDraftView", () => {
@@ -101,6 +102,9 @@ describe("hotelFormDraftView", () => {
     expect(parsed.contributors[2]).toEqual({ fullName: null, designation: null, isYou: false });
     expect(parsed.caps.roomRows).toBe(60);
     expect(parsed.options.facilities.other).toBe("Other");
+    expect(parsed.readAt).toBe("2026-11-26T09:31:00.000Z");
+    const { readAt: _readAt, ...noClock } = draft;
+    expect(hotelFormDraftView.safeParse(noClock).success).toBe(false);
   });
 
   it("refuses a section missing, an answer its draft refuses, a link that is not active, an extra key", () => {

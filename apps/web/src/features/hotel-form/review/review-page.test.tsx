@@ -111,6 +111,15 @@ describe("the summary", () => {
     expect(host.textContent).not.toContain("saved some answers a moment ago");
   });
 
+  it("measures the five minutes on the API's clock, so a device clock running fast hides no colleague's save", async () => {
+    // This device runs six minutes fast: by it, Ravi Kumar's save a minute ago is seven minutes old.
+    vi.setSystemTime(NOW + 6 * 60_000);
+    const site = reviewSite(READY);
+    const draft = { ...site.flow.draft, clockSkewMs: -6 * 60_000 };
+    mounted = await mountReview({ ...site, flow: { ...site.flow, draft } });
+    expect(mounted.host.textContent).toContain("Ravi Kumar saved Property and location at");
+  });
+
   it("asks 7.4 as a required tick and 7.5 as Yes or No in core's words, neither chosen yet", async () => {
     const host = await open();
     expect(host.textContent).toContain(HOTEL_FORM_ACCURACY_DECLARATION.statement);

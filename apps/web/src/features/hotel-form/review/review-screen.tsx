@@ -37,8 +37,10 @@ function Review({
   const identity = reverifyOf(flow);
   const botCheck = useBotCheck(siteKey, { action: HOTEL_FORM_SUBMIT_ACTION });
   const submit = useReviewSubmit(site, draft, botCheck);
-  // When the page opened: a colleague's save in the five minutes before it is worth a warning.
+  // When the page opened, on the API's clock (review fix C7): a colleague's save in the five minutes
+  // before it is worth a warning, whatever this device's clock says.
   const [openedAt] = useState(() => Date.now());
+  const apiOpenedAt = openedAt + flow.draft.clockSkewMs;
   useFocusAfterPanel(identity !== null, BACK_AFTER_PANEL, REVIEW_HEADING_ID);
   return (
     <StepShell
@@ -50,7 +52,7 @@ function Review({
       width="form"
     >
       {identity ? <ReverifyPanel flow={flow} identity={identity} siteKey={siteKey} /> : null}
-      <ColleagueWarning saves={colleagueSavesOf(draft, openedAt)} />
+      <ColleagueWarning saves={colleagueSavesOf(draft, apiOpenedAt)} />
       <MissingPanel
         items={missingItemsOf(draft)}
         incomplete={incompleteSectionsOf(draft)}

@@ -70,11 +70,12 @@ export const DRAFT: HotelFormDraftView = {
     cuisines: { options: ["Indian", "Continental", "Asian", "Italian"], other: "Other" },
     facilities: { options: ["Swimming pool", "Spa", "Gym"], other: "Other" },
   },
+  readAt: "2026-11-26T05:13:00.000Z",
 };
 
-/** The draft as the flow holds it: read, with nothing failing. */
+/** The draft as the flow holds it: read, with nothing failing, this device's clock right. */
 export function draftView(draft: HotelFormDraftView | undefined = DRAFT): DraftView {
-  return { data: draft, isLoading: false, error: null, retry: () => undefined };
+  return { data: draft, isLoading: false, error: null, retry: () => undefined, clockSkewMs: 0 };
 }
 
 /** The draft with its request moved on (submitted, in review, changes requested, merged). */

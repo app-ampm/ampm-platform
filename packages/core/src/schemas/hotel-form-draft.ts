@@ -116,9 +116,9 @@ export const hotelFormCaps = z
 export type HotelFormCaps = z.infer<typeof hotelFormCaps>;
 
 /**
- * `GET /hotel-form/draft`'s answer: the request, every section, the people helping, the caps, and the
- * chips' options: cuisines from configuration `hotel.cuisine_options`, facilities from core
- * `HOTEL_FACILITY_OPTIONS`, each with its Other.
+ * `GET /hotel-form/draft`'s answer: the request, every section, the people helping, the caps, the chips'
+ * options (cuisines from configuration `hotel.cuisine_options`, facilities from core
+ * `HOTEL_FACILITY_OPTIONS`, each with its Other), and the API's clock when it read them.
  */
 export const hotelFormDraftView = z
   .object({
@@ -129,6 +129,12 @@ export const hotelFormDraftView = z
     options: z
       .object({ cuisines: hotelCuisineOptionsView, facilities: hotelCuisineOptionsView })
       .strict(),
+    /**
+     * The API's clock when it read the draft. The page compares it with its own clock when the answer
+     * arrived, so a time it measures against the API's (a colleague's save in the last five minutes)
+     * holds whatever this device's clock says.
+     */
+    readAt: isoDateTime,
   })
   .strict();
 export type HotelFormDraftView = z.infer<typeof hotelFormDraftView>;

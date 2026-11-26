@@ -61,7 +61,7 @@ export function flowAt(
   return {
     state: { ...INITIAL_FLOW, link: LINK, helpContact: HELP, ...state },
     me: { data: undefined, isLoading: false, error: null, retry: noop },
-    draft: { data: undefined, isLoading: false, error: null, retry: noop },
+    draft: { data: undefined, isLoading: false, error: null, retry: noop, clockSkewMs: 0 },
     isSendingCode: false,
     isVerifying: false,
     isSigningOut: false,

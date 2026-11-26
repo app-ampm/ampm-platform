@@ -15,6 +15,7 @@ import {
   FORM_COLLEAGUE_ID,
   FORM_EARLIER,
   FORM_LATER,
+  FORM_NOW,
   FORM_PERSON_ID,
   FORM_REFERENCE,
   FORM_REQUEST_ID,
@@ -184,6 +185,11 @@ describe("HotelFormDraft.get", () => {
       submittedBy: null,
       submittedAt: FORM_EARLIER.toISOString(),
     });
+  });
+
+  it("answers the API's clock when it read the draft, which the page measures recent saves against", async () => {
+    const view = await build().draft.get(formSession(), FORM_NOW);
+    expect(view.readAt).toBe(FORM_NOW.toISOString());
   });
 
   it("answers the caps and the cuisine and facility choices, each with its Other", async () => {
