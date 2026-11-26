@@ -1,10 +1,13 @@
 import { useRouter } from "expo-router";
 import { useState } from "react";
 
+import { typedEmail } from "@ampm/core";
 import { useForgotPassword } from "@ampm/api-client";
 import { Button, Input, SignInLayout, Stack, Text } from "@ampm/ui";
 
+import { refusalText } from "./refusal-text";
 import { SignInHero } from "./sign-in-hero";
+import { STAFF_INPUT_ERRORS } from "./staff-input-errors";
 
 function SentNotice({ email }: { readonly email: string }) {
   const router = useRouter();
@@ -25,10 +28,13 @@ function RequestForm() {
   const router = useRouter();
   const forgot = useForgotPassword();
   const [email, setEmail] = useState("");
+  // Sent as typed minus a phone keyboard's spaces, and shown that way (useAmpmSignIn does the same).
   const submit = (): void => {
-    if (email.trim().length > 0) forgot.mutate({ email: email.trim() });
+    const sent = typedEmail(email);
+    setEmail(sent);
+    if (sent.length > 0) forgot.mutate({ email: sent });
   };
-  if (forgot.isSuccess) return <SentNotice email={email.trim()} />;
+  if (forgot.isSuccess) return <SentNotice email={email} />;
   return (
     <Stack gap={4}>
       <Input
@@ -39,7 +45,7 @@ function RequestForm() {
         keyboardType="email-address"
         autoCapitalize="none"
         autoComplete="email"
-        errorText={forgot.isError ? forgot.error.message : undefined}
+        errorText={refusalText(forgot.error, STAFF_INPUT_ERRORS.email)}
         onSubmitEditing={submit}
       />
       <Button

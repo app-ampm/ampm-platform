@@ -20,6 +20,23 @@ describe("Input", () => {
     expect(onChangeText).toHaveBeenCalledWith("Priya");
   });
 
+  // A phone keyboard's corrections and suggestion spaces inside an address made the API refuse it.
+  it("types an email without autocorrect, spell check or capitals, unless the screen asks", async () => {
+    await renderWithProviders(
+      <>
+        <Input label="Work email" keyboardType="email-address" testID="email" />
+        <Input label="Guest name" testID="name" />
+        <Input label="Contact email" keyboardType="email-address" autoCorrect testID="chosen" />
+      </>,
+    );
+    const email = screen.getByTestId("email");
+    expect(email).toHaveProp("autoCorrect", false);
+    expect(email).toHaveProp("spellCheck", false);
+    expect(email).toHaveProp("autoCapitalize", "none");
+    expect(screen.getByTestId("name")).not.toHaveProp("autoCorrect");
+    expect(screen.getByTestId("chosen")).toHaveProp("autoCorrect", true);
+  });
+
   // The asterisk is drawn; the words say it. Read as "star" it would mean nothing.
   it("says a required field is required, never 'star'", async () => {
     await renderWithProviders(<Input label="Work email" required testID="email" />);
