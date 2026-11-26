@@ -1032,15 +1032,15 @@
     "semantic_hash": ""
   },
   "packages/ui/src/components/input/input.test.tsx": {
-    "mtime": 1795494667.96527,
-    "seen": 1795494865.853152,
-    "ast_hash": "ff9379b06d896112e5cd8af5527e14ae",
+    "mtime": 1795718743.5967937,
+    "seen": 1795718974.72127,
+    "ast_hash": "eb533bd230c80627640fed1e1d0c4b80",
     "semantic_hash": ""
   },
   "packages/ui/src/components/input/input.tsx": {
-    "mtime": 1795395449.950953,
-    "seen": 1795471715.874065,
-    "ast_hash": "ca5af1189d8275b3d1c85f672340cf95",
+    "mtime": 1795718743.5972705,
+    "seen": 1795718974.72127,
+    "ast_hash": "1e6d592798a227c5baf86a39b7d1db46",
     "semantic_hash": ""
   },
   "packages/ui/src/components/layout/index.ts": {
@@ -10602,9 +10602,9 @@
     "semantic_hash": ""
   },
   "apps/mobile/src/features/auth/forgot-password-screen.tsx": {
-    "mtime": 1795395449.9484472,
-    "seen": 1795471715.873481,
-    "ast_hash": "3c2c140c3a47e091cf254f1660e448fe",
+    "mtime": 1795718743.5940306,
+    "seen": 1795718974.694613,
+    "ast_hash": "557eb3d955a6c9ea8d068f20ddabd5da",
     "semantic_hash": ""
   },
   "apps/mobile/src/features/auth/inline-alert.tsx": {
@@ -10668,15 +10668,15 @@
     "semantic_hash": ""
   },
   "apps/mobile/src/features/auth/use-ampm-sign-in.test.tsx": {
-    "mtime": 1795395449.8578253,
-    "seen": 1795471715.873491,
-    "ast_hash": "b817f3ae098ea3d7014bd961e4a5f97c",
+    "mtime": 1795718743.5945938,
+    "seen": 1795718974.694931,
+    "ast_hash": "efa1bc2e95761133fc56b70ee4d1ed53",
     "semantic_hash": ""
   },
   "apps/mobile/src/features/auth/use-ampm-sign-in.ts": {
-    "mtime": 1795426097.9342723,
-    "seen": 1795471715.873491,
-    "ast_hash": "2115b725f20aa56e7e7c05ad104593bb",
+    "mtime": 1795718743.5950832,
+    "seen": 1795718974.694932,
+    "ast_hash": "bf835c3529065a1ece2f44ccccaca4d0",
     "semantic_hash": ""
   },
   "apps/mobile/src/features/auth/use-resend-countdown.test.ts": {
@@ -10764,9 +10764,9 @@
     "semantic_hash": ""
   },
   "packages/core/src/schemas/sign-in.ts": {
-    "mtime": 1795395449.8685093,
-    "seen": 1795471715.873954,
-    "ast_hash": "f08c24139036b956bb1eeeedf1bec40f",
+    "mtime": 1795718743.5963929,
+    "seen": 1795718974.717466,
+    "ast_hash": "484278bdad7dcf668823238656a0cd8a",
     "semantic_hash": ""
   },
   "docs/planning/production-readiness.md": {
@@ -13938,15 +13938,15 @@
     "semantic_hash": ""
   },
   "apps/api/src/common/bot-check/bot-check.adapter.spec.ts": {
-    "mtime": 1795575185.3944488,
-    "seen": 1795587571.413125,
-    "ast_hash": "645362ef6595955021a968d8b7acd110",
+    "mtime": 1795718752.3931358,
+    "seen": 1795718974.675266,
+    "ast_hash": "5550996510010cb25214ad2328cf5c57",
     "semantic_hash": ""
   },
   "apps/api/src/common/bot-check/bot-check.adapter.ts": {
-    "mtime": 1795575185.3945413,
-    "seen": 1795587571.413126,
-    "ast_hash": "9e2c8d9b8a0f94198eea0a306d5a7bb3",
+    "mtime": 1795718766.956199,
+    "seen": 1795718974.675267,
+    "ast_hash": "781139bb27ef4eaf04d7cda0032ffd89",
     "semantic_hash": ""
   },
   "apps/api/src/common/bot-check/bot-check.module.spec.ts": {
@@ -16161,6 +16161,18 @@
     "mtime": 1795679727.268974,
     "seen": 1795697652.3905568,
     "ast_hash": "2f5c3c8c985b5c48ae32bd0d12cdd334",
+    "semantic_hash": ""
+  },
+  "apps/mobile/src/features/auth/staff-input-errors.ts": {
+    "mtime": 1795718743.594225,
+    "seen": 1795718974.6947908,
+    "ast_hash": "981dcdc6d9bfc1f9e38925c67e630ef2",
+    "semantic_hash": ""
+  },
+  "packages/core/src/schemas/sign-in.test.ts": {
+    "mtime": 1795718743.5959377,
+    "seen": 1795718974.7174652,
+    "ast_hash": "29876d8a079c8e2a31e1eb206e9df393",
     "semantic_hash": ""
   }
 }
