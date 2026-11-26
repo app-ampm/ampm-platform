@@ -13,12 +13,16 @@ import {
   buttonsIn,
   decoded,
   flowAt,
+  overviewOf,
   screenOf,
   tagsWith,
 } from "./screen.test-utils";
 import type { MeView } from "./use-hotel-form-flow";
 
-/* The signed-in page, HF-08, the opening card and the form's frame (D-189 §8). */
+/*
+ * Signed in, HF-08, the opening card and the form's frame (D-189 §8). Signed in, the person lands on the
+ * overview (HF-04, D-190 §5), which kept the signed-in page's label, note, status, details and Sign out.
+ */
 
 vi.mock("@/components/bot-check/use-bot-check", () => ({
   useBotCheck: () => ({
@@ -40,9 +44,15 @@ afterEach(() => vi.useRealTimers());
 
 const loaded: MeView = { data: ME, isLoading: false, error: null, retry: () => undefined };
 const signedIn = (reverify: null | { step: "details" } = null, me = loaded, state = {}) =>
-  screenOf(flowAt({ phase: { kind: "signed_in", reverify }, session: "s", ...state }, { me }));
+  overviewOf(flowAt({ phase: { kind: "signed_in", reverify }, session: "s", ...state }, { me }));
 
 describe("signed in", () => {
+  it("leaves the sign-in for the overview: the sign-in itself shows only that it is opening the form", () => {
+    const html = screenOf(flowAt({ phase: { kind: "signed_in", reverify: null }, session: "s" }));
+    expect(html).toMatch(/<p role="status"[^>]*>Opening your form…<\/p>/);
+    expect(html).not.toContain("<h1");
+  });
+
   it("shows AMPM's label and note, the status as a word, your details, and Sign out", () => {
     const html = decoded(signedIn());
     expect(html).toMatch(/<h1 [^>]*>Seasonal refresh 2027<\/h1>/);
@@ -83,7 +93,7 @@ describe("signed in", () => {
   });
 
   it("takes the new code in place too", () => {
-    const html = screenOf(
+    const html = overviewOf(
       flowAt(
         {
           phase: {
@@ -124,7 +134,7 @@ describe("signed in", () => {
     };
     const details = signedIn({ step: "details" }, empty);
     const reverify = { step: "code" as const, issued: ON_SCREEN, resendAt: NOW + 30_000 };
-    const code = screenOf(
+    const code = overviewOf(
       flowAt({ phase: { kind: "signed_in", reverify }, session: null }, { me: empty }),
     );
     const idOf = (html: string) => /<h1 id="([^"]+)"/.exec(html)?.[1];

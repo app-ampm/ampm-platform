@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useReducer, useRef } from "react";
 import {
-  useHotelFormMe,
   useOpenHotelForm,
   useRequestHotelFormCode,
   useSignOutOfHotelForm,
@@ -9,7 +8,6 @@ import {
 } from "@ampm/api-client";
 import {
   hotelFormLinkToken,
-  type HotelFormMe,
   type HotelFormMeUpdateRequest,
   type HotelFormPerson,
 } from "@ampm/core";
@@ -34,13 +32,15 @@ import {
   takeLink,
   type SessionStore,
 } from "./hotel-form-link";
+import { asksForSession, refusalOf, saveOutcomeOf, type SaveOutcome } from "./refusal";
 import {
-  asksForSession,
-  refusalOf,
-  saveOutcomeOf,
-  type Refusal,
-  type SaveOutcome,
-} from "./refusal";
+  useSessionViews,
+  type DraftView,
+  type MeView,
+  type OnSessionRefused,
+} from "./use-session-views";
+
+export type { DraftView, MeView, QueryView } from "./use-session-views";
 
 /** The bot check as a step hands it over: the token Send carries, and how to start a fresh check. */
 export interface BotCheckPass {
@@ -48,19 +48,12 @@ export interface BotCheckPass {
   readonly reset: () => void;
 }
 
-/** The signed-in page's data: the person and the request, while it loads, and why it failed. */
-export interface MeView {
-  readonly data: HotelFormMe | undefined;
-  readonly isLoading: boolean;
-  /** A failure that is not the session's (a lost connection): shown with Try again. */
-  readonly error: string | null;
-  readonly retry: () => void;
-}
-
 /** The flow and what the steps can do. */
 export interface HotelFormFlow {
   readonly state: FlowState;
   readonly me: MeView;
+  /** The form's draft (D-190 §3), read while signed in: the overview's and the sections' data. */
+  readonly draft: DraftView;
   readonly isSendingCode: boolean;
   readonly isVerifying: boolean;
   readonly isSigningOut: boolean;
@@ -73,6 +66,11 @@ export interface HotelFormFlow {
   readonly changeDetails: () => void;
   readonly saveDetails: (change: HotelFormMeUpdateRequest) => Promise<SaveOutcome>;
   readonly signOut: () => void;
+  /**
+   * Hands the flow a call's refusal when it is the session's (a section's save): the flow then asks for a
+   * new code in place, keeping the page. True when it was the session's.
+   */
+  readonly refuseSession: (error: unknown) => boolean;
 }
 
 /** The identity step on screen: in the main flow, or in place over the signed-in page. */
@@ -129,27 +127,6 @@ function useOpening(
       );
     }
   }, [openingKey, open, dispatch, storage]);
-}
-
-/** Hands a refused session to the flow, with the signed-in person when the page has them. */
-type OnSessionRefused = (refusal: Refusal, person: HotelFormPerson | undefined) => void;
-
-/** The signed-in page's `me`, and a session it refuses handed to the flow. */
-function useSignedIn(state: FlowState, onSessionRefused: OnSessionRefused): MeView {
-  const me = useHotelFormMe(state.phase.kind === "signed_in" ? state.session : null);
-  const { error, refetch } = me;
-  const person = me.data?.person;
-  useEffect(() => {
-    const refused = error ? refusalOf(error) : null;
-    if (refused !== null && asksForSession(refused)) onSessionRefused(refused, person);
-  }, [error, onSessionRefused, person]);
-  const refusal = error ? refusalOf(error) : null;
-  return {
-    data: me.data,
-    isLoading: me.isLoading,
-    error: refusal === null || asksForSession(refusal) ? null : refusal.message,
-    retry: () => void refetch(),
-  };
 }
 
 /** A refusal of a code route, handed to the flow with the time it came and the call it refused. */
@@ -252,13 +229,21 @@ export function useHotelFormFlow(): HotelFormFlow {
   }, []);
   useOpening(state, dispatch, storage);
   useLinkArrival(dispatch);
-  const me = useSignedIn(state, onSessionRefused);
+  const { me, draft } = useSessionViews(state, onSessionRefused);
+  const person = me.data?.person;
   return {
     state,
     me,
+    draft,
     ...useSendCode(state, dispatch),
     ...useVerifyCode(state, dispatch, storage),
-    ...useSessionCalls(state, dispatch, onSessionRefused, storage, me.data?.person),
+    ...useSessionCalls(state, dispatch, onSessionRefused, storage, person),
+    refuseSession: (error) => {
+      const refusal = refusalOf(error);
+      if (!asksForSession(refusal)) return false;
+      onSessionRefused(refusal, person);
+      return true;
+    },
     reopen: () => dispatch({ type: "reopen" }),
     start: () => dispatch({ type: "start" }),
     changeClaim: (claim) => dispatch({ type: "claim_changed", claim }),

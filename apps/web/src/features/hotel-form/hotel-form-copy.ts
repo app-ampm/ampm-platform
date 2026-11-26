@@ -1,8 +1,10 @@
 /*
- * The hotel form's words (HF-01 to HF-03, HF-08 and the signed-in page; D-189 §8), in one place until the
- * public site's i18n arrives. Nothing here names a hotel: before a code the page knows only the link's
- * state, and after it only AMPM's label, note and status. The validation messages are core's schemas';
- * the refusals the API raises (HOTEL_FORM_ERRORS) are shown as the API words them.
+ * The hotel form's words (HF-01 to HF-03, HF-08 and what the overview kept of the signed-in page; D-189
+ * §8), in one place until the public site's i18n arrives; the overview's and the sections' own words are
+ * in overview-copy.ts, sections-copy.ts and sections/section-fields-copy.ts. Nothing here names a hotel:
+ * before a code the page knows only the link's state, and after it only AMPM's label, note and status.
+ * The validation messages are core's schemas'; the refusals the API raises (HOTEL_FORM_ERRORS) are shown
+ * as the API words them.
  */
 
 export const HOTEL_FORM_COPY = {
@@ -18,6 +20,8 @@ export const HOTEL_FORM_COPY = {
   helpPrefix: "Need help?",
   helpFallback: "Ask the AMPM colleague who sent you this link.",
   linkUntil: (day: string) => `This link works until ${day}.`,
+  moment: (day: string, time: string) => `on ${day} at ${time}`,
+  openingForm: "Opening your form…",
   welcome: {
     title: "Tell AMPM about",
     emphasis: "your hotel.",
@@ -91,7 +95,6 @@ export const HOTEL_FORM_COPY = {
       in_review: "In review",
       merged: "Complete",
     },
-    next: "The form's seven sections open here next: property and location, contacts, rooms, venues, booking terms, food and beverage, and files.",
     detailsHeading: "Your details",
     edit: "Edit your details",
     save: "Save",
@@ -121,6 +124,13 @@ export const HOTEL_FORM_COPY = {
     title: "This page needs",
     emphasis: "your link.",
     body: "Open the full link AMPM sent you, from the email or message it came in. If it still doesn't work, ask AMPM for a new one.",
+  },
+  notFound: {
+    eyebrow: "Page not found",
+    title: "This page",
+    emphasis: "isn't part of the form.",
+    body: "The address may be mistyped. Go back to the overview to find the section you need.",
+    back: "Back to the overview",
   },
   errors: {
     network: "We couldn't reach AMPM. Check your connection and try again.",

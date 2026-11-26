@@ -4,6 +4,7 @@ import type { HotelFormCodeIssued, HotelFormMe } from "@ampm/core";
 
 import { INITIAL_FLOW, type FlowState } from "./flow";
 import { HotelFormScreen } from "./hotel-form-screen";
+import { OverviewScreen } from "./overview-screen";
 import type { HotelFormFlow } from "./use-hotel-form-flow";
 
 /*
@@ -57,6 +58,7 @@ export function flowAt(
   return {
     state: { ...INITIAL_FLOW, link: LINK, helpContact: HELP, ...state },
     me: { data: undefined, isLoading: false, error: null, retry: noop },
+    draft: { data: undefined, isLoading: false, error: null, retry: noop },
     isSendingCode: false,
     isVerifying: false,
     isSigningOut: false,
@@ -69,6 +71,7 @@ export function flowAt(
     changeDetails: noop,
     saveDetails: () => Promise.resolve({ kind: "saved" }),
     signOut: noop,
+    refuseSession: () => false,
     ...overrides,
   };
 }
@@ -76,6 +79,11 @@ export function flowAt(
 /** The screen for a flow, as markup. */
 export function screenOf(flow: HotelFormFlow): string {
   return renderToStaticMarkup(<HotelFormScreen flow={flow} siteKey="test-site-key" />);
+}
+
+/** The overview (HF-04) for a flow, as markup: where signing in lands. */
+export function overviewOf(flow: HotelFormFlow): string {
+  return renderToStaticMarkup(<OverviewScreen flow={flow} siteKey="test-site-key" />);
 }
 
 /** The opening tags of `element` carrying `attribute`, whatever order React writes them in. */
