@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useMemo, useRef, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useRef, type ReactNode } from "react";
 import { ApiProvider } from "@ampm/api-client";
 
 import { env } from "@/env";
@@ -45,12 +45,13 @@ export function useReturnPage() {
 
 /** The flow, run once for every page under the layout. */
 function FlowHost({ children }: { readonly children: ReactNode }) {
-  const flow = useHotelFormFlow();
-  const returnPage = useReturnPage();
-  const site = useMemo<HotelFormSite>(
-    () => ({ flow, siteKey: env.NEXT_PUBLIC_TURNSTILE_SITE_KEY, ...returnPage }),
-    [flow, returnPage],
-  );
+  // The flow is a new object on every render, so the pages under it draw again with it; the return
+  // page's three calls stay the same, so an effect keyed on one runs once.
+  const site: HotelFormSite = {
+    flow: useHotelFormFlow(),
+    siteKey: env.NEXT_PUBLIC_TURNSTILE_SITE_KEY,
+    ...useReturnPage(),
+  };
   return <HotelFormSiteContext.Provider value={site}>{children}</HotelFormSiteContext.Provider>;
 }
 

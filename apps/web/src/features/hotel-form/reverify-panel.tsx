@@ -52,6 +52,7 @@ export function useFocusAfterPanel(
   useEffect(() => {
     if (wasOpen.current && !isPanelOpen) {
       const back = [...backIds, headingId]
+        .filter((id) => id !== "")
         .map((id) => document.getElementById(id))
         .find((element) => element !== null);
       back?.focus();

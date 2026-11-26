@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useRef, type FocusEvent, type ReactNode } from "react";
 
 import {
   HOTEL_FORM_SECTION_KEYS,
@@ -23,8 +23,6 @@ const COPY = SECTIONS_COPY;
 
 /** The section's heading: focus goes back to it after a choice or a new code took the place it was. */
 export const SECTION_HEADING_ID = "hf-section-heading";
-
-const NO_BACK_IDS: readonly string[] = [];
 
 const focusHeading = () => document.getElementById(SECTION_HEADING_ID)?.focus();
 
@@ -147,15 +145,22 @@ function SectionForm<F extends RefreshNote>({
   sectionKey,
   editor,
   isRefresh,
+  onLeave,
   children,
 }: {
   readonly sectionKey: HotelFormSectionKey;
   readonly editor: SectionEditor<F>;
   readonly isRefresh: boolean;
+  /** The field just left, for the page to remember. */
+  readonly onLeave: (id: string) => void;
   readonly children: ReactNode;
 }) {
+  const leave = (event: FocusEvent<HTMLElement>) => {
+    onLeave(event.target.id);
+    editor.onBlur(event);
+  };
   return (
-    <form noValidate onSubmit={(event) => event.preventDefault()} onBlur={editor.onBlur}>
+    <form noValidate onSubmit={(event) => event.preventDefault()} onBlur={leave}>
       <fieldset disabled={editor.isReadOnly} className="flex min-w-0 flex-col gap-8">
         {isRefresh ? (
           <RefreshSwitch sectionKey={sectionKey} editor={editor}>
@@ -193,7 +198,9 @@ export function SectionScreen<F extends RefreshNote>(props: SectionScreenProps<F
   const { sectionKey, draft, editor, reverify, children } = props;
   const isRefresh = draft.request.kind === "refresh";
   const place = HOTEL_FORM_SECTION_KEYS.indexOf(sectionKey) + 1;
-  useFocusAfterPanel(reverify !== null, NO_BACK_IDS, SECTION_HEADING_ID);
+  // The field the person left last: where focus goes back to once a new code was entered in place.
+  const lastField = useRef("");
+  useFocusAfterPanel(reverify !== null, [lastField.current], SECTION_HEADING_ID);
   return (
     <StepShell
       headingId={SECTION_HEADING_ID}
@@ -205,7 +212,14 @@ export function SectionScreen<F extends RefreshNote>(props: SectionScreenProps<F
       {reverify}
       <SectionNotices editor={editor} draft={draft} />
       {isRefresh ? <RefreshLead /> : null}
-      <SectionForm sectionKey={sectionKey} editor={editor} isRefresh={isRefresh}>
+      <SectionForm
+        sectionKey={sectionKey}
+        editor={editor}
+        isRefresh={isRefresh}
+        onLeave={(id) => {
+          lastField.current = id;
+        }}
+      >
         {children}
       </SectionForm>
       <SectionNav sectionKey={sectionKey} />

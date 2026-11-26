@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act } from "react";
+import { act, useState } from "react";
 import type * as ApiClient from "@ampm/api-client";
 import {
   AppError,
@@ -13,6 +13,7 @@ import { buttonNamed, byId, mount, press, type Mounted } from "@ampm/web-forms/t
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { EDITED_AT, draftView } from "../draft.test-fixtures";
+import type { IdentityStep } from "../flow";
 import { HotelFormSiteContext, type HotelFormSite } from "../hotel-form-provider";
 import { ME, flowAt } from "../screen.test-utils";
 import { AUTOSAVE_DELAY_MS } from "./section-autosave";
@@ -56,6 +57,41 @@ afterEach(() => {
   mounted = null;
   vi.useRealTimers();
 });
+
+function siteAt(reverify: IdentityStep | null = null): HotelFormSite {
+  return {
+    flow: flowAt(
+      { phase: { kind: "signed_in", reverify }, session: reverify === null ? SESSION : null },
+      {
+        me: { data: ME, isLoading: false, error: null, retry: () => undefined },
+        draft: draftView(),
+        refuseSession,
+      },
+    ),
+    siteKey: "test-site-key",
+    rememberReturn: vi.fn(),
+    landing: () => "/hotel-form/overview",
+    arrived: vi.fn(),
+  };
+}
+
+/** The rooms page under a flow that can ask for a new code in place, and take it, on a press. */
+function RoomsWithNewCode() {
+  const [reverify, setReverify] = useState<IdentityStep | null>(null);
+  return (
+    <>
+      <button type="button" onClick={() => setReverify({ step: "details" })}>
+        Session ends
+      </button>
+      <button type="button" onClick={() => setReverify(null)}>
+        New code entered
+      </button>
+      <HotelFormSiteContext.Provider value={siteAt(reverify)}>
+        <HotelFormSectionPage sectionKey="rooms" />
+      </HotelFormSiteContext.Provider>
+    </>
+  );
+}
 
 async function openRooms(): Promise<Mounted> {
   const site: HotelFormSite = {
@@ -224,6 +260,16 @@ describe("a locked request and an ended session", () => {
     const input = byId(TOTAL);
     expect(input instanceof HTMLInputElement && input.value).toBe("41");
     expect(input.matches(":disabled")).toBe(true);
+  });
+
+  it("after a new code in place, puts focus back in the field the person was in", async () => {
+    mounted = await mount(<RoomsWithNewCode />);
+    byId(TOTAL).focus();
+    await press(buttonNamed(mounted.host, "Session ends"));
+    // The panel's heading takes focus, so a keyboard and a screen reader start at the new code.
+    expect(document.activeElement?.id).toBe("hf-reverify-heading");
+    await press(buttonNamed(mounted.host, "New code entered"));
+    expect(document.activeElement).toBe(byId(TOTAL));
   });
 
   it("hands an ended session to the flow, which asks for a new code in place", async () => {
