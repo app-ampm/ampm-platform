@@ -53,9 +53,11 @@ export const HOTEL_FORM_ERRORS = {
   mobileRemoved: "AMPM removed this mobile number from the request. Ask AMPM if this is a mistake.",
   /**
    * 409 (PATCH me: the request shows its status only; a section's save: submitted, in review or showing
-   * its status only); a section's details say who submitted and when (`hotelFormReadOnlyOf`).
+   * its status only), in words true of all three, pointing to a correction; a section's details say who
+   * submitted and when (`hotelFormReadOnlyOf`).
    */
-  readOnly: "This request is complete, so nothing can be changed.",
+  readOnly:
+    "This form has been submitted, so nothing can be changed here. You can still ask AMPM for a correction.",
   /** 429 (PATCH me): more than 10 changes a minute in one session. */
   writeLimit: "Too many changes in a short time. Please wait a moment and try again.",
   /**

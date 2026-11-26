@@ -97,6 +97,12 @@ describe("the hotel form's messages", () => {
     );
   });
 
+  it("refuses a change to a submitted, reviewed or merged request in words true of all three", () => {
+    expect(HOTEL_FORM_ERRORS.readOnly).not.toMatch(/complete/i);
+    expect(HOTEL_FORM_ERRORS.readOnly).toMatch(/submitted/i);
+    expect(HOTEL_FORM_ERRORS.readOnly).toMatch(/correction/i);
+  });
+
   it("tells a person whose change could not be counted that it was not saved, not that codes failed", () => {
     expect(HOTEL_FORM_ERRORS.writesUnavailable).not.toBe(HOTEL_FORM_ERRORS.codesUnavailable);
     expect(HOTEL_FORM_ERRORS.writesUnavailable).not.toMatch(/code/i);

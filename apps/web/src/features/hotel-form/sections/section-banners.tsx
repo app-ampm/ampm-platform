@@ -172,7 +172,7 @@ function StatusLink() {
   );
 }
 
-/** Who submitted, from a refused save's details: they say who and when, the message only "complete". */
+/** Who submitted, from a refused save's details: they say who and when, which the message does not. */
 function refusedLine(readOnly: HotelFormReadOnly | null): string {
   if (readOnly?.submittedBy && readOnly.submittedAt)
     return COPY.locked.refused(readOnly.submittedBy, momentOf(readOnly.submittedAt));

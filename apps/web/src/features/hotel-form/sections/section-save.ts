@@ -14,7 +14,7 @@ import type { SaveRefusal } from "./section-autosave";
 /*
  * A refused section save (PUT /hotel-form/draft/sections/:key, D-190 §3) as the page treats it. The 409s'
  * details say what happened: a colleague's newer save of this section, or who submitted the request (the
- * readOnly message says "complete", so the page words the locked case from these details). A session's
+ * page words the locked case from these details, keeping the unsaved text in view). A session's
  * refusal waits for a new code, which the flow asks for in place; a 429 waits out its Retry-After. Every
  * other refusal is shown in the API's words, or the page's when the API had none.
  */
