@@ -23,6 +23,9 @@ const ENQUIRY_SELECT = {
   datesFlexible: true,
   guestEstimate: true,
   roomsRequired: true,
+  budgetAmountMin: true,
+  budgetAmountMax: true,
+  budgetCurrency: true,
   functionsSummary: true,
   contactPreference: true,
   notesClient: true,
@@ -46,6 +49,10 @@ export interface EnquiryWriteData {
   readonly datesFlexible: boolean;
   readonly guestEstimate: number;
   readonly roomsRequired: number | null;
+  /** Rupee decimal strings for the numeric(14,2) columns (moneyToDecimalString), or null; INR currency. */
+  readonly budgetAmountMin: string | null;
+  readonly budgetAmountMax: string | null;
+  readonly budgetCurrency: string;
   readonly functionsSummary: string | null;
   readonly contactPreference: string | null;
   readonly notesClient: string | null;
@@ -97,6 +104,9 @@ export class EnquiriesRepository {
         datesFlexible: data.datesFlexible,
         guestEstimate: data.guestEstimate,
         roomsRequired: data.roomsRequired,
+        budgetAmountMin: data.budgetAmountMin,
+        budgetAmountMax: data.budgetAmountMax,
+        budgetCurrency: data.budgetCurrency,
         functionsSummary: data.functionsSummary,
         contactPreference: data.contactPreference,
         notesClient: data.notesClient,

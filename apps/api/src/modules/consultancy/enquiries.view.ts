@@ -7,6 +7,8 @@ import type {
   HotelEnquiryStaffView,
 } from "@ampm/core";
 
+import { toClientMoney } from "../../common/money.js";
+
 import type { EnquiryEventRow } from "./enquiry-events.repository.js";
 import type { EnquiryStaffExtras } from "./enquiry-insights.repository.js";
 import type { EnquiryRow } from "./enquiries.repository.js";
@@ -37,6 +39,8 @@ export function toEnquiryClientView(row: EnquiryRow): HotelEnquiryClientView {
     datesFlexible: row.datesFlexible,
     guestEstimate: row.guestEstimate,
     roomsRequired: row.roomsRequired,
+    budgetMin: row.budgetAmountMin ? toClientMoney(row.budgetAmountMin) : null,
+    budgetMax: row.budgetAmountMax ? toClientMoney(row.budgetAmountMax) : null,
     functionsSummary: row.functionsSummary,
     contactPreference: row.contactPreference,
     notesClient: row.notesClient,

@@ -87,6 +87,20 @@ describe("dates", () => {
     ).toBe("12–14 FEB 2027 · 1 guest");
   });
 
+  it("adds the client's budget to the stay line when they gave one", () => {
+    const stay = { dateFrom: "2027-02-12", dateTo: "2027-02-14", guestEstimate: 300 };
+    const money = (minor: number) => ({ minor, currency: "INR" as const });
+    const parts = enquiryFacts({
+      ...stay,
+      roomsRequired: null,
+      datesFlexible: false,
+      budgetMin: money(50_000_000),
+      budgetMax: money(80_000_000),
+    }).split(" · ");
+    expect(parts).toHaveLength(3);
+    expect(parts[2]).toMatch(/\d/);
+  });
+
   it("dates a proposal by when it was shared and how long it holds", () => {
     expect(proposalDates({ sharedAt: null, validUntil: "2026-11-20" })).toBe(
       "Valid until 20 NOV 2026",

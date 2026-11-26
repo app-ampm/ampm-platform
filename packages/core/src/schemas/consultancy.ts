@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { cursorQuery, isoDateTime, page, uuid } from "./common.js";
+import { cursorQuery, isoDateTime, money, page, uuid } from "./common.js";
 import { hotelProposalStatus } from "./hotel-proposals.js";
 
 /**
@@ -14,6 +14,16 @@ import { hotelProposalStatus } from "./hotel-proposals.js";
 
 /** A calendar date on the wire (no time); the DB column is `date`. */
 const isoDate = z.iso.date();
+
+/**
+ * The client's own estimated budget for the stay (CLIENT, A-16: INR). The largest value the
+ * `numeric(14,2)` budget columns hold, in minor units (paise); a value past it is a 422, not a column
+ * overflow. Null is always fine — the budget is optional on the brief. This is the client's stated figure,
+ * never an AMPM cost or margin, so it is CLIENT, not RESTRICTED-FINANCE (security.md).
+ */
+const MAX_BUDGET_MINOR = 99_999_999_999_999;
+const budgetAmountOk = (m: { minor: number } | null): boolean =>
+  m === null || (m.minor >= 0 && m.minor <= MAX_BUDGET_MINOR);
 
 export const hotelEnquiryStatus = z.enum([
   "draft",
@@ -125,6 +135,8 @@ export const hotelEnquiryCreateRequest = z
     datesFlexible: z.boolean().default(false),
     guestEstimate: z.number().int().min(1),
     roomsRequired: z.number().int().min(0).nullable().default(null),
+    budgetMin: money.nullable().default(null),
+    budgetMax: money.nullable().default(null),
     functionsSummary: z.string().max(2000).nullable().default(null),
     contactPreference: z.string().max(255).nullable().default(null),
     notesClient: z.string().max(4000).nullable().default(null),
@@ -133,7 +145,15 @@ export const hotelEnquiryCreateRequest = z
   .refine((v) => v.dateTo >= v.dateFrom, {
     message: "dateTo must be on or after dateFrom",
     path: ["dateTo"],
-  });
+  })
+  .refine((v) => budgetAmountOk(v.budgetMin) && budgetAmountOk(v.budgetMax), {
+    message: "budget is out of range",
+    path: ["budgetMax"],
+  })
+  .refine(
+    (v) => v.budgetMin === null || v.budgetMax === null || v.budgetMax.minor >= v.budgetMin.minor,
+    { message: "budgetMax must be on or above budgetMin", path: ["budgetMax"] },
+  );
 export type HotelEnquiryCreateRequest = z.infer<typeof hotelEnquiryCreateRequest>;
 
 /** A client edits their own free-text note on an enquiry (§5.4: CR update own `notes_client`). */
@@ -231,6 +251,8 @@ const enquiryClientFields = {
   datesFlexible: z.boolean(),
   guestEstimate: z.number().int(),
   roomsRequired: z.number().int().nullable(),
+  budgetMin: money.nullable(),
+  budgetMax: money.nullable(),
   functionsSummary: z.string().nullable(),
   contactPreference: z.string().nullable(),
   notesClient: z.string().nullable(),

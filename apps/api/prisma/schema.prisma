@@ -2156,6 +2156,12 @@ model HotelEnquiry {
   datesFlexible      Boolean              @default(false) @map("dates_flexible")
   guestEstimate      Int                  @map("guest_estimate")
   roomsRequired      Int?                 @map("rooms_required")
+  // The client's own estimated budget range for the stay (CLIENT, A-16: INR). Their stated figure, never
+  // an AMPM cost or margin, so CLIENT not RESTRICTED-FINANCE; separate client/internal columns (A-4) do
+  // not apply. numeric(14,2) rupees ↔ the wire's `money` (paise) through common/money.ts.
+  budgetAmountMin    Decimal?             @map("budget_amount_min") @db.Decimal(14, 2)
+  budgetAmountMax    Decimal?             @map("budget_amount_max") @db.Decimal(14, 2)
+  budgetCurrency     String               @default("INR") @map("budget_currency") @db.VarChar(3)
   functionsSummary   String?              @map("functions_summary") @db.Text
   contactPreference  String?              @map("contact_preference") @db.VarChar(255)
   notesClient        String?              @map("notes_client") @db.Text

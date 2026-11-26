@@ -15,6 +15,7 @@ import {
 import type { Entitlements } from "@ampm/policy";
 
 import { AppLogger } from "../../common/logger.service.js";
+import { moneyToDecimalString } from "../../common/money.js";
 import { PrismaService } from "../../db/prisma.service.js";
 import { Prisma } from "../../generated/prisma/client.js";
 import { EventBus } from "../../jobs/event-bus.js";
@@ -247,6 +248,9 @@ function buildEnquiryWrite(
     datesFlexible: request.datesFlexible,
     guestEstimate: request.guestEstimate,
     roomsRequired: request.roomsRequired,
+    budgetAmountMin: request.budgetMin ? moneyToDecimalString(request.budgetMin) : null,
+    budgetAmountMax: request.budgetMax ? moneyToDecimalString(request.budgetMax) : null,
+    budgetCurrency: request.budgetMin?.currency ?? request.budgetMax?.currency ?? "INR",
     functionsSummary: request.functionsSummary,
     contactPreference: request.contactPreference,
     notesClient: request.notesClient,
