@@ -211,7 +211,7 @@ export function SectionScreen<F extends RefreshNote>(props: SectionScreenProps<F
   const lastField = useRef("");
   useFocusAfterPanel(reverify !== null, [lastField.current], SECTION_HEADING_ID);
   // Turned read-only under a control that went or is disabled: focus to the locked banner's heading.
-  useFocusOnLock(editor.isReadOnly);
+  useFocusOnLock(editor.isReadOnly, SECTION_HEADING_ID);
   return (
     <StepShell
       headingId={SECTION_HEADING_ID}

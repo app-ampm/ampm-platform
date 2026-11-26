@@ -7,20 +7,24 @@ import { describe, expect, it, vi } from "vitest";
 import { EDITED_AT } from "../draft.test-fixtures";
 import { AUTOSAVE_DELAY_MS } from "./section-autosave";
 import {
+  SAVED,
   TOTAL,
   advance,
   api,
   leaveField,
   openRooms,
   setUpPageTests,
+  siteAt,
   type,
 } from "./section-page.test-utils";
+import { SECTION_HEADING_ID } from "./section-screen";
 
 /*
  * Focus as a section turns read-only under it (D-190 §5, review fix F5): a colleague submitted, so the
  * person's save came back locked. A control that goes with it (the save line's Retry, Add, Remove) or is
  * disabled (a list, a tick, a choice, a chip) never leaves focus on <body>: it goes to the locked banner's
- * heading, which says why. Synthetic answers only.
+ * heading, which says why; once the section opens again (review fix F4), from that heading to the
+ * section's own. Synthetic answers only.
  */
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ replace: vi.fn() }) }));
@@ -75,6 +79,26 @@ describe("focus as the section turns read-only (review fix F5)", () => {
     await act(async () => refuse(locked()));
     expect(list.disabled).toBe(true);
     expect(document.activeElement).toBe(byId(LOCKED_HEADING));
+  });
+
+  it("goes back to the section's heading when the banner it was on goes as the section opens again", async () => {
+    api.save
+      .mockRejectedValueOnce(errors.network())
+      .mockRejectedValueOnce(locked())
+      .mockResolvedValue(SAVED);
+    const page = await openRooms();
+    await type(TOTAL, "41");
+    await advance(AUTOSAVE_DELAY_MS);
+    const retry = buttonNamed(page.host, "Retry");
+    retry.focus();
+    await press(retry);
+    await advance(0);
+    expect(document.activeElement).toBe(byId(LOCKED_HEADING));
+    // AMPM asks for changes: a read after the submit says the request takes answers again.
+    const read = { readAt: "2026-11-26T11:00:00.000Z", isEditable: true };
+    await act(async () => siteAt().sections.draftRead(read));
+    expect(page.host.querySelector(`#${LOCKED_HEADING}`)).toBeNull();
+    expect(document.activeElement).toBe(byId(SECTION_HEADING_ID));
   });
 
   it("leaves focus on nothing when it had left Retry for the page's background before Retry went", async () => {

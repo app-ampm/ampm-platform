@@ -9,11 +9,12 @@ import { LOCKED_HEADING_ID } from "./section-banners";
  * then puts focus on <body> (at once for one that went, at its next frame for one disabled). Straight
  * after the render that made the section read-only, focus moves to the locked banner's heading, which
  * says why, before the browser can drop it. Focus on a field that stays focusable, or nowhere already,
- * is left where it is.
+ * is left where it is. When the section opens again (AMPM asked for changes, review fix F4), the banner
+ * goes: focus that was on it moves to the section's own heading (`headingId`).
  *
- *   useFocusOnLock(editor.isReadOnly);
+ *   useFocusOnLock(editor.isReadOnly, SECTION_HEADING_ID);
  */
-export function useFocusOnLock(isReadOnly: boolean): void {
+export function useFocusOnLock(isReadOnly: boolean, headingId: string): void {
   // The element focus was last on: still connected unless it went with a render.
   const last = useRef<Element | null>(null);
   useEffect(() => {
@@ -37,11 +38,12 @@ export function useFocusOnLock(isReadOnly: boolean): void {
     };
   }, []);
   useLayoutEffect(() => {
-    if (!isReadOnly) return;
     const went = last.current !== null && !last.current.isConnected;
-    if (isOnNothing() ? went : document.activeElement?.matches(":disabled"))
-      document.getElementById(LOCKED_HEADING_ID)?.focus();
-  }, [isReadOnly]);
+    const isLost = isOnNothing()
+      ? went
+      : isReadOnly && document.activeElement?.matches(":disabled");
+    if (isLost) document.getElementById(isReadOnly ? LOCKED_HEADING_ID : headingId)?.focus();
+  }, [isReadOnly, headingId]);
 }
 
 /** Whether focus is on no element: <body>, as a browser leaves it. */
