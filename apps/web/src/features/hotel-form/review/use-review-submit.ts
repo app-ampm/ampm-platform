@@ -13,6 +13,7 @@ import type { BotCheckControl } from "@/components/bot-check/use-bot-check";
 
 import type { HotelFormSite } from "../hotel-form-provider";
 import { HOTEL_FORM_ROUTES } from "../hotel-form-routes";
+import type { HeldSections } from "../sections/held-sections";
 import { usePersonScoped } from "../use-person-scoped";
 import { REVIEW_COPY as COPY } from "./review-copy";
 import {
@@ -38,7 +39,7 @@ export type ReviewNotice =
       readonly items: readonly HotelFormMissingItem[];
     }
   | {
-      readonly kind: "sections_changed";
+      readonly kind: "sections_changed" | "pending";
       readonly message: string;
       readonly sections: readonly HotelFormSectionKey[];
     };
@@ -80,6 +81,17 @@ function noticeOf(refusal: SubmitRefusal, now: number): ReviewNotice | null {
     default:
       return refusal;
   }
+}
+
+/**
+ * Sections with changes not saved yet would not be in what is submitted (review fix F2): they are saved at
+ * once (the page stays, so no keepalive) and named, and nothing is sent; null when every change is saved.
+ */
+function savingFirst(sections: HeldSections): ReviewNotice | null {
+  const pending = sections.pendingSections();
+  if (pending.length === 0) return null;
+  sections.flushAll({ keepalive: false });
+  return { kind: "pending", message: COPY.pending, sections: pending };
 }
 
 /** No refusal shown on either declaration. */
@@ -162,10 +174,11 @@ function useSubmitCall(site: HotelFormSite, botCheck: BotCheckControl, page: Sub
 
 /**
  * HF-06's Submit (D-190 §5): 7.4 and 7.5 as the person answers them, then on Submit, in order, the
+ * sections with changes not saved yet (saved at once, named, and nothing sent: review fix F2), the
  * declarations (focus on the first unanswered), the missing items, the bot check's pass, and the call with
- * the section versions the page showed (`draft` is the page's snapshot, never a later read). Success goes to the status page; a refusal shows beside Submit and
- * takes focus (useSubmitCall); a 429 holds Submit back until its wait is over, saying so again if pressed.
- * Submit is disabled only while it sends.
+ * the section versions the page showed (`draft` is the page's snapshot, never a later read). Success goes
+ * to the status page; a refusal shows beside Submit and takes focus (useSubmitCall); a 429 holds Submit
+ * back until its wait is over, saying so again if pressed. Submit is disabled only while it sends.
  *
  *   const submit = useReviewSubmit(site, draft, botCheck);
  */
@@ -181,6 +194,8 @@ export function useReviewSubmit(
     const { notice } = page;
     if (call.isSending) return;
     if (notice?.kind === "wait" && notice.retryAt > Date.now()) return page.show(notice);
+    const saving = savingFirst(site.sections);
+    if (saving !== null) return page.show(saving);
     const { errors, step } = submitCheckOf(declarations.fields, draft, botCheck.token);
     declarations.setErrors(errors);
     if (step.kind === "fix_declarations") return focusDeclaration(errors);

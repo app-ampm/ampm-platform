@@ -204,6 +204,11 @@ export class HeldSections {
     return Object.keys(this.statusCache).length > 0;
   }
 
+  /** The sections with text not saved yet, in the form's order: Submit and Sign out name them. */
+  pendingSections(): HotelFormSectionKey[] {
+    return HOTEL_FORM_SECTION_KEYS.filter((key) => this.statusCache[key] !== undefined);
+  }
+
   private isOutdated<K extends HotelFormSectionKey>(
     held: HeldSection<K, SectionFieldsMap[K]>,
     opened: OpenedSection<K>,

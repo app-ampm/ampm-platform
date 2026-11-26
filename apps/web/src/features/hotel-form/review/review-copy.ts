@@ -58,6 +58,9 @@ export const REVIEW_COPY = {
   submitting: "Submitting…",
   waitingForCheck:
     "The security check hasn't finished yet. Wait a moment for it, then submit again.",
+  /** Submit pressed while sections still had changes not saved: they are saved first (review fix F2). */
+  pending:
+    "Some of your changes aren't saved yet, so nothing was submitted. We're saving them now: submit again once they're saved. A section below that still says its changes aren't saved shows why when you open it.",
   newCode:
     "Enter a new code above, then submit again. Your choices here are kept if you sign in as yourself; for anyone else they start afresh.",
   waitLeft: (time: string) => `You can submit again in ${time}.`,

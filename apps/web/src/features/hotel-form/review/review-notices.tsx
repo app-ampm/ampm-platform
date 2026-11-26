@@ -20,6 +20,7 @@ import { FormButton } from "../form-parts";
 import { HOTEL_FORM_COPY } from "../hotel-form-copy";
 import { sectionPath } from "../hotel-form-routes";
 import { timeOfDay } from "../hotel-form-time";
+import { SectionLinks } from "../section-links";
 import { SECTION_TITLES } from "../sections-copy";
 import { REVIEW_COPY as COPY } from "./review-copy";
 import { missingItemWhere, type ColleagueSave } from "./review.form";
@@ -28,7 +29,7 @@ import type { ShownNotice } from "./use-review-submit";
 /*
  * HF-06's notices (D-190 §5): a colleague's recent save, what is still needed before submitting (and the
  * sections not complete, which only warn), and the notice beside Submit that says why it did not go
- * through, with the way on.
+ * through, with the way on: the sections to see to, a reload or a wait.
  */
 
 /** The notice beside Submit: it takes focus each time it is shown. */
@@ -54,21 +55,6 @@ function MissingItemLinks({
         <li key={`${item.section}.${item.field ?? ""}.${place}`}>
           <Link href={sectionPath(item.section)} className={LINK_STYLES}>
             {COPY.missing.item(missingItemWhere(item, sections), item.message)}
-          </Link>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-/** Sections by name, each a link to its page. */
-function SectionLinks({ sections }: { readonly sections: readonly HotelFormSectionKey[] }) {
-  return (
-    <ul className="flex flex-col">
-      {sections.map((key) => (
-        <li key={key}>
-          <Link href={sectionPath(key)} className={LINK_STYLES}>
-            {SECTION_TITLES[key].title}
           </Link>
         </li>
       ))}
@@ -203,6 +189,7 @@ function NoticeWayOn({
 }) {
   switch (notice.kind) {
     case "sections_changed":
+    case "pending":
       return <SectionLinks sections={notice.sections} />;
     case "incomplete":
       return <MissingItemLinks items={notice.items} sections={sections} />;

@@ -18,6 +18,7 @@ import type { HotelFormSite } from "../hotel-form-provider";
 import { HOTEL_FORM_ROUTES } from "../hotel-form-routes";
 import { LoadingStep } from "../loading-step";
 import { ReverifyPage, ReverifyPanel, reverifyOf, useFocusAfterPanel } from "../reverify-panel";
+import { useHeldStatuses } from "../sections/use-held-sections";
 import { StepShell } from "../step-shell";
 import { REVIEW_COPY as COPY } from "./review-copy";
 import { ReviewDeclarations, SUBMIT_ID } from "./review-declarations";
@@ -66,6 +67,8 @@ function Review({
   const identity = reverifyOf(flow);
   const botCheck = useBotCheck(siteKey, { action: HOTEL_FORM_SUBMIT_ACTION });
   const { shown: draft, submit, changed, showLatest } = useReviewState(site, latest, botCheck);
+  // Changes made in a section and not saved yet: the summary does not show them (review fix F2).
+  const pending = useHeldStatuses(site.sections);
   // When the page opened, on the API's clock (review fix C7): a colleague's save in the five minutes
   // before it is worth a warning, whatever this device's clock says.
   const [openedAt] = useState(() => Date.now());
@@ -88,7 +91,7 @@ function Review({
         incomplete={incompleteSectionsOf(draft)}
         sections={draft.sections}
       />
-      <AnswersSummary sections={draft.sections} canEdit changed={changed} />
+      <AnswersSummary sections={draft.sections} canEdit changed={changed} pending={pending} />
       <ReviewDeclarations submit={submit} botCheck={botCheck} sections={draft.sections} />
       <ButtonLink href={HOTEL_FORM_ROUTES.overview} variant="secondary" size="lg">
         {COPY.back}
@@ -114,10 +117,10 @@ function useLeaveWhenLocked(site: HotelFormSite): boolean {
 /**
  * HF-06, Review and submit (D-190 §5; plan §4.4 and §8), once signed in: a colleague's change while the
  * page was open, a colleague's recent save, what is still needed, the answers with Edit links (the draft as
- * the page opened with it), 7.4 and 7.5, Turnstile and Submit. While the draft loads,
- * skeleton; when it could not load, why, with Try again; a refused session asks for a new code in place
- * (the page itself when there is nothing yet to keep). A request that no longer takes answers goes to the
- * status page.
+ * the page opened with it, each section with changes not saved yet marked), 7.4 and 7.5, Turnstile and
+ * Submit. While the draft loads, skeleton; when it could not load, why, with Try again; a refused session
+ * asks for a new code in place (the page itself when there is nothing yet to keep). A request that no
+ * longer takes answers goes to the status page.
  *
  *   <ReviewScreen site={site} />
  */

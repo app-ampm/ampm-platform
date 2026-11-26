@@ -22,6 +22,7 @@ import { HOTEL_FORM_COPY } from "./hotel-form-copy";
 import { sectionPath } from "./hotel-form-routes";
 import { momentOf } from "./hotel-form-time";
 import { OVERVIEW_COPY as COPY } from "./overview-copy";
+import { PendingLine } from "./pending-line";
 import type { HeldPending } from "./sections/held-section";
 import type { HeldSections } from "./sections/held-sections";
 import { useHeldStatuses } from "./sections/use-held-sections";
@@ -70,17 +71,6 @@ function lastSavedLine(section: HotelFormDraftSections[HotelFormSectionKey]): st
   return section.lastEditedBy === null
     ? COPY.sections.lastSavedUnnamed(moment)
     : COPY.sections.lastSaved(section.lastEditedBy, moment);
-}
-
-/** Changes left in a section not saved yet: waiting to save by themselves, or needing the person. */
-function PendingLine({ pending }: { readonly pending: Exclude<HeldPending, null> }) {
-  return (
-    <span
-      className={textStyles({ variant: "caption", tone: pending === "unsaved" ? "brand" : "body" })}
-    >
-      {COPY.sections[pending]}
-    </span>
-  );
 }
 
 /** One section: its title as the link, its status as a word, who saved it last, and what waits. */
