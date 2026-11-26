@@ -40,8 +40,9 @@ test("HF-04 and HF-05: signed in on the overview, a section saves as it is typed
   await page.reload();
   await expect(page.getByLabel("Hotel name")).toHaveValue("E2E Synthetic Lake Palace");
   await backToOverview(page);
+  // The person's own save says "you", told by the API by person, never by name (review fix C4).
   await expect(page.getByRole("link", { name: /^Property and location/ })).toContainText(
-    "Last saved by Asha Rao",
+    "Last saved by you",
   );
   await expect(page.getByRole("link", { name: /^Property and location/ })).toContainText(
     "In progress",
