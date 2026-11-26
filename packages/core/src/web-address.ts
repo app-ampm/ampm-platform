@@ -94,3 +94,49 @@ export function normaliseWebAddress(text: string): string | null {
 export function webAddressHost(text: string): string | null {
   return parse(text)?.host ?? null;
 }
+
+/** The longest website a hotel keeps (`hotels.website`, varchar(255)). */
+export const WEBSITE_MAX_LENGTH = 255;
+
+/** A scheme written with `://`: an address that names one other than https is refused. */
+const SCHEMED = /^[A-Za-z][A-Za-z0-9+.-]*:\/\//;
+const HTTPS = /^https:\/\//i;
+/** One DNS label as the URL parser writes it: letters, digits and inner hyphens. */
+const LABEL = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/;
+/** A top-level domain: letters, or an internationalised one in punycode. */
+const TOP_LEVEL = /^(?:[a-z]{2,63}|xn--[a-z0-9-]{1,59})$/;
+
+/** Whether a parsed host is a registered name: dotted labels and a real top-level domain, never an IP. */
+function isRegisteredHost(hostname: string): boolean {
+  const labels = hostname.split(".");
+  if (labels.length < 2 || !labels.every((label) => LABEL.test(label))) return false;
+  return TOP_LEVEL.test(labels.at(-1) ?? "");
+}
+
+/**
+ * A hotel's official website as the hotel form takes it (D-190 §2): https only. Text typed without a
+ * scheme reads as https (`www.hotel.example` becomes `https://www.hotel.example`); http and every other
+ * scheme are refused, and so are an address naming a user or a port, an IP address, a host without a
+ * top-level domain, whitespace or a backslash inside, and an address over {@link WEBSITE_MAX_LENGTH}
+ * characters. The address is kept as typed, trimmed, never fetched.
+ *
+ * @example
+ * httpsWebsite(" www.synthetic-hotel.example "); // "https://www.synthetic-hotel.example"
+ * httpsWebsite("http://synthetic-hotel.example"); // null
+ */
+export function httpsWebsite(text: string): string | null {
+  const trimmed = text.trim();
+  if (trimmed === "" || /[\s\\]/.test(trimmed)) return null;
+  if (SCHEMED.test(trimmed) && !HTTPS.test(trimmed)) return null;
+  const website = HTTPS.test(trimmed) ? trimmed : `https://${trimmed.replace(/^\/\//, "")}`;
+  if (website.length > WEBSITE_MAX_LENGTH) return null;
+  let url: InstanceType<typeof URL>;
+  try {
+    url = new URL(website);
+  } catch {
+    return null;
+  }
+  if (url.protocol !== "https:" || url.username !== "" || url.password !== "") return null;
+  if (url.port !== "" || !isRegisteredHost(url.hostname)) return null;
+  return website;
+}

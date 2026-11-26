@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { normaliseWebAddress, WEB_ADDRESS_KEY_MAX_LENGTH, webAddressHost } from "./web-address";
+import {
+  httpsWebsite,
+  normaliseWebAddress,
+  WEB_ADDRESS_KEY_MAX_LENGTH,
+  WEBSITE_MAX_LENGTH,
+  webAddressHost,
+} from "./web-address";
 
 /*
  * A hotel's web address as a key (D-188 §6): the proposed-address key of a new-hotel request and the
@@ -133,5 +139,68 @@ describe("webAddressHost", () => {
   it("answers null where normaliseWebAddress does", () => {
     expect(webAddressHost("ftp://synthetic-hotel.example")).toBeNull();
     expect(webAddressHost("not a web address")).toBeNull();
+  });
+});
+
+/* A hotel's official website as the hotel form takes it (D-190 §2): https only. */
+describe("httpsWebsite", () => {
+  it("keeps an https address as typed, trimmed", () => {
+    for (const link of [
+      "https://www.synthetic-hotel.example",
+      "https://synthetic-hotel.example/weddings?season=winter#venues",
+      "HTTPS://Synthetic-Hotel.Example/Rooms",
+      "https://bücher.example",
+    ]) {
+      expect(httpsWebsite(` ${link} `), link).toBe(link);
+    }
+  });
+
+  it("reads an address typed without a scheme as https", () => {
+    expect(httpsWebsite("www.synthetic-hotel.example")).toBe("https://www.synthetic-hotel.example");
+    expect(httpsWebsite("synthetic-hotel.example/weddings")).toBe(
+      "https://synthetic-hotel.example/weddings",
+    );
+  });
+
+  it("refuses http and every other scheme", () => {
+    for (const link of [
+      "http://synthetic-hotel.example",
+      "ftp://synthetic-hotel.example",
+      "javascript://synthetic-hotel.example",
+      "mailto:sales@synthetic-hotel.example",
+    ]) {
+      expect(httpsWebsite(link), link).toBeNull();
+    }
+  });
+
+  it("refuses an address that names a user, a port, an IP address or no real host", () => {
+    for (const link of [
+      "sales@synthetic-hotel.example",
+      "https://user:secret@synthetic-hotel.example",
+      "https://synthetic-hotel.example:8443",
+      "https://192.0.2.10",
+      "https://[2001:db8::1]",
+      "https://localhost",
+      "https://synthetic-hotel",
+      "https://.example",
+      "https://synthetic..example",
+      "https://-synthetic.example",
+      "https://synthetic-hotel.123",
+      "https://",
+      "",
+      "   ",
+    ]) {
+      expect(httpsWebsite(link), link).toBeNull();
+    }
+  });
+
+  it("refuses whitespace or a backslash inside, and an address longer than the catalogue keeps", () => {
+    expect(httpsWebsite("https://synthetic hotel.example")).toBeNull();
+    expect(httpsWebsite("https://synthetic-hotel.example\\rooms")).toBeNull();
+    const long = `https://synthetic-hotel.example/${"a".repeat(WEBSITE_MAX_LENGTH)}`;
+    expect(httpsWebsite(long)).toBeNull();
+    const fits = `https://synthetic-hotel.example/${"a".repeat(WEBSITE_MAX_LENGTH - 32)}`;
+    expect(fits).toHaveLength(WEBSITE_MAX_LENGTH);
+    expect(httpsWebsite(fits)).toBe(fits);
   });
 });

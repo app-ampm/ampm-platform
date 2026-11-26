@@ -70,3 +70,14 @@ export * from "./hotel-info-request-views";
 // The hotel form's public routes (D-189 §4): the identity step's bodies, answers and refusals.
 export * from "./hotel-form";
 export * from "./hotel-form-refusals";
+// The form itself (D-190 §2 and §3): the lists it offers, the seven section drafts with their fields and
+// caps, what submit needs and what a revision holds, the declarations, and the draft's contracts.
+export * from "./indian-states";
+export * from "./hotel-form-options";
+export * from "./hotel-form-fields";
+export * from "./hotel-form-section-keys";
+export * from "./hotel-form-sections";
+export * from "./hotel-form-submit";
+export * from "./hotel-form-revision";
+export * from "./hotel-form-declarations";
+export * from "./hotel-form-draft";

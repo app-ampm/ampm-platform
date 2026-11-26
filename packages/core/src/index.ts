@@ -47,8 +47,17 @@ export type {
   HotelFieldKinds,
   HotelFieldValues,
 } from "./hotel-change-set";
-// A hotel's web address as a key (D-188 §6): a new-hotel request's proposed-address key and the hints.
-export { normaliseWebAddress, WEB_ADDRESS_KEY_MAX_LENGTH, webAddressHost } from "./web-address";
+// A hotel's web address as a key (D-188 §6): a new-hotel request's proposed-address key and the hints;
+// and the hotel form's https-only website (D-190 §2).
+export {
+  httpsWebsite,
+  normaliseWebAddress,
+  WEB_ADDRESS_KEY_MAX_LENGTH,
+  WEBSITE_MAX_LENGTH,
+  webAddressHost,
+} from "./web-address";
+// Canonical JSON (D-190 §1): what the hotel form's section and revision hashes are taken of, and its size.
+export { canonicalJson, utf8ByteLength } from "./canonical-json";
 export { matchContact, matchRowsByName } from "./hotel-row-match";
 export type {
   HotelContactMatch,
