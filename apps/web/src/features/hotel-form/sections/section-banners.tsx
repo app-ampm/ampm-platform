@@ -32,6 +32,9 @@ import type { SaveState } from "./section-autosave";
 
 const COPY = SECTIONS_COPY;
 
+/** The locked banner's heading: focus goes to it when the section turns read-only under a control. */
+export const LOCKED_HEADING_ID = "hf-locked-heading";
+
 /** The save line's words: Saved, Saving… or Not saved – and why; nothing to say gives the idle line. */
 function saveWords(
   save: SaveState<HotelFormSectionKey>,
@@ -99,7 +102,10 @@ export function SaveLine({ save, problem, hasMarked, onRetry }: SaveLineProps) {
   );
 }
 
-/** A gold callout that is announced as it appears (role alert): something the person must decide or know. */
+/**
+ * A gold callout that is announced as it appears (role alert): something the person must decide or know.
+ * Its heading can take focus from the page.
+ */
 function AlertCallout({
   id,
   heading,
@@ -115,7 +121,11 @@ function AlertCallout({
       aria-labelledby={id}
       className={cn(glassStyles({ recipe: "gold", blur: false }), calloutStyles, "flex-col gap-3")}
     >
-      <h2 id={id} className={textStyles({ variant: "label", tone: "primary" })}>
+      <h2
+        id={id}
+        tabIndex={-1}
+        className={cn(textStyles({ variant: "label", tone: "primary" }), "outline-none")}
+      >
         {heading}
       </h2>
       {children}
@@ -218,7 +228,7 @@ export interface LockedBannerProps {
 export function LockedBanner({ refused, request }: LockedBannerProps) {
   if (refused !== null)
     return (
-      <AlertCallout id="hf-locked-heading" heading={COPY.locked.heading}>
+      <AlertCallout id={LOCKED_HEADING_ID} heading={COPY.locked.heading}>
         <p className={textStyles({ variant: "bodySmall", tone: "primary" })}>
           {refusedLine(refused.readOnly)}
         </p>
@@ -237,7 +247,11 @@ export function LockedBanner({ refused, request }: LockedBannerProps) {
         "flex-col gap-3",
       )}
     >
-      <h2 id="hf-locked-heading" className={textStyles({ variant: "label", tone: "primary" })}>
+      <h2
+        id={LOCKED_HEADING_ID}
+        tabIndex={-1}
+        className={cn(textStyles({ variant: "label", tone: "primary" }), "outline-none")}
+      >
         {isComplete ? OVERVIEW_COPY.complete.heading : OVERVIEW_COPY.locked.heading}
       </h2>
       <p className={textStyles({ variant: "bodySmall", tone: "primary" })}>

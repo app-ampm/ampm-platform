@@ -17,6 +17,7 @@ import { SECTION_TITLES, SECTIONS_COPY } from "../sections-copy";
 import { StepShell } from "../step-shell";
 import { fieldId } from "./field-values";
 import { ConflictBanner, LockedBanner, SaveLine, UnreadableBanner } from "./section-banners";
+import { useFocusOnLock } from "./use-focus-on-lock";
 import type { RefreshNote, SectionEditor } from "./use-section-editor";
 
 const COPY = SECTIONS_COPY;
@@ -209,6 +210,8 @@ export function SectionScreen<F extends RefreshNote>(props: SectionScreenProps<F
   // The field the person left last: where focus goes back to once a new code was entered in place.
   const lastField = useRef("");
   useFocusAfterPanel(reverify !== null, [lastField.current], SECTION_HEADING_ID);
+  // Turned read-only under a control that went or is disabled: focus to the locked banner's heading.
+  useFocusOnLock(editor.isReadOnly);
   return (
     <StepShell
       headingId={SECTION_HEADING_ID}
