@@ -58,8 +58,9 @@ function build() {
 }
 
 describe("HotelFormMe", () => {
-  it("answers the person and the request as the person sees it", () => {
+  it("answers the person, their id and the request as the person sees it", () => {
     expect(build().me.get(SESSION)).toEqual({
+      personId: FORM_PERSON_ID,
       person: { fullName: "Stored Person", designation: "General Manager" },
       request: {
         displayLabel: "Monsoon refresh",

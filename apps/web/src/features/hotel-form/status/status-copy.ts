@@ -62,7 +62,8 @@ export const STATUS_COPY = {
     sent: "Sent to AMPM's Hotel team. You can send another if something else needs correcting.",
     waitingForCheck:
       "The security check hasn't finished yet. Wait a moment for it, then send again.",
-    newCode: "Enter a new code above, then send again. Your message is kept.",
+    newCode:
+      "Enter a new code above, then send again. Your message is kept if you sign in as yourself; for anyone else it is cleared.",
     waitLeft: (time: string) => `You can send again in ${time}.`,
     botCheck: {
       checking: "Running a quick security check before you send…",

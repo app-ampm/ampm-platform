@@ -13,6 +13,7 @@ import type { BotCheckControl } from "@/components/bot-check/use-bot-check";
 
 import type { HotelFormSite } from "../hotel-form-provider";
 import { HOTEL_FORM_ROUTES } from "../hotel-form-routes";
+import { usePersonScoped } from "../use-person-scoped";
 import { REVIEW_COPY as COPY } from "./review-copy";
 import {
   EMPTY_DECLARATIONS,
@@ -81,14 +82,21 @@ function noticeOf(refusal: SubmitRefusal, now: number): ReviewNotice | null {
   }
 }
 
-/** 7.4 and 7.5 as the person answers them; 7.5 is never pre-selected. */
-function useDeclarations() {
-  const [fields, setFields] = useState<DeclarationFields>(EMPTY_DECLARATIONS);
-  const [errors, setErrors] = useState<DeclarationErrors>({});
+/** No refusal shown on either declaration. */
+const NO_ERRORS: DeclarationErrors = {};
+
+/**
+ * 7.4 and 7.5 as the person answers them; 7.5 is never pre-selected. They are the signed-in person's: kept
+ * across a new code entered in place while it is still them, started afresh for someone else (fix C2).
+ */
+function useDeclarations(personId: string | undefined) {
+  const [fields, updateFields] = usePersonScoped<DeclarationFields>(personId, EMPTY_DECLARATIONS);
+  const [errors, updateErrors] = usePersonScoped<DeclarationErrors>(personId, NO_ERRORS);
+  const setErrors = (next: DeclarationErrors) => updateErrors(() => next);
   const setAccuracy = (accepted: boolean) =>
-    setFields((current) => ({ ...current, accuracyAccepted: accepted }));
+    updateFields((current) => ({ ...current, accuracyAccepted: accepted }));
   const setDisplay = (answer: string) =>
-    setFields((current) => ({
+    updateFields((current) => ({
       ...current,
       displayAnswer: answer === "yes" || answer === "no" ? answer : "",
     }));
@@ -166,7 +174,7 @@ export function useReviewSubmit(
   draft: HotelFormDraftView,
   botCheck: BotCheckControl,
 ): ReviewSubmit {
-  const declarations = useDeclarations();
+  const declarations = useDeclarations(site.flow.me.data?.personId);
   const page = useSubmitNotice();
   const call = useSubmitCall(site, botCheck, page);
   const submit = () => {

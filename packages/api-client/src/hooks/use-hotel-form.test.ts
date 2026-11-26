@@ -86,6 +86,7 @@ vi.mock("../provider", () => ({ useApiClient: () => api }));
 const SESSION = `hfs_${"A".repeat(43)}`;
 const CHALLENGE = "0192f3a0-7d3e-7b1a-9c2f-123456789abc";
 const ME: HotelFormMe = {
+  personId: "0192f3a0-7d3e-7b1a-9c2f-0000000000a5",
   person: { fullName: "Asha Rao", designation: "General Manager" },
   request: {
     displayLabel: "Seasonal refresh",

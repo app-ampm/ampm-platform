@@ -60,6 +60,7 @@ export const DRAFT: HotelFormDraftView = {
   readAt: "2026-11-26T09:31:00.000Z",
 };
 export const ME: HotelFormMe = {
+  personId: "0192f3a0-7d3e-7b1a-9c2f-0000000000a5",
   person: { fullName: "Synthetic Person", designation: "General Manager" },
   request: {
     displayLabel: null,

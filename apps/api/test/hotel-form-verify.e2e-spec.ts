@@ -55,8 +55,12 @@ describe("The hotel form's code verification (e2e, D-189, on screen)", () => {
       .verify({ token: link.secret, challengeId, oneTimeCode: code })
       .expect(200);
     const { sessionToken } = verified.body.data;
+    const person = await suite.prisma.hotelInfoRequestPerson.findFirstOrThrow({
+      where: { requestId: link.id, phone: mobile },
+    });
     expect(verified.body.data).toEqual({
       sessionToken: expect.stringMatching(/^hfs_[A-Za-z0-9_-]{43}$/),
+      personId: person.id,
       person: { fullName: "E2E Synthetic Person", designation: "General Manager" },
       request: {
         displayLabel: null,
@@ -64,9 +68,6 @@ describe("The hotel form's code verification (e2e, D-189, on screen)", () => {
         status: "open",
         expiresAt: expect.any(String),
       },
-    });
-    const person = await suite.prisma.hotelInfoRequestPerson.findFirstOrThrow({
-      where: { requestId: link.id, phone: mobile },
     });
     expect(person).toMatchObject({
       codeDelivery: "screen",
@@ -144,6 +145,8 @@ describe("The hotel form's code verification (e2e, D-189, on screen)", () => {
       where: { requestId: link.id, phone: mobile },
     });
     expect(people).toHaveLength(1);
+    // The same person again, so the page keeps what they chose there before the new code.
+    expect(verified.body.data.personId).toBe(people[0]?.id);
   });
 
   it("refuses five wrong tries, then retires the code and clears its claim at once", async () => {

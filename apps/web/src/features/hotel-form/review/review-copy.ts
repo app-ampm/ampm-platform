@@ -58,7 +58,8 @@ export const REVIEW_COPY = {
   submitting: "Submitting…",
   waitingForCheck:
     "The security check hasn't finished yet. Wait a moment for it, then submit again.",
-  newCode: "Enter a new code above, then submit again. Your answers and choices here are kept.",
+  newCode:
+    "Enter a new code above, then submit again. Your choices here are kept if you sign in as yourself; for anyone else they start afresh.",
   waitLeft: (time: string) => `You can submit again in ${time}.`,
   back: "Back to the overview",
 } as const;

@@ -5,6 +5,7 @@ import type { HotelFormCorrectionRequest } from "@ampm/core";
 import type { BotCheckControl } from "@/components/bot-check/use-bot-check";
 
 import type { HotelFormSite } from "../hotel-form-provider";
+import { usePersonScoped } from "../use-person-scoped";
 import { STATUS_COPY } from "./status-copy";
 import { correctionCheckOf, pressRefusalOf } from "./status.form";
 import { pressNoticeOf, usePressNotice, type ShownPressNotice } from "./use-press-notice";
@@ -60,13 +61,18 @@ function useCorrectionCall(
  * 2,000 characters; focus goes to it), the bot check's pass for `hf_correction`, then the call, the pass
  * spent at once. Sent, the field empties for another and the page says so; refused, the notice gives the
  * API's words (409 notSubmitted, 429 correctionLimit held until its wait is over) and the message is kept;
- * a refused session is the flow's (a new code in place). Send is disabled only while it sends.
+ * a refused session is the flow's (a new code in place), and the message stays for the same person only
+ * (fix C2). Send is disabled only while it sends.
  *
  *   const correction = useCorrection(site, botCheck);
  */
 export function useCorrection(site: HotelFormSite, botCheck: BotCheckControl): Correction {
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState<string | undefined>(undefined);
+  // The signed-in person's words: kept across a new code while it is still them, emptied for anyone else.
+  const personId = site.flow.me.data?.personId;
+  const [message, updateMessage] = usePersonScoped(personId, "");
+  const [error, updateError] = usePersonScoped<string | undefined>(personId, undefined);
+  const setMessage = (next: string) => updateMessage(() => next);
+  const setError = (next: string | undefined) => updateError(() => next);
   const notice = usePressNotice();
   const { call, isSending } = useCorrectionCall(site, botCheck, notice, setMessage);
   const send = () => {

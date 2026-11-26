@@ -92,6 +92,7 @@ export class HotelFormEnrolment {
       await this.record(request, enrolled, input, now, tx);
       return {
         sessionToken: session.token,
+        personId: person.id,
         person: { fullName: person.fullName, designation: person.designation },
         request: requestViewOf(request),
       };

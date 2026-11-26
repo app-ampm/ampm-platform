@@ -42,6 +42,7 @@ export const BY_SMS: HotelFormCodeIssued = {
 };
 
 export const ME: HotelFormMe = {
+  personId: "0192f3a0-7d3e-7b1a-9c2f-0000000000a5",
   person: { fullName: "Asha Rao", designation: "General Manager" },
   request: {
     displayLabel: "Seasonal refresh 2027",

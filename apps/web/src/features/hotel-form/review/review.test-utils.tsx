@@ -1,9 +1,10 @@
-import { act, useState } from "react";
+import { act } from "react";
 import type { HotelFormDraftView } from "@ampm/core";
 import { buttonNamed, byId, mount, press, type Mounted } from "@ampm/web-forms/testing";
 
 import { DRAFT, EDITED_AT } from "../draft.test-fixtures";
 import { HotelFormSiteContext, type HotelFormSite } from "../hotel-form-provider";
+import { mountLivePage, type LivePage } from "../live-page.test-utils";
 import { signedInSite } from "../screen.test-utils";
 import { HotelFormReviewPage } from "./review-page";
 
@@ -50,30 +51,11 @@ export function mountReview(site: HotelFormSite): Promise<Mounted> {
 }
 
 /** The review page mounted under a site the test can replace, as the flow does on every render. */
-export interface LiveReview extends Mounted {
-  /** Draws the page again under `site`: a refetched draft, a new code entered in place. */
-  readonly rerender: (site: HotelFormSite) => Promise<void>;
-}
+export type LiveReview = LivePage;
 
 /** The review page under `site`, which `rerender` replaces while the page stays mounted. */
-export async function mountLiveReview(site: HotelFormSite): Promise<LiveReview> {
-  let replace: (next: HotelFormSite) => void = () => undefined;
-  function Live() {
-    const [current, setCurrent] = useState(site);
-    replace = setCurrent;
-    return (
-      <HotelFormSiteContext.Provider value={current}>
-        <HotelFormReviewPage />
-      </HotelFormSiteContext.Provider>
-    );
-  }
-  const mounted = await mount(<Live />);
-  return {
-    ...mounted,
-    rerender: async (next) => {
-      await act(async () => replace(next));
-    },
-  };
+export function mountLiveReview(site: HotelFormSite): Promise<LiveReview> {
+  return mountLivePage(HotelFormReviewPage, site);
 }
 
 /** Lets a press's call settle: its answer, and what the page does with it. */
