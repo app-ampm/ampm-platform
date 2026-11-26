@@ -36,6 +36,7 @@ const unsaved = {
   noChanges: false,
   lastEditedBy: null,
   lastEditedAt: null,
+  isLastSaveYours: false,
   isUnreadable: false,
 };
 
@@ -62,6 +63,7 @@ const draft = {
       noChanges: false,
       lastEditedBy: "Synthetic Person",
       lastEditedAt: at,
+      isLastSaveYours: true,
       isUnreadable: false,
     },
   },
@@ -143,11 +145,14 @@ describe("a section's save", () => {
       contentHash: "a".repeat(64),
       lastEditedBy: "Synthetic Colleague",
       lastEditedAt: at,
+      isLastSaveYours: false,
     };
     expect(hotelFormSectionSaved.parse(saved)).toEqual(saved);
     expect(hotelFormSectionSaved.parse({ ...saved, lastEditedBy: null }).lastEditedBy).toBeNull();
     const { lastEditedAt: _at, ...noTime } = saved;
     expect(hotelFormSectionSaved.safeParse(noTime).success).toBe(false);
+    const { isLastSaveYours: _yours, ...noOwner } = saved;
+    expect(hotelFormSectionSaved.safeParse(noOwner).success).toBe(false);
     expect(hotelFormSectionSaved.safeParse({ ...saved, version: 0 }).success).toBe(false);
     expect(hotelFormSectionSaved.safeParse({ ...saved, contentHash: "A".repeat(64) }).success).toBe(
       false,

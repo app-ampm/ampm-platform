@@ -66,6 +66,7 @@ function harness(version = 2) {
       contentHash: HASH,
       lastEditedBy: "Asha Rao",
       lastEditedAt: new Date(NOW).toISOString(),
+      isLastSaveYours: true,
       ...saved,
     });
     await vi.advanceTimersByTimeAsync(0);

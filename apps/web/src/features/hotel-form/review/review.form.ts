@@ -159,27 +159,24 @@ export interface ColleagueSave {
 }
 
 /**
- * Whether a save under this name is the person's own. The draft names editors, not people, so a name a
- * colleague shares with the person counts as a colleague's: the warning errs on the side of showing.
- */
-function isOwnSave(editedBy: string | null, draft: HotelFormDraftView): boolean {
-  const you = draft.contributors.find((person) => person.isYou)?.fullName ?? null;
-  if (editedBy === null || you === null || editedBy !== you) return false;
-  return !draft.contributors.some((person) => !person.isYou && person.fullName === you);
-}
-
-/**
  * The sections a colleague saved in the last five minutes (anyone but the person, a colleague who
- * withdrew consent included), in the form's order: the review page warns before the person submits.
+ * withdrew consent included), in the form's order: the review page warns before the person submits. The
+ * person's own saves are told by the API (`isLastSaveYours`, by person), never by name: a colleague may
+ * share the person's name, and the person may have changed theirs since.
  *
  * @example
  * colleagueSavesOf(draft, Date.now()); // [{ section: "rooms", editedBy: "Ravi Kumar", editedAt }]
  */
 export function colleagueSavesOf(draft: HotelFormDraftView, now: number): ColleagueSave[] {
   return HOTEL_FORM_SECTION_KEYS.flatMap((section) => {
-    const { lastEditedBy: editedBy, lastEditedAt: editedAt } = draft.sections[section];
-    if (editedAt === null || now - Date.parse(editedAt) >= COLLEAGUE_WINDOW_MS) return [];
-    return isOwnSave(editedBy, draft) ? [] : [{ section, editedBy, editedAt }];
+    const {
+      lastEditedBy: editedBy,
+      lastEditedAt: editedAt,
+      isLastSaveYours,
+    } = draft.sections[section];
+    if (editedAt === null || isLastSaveYours) return [];
+    if (now - Date.parse(editedAt) >= COLLEAGUE_WINDOW_MS) return [];
+    return [{ section, editedBy, editedAt }];
   });
 }
 

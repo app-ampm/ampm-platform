@@ -150,10 +150,22 @@ describe("a colleague's recent save", () => {
     expect(colleagueSavesOf(DRAFT, EDITED + COLLEAGUE_WINDOW_MS)).toEqual([]);
   });
 
-  it("counts a save under your own name as a colleague's when a colleague shares that name", () => {
-    const namesake = { fullName: "Asha Rao", designation: "Events Manager", isYou: false };
-    const draft = { ...DRAFT, contributors: [...DRAFT.contributors, namesake] };
-    expect(colleagueSavesOf(draft, now).map((save) => save.section)).toContain("contact");
+  it("tells your own saves by person, never by name: a namesake's is a colleague's, yours renamed is yours", () => {
+    const sections = {
+      ...DRAFT.sections,
+      // A colleague who shares your name saved the venues.
+      venues: {
+        ...DRAFT.sections.venues,
+        lastEditedBy: "Asha Rao",
+        lastEditedAt: EDITED_AT,
+        isLastSaveYours: false,
+      },
+      // You saved the contact under the name you had before "Edit your details".
+      contact: { ...DRAFT.sections.contact, lastEditedBy: "Asha R.", isLastSaveYours: true },
+    };
+    const saves = colleagueSavesOf({ ...DRAFT, sections }, now).map((save) => save.section);
+    expect(saves).toContain("venues");
+    expect(saves).not.toContain("contact");
   });
 });
 

@@ -69,6 +69,12 @@ describe("HF-04, the overview", () => {
     expect(html).toContain("1 of 7 sections complete");
   });
 
+  it("says you saved a section you saved last, told by person: not by a name a colleague may share", () => {
+    const html = overview();
+    expect(html).toContain(OVERVIEW_COPY.sections.lastSavedByYou(momentOf(EDITED_AT)));
+    expect(html).not.toContain(`Last saved by Asha Rao`);
+  });
+
   it("starts with Quick start, pointing to the fact sheet section, with no upload control yet", () => {
     const html = overview();
     expect(html).toContain(OVERVIEW_COPY.quickStart.heading);
@@ -91,7 +97,7 @@ describe("HF-04, the overview", () => {
     const unnamed = { fullName: null, designation: null, isYou: false };
     const sections = {
       ...DRAFT.sections,
-      contact: { ...DRAFT.sections.contact, lastEditedBy: null },
+      contact: { ...DRAFT.sections.contact, lastEditedBy: null, isLastSaveYours: false },
     };
     const html = overview(
       draftView({ ...DRAFT, sections, contributors: [DRAFT.contributors[0]!, unnamed] }),

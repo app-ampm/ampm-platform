@@ -14,6 +14,7 @@ const unsaved = {
   noChanges: false,
   lastEditedBy: null,
   lastEditedAt: null,
+  isLastSaveYours: false,
   isUnreadable: false,
 };
 
@@ -46,6 +47,7 @@ export const DRAFT: HotelFormDraftView = {
       isComplete: true,
       lastEditedBy: "Asha Rao",
       lastEditedAt: EDITED_AT,
+      isLastSaveYours: true,
     },
     rooms: {
       ...unsaved,

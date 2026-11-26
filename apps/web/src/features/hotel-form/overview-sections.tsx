@@ -55,10 +55,14 @@ export function QuickStart() {
   );
 }
 
-/** Who saved a section last and when, a colleague who withdrew their consent unnamed; null if never. */
+/**
+ * Who saved a section last and when: you (told by the API by person, never by name), a colleague by name,
+ * or a colleague who withdrew their consent unnamed; null if never.
+ */
 function lastSavedLine(section: HotelFormDraftSections[HotelFormSectionKey]): string | null {
   if (section.lastEditedAt === null) return null;
   const moment = momentOf(section.lastEditedAt);
+  if (section.isLastSaveYours) return COPY.sections.lastSavedByYou(moment);
   return section.lastEditedBy === null
     ? COPY.sections.lastSavedUnnamed(moment)
     : COPY.sections.lastSaved(section.lastEditedBy, moment);

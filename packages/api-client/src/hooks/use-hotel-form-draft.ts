@@ -196,6 +196,7 @@ function cacheSaved<K extends HotelFormSectionKey>(
     noChanges: save.noChanges,
     lastEditedBy: saved.lastEditedBy,
     lastEditedAt: saved.lastEditedAt,
+    isLastSaveYours: saved.isLastSaveYours,
     isUnreadable: false,
   }));
 }
@@ -216,6 +217,8 @@ function cacheRefused<K extends HotelFormSectionKey>(
       noChanges: theirs.noChanges,
       lastEditedBy: theirs.editedBy,
       lastEditedAt: theirs.editedAt,
+      // A conflict is a colleague's save, as the section page words it.
+      isLastSaveYours: false,
       isUnreadable: false,
     }));
     return;

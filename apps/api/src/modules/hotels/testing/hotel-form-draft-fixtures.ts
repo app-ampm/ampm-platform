@@ -96,6 +96,7 @@ export function sectionRow(
     isComplete: false,
     noChanges: false,
     lastEditedAt: FORM_EARLIER,
+    lastEditorPersonId: FORM_COLLEAGUE_ID,
     lastEditedBy: "Synthetic Colleague",
     ...overrides,
   };

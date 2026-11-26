@@ -44,6 +44,7 @@ const SAVED: HotelFormSectionSaved = {
   contentHash: "a".repeat(64),
   lastEditedBy: "Asha Rao",
   lastEditedAt: "2026-11-26T10:00:00.000Z",
+  isLastSaveYours: true,
 };
 
 let mounted: Mounted | null = null;

@@ -47,18 +47,25 @@ const savedAs = (version: number, write: SectionWrite, saver: string): HotelForm
   contentHash: write.contentHash,
   lastEditedBy: saver,
   lastEditedAt: write.at.toISOString(),
+  isLastSaveYours: true,
 });
 
 /**
  * A save's answer from the section as it stands, which may be a colleague's: completeness counted from
- * its stored answers by the current schema, and its last editor and time as stored.
+ * its stored answers by the current schema, its last editor and time as stored, and whether that editor
+ * is the person saving now (by person, never by name).
  */
-const savedFrom = (key: HotelFormSectionKey, row: SectionRow): HotelFormSectionSaved => ({
+const savedFrom = (
+  key: HotelFormSectionKey,
+  row: SectionRow,
+  session: FormSession,
+): HotelFormSectionSaved => ({
   version: row.version,
   isComplete: isHotelFormSectionComplete(key, row.answers, row.noChanges),
   contentHash: row.contentHash,
   lastEditedBy: row.lastEditedBy,
   lastEditedAt: row.lastEditedAt.toISOString(),
+  isLastSaveYours: row.lastEditorPersonId === session.personId,
 });
 
 /**
@@ -167,7 +174,7 @@ export class HotelFormSectionSaves {
     // A colleague's first save got there first (the unique key held): theirs stands.
     const winner = await this.sections.find(requestId, key, tx);
     if (winner === null) throw errors.internal("The section could not be saved");
-    if (isUnchanged(winner, write)) return savedFrom(key, winner);
+    if (isUnchanged(winner, write)) return savedFrom(key, winner, session);
     throw conflictWith(key, winner);
   }
 
@@ -178,7 +185,7 @@ export class HotelFormSectionSaves {
     tx: Prisma.TransactionClient,
   ): Promise<HotelFormSectionSaved> {
     const requestId = session.requestId;
-    if (isUnchanged(current, write)) return savedFrom(key, current);
+    if (isUnchanged(current, write)) return savedFrom(key, current, session);
     if (body.expectedVersion !== current.version) throw conflictWith(key, current);
     const written = await this.sections.updateIf(requestId, key, current.version, write, tx);
     if (written === 1) return savedAs(current.version + 1, write, session.person.fullName);

@@ -74,6 +74,7 @@ describe("The hotel form's draft and sections (e2e, D-190 §3)", () => {
       noChanges: false,
       lastEditedBy: null,
       lastEditedAt: null,
+      isLastSaveYours: false,
       isUnreadable: false,
     });
     expect(view.contributors).toEqual([
@@ -99,6 +100,7 @@ describe("The hotel form's draft and sections (e2e, D-190 §3)", () => {
       contentHash: sha256({ name: "E2E Lake Palace" }),
       lastEditedBy: "E2E Synthetic Person",
       lastEditedAt: row.lastEditedAt.toISOString(),
+      isLastSaveYours: true,
     });
     expect(row.answers).toEqual({ name: "E2E Lake Palace" });
     expect(row).toMatchObject({

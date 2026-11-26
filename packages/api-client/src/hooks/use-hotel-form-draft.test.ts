@@ -79,6 +79,7 @@ describe("the form's calls", () => {
       contentHash: "a".repeat(64),
       lastEditedBy: "Synthetic Person",
       lastEditedAt: AT,
+      isLastSaveYours: true,
     });
     const save = {
       answers: { totalRooms: 40, rows: [], noLongerOffered: null },

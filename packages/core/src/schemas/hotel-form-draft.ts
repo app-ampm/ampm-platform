@@ -24,8 +24,8 @@ import type { HotelFormRefusedCall } from "./hotel-form-submit";
 
 /**
  * A section as the draft answers it: its answers, version, completeness (counted from the stored answers
- * by the current schema, on every read), No changes and last editor, and whether its stored answers no
- * longer read.
+ * by the current schema, on every read), No changes, last editor and whether that was the person signed
+ * in, and whether its stored answers no longer read.
  */
 function sectionView<K extends HotelFormSectionKey>(key: K) {
   return z
@@ -41,6 +41,11 @@ function sectionView<K extends HotelFormSectionKey>(key: K) {
        */
       lastEditedBy: z.string().nullable(),
       lastEditedAt: isoDateTime.nullable(),
+      /**
+       * Whether the signed-in person saved it last (false until a first save), told by person, never by
+       * name: a colleague may share the person's name, and the person may have changed theirs since.
+       */
+      isLastSaveYours: z.boolean(),
       /**
        * The stored answers no longer read under the current schema (saved before a change to the form's
        * questions): the section is answered with empty answers and is not complete, so the page asks for
@@ -156,9 +161,9 @@ export interface HotelFormSectionSaveRequest<K extends HotelFormSectionKey = Hot
 
 /**
  * A save's answer: the section as it stands after the save, which may be a colleague's when this save
- * changed nothing: its version, whether it is complete, the SHA-256 of its content, and who saved it last
- * and when (`lastEditedBy` null for a person who withdrew their privacy notice consent), which the page
- * caches instead of assuming the saver.
+ * changed nothing: its version, whether it is complete, the SHA-256 of its content, who saved it last and
+ * when (`lastEditedBy` null for a person who withdrew their privacy notice consent), and whether that was
+ * the person saving, which the page caches instead of assuming the saver.
  */
 export const hotelFormSectionSaved = z
   .object({
@@ -167,6 +172,7 @@ export const hotelFormSectionSaved = z
     contentHash: z.string().regex(/^[0-9a-f]{64}$/),
     lastEditedBy: z.string().nullable(),
     lastEditedAt: isoDateTime,
+    isLastSaveYours: z.boolean(),
   })
   .strict();
 export type HotelFormSectionSaved = z.infer<typeof hotelFormSectionSaved>;

@@ -90,6 +90,7 @@ describe("HotelFormDraft.get", () => {
       noChanges: false,
       lastEditedBy: "Synthetic Colleague",
       lastEditedAt: FORM_EARLIER.toISOString(),
+      isLastSaveYours: false,
       isUnreadable: false,
     });
     expect(view.sections.property).toEqual({
@@ -99,6 +100,7 @@ describe("HotelFormDraft.get", () => {
       noChanges: false,
       lastEditedBy: null,
       lastEditedAt: null,
+      isLastSaveYours: false,
       isUnreadable: false,
     });
     // The fact sheet section asks only its date until its uploads arrive (Slice 9): never incomplete.
@@ -111,6 +113,22 @@ describe("HotelFormDraft.get", () => {
     const view = await build({ rows: [cuisines, rooms] }).draft.get(formSession());
     expect(view.sections.food_beverage.isComplete).toBe(true);
     expect(view.sections.rooms.isComplete).toBe(false);
+  });
+
+  it("says a section is the caller's when they saved it last, by person and never by name", async () => {
+    const mine = sectionRow("rooms", { totalRooms: 40 }, { lastEditorPersonId: FORM_PERSON_ID });
+    // A colleague who shares the caller's name saved the property: theirs, whatever the name.
+    const namesake = sectionRow(
+      "property",
+      { name: "Synthetic Lake Palace" },
+      {
+        lastEditedBy: "Synthetic Person",
+      },
+    );
+    const view = await build({ rows: [mine, namesake] }).draft.get(formSession());
+    expect(view.sections.rooms.isLastSaveYours).toBe(true);
+    expect(view.sections.property.isLastSaveYours).toBe(false);
+    expect(view.sections.venues.isLastSaveYours).toBe(false);
   });
 
   it("answers the request's reference, kind, status and state, label, note and expiry", async () => {
@@ -200,6 +218,7 @@ describe("HotelFormDraft.get", () => {
       noChanges: false,
       lastEditedBy: "Synthetic Colleague",
       lastEditedAt: FORM_EARLIER.toISOString(),
+      isLastSaveYours: false,
       isUnreadable: true,
     });
     expect(view.sections.property).toMatchObject({

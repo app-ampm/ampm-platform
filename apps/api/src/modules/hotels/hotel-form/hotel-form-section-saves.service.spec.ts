@@ -37,6 +37,7 @@ describe("HotelFormSectionSaves: the first save of a section", () => {
       contentHash: hashOf({ name: "Synthetic Lake Palace" }),
       lastEditedBy: "Synthetic Person",
       lastEditedAt: FORM_NOW.toISOString(),
+      isLastSaveYours: true,
     });
     expect(built.allowSectionSave).toHaveBeenCalledWith(formSession().challengeId, FORM_REQUEST_ID);
     expect(built.lock).toHaveBeenCalledWith(FORM_REQUEST_ID, FORM_TX);
@@ -132,6 +133,7 @@ describe("HotelFormSectionSaves: a later save", () => {
       contentHash: hashOf(answers),
       lastEditedBy: "Synthetic Person",
       lastEditedAt: FORM_NOW.toISOString(),
+      isLastSaveYours: true,
     });
     expect(built.updateIf).toHaveBeenCalledWith(
       FORM_REQUEST_ID,
@@ -153,6 +155,7 @@ describe("HotelFormSectionSaves: a later save", () => {
       contentHash: hashOf(stored),
       lastEditedBy: "Synthetic Colleague",
       lastEditedAt: FORM_EARLIER.toISOString(),
+      isLastSaveYours: false,
     });
     expect(built.updateIf).not.toHaveBeenCalled();
     expect(built.createFirst).not.toHaveBeenCalled();
@@ -166,6 +169,16 @@ describe("HotelFormSectionSaves: a later save", () => {
       noChanges: false,
     });
     expect(saved).toMatchObject({ lastEditedBy: null, lastEditedAt: FORM_EARLIER.toISOString() });
+  });
+
+  it("answers an unchanged save of the person's own last save as theirs, by person", async () => {
+    const own = sectionRow("property", stored, { version: 5, lastEditorPersonId: FORM_PERSON_ID });
+    const saved = await save(build({ current: own }), "property", {
+      answers: stored,
+      expectedVersion: 5,
+      noChanges: false,
+    });
+    expect(saved).toMatchObject({ version: 5, isLastSaveYours: true });
   });
 
   it("counts an unchanged section's completeness from its stored answers, never the stored flag", async () => {

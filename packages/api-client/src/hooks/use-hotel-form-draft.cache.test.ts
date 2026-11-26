@@ -70,6 +70,7 @@ describe("the hooks keep the cached draft as the API holds it", () => {
       contentHash: "b".repeat(64),
       lastEditedBy: "Synthetic Person",
       lastEditedAt: "2026-11-26T09:45:00.000Z",
+      isLastSaveYours: true,
     };
     save?.onSuccess?.(saved, roomsSave(41));
     expect(cachedRooms()).toEqual({
@@ -79,6 +80,7 @@ describe("the hooks keep the cached draft as the API holds it", () => {
       noChanges: false,
       lastEditedBy: "Synthetic Person",
       lastEditedAt: "2026-11-26T09:45:00.000Z",
+      isLastSaveYours: true,
       isUnreadable: false,
     });
   });
@@ -97,6 +99,7 @@ describe("the hooks keep the cached draft as the API holds it", () => {
       contentHash: "b".repeat(64),
       lastEditedBy: "Synthetic Person",
       lastEditedAt: "2026-11-26T09:45:00.000Z",
+      isLastSaveYours: true,
     };
     save?.onSuccess?.(saved, roomsSave(41));
     expect(cachedRooms()).toMatchObject({ version: 3, isUnreadable: false });
@@ -113,12 +116,14 @@ describe("the hooks keep the cached draft as the API holds it", () => {
       contentHash: "c".repeat(64),
       lastEditedBy: null,
       lastEditedAt: "2026-11-26T09:40:00.000Z",
+      isLastSaveYours: false,
     };
     save?.onSuccess?.(theirs, roomsSave(30));
     expect(cachedRooms()).toMatchObject({
       version: 4,
       lastEditedBy: null,
       lastEditedAt: "2026-11-26T09:40:00.000Z",
+      isLastSaveYours: false,
     });
   });
 
@@ -142,6 +147,7 @@ describe("the hooks keep the cached draft as the API holds it", () => {
       noChanges: false,
       lastEditedBy: "Colleague",
       lastEditedAt: AT,
+      isLastSaveYours: false,
       isUnreadable: false,
     });
   });

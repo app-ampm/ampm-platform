@@ -15,6 +15,8 @@ export const OVERVIEW_COPY = {
     heading: "Your form",
     progress: (done: number, all: number) => `${done} of ${all} sections complete`,
     lastSaved: (name: string, moment: string) => `Last saved by ${name} ${moment}`,
+    /** The person's own last save, told by the API by person, never by matching names. */
+    lastSavedByYou: (moment: string) => `Last saved by you ${moment}`,
     /** A colleague who withdrew their consent is never named. */
     lastSavedUnnamed: (moment: string) => `Last saved by a colleague ${moment}`,
     loading: "Loading your sections…",

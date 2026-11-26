@@ -11,6 +11,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { CONTACT, draftCalls, firstSave, PROPERTY } from "./hotel-form-draft-suite.js";
 import {
+  formCalls,
   freshMobile,
   signIn,
   startFormSuite,
@@ -24,11 +25,13 @@ import {
  * as fixed after the reviews): completeness counted from the canonical answers stored, so a save's answer,
  * the stored flag and the next read agree; and a stored section that no longer reads under the current
  * schema (saved before a change to its questions), answered as unreadable and empty instead of failing
- * the whole draft, named by the submit check, and replaced by its next save. Synthetic data only.
+ * the whole draft, named by the submit check, and replaced by its next save; and whether the last save
+ * of each section was the caller's, by person and never by name. Synthetic data only.
  */
 describe("The hotel form's draft as each section reads back (e2e)", () => {
   let suite: FormSuite;
   const calls = draftCalls(() => suite);
+  const form = formCalls(() => suite);
 
   beforeAll(async () => {
     suite = await startFormSuite("e2e-hf-draft-reads-");
@@ -118,5 +121,27 @@ describe("The hotel form's draft as each section reads back (e2e)", () => {
       version: 3,
       isUnreadable: false,
     });
+  });
+
+  it("says whose the last save of each section was by person, in the draft and a save's answer, whatever the names", async () => {
+    const link = await testLink(suite);
+    const mine = await signIn(suite, link.secret, freshMobile());
+    // A colleague who shares the person's name: a name never says whose a save was.
+    const theirs = await signIn(suite, link.secret, freshMobile());
+    const property = { name: "E2E Synthetic Lake Palace" };
+    const saved = await calls.save(mine.sessionToken, "property", firstSave(property)).expect(200);
+    expect(saved.body.data.isLastSaveYours).toBe(true);
+    const sectionsOf = async (token: string) =>
+      hotelFormDraftView.parse((await calls.draft(token).expect(200)).body.data).sections;
+    expect((await sectionsOf(mine.sessionToken)).property.isLastSaveYours).toBe(true);
+    expect((await sectionsOf(theirs.sessionToken)).property.isLastSaveYours).toBe(false);
+    expect((await sectionsOf(theirs.sessionToken)).rooms.isLastSaveYours).toBe(false);
+    // The colleague's save that changes nothing answers the section as it stands: still the person's.
+    const unchanged = { answers: property, expectedVersion: 1, noChanges: false };
+    const same = await calls.save(theirs.sessionToken, "property", unchanged).expect(200);
+    expect(same.body.data).toMatchObject({ version: 1, isLastSaveYours: false });
+    // After "Edit your details" the person's earlier saves are still theirs.
+    await form.patchMe(mine.sessionToken, { fullName: "E2E Renamed Person" }).expect(200);
+    expect((await sectionsOf(mine.sessionToken)).property.isLastSaveYours).toBe(true);
   });
 });

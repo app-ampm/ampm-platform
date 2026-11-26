@@ -42,6 +42,13 @@ type SectionView<K extends HotelFormSectionKey> = HotelFormDraftSections[K];
 /** Told of a saved section that no longer reads under the current schema, with why. */
 type OnUnreadable = (row: SectionRow, issues: readonly UnreadableIssue[]) => void;
 
+/** What reading the sections needs beyond their rows: whose draft it is, and where a fault is told. */
+interface ReadContext {
+  /** The signed-in person: a section they saved last is theirs. */
+  readonly personId: string;
+  readonly onUnreadable: OnUnreadable;
+}
+
 /**
  * A section as the draft answers it: a saved one read through its draft, an unsaved one at version 0. A
  * saved one whose stored answers no longer read (saved before a change to the form's questions) is
@@ -51,7 +58,7 @@ type OnUnreadable = (row: SectionRow, issues: readonly UnreadableIssue[]) => voi
 function sectionViewOf<K extends HotelFormSectionKey>(
   key: K,
   row: SectionRow | undefined,
-  onUnreadable: OnUnreadable,
+  { personId, onUnreadable }: ReadContext,
 ): SectionView<K> {
   if (row === undefined) {
     const answers = DRAFTS[key].parse({});
@@ -63,6 +70,7 @@ function sectionViewOf<K extends HotelFormSectionKey>(
       noChanges: false,
       lastEditedBy: null,
       lastEditedAt: null,
+      isLastSaveYours: false,
       isUnreadable: false,
     };
   }
@@ -77,6 +85,7 @@ function sectionViewOf<K extends HotelFormSectionKey>(
     noChanges: row.noChanges,
     lastEditedBy: row.lastEditedBy,
     lastEditedAt: row.lastEditedAt.toISOString(),
+    isLastSaveYours: row.lastEditorPersonId === personId,
     isUnreadable: stored.isUnreadable,
   };
 }
@@ -92,13 +101,10 @@ function contributorOf(person: ContributorRow, session: FormSession): HotelFormC
 }
 
 /** Every section, saved or not, in the form's model. */
-function sectionsOf(
-  rows: readonly SectionRow[],
-  onUnreadable: OnUnreadable,
-): HotelFormDraftSections {
+function sectionsOf(rows: readonly SectionRow[], context: ReadContext): HotelFormDraftSections {
   const byKey = new Map(rows.map((row) => [row.sectionKey, row]));
   const view = <K extends HotelFormSectionKey>(key: K): SectionView<K> =>
-    sectionViewOf(key, byKey.get(key), onUnreadable);
+    sectionViewOf(key, byKey.get(key), context);
   return {
     property: view("property"),
     contact: view("contact"),
@@ -128,9 +134,9 @@ function requestOf(request: FormSubmission): HotelFormDraftRequest {
 
 /**
  * `GET /hotel-form/draft` (D-190 §3): what the hub, the section pages, the review page and the status page
- * draw from. Every section with its answers, version, completeness (counted on read), No changes and last
- * editor's name and time (a section whose stored answers no longer read answered empty and unreadable, and
- * logged without its answers); the people helping, by name and designation (never a mobile; a colleague who
+ * draw from. Every section with its answers, version, completeness (counted on read), No changes, last
+ * editor's name and time and whether that was the caller (by person, never by name; a section whose stored
+ * answers no longer read answered empty and unreadable, and logged without its answers); the people helping, by name and designation (never a mobile; a colleague who
  * withdrew their privacy notice consent unnamed, as everywhere on the form); AMPM's label and note; the
  * request's reference, kind, status and state, and who submitted it and when; the caps; and the cuisine
  * choices (configuration `hotel.cuisine_options`) and facility choices, each with its Other. It reads
@@ -153,14 +159,14 @@ export class HotelFormDraft {
       this.people.contributors(session.requestId),
       this.config.get("hotel.cuisine_options"),
     ]);
-    const unreadable: OnUnreadable = (row, issues) =>
+    const onUnreadable: OnUnreadable = (row, issues) =>
       this.logger.warn(
         "hotel_form.section_unreadable",
         unreadableLogOf(session.requestId, row, issues),
       );
     return {
       request: requestOf(inForm(request)),
-      sections: sectionsOf(rows, unreadable),
+      sections: sectionsOf(rows, { personId: session.personId, onUnreadable }),
       contributors: people.map((person) => contributorOf(person, session)),
       caps: HOTEL_FORM_CAPS,
       options: {

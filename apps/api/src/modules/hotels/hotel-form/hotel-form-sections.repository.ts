@@ -22,6 +22,7 @@ const SECTION_SELECT = {
   isComplete: true,
   noChanges: true,
   lastEditedAt: true,
+  lastEditorPersonId: true,
   lastEditor: { select: NAMED_PERSON_SELECT },
 } as const satisfies Prisma.HotelInfoRequestSectionSelect;
 
@@ -38,6 +39,8 @@ export interface SectionRow {
   readonly isComplete: boolean;
   readonly noChanges: boolean;
   readonly lastEditedAt: Date;
+  /** The person who saved it last: compared with a session's person, never sent to the page. */
+  readonly lastEditorPersonId: string;
   /**
    * The last editor's name (RESTRICTED-CONTACT, shown to the request's people), or null once they
    * withdrew their privacy notice consent (hotel-form-named-person.ts).
