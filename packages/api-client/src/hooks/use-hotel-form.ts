@@ -41,6 +41,12 @@ const signedOut = acknowledged.strict();
 /** The form's own `me`, apart from the staff and client `me` (`["me"]`). */
 export const HOTEL_FORM_ME_QUERY_KEY = ["hotel-form", "me"] as const;
 
+/**
+ * The form's draft (D-190 §3), apart from the form's `me` and from every staff or client query: it is
+ * read again after a code (who is "you" among the people helping may change) and forgotten on sign-out.
+ */
+export const HOTEL_FORM_DRAFT_QUERY_KEY = ["hotel-form", "draft"] as const;
+
 /** A call made inside a form session. */
 export interface HotelFormSessionCall {
   /** The session's token (`hfs_…`), from the answer of `codes/verify`. */
@@ -115,7 +121,8 @@ export function useRequestHotelFormCode() {
 
 /**
  * `POST /hotel-form/codes/verify`: the code of one challenge, answered with the session's token and the
- * person and request as `me` answers them, which become the cached `me` (without the token).
+ * person and request as `me` answers them, which become the cached `me` (without the token). The draft is
+ * read again, kept on the page meanwhile, so a new code asked for in place keeps what the page shows.
  *
  *   const { sessionToken } = await useVerifyHotelFormCode().mutateAsync({ token, challengeId, oneTimeCode });
  */
@@ -124,8 +131,10 @@ export function useVerifyHotelFormCode() {
   const queryClient = useQueryClient();
   return useMutation<HotelFormVerified, Error, HotelFormVerifyRequest>({
     mutationFn: (body) => hotelFormCalls(api).verify(body),
-    onSuccess: ({ sessionToken: _token, ...me }) =>
-      queryClient.setQueryData<HotelFormMe>(HOTEL_FORM_ME_QUERY_KEY, me),
+    onSuccess: ({ sessionToken: _token, ...me }) => {
+      queryClient.setQueryData<HotelFormMe>(HOTEL_FORM_ME_QUERY_KEY, me);
+      void queryClient.invalidateQueries({ queryKey: HOTEL_FORM_DRAFT_QUERY_KEY });
+    },
   });
 }
 
@@ -172,7 +181,8 @@ export function useUpdateHotelFormMe() {
 }
 
 /**
- * `POST /hotel-form/sign-out`: ends the session; the cached `me` is forgotten whatever the answer.
+ * `POST /hotel-form/sign-out`: ends the session; the cached `me` and draft are forgotten whatever the
+ * answer, so the next person to sign in on the tab never sees them.
  *
  *   await useSignOutOfHotelForm().mutateAsync({ sessionToken });
  */
@@ -181,6 +191,9 @@ export function useSignOutOfHotelForm() {
   const queryClient = useQueryClient();
   return useMutation<Acknowledged, Error, HotelFormSessionCall>({
     mutationFn: (variables) => hotelFormCalls(api).signOut(variables),
-    onSettled: () => queryClient.removeQueries({ queryKey: HOTEL_FORM_ME_QUERY_KEY }),
+    onSettled: () => {
+      queryClient.removeQueries({ queryKey: HOTEL_FORM_ME_QUERY_KEY });
+      queryClient.removeQueries({ queryKey: HOTEL_FORM_DRAFT_QUERY_KEY });
+    },
   });
 }

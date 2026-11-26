@@ -36,7 +36,11 @@ import type { z, ZodType } from "zod";
 
 import type { ApiClient } from "../client";
 import { useApiClient } from "../provider";
-import { HOTEL_FORM_ME_QUERY_KEY, type HotelFormSessionCall } from "./use-hotel-form";
+import {
+  HOTEL_FORM_DRAFT_QUERY_KEY,
+  HOTEL_FORM_ME_QUERY_KEY,
+  type HotelFormSessionCall,
+} from "./use-hotel-form";
 
 /*
  * The hotel form's own routes (D-190 §3), which the website's pages call inside a form session: the draft,
@@ -47,8 +51,7 @@ import { HOTEL_FORM_ME_QUERY_KEY, type HotelFormSessionCall } from "./use-hotel-
  * writes the colleague's save, a refused save on a locked request, a submit and a withdrawal read it again.
  */
 
-/** The form's draft, apart from the form's `me` and from every staff or client query. */
-export const HOTEL_FORM_DRAFT_QUERY_KEY = ["hotel-form", "draft"] as const;
+export { HOTEL_FORM_DRAFT_QUERY_KEY };
 
 /** A section's save: the section, and its answers as the page holds them, version and No changes. */
 export interface HotelFormSectionSaveCall<

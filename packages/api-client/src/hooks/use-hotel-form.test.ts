@@ -10,6 +10,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createApiClient } from "../client";
 import {
+  HOTEL_FORM_DRAFT_QUERY_KEY,
   HOTEL_FORM_ME_QUERY_KEY,
   hotelFormCalls,
   hotelFormMeQueryOptions,
@@ -260,5 +261,22 @@ describe("the hooks", () => {
     expect(signOut?.onSettled).toBeTypeOf("function");
     signOut?.onSettled?.();
     expect(cache.getQueryData(HOTEL_FORM_ME_QUERY_KEY)).toBeUndefined();
+  });
+
+  it("forget the draft once signed out, so the next person on the tab never sees it as theirs", () => {
+    useSignOutOfHotelForm();
+    const [signOut] = hooks.options;
+    cache.setQueryData(HOTEL_FORM_DRAFT_QUERY_KEY, { contributors: [] });
+    signOut?.onSettled?.();
+    expect(cache.getQueryData(HOTEL_FORM_DRAFT_QUERY_KEY)).toBeUndefined();
+  });
+
+  it("read the draft again after a code, keeping it on the page meanwhile (a new code in place)", () => {
+    useVerifyHotelFormCode();
+    const [verify] = hooks.options;
+    cache.setQueryData(HOTEL_FORM_DRAFT_QUERY_KEY, { contributors: [] });
+    verify?.onSuccess?.({ ...ME, sessionToken: SESSION });
+    expect(cache.getQueryData(HOTEL_FORM_DRAFT_QUERY_KEY)).toEqual({ contributors: [] });
+    expect(cache.getQueryState(HOTEL_FORM_DRAFT_QUERY_KEY)?.isInvalidated).toBe(true);
   });
 });
