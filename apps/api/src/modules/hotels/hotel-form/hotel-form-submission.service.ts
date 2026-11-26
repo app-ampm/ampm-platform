@@ -72,12 +72,12 @@ interface Call {
  * transaction (the provider gets 5 seconds, and no row is held meanwhile); then, under the request's
  * lock: a request still open (or awaiting changes) needs both declarations in the words in force (409
  * noticeStale), the pass (400), every section at the version the review page read (409 sectionsChanged,
- * naming the ones a colleague saved since) and the strict check (400 submitIncomplete, every missing item); then
- * revision n+1 holds every section and its hash, 7.4 and 7.5 are recorded against that hash, the System
- * moves the request to submitted through a conditional write (its revision, time and submitter set), and
- * the `submitted` event and an allow-listed audit are written. Staff are told after the commit. A request
- * no longer open answers a repeat of the submit that locked it with that submit's answer, writing nothing
- * (see `repeatOf`), and anything else with 409 alreadySubmitted.
+ * naming the ones a colleague saved since) and the strict check (400 submitIncomplete, every missing
+ * item); then revision n+1 holds every section and its hash, 7.4 and 7.5 are recorded against that hash,
+ * the System moves the request to submitted through a conditional write (its revision, time and submitter
+ * set), and the `submitted` event and an allow-listed audit are written. Staff are told after the commit.
+ * A request no longer open answers a repeat of the submit that locked it with that submit's answer,
+ * writing nothing (see `repeatOf`), and anything else with 409 alreadySubmitted.
  */
 @Injectable()
 export class HotelFormSubmission {

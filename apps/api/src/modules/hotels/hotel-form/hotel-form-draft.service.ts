@@ -114,9 +114,9 @@ function requestOf(request: FormSubmission): HotelFormDraftRequest {
  * draw from. Every section with its answers, version, completeness (counted on read), No changes and last
  * editor's name and time; the people helping, by name and designation (never a mobile; a colleague who
  * withdrew their privacy notice consent unnamed, as everywhere on the form); AMPM's label and note; the
- * request's reference, kind, status and state, and who submitted it and when; the caps; and the cuisine choices
- * (configuration `hotel.cuisine_options`) and facility choices, each with its Other. It reads nothing from
- * the catalogue (plan decision 16): the draft holds only what the hotel's people typed.
+ * request's reference, kind, status and state, and who submitted it and when; the caps; and the cuisine
+ * choices (configuration `hotel.cuisine_options`) and facility choices, each with its Other. It reads
+ * nothing from the catalogue (plan decision 16): the draft holds only what the hotel's people typed.
  */
 @Injectable()
 export class HotelFormDraft {

@@ -85,7 +85,8 @@ function rangeGaps(
  * A room row's half-filled pairs: its size without its number.
  *
  * @example
- * roomRowGaps({ rowId, size: { unit: "sqft" } }, 0); // [{ field: "rows.0.size.value", message: "Enter the size" }]
+ * roomRowGaps({ rowId, size: { unit: "sqft" } }, 0);
+ * // [{ field: "rows.0.size.value", message: "Enter the size" }]
  */
 export function roomRowGaps(row: RoomRow, index: number): HotelFormPairGap[] {
   return areaGap(row.size, `rows.${index}.size`, "Enter the size");
