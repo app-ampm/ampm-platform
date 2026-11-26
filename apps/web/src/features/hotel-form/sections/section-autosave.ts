@@ -86,7 +86,10 @@ export interface SectionAutosave<K extends HotelFormSectionKey> {
   readonly resume: () => void;
   /** Whether anything typed is not saved yet (or is being saved). */
   readonly hasUnsaved: () => boolean;
-  /** The size in bytes of what a flush would send now, 0 when nothing would go: keepalive's limit. */
+  /**
+   * The size in bytes of what a flush would send, now or once the save on its way lands; 0 when nothing
+   * would go: keepalive's limit.
+   */
   readonly pendingBytes: () => number;
   /** The version the next save goes on. */
   readonly version: () => number;
@@ -141,7 +144,10 @@ class AutosaveRun<K extends HotelFormSectionKey> {
   private state: SaveState<K> = { kind: "idle" };
   private timer: ReturnType<typeof setTimeout> | undefined;
   private isSending = false;
-  private isQueued = false;
+  /** What the save on its way sends: a flush sizes only what would go after it. */
+  private sendingText = "";
+  /** A save asked for while one is on its way: it goes once that lands, with keepalive if any asked. */
+  private queued: SendOptions | null = null;
   private isStopped = false;
 
   constructor(private readonly options: AutosaveOptions<K>) {
@@ -200,13 +206,16 @@ class AutosaveRun<K extends HotelFormSectionKey> {
   }
 
   pendingBytes(): number {
-    if (this.latest === null || this.isHeld() || this.isSending || !this.isUnsaved()) return 0;
-    return UTF8.encode(textOf(this.latest)).length;
+    if (this.latest === null || this.isHeld()) return 0;
+    const text = textOf(this.latest);
+    // Typed since the save on its way was sent: it goes, as asked, once that save lands (review fix F3).
+    const sent = this.isSending ? this.sendingText : this.savedText;
+    return text === sent ? 0 : UTF8.encode(text).length;
   }
 
   stop(): void {
     this.isStopped = true;
-    this.isQueued = false;
+    this.queued = null;
     this.clearTimer();
   }
 
@@ -222,7 +231,7 @@ class AutosaveRun<K extends HotelFormSectionKey> {
     const payload = this.latest;
     if (payload === null || this.isHeld() || this.isStopped) return;
     if (this.isSending) {
-      this.isQueued = true;
+      this.queued = { keepalive: sending.keepalive || (this.queued?.keepalive ?? false) };
       return;
     }
     if (!this.isUnsaved()) {
@@ -230,9 +239,10 @@ class AutosaveRun<K extends HotelFormSectionKey> {
       return;
     }
     this.isSending = true;
-    this.isQueued = false;
+    this.queued = null;
     this.show({ kind: "saving" });
     const text = textOf(payload);
+    this.sendingText = text;
     this.options.send(payload, this.version, sending).then(
       (saved) => this.saved(saved, payload, text),
       (error: unknown) => {
@@ -250,12 +260,14 @@ class AutosaveRun<K extends HotelFormSectionKey> {
     this.options.onSaved?.(payload);
     // Newer typing still to go (queued, or waiting out its delay) keeps the line at Saving….
     this.show(this.isUnsaved() ? { kind: "saving" } : { kind: "saved" });
-    if (this.isQueued) this.save();
+    const { queued } = this;
+    this.queued = null;
+    if (queued !== null) this.save(queued);
   }
 
   private refused(refusal: SaveRefusal<K>): void {
     this.isSending = false;
-    this.isQueued = false;
+    this.queued = null;
     this.clearTimer();
     if (refusal.kind !== "wait") {
       this.show(refusal.kind === "session" ? { kind: "session" } : refusal);

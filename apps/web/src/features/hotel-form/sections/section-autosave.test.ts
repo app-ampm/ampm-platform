@@ -135,9 +135,32 @@ describe("when a section saves", () => {
     );
     autosave.flush({ keepalive: true });
     expect(calls[0]?.keepalive).toBe(true);
-    // On its way already: a flush now only queues the next save, so there is nothing to size.
-    autosave.change(payload(32));
+    // On its way already: nothing more would go, until the person types again.
     expect(autosave.pendingBytes()).toBe(0);
+    autosave.change(payload(32));
+    // That goes once the first save lands, so a flush counts it against keepalive's limit.
+    expect(autosave.pendingBytes()).toBe(
+      new TextEncoder().encode(JSON.stringify({ answers: { totalRooms: 32 }, noChanges: false }))
+        .length,
+    );
+  });
+
+  it("keeps the keepalive a save was queued with behind the one on its way (review fix F3)", async () => {
+    const { autosave, calls, answer } = harness();
+    autosave.change(payload(31));
+    autosave.flush();
+    autosave.change(payload(32));
+    // The page is hidden while the first save is on its way, then the person types once more.
+    autosave.flush({ keepalive: true });
+    autosave.change(payload(33));
+    await vi.advanceTimersByTimeAsync(AUTOSAVE_DELAY_MS);
+    await answer(0, { version: 3 });
+    expect(calls[1]).toMatchObject({ payload: payload(33), keepalive: true });
+    // A save queued without it goes without it.
+    autosave.change(payload(34));
+    autosave.flush();
+    await answer(1, { version: 4 });
+    expect(calls[2]).toMatchObject({ payload: payload(34), keepalive: false });
   });
 
   it("stops for good once stopped: nothing more is sent or said, nor any refusal handed on", async () => {

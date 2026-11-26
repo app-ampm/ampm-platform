@@ -105,3 +105,20 @@ describe("a save queued behind one on its way (review fix F1)", () => {
     });
   });
 });
+
+describe("the page hidden while a save is on its way (review fix F3)", () => {
+  it("sends the typing queued behind that save with keepalive, as the hidden page asked", async () => {
+    const { sections, calls, openRooms, answer } = harness();
+    const rooms = openRooms();
+    rooms.update(typeTotal("41"));
+    rooms.leave(TOTAL_ID);
+    rooms.update(typeTotal("42"));
+    sections.flushAll({ keepalive: true });
+    expect(calls).toHaveLength(1);
+    await answer(0, { version: 3 });
+    expect(calls[1]?.call).toMatchObject({
+      keepalive: true,
+      save: { answers: { totalRooms: 42 } },
+    });
+  });
+});
