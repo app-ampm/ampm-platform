@@ -199,7 +199,7 @@ Every component is a folder with its test and stories; the Gallery shows every v
 ### The website's form fields (`packages/web-forms`)
 
 The site's forms (the contact form, the hotel information form) are plain DOM fields on the same recipes
-(D-175). The hotel form added four patterns (D-190 §5):
+(D-175). The hotel form added these patterns (D-190 §5):
 
 | Pattern | Peacock Night spec |
 |---|---|
@@ -207,12 +207,24 @@ The site's forms (the contact form, the hotel information form) are plain DOM fi
 | `ChoiceSegments` with `clearLabel` | The soft pill choice (Yes / No / Depends) plus a ghost "Clear" once answered, described by the question; Clear puts focus on the first pill. |
 | `ChoiceSegments` with `description` | Paragraphs in pearl 80% between the question and the pills saying what each answer means (the review's 7.5, never pre-selected); every radio is described by them, and they stay beside an error. |
 | `RepeatableFieldsets` | Each row a flat-tint fieldset (radius 16) named by its legend, which the row's own name renames; secondary "Remove" (named after the row) and "Add" pills, Add giving way to a quiet line at the cap. Focus goes into a new row's first field, or after a removal onto the row that took its place; a polite region says what was removed. |
-| `ChipGroupField` | FilterChip pills as toggle buttons (aria-pressed) in a named group, each 38 tall inside a 46 target; Other last, opening a text field for its words. |
+| `ChipGroupField` | FilterChip pills as toggle buttons (aria-pressed) in a named group, each 38 tall inside a 46 target; Other last, opening a text field for its words. A chosen value the list no longer has stays as a chip of its own before Other until it is unticked; unticking it moves focus to the chip after it, or to the group (the kit's focus ring) when none is. |
+| `ReadOnlyFields` | Makes the fields inside read-only together, in place of a disabled fieldset: text fields keep focus and their text stays selectable (read-only, in the field pill's disabled look), while lists, ticks, choices and chips are disabled and Clear, Add and Remove are not offered. A section submitted while it was open keeps the person's unsaved text this way, to copy into a correction. |
 
 The hotel form's sections also show a save line ("Saved", "Saving…", "Not saved – retry" with a ghost
 Retry) in a polite live region under the section's heading, a gold callout (role alert) for a colleague's
 newer save with Keep mine and Take theirs, and a peacock callout when the request is with AMPM, the
-questions read-only beneath it.
+questions read-only beneath it (a gold one when the person's own save was refused because a colleague
+submitted). When the section turns read-only under the control that has focus, focus moves to that
+callout's heading, never to the page's body.
+
+A section with changes not saved yet is marked in the same words on the overview's list and on the
+review's summary card, a caption under the section's title: "Changes waiting to be saved" in pearl 80%
+(it saves by itself) or, in gold, "Changes not saved: open the section to see why" (it needs the
+person). Submit pressed while a section is marked saves what waits, sends nothing, and answers in the
+gold callout beside it, naming the sections as links. Sign out (on the overview and the status page)
+asks first while a section is marked: a gold callout whose heading takes focus, naming the sections as
+links, with a destructive "Sign out anyway" (which drops those changes) and a ghost "Stay signed in"
+(which puts focus back on Sign out).
 
 The review (HF-06) and the status page (HF-07) read the answers back as flat-tint cards, one per section
 (its title, its status chip and a gold "Edit" link named after the section), each answer a muted label
