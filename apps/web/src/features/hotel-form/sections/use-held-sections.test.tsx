@@ -158,6 +158,21 @@ describe("the page going (review fix E5)", () => {
     expect(beforeUnload().defaultPrevented).toBe(false);
   });
 
+  it("stops asking before the tab closes once the layout is gone, its listeners removed", async () => {
+    const sections = await mountLayout();
+    typeRooms(sections);
+    mounted?.unmount();
+    mounted = null;
+    // Leaving the form's pages saves what waited: on its way, the section still waits, yet nothing asks.
+    expect(sections.hasPending()).toBe(true);
+    expect(beforeUnload().defaultPrevented).toBe(false);
+    typeRooms(sections, "42");
+    window.dispatchEvent(new Event("pagehide"));
+    await settle();
+    expect(wire.sent).toHaveLength(1);
+    expect(wire.sent[0]?.keepalive).toBeUndefined();
+  });
+
   it("saves what waits at once with keepalive when the page is hidden, and when it is closed", async () => {
     const sections = await mountLayout();
     typeRooms(sections);
