@@ -15,9 +15,9 @@ import { payloadOf } from "./section-payload";
 import { useHeldSections } from "./use-held-sections";
 
 /*
- * The layout's held sections in a browser (D-190 §5, review fix E1): a hidden page saves at once, and what
- * one person typed is dropped when the form is forgotten or someone else signs in, and sent when the same
- * person does.
+ * The layout's held sections in a browser (D-190 §5, review fixes E1 and E5): the tab asks before it
+ * closes with typing not saved, a hidden page saves at once with keepalive, and what one person typed is
+ * dropped when the form is forgotten or someone else signs in, and sent when the same person does.
  */
 
 const SESSION = `hfs_${"y".repeat(43)}`;
@@ -99,6 +99,12 @@ function typeRooms(sections: HeldSections, total = "41") {
 
 const settle = () => act(async () => vi.advanceTimersByTimeAsync(0));
 
+function beforeUnload(): Event {
+  const event = new Event("beforeunload", { cancelable: true });
+  window.dispatchEvent(event);
+  return event;
+}
+
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] });
   wire.sent.length = 0;
@@ -112,8 +118,19 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-describe("the page going", () => {
-  it("saves what waits at once when the page is hidden, and when it is closed", async () => {
+describe("the page going (review fix E5)", () => {
+  it("asks before the tab closes while a section has typing not saved, and not once it is saved", async () => {
+    const sections = await mountLayout();
+    expect(beforeUnload().defaultPrevented).toBe(false);
+    typeRooms(sections);
+    expect(beforeUnload().defaultPrevented).toBe(true);
+    await act(async () => vi.advanceTimersByTimeAsync(AUTOSAVE_DELAY_MS));
+    await settle();
+    expect(wire.sent).toHaveLength(1);
+    expect(beforeUnload().defaultPrevented).toBe(false);
+  });
+
+  it("saves what waits at once with keepalive when the page is hidden, and when it is closed", async () => {
     const sections = await mountLayout();
     typeRooms(sections);
     Object.defineProperty(document, "visibilityState", { value: "hidden", configurable: true });
@@ -121,10 +138,11 @@ describe("the page going", () => {
     Reflect.deleteProperty(document, "visibilityState");
     await settle();
     expect(wire.sent).toHaveLength(1);
+    expect(wire.sent[0]?.keepalive).toBe(true);
     typeRooms(sections, "42");
     window.dispatchEvent(new Event("pagehide"));
     await settle();
-    expect(wire.sent).toHaveLength(2);
+    expect(wire.sent[1]?.keepalive).toBe(true);
   });
 });
 

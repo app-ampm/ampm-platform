@@ -16,18 +16,25 @@ export function formSessionOf(flow: HotelFormFlow): FormSession {
 }
 
 /**
- * When the page is hidden (another tab, the phone locked) or closed, what waits is saved at once; leaving
- * the form's pages altogether saves what waits too.
+ * Before the tab closes while a section has text not saved, the browser asks the person whether to leave;
+ * when the page is hidden (another tab, the phone locked) or closed, what waits is saved at once, with
+ * keepalive so the browser can finish it after the page has gone. Leaving the form's pages altogether
+ * saves what waits too.
  */
 function usePageLeave(sections: HeldSections) {
   useEffect(() => {
-    const hide = () => sections.flushAll({ keepalive: false });
+    const ask = (event: BeforeUnloadEvent) => {
+      if (sections.hasPending()) event.preventDefault();
+    };
+    const hide = () => sections.flushAll({ keepalive: true });
     const onVisibility = () => {
       if (document.visibilityState === "hidden") hide();
     };
+    window.addEventListener("beforeunload", ask);
     window.addEventListener("pagehide", hide);
     document.addEventListener("visibilitychange", onVisibility);
     return () => {
+      window.removeEventListener("beforeunload", ask);
       window.removeEventListener("pagehide", hide);
       document.removeEventListener("visibilitychange", onVisibility);
       sections.flushAll({ keepalive: false });
@@ -36,7 +43,7 @@ function usePageLeave(sections: HeldSections) {
 }
 
 /**
- * The form's held sections (D-190 §5, review fixes E1 and E4), made once by the layout: every save goes
+ * The form's held sections (D-190 §5, review fixes E1, E4, E5), made once by the layout: every save goes
  * through the api-client's section save inside the flow's session, a session refused on the way is handed
  * to the flow (which asks for a new code in place), and the held sections are dropped when the form is
  * forgotten (sign-out, every consent withdrawn, HF-08) or someone else signs in. The same person's new
