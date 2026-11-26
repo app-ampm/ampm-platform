@@ -104,6 +104,13 @@ export const HOTEL_FORM_COPY = {
     nothingChanged: "Change your name or your designation first.",
     signOut: "Sign out",
     signingOut: "Signing out…",
+    /** Sign out pressed while sections still have changes not saved (D-190 §5, review fix F2). */
+    signOutPending: {
+      heading: "Some of your changes aren't saved yet",
+      body: "Signing out now drops the changes not saved in these sections. Stay signed in to let them save, or open a section to see why it can't.",
+      confirm: "Sign out anyway",
+      stay: "Stay signed in",
+    },
     loading: "Loading your request…",
     reverifyHeading: "Enter a new code to continue",
   },

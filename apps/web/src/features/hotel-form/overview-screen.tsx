@@ -8,6 +8,7 @@ import { NextAction, RequestBanner, StaffNote, StatusRow } from "./overview-part
 import { OverviewSections, QuickStart } from "./overview-sections";
 import { ReverifyPage, ReverifyPanel, reverifyOf, useFocusAfterPanel } from "./reverify-panel";
 import type { HeldSections } from "./sections/held-sections";
+import { SignOutButton } from "./sign-out-button";
 import { StepShell } from "./step-shell";
 import type { HotelFormFlow } from "./use-hotel-form-flow";
 import { EDIT_SAVE_ID, YourDetails } from "./your-details";
@@ -60,9 +61,7 @@ function Overview({
         onSave={flow.saveDetails}
       />
       <NextAction status={request.status} />
-      <FormButton variant="secondary" onClick={flow.signOut} isBusy={flow.isSigningOut}>
-        {flow.isSigningOut ? COPY.signingOut : COPY.signOut}
-      </FormButton>
+      <SignOutButton flow={flow} sections={sections} />
     </StepShell>
   );
 }
@@ -70,7 +69,8 @@ function Overview({
 /**
  * HF-04, the overview (D-190 §5; plan §4.4 and §8), where signing in lands: AMPM's label and note, the
  * request's status, a changes-requested or locked banner, "Quick start", the seven sections with their
- * status, who else is helping, your own details with Edit, Review and submit, and Sign out. A refused
+ * status, who else is helping, your own details with Edit, Review and submit, and Sign out (which asks
+ * first while a section has changes not saved yet). A refused
  * session asks for a new code in place at the top, everything below kept as it was; with no request to
  * show yet, the new code is the page.
  *

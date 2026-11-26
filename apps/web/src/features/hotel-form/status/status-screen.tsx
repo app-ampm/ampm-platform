@@ -11,6 +11,7 @@ import type { HotelFormSite } from "../hotel-form-provider";
 import { HOTEL_FORM_ROUTES } from "../hotel-form-routes";
 import { LoadingStep } from "../loading-step";
 import { ReverifyPage, ReverifyPanel, reverifyOf, useFocusAfterPanel } from "../reverify-panel";
+import { SignOutButton } from "../sign-out-button";
 import { StepShell } from "../step-shell";
 import { ConsentPanel } from "./consent-panel";
 import { CorrectionForm } from "./correction-form";
@@ -29,19 +30,19 @@ export interface StatusScreenProps {
   readonly onRemoved: () => void;
 }
 
-/** The way back to the overview (when the card does not already lead there), and Sign out. */
+/**
+ * The way back to the overview (when the card does not already lead there), and Sign out, which asks first
+ * while a section has changes not saved yet (its question on a line of its own).
+ */
 function StatusFooter({ site, draft }: StatusScreenProps & { readonly draft: HotelFormDraftView }) {
-  const { flow } = site;
   return (
-    <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+    <div className="flex flex-col gap-3 md:flex-row md:flex-wrap md:items-center md:justify-between">
       {hotelFormStateOf(draft.request.status) === "ready" ? null : (
         <ButtonLink href={HOTEL_FORM_ROUTES.overview} variant="secondary" size="lg">
           {COPY.back}
         </ButtonLink>
       )}
-      <FormButton variant="secondary" onClick={flow.signOut} isBusy={flow.isSigningOut}>
-        {flow.isSigningOut ? HOTEL_FORM_COPY.signedIn.signingOut : HOTEL_FORM_COPY.signedIn.signOut}
-      </FormButton>
+      <SignOutButton flow={site.flow} sections={site.sections} />
     </div>
   );
 }
