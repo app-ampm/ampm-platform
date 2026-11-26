@@ -6,7 +6,7 @@ import {
   type HotelFormSectionKey,
 } from "@ampm/core";
 import { cn, glassStyles, calloutStyles, textStyles } from "@ampm/ui/styles";
-import { CheckboxField, TextAreaField } from "@ampm/web-forms";
+import { CheckboxField, ReadOnlyFields, TextAreaField } from "@ampm/web-forms";
 
 import { ButtonLink } from "@/components/site/button-link";
 
@@ -143,7 +143,10 @@ function RefreshLead() {
   );
 }
 
-/** The questions in one form: leaving any field saves; read-only once the request is submitted. */
+/**
+ * The questions in one form: leaving any field saves. Read-only once the request is submitted or a save
+ * was refused as locked, never disabled, so the person can still select and copy what they typed.
+ */
 function SectionForm<F extends RefreshNote>({
   sectionKey,
   editor,
@@ -164,15 +167,17 @@ function SectionForm<F extends RefreshNote>({
   };
   return (
     <form noValidate onSubmit={(event) => event.preventDefault()} onBlur={leave}>
-      <fieldset disabled={editor.isReadOnly} className="flex min-w-0 flex-col gap-8">
-        {isRefresh ? (
-          <RefreshSwitch sectionKey={sectionKey} editor={editor}>
-            {children}
-          </RefreshSwitch>
-        ) : (
-          children
-        )}
-        {isRefresh ? <NoLongerOffered sectionKey={sectionKey} editor={editor} /> : null}
+      <fieldset className="flex min-w-0 flex-col gap-8">
+        <ReadOnlyFields isReadOnly={editor.isReadOnly}>
+          {isRefresh ? (
+            <RefreshSwitch sectionKey={sectionKey} editor={editor}>
+              {children}
+            </RefreshSwitch>
+          ) : (
+            children
+          )}
+          {isRefresh ? <NoLongerOffered sectionKey={sectionKey} editor={editor} /> : null}
+        </ReadOnlyFields>
       </fieldset>
     </form>
   );
@@ -193,7 +198,7 @@ export interface SectionScreenProps<F extends RefreshNote> {
  * lead, a new code in place when the session ended, a colleague's save to choose over, why a locked
  * request cannot change, the save line, then the questions. On a refresh, "Fill in only what changed",
  * "No changes since last time" and "Anything no longer offered or renamed?". Leaving any field saves the
- * section; the questions are read-only once the request is submitted.
+ * section; the questions are read-only (selectable, never disabled) once the request is submitted.
  *
  *   <SectionScreen sectionKey="rooms" draft={draft} editor={editor} reverify={null}>…</SectionScreen>
  */

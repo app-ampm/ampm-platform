@@ -169,8 +169,12 @@ describe("a locked request", () => {
     expect(html).toMatch(/<section role="alert" aria-labelledby="hf-locked-heading"/);
     expect(html).toContain(SECTIONS_COPY.locked.refused("Ravi Kumar", momentOf(EDITED_AT)));
     expect(html).toContain('href="/hotel-form/status"');
-    expect(tagsWith(html, "input", `id="${roomsId("totalRooms")}"`)[0]).toContain('value="41"');
-    expect(tagsWith(html, "fieldset", 'disabled=""')).toHaveLength(1);
+    const [total] = tagsWith(html, "input", `id="${roomsId("totalRooms")}"`);
+    expect(total).toContain('value="41"');
+    // Read-only, not disabled, so the unsaved text can be selected and copied into a correction.
+    expect(total).toContain('readOnly=""');
+    expect(tagsWith(html, "fieldset", "disabled")).toHaveLength(0);
+    expect(html).not.toContain(">Add a room category<");
     // Nothing more saves, so there is no save line.
     expect(html).not.toContain(SECTIONS_COPY.save.held);
     expect(html).not.toContain(SECTIONS_COPY.save.idle);
@@ -185,7 +189,8 @@ describe("a locked request", () => {
     });
     const html = rooms(editorAt(ROOMS, { isReadOnly: true }), draft);
     expect(html).toContain(OVERVIEW_COPY.locked.submitted("Asha Rao", momentOf(EDITED_AT)));
-    expect(tagsWith(html, "fieldset", 'disabled=""')).toHaveLength(1);
+    expect(tagsWith(html, "input", `id="${roomsId("totalRooms")}"`)[0]).toContain('readOnly=""');
+    expect(tagsWith(html, "fieldset", "disabled")).toHaveLength(0);
   });
 });
 

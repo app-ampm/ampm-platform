@@ -1,5 +1,5 @@
 import type { HotelFormPerson } from "@ampm/core";
-import { RepeatableFieldsets, TextField } from "@ampm/web-forms";
+import { RepeatableFieldsets, TextField, useIsReadOnly } from "@ampm/web-forms";
 
 import { FormButton } from "../form-parts";
 import { textField, withRow } from "./bindings";
@@ -77,20 +77,24 @@ function ContactFieldsGrid({ editor, row }: RowProps) {
   );
 }
 
-/** One contact: "Same as me" while the person's details are read, then the contact's fields. */
+/**
+ * One contact: "Same as me" once the person's details are read and while the form can change, then the
+ * contact's fields.
+ */
 function ContactRow({
   editor,
   row,
   person,
   mobile,
 }: RowProps & Pick<ContactSectionProps, "person" | "mobile">) {
+  const isReadOnly = useIsReadOnly();
   const fillFromMe = (me: HotelFormPerson) =>
     editor.update((fields) =>
       withContact(fields, row.key, (contact) => sameAsMe(contact, me, mobile)),
     );
   return (
     <>
-      {person ? (
+      {person && !isReadOnly ? (
         <FormButton variant="secondary" onClick={() => fillFromMe(person)}>
           {COPY.sameAsMe}
         </FormButton>

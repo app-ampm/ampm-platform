@@ -89,9 +89,9 @@ export const SECTIONS_COPY = {
   locked: {
     heading: "This form was submitted",
     refused: (name: string, moment: string) =>
-      `${name} submitted the form ${moment}, so your last changes here were not saved. They are still on this page, so you can copy them into a correction for AMPM.`,
+      `${name} submitted the form ${moment}, so your last changes here were not saved. They stay on this page until you sign out: select and copy them, then send them to AMPM as a correction from where your request stands.`,
     refusedPlain:
-      "The form was submitted, so your last changes here were not saved. They are still on this page, so you can copy them into a correction for AMPM.",
+      "The form was submitted, so your last changes here were not saved. They stay on this page until you sign out: select and copy them, then send them to AMPM as a correction from where your request stands.",
     readOnly: "The answers can't be changed here now.",
     status: "See where your request stands",
   },

@@ -22,6 +22,7 @@ import {
   advance,
   api,
   leaveField,
+  leavePage,
   openRooms,
   refusedSession,
   saveLine,
@@ -30,6 +31,7 @@ import {
   siteAt,
   tooMany,
   type,
+  valueOf,
 } from "./section-page.test-utils";
 
 /* A section's page in a browser (D-190 §5): autosave's timing, a colleague's save, a locked request, a session. */
@@ -178,8 +180,22 @@ describe("a locked request and an ended session", () => {
     expect(alert).toContain("Ravi Kumar submitted the form on 26 Nov 2026");
     expect(alert).not.toContain("complete");
     const input = byId(TOTAL);
-    expect(input instanceof HTMLInputElement && input.value).toBe("41");
-    expect(input.matches(":disabled")).toBe(true);
+    if (!(input instanceof HTMLInputElement)) throw new Error("No total rooms input");
+    expect(input.value).toBe("41");
+    // Read-only, not disabled: it takes focus and its text can be selected, to copy into a correction.
+    expect(input.readOnly).toBe(true);
+    expect(input.matches(":disabled")).toBe(false);
+    input.focus();
+    input.select();
+    expect(document.activeElement).toBe(input);
+    expect([input.selectionStart, input.selectionEnd]).toEqual([0, 2]);
+    // Still there after leaving the section and coming back, until the person signs out.
+    leavePage();
+    await openRooms();
+    expect(valueOf(TOTAL)).toBe("41");
+    expect(
+      byId(TOTAL) instanceof HTMLInputElement && (byId(TOTAL) as HTMLInputElement).readOnly,
+    ).toBe(true);
   });
 
   it("after a new code in place, puts focus back in the field the person was in", async () => {
