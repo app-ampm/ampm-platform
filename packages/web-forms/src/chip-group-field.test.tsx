@@ -135,6 +135,38 @@ describe("chip group in use", () => {
     ]);
   });
 
+  it("moves focus to the next chip when a kept chip is unticked and goes (review fix F5)", async () => {
+    mounted = await mount(<Facilities chosen={["Helipad", "Ballroom"]} />);
+    const helipad = buttonNamed(mounted.host, "Helipad");
+    helipad.focus();
+    await press(helipad);
+    expect(helipad.isConnected).toBe(false);
+    expect(document.activeElement).toBe(buttonNamed(mounted.host, "Ballroom"));
+    // The last kept chip: Other comes next.
+    await press(buttonNamed(mounted.host, "Ballroom"));
+    expect(document.activeElement).toBe(buttonNamed(mounted.host, "Other"));
+  });
+
+  it("moves focus to the group when no chip comes after the kept chip that goes (review fix F5)", async () => {
+    function NoOther() {
+      const [value, setValue] = useState<readonly string[]>(["Helipad"]);
+      return (
+        <ChipGroupField
+          id="facilities"
+          legend="Facilities"
+          options={OPTIONS}
+          value={value}
+          onChange={setValue}
+        />
+      );
+    }
+    mounted = await mount(<NoOther />);
+    const helipad = buttonNamed(mounted.host, "Helipad");
+    helipad.focus();
+    await press(helipad);
+    expect(document.activeElement).toBe(mounted.host.querySelector("fieldset#facilities"));
+  });
+
   it("puts Other after the listed chips", async () => {
     mounted = await mount(<Facilities />);
     await press(buttonNamed(mounted.host, "Other"));
