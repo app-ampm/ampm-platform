@@ -33,26 +33,46 @@ import { HotelFormSubmissionsRepository } from "./hotel-form-submissions.reposit
 const DRAFTS: { readonly [K in HotelFormSectionKey]: z.ZodType<HotelFormSectionAnswers[K]> } =
   HOTEL_FORM_SECTION_DRAFTS;
 
+/** One save as the lock takes it: who saves which section, the body, and what it would write. */
+interface SaveCall<K extends HotelFormSectionKey> {
+  readonly session: FormSession;
+  readonly key: K;
+  readonly body: HotelFormSectionSaveRequest<K>;
+  readonly write: SectionWrite;
+}
+
 /** What a save naming a version of a section never saved is refused with, on `expectedVersion`. */
 const NEVER_SAVED = "This section has not been saved yet: send version 0";
 
-/** A save's answer from what it wrote. */
-const savedAs = (version: number, write: SectionWrite): HotelFormSectionSaved => ({
+/** A save's answer from what it wrote: the saver is the last editor, now. */
+const savedAs = (version: number, write: SectionWrite, saver: string): HotelFormSectionSaved => ({
   version,
   isComplete: write.isComplete,
   contentHash: write.contentHash,
+  lastEditedBy: saver,
+  lastEditedAt: write.at.toISOString(),
 });
 
-/** A save's answer from the section as it stands. */
-const savedFrom = (row: SectionRow): HotelFormSectionSaved => ({
+/**
+ * A save's answer from the section as it stands, which may be a colleague's: completeness counted from
+ * its stored answers by the current schema, and its last editor and time as stored.
+ */
+const savedFrom = (key: HotelFormSectionKey, row: SectionRow): HotelFormSectionSaved => ({
   version: row.version,
-  isComplete: row.isComplete,
+  isComplete: isHotelFormSectionComplete(key, row.answers, row.noChanges),
   contentHash: row.contentHash,
+  lastEditedBy: row.lastEditedBy,
+  lastEditedAt: row.lastEditedAt.toISOString(),
 });
 
-/** Whether a save changes nothing: the same content and the same No changes. */
+/**
+ * Whether a save changes nothing: the same content, the same No changes and the same schema version (a
+ * section saved under another version is written again, so its row records the version it now follows).
+ */
 const isUnchanged = (row: SectionRow, write: SectionWrite): boolean =>
-  row.contentHash === write.contentHash && row.noChanges === write.noChanges;
+  row.contentHash === write.contentHash &&
+  row.noChanges === write.noChanges &&
+  row.schemaVersion === write.schemaVersion;
 
 /** 409 `sectionConflict`: the section as a colleague saved it, for Keep mine or Take theirs. */
 function conflictWith<K extends HotelFormSectionKey>(key: K, row: SectionRow): AppError {
@@ -116,19 +136,17 @@ export class HotelFormSectionSaves {
       editorPersonId: session.personId,
       at: now,
     };
-    return this.requests.transaction((tx) =>
-      this.saveLocked(session.requestId, key, body, write, tx),
-    );
+    const call: SaveCall<K> = { session, key, body, write };
+    return this.requests.transaction((tx) => this.saveLocked(call, tx));
   }
 
   /** The save under the request's lock: the state, No changes, then the first or the next version. */
   private async saveLocked<K extends HotelFormSectionKey>(
-    requestId: string,
-    key: K,
-    body: HotelFormSectionSaveRequest<K>,
-    write: SectionWrite,
+    call: SaveCall<K>,
     tx: Prisma.TransactionClient,
   ): Promise<HotelFormSectionSaved> {
+    const { session, key, body, write } = call;
+    const requestId = session.requestId;
     const request = inForm(await this.submissions.lock(requestId, tx));
     if (!isEditableStatus(request.status)) throw readOnlyRefusal(request);
     if (body.noChanges && request.kind !== "refresh") {
@@ -136,31 +154,31 @@ export class HotelFormSectionSaves {
       throw errors.validation([detail], HOTEL_FORM_ERRORS.noChangesOnOnboarding);
     }
     const current = await this.sections.find(requestId, key, tx);
-    if (current !== null) return this.saveNext(requestId, key, body, current, write, tx);
+    if (current !== null) return this.saveNext(call, current, tx);
     if (body.expectedVersion !== 0) {
       throw errors.validation([{ path: "expectedVersion", message: NEVER_SAVED }], NEVER_SAVED);
     }
-    if (await this.sections.createFirst(requestId, key, write, tx)) return savedAs(1, write);
+    if (await this.sections.createFirst(requestId, key, write, tx)) {
+      return savedAs(1, write, session.person.fullName);
+    }
     // A colleague's first save got there first (the unique key held): theirs stands.
     const winner = await this.sections.find(requestId, key, tx);
     if (winner === null) throw errors.internal("The section could not be saved");
-    if (isUnchanged(winner, write)) return savedFrom(winner);
+    if (isUnchanged(winner, write)) return savedFrom(key, winner);
     throw conflictWith(key, winner);
   }
 
   /** A later save: unchanged answers the section as it stands; else only from the current version. */
   private async saveNext<K extends HotelFormSectionKey>(
-    requestId: string,
-    key: K,
-    body: HotelFormSectionSaveRequest<K>,
+    { session, key, body, write }: SaveCall<K>,
     current: SectionRow,
-    write: SectionWrite,
     tx: Prisma.TransactionClient,
   ): Promise<HotelFormSectionSaved> {
-    if (isUnchanged(current, write)) return savedFrom(current);
+    const requestId = session.requestId;
+    if (isUnchanged(current, write)) return savedFrom(key, current);
     if (body.expectedVersion !== current.version) throw conflictWith(key, current);
     const written = await this.sections.updateIf(requestId, key, current.version, write, tx);
-    if (written === 1) return savedAs(current.version + 1, write);
+    if (written === 1) return savedAs(current.version + 1, write, session.person.fullName);
     throw conflictWith(key, (await this.sections.find(requestId, key, tx)) ?? current);
   }
 }

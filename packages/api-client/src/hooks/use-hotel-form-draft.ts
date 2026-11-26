@@ -22,7 +22,6 @@ import {
   type HotelFormCorrectionRequest,
   type HotelFormDraftSections,
   type HotelFormDraftView,
-  type HotelFormMe,
   type HotelFormSectionAnswers,
   type HotelFormSectionAnswersInput,
   type HotelFormSectionKey,
@@ -174,25 +173,25 @@ function withSection<K extends HotelFormSectionKey>(
   });
 }
 
-/** A saved section in the cache: its new version, its answers as the API stores them, and its editor. */
+/**
+ * A saved section in the cache: its version, its answers as the API stores them, and who saved it last
+ * and when as the API answered (a save that changed nothing answers the section as it stands, which may
+ * be a colleague's, so the saver is never assumed).
+ */
 function cacheSaved<K extends HotelFormSectionKey>(
   queryClient: QueryClient,
   { section: key, save }: HotelFormSectionSaveCall<K>,
   saved: HotelFormSectionSaved,
 ): void {
   const answers = DRAFTS[key].safeParse(compact(save.answers));
-  const me = queryClient.getQueryData<HotelFormMe>(HOTEL_FORM_ME_QUERY_KEY);
-  withSection(queryClient, key, (section) => {
-    const moved = saved.version !== section.version;
-    return {
-      answers: answers.success ? answers.data : section.answers,
-      version: saved.version,
-      isComplete: saved.isComplete,
-      noChanges: save.noChanges,
-      lastEditedBy: moved ? (me?.person.fullName ?? section.lastEditedBy) : section.lastEditedBy,
-      lastEditedAt: moved ? new Date().toISOString() : section.lastEditedAt,
-    };
-  });
+  withSection(queryClient, key, (section) => ({
+    answers: answers.success ? answers.data : section.answers,
+    version: saved.version,
+    isComplete: saved.isComplete,
+    noChanges: save.noChanges,
+    lastEditedBy: saved.lastEditedBy,
+    lastEditedAt: saved.lastEditedAt,
+  }));
 }
 
 /** A refused save in the cache: a colleague's save is written in; a locked request is read again. */

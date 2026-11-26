@@ -38,7 +38,13 @@ vi.mock("@/components/bot-check/use-bot-check", () => ({
 }));
 
 const SESSION = `hfs_${"y".repeat(43)}`;
-const SAVED: HotelFormSectionSaved = { version: 3, isComplete: false, contentHash: "a".repeat(64) };
+const SAVED: HotelFormSectionSaved = {
+  version: 3,
+  isComplete: false,
+  contentHash: "a".repeat(64),
+  lastEditedBy: "Asha Rao",
+  lastEditedAt: "2026-11-26T10:00:00.000Z",
+};
 
 let mounted: Mounted | null = null;
 let refuseSession = vi.fn(() => true);

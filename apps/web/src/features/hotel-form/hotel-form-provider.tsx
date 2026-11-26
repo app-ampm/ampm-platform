@@ -1,7 +1,7 @@
 "use client";
 
-import { createContext, useCallback, useContext, useRef, type ReactNode } from "react";
-import { ApiProvider } from "@ampm/api-client";
+import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from "react";
+import { ApiProvider, createQueryClient } from "@ampm/api-client";
 
 import { env } from "@/env";
 
@@ -56,6 +56,16 @@ function FlowHost({ children }: { readonly children: ReactNode }) {
 }
 
 /**
+ * The form's query client: a query refused with 429 is never tried again, since the pages count its
+ * Retry-After down and a retry would only spend the window before it ends.
+ *
+ *   const [queryClient] = useState(hotelFormQueryClient);
+ */
+export function hotelFormQueryClient(): ReturnType<typeof createQueryClient> {
+  return createQueryClient({ retryRateLimited: false });
+}
+
+/**
  * The hotel form's state for every page under /hotel-form (D-190 §5): the API through a provider of its
  * own (no staff or client token exists on the site; the form's calls pass their session explicitly), and
  * one flow, so the link, the session and what the person typed survive moving between the form's pages.
@@ -64,8 +74,9 @@ function FlowHost({ children }: { readonly children: ReactNode }) {
  *   <HotelFormProvider>{children}</HotelFormProvider>
  */
 export function HotelFormProvider({ children }: { readonly children: ReactNode }) {
+  const [queryClient] = useState(hotelFormQueryClient);
   return (
-    <ApiProvider baseUrl={env.NEXT_PUBLIC_API_URL}>
+    <ApiProvider baseUrl={env.NEXT_PUBLIC_API_URL} queryClient={queryClient}>
       <FlowHost>{children}</FlowHost>
     </ApiProvider>
   );

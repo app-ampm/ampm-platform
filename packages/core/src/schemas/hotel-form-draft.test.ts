@@ -132,9 +132,18 @@ describe("a section's save", () => {
     expect(hotelFormSectionParams.safeParse({ sectionKey: "photos" }).success).toBe(false);
   });
 
-  it("answers the new version, whether the section is complete and its content hash", () => {
-    const saved = { version: 4, isComplete: true, contentHash: "a".repeat(64) };
+  it("answers the section's version, completeness, content hash and last editor after the save", () => {
+    const saved = {
+      version: 4,
+      isComplete: true,
+      contentHash: "a".repeat(64),
+      lastEditedBy: "Synthetic Colleague",
+      lastEditedAt: at,
+    };
     expect(hotelFormSectionSaved.parse(saved)).toEqual(saved);
+    expect(hotelFormSectionSaved.parse({ ...saved, lastEditedBy: null }).lastEditedBy).toBeNull();
+    const { lastEditedAt: _at, ...noTime } = saved;
+    expect(hotelFormSectionSaved.safeParse(noTime).success).toBe(false);
     expect(hotelFormSectionSaved.safeParse({ ...saved, version: 0 }).success).toBe(false);
     expect(hotelFormSectionSaved.safeParse({ ...saved, contentHash: "A".repeat(64) }).success).toBe(
       false,

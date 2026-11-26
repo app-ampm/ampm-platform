@@ -58,7 +58,8 @@ function sectionViewOf<K extends HotelFormSectionKey>(
   return {
     answers: answers.data,
     version: row.version,
-    isComplete: row.isComplete,
+    // Counted on every read, by the current schema: the stored flag is only as current as its save.
+    isComplete: isHotelFormSectionComplete(key, answers.data, row.noChanges),
     noChanges: row.noChanges,
     lastEditedBy: row.lastEditedBy,
     lastEditedAt: row.lastEditedAt.toISOString(),
@@ -99,8 +100,9 @@ function requestOf(request: FormSubmission): HotelFormDraftRequest {
 
 /**
  * `GET /hotel-form/draft` (D-190 §3): what the hub, the section pages, the review page and the status page
- * draw from. Every section with its answers, version, completeness, No changes and last editor's name and
- * time; the people helping, by name and designation (never a mobile); AMPM's label and note; the request's
+ * draw from. Every section with its answers, version, completeness (counted on read), No changes and last
+ * editor's name and time; the people helping, by name and designation (never a mobile); AMPM's label and
+ * note; the request's
  * reference, kind, status and state, and who submitted it and when; the caps; and the cuisine choices
  * (configuration `hotel.cuisine_options`) and facility choices, each with its Other. It reads nothing from
  * the catalogue (plan decision 16): the draft holds only what the hotel's people typed.

@@ -1,13 +1,5 @@
-import {
-  AppError,
-  errors,
-  HOTEL_FORM_ERRORS,
-  hotelFormReadOnlyOf,
-  hotelFormSectionConflictOf,
-  hotelFormSessionRefusalOf,
-  type HotelFormSectionKey,
-} from "@ampm/core";
-import { describe, expect, it, vi } from "vitest";
+import { HOTEL_FORM_ERRORS, hotelFormSectionConflictOf } from "@ampm/core";
+import { describe, expect, it } from "vitest";
 
 import { refusalOf } from "../testing/hotel-form-fixtures.js";
 import {
@@ -18,21 +10,11 @@ import {
   FORM_TX,
   formSession,
   formSubmission,
-  formSubmissions,
-  formTransactions,
   hashOf,
   sectionRow,
-  submittedRequest,
 } from "../testing/hotel-form-draft-fixtures.js";
-import type { HotelFormLimits } from "./hotel-form-limits.js";
-import type { HotelFormRequestsRepository } from "./hotel-form-requests.repository.js";
-import { HotelFormSectionSaves } from "./hotel-form-section-saves.service.js";
-import type {
-  HotelFormSectionsRepository,
-  SectionRow,
-  SectionWrite,
-} from "./hotel-form-sections.repository.js";
-import type { FormSubmission } from "./hotel-form-submissions.repository.js";
+import { build, save } from "../testing/hotel-form-section-saves-fakes.js";
+import type { SectionWrite } from "./hotel-form-sections.repository.js";
 
 /*
  * A section's autosave (D-190 §3) with fakes: under the request's lock, the first save makes the row at
@@ -40,55 +22,9 @@ import type { FormSubmission } from "./hotel-form-submissions.repository.js";
  * unchanged content (the same hash and No changes) writes nothing; a stale version is 409
  * sectionConflict with the colleague's save; a request no longer open is 409 readOnly with who submitted;
  * over the cap is 400 sectionTooLarge; No changes is for a refresh only; and every save counts against the
- * session's and the request's windows. The database side is in test/hotel-form-sections.e2e-spec.ts.
+ * session's and the request's windows (what is refused is in hotel-form-section-saves.refusals.spec.ts).
+ * The database side is in test/hotel-form-sections.e2e-spec.ts.
  */
-
-interface Built {
-  readonly saves: HotelFormSectionSaves;
-  readonly find: ReturnType<typeof vi.fn>;
-  readonly createFirst: ReturnType<typeof vi.fn>;
-  readonly updateIf: ReturnType<typeof vi.fn>;
-  readonly allowSectionSave: ReturnType<typeof vi.fn>;
-  readonly lock: ReturnType<typeof vi.fn>;
-}
-
-function build(
-  options: {
-    readonly current?: SectionRow | null;
-    readonly locked?: FormSubmission | null;
-    readonly created?: boolean;
-    readonly written?: number;
-  } = {},
-): Built {
-  const submissions = formSubmissions(
-    options.locked === undefined ? formSubmission() : options.locked,
-  );
-  const find = vi.fn(async () => options.current ?? null);
-  const createFirst = vi.fn(async () => options.created ?? true);
-  const updateIf = vi.fn(async () => options.written ?? 1);
-  const allowSectionSave = vi.fn(async () => undefined);
-  const saves = new HotelFormSectionSaves(
-    formTransactions() as unknown as HotelFormRequestsRepository,
-    submissions.typed,
-    { find, createFirst, updateIf } as unknown as HotelFormSectionsRepository,
-    { allowSectionSave } as unknown as HotelFormLimits,
-  );
-  return {
-    saves,
-    find,
-    createFirst,
-    updateIf,
-    allowSectionSave,
-    lock: submissions.repository.lock,
-  };
-}
-
-const save = (
-  built: Built,
-  key: HotelFormSectionKey,
-  body: { answers: object; expectedVersion: number; noChanges: boolean },
-  session = formSession(),
-) => built.saves.save(session, key, body, FORM_NOW);
 
 describe("HotelFormSectionSaves: the first save of a section", () => {
   it("makes the row at version 1 from expectedVersion 0, storing its canonical answers and hash", async () => {
@@ -99,6 +35,8 @@ describe("HotelFormSectionSaves: the first save of a section", () => {
       version: 1,
       isComplete: false,
       contentHash: hashOf({ name: "Synthetic Lake Palace" }),
+      lastEditedBy: "Synthetic Person",
+      lastEditedAt: FORM_NOW.toISOString(),
     });
     expect(built.allowSectionSave).toHaveBeenCalledWith(formSession().challengeId, FORM_REQUEST_ID);
     expect(built.lock).toHaveBeenCalledWith(FORM_REQUEST_ID, FORM_TX);
@@ -164,7 +102,13 @@ describe("HotelFormSectionSaves: a later save", () => {
     const built = build({ current: sectionRow("property", stored, { version: 3 }) });
     const answers = { name: "Synthetic Lake Palace", city: "Udaipur" };
     const saved = await save(built, "property", { answers, expectedVersion: 3, noChanges: false });
-    expect(saved).toEqual({ version: 4, isComplete: false, contentHash: hashOf(answers) });
+    expect(saved).toEqual({
+      version: 4,
+      isComplete: false,
+      contentHash: hashOf(answers),
+      lastEditedBy: "Synthetic Person",
+      lastEditedAt: FORM_NOW.toISOString(),
+    });
     expect(built.updateIf).toHaveBeenCalledWith(
       FORM_REQUEST_ID,
       "property",
@@ -175,15 +119,49 @@ describe("HotelFormSectionSaves: a later save", () => {
   });
 
   it("writes nothing for an unchanged content, null and missing keys alike, whatever version it names", async () => {
-    const built = build({
-      current: sectionRow("property", stored, { version: 5, isComplete: true }),
-    });
+    const built = build({ current: sectionRow("property", stored, { version: 5 }) });
     // As the controller hands them over: read through the draft, so blank text is already null.
     const answers = { name: "Synthetic Lake Palace", city: null, groupName: null, facilities: [] };
     const saved = await save(built, "property", { answers, expectedVersion: 2, noChanges: false });
-    expect(saved).toEqual({ version: 5, isComplete: true, contentHash: hashOf(stored) });
+    expect(saved).toEqual({
+      version: 5,
+      isComplete: false,
+      contentHash: hashOf(stored),
+      lastEditedBy: "Synthetic Colleague",
+      lastEditedAt: FORM_EARLIER.toISOString(),
+    });
     expect(built.updateIf).not.toHaveBeenCalled();
     expect(built.createFirst).not.toHaveBeenCalled();
+  });
+
+  it("counts an unchanged section's completeness from its stored answers, never the stored flag", async () => {
+    const cuisines = { cuisines: ["Indian"] };
+    const stale = sectionRow("food_beverage", cuisines, { version: 2, isComplete: false });
+    const saved = await save(build({ current: stale }), "food_beverage", {
+      answers: cuisines,
+      expectedVersion: 2,
+      noChanges: false,
+    });
+    expect(saved).toMatchObject({ version: 2, isComplete: true });
+  });
+
+  it("writes an unchanged content saved under another schema version, so the row records the current", async () => {
+    const built = build({
+      current: sectionRow("property", stored, { version: 5, schemaVersion: 2 }),
+    });
+    const saved = await save(built, "property", {
+      answers: stored,
+      expectedVersion: 5,
+      noChanges: false,
+    });
+    expect(saved.version).toBe(6);
+    expect(built.updateIf).toHaveBeenCalledWith(
+      FORM_REQUEST_ID,
+      "property",
+      5,
+      expect.objectContaining({ schemaVersion: 1, contentHash: hashOf(stored) }),
+      FORM_TX,
+    );
   });
 
   it("writes a change of No changes alone, on a refresh", async () => {
@@ -224,89 +202,5 @@ describe("HotelFormSectionSaves: a later save", () => {
       save(built, "property", { answers, expectedVersion: 3, noChanges: false }),
     );
     expect(refused?.message).toBe(HOTEL_FORM_ERRORS.sectionConflict);
-  });
-});
-
-describe("HotelFormSectionSaves: what is refused", () => {
-  it("refuses a request no longer open with 409 readOnly, naming who submitted and when, uncounted", async () => {
-    const built = build({ locked: submittedRequest() });
-    const session = formSession({ state: "locked" });
-    const refused = await refusalOf(
-      save(built, "property", { answers: {}, expectedVersion: 0, noChanges: false }, session),
-    );
-    expect(refused?.status).toBe(409);
-    expect(refused?.message).toBe(HOTEL_FORM_ERRORS.readOnly);
-    expect(refused && hotelFormReadOnlyOf(refused)).toEqual({
-      status: "submitted",
-      submittedBy: "Synthetic Person",
-      submittedAt: FORM_EARLIER.toISOString(),
-    });
-    expect(built.allowSectionSave).not.toHaveBeenCalled();
-  });
-
-  it("refuses a save that meets a submit under the lock, though the session saw the request open", async () => {
-    const built = build({ locked: submittedRequest({ status: "in_review" }) });
-    const refused = await refusalOf(
-      save(built, "rooms", { answers: {}, expectedVersion: 0, noChanges: false }),
-    );
-    expect(refused && hotelFormReadOnlyOf(refused)?.status).toBe("in_review");
-    expect(built.createFirst).not.toHaveBeenCalled();
-  });
-
-  it("answers 401 not_active when the request left the form meanwhile", async () => {
-    for (const locked of [null, formSubmission({ status: "revoked" })]) {
-      const refused = await refusalOf(
-        save(build({ locked }), "rooms", { answers: {}, expectedVersion: 0, noChanges: false }),
-      );
-      expect(refused && hotelFormSessionRefusalOf(refused)).toBe("not_active");
-    }
-  });
-
-  it("refuses No changes on an onboarding request, on noChanges", async () => {
-    const built = build();
-    const refused = await refusalOf(
-      save(built, "rooms", { answers: {}, expectedVersion: 0, noChanges: true }),
-    );
-    expect(refused?.status).toBe(400);
-    expect(refused?.message).toBe(HOTEL_FORM_ERRORS.noChangesOnOnboarding);
-    expect(refused?.details).toEqual([
-      { path: "noChanges", message: HOTEL_FORM_ERRORS.noChangesOnOnboarding },
-    ]);
-    expect(built.createFirst).not.toHaveBeenCalled();
-  });
-
-  it("refuses a section over its cap with 400 sectionTooLarge naming the cap, writing nothing", async () => {
-    const built = build();
-    // Within every field's bound, yet over the property section's 32 KB: 3-byte characters count 3.
-    const answers = { accessNotes: "語".repeat(10_000), noLongerOffered: "語".repeat(2_000) };
-    const refused = await refusalOf(
-      save(built, "property", { answers, expectedVersion: 0, noChanges: false }),
-    );
-    expect(refused?.status).toBe(400);
-    expect(refused?.message).toBe(HOTEL_FORM_ERRORS.sectionTooLarge);
-    expect(refused?.details).toEqual([
-      { path: "answers", message: "Keep this section under 32 KB" },
-    ]);
-    expect(built.lock).not.toHaveBeenCalled();
-    // The same text fits the rooms section's 96 KB.
-    const rooms = { noLongerOffered: "語".repeat(2_000), rows: [] };
-    expect(
-      await refusalOf(
-        save(build(), "rooms", { answers: rooms, expectedVersion: 0, noChanges: false }),
-      ),
-    ).toBeNull();
-  });
-
-  it("refuses past the session's or the request's window before reading anything", async () => {
-    const built = build();
-    built.allowSectionSave.mockRejectedValueOnce(
-      errors.rateLimited(HOTEL_FORM_ERRORS.writeLimit, 30),
-    );
-    const refused = await refusalOf(
-      save(built, "rooms", { answers: {}, expectedVersion: 0, noChanges: false }),
-    );
-    expect(refused).toBeInstanceOf(AppError);
-    expect(refused?.status).toBe(429);
-    expect(built.lock).not.toHaveBeenCalled();
   });
 });

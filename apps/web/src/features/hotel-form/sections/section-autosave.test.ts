@@ -60,7 +60,14 @@ function harness(version = 2) {
   });
   const last = () => states.at(-1);
   const answer = async (index: number, saved: Partial<HotelFormSectionSaved> = {}) => {
-    calls[index]?.resolve({ version: 3, isComplete: false, contentHash: HASH, ...saved });
+    calls[index]?.resolve({
+      version: 3,
+      isComplete: false,
+      contentHash: HASH,
+      lastEditedBy: "Asha Rao",
+      lastEditedAt: new Date(NOW).toISOString(),
+      ...saved,
+    });
     await vi.advanceTimersByTimeAsync(0);
   };
   const refuse = async (index: number, refusal: SaveRefusal<"rooms">) => {

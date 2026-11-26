@@ -22,7 +22,10 @@ import type { HotelFormRefusedCall } from "./hotel-form-submit";
  * the `…Of` readers. Nothing here comes from AMPM's catalogue (plan decision 16).
  */
 
-/** A section as the draft answers it: its answers, version, completeness, No changes and last editor. */
+/**
+ * A section as the draft answers it: its answers, version, completeness (counted from the stored answers
+ * by the current schema, on every read), No changes and last editor.
+ */
 function sectionView<K extends HotelFormSectionKey>(key: K) {
   return z
     .object({
@@ -132,12 +135,18 @@ export interface HotelFormSectionSaveRequest<K extends HotelFormSectionKey = Hot
   readonly noChanges: boolean;
 }
 
-/** A save's answer: the section's version now, whether it is complete, and the SHA-256 of its content. */
+/**
+ * A save's answer: the section as it stands after the save, which may be a colleague's when this save
+ * changed nothing: its version, whether it is complete, the SHA-256 of its content, and who saved it last
+ * and when, which the page caches instead of assuming the saver.
+ */
 export const hotelFormSectionSaved = z
   .object({
     version: z.number().int().min(1),
     isComplete: z.boolean(),
     contentHash: z.string().regex(/^[0-9a-f]{64}$/),
+    lastEditedBy: z.string().nullable(),
+    lastEditedAt: isoDateTime,
   })
   .strict();
 export type HotelFormSectionSaved = z.infer<typeof hotelFormSectionSaved>;

@@ -83,6 +83,14 @@ describe("HotelFormDraft.get", () => {
     expect(view.sections.fact_sheet_media.isComplete).toBe(true);
   });
 
+  it("counts each section's completeness from its stored answers and the current schema, not the stored flag", async () => {
+    const cuisines = sectionRow("food_beverage", { cuisines: ["Indian"] }, { isComplete: false });
+    const rooms = sectionRow("rooms", { totalRooms: 40 }, { isComplete: true });
+    const view = await build({ rows: [cuisines, rooms] }).draft.get(formSession());
+    expect(view.sections.food_beverage.isComplete).toBe(true);
+    expect(view.sections.rooms.isComplete).toBe(false);
+  });
+
   it("answers the request's reference, kind, status and state, label, note and expiry", async () => {
     const view = await build().draft.get(formSession());
     expect(view.request).toEqual({

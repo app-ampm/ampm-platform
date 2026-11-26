@@ -6,22 +6,33 @@ import { createApiClient, type ApiClient, type ApiClientOptions } from "./client
 
 const ApiContext = createContext<ApiClient | null>(null);
 
-/** Server state lives in TanStack Query (code.md); one client per app with sensible retries. */
-export function createQueryClient(): QueryClient {
+/** How a client made by {@link createQueryClient} retries. */
+export interface QueryClientOptions {
+  /**
+   * Whether a query refused with 429 is tried again (default true). A page that counts the refusal's
+   * Retry-After down itself (the hotel form) sets false, so no retry spends the window before it ends.
+   */
+  readonly retryRateLimited?: boolean;
+}
+
+const NEVER_RETRIED = ["unauthenticated", "forbidden", "not_found", "validation_failed"];
+
+/**
+ * Server state lives in TanStack Query (code.md); one client per app with sensible retries: a network or
+ * server failure twice, never a denial or a validation failure.
+ *
+ * @example
+ * const queryClient = createQueryClient({ retryRateLimited: false });
+ */
+export function createQueryClient(options: QueryClientOptions = {}): QueryClient {
+  const isRetried = (error: Error): boolean => {
+    if (!isAppError(error)) return true;
+    if (error.code === "rate_limited") return options.retryRateLimited ?? true;
+    return !NEVER_RETRIED.includes(error.code);
+  };
   return new QueryClient({
     defaultOptions: {
-      queries: {
-        staleTime: 30_000,
-        retry: (count, error) => {
-          // Never retry a denial or a validation failure; retry a network or server failure twice.
-          if (
-            isAppError(error) &&
-            ["unauthenticated", "forbidden", "not_found", "validation_failed"].includes(error.code)
-          )
-            return false;
-          return count < 2;
-        },
-      },
+      queries: { staleTime: 30_000, retry: (count, error) => isRetried(error) && count < 2 },
     },
   });
 }

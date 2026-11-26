@@ -1,19 +1,10 @@
-import type * as ReactQuery from "@tanstack/react-query";
-import { QueryClient } from "@tanstack/react-query";
 import {
-  AppError,
-  HOTEL_FORM_ACCURACY_VERSION,
-  HOTEL_FORM_CAPS,
-  HOTEL_FORM_DISPLAY_VERSION,
   HOTEL_FORM_ERRORS,
-  hotelFormReadOnlyDetails,
   hotelFormSectionConflictDetails,
   hotelFormSectionConflictOf,
   isAppError,
-  type HotelFormDraftView,
-  type HotelFormMe,
 } from "@ampm/core";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 
 import { createApiClient } from "../client";
 import { HOTEL_FORM_ME_QUERY_KEY } from "./use-hotel-form";
@@ -21,13 +12,13 @@ import {
   HOTEL_FORM_DRAFT_QUERY_KEY,
   hotelFormDraftCalls,
   hotelFormDraftQueryOptions,
-  useRequestHotelFormCorrection,
-  useSaveHotelFormSection,
-  useSubmitHotelForm,
-  useWithdrawHotelFormConsent,
 } from "./use-hotel-form-draft";
+import { AT, DRAFT, SESSION, SUBMIT, THEIRS } from "./use-hotel-form-draft.test-fixtures";
 
-/* The hotel form's own routes (D-190 §3): what is sent, as whom, what is read back and what is cached. */
+/*
+ * The hotel form's own routes (D-190 §3): what is sent, as whom, and what is read back. What the hooks
+ * cache is in use-hotel-form-draft.cache.test.ts.
+ */
 
 interface Sent {
   readonly url: string;
@@ -36,25 +27,7 @@ interface Sent {
   readonly body: unknown;
 }
 
-const wire = vi.hoisted(() => ({ sent: [] as Sent[], status: 200, answer: null as unknown }));
-
-interface MutationSeen {
-  readonly mutationFn: (variables: unknown) => Promise<unknown>;
-  readonly onSuccess?: (data: unknown, variables: unknown) => unknown;
-  readonly onError?: (error: unknown, variables: unknown) => unknown;
-}
-
-const hooks = vi.hoisted(() => ({ options: [] as MutationSeen[] }));
-const cache = new QueryClient();
-
-vi.mock("@tanstack/react-query", async (importOriginal) => ({
-  ...(await importOriginal<typeof ReactQuery>()),
-  useMutation: (options: MutationSeen) => {
-    hooks.options.push(options);
-    return options;
-  },
-  useQueryClient: () => cache,
-}));
+const wire = { sent: [] as Sent[], status: 200, answer: null as unknown };
 
 const fakeFetch: typeof fetch = async (input, init) => {
   wire.sent.push({
@@ -76,77 +49,6 @@ const api = createApiClient({
   fetch: fakeFetch,
 });
 
-vi.mock("../provider", () => ({ useApiClient: () => api }));
-
-const SESSION = `hfs_${"B".repeat(43)}`;
-const AT = "2026-11-26T09:30:00.000Z";
-const unsaved = {
-  answers: {},
-  version: 0,
-  isComplete: false,
-  noChanges: false,
-  lastEditedBy: null,
-  lastEditedAt: null,
-};
-const DRAFT: HotelFormDraftView = {
-  request: {
-    reference: "HIR-2026-0042",
-    kind: "onboarding",
-    status: "open",
-    state: "ready",
-    displayLabel: "Synthetic Lake Palace, winter 2026",
-    staffNote: null,
-    expiresAt: "2026-12-26T00:00:00.000Z",
-    submittedAt: null,
-    submittedBy: null,
-  },
-  sections: {
-    property: unsaved,
-    contact: unsaved,
-    rooms: {
-      ...unsaved,
-      answers: { totalRooms: 30 },
-      version: 2,
-      lastEditedBy: "Colleague",
-      lastEditedAt: AT,
-    },
-    venues: unsaved,
-    booking_terms: unsaved,
-    food_beverage: unsaved,
-    fact_sheet_media: { ...unsaved, isComplete: true },
-  },
-  contributors: [{ fullName: "Synthetic Person", designation: "General Manager", isYou: true }],
-  caps: HOTEL_FORM_CAPS,
-  options: {
-    cuisines: { options: ["Indian"], other: "Other" },
-    facilities: { options: ["Spa"], other: "Other" },
-  },
-};
-const ME: HotelFormMe = {
-  person: { fullName: "Synthetic Person", designation: "General Manager" },
-  request: {
-    displayLabel: null,
-    staffNote: null,
-    status: "open",
-    expiresAt: "2026-12-26T00:00:00.000Z",
-  },
-};
-const SUBMIT = {
-  accuracy: { accepted: true as const, textVersion: HOTEL_FORM_ACCURACY_VERSION },
-  display: { answer: "yes" as const, textVersion: HOTEL_FORM_DISPLAY_VERSION },
-  botToken: "turnstile-pass",
-};
-
-/** A colleague's newer save of the rooms section, as a 409 carries it. */
-const THEIRS = {
-  section: "rooms" as const,
-  version: 4,
-  answers: { totalRooms: 44 },
-  noChanges: false,
-  editedBy: "Colleague",
-  editedAt: AT,
-};
-
 function answer(data: unknown, status = 200): void {
   wire.answer = data;
   wire.status = status;
@@ -157,8 +59,6 @@ const route = (sent: Sent | undefined) => [sent?.method, sent?.url.split("/_api"
 
 beforeEach(() => {
   wire.sent.length = 0;
-  hooks.options.length = 0;
-  cache.clear();
   answer(null);
 });
 
@@ -173,7 +73,13 @@ describe("the form's calls", () => {
   });
 
   it("save a section compact, its blanks left out, under the section's own path", async () => {
-    answer({ version: 3, isComplete: false, contentHash: "a".repeat(64) });
+    answer({
+      version: 3,
+      isComplete: false,
+      contentHash: "a".repeat(64),
+      lastEditedBy: "Synthetic Person",
+      lastEditedAt: AT,
+    });
     const save = {
       answers: { totalRooms: 40, rows: [], noLongerOffered: null },
       expectedVersion: 2,
@@ -240,87 +146,5 @@ describe("the form's calls", () => {
     expect(hotelFormDraftQueryOptions(api, null).enabled).toBe(false);
     expect(hotelFormDraftQueryOptions(api, SESSION).queryKey).toEqual(HOTEL_FORM_DRAFT_QUERY_KEY);
     expect(HOTEL_FORM_DRAFT_QUERY_KEY).not.toEqual(HOTEL_FORM_ME_QUERY_KEY);
-  });
-});
-
-describe("the hooks keep the cached draft as the API holds it", () => {
-  const isInvalidated = (key: readonly string[]) =>
-    cache.getQueryState(key)?.isInvalidated === true;
-
-  it("after a save: the section's new version, its normalised answers and you as its editor", () => {
-    cache.setQueryData(HOTEL_FORM_DRAFT_QUERY_KEY, DRAFT);
-    cache.setQueryData(HOTEL_FORM_ME_QUERY_KEY, ME);
-    useSaveHotelFormSection();
-    const [save] = hooks.options;
-    const call = {
-      sessionToken: SESSION,
-      section: "rooms",
-      save: {
-        answers: { totalRooms: 41, noLongerOffered: "  " },
-        expectedVersion: 2,
-        noChanges: false,
-      },
-    };
-    save?.onSuccess?.({ version: 3, isComplete: false, contentHash: "b".repeat(64) }, call);
-    const rooms = cache.getQueryData<HotelFormDraftView>(HOTEL_FORM_DRAFT_QUERY_KEY)?.sections
-      .rooms;
-    expect(rooms).toMatchObject({
-      answers: { totalRooms: 41, noLongerOffered: null },
-      version: 3,
-      lastEditedBy: "Synthetic Person",
-    });
-    expect(rooms?.lastEditedAt).not.toBe(AT);
-  });
-
-  it("after a conflict: the colleague's save, so Keep mine saves on their version", () => {
-    cache.setQueryData(HOTEL_FORM_DRAFT_QUERY_KEY, DRAFT);
-    useSaveHotelFormSection();
-    const [save] = hooks.options;
-    const theirs = THEIRS;
-    const error = new AppError(
-      "conflict",
-      HOTEL_FORM_ERRORS.sectionConflict,
-      hotelFormSectionConflictDetails(theirs),
-    );
-    save?.onError?.(error, { sessionToken: SESSION, section: "rooms", save: {} });
-    expect(
-      cache.getQueryData<HotelFormDraftView>(HOTEL_FORM_DRAFT_QUERY_KEY)?.sections.rooms,
-    ).toEqual({
-      answers: { totalRooms: 44 },
-      version: 4,
-      isComplete: false,
-      noChanges: false,
-      lastEditedBy: "Colleague",
-      lastEditedAt: AT,
-    });
-  });
-
-  it("after a refused save on a locked request, and after a submit or a withdrawal: read again", () => {
-    useSaveHotelFormSection();
-    useSubmitHotelForm();
-    useWithdrawHotelFormConsent();
-    useRequestHotelFormCorrection();
-    const [save, submit, withdraw, correction] = hooks.options;
-    const reseed = () => {
-      cache.setQueryData(HOTEL_FORM_DRAFT_QUERY_KEY, DRAFT);
-      cache.setQueryData(HOTEL_FORM_ME_QUERY_KEY, ME);
-    };
-    reseed();
-    const locked = new AppError(
-      "conflict",
-      HOTEL_FORM_ERRORS.readOnly,
-      hotelFormReadOnlyDetails({ status: "submitted", submittedBy: "Colleague", submittedAt: AT }),
-    );
-    save?.onError?.(locked, { sessionToken: SESSION, section: "rooms", save: {} });
-    expect(isInvalidated(HOTEL_FORM_DRAFT_QUERY_KEY)).toBe(true);
-    expect(isInvalidated(HOTEL_FORM_ME_QUERY_KEY)).toBe(true);
-    reseed();
-    submit?.onSuccess?.({ reference: "HIR-2026-0042", status: "submitted", submittedAt: AT }, {});
-    expect(isInvalidated(HOTEL_FORM_DRAFT_QUERY_KEY)).toBe(true);
-    expect(isInvalidated(HOTEL_FORM_ME_QUERY_KEY)).toBe(true);
-    reseed();
-    withdraw?.onSuccess?.({ withdrawn: [], removalRequested: true }, {});
-    expect(isInvalidated(HOTEL_FORM_DRAFT_QUERY_KEY)).toBe(true);
-    expect(correction?.onSuccess).toBeUndefined();
   });
 });
