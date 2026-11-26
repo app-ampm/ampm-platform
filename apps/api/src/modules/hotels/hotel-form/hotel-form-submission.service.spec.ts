@@ -3,6 +3,7 @@ import {
   HOTEL_FORM_DISPLAY_VERSION,
   HOTEL_FORM_ERRORS,
   hotelFormMissingItemsOf,
+  hotelFormSectionsChangedOf,
   hotelFormSessionRefusalOf,
 } from "@ampm/core";
 import { describe, expect, it } from "vitest";
@@ -21,6 +22,7 @@ import {
 } from "../testing/hotel-form-draft-fixtures.js";
 import {
   BODY,
+  bodyFor,
   buildSubmission as build,
   COMPLETE,
   expectNothingWritten,
@@ -29,7 +31,8 @@ import {
 
 /*
  * Submitting the form (D-190 §3) with fakes: under the request's lock, the declarations' versions, the bot
- * check for `hf_submit`, the strict check, revision n+1 with every section and its hash, both declarations
+ * check for `hf_submit`, the section versions the review page read (409 sectionsChanged), the strict check,
+ * revision n+1 with every section and its hash, both declarations
  * bound to that hash, the System's move with a conditional write, the `submitted` event, an allow-listed
  * audit, then the staff notice. A repeat is in hotel-form-submission.repeat.spec.ts; the database side in
  * test/hotel-form-submit.e2e-spec.ts.
@@ -148,7 +151,7 @@ describe("HotelFormSubmission: a submit", () => {
 
   it("asks nothing of a refresh's empty sections: blanks leave the records as they are", async () => {
     const built = build({ locked: formSubmission({ kind: "refresh" }), rows: [] });
-    const answer = await built.service.submit(formSession(), BODY, FORM_IP, FORM_NOW);
+    const answer = await built.service.submit(formSession(), bodyFor([]), FORM_IP, FORM_NOW);
     expect(answer.status).toBe("submitted");
   });
 });
@@ -175,8 +178,11 @@ describe("HotelFormSubmission: what a submit is refused for", () => {
   });
 
   it("refuses an incomplete form with 400 submitIncomplete, listing every missing item", async () => {
-    const built = build({ rows: [sectionRow("contact", { contacts: [{ role: "Sales" }] })] });
-    const refused = await refusalOf(built.service.submit(formSession(), BODY, FORM_IP, FORM_NOW));
+    const rows = [sectionRow("contact", { contacts: [{ role: "Sales" }] })];
+    const built = build({ rows });
+    const refused = await refusalOf(
+      built.service.submit(formSession(), bodyFor(rows), FORM_IP, FORM_NOW),
+    );
     expect(refused?.status).toBe(400);
     expect(refused?.message).toBe(HOTEL_FORM_ERRORS.submitIncomplete);
     expect(refused && hotelFormMissingItemsOf(refused)).toEqual([
@@ -191,6 +197,31 @@ describe("HotelFormSubmission: what a submit is refused for", () => {
       { section: "contact", field: "contacts.0.name", message: "Name this contact" },
     ]);
     expectNothingWritten(built);
+  });
+
+  it("refuses with 409 sectionsChanged, naming each section saved since the review page read it", async () => {
+    const seen = [sectionRow("property", { name: "Synthetic Lake Palace" })];
+    const now = [
+      sectionRow("property", { name: "Synthetic Lake Palace", city: "Udaipur" }, { version: 2 }),
+      ...COMPLETE.slice(1),
+    ];
+    const built = build({ rows: now });
+    const refused = await refusalOf(
+      built.service.submit(formSession(), bodyFor(seen), FORM_IP, FORM_NOW),
+    );
+    expect(refused?.status).toBe(409);
+    expect(refused?.message).toBe(HOTEL_FORM_ERRORS.sectionsChanged);
+    expect(refused && hotelFormSectionsChangedOf(refused)).toEqual(["property", "contact"]);
+    expectNothingWritten(built);
+  });
+
+  it("checks the versions before the strict check, so an incomplete form a colleague changed says so", async () => {
+    const built = build({ rows: [sectionRow("contact", { contacts: [{ role: "Sales" }] })] });
+    const refused = await refusalOf(
+      built.service.submit(formSession(), bodyFor([]), FORM_IP, FORM_NOW),
+    );
+    expect(refused?.message).toBe(HOTEL_FORM_ERRORS.sectionsChanged);
+    expect(refused && hotelFormSectionsChangedOf(refused)).toEqual(["contact"]);
   });
 
   it("answers 401 not_active for a request that left the form since the guard passed", async () => {

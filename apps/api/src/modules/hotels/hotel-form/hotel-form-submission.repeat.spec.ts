@@ -25,8 +25,9 @@ import type { RevisionRow } from "./hotel-form-submissions.repository.js";
 /*
  * A submit on a request that is no longer open (D-190 §3). It is a repeat of the submit that locked the
  * request, answered with that submit's answer and writing nothing, when the request still awaits review
- * (submitted), its sections still hash to the latest revision, and the declarations it carries are the
- * ones recorded with that revision: a double click, or a colleague who agrees. Anything else is 409
+ * (submitted), its sections still hash to the latest revision and stand at the versions the caller's review
+ * page read, and the declarations it carries are the ones recorded with that revision: a double click, or a
+ * colleague who agrees. Anything else is 409
  * alreadySubmitted, saying who submitted and when: AMPM moved the request on (in review, merged), or the
  * caller's declarations differ, so theirs are never silently dropped as if recorded.
  */
@@ -99,6 +100,17 @@ describe("HotelFormSubmission: a repeat, and alreadySubmitted", () => {
       expect(refused && hotelFormReadOnlyOf(refused)?.status).toBe(status);
       expectNothingWritten(built);
     }
+  });
+
+  it("refuses with 409 alreadySubmitted a repeat whose review page read other versions of the sections", async () => {
+    const built = build({ locked: submittedRequest(), latest });
+    const stale = { ...BODY, sectionVersions: { ...BODY.sectionVersions, contact: 0 } };
+    const refused = await refusalOf(
+      built.service.submit(formSession({ state: "locked" }), stale, FORM_IP, FORM_NOW),
+    );
+    expect(refused?.message).toBe(HOTEL_FORM_ERRORS.alreadySubmitted);
+    expect(built.declarationsOf).not.toHaveBeenCalled();
+    expectNothingWritten(built);
   });
 
   it("refuses with 409 alreadySubmitted when the sections no longer hash to the submitted revision", async () => {

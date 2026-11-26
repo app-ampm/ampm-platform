@@ -84,6 +84,12 @@ export const HOTEL_FORM_ERRORS = {
    */
   alreadySubmitted:
     "This form has already been submitted. You can still ask AMPM for a correction.",
+  /**
+   * 409 (submit): a colleague saved a section after the review page read it, so the declarations would
+   * cover answers the person has not seen; the details name the sections (`hotelFormSectionsChangedOf`).
+   */
+  sectionsChanged:
+    "A colleague changed some answers while you were reviewing them. Check the sections marked, then submit again.",
   /** 409 (corrections): the request was never submitted, so there is nothing to correct yet. */
   notSubmitted: "Submit the form first. After that you can ask AMPM for a correction.",
   /** 429 (corrections): more than 5 corrections on this request within a day; `Retry-After` says when. */

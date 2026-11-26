@@ -99,7 +99,9 @@ describe("Submitting the hotel form (e2e, D-190 §3)", () => {
 
   it("writes revision 1, binds both declarations to its hash, moves the request and tells staff", async () => {
     const { link, sessionToken } = await readyToSubmit();
-    const answer = await calls.submit(sessionToken, submitBody("no")).expect(200);
+    const answer = await calls
+      .submit(sessionToken, await calls.reviewedBody(sessionToken, "no"))
+      .expect(200);
     const request = await suite.prisma.hotelInfoRequest.findUniqueOrThrow({
       where: { id: link.id },
     });
@@ -170,13 +172,15 @@ describe("Submitting the hotel form (e2e, D-190 §3)", () => {
 
   it("answers a repeat, or a colleague who agrees, with the same answer, writing nothing twice", async () => {
     const { link, sessionToken } = await readyToSubmit();
-    const first = await calls.submit(sessionToken, submitBody()).expect(200);
-    const again = await calls.submit(sessionToken, submitBody()).expect(200);
+    const body = await calls.reviewedBody(sessionToken);
+    const first = await calls.submit(sessionToken, body).expect(200);
+    const again = await calls.submit(sessionToken, body).expect(200);
     expect(again.body.data).toEqual(first.body.data);
     const colleague = await signIn(suite, link.secret, freshMobile(), {
       fullName: "E2E Colleague",
     });
-    const theirs = await calls.submit(colleague.sessionToken, submitBody()).expect(200);
+    const agrees = await calls.reviewedBody(colleague.sessionToken);
+    const theirs = await calls.submit(colleague.sessionToken, agrees).expect(200);
     expect(theirs.body.data).toEqual(first.body.data);
     expect(
       await suite.prisma.hotelInfoRequestRevision.count({ where: { requestId: link.id } }),
@@ -193,11 +197,12 @@ describe("Submitting the hotel form (e2e, D-190 §3)", () => {
 
   it("refuses a colleague whose 7.5 differs, and any submit once AMPM moved it on: 409 alreadySubmitted", async () => {
     const { link, sessionToken } = await readyToSubmit();
-    await calls.submit(sessionToken, submitBody("yes")).expect(200);
+    await calls.submit(sessionToken, await calls.reviewedBody(sessionToken, "yes")).expect(200);
     const colleague = await signIn(suite, link.secret, freshMobile(), {
       fullName: "E2E Colleague",
     });
-    const differs = await calls.submit(colleague.sessionToken, submitBody("no")).expect(409);
+    const no = await calls.reviewedBody(colleague.sessionToken, "no");
+    const differs = await calls.submit(colleague.sessionToken, no).expect(409);
     expect(differs.body.error.message).toBe(HOTEL_FORM_ERRORS.alreadySubmitted);
     expect(hotelFormReadOnlyOf(refusalOf(differs))).toMatchObject({
       status: "submitted",
@@ -208,7 +213,9 @@ describe("Submitting the hotel form (e2e, D-190 §3)", () => {
       where: { id: link.id },
       data: { status: "in_review" },
     });
-    const moved = await calls.submit(sessionToken, submitBody("yes")).expect(409);
+    const moved = await calls
+      .submit(sessionToken, await calls.reviewedBody(sessionToken, "yes"))
+      .expect(409);
     expect(hotelFormReadOnlyOf(refusalOf(moved))?.status).toBe("in_review");
     expect(
       await suite.prisma.hotelInfoRequestRevision.count({ where: { requestId: link.id } }),
@@ -217,7 +224,7 @@ describe("Submitting the hotel form (e2e, D-190 §3)", () => {
 
   it("locks the draft once submitted, and submits revision 2 after changes are asked for", async () => {
     const { link, sessionToken } = await readyToSubmit();
-    await calls.submit(sessionToken, submitBody()).expect(200);
+    await calls.submit(sessionToken, await calls.reviewedBody(sessionToken)).expect(200);
     const locked = await calls
       .save(sessionToken, "rooms", firstSave({ totalRooms: 40 }))
       .expect(409);
@@ -231,7 +238,7 @@ describe("Submitting the hotel form (e2e, D-190 §3)", () => {
       data: { status: "changes_requested" },
     });
     await calls.save(sessionToken, "rooms", firstSave({ totalRooms: 40 })).expect(200);
-    await calls.submit(sessionToken, submitBody()).expect(200);
+    await calls.submit(sessionToken, await calls.reviewedBody(sessionToken)).expect(200);
     const request = await suite.prisma.hotelInfoRequest.findUniqueOrThrow({
       where: { id: link.id },
     });
@@ -246,12 +253,13 @@ describe("Submitting the hotel form (e2e, D-190 §3)", () => {
 
   it("refuses older declaration words with 409 noticeStale, and a missing bot pass with 400", async () => {
     const { link, sessionToken } = await readyToSubmit();
-    const stale = submitBody("yes", {
+    const stale = await calls.reviewedBody(sessionToken, "yes", {
       accuracy: { accepted: true, textVersion: "hf-accuracy-2020-01-01" },
     });
     const refused = await calls.submit(sessionToken, stale).expect(409);
     expect(refused.body.error.message).toBe(HOTEL_FORM_ERRORS.noticeStale);
-    const noPass = await calls.submit(sessionToken, submitBody("yes", { botToken: undefined }));
+    const unpassed = await calls.reviewedBody(sessionToken, "yes", { botToken: undefined });
+    const noPass = await calls.submit(sessionToken, unpassed);
     expect(noPass.status).toBe(400);
     expect(noPass.body.error.details).toEqual([
       { path: "botToken", message: HOTEL_FORM_ERRORS.botCheck },

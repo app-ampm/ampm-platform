@@ -8,9 +8,6 @@ import {
   HOTEL_FORM_ERRORS,
   HOTEL_FORM_SUBMIT_ACTION,
   hotelFormMissingItemDetails,
-  hotelFormRevisionAnswersOf,
-  type HotelFormSavedSection,
-  type HotelFormSectionKey,
   type HotelFormSubmitRequest,
   type HotelFormSubmitted,
 } from "@ampm/core";
@@ -25,10 +22,17 @@ import type { Prisma } from "../../../generated/prisma/client.js";
 import { HotelInfoRequestJournal } from "../hotel-info-request-journal.js";
 import { HotelInfoRequestsRepository } from "../hotel-info-requests.repository.js";
 import { hotelFormBotPasses, hotelFormBotRefusal } from "./hotel-form-bot-check.js";
-import { wholeContentOf, type CanonicalContent } from "./hotel-form-content.js";
+import type { CanonicalContent } from "./hotel-form-content.js";
 import { HotelFormPeopleRepository } from "./hotel-form-people.repository.js";
 import { HotelFormRequestsRepository } from "./hotel-form-requests.repository.js";
-import { HotelFormSectionsRepository, type SectionRow } from "./hotel-form-sections.repository.js";
+import {
+  changedSectionsOf,
+  revisionHashOrNull,
+  revisionOf,
+  savedSectionsOf,
+  sectionsChangedRefusal,
+} from "./hotel-form-submission-sections.js";
+import { HotelFormSectionsRepository } from "./hotel-form-sections.repository.js";
 import type { FormSession } from "./hotel-form-sessions.service.js";
 import { HotelFormStaffNotices } from "./hotel-form-staff-notices.js";
 import {
@@ -63,40 +67,12 @@ interface Call {
   readonly now: Date;
 }
 
-/** The saved sections by key, as submit's check and a revision read them. */
-function savedSectionsOf(
-  rows: readonly SectionRow[],
-): Partial<Record<HotelFormSectionKey, HotelFormSavedSection>> {
-  return Object.fromEntries(
-    rows.map((row) => [
-      row.sectionKey,
-      { schemaVersion: row.schemaVersion, noChanges: row.noChanges, answers: row.answers },
-    ]),
-  );
-}
-
-/**
- * A revision of the saved sections (every section, saved or not) as it is kept (whole, in the shape core's
- * revision schema reads) and hashed (its canonical JSON).
- */
-function revisionOf(rows: readonly SectionRow[]): CanonicalContent {
-  return wholeContentOf(hotelFormRevisionAnswersOf(savedSectionsOf(rows)));
-}
-
-/** The hash the saved sections would submit under, or null when one no longer reads. */
-function revisionHashOrNull(rows: readonly SectionRow[]): string | null {
-  try {
-    return revisionOf(rows).hash;
-  } catch {
-    return null;
-  }
-}
-
 /**
  * `POST /hotel-form/submit` (D-190 §3). The Turnstile pass for `hf_submit` is verified first, outside the
  * transaction (the provider gets 5 seconds, and no row is held meanwhile); then, under the request's
  * lock: a request still open (or awaiting changes) needs both declarations in the words in force (409
- * noticeStale), the pass (400) and the strict check (400 submitIncomplete, every missing item); then
+ * noticeStale), the pass (400), every section at the version the review page read (409 sectionsChanged,
+ * naming the ones a colleague saved since) and the strict check (400 submitIncomplete, every missing item); then
  * revision n+1 holds every section and its hash, 7.4 and 7.5 are recorded against that hash, the System
  * moves the request to submitted through a conditional write (its revision, time and submitter set), and
  * the `submitted` event and an allow-listed audit are written. Staff are told after the commit. A request
@@ -148,6 +124,8 @@ export class HotelFormSubmission {
     }
     if (!call.human) throw hotelFormBotRefusal();
     const rows = await this.sections.list(request.id, tx);
+    const changed = changedSectionsOf(rows, call.body.sectionVersions);
+    if (changed.length > 0) throw sectionsChangedRefusal(changed);
     const missing = checkSubmit({ kind: request.kind, sections: savedSectionsOf(rows) });
     if (missing.length > 0) {
       const details = hotelFormMissingItemDetails(missing);
@@ -251,10 +229,11 @@ export class HotelFormSubmission {
 
   /**
    * A submit on a request no longer open. It repeats the submit that locked the request (a double click,
-   * or a colleague who agrees) when the request still awaits review, its sections still hash to the
-   * latest revision, and the declarations it carries are the ones that revision's submitter recorded:
-   * that submit's answer, nothing written. Otherwise 409 alreadySubmitted: AMPM moved the request on, or
-   * these declarations differ, and are never dropped silently as if recorded.
+   * or a colleague who agrees) when the request still awaits review, its sections stand at the versions
+   * the caller's review page read and still hash to the latest revision, and the declarations it carries
+   * are the ones that revision's submitter recorded: that submit's answer, nothing written. Otherwise 409
+   * alreadySubmitted: AMPM moved the request on, or the caller read other answers or declared otherwise,
+   * which is never dropped silently as if recorded.
    */
   private async repeatOf(
     request: FormSubmission,
@@ -262,13 +241,15 @@ export class HotelFormSubmission {
     tx: Prisma.TransactionClient,
   ): Promise<HotelFormSubmitted> {
     const latest = await this.submissions.latestRevision(request.id, tx);
+    const rows = await this.sections.list(request.id, tx);
     const submittedAt = request.submittedAt;
     if (
       request.status !== "submitted" ||
       submittedAt === null ||
       latest === null ||
       latest.revision !== request.revision ||
-      revisionHashOrNull(await this.sections.list(request.id, tx)) !== latest.answersHash
+      changedSectionsOf(rows, body.sectionVersions).length > 0 ||
+      revisionHashOrNull(rows) !== latest.answersHash
     ) {
       throw alreadySubmittedRefusal(request);
     }

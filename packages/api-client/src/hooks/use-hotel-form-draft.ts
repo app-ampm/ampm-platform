@@ -65,7 +65,10 @@ export interface HotelFormSectionSaveCall<
   };
 }
 
-/** `submit`'s variables: the session, both declarations and the Turnstile pass for `hf_submit`. */
+/**
+ * `submit`'s variables: the session, and the body: both declarations, every section's version as the
+ * review page showed it, and the Turnstile pass for `hf_submit`.
+ */
 export interface HotelFormSubmitCall extends HotelFormSessionCall {
   readonly submit: HotelFormSubmitRequest;
 }
@@ -243,8 +246,11 @@ export function useSaveHotelFormSection() {
 }
 
 /**
- * `POST /hotel-form/submit`: both declarations and the Turnstile pass; the draft and `me` are read again,
- * as is either after a 409 alreadySubmitted (who submitted and when: `hotelFormReadOnlyOf`).
+ * `POST /hotel-form/submit`: both declarations, the section versions the review page showed
+ * (`hotelFormSectionVersionsOf(draft.sections)`) and the Turnstile pass. The draft and `me` are read
+ * again after it, and after any 409: sectionsChanged (a colleague saved since the page read the draft;
+ * `hotelFormSectionsChangedOf` names the sections), alreadySubmitted (who submitted and when:
+ * `hotelFormReadOnlyOf`) or noticeStale.
  *
  *   const { reference } = await useSubmitHotelForm().mutateAsync({ sessionToken, submit });
  */
@@ -255,7 +261,7 @@ export function useSubmitHotelForm() {
     mutationFn: (call) => hotelFormDraftCalls(api).submit(call),
     onSuccess: () => readAgain(queryClient),
     onError: (error) => {
-      if (isAppError(error) && hotelFormReadOnlyOf(error) !== null) void readAgain(queryClient);
+      if (isAppError(error) && error.code === "conflict") void readAgain(queryClient);
     },
   });
 }

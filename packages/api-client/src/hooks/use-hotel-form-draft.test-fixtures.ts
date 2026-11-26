@@ -2,6 +2,7 @@ import {
   HOTEL_FORM_ACCURACY_VERSION,
   HOTEL_FORM_CAPS,
   HOTEL_FORM_DISPLAY_VERSION,
+  hotelFormSectionVersionsOf,
   type HotelFormDraftView,
   type HotelFormMe,
 } from "@ampm/core";
@@ -67,6 +68,7 @@ export const ME: HotelFormMe = {
 export const SUBMIT = {
   accuracy: { accepted: true as const, textVersion: HOTEL_FORM_ACCURACY_VERSION },
   display: { answer: "yes" as const, textVersion: HOTEL_FORM_DISPLAY_VERSION },
+  sectionVersions: hotelFormSectionVersionsOf(DRAFT.sections),
   botToken: "turnstile-pass",
 };
 

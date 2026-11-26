@@ -93,6 +93,7 @@ describe("the hotel form's messages", () => {
         "correctionLimit",
         "notSubmitted",
         "noChangesOnOnboarding",
+        "sectionsChanged",
       ].sort(),
     );
   });
@@ -118,6 +119,7 @@ describe("the hotel form's messages", () => {
       HOTEL_FORM_ERRORS.notSubmitted,
       HOTEL_FORM_ERRORS.noChangesOnOnboarding,
       HOTEL_FORM_ERRORS.readOnly,
+      HOTEL_FORM_ERRORS.sectionsChanged,
     ];
     expect(new Set(form).size).toBe(form.length);
     for (const message of form) expect(message.length).toBeGreaterThan(20);

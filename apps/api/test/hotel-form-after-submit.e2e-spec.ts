@@ -6,7 +6,7 @@ import {
 } from "@ampm/core";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { CONTACT, draftCalls, firstSave, PROPERTY, submitBody } from "./hotel-form-draft-suite.js";
+import { CONTACT, draftCalls, firstSave, PROPERTY } from "./hotel-form-draft-suite.js";
 import {
   freshMobile,
   signIn,
@@ -47,7 +47,7 @@ describe("Corrections and withdrawal (e2e, D-190 §3)", () => {
     const { sessionToken } = await signIn(suite, link.secret, freshMobile());
     await calls.save(sessionToken, "property", firstSave(PROPERTY)).expect(200);
     await calls.save(sessionToken, "contact", firstSave(CONTACT)).expect(200);
-    await calls.submit(sessionToken, submitBody()).expect(200);
+    await calls.submit(sessionToken, await calls.reviewedBody(sessionToken)).expect(200);
     const person = await suite.prisma.hotelInfoRequestPerson.findFirstOrThrow({
       where: { requestId: link.id },
     });

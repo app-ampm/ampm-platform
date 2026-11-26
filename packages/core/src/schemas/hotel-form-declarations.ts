@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { isoDateTime, storableJsonText } from "./common";
 import { hotelFormRequestStatus } from "./hotel-form";
+import { hotelFormSectionVersions } from "./hotel-form-submit-versions";
 import { HOTEL_INFO_REQUEST_REFERENCE, hotelInfoRequestConsentKind } from "./hotel-info-requests";
 
 /*
@@ -63,13 +64,16 @@ const botToken = z.string().max(4096).optional();
 
 /**
  * `POST /hotel-form/submit`: 7.4 accepted and 7.5 answered, each naming the version of the words the
- * person saw ({@link HOTEL_FORM_ACCURACY_VERSION}, {@link HOTEL_FORM_DISPLAY_VERSION}), and the
- * Turnstile pass for {@link HOTEL_FORM_SUBMIT_ACTION}.
+ * person saw ({@link HOTEL_FORM_ACCURACY_VERSION}, {@link HOTEL_FORM_DISPLAY_VERSION}); every section's
+ * version as the review page showed it (`hotelFormSectionVersionsOf(draft.sections)`), so a colleague's
+ * later save is 409 `sectionsChanged` rather than declared accurate unseen; and the Turnstile pass for
+ * {@link HOTEL_FORM_SUBMIT_ACTION}.
  *
  * @example
  * hotelFormSubmitRequest.parse({
  *   accuracy: { accepted: true, textVersion: HOTEL_FORM_ACCURACY_VERSION },
  *   display: { answer: "no", textVersion: HOTEL_FORM_DISPLAY_VERSION },
+ *   sectionVersions: hotelFormSectionVersionsOf(draft.sections),
  *   botToken,
  * });
  */
@@ -82,6 +86,7 @@ export const hotelFormSubmitRequest = z
       })
       .strict(),
     display: z.object({ answer: hotelFormDisplayAnswer, textVersion }).strict(),
+    sectionVersions: hotelFormSectionVersions,
     botToken,
   })
   .strict();

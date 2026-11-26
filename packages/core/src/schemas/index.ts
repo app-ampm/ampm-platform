@@ -78,6 +78,7 @@ export * from "./hotel-form-fields";
 export * from "./hotel-form-section-keys";
 export * from "./hotel-form-sections";
 export * from "./hotel-form-submit";
+export * from "./hotel-form-submit-versions";
 export * from "./hotel-form-revision";
 export * from "./hotel-form-declarations";
 export * from "./hotel-form-draft";

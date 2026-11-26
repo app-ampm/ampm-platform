@@ -2,6 +2,9 @@ import {
   HOTEL_FORM_ACCURACY_VERSION,
   HOTEL_FORM_DISPLAY_VERSION,
   hotelFormRevisionAnswersOf,
+  hotelFormSectionVersionsOf,
+  type HotelFormSectionKey,
+  type HotelFormSectionVersions,
   type HotelFormSubmitRequest,
 } from "@ampm/core";
 import { expect, vi } from "vitest";
@@ -36,8 +39,9 @@ import {
 
 /*
  * The submit's fakes (D-190 §3), shared by its two unit specs: a complete onboarding draft, a body with
- * both declarations, the hash its revision binds to, the declarations a submitter recorded, and the
- * service on fake repositories whose transactions run at once. Synthetic data only. Test-only.
+ * both declarations and the section versions its review page read, the hash its revision binds to, the
+ * declarations a submitter recorded, and the service on fake repositories whose transactions run at once.
+ * Synthetic data only. Test-only.
  */
 
 export const COMPLETE: SectionRow[] = [
@@ -45,11 +49,33 @@ export const COMPLETE: SectionRow[] = [
   sectionRow("contact", { contacts: [{ name: "Synthetic Sales", email: "sales@hotel.example" }] }),
 ];
 
-export const BODY: HotelFormSubmitRequest = {
-  accuracy: { accepted: true, textVersion: HOTEL_FORM_ACCURACY_VERSION },
-  display: { answer: "yes", textVersion: HOTEL_FORM_DISPLAY_VERSION },
-  botToken: "turnstile-pass",
-};
+/** The versions a review page that read `rows` sends: each saved section's, 0 for the others. */
+export function versionsOf(rows: readonly SectionRow[]): HotelFormSectionVersions {
+  const at = (key: HotelFormSectionKey) => ({
+    version: rows.find((row) => row.sectionKey === key)?.version ?? 0,
+  });
+  return hotelFormSectionVersionsOf({
+    property: at("property"),
+    contact: at("contact"),
+    rooms: at("rooms"),
+    venues: at("venues"),
+    booking_terms: at("booking_terms"),
+    food_beverage: at("food_beverage"),
+    fact_sheet_media: at("fact_sheet_media"),
+  });
+}
+
+/** A submit's body for a review page that read `rows`: both declarations, their versions, the pass. */
+export function bodyFor(rows: readonly SectionRow[]): HotelFormSubmitRequest {
+  return {
+    accuracy: { accepted: true, textVersion: HOTEL_FORM_ACCURACY_VERSION },
+    display: { answer: "yes", textVersion: HOTEL_FORM_DISPLAY_VERSION },
+    sectionVersions: versionsOf(rows),
+    botToken: "turnstile-pass",
+  };
+}
+
+export const BODY: HotelFormSubmitRequest = bodyFor(COMPLETE);
 
 /** The hash a submit of `rows` binds to, as the service computes it. */
 export function revisionHashOf(rows: readonly SectionRow[]): string {

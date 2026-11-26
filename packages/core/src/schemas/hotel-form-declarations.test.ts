@@ -41,6 +41,15 @@ const displayWords = (): string => {
 const submit = {
   accuracy: { accepted: true, textVersion: HOTEL_FORM_ACCURACY_VERSION },
   display: { answer: "no", textVersion: HOTEL_FORM_DISPLAY_VERSION },
+  sectionVersions: {
+    property: 2,
+    contact: 1,
+    rooms: 0,
+    venues: 0,
+    booking_terms: 0,
+    food_beverage: 0,
+    fact_sheet_media: 0,
+  },
   botToken: "turnstile-pass",
 };
 
@@ -101,6 +110,15 @@ describe("hotelFormSubmitRequest", () => {
       message: "Answer Yes or No",
     });
     expect(hotelFormSubmitRequest.safeParse({ ...submit, display: undefined }).success).toBe(false);
+  });
+
+  it("needs the section versions the review page showed, every section's", () => {
+    const { sectionVersions: _versions, ...without } = submit;
+    expect(hotelFormSubmitRequest.safeParse(without).success).toBe(false);
+    const { rooms: _rooms, ...six } = submit.sectionVersions;
+    expect(hotelFormSubmitRequest.safeParse({ ...submit, sectionVersions: six }).success).toBe(
+      false,
+    );
   });
 
   it("refuses an unknown key, an empty or over-long version, and takes a missing bot pass for the check", () => {

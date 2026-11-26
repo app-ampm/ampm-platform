@@ -5,6 +5,7 @@ import {
   HOTEL_FORM_ERRORS,
   hotelFormReadOnlyDetails,
   hotelFormSectionConflictDetails,
+  hotelFormSectionsChangedDetails,
   type HotelFormDraftView,
 } from "@ampm/core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -151,5 +152,18 @@ describe("the hooks keep the cached draft as the API holds it", () => {
     withdraw?.onSuccess?.({ withdrawn: [], removalRequested: true }, {});
     expect(isInvalidated(HOTEL_FORM_DRAFT_QUERY_KEY)).toBe(true);
     expect(correction?.onSuccess).toBeUndefined();
+  });
+
+  it("after a submit refused because a colleague changed sections since the review page read them: read again", () => {
+    useSubmitHotelForm();
+    const [submit] = hooks.options;
+    cache.setQueryData(HOTEL_FORM_DRAFT_QUERY_KEY, DRAFT);
+    const changed = new AppError(
+      "conflict",
+      HOTEL_FORM_ERRORS.sectionsChanged,
+      hotelFormSectionsChangedDetails(["rooms"]),
+    );
+    submit?.onError?.(changed, {});
+    expect(isInvalidated(HOTEL_FORM_DRAFT_QUERY_KEY)).toBe(true);
   });
 });

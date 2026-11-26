@@ -4,6 +4,7 @@ import {
   canonicalJson,
   HOTEL_FORM_ACCURACY_VERSION,
   HOTEL_FORM_DISPLAY_VERSION,
+  hotelFormSectionVersionsOf,
   utf8ByteLength,
 } from "@ampm/core";
 import request from "supertest";
@@ -21,9 +22,19 @@ import { freshIp, type FormSuite } from "./hotel-form-suite.js";
 export function draftCalls(suite: () => FormSuite) {
   const http = () => request(suite().app.getHttpServer());
   const as = (token: string) => `Bearer ${token}`;
+  const draft = (token: string, ip = freshIp()) =>
+    http().get("/hotel-form/draft").set("X-Forwarded-For", ip).set("Authorization", as(token));
   return {
-    draft: (token: string, ip = freshIp()) =>
-      http().get("/hotel-form/draft").set("X-Forwarded-For", ip).set("Authorization", as(token)),
+    draft,
+    /**
+     * A submit's body as the review page sends it: the section versions read from the draft now, as the
+     * page shows them, and both declarations.
+     */
+    reviewedBody: async (token: string, display: "yes" | "no" = "yes", overrides: object = {}) => {
+      const shown = await draft(token).expect(200);
+      const sectionVersions = hotelFormSectionVersionsOf(shown.body.data.sections);
+      return submitBody(display, { sectionVersions, ...overrides });
+    },
     save: (token: string, section: string, body: object, ip = freshIp()) =>
       http()
         .put(`/hotel-form/draft/sections/${section}`)
@@ -60,11 +71,26 @@ export const CONTACT = {
 /** A first save's body. */
 export const firstSave = (answers: object) => ({ answers, expectedVersion: 0, noChanges: false });
 
-/** A submit's body: 7.4 accepted, 7.5 answered, both in the words in force, and the stub's pass. */
+/** The versions a review page read before any section was saved. */
+export const UNSAVED_VERSIONS = {
+  property: 0,
+  contact: 0,
+  rooms: 0,
+  venues: 0,
+  booking_terms: 0,
+  food_beverage: 0,
+  fact_sheet_media: 0,
+};
+
+/**
+ * A submit's body: 7.4 accepted, 7.5 answered, both in the words in force, the section versions the
+ * review page read (none saved, unless told), and the stub's pass.
+ */
 export function submitBody(display: "yes" | "no" = "yes", overrides: object = {}) {
   return {
     accuracy: { accepted: true, textVersion: HOTEL_FORM_ACCURACY_VERSION },
     display: { answer: display, textVersion: HOTEL_FORM_DISPLAY_VERSION },
+    sectionVersions: UNSAVED_VERSIONS,
     botToken: "dev-bot-check",
     ...overrides,
   };
