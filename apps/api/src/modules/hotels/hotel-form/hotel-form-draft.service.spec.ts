@@ -8,6 +8,7 @@ import {
 } from "@ampm/core";
 import { describe, expect, it, vi } from "vitest";
 
+import type { AppLogger } from "../../../common/logger.service.js";
 import type { ConfigService } from "../../admin/config/config.service.js";
 import { refusalOf } from "../testing/hotel-form-fixtures.js";
 import {
@@ -16,6 +17,7 @@ import {
   FORM_LATER,
   FORM_PERSON_ID,
   FORM_REFERENCE,
+  FORM_REQUEST_ID,
   formSession,
   formSubmission,
   formSubmissions,
@@ -64,13 +66,15 @@ function build(
   const list = vi.fn(async () => options.rows ?? []);
   const contributors = vi.fn(async () => options.people ?? PEOPLE);
   const get = vi.fn(async () => ({ options: CUISINES }));
+  const warn = vi.fn();
   const draft = new HotelFormDraft(
     submissions.typed,
     { list } as unknown as HotelFormSectionsRepository,
     { contributors } as unknown as HotelFormPeopleRepository,
     { get } as unknown as ConfigService,
+    { warn } as unknown as AppLogger,
   );
-  return { draft, submissions: submissions.repository, list, get };
+  return { draft, submissions: submissions.repository, list, get, warn };
 }
 
 describe("HotelFormDraft.get", () => {
@@ -86,6 +90,7 @@ describe("HotelFormDraft.get", () => {
       noChanges: false,
       lastEditedBy: "Synthetic Colleague",
       lastEditedAt: FORM_EARLIER.toISOString(),
+      isUnreadable: false,
     });
     expect(view.sections.property).toEqual({
       answers: {},
@@ -94,6 +99,7 @@ describe("HotelFormDraft.get", () => {
       noChanges: false,
       lastEditedBy: null,
       lastEditedAt: null,
+      isUnreadable: false,
     });
     // The fact sheet section asks only its date until its uploads arrive (Slice 9): never incomplete.
     expect(view.sections.fact_sheet_media.isComplete).toBe(true);
@@ -181,9 +187,40 @@ describe("HotelFormDraft.get", () => {
     }
   });
 
-  it("never trusts a stored section that no longer reads: it is a fault, not an empty section", async () => {
-    const broken = sectionRow("rooms", { rows: "many" });
-    const refused = await refusalOf(build({ rows: [broken] }).draft.get(formSession()));
-    expect(refused?.status).toBe(500);
+  it("answers a stored section that no longer reads as unreadable and empty, never failing the draft", async () => {
+    const broken = sectionRow("rooms", { rows: "many", totalRooms: 40 }, { version: 4 });
+    const property = sectionRow("property", { name: "Synthetic Lake Palace" });
+    const built = build({ rows: [broken, property] });
+    const view = await built.draft.get(formSession());
+    expect(hotelFormDraftView.parse(view)).toEqual(view);
+    expect(view.sections.rooms).toEqual({
+      answers: {},
+      version: 4,
+      isComplete: false,
+      noChanges: false,
+      lastEditedBy: "Synthetic Colleague",
+      lastEditedAt: FORM_EARLIER.toISOString(),
+      isUnreadable: true,
+    });
+    expect(view.sections.property).toMatchObject({
+      answers: { name: "Synthetic Lake Palace" },
+      isUnreadable: false,
+    });
+    expect(view.sections.venues.isUnreadable).toBe(false);
+  });
+
+  it("logs a section that no longer reads by its request, key and versions, never its answers", async () => {
+    const broken = sectionRow("rooms", { rows: "Synthetic many", totalRooms: 40 }, { version: 4 });
+    const built = build({ rows: [broken] });
+    await built.draft.get(formSession());
+    expect(built.warn).toHaveBeenCalledTimes(1);
+    expect(built.warn).toHaveBeenCalledWith("hotel_form.section_unreadable", {
+      requestId: FORM_REQUEST_ID,
+      section: "rooms",
+      version: 4,
+      schemaVersion: 1,
+      issues: [{ path: "rows", code: "invalid_type" }],
+    });
+    expect(JSON.stringify(built.warn.mock.calls)).not.toContain("Synthetic many");
   });
 });

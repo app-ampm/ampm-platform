@@ -16,7 +16,7 @@ import { useFocusAfterPanel } from "../reverify-panel";
 import { SECTION_TITLES, SECTIONS_COPY } from "../sections-copy";
 import { StepShell } from "../step-shell";
 import { fieldId } from "./field-values";
-import { ConflictBanner, LockedBanner, SaveLine } from "./section-banners";
+import { ConflictBanner, LockedBanner, SaveLine, UnreadableBanner } from "./section-banners";
 import type { RefreshNote, SectionEditor } from "./use-section-editor";
 
 const COPY = SECTIONS_COPY;
@@ -26,17 +26,20 @@ export const SECTION_HEADING_ID = "hf-section-heading";
 
 const focusHeading = () => document.getElementById(SECTION_HEADING_ID)?.focus();
 
-/** A colleague's save, a locked request, and the save line, over the questions. */
+/** Answers that no longer read, a colleague's save, a locked request, and the save line, over the questions. */
 function SectionNotices<F>({
+  sectionKey,
   editor,
   draft,
 }: {
+  readonly sectionKey: HotelFormSectionKey;
   readonly editor: SectionEditor<F>;
   readonly draft: HotelFormDraftView;
 }) {
   const { save } = editor;
   return (
     <>
+      {draft.sections[sectionKey].isUnreadable ? <UnreadableBanner /> : null}
       {save.kind === "conflict" ? (
         <ConflictBanner
           theirs={save.theirs}
@@ -210,7 +213,7 @@ export function SectionScreen<F extends RefreshNote>(props: SectionScreenProps<F
       width="form"
     >
       {reverify}
-      <SectionNotices editor={editor} draft={draft} />
+      <SectionNotices sectionKey={sectionKey} editor={editor} draft={draft} />
       {isRefresh ? <RefreshLead /> : null}
       <SectionForm
         sectionKey={sectionKey}

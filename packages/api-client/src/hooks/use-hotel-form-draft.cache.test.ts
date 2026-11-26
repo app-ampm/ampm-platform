@@ -79,7 +79,27 @@ describe("the hooks keep the cached draft as the API holds it", () => {
       noChanges: false,
       lastEditedBy: "Synthetic Person",
       lastEditedAt: "2026-11-26T09:45:00.000Z",
+      isUnreadable: false,
     });
+  });
+
+  it("after a save of a section whose stored answers no longer read: the save replaced them, so it reads", () => {
+    const unreadable = { ...DRAFT.sections.rooms, answers: {}, isUnreadable: true };
+    cache.setQueryData(HOTEL_FORM_DRAFT_QUERY_KEY, {
+      ...DRAFT,
+      sections: { ...DRAFT.sections, rooms: unreadable },
+    });
+    useSaveHotelFormSection();
+    const [save] = hooks.options;
+    const saved = {
+      version: 3,
+      isComplete: false,
+      contentHash: "b".repeat(64),
+      lastEditedBy: "Synthetic Person",
+      lastEditedAt: "2026-11-26T09:45:00.000Z",
+    };
+    save?.onSuccess?.(saved, roomsSave(41));
+    expect(cachedRooms()).toMatchObject({ version: 3, isUnreadable: false });
   });
 
   it("after a save that changed nothing at a colleague's newer version: their name and time, not you now", () => {
@@ -122,6 +142,7 @@ describe("the hooks keep the cached draft as the API holds it", () => {
       noChanges: false,
       lastEditedBy: "Colleague",
       lastEditedAt: AT,
+      isUnreadable: false,
     });
   });
 

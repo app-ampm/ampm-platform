@@ -90,6 +90,14 @@ describe("the missing items", () => {
     );
   });
 
+  it("name a section whose stored answers no longer read, as the API's submit check would", () => {
+    const rooms = { ...READY.sections.rooms, answers: {}, isUnreadable: true };
+    const draft = { ...READY, sections: { ...READY.sections, rooms } };
+    expect(missingItemsOf(draft)).toEqual([
+      { section: "rooms", field: null, message: "Check this section and save it again" },
+    ]);
+  });
+
   it("say where each is: the section, and the row by its name or its place", () => {
     const draft = draftWith({
       venues: {

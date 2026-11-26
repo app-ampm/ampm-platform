@@ -229,6 +229,28 @@ describe("HotelFormSectionSaves: a later save", () => {
     expect(built.updateIf).not.toHaveBeenCalled();
   });
 
+  it("replaces a stored section that no longer reads when it is saved on its version", async () => {
+    const built = build({ current: sectionRow("rooms", { rows: "many" }, { version: 3 }) });
+    const answers = { totalRooms: 40 };
+    const saved = await save(built, "rooms", { answers, expectedVersion: 3, noChanges: false });
+    expect(saved.version).toBe(4);
+    const write = expect.objectContaining({ answers, contentHash: hashOf(answers) });
+    expect(built.updateIf).toHaveBeenCalledWith(FORM_REQUEST_ID, "rooms", 3, write, FORM_TX);
+  });
+
+  it("answers a stale save over a stored section that no longer reads as a conflict with no answers, never a 500", async () => {
+    const built = build({ current: sectionRow("rooms", { rows: "many" }, { version: 3 }) });
+    const refused = await refusalOf(
+      save(built, "rooms", { answers: { totalRooms: 40 }, expectedVersion: 2, noChanges: false }),
+    );
+    expect(refused?.status).toBe(409);
+    expect(refused && hotelFormSectionConflictOf(refused, "rooms")).toMatchObject({
+      version: 3,
+      answers: {},
+    });
+    expect(built.updateIf).not.toHaveBeenCalled();
+  });
+
   it("answers a write that found the version moved as a conflict, never as saved", async () => {
     const built = build({ current: sectionRow("property", stored, { version: 3 }), written: 0 });
     const answers = { name: "Another Lake Palace" };

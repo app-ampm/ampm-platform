@@ -81,6 +81,11 @@ export const SECTIONS_COPY = {
     keepMine: "Keep mine",
     takeTheirs: "Take theirs",
   },
+  /** A section whose saved answers no longer read under the form's current questions (D-190, fix D3). */
+  unreadable: {
+    heading: "Please fill in this section again",
+    body: "Its answers were saved before we changed this section's questions, so they can't be shown. What you enter now replaces them.",
+  },
   locked: {
     heading: "This form was submitted",
     refused: (name: string, moment: string) =>

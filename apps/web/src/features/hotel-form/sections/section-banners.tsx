@@ -123,6 +123,30 @@ function AlertCallout({
   );
 }
 
+/**
+ * A section whose saved answers no longer read under the form's current questions (D-190, review fix
+ * D3): the draft answers it empty, so the person is asked to fill it in again; their next save replaces
+ * the old answers. Announced politely, as the page opens on it.
+ *
+ *   {draft.sections.rooms.isUnreadable ? <UnreadableBanner /> : null}
+ */
+export function UnreadableBanner() {
+  return (
+    <section
+      role="status"
+      aria-labelledby="hf-unreadable-heading"
+      className={cn(glassStyles({ recipe: "gold", blur: false }), calloutStyles, "flex-col gap-3")}
+    >
+      <h2 id="hf-unreadable-heading" className={textStyles({ variant: "label", tone: "primary" })}>
+        {COPY.unreadable.heading}
+      </h2>
+      <p className={textStyles({ variant: "bodySmall", tone: "primary" })}>
+        {COPY.unreadable.body}
+      </p>
+    </section>
+  );
+}
+
 export interface ConflictBannerProps {
   readonly theirs: HotelFormSectionConflict;
   readonly onKeepMine: () => void;

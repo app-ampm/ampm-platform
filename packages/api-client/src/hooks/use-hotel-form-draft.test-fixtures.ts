@@ -21,6 +21,7 @@ const unsaved = {
   noChanges: false,
   lastEditedBy: null,
   lastEditedAt: null,
+  isUnreadable: false,
 };
 export const DRAFT: HotelFormDraftView = {
   request: {

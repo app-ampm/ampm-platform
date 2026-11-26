@@ -76,6 +76,16 @@ describe("a section's page", () => {
     ).toEqual(["/hotel-form/review", "Review and submit"]);
   });
 
+  it("asks for a section whose saved answers no longer read to be filled in again, and only then", () => {
+    const rooms = { ...DRAFT.sections.rooms, answers: {}, isUnreadable: true };
+    const unreadable = { ...DRAFT, sections: { ...DRAFT.sections, rooms } };
+    const html = screen(editorAt(ROOMS), unreadable);
+    expect(html).toContain(SECTIONS_COPY.unreadable.heading);
+    expect(html).toContain(SECTIONS_COPY.unreadable.body);
+    expect(tagsWith(html, "section", 'role="status"')).toHaveLength(1);
+    expect(screen(editorAt(ROOMS))).not.toContain(SECTIONS_COPY.unreadable.heading);
+  });
+
   it("holds the questions in one form, whose blur saves the section on leaving any field", () => {
     expect(screen(editorAt(ROOMS))).toMatch(/<form noValidate=""><fieldset[^>]*>/);
   });

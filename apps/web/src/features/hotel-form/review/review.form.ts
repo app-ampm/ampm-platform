@@ -61,8 +61,8 @@ export interface SubmitCheck {
 }
 
 /**
- * Every item a submit would be refused for, by core's `checkSubmit` for the request's kind: empty when the
- * form may be submitted.
+ * Every item a submit would be refused for, by core's `checkSubmit` for the request's kind (a section
+ * whose stored answers no longer read named, as the API names it): empty when the form may be submitted.
  *
  * @example
  * missingItemsOf(draft); // [{ section: "property", field: "state", message: "Choose the state" }]
@@ -70,10 +70,10 @@ export interface SubmitCheck {
 export function missingItemsOf(draft: HotelFormDraftView): HotelFormMissingItem[] {
   const { sections } = draft;
   const saved = Object.fromEntries(
-    HOTEL_FORM_SECTION_KEYS.map((key) => [
-      key,
-      { answers: sections[key].answers, noChanges: sections[key].noChanges },
-    ]),
+    HOTEL_FORM_SECTION_KEYS.map((key) => {
+      const { answers, noChanges, isUnreadable } = sections[key];
+      return [key, { answers, noChanges, isUnreadable }];
+    }),
   );
   return checkSubmit({ kind: draft.request.kind, sections: saved });
 }

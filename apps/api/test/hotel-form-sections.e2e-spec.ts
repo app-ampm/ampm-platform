@@ -74,6 +74,7 @@ describe("The hotel form's draft and sections (e2e, D-190 §3)", () => {
       noChanges: false,
       lastEditedBy: null,
       lastEditedAt: null,
+      isUnreadable: false,
     });
     expect(view.contributors).toEqual([
       { fullName: "E2E Synthetic Person", designation: "General Manager", isYou: true },

@@ -4,17 +4,14 @@ import {
   errors,
   HOTEL_FORM_ERRORS,
   HOTEL_FORM_SCHEMA_VERSIONS,
-  HOTEL_FORM_SECTION_DRAFTS,
   HOTEL_FORM_SECTION_MAX_BYTES,
   hotelFormSectionConflictDetails,
   hotelFormSectionTooLargeDetails,
   isHotelFormSectionComplete,
-  type HotelFormSectionAnswers,
   type HotelFormSectionKey,
   type HotelFormSectionSaved,
   type HotelFormSectionSaveRequest,
 } from "@ampm/core";
-import type { z } from "zod";
 
 import type { Prisma } from "../../../generated/prisma/client.js";
 import { canonicalContentOf } from "./hotel-form-content.js";
@@ -28,12 +25,9 @@ import {
 } from "./hotel-form-sections.repository.js";
 import { HotelFormSessionsRepository } from "./hotel-form-sessions.repository.js";
 import type { FormSession } from "./hotel-form-sessions.service.js";
+import { storedAnswersOf } from "./hotel-form-stored-answers.js";
 import { inForm, isEditableStatus, readOnlyRefusal } from "./hotel-form-submission-state.js";
 import { HotelFormSubmissionsRepository } from "./hotel-form-submissions.repository.js";
-
-/** Each section's draft, typed so a key's parse gives that section's answers. */
-const DRAFTS: { readonly [K in HotelFormSectionKey]: z.ZodType<HotelFormSectionAnswers[K]> } =
-  HOTEL_FORM_SECTION_DRAFTS;
 
 /** One save as the lock takes it: who saves which section, the body, and what it would write. */
 interface SaveCall<K extends HotelFormSectionKey> {
@@ -76,14 +70,16 @@ const isUnchanged = (row: SectionRow, write: SectionWrite): boolean =>
   row.noChanges === write.noChanges &&
   row.schemaVersion === write.schemaVersion;
 
-/** 409 `sectionConflict`: the section as a colleague saved it, for Keep mine or Take theirs. */
+/**
+ * 409 `sectionConflict`: the section as a colleague saved it, for Keep mine or Take theirs. Stored answers
+ * that no longer read under the current schema go as the draft's empty answers, as the draft answers
+ * them, so the choice is still offered and Keep mine replaces them (review fix D3).
+ */
 function conflictWith<K extends HotelFormSectionKey>(key: K, row: SectionRow): AppError {
-  const answers = DRAFTS[key].safeParse(row.answers);
-  if (!answers.success) return errors.internal(`The saved ${key} section no longer reads`);
   const details = hotelFormSectionConflictDetails({
     section: key,
     version: row.version,
-    answers: answers.data,
+    answers: storedAnswersOf(key, row).answers,
     noChanges: row.noChanges,
     editedBy: row.lastEditedBy,
     editedAt: row.lastEditedAt.toISOString(),

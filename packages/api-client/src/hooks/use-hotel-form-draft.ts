@@ -180,7 +180,8 @@ function withSection<K extends HotelFormSectionKey>(
 /**
  * A saved section in the cache: its version, its answers as the API stores them, and who saved it last
  * and when as the API answered (a save that changed nothing answers the section as it stands, which may
- * be a colleague's, so the saver is never assumed).
+ * be a colleague's, so the saver is never assumed). A section whose stored answers no longer read reads
+ * again: the save replaced them.
  */
 function cacheSaved<K extends HotelFormSectionKey>(
   queryClient: QueryClient,
@@ -195,6 +196,7 @@ function cacheSaved<K extends HotelFormSectionKey>(
     noChanges: save.noChanges,
     lastEditedBy: saved.lastEditedBy,
     lastEditedAt: saved.lastEditedAt,
+    isUnreadable: false,
   }));
 }
 
@@ -214,6 +216,7 @@ function cacheRefused<K extends HotelFormSectionKey>(
       noChanges: theirs.noChanges,
       lastEditedBy: theirs.editedBy,
       lastEditedAt: theirs.editedAt,
+      isUnreadable: false,
     }));
     return;
   }

@@ -39,10 +39,15 @@ export const hotelFormMissingItem = z
   .strict();
 export type HotelFormMissingItem = z.infer<typeof hotelFormMissingItem>;
 
-/** One section as submit reads it: its answers as stored, and whether it is marked "No changes". */
+/**
+ * One section as submit reads it: its answers as stored, whether it is marked "No changes", and whether
+ * its stored answers no longer read (the draft's `isUnreadable`, for a page that holds the draft's empty
+ * answers instead of the stored ones).
+ */
 export interface HotelFormSectionState {
   readonly answers: unknown;
   readonly noChanges: boolean;
+  readonly isUnreadable?: boolean | undefined;
 }
 
 /** What submit checks: the request's kind, and its saved sections (one never saved is left out). */
@@ -205,15 +210,15 @@ export function isHotelFormSectionComplete<K extends HotelFormSectionKey>(
 
 /**
  * A section's missing items. Its answers are read first, even on a refresh section marked "No changes":
- * the revision holds every section as its draft reads it, so one that no longer reads is named here
- * rather than failing the submit after this check passed.
+ * the revision holds every section as its draft reads it, so one that no longer reads (or that the draft
+ * says no longer reads) is named here rather than failing the submit after this check passed.
  */
 function sectionItems<K extends HotelFormSectionKey>(
   key: K,
   { kind, sections }: HotelFormSubmitInput,
 ): HotelFormMissingItem[] {
   const saved = sections[key];
-  const draft = read(key, saved?.answers);
+  const draft = saved?.isUnreadable === true ? null : read(key, saved?.answers);
   if (draft === null) return [{ section: key, field: null, message: UNREADABLE }];
   if (kind === "refresh" && saved?.noChanges === true) return [];
   return REQUIRED[key](draft, kind).map((item) => ({ section: key, ...item }));

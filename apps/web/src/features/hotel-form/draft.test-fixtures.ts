@@ -14,6 +14,7 @@ const unsaved = {
   noChanges: false,
   lastEditedBy: null,
   lastEditedAt: null,
+  isUnreadable: false,
 };
 
 export const EDITED_AT = "2026-11-26T05:12:00.000Z";

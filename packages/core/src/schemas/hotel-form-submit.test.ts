@@ -162,6 +162,21 @@ describe("checkSubmit", () => {
     ]);
   });
 
+  it("names a section the draft answered as unreadable, though the page holds its empty answers", () => {
+    const rooms = { answers: {}, noChanges: false, isUnreadable: true };
+    expect(checkSubmit({ kind: "onboarding", sections: { ...ready, rooms } })).toEqual([
+      { section: "rooms", field: null, message: "Check this section and save it again" },
+    ]);
+    const marked = { answers: {}, noChanges: true, isUnreadable: true };
+    expect(checkSubmit({ kind: "refresh", sections: { rooms: marked } })).toEqual([
+      { section: "rooms", field: null, message: "Check this section and save it again" },
+    ]);
+    const readable = { answers: {}, noChanges: false, isUnreadable: false };
+    expect(checkSubmit({ kind: "onboarding", sections: { ...ready, rooms: readable } })).toEqual(
+      [],
+    );
+  });
+
   it("names a refresh section marked No changes whose saved answers no longer read, as its revision could not hold them", () => {
     const acre = { rowId: rowId(1), name: "Suite", size: { value: 1, unit: "acre" } };
     const rooms = state({ rows: [acre] }, true);

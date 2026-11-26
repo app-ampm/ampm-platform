@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common";
 import {
-  errors,
   HOTEL_CUISINE_OTHER,
   HOTEL_FACILITY_OPTIONS,
   HOTEL_FACILITY_OTHER,
@@ -17,10 +16,16 @@ import {
 } from "@ampm/core";
 import type { z } from "zod";
 
+import { AppLogger } from "../../../common/logger.service.js";
 import { ConfigService } from "../../admin/config/config.service.js";
 import { HotelFormPeopleRepository, type ContributorRow } from "./hotel-form-people.repository.js";
 import { HotelFormSectionsRepository, type SectionRow } from "./hotel-form-sections.repository.js";
 import type { FormSession } from "./hotel-form-sessions.service.js";
+import {
+  storedAnswersOf,
+  unreadableLogOf,
+  type UnreadableIssue,
+} from "./hotel-form-stored-answers.js";
 import { linkClosesAt } from "./hotel-form-state.js";
 import { formStatusOf, inForm } from "./hotel-form-submission-state.js";
 import {
@@ -34,13 +39,19 @@ const DRAFTS: { readonly [K in HotelFormSectionKey]: z.ZodType<HotelFormSectionA
 
 type SectionView<K extends HotelFormSectionKey> = HotelFormDraftSections[K];
 
+/** Told of a saved section that no longer reads under the current schema, with why. */
+type OnUnreadable = (row: SectionRow, issues: readonly UnreadableIssue[]) => void;
+
 /**
- * A section as the draft answers it: a saved one read through its draft (a stored answer that no longer
- * reads is a fault, never shown as empty, so no save overwrites it unseen), an unsaved one at version 0.
+ * A section as the draft answers it: a saved one read through its draft, an unsaved one at version 0. A
+ * saved one whose stored answers no longer read (saved before a change to the form's questions) is
+ * answered empty and unreadable at its version, so the page asks for it again and its next save replaces
+ * it, instead of the whole draft failing (review fix D3).
  */
 function sectionViewOf<K extends HotelFormSectionKey>(
   key: K,
   row: SectionRow | undefined,
+  onUnreadable: OnUnreadable,
 ): SectionView<K> {
   if (row === undefined) {
     const answers = DRAFTS[key].parse({});
@@ -52,19 +63,21 @@ function sectionViewOf<K extends HotelFormSectionKey>(
       noChanges: false,
       lastEditedBy: null,
       lastEditedAt: null,
+      isUnreadable: false,
     };
   }
-  const answers = DRAFTS[key].safeParse(row.answers);
-  if (!answers.success) throw errors.internal(`The saved ${key} section no longer reads`);
+  const stored = storedAnswersOf(key, row);
+  if (stored.isUnreadable) onUnreadable(row, stored.issues);
   return {
-    answers: answers.data,
+    answers: stored.answers,
     version: row.version,
     // Counted on every read from the answers as stored, by the current schema: the stored flag is only
-    // as current as its save.
+    // as current as its save, and answers that no longer read are never complete.
     isComplete: isHotelFormSectionComplete(key, row.answers, row.noChanges),
     noChanges: row.noChanges,
     lastEditedBy: row.lastEditedBy,
     lastEditedAt: row.lastEditedAt.toISOString(),
+    isUnreadable: stored.isUnreadable,
   };
 }
 
@@ -79,10 +92,13 @@ function contributorOf(person: ContributorRow, session: FormSession): HotelFormC
 }
 
 /** Every section, saved or not, in the form's model. */
-function sectionsOf(rows: readonly SectionRow[]): HotelFormDraftSections {
+function sectionsOf(
+  rows: readonly SectionRow[],
+  onUnreadable: OnUnreadable,
+): HotelFormDraftSections {
   const byKey = new Map(rows.map((row) => [row.sectionKey, row]));
   const view = <K extends HotelFormSectionKey>(key: K): SectionView<K> =>
-    sectionViewOf(key, byKey.get(key));
+    sectionViewOf(key, byKey.get(key), onUnreadable);
   return {
     property: view("property"),
     contact: view("contact"),
@@ -113,7 +129,8 @@ function requestOf(request: FormSubmission): HotelFormDraftRequest {
 /**
  * `GET /hotel-form/draft` (D-190 §3): what the hub, the section pages, the review page and the status page
  * draw from. Every section with its answers, version, completeness (counted on read), No changes and last
- * editor's name and time; the people helping, by name and designation (never a mobile; a colleague who
+ * editor's name and time (a section whose stored answers no longer read answered empty and unreadable, and
+ * logged without its answers); the people helping, by name and designation (never a mobile; a colleague who
  * withdrew their privacy notice consent unnamed, as everywhere on the form); AMPM's label and note; the
  * request's reference, kind, status and state, and who submitted it and when; the caps; and the cuisine
  * choices (configuration `hotel.cuisine_options`) and facility choices, each with its Other. It reads
@@ -126,6 +143,7 @@ export class HotelFormDraft {
     private readonly sections: HotelFormSectionsRepository,
     private readonly people: HotelFormPeopleRepository,
     private readonly config: ConfigService,
+    private readonly logger: AppLogger,
   ) {}
 
   async get(session: FormSession): Promise<HotelFormDraftView> {
@@ -135,9 +153,14 @@ export class HotelFormDraft {
       this.people.contributors(session.requestId),
       this.config.get("hotel.cuisine_options"),
     ]);
+    const unreadable: OnUnreadable = (row, issues) =>
+      this.logger.warn(
+        "hotel_form.section_unreadable",
+        unreadableLogOf(session.requestId, row, issues),
+      );
     return {
       request: requestOf(inForm(request)),
-      sections: sectionsOf(rows),
+      sections: sectionsOf(rows, unreadable),
       contributors: people.map((person) => contributorOf(person, session)),
       caps: HOTEL_FORM_CAPS,
       options: {

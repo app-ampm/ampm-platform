@@ -24,7 +24,8 @@ import type { HotelFormRefusedCall } from "./hotel-form-submit";
 
 /**
  * A section as the draft answers it: its answers, version, completeness (counted from the stored answers
- * by the current schema, on every read), No changes and last editor.
+ * by the current schema, on every read), No changes and last editor, and whether its stored answers no
+ * longer read.
  */
 function sectionView<K extends HotelFormSectionKey>(key: K) {
   return z
@@ -40,6 +41,13 @@ function sectionView<K extends HotelFormSectionKey>(key: K) {
        */
       lastEditedBy: z.string().nullable(),
       lastEditedAt: isoDateTime.nullable(),
+      /**
+       * The stored answers no longer read under the current schema (saved before a change to the form's
+       * questions): the section is answered with empty answers and is not complete, so the page asks for
+       * it again and the submit check names it; its next save, on its version, replaces the stored row.
+       * One such section never fails the whole draft.
+       */
+      isUnreadable: z.boolean(),
     })
     .strict();
 }

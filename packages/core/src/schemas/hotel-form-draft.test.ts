@@ -36,6 +36,7 @@ const unsaved = {
   noChanges: false,
   lastEditedBy: null,
   lastEditedAt: null,
+  isUnreadable: false,
 };
 
 const sections = Object.fromEntries(HOTEL_FORM_SECTION_KEYS.map((key) => [key, unsaved]));
@@ -61,6 +62,7 @@ const draft = {
       noChanges: false,
       lastEditedBy: "Synthetic Person",
       lastEditedAt: at,
+      isUnreadable: false,
     },
   },
   contributors: [
