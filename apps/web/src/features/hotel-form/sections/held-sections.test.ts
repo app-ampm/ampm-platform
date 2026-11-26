@@ -8,6 +8,7 @@ import {
 } from "@ampm/core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { CONTACT_MODEL, type ContactFields } from "./contact.form";
 import { HeldSections, KEEPALIVE_BUDGET_BYTES, type FormSession } from "./held-sections";
 import { PROPERTY_MODEL, type PropertyFields } from "./property.form";
 import { ROOMS_MODEL, emptyRoom, type RoomsFields } from "./rooms.form";
@@ -169,6 +170,41 @@ describe("leaving a section (review fixes E1 and E4)", () => {
     expect(sections.statuses()).toEqual({ rooms: "unsaved" });
     expect(openRooms(5, 52)).toBe(rooms);
     expect(rooms.snapshot().fields.totalRooms).toBe("forty");
+  });
+});
+
+describe("a contact's refused field (review fix E2)", () => {
+  it("is sent as its row's last save stored it, the save landed since the page opened", async () => {
+    const { sections, calls, answer } = harness();
+    const contact = sections.open(
+      "contact",
+      { model: CONTACT_MODEL, check: payloadOf },
+      { version: 0, saved: { answers: {}, noChanges: false } },
+    );
+    const typeEmail = (email: string) =>
+      contact.update((fields: ContactFields) => ({
+        ...fields,
+        contacts: fields.contacts.map((row) => ({ ...row, name: "Synthetic Ravi", email })),
+      }));
+    typeEmail("events@grandhotel.example");
+    contact.leave("");
+    await answer(0, { version: 1 });
+    // Retyping the domain, paused at "events@grandhotel": the stored email still goes, never a blank.
+    typeEmail("events@grandhotel");
+    await vi.advanceTimersByTimeAsync(AUTOSAVE_DELAY_MS);
+    expect(calls).toHaveLength(1);
+    typeEmail("events@grandhotel");
+    contact.update((fields: ContactFields) => ({
+      ...fields,
+      contacts: fields.contacts.map((row) => ({ ...row, role: "Events" })),
+    }));
+    await vi.advanceTimersByTimeAsync(AUTOSAVE_DELAY_MS);
+    expect(calls[1]?.call.save.answers).toEqual({
+      contacts: [
+        { name: "Synthetic Ravi", role: "Events", phone: null, email: "events@grandhotel.example" },
+      ],
+      noLongerOffered: null,
+    });
   });
 });
 

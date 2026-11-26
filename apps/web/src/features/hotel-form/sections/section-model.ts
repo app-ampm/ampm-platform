@@ -19,4 +19,10 @@ export interface SectionModel<K extends HotelFormSectionKey, F> {
   readonly fieldsOf: (answers: HotelFormSectionAnswers[K], newKey: () => string) => F;
   /** The answers the fields hold, read against the saved ones. */
   readonly answersOf: (fields: F, saved: HotelFormSectionAnswers[K]) => BuiltAnswers<K>;
+  /**
+   * The fields once a save read from `sentFrom` stored `sent`, for a section whose rows keep what the API
+   * holds for them (contacts, which carry no row id); the others read the saved answers by row id.
+   */
+  readonly savedInto?:
+    ((fields: F, sentFrom: F, sent: HotelFormSectionAnswers[K]) => F) | undefined;
 }

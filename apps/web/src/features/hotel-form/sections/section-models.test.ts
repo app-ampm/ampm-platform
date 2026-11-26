@@ -103,16 +103,49 @@ describe("contacts", () => {
     expect(sameAsMe({ ...filled, phone: "0141 234 5678" }, person, "").phone).toBe("0141 234 5678");
   });
 
-  it("sends a refused field blank rather than another contact's saved value", () => {
+  it("sends a refused field as its own row last saved it, after a contact above it was removed", () => {
     const saved = {
-      contacts: [{ name: "First", email: "first@hotel.example" }, { name: "Second" }],
+      contacts: [
+        { name: "First", email: "first@hotel.example" },
+        { name: "Second", email: "events@grandhotel.example" },
+      ],
     };
     const fields = CONTACT_MODEL.fieldsOf(saved, keys());
     const [, second] = fields.contacts;
-    const edited = { ...fields, contacts: [{ ...second!, email: "not-an-email" }] };
+    // The first contact removed, and the second's email half retyped: its saved email still goes.
+    const edited = { ...fields, contacts: [{ ...second!, email: "events@grandhotel" }] };
     const { answers, errors } = CONTACT_MODEL.answersOf(edited, saved);
-    expect(answers.contacts).toEqual([{ name: "Second", role: null, phone: null, email: null }]);
+    expect(answers.contacts).toEqual([
+      { name: "Second", role: null, phone: null, email: "events@grandhotel.example" },
+    ]);
     expect(errors[contactId(second!.key, "email")]).toMatch(/email address/);
+  });
+
+  it("sends a refused field of a contact never saved as no answer", () => {
+    const fields = CONTACT_MODEL.fieldsOf({}, keys());
+    const edited = {
+      ...fields,
+      contacts: [{ ...fields.contacts[0]!, name: "New", email: "new@" }],
+    };
+    expect(CONTACT_MODEL.answersOf(edited, {}).answers.contacts).toEqual([
+      { name: "New", role: null, phone: null, email: null },
+    ]);
+  });
+
+  it("keeps on each row what a save stored once it lands, the typing since kept as it is", () => {
+    const savedInto = CONTACT_MODEL.savedInto;
+    if (savedInto === undefined) throw new Error("Contacts keep each row's last save");
+    const fields = CONTACT_MODEL.fieldsOf({}, keys());
+    const [row] = fields.contacts;
+    const typed = { ...fields, contacts: [{ ...row!, name: "Ravi", email: "ravi@hotel.example" }] };
+    const sent = CONTACT_MODEL.answersOf(typed, {}).answers;
+    // The email retyped while the save was on its way; then the save lands.
+    const retyped = { ...typed, contacts: [{ ...typed.contacts[0]!, email: "ravi@hotel" }] };
+    const landed = savedInto(retyped, typed, sent);
+    expect(landed.contacts[0]?.email).toBe("ravi@hotel");
+    expect(CONTACT_MODEL.answersOf(landed, sent).answers.contacts).toEqual([
+      { name: "Ravi", role: null, phone: null, email: "ravi@hotel.example" },
+    ]);
   });
 });
 

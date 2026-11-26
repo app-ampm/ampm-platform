@@ -11,11 +11,13 @@ import type { BuiltAnswers, SectionModel } from "./section-model";
 /*
  * Contact for weddings and events (plan §5.1: 1.7 and 1.8; D-190 §2): up to 3 contacts, each with a
  * name, role, phone and email, and "Same as me" filled in on the page from the person's own details.
- * Contacts carry no row id, so the page keys each row itself; a refused field is sent blank while it is
- * refused rather than matched to a saved contact by its place, which a removal would shift.
+ * Contacts carry no row id, so the page keys each row itself and keeps on the row what the API holds for
+ * it, from the draft and then from each save as it lands (review fix E2): a refused field is sent as its
+ * own row last saved it, never matched to a saved contact by its place, which a removal would shift.
  */
 
 type Answers = HotelFormSectionAnswers["contact"];
+type SavedContact = NonNullable<Answers["contacts"]>[number];
 
 const SHAPE = hotelFormContactDraft.shape;
 const ROW = hotelFormContactRow.shape;
@@ -27,6 +29,8 @@ export interface ContactRowFields {
   readonly role: string;
   readonly phone: string;
   readonly email: string;
+  /** What the API holds for the row, as its last save stored it; null for a row never saved. */
+  readonly saved: SavedContact | null;
 }
 
 export interface ContactFields {
@@ -44,6 +48,7 @@ export const emptyContact = (key: string): ContactRowFields => ({
   role: "",
   phone: "",
   email: "",
+  saved: null,
 });
 
 /**
@@ -74,21 +79,28 @@ function fieldsOf(answers: Answers, newKey: () => string): ContactFields {
           role: textOf(contact.role),
           phone: textOf(contact.phone),
           email: textOf(contact.email),
+          saved: contact,
         }));
   return { contacts, noLongerOffered: textOf(answers.noLongerOffered) };
 }
 
+/** A contact with nothing typed in it: not sent. */
+const isBlankContact = (row: ContactRowFields): boolean =>
+  isBlankRow([row.name, row.role, row.phone, row.email]);
+
 function answersOf(fields: ContactFields, saved: Answers): BuiltAnswers<"contact"> {
   const r = answerReader();
-  const typed = fields.contacts.filter(
-    (row) => !isBlankRow([row.name, row.role, row.phone, row.email]),
-  );
-  const contacts = typed.map((row) => ({
-    name: r.read(contactId(row.key, "name"), ROW.name, row.name, null),
-    role: r.read(contactId(row.key, "role"), ROW.role, row.role, null),
-    phone: r.read(contactId(row.key, "phone"), ROW.phone, row.phone, null),
-    email: r.read(contactId(row.key, "email"), ROW.email, row.email, null),
-  }));
+  const contacts = fields.contacts
+    .filter((row) => !isBlankContact(row))
+    .map((row) => {
+      const id = (part: string) => contactId(row.key, part);
+      return {
+        name: r.read(id("name"), ROW.name, row.name, row.saved?.name ?? null),
+        role: r.read(id("role"), ROW.role, row.role, row.saved?.role ?? null),
+        phone: r.read(id("phone"), ROW.phone, row.phone, row.saved?.phone ?? null),
+        email: r.read(id("email"), ROW.email, row.email, row.saved?.email ?? null),
+      };
+    });
   const noLongerOffered = r.read(
     fieldId("contact", "noLongerOffered"),
     SHAPE.noLongerOffered,
@@ -99,9 +111,31 @@ function answersOf(fields: ContactFields, saved: Answers): BuiltAnswers<"contact
 }
 
 /**
+ * The fields once a save read from `sentFrom` stored `sent`: each contact it sent keeps what it stored,
+ * one it left out as blank keeps nothing, and every field keeps what was typed since.
+ */
+function savedInto(fields: ContactFields, sentFrom: ContactFields, sent: Answers): ContactFields {
+  const stored = new Map<string, SavedContact | null>(
+    sentFrom.contacts.map((row) => [row.key, null]),
+  );
+  sentFrom.contacts
+    .filter((row) => !isBlankContact(row))
+    .forEach((row, index) => stored.set(row.key, sent.contacts?.[index] ?? null));
+  const contacts = fields.contacts.map((row) => {
+    const saved = stored.get(row.key);
+    return saved === undefined ? row : { ...row, saved };
+  });
+  return { ...fields, contacts };
+}
+
+/**
  * The contact section's fields and their reading.
  *
  * @example
  * const fields = CONTACT_MODEL.fieldsOf(draft.sections.contact.answers, newKey);
  */
-export const CONTACT_MODEL: SectionModel<"contact", ContactFields> = { fieldsOf, answersOf };
+export const CONTACT_MODEL: SectionModel<"contact", ContactFields> = {
+  fieldsOf,
+  answersOf,
+  savedInto,
+};

@@ -101,6 +101,8 @@ export class HeldSection<K extends HotelFormSectionKey, F> {
   private hasRefused = false;
   private attachments = 0;
   private readonly listeners = new Set<() => void>();
+  /** The fields each save was read from, so a landed save can say what it stored for each row. */
+  private readonly sentFrom = new WeakMap<SectionPayload<K>, F>();
   private readonly autosave: SectionAutosave<K>;
 
   constructor(
@@ -219,14 +221,23 @@ export class HeldSection<K extends HotelFormSectionKey, F> {
     const { answers, errors } = this.reading.model.answersOf(fields, this.view.saved);
     const check = this.reading.check(this.key, answers, noChanges);
     this.hasRefused = Object.keys(errors).length > 0;
-    if (check.kind === "send") this.autosave.change(check.payload);
+    if (check.kind === "send") {
+      this.sentFrom.set(check.payload, fields);
+      this.autosave.change(check.payload);
+    }
     // Told last, so what the overview reads already counts the change.
     this.set({ fields, noChanges, problem: check.kind === "refused" ? check.message : null });
   }
 
-  /** A save landed: refused fields fall back to what it stored from now on. */
+  /** A save landed: refused fields fall back to what it stored from now on (each contact's too). */
   private landed(payload: SectionPayload<K>): void {
-    this.set({ saved: payload.answers });
+    const sentFrom = this.sentFrom.get(payload);
+    const { savedInto } = this.reading.model;
+    const fields =
+      sentFrom !== undefined && savedInto !== undefined
+        ? savedInto(this.view.fields, sentFrom, payload.answers)
+        : this.view.fields;
+    this.set({ fields, saved: payload.answers });
   }
 
   private set(change: Partial<HeldView<K, F>>): void {
