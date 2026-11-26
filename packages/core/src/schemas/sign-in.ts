@@ -35,6 +35,23 @@ export const signInRequest = z.object({
 });
 export type SignInRequest = z.infer<typeof signInRequest>;
 
+/** Spaces of any kind, and the zero-width characters that copied text carries but no one can see. */
+const NOT_IN_AN_EMAIL = /[\s\u200B-\u200D\u2060]/g;
+
+/**
+ * An email address as a person typed it, ready to send: every space and invisible character removed,
+ * and lower-case, as the API compares it. A phone keyboard adds a space after a word it suggests and
+ * may autocorrect inside the address, and copied text can carry zero-width characters; the schema
+ * only trims the ends, so the API refused such an address as "Validation failed". No address the
+ * schema accepts holds a space, so nothing a person meant is lost.
+ *
+ * @example
+ * typedEmail(" App.ampm.1 @gmail.com\u200B"); // "app.ampm.1@gmail.com"
+ */
+export function typedEmail(text: string): string {
+  return text.replace(NOT_IN_AN_EMAIL, "").toLowerCase();
+}
+
 /** The authenticator to add: the secret for manual entry and the otpauth:// URI the QR code encodes. */
 export const totpEnrolment = z.object({
   secret: z.string().min(16),

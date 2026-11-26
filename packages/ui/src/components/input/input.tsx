@@ -63,9 +63,17 @@ interface TextFieldProps extends Omit<
 }
 
 /**
+ * What an email field types with unless the screen says otherwise: no autocorrect, spell check or
+ * capitals. A phone keyboard otherwise "corrects" words inside an address and adds a space after one
+ * it suggests, and the API refuses the address it gets.
+ */
+const EMAIL_TYPING = { autoCorrect: false, spellCheck: false, autoCapitalize: "none" } as const;
+
+/**
  * The text input itself: labelled by the label, described by the message, pearl on midnight. A
  * required field is named "…, required" on iOS and Android and is aria-required on the web, where
- * the label element names it (aria-labelledby wins over the accessibilityLabel there).
+ * the label element names it (aria-labelledby wins over the accessibilityLabel there). An email field
+ * (`keyboardType="email-address"`) types without autocorrect (EMAIL_TYPING).
  */
 function FieldTextInput({
   label,
@@ -92,6 +100,7 @@ function FieldTextInput({
       aria-invalid={hasError}
       aria-required={required}
       {...(messageId ? { "aria-describedby": messageId } : {})}
+      {...(rest.keyboardType === "email-address" ? EMAIL_TYPING : {})}
       {...rest}
     />
   );
