@@ -132,6 +132,8 @@ describe("the summary", () => {
     const radios = [...host.querySelectorAll<HTMLInputElement>('input[name="hf-display"]')];
     expect(radios.map((radio) => radio.value)).toEqual(["yes", "no"]);
     expect(radios.some((radio) => radio.checked)).toBe(false);
+    // 7.5 is required as 7.4 is: a screen reader hears it on the group's radios.
+    expect(radios.every((radio) => radio.required)).toBe(true);
   });
 });
 

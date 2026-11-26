@@ -48,6 +48,22 @@ describe("pill choices", () => {
     expect(html).toContain('<legend class="sr-only">Type of request</legend>');
   });
 
+  it("mark every radio required when the question needs an answer, and none otherwise", () => {
+    const choice = (required?: boolean) =>
+      markupOf(
+        <ChoiceSegments
+          name="show"
+          legend="May AMPM show your hotel?"
+          options={options}
+          value=""
+          onChange={noop}
+          required={required}
+        />,
+      );
+    expect(tagsWith(choice(true), "input", 'required=""')).toHaveLength(2);
+    expect(choice()).not.toContain("required");
+  });
+
   it("read out what each answer means under the question, before the pills, kept beside an error", () => {
     const meaning = ["Yes lets AMPM show the photos.", "No keeps them for AMPM's planning."];
     const described = (error?: string) =>

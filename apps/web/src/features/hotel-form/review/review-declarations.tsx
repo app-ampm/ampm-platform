@@ -32,7 +32,7 @@ export interface ReviewDeclarationsProps {
   readonly sections: HotelFormDraftSections;
 }
 
-/** 7.4's required tick and 7.5's Yes or No, each with its refusal in core's words. */
+/** 7.4's required tick and 7.5's required Yes or No, each with its refusal in core's words. */
 function Declarations({ submit }: { readonly submit: ReviewSubmit }) {
   const { fields, errors } = submit;
   return (
@@ -53,6 +53,7 @@ function Declarations({ submit }: { readonly submit: ReviewSubmit }) {
         value={fields.displayAnswer}
         onChange={(event) => submit.setDisplay(event.target.value)}
         look="soft"
+        required
         error={errors.display}
       />
     </>

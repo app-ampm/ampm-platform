@@ -37,6 +37,11 @@ export interface ChoiceSegmentsProps {
   /** A line under the pills while there is no error. */
   readonly help?: string | undefined;
   /**
+   * The question needs an answer (the hotel form's 7.5): every radio is a native required one, which a
+   * screen reader announces, as a required tick's aria-required is.
+   */
+  readonly required?: boolean | undefined;
+  /**
    * The words of a button that takes the answer back to none ("Clear"), shown once one is chosen: an
    * optional question (Yes, No or Depends) can be left unanswered again, which radios alone cannot do.
    */
@@ -45,7 +50,7 @@ export interface ChoiceSegmentsProps {
   readonly className?: string | undefined;
 }
 
-interface ChoiceSegmentProps extends Pick<ChoiceSegmentsProps, "name" | "onChange"> {
+interface ChoiceSegmentProps extends Pick<ChoiceSegmentsProps, "name" | "onChange" | "required"> {
   readonly option: ChoiceOption;
   readonly isChecked: boolean;
   readonly look: ChoiceLook;
@@ -62,6 +67,7 @@ function ChoiceSegment({
   onChange,
   describedBy,
   inputRef,
+  required,
 }: ChoiceSegmentProps) {
   return (
     <label className={choiceTargetStyles(look)}>
@@ -72,6 +78,7 @@ function ChoiceSegment({
         value={option.value}
         checked={isChecked}
         onChange={onChange}
+        required={required}
         aria-describedby={describedBy}
         className="peer sr-only"
       />
@@ -148,7 +155,7 @@ function describedByOf(
  */
 export function ChoiceSegments(props: ChoiceSegmentsProps) {
   const { name, legend, isLegendHidden = false, options, value, onChange, look = "solid" } = props;
-  const { description, error, help, clearLabel, className } = props;
+  const { description, error, help, clearLabel, className, required } = props;
   const firstRadio = useRef<HTMLInputElement>(null);
   const describedBy = describedByOf(name, { description, error, help });
   // Named only where Clear points at it, so a choice without Clear keeps its markup as it was.
@@ -169,7 +176,7 @@ export function ChoiceSegments(props: ChoiceSegmentsProps) {
         {options.map((option, index) => (
           <ChoiceSegment
             key={option.value}
-            {...{ name, option, look, onChange, describedBy }}
+            {...{ name, option, look, onChange, describedBy, required }}
             isChecked={option.value === value}
             inputRef={index === 0 ? firstRadio : undefined}
           />
