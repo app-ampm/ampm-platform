@@ -205,6 +205,7 @@ The site's forms (the contact form, the hotel information form) are plain DOM fi
 |---|---|
 | `NumberUnitField` | One input pill: the number as typed, a pearl 20% rule, then a native unit list (sq ft, m²) with its own name and a pearl 58% chevron. Both carry the field's error or help. |
 | `ChoiceSegments` with `clearLabel` | The soft pill choice (Yes / No / Depends) plus a ghost "Clear" once answered, described by the question; Clear puts focus on the first pill. |
+| `ChoiceSegments` with `description` | Paragraphs in pearl 80% between the question and the pills saying what each answer means (the review's 7.5, never pre-selected); every radio is described by them, and they stay beside an error. |
 | `RepeatableFieldsets` | Each row a flat-tint fieldset (radius 16) named by its legend, which the row's own name renames; secondary "Remove" (named after the row) and "Add" pills, Add giving way to a quiet line at the cap. Focus goes into a new row's first field, or after a removal onto the row that took its place; a polite region says what was removed. |
 | `ChipGroupField` | FilterChip pills as toggle buttons (aria-pressed) in a named group, each 38 tall inside a 46 target; Other last, opening a text field for its words. |
 
@@ -212,6 +213,13 @@ The hotel form's sections also show a save line ("Saved", "Saving…", "Not save
 Retry) in a polite live region under the section's heading, a gold callout (role alert) for a colleague's
 newer save with Keep mine and Take theirs, and a peacock callout when the request is with AMPM, the
 questions read-only beneath it.
+
+The review (HF-06) and the status page (HF-07) read the answers back as flat-tint cards, one per section
+(its title, its status chip and a gold "Edit" link named after the section), each answer a muted label
+over its value and each room, venue or contact under its own heading. A press that does not go through
+(Submit, Send, a withdrawal) answers beside the button in a callout that takes focus each time it is shown:
+gold glass for a refusal, with the way on (links to the sections, a reload, a wait counted down), peacock
+for done. Submit and Send are disabled only while they send.
 
 ## 7. Layout and navigation
 
