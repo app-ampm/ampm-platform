@@ -65,6 +65,8 @@ export interface HotelFormSectionSaveCall<
     readonly expectedVersion: number;
     readonly noChanges: boolean;
   };
+  /** Finish the save even if the page goes meanwhile: the save made as the page is hidden or closed. */
+  readonly keepalive?: boolean | undefined;
 }
 
 /**
@@ -121,12 +123,14 @@ export function hotelFormDraftCalls(api: ApiClient) {
       sessionToken,
       section,
       save,
+      keepalive,
     }: HotelFormSectionSaveCall<K>): Promise<HotelFormSectionSaved> =>
       api.request(`/hotel-form/draft/sections/${section}`, {
         method: "PUT",
         body: { ...save, answers: compact(save.answers) },
         schema: hotelFormSectionSaved,
         accessToken: sessionToken,
+        keepalive,
       }),
     submit: ({ sessionToken, submit }: HotelFormSubmitCall): Promise<HotelFormSubmitted> =>
       post("/hotel-form/submit", submit, hotelFormSubmitted, sessionToken),

@@ -25,6 +25,7 @@ interface Sent {
   readonly method: string | undefined;
   readonly headers: Record<string, string>;
   readonly body: unknown;
+  readonly keepalive: boolean | undefined;
 }
 
 const wire = { sent: [] as Sent[], status: 200, answer: null as unknown };
@@ -35,6 +36,7 @@ const fakeFetch: typeof fetch = async (input, init) => {
     method: init?.method,
     headers: { ...(init?.headers as Record<string, string>) },
     body: typeof init?.body === "string" ? JSON.parse(init.body) : init?.body,
+    keepalive: init?.keepalive,
   });
   const envelope = wire.status < 400 ? { data: wire.answer } : wire.answer;
   return new Response(JSON.stringify(envelope), {
@@ -94,6 +96,22 @@ describe("the form's calls", () => {
       noChanges: false,
     });
     expect(wire.sent[0]?.headers["authorization"]).toBe(`Bearer ${SESSION}`);
+    expect(wire.sent[0]?.keepalive).toBeUndefined();
+  });
+
+  it("save a section with keepalive when asked, so a save made as the page is hidden can finish", async () => {
+    answer({
+      version: 3,
+      isComplete: false,
+      contentHash: "a".repeat(64),
+      lastEditedBy: null,
+      lastEditedAt: AT,
+      isLastSaveYours: true,
+    });
+    const save = { answers: { totalRooms: 40 }, expectedVersion: 2, noChanges: false };
+    await calls.saveSection({ sessionToken: SESSION, section: "rooms", save, keepalive: true });
+    expect(route(wire.sent[0])).toEqual(["PUT", "/hotel-form/draft/sections/rooms"]);
+    expect(wire.sent[0]?.keepalive).toBe(true);
   });
 
   it("submit, ask for a correction and withdraw consent, each answer held to its contract", async () => {
