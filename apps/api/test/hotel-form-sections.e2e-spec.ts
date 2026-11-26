@@ -27,9 +27,10 @@ import {
  * real 100 KB JSON parser: the draft answers every section, the request and the people helping; a section
  * saves from version 0, then only from its current version; a null and a missing answer are one content,
  * stored canonically; a stale version is 409 sectionConflict carrying the colleague's save; two people's
- * concurrent first saves end in one 409, never a 500; a maximal rooms section (just under 96 KB of
- * canonical JSON) saves, one over its cap is 400 sectionTooLarge; and the mode off answers 404 before the
- * body is read. Synthetic data only.
+ * concurrent first saves end in one 200 and one 409, never a 500 (the unique key decides; the request's
+ * lock against a submit is in hotel-form-review-races.e2e-spec.ts); a maximal rooms section (just under
+ * 96 KB of canonical JSON) saves, one over its cap is 400 sectionTooLarge; and the mode off answers 404
+ * before the body is read. Synthetic data only.
  */
 describe("The hotel form's draft and sections (e2e, D-190 §3)", () => {
   let suite: FormSuite;
@@ -166,7 +167,10 @@ describe("The hotel form's draft and sections (e2e, D-190 §3)", () => {
       .expect(200);
   });
 
-  it("ends two people's concurrent first saves of one section in one 409, never a 500", async () => {
+  // The section's unique key decides this race, with or without the request's row lock (the loser's
+  // insert does nothing and it reads the winner's row); what the lock orders, a save against a submit,
+  // is shown in hotel-form-review-races.e2e-spec.ts.
+  it("ends two people's concurrent first saves of one section in one 200 and one 409, never a 500", async () => {
     const link = await testLink(suite);
     const a = await signIn(suite, link.secret, freshMobile());
     const b = await signIn(suite, link.secret, freshMobile(), { fullName: "E2E Second Person" });

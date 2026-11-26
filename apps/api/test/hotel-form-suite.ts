@@ -11,6 +11,7 @@ import {
   type NotificationAdapters,
   type NotificationDelivery,
 } from "../src/modules/admin/notification/notification.adapter.js";
+import type { CustomiseApi } from "./start-api.js";
 import {
   requestCalls,
   secretOf,
@@ -68,19 +69,21 @@ function recordingAdapters(sms: NotificationDelivery[]): NotificationAdapters {
 
 /**
  * Starts the API for a hotel form suite, with the form's mode at test_only. In SMS mode a provider and
- * the form's template are set (so codes go by SMS) and every line is logged, for the suite to read.
+ * the form's template are set (so codes go by SMS) and every line is logged, for the suite to read; a
+ * suite may also override providers of its own (`customise`), as the review races gate a submit.
  *
  * @example
  * beforeAll(async () => (suite = await startFormSuite("e2e-hf-a-")));
  */
 export async function startFormSuite(
   name: string,
-  options: { readonly smsMode?: boolean } = {},
+  options: { readonly smsMode?: boolean; readonly customise?: CustomiseApi } = {},
 ): Promise<FormSuite> {
   const store = new ClearableRateLimitStore();
   const sms: NotificationDelivery[] = [];
   const suite = await startRequestSuite(name, (builder) => {
-    const withStore = builder.overrideProvider(RateLimitStore).useValue(store);
+    const customised = options.customise?.(builder) ?? builder;
+    const withStore = customised.overrideProvider(RateLimitStore).useValue(store);
     if (!options.smsMode) return withStore;
     const env = {
       ...loadEnv(),
