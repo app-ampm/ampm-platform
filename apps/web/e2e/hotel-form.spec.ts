@@ -22,7 +22,7 @@ import { SESSION_KEY, fillDetails, signIn, type FormPerson } from "./support/sig
 /*
  * The hotel form's identity step end to end (D-189 §8; plan §8 HF-01, HF-02, HF-03, HF-08): a real
  * browser, the built site and a local API in on-screen mode with the stub bot check. Signing in lands on
- * the overview (HF-04, D-190 §5), whose own tests are in hotel-form-pages.spec.ts. Each page is checked
+ * the overview (HF-04, D-190 §5), whose own tests are in hotel-form-sections.spec.ts. Each page is checked
  * with axe as it stands.
  */
 

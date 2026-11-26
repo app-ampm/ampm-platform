@@ -22,6 +22,8 @@ const browser = process.env["PLAYWRIGHT_BROWSER"] === "chromium" ? {} : { channe
 
 export default defineConfig({
   testDir: "./e2e",
+  // The specs only: e2e/support holds the run's own helpers, whose unit tests are Vitest's.
+  testMatch: "**/*.spec.ts",
   // One worker: the API's per-network limits count every test's code requests together.
   workers: 1,
   fullyParallel: false,
