@@ -2,7 +2,10 @@ import type { ReactNode } from "react";
 
 import { cn, textStyles } from "@ampm/ui/styles";
 
-import { Eyebrow, GlowOrbs, SectionHeading, SiteContainer } from "@/components/site";
+import { Eyebrow } from "@/components/site/eyebrow";
+import { GlowOrbs } from "@/components/site/glow-orbs";
+import { SectionHeading } from "@/components/site/section-heading";
+import { SiteContainer } from "@/components/site/site-container";
 
 export interface StatusPageProps {
   /** What happened, in a few words ("Page not found"). */

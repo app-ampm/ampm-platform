@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 
-import { ButtonLink } from "@/components/site";
+import { ButtonLink } from "@/components/site/button-link";
 
 import { logPageError, type PageErrorScope } from "./error-log";
 import { ERROR_CONTENT as COPY } from "./errors-content";
