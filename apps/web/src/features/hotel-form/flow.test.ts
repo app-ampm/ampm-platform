@@ -1,59 +1,22 @@
-import {
-  HOTEL_FORM_ERRORS,
-  HOTEL_FORM_SESSION_REFUSAL_MESSAGES,
-  type HotelFormCodeIssued,
-  type HotelFormOpenAnswer,
-} from "@ampm/core";
+import { HOTEL_FORM_ERRORS } from "@ampm/core";
 import { describe, expect, it } from "vitest";
 
-import { EMPTY_DETAILS } from "./details.form";
+import { INITIAL_FLOW, flowReducer, openingKeyOf, waitFor } from "./flow";
 import {
-  INITIAL_FLOW,
-  flowReducer,
-  openingKeyOf,
-  waitFor,
-  type FlowEvent,
-  type FlowState,
-} from "./flow";
+  CLAIM,
+  ISSUED,
+  NOW,
+  PERSON,
+  READY,
+  SECRET,
+  SESSION,
+  after,
+  atCode,
+  opened,
+} from "./flow.test-fixtures";
 import { HOTEL_FORM_COPY } from "./hotel-form-copy";
 
 /* The identity step's flow (D-189 §8): HF-01 → HF-02 → HF-03 → signed in, HF-08, and the refusals. */
-
-const SECRET = `hfl_${"x".repeat(43)}`;
-const SESSION = `hfs_${"y".repeat(43)}`;
-const NOW = Date.parse("2026-11-25T10:00:00.000Z");
-const READY: HotelFormOpenAnswer = {
-  state: "ready",
-  expiresAt: "2026-12-25T10:00:00.000Z",
-  helpContact: "Call AMPM on +91 22 0000 0000",
-};
-const ISSUED: HotelFormCodeIssued = {
-  challengeId: "0192f3a0-7d3e-7b1a-9c2f-123456789abc",
-  maskedMobile: "+91 ••••• •1234",
-  expiresAt: "2026-11-25T10:05:00.000Z",
-  resendAfter: "2026-11-25T10:00:30.000Z",
-  delivery: "screen",
-  code: "482917",
-};
-const CLAIM = { ...EMPTY_DETAILS, fullName: "Asha Rao", mobile: "70000 01234" };
-
-/** The flow after these events, from the start. */
-function after(...events: readonly FlowEvent[]): FlowState {
-  return events.reduce(flowReducer, INITIAL_FLOW);
-}
-
-const opened = (answer = READY, session: string | null = null): FlowEvent => ({
-  type: "opened",
-  secret: SECRET,
-  answer,
-  session,
-});
-const atCode = [
-  opened(),
-  { type: "start" },
-  { type: "claim_changed", claim: CLAIM },
-  { type: "code_issued", issued: ISSUED, now: NOW },
-] as const satisfies readonly FlowEvent[];
 
 describe("opening the link", () => {
   it("starts by opening it", () => {
@@ -238,10 +201,11 @@ describe("your details and the code (HF-02, HF-03)", () => {
     expect(state.errors).toEqual({ mobile: "Enter a 10-digit Indian mobile number" });
   });
 
-  it("signs the person in once the code is right, keeping the session", () => {
-    const state = after(...atCode, { type: "verified", sessionToken: SESSION });
+  it("signs the person in once the code is right, keeping the session and whose it is", () => {
+    const state = after(...atCode, { type: "verified", sessionToken: SESSION, personId: PERSON });
     expect(state.phase).toEqual({ kind: "signed_in", reverify: null });
     expect(state.session).toBe(SESSION);
+    expect(state.personId).toBe(PERSON);
     expect(state.notice).toBeNull();
   });
 
@@ -253,77 +217,5 @@ describe("your details and the code (HF-02, HF-03)", () => {
       call: "verify",
     });
     expect(state.phase).toEqual({ kind: "gone", message: HOTEL_FORM_ERRORS.notActive });
-  });
-});
-
-describe("a refused session", () => {
-  const signedIn = [...atCode, { type: "verified", sessionToken: SESSION }] as const;
-
-  it("asks for a new code in place, over the signed-in page, keeping the details typed", () => {
-    const message = HOTEL_FORM_SESSION_REFUSAL_MESSAGES.session_expired;
-    const state = after(...signedIn, {
-      type: "session_refused",
-      refusal: { kind: "new_code", message },
-    });
-    expect(state.phase).toEqual({ kind: "signed_in", reverify: { step: "details" } });
-    expect(state.session).toBeNull();
-    expect(state.claim).toEqual(CLAIM);
-    expect(state.notice).toEqual({ message, retryAt: null, isReload: false });
-  });
-
-  it("takes the new code in place and closes the request for it", () => {
-    const state = after(
-      ...signedIn,
-      { type: "session_refused", refusal: { kind: "new_code", message: "Enter a new code." } },
-      { type: "code_issued", issued: ISSUED, now: NOW },
-    );
-    expect(state.phase).toEqual({
-      kind: "signed_in",
-      reverify: { step: "code", issued: ISSUED, resendAt: NOW + 30_000 },
-    });
-    const back = flowReducer(state, { type: "verified", sessionToken: SESSION });
-    expect(back.phase).toEqual({ kind: "signed_in", reverify: null });
-    expect(back.session).toBe(SESSION);
-  });
-
-  it("asks for a new code in place when a session kept from before a reload has ended", () => {
-    const state = after(opened(READY, SESSION), {
-      type: "session_refused",
-      refusal: { kind: "new_code", message: "Enter a new code to continue." },
-    });
-    expect(state.phase).toEqual({ kind: "signed_in", reverify: { step: "details" } });
-  });
-
-  it("fills the details in from the person's own when nothing typed is left (after a reload)", () => {
-    const person = { fullName: "Asha Rao", designation: "Chief Engineer" };
-    const state = after(opened(READY, SESSION), {
-      type: "session_refused",
-      refusal: { kind: "new_code", message: "Enter a new code to continue." },
-      person,
-    });
-    expect(state.claim).toMatchObject({
-      fullName: "Asha Rao",
-      designationChoice: "Other",
-      designationOther: "Chief Engineer",
-      mobile: "",
-    });
-  });
-
-  it("ends at HF-08, in the API's words, when AMPM replaced the link or removed the person", () => {
-    const message = HOTEL_FORM_SESSION_REFUSAL_MESSAGES.person_removed;
-    const state = after(...signedIn, {
-      type: "session_refused",
-      refusal: { kind: "gone", message },
-    });
-    expect(state.phase).toEqual({ kind: "gone", message });
-    expect(state.session).toBeNull();
-  });
-
-  it("returns to the welcome after signing out, forgetting the details typed", () => {
-    const state = after(...signedIn, { type: "signed_out" });
-    expect(state.phase).toEqual({ kind: "welcome" });
-    expect(state.session).toBeNull();
-    expect(state.claim).toEqual(EMPTY_DETAILS);
-    expect(state.notice?.message).toBe(HOTEL_FORM_COPY.welcome.signedOut);
   });
 });

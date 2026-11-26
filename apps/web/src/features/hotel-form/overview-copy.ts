@@ -21,6 +21,10 @@ export const OVERVIEW_COPY = {
     lastSavedUnnamed: (moment: string) => `Last saved by a colleague ${moment}`,
     loading: "Loading your sections…",
     failed: "We couldn't load your sections.",
+    /** A section left with changes still to be saved, which save by themselves (review fix E1). */
+    waiting: "Changes waiting to be saved",
+    /** A section left with changes that did not save and need the person; its page says why. */
+    unsaved: "Changes not saved: open the section to see why",
   },
   helpers: {
     heading: "Who is helping",

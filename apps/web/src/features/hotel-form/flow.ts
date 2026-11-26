@@ -78,6 +78,12 @@ export interface FlowState {
   readonly notice: StepNotice | null;
   /** The form session, mirrored in sessionStorage by the page. */
   readonly session: string | null;
+  /**
+   * Whose session it is (their id on the request), from the code that opened it: known the moment the
+   * session is, so what one person typed is never saved under another's (D-190, review fix E1). Null for a
+   * session kept from before a reload, whose person `me` names, and with no session.
+   */
+  readonly personId: string | null;
   /** How many times the page was asked to open again: a link that arrives while one opens counts too. */
   readonly reopens: number;
 }
@@ -99,7 +105,7 @@ export type FlowEvent =
   | { readonly type: "code_changed"; readonly code: string }
   | { readonly type: "code_invalid"; readonly error: string }
   | { readonly type: "change_details" }
-  | { readonly type: "verified"; readonly sessionToken: string }
+  | { readonly type: "verified"; readonly sessionToken: string; readonly personId: string }
   | {
       readonly type: "refused";
       readonly refusal: Refusal;
@@ -125,8 +131,12 @@ export const INITIAL_FLOW: FlowState = {
   codeError: null,
   notice: null,
   session: null,
+  personId: null,
   reopens: 0,
 };
+
+/** No session, so nobody's. */
+const NO_SESSION = { session: null, personId: null } as const;
 
 const noticeOf = (
   message: string,
@@ -169,11 +179,13 @@ function opened(state: FlowState, event: Extract<FlowEvent, { type: "opened" }>)
   const { answer, secret, session } = event;
   const helpContact = answer.helpContact;
   if (answer.state === "not_active")
-    return { ...state, helpContact, phase: { kind: "gone", message: null }, session: null };
+    return { ...state, helpContact, phase: { kind: "gone", message: null }, ...NO_SESSION };
   const link: OpenedLink = { secret, state: answer.state, expiresAt: answer.expiresAt };
   const phase: Phase =
     session === null ? { kind: "welcome" } : { kind: "signed_in", reverify: null };
-  return { ...state, link, helpContact, phase, session };
+  // The same session opened again is still the same person's; any other, `me` will say whose.
+  const personId = session !== null && session === state.session ? state.personId : null;
+  return { ...state, link, helpContact, phase, session, personId };
 }
 
 /** A field's refusal from the API, on the field it names. */
@@ -197,7 +209,7 @@ function refused(
 ): FlowState {
   switch (refusal.kind) {
     case "gone":
-      return { ...state, phase: { kind: "gone", message: refusal.message }, session: null };
+      return { ...state, phase: { kind: "gone", message: refusal.message }, ...NO_SESSION };
     case "wait":
       return { ...state, notice: noticeOf(refusal.message, now + refusal.seconds * 1000, call) };
     case "reload":
@@ -216,7 +228,7 @@ function sessionRefused(
   if (refusal.kind === "gone") return refused(state, refusal, 0);
   const isUntyped = state.claim.fullName === "" && state.claim.mobile === "";
   const claim = isUntyped && person ? detailsFromPerson(person) : state.claim;
-  const asked = { ...state, claim, session: null, notice: noticeOf(refusal.message), code: "" };
+  const asked = { ...state, claim, ...NO_SESSION, notice: noticeOf(refusal.message), code: "" };
   return asked.phase.kind === "signed_in"
     ? { ...asked, phase: { kind: "signed_in", reverify: { step: "details" } } }
     : { ...asked, phase: { kind: "identity", identity: { step: "details" } } };
@@ -259,7 +271,7 @@ export function flowReducer(state: FlowState, event: FlowEvent): FlowState {
     case "change_details":
       return withIdentity({ ...state, notice: null, codeError: null }, { step: "details" });
     case "verified":
-      return verified(state, event.sessionToken);
+      return verified(state, event.sessionToken, event.personId);
     case "refused":
       return refused(state, event.refusal, event.now, event.call);
     case "session_refused":
@@ -278,9 +290,10 @@ function unreachable(refusal: Refusal, now: number): Phase {
   };
 }
 
-function verified(state: FlowState, sessionToken: string): FlowState {
+function verified(state: FlowState, sessionToken: string, personId: string): FlowState {
   const phase: Phase = { kind: "signed_in", reverify: null };
-  return { ...state, phase, session: sessionToken, code: "", codeError: null, notice: null };
+  const signedIn = { phase, session: sessionToken, personId };
+  return { ...state, ...signedIn, code: "", codeError: null, notice: null };
 }
 
 function signedOut(state: FlowState): FlowState {

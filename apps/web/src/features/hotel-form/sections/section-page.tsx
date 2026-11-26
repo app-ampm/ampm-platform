@@ -13,33 +13,45 @@ import { StepShell } from "../step-shell";
 import { useSignedInPage } from "../use-signed-in-page";
 import { SECTION_HEADING_ID } from "./section-screen";
 import { SectionHost } from "./section-hosts";
+import { formSessionOf } from "./use-held-sections";
 
-/** The section once signed in: its draft loading, failing, or the section itself with its editor. */
-function SignedInSection({
-  sectionKey,
-  site,
-}: {
+interface SectionPageProps {
   readonly sectionKey: HotelFormSectionKey;
   readonly site: HotelFormSite;
-}) {
+}
+
+/**
+ * The section before it can open: a new code first, the draft (or the person's `me`, which says whose
+ * typing the section holds) failing with Try again, or loading.
+ */
+function SectionNotReady({ sectionKey, site }: SectionPageProps) {
+  const { flow, siteKey } = site;
+  const identity = reverifyOf(flow);
+  if (identity) return <ReverifyPage flow={flow} identity={identity} siteKey={siteKey} />;
+  const failed = flow.draft.data === undefined ? flow.draft : flow.me;
+  if (failed.error === null) return <LoadingStep label={SECTIONS_COPY.loading} />;
+  return (
+    <StepShell
+      headingId={SECTION_HEADING_ID}
+      title={SECTION_TITLES[sectionKey].title}
+      lead={SECTIONS_COPY.failed}
+    >
+      <FormNotice notice={{ message: failed.error, retryAt: null, isReload: false }} />
+      <FormButton onClick={failed.retry}>{HOTEL_FORM_COPY.errors.retry}</FormButton>
+    </StepShell>
+  );
+}
+
+/**
+ * The section once signed in, its draft read and its person known (what is typed in it is theirs, review
+ * fix E1), with its editor; until then, why not.
+ */
+function SignedInSection({ sectionKey, site }: SectionPageProps) {
   const { flow, siteKey } = site;
   const identity = reverifyOf(flow);
   const draft = flow.draft.data;
-  if (draft === undefined) {
-    if (identity) return <ReverifyPage flow={flow} identity={identity} siteKey={siteKey} />;
-    if (flow.draft.error)
-      return (
-        <StepShell
-          headingId={SECTION_HEADING_ID}
-          title={SECTION_TITLES[sectionKey].title}
-          lead={SECTIONS_COPY.failed}
-        >
-          <FormNotice notice={{ message: flow.draft.error, retryAt: null, isReload: false }} />
-          <FormButton onClick={flow.draft.retry}>{HOTEL_FORM_COPY.errors.retry}</FormButton>
-        </StepShell>
-      );
-    return <LoadingStep label={SECTIONS_COPY.loading} />;
-  }
+  if (draft === undefined || formSessionOf(flow).personId === undefined)
+    return <SectionNotReady sectionKey={sectionKey} site={site} />;
   const reverify = identity ? (
     <ReverifyPanel flow={flow} identity={identity} siteKey={siteKey} />
   ) : null;

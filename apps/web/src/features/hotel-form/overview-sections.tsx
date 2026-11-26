@@ -22,13 +22,17 @@ import { HOTEL_FORM_COPY } from "./hotel-form-copy";
 import { sectionPath } from "./hotel-form-routes";
 import { momentOf } from "./hotel-form-time";
 import { OVERVIEW_COPY as COPY } from "./overview-copy";
+import type { HeldPending } from "./sections/held-section";
+import type { HeldSections } from "./sections/held-sections";
+import { useHeldStatuses } from "./sections/use-held-sections";
 import { SECTION_TITLES, SECTIONS_COPY } from "./sections-copy";
 import { SECTION_TONE, doneSectionsOf, sectionStatusOf } from "./section-status";
 import type { DraftView } from "./use-hotel-form-flow";
 
 /*
  * HF-04's form (D-190 §5; plan §4.4): "Quick start" pointing to the fact sheet section, then the seven
- * sections with their status and who saved each last, each a link to its page.
+ * sections with their status and who saved each last, each a link to its page; a section left with
+ * changes not saved yet says so (review fix E1).
  */
 
 /** "Quick start": the fact sheet section first; its uploads arrive in Slice 9, so no upload here yet. */
@@ -68,13 +72,26 @@ function lastSavedLine(section: HotelFormDraftSections[HotelFormSectionKey]): st
     : COPY.sections.lastSaved(section.lastEditedBy, moment);
 }
 
-/** One section: its title as the link, its status as a word, and who saved it last. */
+/** Changes left in a section not saved yet: waiting to save by themselves, or needing the person. */
+function PendingLine({ pending }: { readonly pending: Exclude<HeldPending, null> }) {
+  return (
+    <span
+      className={textStyles({ variant: "caption", tone: pending === "unsaved" ? "brand" : "body" })}
+    >
+      {COPY.sections[pending]}
+    </span>
+  );
+}
+
+/** One section: its title as the link, its status as a word, who saved it last, and what waits. */
 function SectionRow({
   sectionKey,
   sections,
+  pending,
 }: {
   readonly sectionKey: HotelFormSectionKey;
   readonly sections: HotelFormDraftSections;
+  readonly pending: HeldPending | undefined;
 }) {
   const section = sections[sectionKey];
   const status = sectionStatusOf(section);
@@ -95,6 +112,7 @@ function SectionRow({
           {saved ? (
             <span className={textStyles({ variant: "caption", tone: "muted" })}>{saved}</span>
           ) : null}
+          {pending ? <PendingLine pending={pending} /> : null}
         </span>
         <Chip tone={SECTION_TONE[status]}>{SECTIONS_COPY.status[status]}</Chip>
       </Link>
@@ -121,12 +139,20 @@ function SectionsLoading() {
 }
 
 /**
- * The form's seven sections with their status, how many are done, and a way to each; while the draft
- * loads, skeleton rows; when it could not load, why, with Try again.
+ * The form's seven sections with their status, how many are done, and a way to each, saying which still
+ * have changes not saved (`sections`, the layout's held sections); while the draft loads, skeleton rows;
+ * when it could not load, why, with Try again.
  *
- *   <OverviewSections draft={flow.draft} />
+ *   <OverviewSections draft={flow.draft} sections={site.sections} />
  */
-export function OverviewSections({ draft }: { readonly draft: DraftView }) {
+export function OverviewSections({
+  draft,
+  sections,
+}: {
+  readonly draft: DraftView;
+  readonly sections?: HeldSections | undefined;
+}) {
+  const pending = useHeldStatuses(sections);
   if (draft.error)
     return (
       <div className="flex flex-col gap-3">
@@ -137,7 +163,7 @@ export function OverviewSections({ draft }: { readonly draft: DraftView }) {
       </div>
     );
   if (draft.data === undefined) return draft.isLoading ? <SectionsLoading /> : null;
-  const { sections } = draft.data;
+  const drafted = draft.data.sections;
   return (
     <section aria-labelledby="hf-sections-heading" className="flex flex-col gap-3">
       <div className="flex flex-row flex-wrap items-baseline justify-between gap-2">
@@ -145,12 +171,12 @@ export function OverviewSections({ draft }: { readonly draft: DraftView }) {
           {COPY.sections.heading}
         </h2>
         <p className={textStyles({ variant: "bodySmall", tone: "muted" })}>
-          {COPY.sections.progress(doneSectionsOf(sections), HOTEL_FORM_SECTION_KEYS.length)}
+          {COPY.sections.progress(doneSectionsOf(drafted), HOTEL_FORM_SECTION_KEYS.length)}
         </p>
       </div>
       <ol className="flex flex-col gap-2">
         {HOTEL_FORM_SECTION_KEYS.map((key) => (
-          <SectionRow key={key} sectionKey={key} sections={sections} />
+          <SectionRow key={key} sectionKey={key} sections={drafted} pending={pending[key]} />
         ))}
       </ol>
     </section>

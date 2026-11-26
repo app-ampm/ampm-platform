@@ -1,17 +1,18 @@
-import { useEffect, useMemo, useRef, useState, type FocusEvent, type RefObject } from "react";
+import { useEffect, useMemo, useSyncExternalStore, type FocusEvent } from "react";
 import {
   hotelFormStateOf,
+  type HotelFormDraftSections,
   type HotelFormDraftView,
-  type HotelFormSectionAnswers,
   type HotelFormSectionKey,
 } from "@ampm/core";
 import { unitSelectId } from "@ampm/web-forms";
 
 import type { HotelFormSite } from "../hotel-form-provider";
-import type { SaveState, SectionAutosave } from "./section-autosave";
+import { newRowKey, type HeldSection, type HeldView } from "./held-section";
+import type { HeldSections, SectionFieldsMap } from "./held-sections";
+import type { SaveState } from "./section-autosave";
 import type { SectionModel } from "./section-model";
 import { payloadOf } from "./section-payload";
-import { useSectionAutosave } from "./use-section-autosave";
 
 /** What every section's fields hold besides their own: the refresh note. */
 export interface RefreshNote {
@@ -44,143 +45,72 @@ export interface SectionEditor<F> {
   readonly newKey: () => string;
 }
 
-interface Typed<F> {
-  readonly fields: F;
-  readonly noChanges: boolean;
-}
-
-const newKey = (): string => crypto.randomUUID();
-
-/** Which fields the person has left: their messages show from then on. */
-function useTouched() {
-  const [touched, setTouched] = useState<ReadonlySet<string>>(() => new Set());
-  const touch = (id: string) => {
-    if (id === "") return;
-    setTouched((seen) => (seen.has(id) ? seen : new Set([...seen, id])));
-  };
-  const isTouched = (id: string) => touched.has(id) || touched.has(unitSelectId(id));
-  return { touched, touch, isTouched, reset: () => setTouched(new Set()) };
-}
-
-/** The fields as typed, kept in a ref too so a change reads the latest without waiting for a render. */
-function useTyped<F>(initial: () => Typed<F>) {
-  const [typed, setTyped] = useState(initial);
-  const latest = useRef(typed);
-  const set = (next: Typed<F>) => {
-    latest.current = next;
-    setTyped(next);
-  };
-  return { typed, latest, set };
-}
-
-/** A section as the draft holds it: its answers, its version and "No changes". */
-interface SectionView<K extends HotelFormSectionKey> {
-  readonly answers: HotelFormSectionAnswers[K];
-  readonly version: number;
-  readonly noChanges: boolean;
-}
-
-/** The fields as typed, each change handed to the autosave, and why a change could not be sent. */
-function useTypedSection<K extends HotelFormSectionKey, F>(
-  key: K,
-  model: SectionModel<K, F>,
-  section: SectionView<K>,
-  autosave: RefObject<SectionAutosave<K> | null>,
-) {
-  const [problem, setProblem] = useState<string | null>(null);
-  const { typed, latest, set } = useTyped(() => ({
-    fields: model.fieldsOf(section.answers, newKey),
-    noChanges: section.noChanges,
-  }));
-  const saved = useRef(section.answers);
-  useEffect(() => {
-    saved.current = section.answers;
-  }, [section.answers]);
-  const commit = (next: Typed<F>) => {
-    set(next);
-    const { answers } = model.answersOf(next.fields, saved.current);
-    const check = payloadOf(key, answers, next.noChanges);
-    setProblem(check.kind === "refused" ? check.message : null);
-    if (check.kind === "send") autosave.current?.change(check.payload);
-  };
-  const replace = (next: Typed<F>) => {
-    set(next);
-    setProblem(null);
-  };
-  return { typed, latest, commit, replace, problem };
-}
-
-type Touched = ReturnType<typeof useTouched>;
-type Typing<F> = ReturnType<typeof useTypedSection<HotelFormSectionKey, F>>;
-
-/** What the person can do: change, leave a field, retry, and the conflict's two ways on. */
-function actionsOf<K extends HotelFormSectionKey, F>(
-  model: SectionModel<K, F>,
-  autosave: RefObject<SectionAutosave<K> | null>,
-  typing: Typing<F>,
-  touched: Touched,
-) {
-  const { latest, commit } = typing;
-  return {
-    update: (change: (fields: F) => F) =>
-      commit({ ...latest.current, fields: change(latest.current.fields) }),
-    setNoChanges: (isOn: boolean) => commit({ ...latest.current, noChanges: isOn }),
-    onBlur: (event: FocusEvent<HTMLElement>) => {
-      touched.touch(event.target.id);
-      autosave.current?.flush();
-    },
-    retry: () => autosave.current?.retry(),
-    keepMine: () => autosave.current?.keepMine(),
-    takeTheirs: () => {
-      const theirs = autosave.current?.takeTheirs();
-      if (!theirs) return;
-      typing.replace({
-        fields: model.fieldsOf(theirs.answers, newKey),
-        noChanges: theirs.noChanges,
-      });
-      touched.reset();
-    },
-  };
-}
-
 /**
- * A section page's editor: the fields filled from the draft once, each change read through the section's
- * model and handed to the autosave, messages shown for fields the person has left, and the conflict's
- * two ways on. The draft's own copy follows each save (the api-client writes it), so a refused field
- * falls back to what was saved last.
- *
- *   const editor = useSectionEditor("rooms", ROOMS_MODEL, site, draft);
+ * The section's held state for its page: the one the layout holds, or one opened from the draft; a page
+ * open on it keeps it attached, and a drop (signed out, someone else signed in) gives the page a fresh one.
  */
-export function useSectionEditor<K extends HotelFormSectionKey, F extends RefreshNote>(
+function useHeldSection<K extends HotelFormSectionKey>(
   key: K,
-  model: SectionModel<K, F>,
-  site: HotelFormSite,
-  draft: HotelFormDraftView,
-): SectionEditor<F> {
-  const section: SectionView<K> = draft.sections[key];
-  const [save, setSave] = useState<SaveState<K>>({ kind: "idle" });
+  model: SectionModel<K, SectionFieldsMap[K]>,
+  sections: HeldSections,
+  section: HotelFormDraftSections[K],
+): HeldSection<K, SectionFieldsMap[K]> {
+  useSyncExternalStore(sections.subscribe, sections.generation, sections.generation);
+  const reading = useMemo(() => ({ model, check: payloadOf }), [model]);
   const opened = {
     version: section.version,
     saved: { answers: section.answers, noChanges: section.noChanges },
   };
-  const autosave = useSectionAutosave(key, site, opened, setSave);
-  const typing = useTypedSection(key, model, section, autosave);
-  const touched = useTouched();
-  const { fields, noChanges } = typing.typed;
+  const held = sections.open(key, reading, opened);
+  useEffect(() => held.readWith(reading), [held, reading]);
+  useEffect(() => {
+    held.attach();
+    return () => held.detach();
+  }, [held]);
+  return held;
+}
+
+/** Whether the person has left a field (a number's unit list counts for its number). */
+const isTouchedIn =
+  <K extends HotelFormSectionKey, F>(view: HeldView<K, F>) =>
+  (id: string): boolean =>
+    view.touched.has(id) || view.touched.has(unitSelectId(id));
+
+/**
+ * A section page's editor (D-190 §5): the section's fields as the layout holds them (filled from the draft
+ * the first time), each change read through the section's model and handed to its autosave, messages for
+ * fields the person has left, and the conflict's two ways on. Leaving the page keeps all of it, so the
+ * section is still saved and opens again as it was left (review fixes E1 and E4).
+ *
+ *   const editor = useSectionEditor("rooms", ROOMS_MODEL, site, draft);
+ */
+export function useSectionEditor<K extends HotelFormSectionKey>(
+  key: K,
+  model: SectionModel<K, SectionFieldsMap[K]>,
+  site: HotelFormSite,
+  draft: HotelFormDraftView,
+): SectionEditor<SectionFieldsMap[K]> {
+  const held = useHeldSection(key, model, site.sections, draft.sections[key]);
+  const view = useSyncExternalStore(held.subscribe, held.snapshot, held.snapshot);
   const built = useMemo(
-    () => model.answersOf(fields, section.answers),
-    [model, fields, section.answers],
+    () => model.answersOf(view.fields, view.saved),
+    [model, view.fields, view.saved],
   );
+  const isTouched = isTouchedIn(view);
   return {
-    fields,
-    noChanges,
-    isReadOnly: hotelFormStateOf(draft.request.status) !== "ready" || save.kind === "locked",
-    save,
-    problem: typing.problem,
-    hasMarked: Object.keys(built.errors).some(touched.isTouched),
-    errorOf: (id, always = false) =>
-      always || touched.isTouched(id) ? built.errors[id] : undefined,
-    ...actionsOf(model, autosave, typing, touched),
-    newKey,
+    fields: view.fields,
+    noChanges: view.noChanges,
+    isReadOnly: hotelFormStateOf(draft.request.status) !== "ready" || view.save.kind === "locked",
+    save: view.save,
+    problem: view.problem,
+    hasMarked: Object.keys(built.errors).some(isTouched),
+    errorOf: (id, always = false) => (always || isTouched(id) ? built.errors[id] : undefined),
+    update: held.update,
+    setNoChanges: held.setNoChanges,
+    onBlur: (event) => held.leave(event.target.id),
+    retry: held.retry,
+    keepMine: held.keepMine,
+    takeTheirs: held.takeTheirs,
+    newKey: newRowKey,
   };
 }

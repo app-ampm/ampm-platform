@@ -7,6 +7,7 @@ import { Helpers } from "./overview-helpers";
 import { NextAction, RequestBanner, StaffNote, StatusRow } from "./overview-parts";
 import { OverviewSections, QuickStart } from "./overview-sections";
 import { ReverifyPage, ReverifyPanel, reverifyOf, useFocusAfterPanel } from "./reverify-panel";
+import type { HeldSections } from "./sections/held-sections";
 import { StepShell } from "./step-shell";
 import type { HotelFormFlow } from "./use-hotel-form-flow";
 import { EDIT_SAVE_ID, YourDetails } from "./your-details";
@@ -21,6 +22,8 @@ const BACK_AFTER_PANEL = [EDIT_SAVE_ID];
 export interface OverviewScreenProps {
   readonly flow: HotelFormFlow;
   readonly siteKey: string;
+  /** The layout's held sections: the list says which have changes not saved yet. */
+  readonly sections?: HeldSections | undefined;
 }
 
 /** HF-04 with its request: everything below the in-place new code, when one is asked for. */
@@ -28,6 +31,7 @@ function Overview({
   flow,
   me,
   siteKey,
+  sections,
 }: OverviewScreenProps & {
   readonly me: HotelFormMe;
 }) {
@@ -48,7 +52,7 @@ function Overview({
       <RequestBanner status={request.status} request={draft?.request} />
       {request.staffNote ? <StaffNote note={request.staffNote} /> : null}
       {hotelFormStateOf(request.status) === "ready" ? <QuickStart /> : null}
-      <OverviewSections draft={flow.draft} />
+      <OverviewSections draft={flow.draft} sections={sections} />
       {draft ? <Helpers contributors={draft.contributors} /> : null}
       <YourDetails
         person={person}
@@ -72,10 +76,10 @@ function Overview({
  *
  *   <OverviewScreen flow={flow} siteKey={siteKey} />
  */
-export function OverviewScreen({ flow, siteKey }: OverviewScreenProps) {
+export function OverviewScreen({ flow, siteKey, sections }: OverviewScreenProps) {
   const { me } = flow;
   const identity = reverifyOf(flow);
-  if (me.data) return <Overview flow={flow} me={me.data} siteKey={siteKey} />;
+  if (me.data) return <Overview flow={flow} me={me.data} siteKey={siteKey} sections={sections} />;
   if (identity) return <ReverifyPage flow={flow} identity={identity} siteKey={siteKey} />;
   if (me.error)
     return (

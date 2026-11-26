@@ -170,9 +170,9 @@ function useVerifyCode(
       return;
     }
     verify.mutate(step.request, {
-      onSuccess: ({ sessionToken }) => {
+      onSuccess: ({ sessionToken, personId }) => {
         keepSession(storage.current, sessionToken);
-        dispatch({ type: "verified", sessionToken });
+        dispatch({ type: "verified", sessionToken, personId });
       },
       onError: refusedBy(dispatch, "verify"),
     });

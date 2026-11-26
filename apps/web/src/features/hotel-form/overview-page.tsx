@@ -15,5 +15,5 @@ import { useSignedInPage } from "./use-signed-in-page";
 export function HotelFormOverviewPage() {
   const site = useSignedInPage(HOTEL_FORM_ROUTES.overview);
   if (site === null) return <LoadingStep label={HOTEL_FORM_COPY.openingForm} />;
-  return <OverviewScreen flow={site.flow} siteKey={site.siteKey} />;
+  return <OverviewScreen flow={site.flow} siteKey={site.siteKey} sections={site.sections} />;
 }

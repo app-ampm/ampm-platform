@@ -8,6 +8,7 @@ import { INITIAL_FLOW, type FlowState } from "./flow";
 import type { HotelFormSite } from "./hotel-form-provider";
 import { HotelFormScreen } from "./hotel-form-screen";
 import { OverviewScreen } from "./overview-screen";
+import { heldSectionsFor } from "./sections/held-sections.test-utils";
 import type { HotelFormFlow } from "./use-hotel-form-flow";
 
 /*
@@ -88,15 +89,17 @@ export function signedInSite(
   draft: HotelFormDraftView,
   overrides: Partial<HotelFormFlow> = {},
 ): HotelFormSite {
+  const flow = flowAt(
+    { phase: { kind: "signed_in", reverify: null }, session: SESSION },
+    {
+      me: { data: ME, isLoading: false, error: null, retry: noop },
+      draft: draftView(draft),
+      ...overrides,
+    },
+  );
   return {
-    flow: flowAt(
-      { phase: { kind: "signed_in", reverify: null }, session: SESSION },
-      {
-        me: { data: ME, isLoading: false, error: null, retry: noop },
-        draft: draftView(draft),
-        ...overrides,
-      },
-    ),
+    flow,
+    sections: heldSectionsFor(() => flow),
     siteKey: "test-site-key",
     rememberReturn: vi.fn(),
     landing: () => "/hotel-form/overview",

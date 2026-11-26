@@ -9,6 +9,7 @@ import { HotelFormOverviewPage } from "./overview-page";
 import { ME, flowAt } from "./screen.test-utils";
 import { HotelFormSectionPage } from "./sections/section-page";
 import { innerPageStep, useSignedInPage } from "./use-signed-in-page";
+import { heldSectionsFor } from "./sections/held-sections.test-utils";
 
 /*
  * The form's pages sharing one session (D-190 §5): a page behind the sign-in opened without a session goes
@@ -37,11 +38,13 @@ afterEach(() => {
 
 /** The form's shared state at a phase, its return page recorded by spies. */
 function siteAt(phase: Phase, landing = "/hotel-form/overview"): HotelFormSite {
+  const flow = flowAt(
+    { phase, session: phase.kind === "signed_in" ? "s" : null },
+    { me: { data: ME, isLoading: false, error: null, retry: () => undefined } },
+  );
   return {
-    flow: flowAt(
-      { phase, session: phase.kind === "signed_in" ? "s" : null },
-      { me: { data: ME, isLoading: false, error: null, retry: () => undefined } },
-    ),
+    flow,
+    sections: heldSectionsFor(() => flow),
     siteKey: "test-site-key",
     rememberReturn: vi.fn(),
     landing: () => landing,

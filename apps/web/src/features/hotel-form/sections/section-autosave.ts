@@ -13,6 +13,8 @@ import {
  * time, and never the answers the API already holds. Each refusal has its way on: a colleague's save waits
  * for Keep mine or Take theirs, a locked request stops for good (what was typed stays on the page), a 429
  * waits out its Retry-After, an ended session waits for a new code, anything else says Not saved – retry.
+ * It lives as long as the form's layout, not the section's page (review fix E1): leaving the section keeps
+ * its wait and its retry, and only signing out or another person signing in stops it.
  */
 
 /** How long typing must stop before a section saves. */
@@ -43,6 +45,11 @@ export type SaveState<K extends HotelFormSectionKey> =
   | { readonly kind: "locked"; readonly readOnly: HotelFormReadOnly | null }
   | { readonly kind: "session" };
 
+/** How a save goes: with keepalive when it is made as the page is hidden or closed. */
+export interface SendOptions {
+  readonly keepalive: boolean;
+}
+
 export interface AutosaveOptions<K extends HotelFormSectionKey> {
   /** The saved section's version: 0 before its first save. */
   readonly version: number;
@@ -51,16 +58,19 @@ export interface AutosaveOptions<K extends HotelFormSectionKey> {
   readonly send: (
     payload: SectionPayload<K>,
     expectedVersion: number,
+    options: SendOptions,
   ) => Promise<HotelFormSectionSaved>;
   readonly refusalOf: (error: unknown) => SaveRefusal<K>;
   readonly onState: (state: SaveState<K>) => void;
+  /** A save landed: what the API now holds for the section. */
+  readonly onSaved?: ((payload: SectionPayload<K>) => void) | undefined;
 }
 
 export interface SectionAutosave<K extends HotelFormSectionKey> {
   /** The person changed the section: it saves once typing has stopped for a while. */
   readonly change: (payload: SectionPayload<K>) => void;
-  /** Saves now: a field was left, the page was hidden. */
-  readonly flush: () => void;
+  /** Saves now: a field or the section was left, or the page was hidden (with keepalive). */
+  readonly flush: (options?: SendOptions) => void;
   /** Not saved – retry. */
   readonly retry: () => void;
   /** A colleague saved first: save these answers on their version. */
@@ -71,12 +81,18 @@ export interface SectionAutosave<K extends HotelFormSectionKey> {
   readonly resume: () => void;
   /** Whether anything typed is not saved yet (or is being saved). */
   readonly hasUnsaved: () => boolean;
-  /** The page goes: what is left is saved, and the page hears nothing more. */
-  readonly dispose: () => void;
+  /** The size in bytes of what a flush would send now, 0 when nothing would go: keepalive's limit. */
+  readonly pendingBytes: () => number;
+  /** The version the next save goes on. */
+  readonly version: () => number;
+  /** Stops for good (signed out, someone else signed in): nothing more is sent or said. */
+  readonly stop: () => void;
 }
 
 const textOf = <K extends HotelFormSectionKey>(payload: SectionPayload<K>): string =>
   canonicalJson(payload);
+
+const UTF8 = new TextEncoder();
 
 /** States in which nothing saves until the person or the page acts. */
 const HELD: ReadonlySet<SaveState<HotelFormSectionKey>["kind"]> = new Set([
@@ -99,26 +115,28 @@ export function createSectionAutosave<K extends HotelFormSectionKey>(
   const run = new AutosaveRun(options);
   return {
     change: (payload) => run.change(payload),
-    flush: () => run.flush(),
+    flush: (sending) => run.flush(sending),
     retry: () => run.flush(),
     keepMine: () => run.keepMine(),
     takeTheirs: () => run.takeTheirs(),
     resume: () => run.resume(),
     hasUnsaved: () => run.hasUnsaved(),
-    dispose: () => run.dispose(),
+    pendingBytes: () => run.pendingBytes(),
+    version: () => run.version,
+    stop: () => run.stop(),
   };
 }
 
-/** The autosave's state between calls; one per section page. */
+/** The autosave's state between calls; one per section, held by the form's layout. */
 class AutosaveRun<K extends HotelFormSectionKey> {
-  private version: number;
+  version: number;
   private savedText: string;
   private latest: SectionPayload<K> | null = null;
   private state: SaveState<K> = { kind: "idle" };
   private timer: ReturnType<typeof setTimeout> | undefined;
   private isSending = false;
   private isQueued = false;
-  private isDisposed = false;
+  private isStopped = false;
 
   constructor(private readonly options: AutosaveOptions<K>) {
     this.version = options.version;
@@ -134,10 +152,10 @@ class AutosaveRun<K extends HotelFormSectionKey> {
     if (this.state.kind === "saved" && this.isUnsaved()) this.show({ kind: "saving" });
   }
 
-  flush(): void {
+  flush(sending: SendOptions = { keepalive: false }): void {
     if (this.isHeld()) return;
     this.clearTimer();
-    this.save();
+    this.save(sending);
   }
 
   keepMine(): void {
@@ -171,10 +189,15 @@ class AutosaveRun<K extends HotelFormSectionKey> {
     return this.isSending || this.isUnsaved();
   }
 
-  dispose(): void {
+  pendingBytes(): number {
+    if (this.latest === null || this.isHeld() || this.isSending || !this.isUnsaved()) return 0;
+    return UTF8.encode(textOf(this.latest)).length;
+  }
+
+  stop(): void {
+    this.isStopped = true;
+    this.isQueued = false;
     this.clearTimer();
-    if (!this.isHeld()) this.save();
-    this.isDisposed = true;
   }
 
   private isHeld(): boolean {
@@ -185,9 +208,9 @@ class AutosaveRun<K extends HotelFormSectionKey> {
     return this.latest !== null && textOf(this.latest) !== this.savedText;
   }
 
-  private save(): void {
+  private save(sending: SendOptions = { keepalive: false }): void {
     const payload = this.latest;
-    if (payload === null || this.isHeld()) return;
+    if (payload === null || this.isHeld() || this.isStopped) return;
     if (this.isSending) {
       this.isQueued = true;
       return;
@@ -200,16 +223,21 @@ class AutosaveRun<K extends HotelFormSectionKey> {
     this.isQueued = false;
     this.show({ kind: "saving" });
     const text = textOf(payload);
-    this.options.send(payload, this.version).then(
-      (saved) => this.saved(saved, text),
-      (error: unknown) => this.refused(this.options.refusalOf(error)),
+    this.options.send(payload, this.version, sending).then(
+      (saved) => this.saved(saved, payload, text),
+      (error: unknown) => {
+        // Stopped meanwhile (signed out): its refusal is nobody's now, the flow's session least of all.
+        if (!this.isStopped) this.refused(this.options.refusalOf(error));
+      },
     );
   }
 
-  private saved(saved: HotelFormSectionSaved, text: string): void {
+  private saved(saved: HotelFormSectionSaved, payload: SectionPayload<K>, text: string): void {
+    if (this.isStopped) return;
     this.isSending = false;
     this.version = saved.version;
     this.savedText = text;
+    this.options.onSaved?.(payload);
     // Newer typing still to go (queued, or waiting out its delay) keeps the line at Saving….
     this.show(this.isUnsaved() ? { kind: "saving" } : { kind: "saved" });
     if (this.isQueued) this.save();
@@ -233,7 +261,7 @@ class AutosaveRun<K extends HotelFormSectionKey> {
 
   private show(state: SaveState<K>): void {
     this.state = state;
-    if (!this.isDisposed) this.options.onState(state);
+    if (!this.isStopped) this.options.onState(state);
   }
 
   private clearTimer(): void {

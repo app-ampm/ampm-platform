@@ -6,11 +6,18 @@ import { ApiProvider, createQueryClient } from "@ampm/api-client";
 import { env } from "@/env";
 
 import { HOTEL_FORM_ROUTES, innerPathOf } from "./hotel-form-routes";
+import type { HeldSections } from "./sections/held-sections";
+import { useHeldSections } from "./sections/use-held-sections";
 import { useHotelFormFlow, type HotelFormFlow } from "./use-hotel-form-flow";
 
 /** What every page of the form shares: the flow and its session, and where signing in leads. */
 export interface HotelFormSite {
   readonly flow: HotelFormFlow;
+  /**
+   * Each section's answers not saved yet and its autosave, kept while the person moves between the form's
+   * pages (review fixes E1 and E4): a section left is still saved, and opens again as it was left.
+   */
+  readonly sections: HeldSections;
   /** The Turnstile widget's site key, for a new code asked for on any page. */
   readonly siteKey: string;
   /** Remembers the page the person was sent to the sign-in from. */
@@ -63,9 +70,11 @@ export function useReturnPage() {
 /** The flow, run once for every page under the layout. */
 function FlowHost({ children }: { readonly children: ReactNode }) {
   // The flow is a new object on every render, so the pages under it draw again with it; the return
-  // page's three calls stay the same, so an effect keyed on one runs once.
+  // page's three calls and the held sections stay the same, so an effect keyed on one runs once.
+  const flow = useHotelFormFlow();
   const site: HotelFormSite = {
-    flow: useHotelFormFlow(),
+    flow,
+    sections: useHeldSections(flow),
     siteKey: env.NEXT_PUBLIC_TURNSTILE_SITE_KEY,
     ...useReturnPage(),
   };
