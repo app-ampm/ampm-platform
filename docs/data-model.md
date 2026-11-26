@@ -602,6 +602,12 @@ erDiagram
     hotel_info_request_people ||--o{ hotel_info_request_consents : consents
     hotel_info_request_people |o--o{ hotel_info_request_events : acts_in
     hotel_info_request_people |o--o{ hotel_info_requests : submits
+    hotel_info_requests ||--o{ hotel_info_request_sections : drafts
+    hotel_info_requests ||--o{ hotel_info_request_revisions : snapshots
+    hotel_info_requests ||--o{ hotel_info_request_corrections : corrected_by
+    hotel_info_request_people ||--o{ hotel_info_request_sections : last_edits
+    hotel_info_request_people ||--o{ hotel_info_request_revisions : submits_revision
+    hotel_info_request_people ||--o{ hotel_info_request_corrections : asks
 
     destinations {
         uuid id PK
@@ -807,7 +813,7 @@ erDiagram
     hotel_info_request_events {
         uuid id PK
         uuid request_id FK
-        string event_type "enum created / link_reissued / link_emailed / share_recorded / updated / expiry_extended / revoked / code_requested / person_verified / person_updated"
+        string event_type "enum created / link_reissued / link_emailed / share_recorded / updated / expiry_extended / revoked / code_requested / person_verified / person_updated / submitted / correction_requested / consent_withdrawn / removal_requested"
         string actor_kind "enum staff / hotel_person / system"
         uuid actor_user_id FK "the staff user, when staff acted"
         uuid actor_person_id FK "the hotel person (hotel_info_request_people), when one acted; null on code_requested"
@@ -853,15 +859,46 @@ erDiagram
     hotel_info_request_consents {
         uuid id PK
         uuid person_id FK
-        string kind "enum privacy_notice (the submit declarations arrive with submit)"
+        string kind "enum privacy_notice / accuracy_attestation / display_authorisation"
         string text_version "the version of the text consented to"
-        bool granted
-        string revision_hash "the submitted revision a declaration binds to; null for the notice"
+        bool granted "7.5's Yes or No; always true for the notice and 7.4"
+        string revision_hash "the answers_hash of the submitted revision a declaration binds to; null for the notice"
         datetime recorded_at
         string ip_address "RESTRICTED-CONTACT"
         datetime withdrawn_at
         string withdrawal_source "enum contributor / staff"
         uuid withdrawn_by_user_id "the staff user, for a staff withdrawal"
+    }
+    hotel_info_request_sections {
+        uuid id PK
+        uuid request_id FK
+        string section_key "enum property / contact / rooms / venues / booking_terms / food_beverage / fact_sheet_media"
+        int schema_version "the core draft schema the answers follow, from 1"
+        json answers_json "the section's draft (RESTRICTED-CONTACT for contacts)"
+        string content_hash "SHA-256 of the answers' canonical JSON"
+        int version "1 at the first save, plus 1 at every change"
+        bool is_complete "every question of AMPM's PDF in the section answered, or No changes"
+        bool no_changes "a refresh's No changes since last time"
+        uuid last_editor_person_id FK "the hotel person who saved it last"
+        datetime last_edited_at
+    }
+    hotel_info_request_revisions {
+        uuid id PK
+        uuid request_id FK
+        int revision "1, 2 and so on per request; unique with request_id"
+        json answers_json "every section at the submit (RESTRICTED-CONTACT for contacts)"
+        string answers_hash "SHA-256 of the answers' canonical JSON; the declarations bind to it"
+        json files_json "each file's id and SHA-256; empty until Slice 9"
+        uuid submitted_by_person_id FK "the hotel person who submitted"
+        datetime submitted_at
+    }
+    hotel_info_request_corrections {
+        uuid id PK
+        uuid request_id FK
+        uuid person_id FK "the hotel person who asked"
+        string message "RESTRICTED-CONTACT, at most 2,000 characters"
+        datetime handled_at "set by staff with handled_by (Slice 8b)"
+        uuid handled_by "the staff user who handled it"
     }
 ```
 
@@ -962,11 +999,20 @@ Notes:
   - **A person** (`hotel_info_request_people`) exists only after a correct code, and is never a `users` row. Their name, designation and phone (E.164, the CHECK `hotel_info_request_people_phone_e164`) are RESTRICTED-CONTACT. `code_entered_at` and `code_delivery` describe the latest correct code; `phone_verified_at` is set only by an SMS code (while codes are shown on screen, a code proves nothing about the mobile). The partial unique index `hotel_info_request_people_request_phone_live_key` holds one person per request and phone while neither removed nor deleted, so a returning person is found by request and phone, not created twice. AMPM removing a person sets `removed_at` and `removed_by`, ends their sessions and frees their place among the request's `maxPeople`.
   - **A code challenge** (`hotel_info_request_challenges`) is one code: issued on the request's link generation, to a mobile known only by its `destination_hash`, the HMAC of the E.164 number under the address key (HKDF `ampm/hotel-form-address`), which the per-mobile limits and the lockout key on. Until the code is entered or the challenge is retired it holds the claim: the name, designation, mobile and notice version typed (RESTRICTED-CONTACT); then they are cleared (the CHECK `hotel_info_request_challenges_claim_cleared`), so nothing a stranger types reaches anyone's record without a code. The code is stored only as `code_hmac`, bound to the challenge's id under the code key (HKDF `ampm/hotel-form-code`), with one exception: in SMS mode the queued SMS notification holds it in its render data (`notifications.data`) until the SMS is sent or fails, when that data is cleared, as a client sign-in code's is (D-044). It lives 5 minutes, and `attempts` counts the tries, at most 5 (`hotel_info_request_challenges_attempts_range`), each reserved by an update that increments while the challenge is unused, unretired, unexpired and under 5. A new code for the same request and mobile retires the open one. The index on (`request_id`, `destination_hash`, `created_at`) finds the open challenge and counts the burned ones of the last hour.
   - **The session** a correct code opens is carried by that challenge: `person_id` is set when the code is entered (`hotel_info_request_challenges_person_on_use`), and only the SHA-256 of the session's `hfs_` token is stored (`session_token_hash`, unique, SECRET), with its start, last sight and end; a session needs its person and start (`hotel_info_request_challenges_session_on_verified`). The address and the user agent are RESTRICTED-CONTACT.
-  - **Consents** (`hotel_info_request_consents`) are the evidence, append-only by repository convention: created, then only withdrawn (time, source and, for staff, who). The privacy notice's consent is recorded when a person's code is entered, with the notice's version and no `revision_hash` (`hotel_info_request_consents_notice_has_no_revision`); the two declarations of a later slice add their kinds and bind to a submitted revision's hash.
+  - **Consents** (`hotel_info_request_consents`) are the evidence, append-only by repository convention: created, then only withdrawn (time, source and, for staff, who). The privacy notice's consent is recorded when a person's code is entered, with the notice's version and no `revision_hash` (`hotel_info_request_consents_notice_has_no_revision`, since Slice 8a `hotel_info_request_consents_revision_hash_by_kind`); the two declarations of submit add their kinds and bind to a submitted revision's hash (D-190, below).
   - **Rolling back past this migration.** The previous image never reads the new tables or the new column, and the hotel form's public routes stay off with the mode. Its audit service writes no `actor_ref`, which the CHECK allows. Nothing to clear.
   - **Applying it while the previous API serves.** Prisma applies the file one statement at a time, each committing on its own, and no statement waits more than 5 seconds for a lock (`SET lock_timeout`), so none keeps the API's writes queued behind it. The `audit_events` statements come last: the column and the CHECK, added `NOT VALID`, lock every audit partition for an instant and read no row, and `VALIDATE CONSTRAINT` then reads the rows while reads and writes go on. A statement that times out stops the deploy with the ones before it in place: run the rest of the file by hand when the tables are quiet (usually just the `audit_events` statements), then `prisma migrate resolve --applied 20261129000000_hotel_form_identity`, and deploy again.
   - **Abandoned claims.** A claim never outlives its challenge for long: a challenge whose five tries run out without the right code is retired at once, its claim cleared in the same update, and the worker's hourly job `hotel_form.challenges.retire_expired` retires every challenge whose code expired unused, clearing its claim (each run recorded on `job_runs`). So a claimant who never entered their code is kept at most an hour past its five minutes. A mobile whose person AMPM removed from a request gets no code on that request (403), so removing someone holds in SMS mode.
   - **A hotel person's request events** (migration `20261130000000_hotel_form_events`, expand only: three values of `HotelInfoRequestEventType`). What a hotel person does through the identity step joins the request's history, with actor kind `hotel_person`: `code_requested` (someone holding the link asked for a code, the first human step, so a link counts as opened only then; no person exists yet, so `actor_person_id` is null and the detail names the challenge and the delivery), `person_verified` (a correct code, from a new or a returning person: `actor_person_id` set, the detail naming the challenge, the delivery and whether the person was returning) and `person_updated` (a person changed their own name or designation: the detail names the fields, never their values). No detail holds a name, a mobile or a code. Rolling back past it: the previous image reads these events in a request's full view, whose response model does not know the three types and answers 500 for a request holding one; delete them first (`DELETE FROM hotel_info_request_events WHERE event_type IN ('code_requested', 'person_verified', 'person_updated');`), or leave the form's mode `off`, which writes none.
+
+- **The hotel form's sections (26 November 2026, D-190).** Slice 8a of the hotel information form plan (§4.4 and §6.1 of the plan), implemented in migration `20261201000000_hotel_form_sections` (expand only: a new type, six enum values, three new tables and the consents' CHECK widened; no row changes). Retention class `hotel_intake`, following their request (D-180).
+  - **Sections** (`hotel_info_request_sections`) are the shared draft a request's people fill in: one row per request and section (the unique key on `request_id` and `section_key`), made at the section's first save. `section_key` is one of the seven of core `HOTEL_FORM_SECTION_KEYS`; `answers_json` holds the section's answers as core's draft schema of `schema_version` reads them (one JSON object, `hotel_info_request_sections_answers_object`), and the contacts in them are RESTRICTED-CONTACT. `content_hash` is the SHA-256 of their canonical JSON (core `canonicalJson`: keys in order, blanks left out), in hex (`hotel_info_request_sections_content_hash_sha256`). `version` is 1 at the first save and plus 1 at every change (`hotel_info_request_sections_version_from_one`, which holds `schema_version` from 1 too): a save names the version it was based on, and a colleague's newer save refuses it. A save that changes nothing (the same hash and the same `no_changes`) writes nothing, so a request's last activity comes from its sections and a save writes no event. `is_complete` follows core `isHotelFormSectionComplete`, and `no_changes` is a refresh's "No changes since last time". A section is capped in UTF-8 bytes of its canonical JSON (32 KB, 96 KB for rooms and venues) and its rows in number (60 rooms, 40 venues, 3 contacts, 12 other layouts a venue) by the API; text keeps the catalogue's bounds, and jsonb's: no null character and no lone surrogate.
+  - **Revisions** (`hotel_info_request_revisions`) are the immutable snapshot each submit takes, created and read only (by repository convention): `revision` counts from 1 per request (`hotel_info_request_revisions_request_id_revision_key`, `hotel_info_request_revisions_revision_from_one`), `answers_json` holds every section, saved or not, with its schema version, its No changes and its answers (core `hotelFormRevisionAnswers`, built by `hotelFormRevisionAnswersOf`), and `answers_hash` the SHA-256 of its canonical JSON, which both declarations bind to (`hotel_info_request_revisions_answers_hash_sha256`), and `files_json` the files' ids and SHA-256, an empty list until Slice 9 (`hotel_info_request_revisions_answers_shape` holds the object and the list).
+  - **Corrections** (`hotel_info_request_corrections`) are what a person asks AMPM to correct after submitting: the request, the person, and the message, at most 2,000 characters and never blank (`hotel_info_request_corrections_message_not_blank`), RESTRICTED-CONTACT, kept out of every event, notice and log. Staff mark one handled with `handled_at` and `handled_by` together (`hotel_info_request_corrections_handled_together`, Slice 8b). The index on (`request_id`, `created_at`) lists a request's corrections and counts a day's.
+  - **The declarations** join the consent kinds: `accuracy_attestation` (7.4, always granted) and `display_authorisation` (7.5, `granted` holding the Yes or the No), each recorded against the submitted revision's `answers_hash` with the version of its words (core `HOTEL_FORM_ACCURACY_VERSION`, `HOTEL_FORM_DISPLAY_VERSION`, drafts for counsel, HF-G2). The CHECK `hotel_info_request_consents_revision_hash_by_kind` requires a SHA-256 on a declaration and forbids one on the privacy notice; it replaced `hotel_info_request_consents_notice_has_no_revision`, added before the old one was dropped so the table was never without one.
+  - **The form's events** join the request's history, with actor kind `hotel_person`: `submitted` (the detail names the revision), `correction_requested` (the correction's id, never its message), `consent_withdrawn` (the kind withdrawn, `display_authorisation` or `all`) and `removal_requested` (a person asked to have their details removed, for a Super Admin to review).
+  - **Rolling back past this migration.** The previous image never reads the new tables, writes no new consent kind and no new event type, and the form's public routes stay off with the mode. Its request full view does not know the four event types and answers 500 for a request holding one: delete them first (`DELETE FROM hotel_info_request_events WHERE event_type IN ('submitted', 'correction_requested', 'consent_withdrawn', 'removal_requested');`), or leave the form's mode `off`, which writes none. The widened CHECK allows every consent the previous image writes.
+  - **Applying it while the previous API serves.** As for the identity step: one statement at a time, each committing on its own, none waiting more than 5 seconds for a lock. The new tables hold no row, so their keys and CHECKs read nothing; each foreign key holds its parent table for an instant; the consents' statements come last. The new CHECK names only `privacy_notice`, never a value the file adds, so the file also runs by hand as one transaction.
 
 ---
 
@@ -2336,6 +2382,7 @@ Phase numbers follow SPEC §11 as adjusted by A-10. "Restricted" lists the field
 | saved_hotels | C | 1 | Client shortlist | — |
 | hotel_info_requests, hotel_info_request_events | C | 1 | Hotel information form requests, their links and their history (D-188) | token_hash; recipient_name, recipient_email |
 | hotel_info_request_people, hotel_info_request_challenges, hotel_info_request_consents | C | 1 | The hotel form's people, their code challenges and sessions, and their consents (D-189) | people's names, designations and phones; the claims; code_hmac, destination_hash, session_token_hash; ip_address, user_agent |
+| hotel_info_request_sections, hotel_info_request_revisions, hotel_info_request_corrections | C | 1 | The hotel form's shared draft, its submitted revisions and the corrections asked for after a submit (D-190) | the contacts in answers_json; message |
 | hotel_enquiries | D | 1 | Assistance requests and consultancy | notes_internal |
 | hotel_enquiry_events | D | 1 | Enquiry timeline | internal_only rows |
 | site_visits | D | 1 | Scheduled visits | outcome_internal |

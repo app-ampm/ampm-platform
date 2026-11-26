@@ -89,8 +89,10 @@ const eventDetailValue = z.union([
  * maybe `note`; `updated` has `fields` (the names changed, never their values); `expiry_extended` has
  * `from` and `to`; `revoked` has `fromStatus` and `cause` (`staff` or `hotel_deleted`). A hotel person's
  * (D-189 §6): `code_requested` has `challengeId` and `delivery` (`sms` or `screen`); `person_verified` has
- * `challengeId`, `delivery` and `returning`; `person_updated` has `fields`. None holds a name, a mobile or
- * a code.
+ * `challengeId`, `delivery` and `returning`; `person_updated` has `fields`. The form's own (D-190 §1), a
+ * hotel person's too: `submitted` has `revision` (the revision written); `correction_requested` has
+ * `correctionId`, never the message; `consent_withdrawn` has `kind` (`display_authorisation` or `all`);
+ * `removal_requested` has none. None holds a name, a mobile, a code or anything a hotel typed.
  */
 export const hotelInfoRequestEventView = z
   .object({

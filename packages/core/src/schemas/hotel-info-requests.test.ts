@@ -17,7 +17,7 @@ import {
 
 /* The words of hotel information requests (D-188 §1 and §2), kept in step with the database enums. */
 describe("hotel information request vocabulary", () => {
-  it("names the kinds, targets, statuses, event types (D-188, and D-189's hotel people) and actor kinds", () => {
+  it("names the kinds, targets, statuses, event types (D-188, D-189's hotel people, D-190's submit) and actor kinds", () => {
     expect(hotelInfoRequestKind.options).toEqual(["onboarding", "refresh"]);
     expect(hotelInfoRequestTarget.options).toEqual(["existing", "new"]);
     expect(hotelInfoRequestStatus.options).toEqual([
@@ -41,6 +41,10 @@ describe("hotel information request vocabulary", () => {
       "code_requested",
       "person_verified",
       "person_updated",
+      "submitted",
+      "correction_requested",
+      "consent_withdrawn",
+      "removal_requested",
     ]);
   });
 
@@ -85,8 +89,12 @@ describe("hotel form identity vocabulary", () => {
     expect(hotelFormCodeDelivery.options).toEqual(["sms", "screen"]);
   });
 
-  it("records the privacy notice consent now, withdrawn by the contributor or by staff", () => {
-    expect(hotelInfoRequestConsentKind.options).toEqual(["privacy_notice"]);
+  it("records the privacy notice and the two declarations, withdrawn by the contributor or by staff", () => {
+    expect(hotelInfoRequestConsentKind.options).toEqual([
+      "privacy_notice",
+      "accuracy_attestation",
+      "display_authorisation",
+    ]);
     expect(hotelInfoRequestWithdrawalSource.options).toEqual(["contributor", "staff"]);
   });
 });

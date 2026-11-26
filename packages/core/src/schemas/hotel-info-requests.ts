@@ -63,7 +63,11 @@ export type HotelInfoRequestPrefillMode = z.infer<typeof hotelInfoRequestPrefill
  * events, then the identity step's (D-189 §6), whose actor is a hotel person: `code_requested` (someone
  * holding the link asked for a code: the first human step, so a link counts as opened only then; no
  * person exists yet), `person_verified` (a correct code: a new or a returning person) and
- * `person_updated` (a person changed their own name or designation). Later slices add theirs.
+ * `person_updated` (a person changed their own name or designation). Then the form's own (D-190 §1), a
+ * hotel person's too: `submitted` (a revision was submitted), `correction_requested` (a message for
+ * staff after submitting), `consent_withdrawn` and `removal_requested` (a person withdrew their consent,
+ * or asked to have their details removed, for a Super Admin to review). A section's autosave writes no
+ * event: a request's last activity comes from its sections.
  */
 export const hotelInfoRequestEventType = z.enum([
   "created",
@@ -76,6 +80,10 @@ export const hotelInfoRequestEventType = z.enum([
   "code_requested",
   "person_verified",
   "person_updated",
+  "submitted",
+  "correction_requested",
+  "consent_withdrawn",
+  "removal_requested",
 ]);
 export type HotelInfoRequestEventType = z.infer<typeof hotelInfoRequestEventType>;
 
@@ -92,10 +100,17 @@ export const hotelFormCodeDelivery = z.enum(["sms", "screen"]);
 export type HotelFormCodeDelivery = z.infer<typeof hotelFormCodeDelivery>;
 
 /**
- * What a contributor consented to (`hotel_info_request_consents.kind`, D-189 §1): the privacy notice,
- * recorded when their code is entered. The two declarations arrive with submit, in a later slice.
+ * What a contributor consented to (`hotel_info_request_consents.kind`): the privacy notice, recorded
+ * when their code is entered (D-189 §1), and the two declarations of submit (D-190 §1), each bound to the
+ * submitted revision's hash: `accuracy_attestation` (7.4, always granted: submit refuses without it) and
+ * `display_authorisation` (7.5, `granted` holding the Yes or the No). A CHECK requires a revision hash
+ * on the declarations and forbids one on the notice.
  */
-export const hotelInfoRequestConsentKind = z.enum(["privacy_notice"]);
+export const hotelInfoRequestConsentKind = z.enum([
+  "privacy_notice",
+  "accuracy_attestation",
+  "display_authorisation",
+]);
 export type HotelInfoRequestConsentKind = z.infer<typeof hotelInfoRequestConsentKind>;
 
 /** Who withdrew a consent (`hotel_info_request_consents.withdrawal_source`): its contributor, or staff. */

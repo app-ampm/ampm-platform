@@ -255,6 +255,27 @@ function personEventWhat(event: HotelInfoRequestEventView): string {
       return `A person changed their ${listInWords(fields.map((field) => FIELD_NAME[field] ?? field))}`;
     }
     default:
+      return formEventWhat(event);
+  }
+}
+
+/** What the form's own events did (D-190 §1): no line quotes what a hotel typed. */
+function formEventWhat(event: HotelInfoRequestEventView): string {
+  const { detail } = event;
+  switch (event.eventType) {
+    case "submitted": {
+      const revision = detail?.["revision"];
+      return typeof revision === "number" ? `Submitted (revision ${revision})` : "Submitted";
+    }
+    case "correction_requested":
+      return "A correction was requested";
+    case "consent_withdrawn":
+      return textOf(detail, "kind") === "display_authorisation"
+        ? "A person withdrew the display authorisation (7.5)"
+        : "A person withdrew all their consents";
+    case "removal_requested":
+      return "A person asked for their details to be removed";
+    default:
       return "Request changed";
   }
 }
