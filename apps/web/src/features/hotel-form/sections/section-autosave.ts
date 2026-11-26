@@ -11,8 +11,9 @@ import {
  * A section's autosave (D-190 §5; plan §4.4), apart from React so its timing is tested with fake timers:
  * 1.5 seconds after typing stops, at once on leaving a field or when the page is hidden, one save at a
  * time, and never the answers the API already holds. Each refusal has its way on: a colleague's save waits
- * for Keep mine or Take theirs, a locked request stops for good (what was typed stays on the page), a 429
- * waits out its Retry-After, an ended session waits for a new code, anything else says Not saved – retry.
+ * for Keep mine or Take theirs, a locked request stops until it takes answers again (what was typed stays
+ * on the page meanwhile), a 429 waits out its Retry-After, an ended session waits for a new code, anything
+ * else says Not saved – retry.
  * It lives as long as the form's layout, not the section's page (review fix E1): leaving the section keeps
  * its wait and its retry, and only signing out or another person signing in stops it.
  */
@@ -84,6 +85,8 @@ export interface SectionAutosave<K extends HotelFormSectionKey> {
   readonly takeTheirs: () => SectionPayload<K> | null;
   /** A new code opened a new session: save what was waiting. */
   readonly resume: () => void;
+  /** A locked request takes answers again (AMPM asked for changes): save what was typed meanwhile. */
+  readonly unlock: () => void;
   /** Whether anything typed is not saved yet (or is being saved). */
   readonly hasUnsaved: () => boolean;
   /**
@@ -129,6 +132,7 @@ export function createSectionAutosave<K extends HotelFormSectionKey>(
     keepMine: () => run.keepMine(),
     takeTheirs: () => run.takeTheirs(),
     resume: () => run.resume(),
+    unlock: () => run.unlock(),
     hasUnsaved: () => run.hasUnsaved(),
     pendingBytes: () => run.pendingBytes(),
     version: () => run.version,
@@ -196,9 +200,11 @@ class AutosaveRun<K extends HotelFormSectionKey> {
   }
 
   resume(): void {
-    if (this.state.kind !== "session") return;
-    this.show({ kind: "idle" });
-    this.save();
+    this.goOn("session");
+  }
+
+  unlock(): void {
+    this.goOn("locked");
   }
 
   hasUnsaved(): boolean {
@@ -221,6 +227,13 @@ class AutosaveRun<K extends HotelFormSectionKey> {
 
   private isHeld(): boolean {
     return HELD.has(this.state.kind);
+  }
+
+  /** Out of a state that held every save (`from`): what waits is saved now. */
+  private goOn(from: "session" | "locked"): void {
+    if (this.state.kind !== from) return;
+    this.show({ kind: "idle" });
+    this.save();
   }
 
   private isUnsaved(): boolean {

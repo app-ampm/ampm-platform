@@ -5,6 +5,12 @@ import { NOW, THEIRS, harness, payload } from "./section-autosave.test-utils";
 
 /* A section's autosave (D-190 §5; plan §4.4): each refusal's way on. */
 
+const READ_ONLY = {
+  status: "submitted" as const,
+  submittedBy: "Synthetic Colleague",
+  submittedAt: "2026-11-26T09:59:00.000Z",
+};
+
 beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(NOW);
@@ -116,23 +122,51 @@ describe("when a save is refused", () => {
     expect(calls[1]?.expectedVersion).toBe(5);
   });
 
-  it("stops for good on a locked request, keeping what was typed unsaved", async () => {
+  it("stops on a locked request, keeping what was typed unsaved, until it is unlocked", async () => {
     const { autosave, calls, last, refuse } = harness();
     autosave.change(payload(31));
     autosave.flush();
-    const readOnly = {
-      status: "submitted" as const,
-      submittedBy: "Synthetic Colleague",
-      submittedAt: "2026-11-26T09:59:00.000Z",
-    };
-    await refuse(0, { kind: "locked", readOnly });
-    expect(last()).toEqual({ kind: "locked", readOnly });
+    await refuse(0, { kind: "locked", readOnly: READ_ONLY });
+    expect(last()).toEqual({ kind: "locked", readOnly: READ_ONLY });
     autosave.change(payload(32));
     autosave.flush();
     autosave.retry();
     await vi.advanceTimersByTimeAsync(AUTOSAVE_DELAY_MS);
     expect(calls).toHaveLength(1);
     expect(autosave.hasUnsaved()).toBe(true);
+  });
+
+  it("once unlocked (the request takes answers again), saves what waited on its version (fix F4)", async () => {
+    const { autosave, calls, last, refuse, answer } = harness();
+    autosave.change(payload(31));
+    autosave.flush();
+    await refuse(0, { kind: "locked", readOnly: READ_ONLY });
+    autosave.change(payload(32));
+    autosave.unlock();
+    expect(calls[1]).toMatchObject({ payload: payload(32), expectedVersion: 2 });
+    await answer(1, { version: 3 });
+    expect(last()).toEqual({ kind: "saved" });
+  });
+
+  it("once unlocked, offers Keep mine when a colleague saved while it was locked (fix F4)", async () => {
+    const { autosave, calls, last, refuse } = harness();
+    autosave.change(payload(31));
+    autosave.flush();
+    await refuse(0, { kind: "locked", readOnly: READ_ONLY });
+    autosave.unlock();
+    await refuse(1, { kind: "conflict", theirs: THEIRS });
+    expect(last()).toEqual({ kind: "conflict", theirs: THEIRS });
+    autosave.keepMine();
+    expect(calls[2]).toMatchObject({ payload: payload(31), expectedVersion: 5 });
+  });
+
+  it("unlocks nothing but a locked section", async () => {
+    const { autosave, calls, refuse } = harness();
+    autosave.change(payload(31));
+    autosave.flush();
+    await refuse(0, { kind: "conflict", theirs: THEIRS });
+    autosave.unlock();
+    expect(calls).toHaveLength(1);
   });
 
   it("holds the save while a new code is asked for, and sends it once the session is back", async () => {

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useHotelFormForgotten, useSaveHotelFormSection } from "@ampm/api-client";
+import { hotelFormStateOf, type HotelFormDraftView } from "@ampm/core";
 
 import type { HotelFormFlow } from "../use-hotel-form-flow";
 import { HeldSections, type FormSession, type HeldStatuses } from "./held-sections";
@@ -43,11 +44,23 @@ function usePageLeave(sections: HeldSections) {
 }
 
 /**
- * The form's held sections (D-190 §5, review fixes E1, E4, E5), made once by the layout: every save goes
- * through the api-client's section save inside the flow's session, a session refused on the way is handed
- * to the flow (which asks for a new code in place), and the held sections are dropped when the form is
- * forgotten (sign-out, every consent withdrawn, HF-08) or someone else signs in. The same person's new
- * code sends what waited for it.
+ * Tells the held sections of each read of the draft: once one says the request takes answers again (AMPM
+ * asked for changes), a section a save found locked opens for editing (review fix F4).
+ */
+function useDraftReads(sections: HeldSections, draft: HotelFormDraftView | undefined) {
+  const readAt = draft?.readAt;
+  const isEditable = draft !== undefined && hotelFormStateOf(draft.request.status) === "ready";
+  useEffect(() => {
+    if (readAt !== undefined) sections.draftRead({ readAt, isEditable });
+  }, [sections, readAt, isEditable]);
+}
+
+/**
+ * The form's held sections (D-190 §5, review fixes E1, E4, E5, F4), made once by the layout: every save
+ * goes through the api-client's section save inside the flow's session, a session refused on the way is
+ * handed to the flow (which asks for a new code in place), and the held sections are dropped when the form
+ * is forgotten (sign-out, every consent withdrawn, HF-08) or someone else signs in. The same person's new
+ * code sends what waited for it, and a draft that takes answers again opens a section a save found locked.
  *
  *   const sections = useHeldSections(flow);
  */
@@ -72,6 +85,7 @@ export function useHeldSections(flow: HotelFormFlow): HeldSections {
   useEffect(() => {
     sections.sessionChanged({ token, personId });
   }, [sections, token, personId]);
+  useDraftReads(sections, flow.draft.data);
   usePageLeave(sections);
   return sections;
 }

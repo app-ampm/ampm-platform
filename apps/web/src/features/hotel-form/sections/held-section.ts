@@ -212,6 +212,19 @@ export class HeldSection<K extends HotelFormSectionKey, F> {
     this.autosave.resume();
   }
 
+  /**
+   * A draft read at `readAt` says the request takes answers again (AMPM asked for changes): a section a
+   * save found locked opens for editing, its text kept, and saves it (review fix F4). A read from before
+   * the submit that locked it (one that landed late) leaves it locked.
+   */
+  reopen(readAt: string): void {
+    const { save } = this.view;
+    if (save.kind !== "locked") return;
+    const submittedAt = save.readOnly?.submittedAt ?? null;
+    if (submittedAt !== null && Date.parse(readAt) <= Date.parse(submittedAt)) return;
+    this.autosave.unlock();
+  }
+
   /** Dropped (signed out, someone else signed in): nothing more is sent. */
   stop(): void {
     this.autosave.stop();

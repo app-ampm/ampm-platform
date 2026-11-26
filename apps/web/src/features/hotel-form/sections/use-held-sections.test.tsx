@@ -1,11 +1,17 @@
 // @vitest-environment jsdom
 import { act, useState } from "react";
 import { ApiProvider, createQueryClient, forgetHotelForm } from "@ampm/api-client";
-import { hotelFormSessionError, type HotelFormSectionSaved } from "@ampm/core";
+import {
+  HOTEL_FORM_ERRORS,
+  hotelFormReadOnlyDetails,
+  hotelFormSessionError,
+  type HotelFormSectionSaved,
+} from "@ampm/core";
 import { mount, type Mounted } from "@ampm/web-forms/testing";
 import type { QueryClient } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { draftView, draftWith } from "../draft.test-fixtures";
 import { ME, flowAt } from "../screen.test-utils";
 import type { HotelFormFlow } from "../use-hotel-form-flow";
 import type { HeldSections } from "./held-sections";
@@ -47,6 +53,21 @@ const sessionEnded = () => {
   return Response.json({ error }, { status: 401 });
 };
 
+/** The 409 readOnly a save gets once a colleague submitted the form. */
+const submittedMeanwhile = () => {
+  const readOnly = {
+    status: "submitted" as const,
+    submittedBy: "Ravi Kumar",
+    submittedAt: "2026-11-26T10:00:30.000Z",
+  };
+  const error = {
+    code: "conflict",
+    message: HOTEL_FORM_ERRORS.readOnly,
+    details: hotelFormReadOnlyDetails(readOnly),
+  };
+  return Response.json({ error }, { status: 409 });
+};
+
 const fakeFetch: typeof fetch = async (_input, init) => {
   const headers = new Headers(init?.headers);
   wire.sent.push({
@@ -74,6 +95,12 @@ const signedIn = (session: string | null = SESSION, personId: string | null = nu
     { phase: { kind: "signed_in", reverify: null }, session, personId },
     { me: { data: ME, isLoading: false, error: null, retry: () => undefined } },
   );
+
+/** Signed in, the draft read at `readAt` with the request at `status`. */
+const withDraft = (status: "submitted" | "changes_requested", readAt: string) => ({
+  ...signedIn(),
+  draft: draftView({ ...draftWith({ status }), readAt }),
+});
 
 async function mountLayout(flow = signedIn()): Promise<HeldSections> {
   client = createQueryClient({ retryRateLimited: false });
@@ -180,6 +207,27 @@ describe("whose typing it is (review fix E1)", () => {
     await settle();
     expect(wire.sent).toHaveLength(2);
     expect(wire.sent[1]?.bearer).toBe(NEW_SESSION);
+    expect(wire.sent[1]?.body).toMatchObject({ answers: { totalRooms: 41 }, expectedVersion: 2 });
+    expect(rooms.snapshot().save).toEqual({ kind: "saved" });
+  });
+});
+
+describe("a section a save found locked (review fix F4)", () => {
+  it("opens again and saves its text once the layout reads a draft that takes answers again", async () => {
+    wire.answers.push(submittedMeanwhile);
+    const sections = await mountLayout();
+    const rooms = typeRooms(sections);
+    rooms.leave("hf-rooms-totalRooms");
+    await settle();
+    expect(rooms.snapshot().save.kind).toBe("locked");
+    // The draft read again after the 409: with AMPM, so nothing changes.
+    await act(async () => setFlow(withDraft("submitted", "2026-11-26T10:01:00.000Z")));
+    expect(rooms.snapshot().save.kind).toBe("locked");
+    expect(wire.sent).toHaveLength(1);
+    // AMPM asks for changes, and the next read says so: the text kept is saved.
+    await act(async () => setFlow(withDraft("changes_requested", "2026-11-26T11:00:00.000Z")));
+    await settle();
+    expect(wire.sent).toHaveLength(2);
     expect(wire.sent[1]?.body).toMatchObject({ answers: { totalRooms: 41 }, expectedVersion: 2 });
     expect(rooms.snapshot().save).toEqual({ kind: "saved" });
   });

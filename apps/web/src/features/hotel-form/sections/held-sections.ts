@@ -24,10 +24,11 @@ import type { VenuesFields } from "./venues.form";
 
 /*
  * Every section's held answers and autosave, for as long as the form's layout is mounted (D-190 §5,
- * review fixes E1, E4 and E5). They belong to the person who typed them: a save goes only under that
+ * review fixes E1, E4, E5 and F4). They belong to the person who typed them: a save goes only under that
  * person's session, a different person signing in drops them all, and so do signing out and anything else
  * that forgets the form. The overview reads which sections still wait to save, and the page asks before
- * the tab closes while any does.
+ * the tab closes while any does. A section a save found locked opens again once a read of the draft says
+ * the request takes answers again.
  */
 
 /** Each section's fields as its page holds them. */
@@ -65,7 +66,15 @@ interface HeldEntry {
   pendingBytes(): number;
   flush(options: SendOptions): void;
   resume(): void;
+  reopen(readAt: string): void;
   stop(): void;
+}
+
+/** A read of the draft, as the layout hears of it: when the API read it, and whether it takes answers. */
+export interface DraftRead {
+  readonly readAt: string;
+  /** The request is open or AMPM asked for changes: its sections can be saved. */
+  readonly isEditable: boolean;
 }
 
 /** The session as a save asks for it: its token, and the person it belongs to once known. */
@@ -109,6 +118,8 @@ const sameStatuses = (a: HeldStatuses, b: HeldStatuses): boolean =>
 export class HeldSections {
   private slots: Slots = emptySlots();
   private owner: string | undefined;
+  /** When the API read the last draft the layout heard of. */
+  private lastRead: string | undefined;
   private drops = 0;
   private statusCache: HeldStatuses = NONE;
   private readonly listeners = new Set<() => void>();
@@ -164,6 +175,17 @@ export class HeldSections {
     if (personId === undefined) return;
     if (this.owner !== undefined && personId !== this.owner) this.drop();
     if (token !== null && personId === this.owner) this.each((section) => section.resume());
+  }
+
+  /**
+   * The draft was read again: once a read says the request takes answers again (AMPM asked for changes),
+   * each section a save found locked opens for editing, its text kept, and saves it (review fix F4). The
+   * same read heard of again (the cached draft changed under it, nothing was read) changes nothing.
+   */
+  draftRead({ readAt, isEditable }: DraftRead): void {
+    if (readAt === this.lastRead) return;
+    this.lastRead = readAt;
+    if (isEditable) this.each((section) => section.reopen(readAt));
   }
 
   /** The page is hidden or closed: what waits goes now, with keepalive while the bodies fit its limit. */
