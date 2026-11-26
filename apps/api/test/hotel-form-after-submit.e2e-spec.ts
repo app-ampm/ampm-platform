@@ -1,4 +1,9 @@
-import { HOTEL_FORM_ERRORS } from "@ampm/core";
+import {
+  AppError,
+  HOTEL_FORM_ERRORS,
+  hotelFormReadOnlyOf,
+  hotelFormSectionConflictOf,
+} from "@ampm/core";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { CONTACT, draftCalls, firstSave, PROPERTY, submitBody } from "./hotel-form-draft-suite.js";
@@ -47,6 +52,20 @@ describe("Corrections and withdrawal (e2e, D-190 §3)", () => {
       where: { requestId: link.id },
     });
     return { link, sessionToken, personId: person.id };
+  }
+
+  /** The person's mobile, as the identity step stored it (E.164), to sign them in again. */
+  function mobileOf(personId: string, link: IssuedLink): Promise<string> {
+    return suite.prisma.hotelInfoRequestPerson
+      .findFirstOrThrow({ where: { id: personId, requestId: link.id }, select: { phone: true } })
+      .then((person) => person.phone);
+  }
+
+  /** A refusal's envelope as the AppError the api-client would raise, for core's readers. */
+  function appErrorOf(body: {
+    error: { code: AppError["code"]; message: string; details?: AppError["details"] };
+  }): AppError {
+    return new AppError(body.error.code, body.error.message, body.error.details);
   }
 
   /** The users a request's staff notices of `templateKey` went to, by role. */
@@ -158,8 +177,9 @@ describe("Corrections and withdrawal (e2e, D-190 §3)", () => {
     ]);
   });
 
-  it("withdraws every consent and asks once for removal; a repeat writes nothing more", async () => {
+  it("withdraws every consent, asks once for removal and ends the person's sessions, all at once", async () => {
     const { link, sessionToken, personId } = await submitted();
+    const other = await signIn(suite, link.secret, await mobileOf(personId, link));
     const answer = await calls
       .withdraw(sessionToken, { kind: "all", requestRemoval: true })
       .expect(200);
@@ -171,10 +191,11 @@ describe("Corrections and withdrawal (e2e, D-190 §3)", () => {
       where: { personId, withdrawnAt: null },
     });
     expect(live).toBe(0);
-    const again = await calls
-      .withdraw(sessionToken, { kind: "all", requestRemoval: true })
-      .expect(200);
-    expect(again.body.data).toEqual({ withdrawn: [], removalRequested: true });
+    for (const token of [sessionToken, other.sessionToken]) {
+      const ended = await calls.draft(token).expect(401);
+      expect(ended.body.error.details).toEqual([{ path: "reason", message: "session_ended" }]);
+    }
+    await calls.withdraw(sessionToken, { kind: "all", requestRemoval: true }).expect(401);
     const events = await suite.prisma.hotelInfoRequestEvent.findMany({
       where: { requestId: link.id, eventType: { in: ["consent_withdrawn", "removal_requested"] } },
       orderBy: { occurredAt: "asc" },
@@ -189,7 +210,43 @@ describe("Corrections and withdrawal (e2e, D-190 §3)", () => {
     });
     expect(audit.afterJson).toMatchObject({
       kinds: ["privacy_notice", "accuracy_attestation", "display_authorisation"],
-      changedFields: ["withdrawnAt", "withdrawalSource", "removalRequested"],
+      changedFields: ["withdrawnAt", "withdrawalSource", "removalRequested", "sessionEndedAt"],
     });
+  });
+
+  it("no longer names a person who withdrew every consent to colleagues, until a new code", async () => {
+    const { link, sessionToken, personId } = await submitted();
+    const colleague = await signIn(suite, link.secret, freshMobile(), {
+      fullName: "E2E Synthetic Colleague",
+    });
+    await calls.withdraw(sessionToken, { kind: "all", requestRemoval: false }).expect(200);
+    const seen = (await calls.draft(colleague.sessionToken).expect(200)).body.data;
+    expect(seen.contributors).toEqual([
+      { fullName: null, designation: null, isYou: false },
+      { fullName: "E2E Synthetic Colleague", designation: "General Manager", isYou: true },
+    ]);
+    expect(seen.sections.property.lastEditedBy).toBeNull();
+    expect(seen.sections.property.lastEditedAt).not.toBeNull();
+    expect(seen.request.submittedBy).toBeNull();
+    const locked = await calls.save(colleague.sessionToken, "rooms", firstSave({ totalRooms: 2 }));
+    expect(locked.status).toBe(409);
+    expect(hotelFormReadOnlyOf(appErrorOf(locked.body))?.submittedBy).toBeNull();
+    await signIn(suite, link.secret, await mobileOf(personId, link));
+    const named = (await calls.draft(colleague.sessionToken).expect(200)).body.data;
+    expect(named.contributors[0]).toMatchObject({ fullName: "E2E Synthetic Person" });
+    expect(named.sections.property.lastEditedBy).toBe("E2E Synthetic Person");
+  });
+
+  it("answers a conflict with a colleague who withdrew every consent without their name", async () => {
+    const link = await testLink(suite);
+    const mine = await signIn(suite, link.secret, freshMobile());
+    await calls.save(mine.sessionToken, "contact", firstSave(CONTACT)).expect(200);
+    await calls.withdraw(mine.sessionToken, { kind: "all", requestRemoval: false }).expect(200);
+    const colleague = await signIn(suite, link.secret, freshMobile());
+    const changed = { contacts: [{ name: "E2E Another Person", phone: "+917000099999" }] };
+    const conflict = await calls.save(colleague.sessionToken, "contact", firstSave(changed));
+    expect(conflict.status).toBe(409);
+    const theirs = hotelFormSectionConflictOf(appErrorOf(conflict.body), "contact");
+    expect(theirs?.editedBy).toBeNull();
   });
 });
