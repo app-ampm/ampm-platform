@@ -38,6 +38,14 @@ export interface RequestOptions<T> {
    *   api.request("/auth/activate", { method: "POST", body, schema: activateResponse, accessToken })
    */
   readonly accessToken?: string | undefined;
+  /**
+   * Ask the browser to finish the request even if the page goes meanwhile (fetch's `keepalive`): a save
+   * made as the page is hidden or closed. The browser takes at most 64 KiB of such bodies at once, so the
+   * caller sends it only for a body that fits.
+   *
+   *   api.request(path, { method: "PUT", body, schema, accessToken, keepalive: true })
+   */
+  readonly keepalive?: boolean | undefined;
 }
 
 export interface UploadOptions<T> {
@@ -158,7 +166,15 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
 
   async function request<T>(
     path: string,
-    { method = "GET", body, schema, signal, anonymous = false, accessToken }: RequestOptions<T>,
+    {
+      method = "GET",
+      body,
+      schema,
+      signal,
+      anonymous = false,
+      accessToken,
+      keepalive,
+    }: RequestOptions<T>,
   ): Promise<T> {
     const headers = await authHeaders(
       body === undefined ? {} : { "content-type": "application/json" },
@@ -172,6 +188,7 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
         headers,
         ...(body === undefined ? {} : { body: JSON.stringify(body) }),
         ...(signal ? { signal } : {}),
+        ...(keepalive ? { keepalive: true } : {}),
       },
       schema,
     );

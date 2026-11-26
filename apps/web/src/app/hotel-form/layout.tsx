@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 
 import { HOTEL_FORM_COPY } from "@/features/hotel-form/hotel-form-copy";
 import { HotelFormFrame } from "@/features/hotel-form/hotel-form-frame";
+import { HotelFormProvider } from "@/features/hotel-form/hotel-form-provider";
 
 /**
  * Generic words only: a link preview (a chat app, a mail scanner) shows these, never anything about the
@@ -16,7 +17,15 @@ export const metadata: Metadata = {
   referrer: "no-referrer",
 };
 
-/** The hotel form's pages (D-189 §8) in their own frame: no site navigation, no chat pill. */
+/**
+ * The hotel form's pages (D-189 §8, D-190 §5) in their own frame (no site navigation, no chat pill),
+ * sharing one provider: the API, the flow and its session, so moving between the sign-in, the overview
+ * and the sections keeps the link, the session and what was typed.
+ */
 export default function HotelFormLayout({ children }: { readonly children: ReactNode }) {
-  return <HotelFormFrame>{children}</HotelFormFrame>;
+  return (
+    <HotelFormFrame>
+      <HotelFormProvider>{children}</HotelFormProvider>
+    </HotelFormFrame>
+  );
 }

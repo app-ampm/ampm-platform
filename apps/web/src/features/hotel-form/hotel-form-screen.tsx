@@ -2,7 +2,6 @@ import { HOTEL_FORM_COPY } from "./hotel-form-copy";
 import { IdentityStepView } from "./identity-step";
 import { LinkGoneStep, UnreachableStep } from "./link-gone-step";
 import { LoadingStep } from "./loading-step";
-import { SignedInStep } from "./signed-in-step";
 import type { HotelFormFlow } from "./use-hotel-form-flow";
 import { WelcomeStep } from "./welcome-step";
 
@@ -14,8 +13,8 @@ export interface HotelFormScreenProps {
 
 /**
  * The step the flow is on, drawn from its state alone, so each state renders (and is tested) without the
- * API: opening, HF-01, HF-02, HF-03, signed in, HF-08, a page without its link, and a link that could
- * not be opened for now.
+ * API: opening, HF-01, HF-02, HF-03, HF-08, a page without its link, a link that could not be opened for
+ * now, and the moment between signing in and the form's overview (HF-04, overview-screen.tsx).
  *
  *   <HotelFormScreen flow={useHotelFormFlow()} siteKey={env.NEXT_PUBLIC_TURNSTILE_SITE_KEY} />
  */
@@ -47,6 +46,7 @@ export function HotelFormScreen({ flow, siteKey }: HotelFormScreenProps) {
     case "identity":
       return <IdentityStepView flow={flow} identity={phase.identity} siteKey={siteKey} />;
     case "signed_in":
-      return <SignedInStep flow={flow} siteKey={siteKey} />;
+      // The sign-in is done: the page sends the person on to the form (identity-page.tsx).
+      return <LoadingStep label={HOTEL_FORM_COPY.openingForm} />;
   }
 }

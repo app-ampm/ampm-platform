@@ -4,10 +4,15 @@
   "private": true,
   "description": "The public website's plain-HTML form fields (D-175): presentational DOM controls styled with the kit's recipes from @ampm/ui/styles, shared by the contact form and the hotel information form. No fetching, no upload logic; state and validation stay with the forms.",
   "type": "module",
+  "sideEffects": false,
   "exports": {
     ".": {
       "types": "./src/index.ts",
       "default": "./src/index.ts"
+    },
+    "./testing": {
+      "types": "./src/testing.ts",
+      "default": "./src/testing.ts"
     }
   },
   "scripts": {
@@ -23,6 +28,7 @@
     "@ampm/tokens": "workspace:*",
     "@types/react": "catalog:",
     "@types/react-dom": "^19",
+    "jsdom": "26.1.0",
     "postcss": "^8.5.31",
     "react": "catalog:",
     "react-dom": "catalog:",

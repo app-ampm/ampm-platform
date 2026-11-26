@@ -10,6 +10,10 @@ import type {
   QueueNotification,
   QueueResult,
 } from "../notification/notification.service.js";
+import {
+  HOTEL_TEAM_ALERT_ROLES,
+  type StaffAlertRecipients,
+} from "../notification/staff-alert-recipients.js";
 import type { DiskCheckRepository } from "./disk-check.repository.js";
 import { GIB, type DiskLevel, type NoticeHistory } from "./disk-check.rules.js";
 import { DISK_CHECK_CRON, DiskCheckService, diskCheckJob } from "./disk-check.service.js";
@@ -46,7 +50,9 @@ function build(options: FakeOptions = {}) {
   const succeed = vi.fn(async () => undefined);
   const fail = vi.fn(async () => undefined);
   const history = vi.fn(async () => options.history ?? NONE);
-  const recipientIds = vi.fn(async () => [...(options.recipients ?? ["sa-1", "ht-1"])]);
+  const recipientIds = vi.fn(async (_roles: readonly string[]) => [
+    ...(options.recipients ?? ["sa-1", "ht-1"]),
+  ]);
   const measure = vi.fn(async (_dir: string) => {
     if (options.freeGiB === undefined) throw new Error("ENOENT: no such file or directory, statfs");
     return { freeBytes: options.freeGiB * GIB, totalBytes: 193 * GIB };
@@ -59,14 +65,26 @@ function build(options: FakeOptions = {}) {
   const { logger, entries } = createMemoryLogger("debug");
   const service = new DiskCheckService(
     { register, scheduleRepeatable } as unknown as JobQueue,
-    { start, succeed, fail, history, recipientIds } as unknown as DiskCheckRepository,
+    { start, succeed, fail, history } as unknown as DiskCheckRepository,
     { get } as unknown as ConfigService,
     { queue } as unknown as NotificationService,
+    { ids: recipientIds } as unknown as StaffAlertRecipients,
     { measure } as unknown as DiskSpaceProbe,
     logger as unknown as AppLogger,
     { JOB_WORKER: options.worker ?? false, STORAGE_LOCAL_DIR: "/data/storage" } as unknown as Env,
   );
-  return { service, register, scheduleRepeatable, start, succeed, fail, measure, queue, entries };
+  return {
+    service,
+    register,
+    scheduleRepeatable,
+    start,
+    succeed,
+    fail,
+    measure,
+    queue,
+    recipientIds,
+    entries,
+  };
 }
 
 describe("DiskCheckService", () => {
@@ -116,6 +134,8 @@ describe("DiskCheckService", () => {
     expect(check.entries).toContainEqual(
       expect.objectContaining({ event: "system.disk_check.alerted", level: "warn" }),
     );
+    // The recipients come from the query every staff alert shares (D-190 §4).
+    expect(check.recipientIds).toHaveBeenCalledWith(HOTEL_TEAM_ALERT_ROLES);
   });
 
   it("calls it critical below the floor", async () => {

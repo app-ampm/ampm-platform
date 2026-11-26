@@ -48,6 +48,49 @@ describe("pill choices", () => {
     expect(html).toContain('<legend class="sr-only">Type of request</legend>');
   });
 
+  it("mark every radio required when the question needs an answer, and none otherwise", () => {
+    const choice = (required?: boolean) =>
+      markupOf(
+        <ChoiceSegments
+          name="show"
+          legend="May AMPM show your hotel?"
+          options={options}
+          value=""
+          onChange={noop}
+          required={required}
+        />,
+      );
+    expect(tagsWith(choice(true), "input", 'required=""')).toHaveLength(2);
+    expect(choice()).not.toContain("required");
+  });
+
+  it("read out what each answer means under the question, before the pills, kept beside an error", () => {
+    const meaning = ["Yes lets AMPM show the photos.", "No keeps them for AMPM's planning."];
+    const described = (error?: string) =>
+      markupOf(
+        <ChoiceSegments
+          name="display"
+          legend="May AMPM show your hotel's details?"
+          description={meaning}
+          options={options}
+          value=""
+          onChange={noop}
+          look="soft"
+          error={error}
+        />,
+      );
+    const html = described();
+    expect(html).toMatch(
+      /<legend[^>]*>May AMPM show your hotel&#x27;s details\?<\/legend><div id="display-description"[^>]*><p[^>]*>Yes lets AMPM show the photos\.<\/p><p[^>]*>No keeps them for AMPM&#x27;s planning\.<\/p><\/div><div/,
+    );
+    for (const radio of tagsWith(html, "input", 'type="radio"'))
+      expect(radio).toContain('aria-describedby="display-description"');
+    const refused = described("Answer Yes or No");
+    expect(refused).toContain("Yes lets AMPM show the photos.");
+    for (const radio of tagsWith(refused, "input", 'type="radio"'))
+      expect(radio).toContain('aria-describedby="display-description display-error"');
+  });
+
   it("show an error in gold and point the radios at it", () => {
     const html = markupOf(
       <ChoiceSegments

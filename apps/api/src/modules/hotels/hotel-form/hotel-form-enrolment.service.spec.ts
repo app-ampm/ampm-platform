@@ -46,6 +46,7 @@ describe("HotelFormEnrolment of a new person", () => {
     );
     expect(result).toEqual({
       sessionToken: expect.stringMatching(/^hfs_/),
+      personId: FORM_PERSON_ID,
       person: { fullName: "Synthetic Claimant", designation: "Sales Manager" },
       request: {
         displayLabel: "Monsoon refresh",

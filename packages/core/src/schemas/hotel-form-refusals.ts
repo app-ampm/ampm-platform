@@ -3,19 +3,22 @@ import { z } from "zod";
 import { AppError, type ErrorDetail } from "../errors.js";
 
 /*
- * How the hotel form's public routes refuse (D-189 §3 to §5). The envelope has a code and a message, so
- * the API raises these exact messages and the page shows them. A session's 401 also carries a reason code,
+ * How the hotel form's public routes refuse (D-189 §3 to §5; the form's own, D-190 §3). The envelope has a
+ * code and a message, so the API raises these exact messages and the page shows them. A session's 401 also carries a reason code,
  * in the envelope's `details` as `{ path: "reason", message: <reason> }`, which the page reads with
  * `hotelFormSessionRefusalOf` to ask for a new code in place, or to show that the link is gone (HF-08).
  * Every 429 carries `Retry-After`, and so does the SMS cap's 503 (the time to the next day in India), which
  * the api-client hands the page as `retryAfterSeconds`; the other 503s carry none.
  */
 
-/** The messages of the identity step's refusals, by the route that raises each and its status. */
+/** The messages of the identity step's and the form's refusals, by the route that raises each and its status. */
 export const HOTEL_FORM_ERRORS = {
   /** 404 (codes, verify): the link is unknown, expired, revoked, rejected or not admitted by the mode. */
   notActive: "This link is not active. Ask AMPM for a new one.",
-  /** 409 (codes): the page showed an older privacy notice than the one in force. */
+  /**
+   * 409 (codes; submit): the page showed an older privacy notice, or older words of a declaration (7.4,
+   * 7.5), than the ones in force.
+   */
   noticeStale: "The form was updated. Reload the page.",
   /** 400 on `botToken` (codes): the Turnstile pass is missing, used, or for another page or action. */
   botCheck: "Complete the bot check to continue",
@@ -48,15 +51,50 @@ export const HOTEL_FORM_ERRORS = {
   closedToNewPeople: "This request is complete, so no one new can join it.",
   /** 403 (verify): AMPM removed the person with this mobile from the request. */
   mobileRemoved: "AMPM removed this mobile number from the request. Ask AMPM if this is a mistake.",
-  /** 409 (PATCH me): the request shows its status only, so nothing can be changed. */
-  readOnly: "This request is complete, so nothing can be changed.",
+  /**
+   * 409 (PATCH me: the request shows its status only; a section's save: submitted, in review or showing
+   * its status only), in words true of all three, pointing to a correction; a section's details say who
+   * submitted and when (`hotelFormReadOnlyOf`).
+   */
+  readOnly:
+    "This form has been submitted, so nothing can be changed here. You can still ask AMPM for a correction.",
   /** 429 (PATCH me): more than 10 changes a minute in one session. */
   writeLimit: "Too many changes in a short time. Please wait a moment and try again.",
   /**
-   * 503 (PATCH me): the session's write window cannot be counted, so nothing is changed uncounted; no
-   * `Retry-After`.
+   * 503 (PATCH me, a section's save, a correction): a write window cannot be counted, so nothing is
+   * changed uncounted; no `Retry-After`.
    */
   writesUnavailable: "Your changes can't be saved right now. Please try again in a few minutes.",
+  /**
+   * 409 (a section's save): a colleague saved the section after the version this save was based on; the
+   * details carry their save (`hotelFormSectionConflictOf`), for Keep mine or Take theirs.
+   */
+  sectionConflict:
+    "A colleague saved this section after you opened it. Choose which version to keep.",
+  /** 400 on `answers` (a section's save): over the section's cap; the detail names it in KB. */
+  sectionTooLarge: "This section is too long to save. Shorten the notes or remove some rows.",
+  /** 400 on `noChanges` (a section's save): "No changes since last time" is for a refresh only. */
+  noChangesOnOnboarding:
+    "“No changes since last time” is only for updating a hotel AMPM already lists.",
+  /** 400 (submit): what submit needs is missing; the details list every item (`hotelFormMissingItemsOf`). */
+  submitIncomplete: "Some answers are still needed. Complete the items listed, then submit again.",
+  /**
+   * 409 (submit): the request was submitted already and this is not that submit again (AMPM moved it on,
+   * or this one's declarations differ); the details say who submitted and when (`hotelFormReadOnlyOf`).
+   */
+  alreadySubmitted:
+    "This form has already been submitted. You can still ask AMPM for a correction.",
+  /**
+   * 409 (submit): a colleague saved a section after the review page read it, so the declarations would
+   * cover answers the person has not seen; the details name the sections (`hotelFormSectionsChangedOf`).
+   */
+  sectionsChanged:
+    "A colleague changed some answers while you were reviewing them. Check the sections marked, then submit again.",
+  /** 409 (corrections): the request was never submitted, so there is nothing to correct yet. */
+  notSubmitted: "Submit the form first. After that you can ask AMPM for a correction.",
+  /** 429 (corrections): more than 5 corrections on this request within a day; `Retry-After` says when. */
+  correctionLimit:
+    "Too many corrections were sent on this request today. Please try again tomorrow.",
 } as const;
 
 /**

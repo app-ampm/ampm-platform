@@ -1,6 +1,6 @@
 # AMPM Platform — Field Matrix
 
-**Status:** DRAFT v0.1, generated 2026-11-25 from [data-model.md](data-model.md) by `docs/tools/field_matrix_build.py`. Do not edit by hand; change the data model or `docs/tools/field_rules.py` and rebuild.
+**Status:** DRAFT v0.1, generated 2026-11-26 from [data-model.md](data-model.md) by `docs/tools/field_matrix_build.py`. Do not edit by hand; change the data model or `docs/tools/field_rules.py` and rebuild.
 **Companions:** [requirements-audit.md](requirements-audit.md) (Q numbers), [data-model.md](data-model.md) (assumptions A-1 to A-30), [permission-matrix.md](permission-matrix.md) (role codes, visibility classes, assumptions P-1 to P-11).
 **Spreadsheet version:** [field-matrix.csv](field-matrix.csv) has the same rows for filtering.
 
@@ -22,7 +22,7 @@ Global conventions that apply to every row: money is `numeric(14,2)` with a sibl
 |---|---|---|---|---|---|
 | A — Identity, access and administration | 20 | 132 | 61 | 10 | 7 |
 | B — CRM, subscriptions and commercial agreements | 13 | 143 | 55 | 94 | 4 |
-| C — Hotel intelligence | 15 | 230 | 57 | 115 | 27 |
+| C — Hotel intelligence | 18 | 255 | 77 | 115 | 30 |
 | D — Hotel consultancy | 6 | 70 | 28 | 65 | 3 |
 | E — Wedding project | 3 | 36 | 13 | 29 | 3 |
 | F — Functions, programme and run-of-show | 4 | 43 | 17 | 27 | 1 |
@@ -37,9 +37,9 @@ Global conventions that apply to every row: money is `numeric(14,2)` with a sibl
 | O — Checklists, closure and feedback | 4 | 30 | 17 | 7 | 0 |
 | P — Public website content (dormant) | 2 | 17 | 8 | 17 | 0 |
 | Q — Live chat | 2 | 16 | 6 | 16 | 0 |
-| **Total** | **122** | **1304** | **521** | **683** | **126** |
+| **Total** | **125** | **1329** | **541** | **683** | **129** |
 
-Fields by visibility class: CLIENT 650, INTERNAL 438, Other (per record, recipient or parent) 57, RESTRICTED-NOTES 36, PUBLIC 33, RESTRICTED-FINANCE 31, RESTRICTED-CONTACT 25, SECRET 15, RESTRICTED-IDENTITY 13, RESTRICTED-BANK 4, SENSITIVE-GUEST 2.
+Fields by visibility class: CLIENT 650, INTERNAL 460, Other (per record, recipient or parent) 57, RESTRICTED-NOTES 36, PUBLIC 33, RESTRICTED-FINANCE 31, RESTRICTED-CONTACT 28, SECRET 15, RESTRICTED-IDENTITY 13, RESTRICTED-BANK 4, SENSITIVE-GUEST 2.
 
 ---
 
@@ -823,11 +823,11 @@ Created at stage: **Hotel intake** · Default editor: SYS · Default visibility:
 |---|---|---|---|---|---|---|
 | `id` (PK) | UUID v7, generated |  | SYS | INTERNAL | System | — |
 | `request_id` (FK) | references hotel_info_requests |  | SYS | INTERNAL | At creation | — |
-| `event_type` | one of the listed options | created, link_reissued, link_emailed, share_recorded, updated, expiry_extended, revoked, code_requested, person_verified, person_updated | SYS | INTERNAL | At creation | — |
+| `event_type` | one of the listed options | created, link_reissued, link_emailed, share_recorded, updated, expiry_extended, revoked, code_requested, person_verified, person_updated, submitted, correction_requested, consent_withdrawn, removal_requested | SYS | INTERNAL | At creation | A section's autosave writes no event (D-190): a request's last activity comes from its sections |
 | `actor_kind` | one of the listed options | staff, hotel_person, system | SYS | INTERNAL | At creation | — |
 | `actor_user_id` (FK) | references users; the staff user, when staff acted |  | SYS (acting user) | INTERNAL | When actor_kind is staff | — |
 | `actor_person_id` (FK) | references hotel_info_request_people (foreign key from Slice 7b) |  | SYS | INTERNAL | When actor_kind is hotel_person, except code_requested (no person yet) | — |
-| `detail_json` | valid JSON; personal data masked before storage; never the link's secret |  | SYS | INTERNAL | Optional | — |
+| `detail_json` | valid JSON; personal data masked before storage; never the link's secret, and never text a hotel typed (a correction's message stays in its own row) |  | SYS | INTERNAL | Optional | — |
 | `occurred_at` | timestamp (UTC) |  | SYS | INTERNAL | System | — |
 
 ### `hotel_info_request_people`
@@ -878,21 +878,67 @@ Created at stage: **Hotel intake** · Default editor: SYS · Default visibility:
 
 ### `hotel_info_request_consents`
 
-Created at stage: **Hotel intake** · Default editor: SYS · Default visibility: INTERNAL · Assumptions: D-189, D-180 · append-only by convention: created, then only withdrawn
+Created at stage: **Hotel intake** · Default editor: SYS · Default visibility: INTERNAL · Assumptions: D-189, D-190, D-180 · append-only by convention: created, then only withdrawn
 
 | Field | Type and validation | Options | Edited by | Visibility | Required | Automation and report impact |
 |---|---|---|---|---|---|---|
 | `id` (PK) | UUID v7, generated |  | SYS | INTERNAL | System | — |
 | `person_id` (FK) | references hotel_info_request_people |  | SYS | INTERNAL | At creation | — |
-| `kind` | one of the listed options; (the submit declarations arrive with submit) | privacy_notice | SYS | INTERNAL | At creation | privacy_notice is recorded when a person's code is entered; the submit declarations arrive with submit |
-| `text_version` | the version of the text consented to (core constants), up to 64 characters |  | SYS | INTERNAL | At creation | — |
-| `granted` | true or false |  | SYS | INTERNAL | At creation | — |
-| `revision_hash` | SHA-256 of the submitted revision a declaration binds to; null for the privacy notice (CHECK hotel_info_request_consents_notice_has_no_revision) |  | SYS | INTERNAL | Optional | — |
+| `kind` | one of the listed options | privacy_notice, accuracy_attestation, display_authorisation | SYS | INTERNAL | At creation | privacy_notice is recorded when a person's code is entered; accuracy_attestation (7.4) and display_authorisation (7.5) at each submit, bound to its revision (D-190) |
+| `text_version` | the version of the text consented to (core constants), up to 64 characters; a stale one is refused with the form was updated |  | SYS | INTERNAL | At creation | — |
+| `granted` | true or false; 7.5's Yes or No; always true for the notice and 7.4 |  | SYS | INTERNAL | At creation | 7.5's Yes or No; always true for the notice and for 7.4, which submit refuses without |
+| `revision_hash` | the answers_hash of the submitted revision a declaration binds to, 64 hex characters; null for the privacy notice (CHECK hotel_info_request_consents_revision_hash_by_kind) |  | SYS | INTERNAL | For accuracy_attestation and display_authorisation | — |
 | `recorded_at` | timestamp (UTC) |  | SYS | INTERNAL | System | — |
 | `ip_address` | the caller's address |  | SYS | RESTRICTED-CONTACT | Optional | — |
 | `withdrawn_at` | timestamp (UTC) |  | The person, inside a form session; SA | INTERNAL | When the consent is withdrawn | Withdrawing is as easy as consenting; a Super Admin review follows |
 | `withdrawal_source` | one of the listed options | contributor, staff | SYS | INTERNAL | With withdrawn_at | — |
 | `withdrawn_by_user_id` | references users; set for a staff withdrawal |  | SYS (acting user) | INTERNAL | Optional | — |
+
+### `hotel_info_request_sections`
+
+Created at stage: **Hotel intake** · Default editor: The hotel person, inside a form session (PUT /hotel-form/draft/sections/:sectionKey) · Default visibility: INTERNAL · Assumptions: D-190, D-180 · one row per request and section (unique key hotel_info_request_sections_request_id_section_key_key), made at the section's first save; a save that changes nothing writes nothing
+
+| Field | Type and validation | Options | Edited by | Visibility | Required | Automation and report impact |
+|---|---|---|---|---|---|---|
+| `id` (PK) | UUID v7, generated |  | SYS | INTERNAL | System | — |
+| `request_id` (FK) | references hotel_info_requests |  | The hotel person, inside a form session (PUT /hotel-form/draft/sections/:sectionKey) | INTERNAL | At creation | — |
+| `section_key` | one of core HOTEL_FORM_SECTION_KEYS | property, contact, rooms, venues, booking_terms, food_beverage, fact_sheet_media | SYS | INTERNAL | At creation | — |
+| `schema_version` | integer, 1 or more: core HOTEL_FORM_SCHEMA_VERSIONS for the section (CHECK hotel_info_request_sections_version_from_one) |  | SYS | INTERNAL | At creation | — |
+| `answers_json` | one JSON object (CHECK hotel_info_request_sections_answers_object) that the section's core draft schema reads: unknown keys refused, every field optional, the catalogue's bounds, a Google Maps link, an https website, a PIN, phones in E.164, areas with their unit; at most 32 KB of canonical JSON, 96 KB for rooms and venues; at most 60 room rows, 40 venue rows, 3 contacts and 12 other layouts a venue |  | The hotel person, inside a form session (PUT /hotel-form/draft/sections/:sectionKey) | RESTRICTED-CONTACT | At creation | Refused over a cap with 400 naming it |
+| `content_hash` | SHA-256 of the answers' canonical JSON (core canonicalJson), 64 hex characters (CHECK hotel_info_request_sections_content_hash_sha256) |  | SYS | INTERNAL | At creation | A save with the same hash and the same no_changes writes nothing |
+| `version` | integer, 1 or more (CHECK hotel_info_request_sections_version_from_one) |  | SYS | INTERNAL | At creation | 1 at the first save, plus 1 at every change; a save based on an older version is refused with 409, which carries the newer version, its answers, and who saved it when |
+| `is_complete` | true or false; every question of AMPM's PDF in the section answered, or No changes |  | SYS | INTERNAL | At creation | Recomputed at every save (core isHotelFormSectionComplete): every question of AMPM's PDF in the section answered, or no_changes |
+| `no_changes` | true or false; a refresh's No changes since last time |  | The hotel person, on a refresh request | INTERNAL | At creation | No changes since last time: the section counts as complete and submit does not read it |
+| `last_editor_person_id` (FK) | references hotel_info_request_people |  | SYS | INTERNAL | At creation | — |
+| `last_edited_at` | timestamp (UTC) |  | SYS | INTERNAL | At creation | Shown on the hub, in a conflict and in the colleague warning before submit |
+
+### `hotel_info_request_revisions`
+
+Created at stage: **Hotel intake** · Default editor: SYS · Default visibility: INTERNAL · Assumptions: D-190, D-180 · immutable: created at each submit and only read after (by repository convention); one per request and revision (unique key hotel_info_request_revisions_request_id_revision_key)
+
+| Field | Type and validation | Options | Edited by | Visibility | Required | Automation and report impact |
+|---|---|---|---|---|---|---|
+| `id` (PK) | UUID v7, generated |  | SYS | INTERNAL | System | — |
+| `request_id` (FK) | references hotel_info_requests |  | SYS | INTERNAL | At creation | — |
+| `revision` | integer, 1 or more (CHECK hotel_info_request_revisions_revision_from_one) |  | SYS | INTERNAL | At creation | The request's revision plus 1 at each submit |
+| `answers_json` | one JSON object holding every section (CHECK hotel_info_request_revisions_answers_shape) |  | SYS | RESTRICTED-CONTACT | At creation | — |
+| `answers_hash` | SHA-256 of the answers' canonical JSON, 64 hex characters (CHECK hotel_info_request_revisions_answers_hash_sha256) |  | SYS | INTERNAL | At creation | Both declarations bind to it; a repeated submit with the same hash answers the same |
+| `files_json` | a JSON list of each file's id and SHA-256 (CHECK hotel_info_request_revisions_answers_shape); empty until Slice 9 |  | SYS | INTERNAL | At creation | — |
+| `submitted_by_person_id` (FK) | references hotel_info_request_people |  | SYS | INTERNAL | At creation | — |
+| `submitted_at` | timestamp (UTC) |  | SYS (when the action happens) | INTERNAL | At creation | Also set on the request, with submitted_by_person_id |
+
+### `hotel_info_request_corrections`
+
+Created at stage: **Hotel intake** · Default editor: The hotel person, inside a form session (POST /hotel-form/corrections) · Default visibility: INTERNAL · Assumptions: D-190, D-180 · read only in the staff app; at most 5 a day per request
+
+| Field | Type and validation | Options | Edited by | Visibility | Required | Automation and report impact |
+|---|---|---|---|---|---|---|
+| `id` (PK) | UUID v7, generated |  | SYS | INTERNAL | System | — |
+| `request_id` (FK) | references hotel_info_requests |  | The hotel person, inside a form session (POST /hotel-form/corrections) | INTERNAL | At creation | — |
+| `person_id` (FK) | references hotel_info_request_people |  | SYS | INTERNAL | At creation | — |
+| `message` | 1 to 2,000 characters, not blank (CHECK hotel_info_request_corrections_message_not_blank) |  | The hotel person, inside a form session (POST /hotel-form/corrections) | RESTRICTED-CONTACT | At creation | Never in an event, a notice or a log; staff are told a correction arrived, not what it says |
+| `handled_at` | set with handled_by (CHECK hotel_info_request_corrections_handled_together) |  | SA; HT (Slice 8b) | INTERNAL | With handled_by | — |
+| `handled_by` | the staff user who handled it |  | SYS (acting user) | INTERNAL | With handled_at | — |
 
 ---
 

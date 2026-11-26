@@ -16,15 +16,17 @@ import {
   freshMobile,
   revokeTestLink,
 } from "./support/local-api";
+import { reserveCodeRequests } from "./support/code-pace";
+import { SESSION_KEY, fillDetails, signIn, type FormPerson } from "./support/sign-in";
 
 /*
  * The hotel form's identity step end to end (D-189 §8; plan §8 HF-01, HF-02, HF-03, HF-08): a real
- * browser, the built site and a local API in on-screen mode with the stub bot check. Each page is checked
+ * browser, the built site and a local API in on-screen mode with the stub bot check. Signing in lands on
+ * the overview (HF-04, D-190 §5), whose own tests are in hotel-form-sections.spec.ts. Each page is checked
  * with axe as it stands.
  */
 
 const LINK_KEY = "ampm.hotel-form.link";
-const SESSION_KEY = "ampm.hotel-form.session";
 
 /** Every request the page sent, to any host (the API, the site itself, Turnstile), with its body. */
 function everyRequest(page: Page): Request[] {
@@ -63,32 +65,18 @@ function sessionStorageValue(page: Page, key: string): Promise<string | null> {
   return page.evaluate((name) => window.sessionStorage.getItem(name), key);
 }
 
-/** HF-02 filled in for a person, ready to send. */
-async function fillDetails(page: Page, mobile: string): Promise<void> {
-  await page.getByLabel("Your name").fill("Asha Rao");
-  await page.getByLabel("Designation").selectOption("Other");
-  await page.getByLabel("Your designation").fill("Chief Engineer");
-  await page.getByLabel("Mobile number").fill(mobile);
-  // The native checkbox is hidden for sight; a person ticks it by its row, as here.
-  await page.getByText("I have read the privacy notice and accept it").click();
-  await expect(page.getByLabel("I have read the privacy notice and accept it")).toBeChecked();
-}
-
-/** From the link to the signed-in page, entering the code shown on screen. */
-async function signIn(page: Page, url: string, mobile: string): Promise<void> {
-  await page.goto(url);
-  await page.getByRole("button", { name: "Start" }).click();
-  await fillDetails(page, mobile);
-  await page.getByRole("button", { name: "Send me a code" }).click();
-  await page.getByRole("button", { name: "Use this code" }).click();
-  await page.getByRole("button", { name: "Continue" }).click();
-  await expect(page.getByRole("heading", { level: 1, name: "E2E seasonal refresh" })).toBeVisible();
-}
+/** Asha Rao, a synthetic person, with a reserved test mobile. */
+const asha = (mobile: string): FormPerson => ({
+  fullName: "Asha Rao",
+  designation: "Chief Engineer",
+  mobile,
+});
 
 test("HF-01 to HF-03: the link opens the welcome, the details ask for a code, the code signs in", async ({
   page,
   formLink,
 }) => {
+  await reserveCodeRequests(1);
   const sent = everyRequest(page);
   await page.goto(formLink.url);
 
@@ -120,7 +108,7 @@ test("HF-01 to HF-03: the link opens the welcome, the details ask for a code, th
   await expect(page.getByText("Tick the box to accept the privacy notice")).toBeVisible();
   await expectAccessible(page);
   const mobile = freshMobile();
-  await fillDetails(page, mobile);
+  await fillDetails(page, asha(mobile));
   await page.getByRole("button", { name: "Send me a code" }).click();
 
   // HF-03: the code on screen, the resend held back, a wrong code refused in the API's words.
@@ -134,7 +122,8 @@ test("HF-01 to HF-03: the link opens the welcome, the details ask for a code, th
   await page.getByRole("button", { name: "Use this code" }).click();
   await page.getByRole("button", { name: "Continue" }).click();
 
-  // Signed in: AMPM's label, note and status, the person's own details.
+  // Signed in, on the overview (HF-04): AMPM's label, note and status, the person's own details.
+  await expect(page).toHaveURL(`${SITE_URL}/hotel-form/overview`);
   await expect(page.getByRole("heading", { level: 1, name: "E2E seasonal refresh" })).toBeVisible();
   await expect(page.getByText("Synthetic request for the site's end-to-end tests.")).toBeVisible();
   await expect(page.getByText("Asha Rao · Chief Engineer")).toBeVisible();
@@ -151,10 +140,12 @@ test("a reload keeps the tab signed in, and Sign out returns to the welcome", as
   page,
   formLink,
 }) => {
-  await signIn(page, formLink.url, freshMobile());
+  await signIn(page, formLink.url, asha(freshMobile()));
   await page.reload();
+  await expect(page).toHaveURL(`${SITE_URL}/hotel-form/overview`);
   await expect(page.getByRole("heading", { level: 1, name: "E2E seasonal refresh" })).toBeVisible();
   await page.getByRole("button", { name: "Sign out" }).click();
+  await expect(page).toHaveURL(`${SITE_URL}/hotel-form`);
   await expect(page.getByText("You're signed out.")).toBeVisible();
   await expect(
     page.getByRole("heading", { level: 1, name: "Tell AMPM about your hotel." }),
@@ -166,7 +157,8 @@ test("an ended session asks for a new code in place, keeping what was typed, and
   page,
   formLink,
 }) => {
-  await signIn(page, formLink.url, freshMobile());
+  // Two more codes after the sign-in's: one refused as too soon, then the new one.
+  await signIn(page, formLink.url, asha(freshMobile()), { extraCodes: 2 });
   await page.getByRole("button", { name: "Edit your details" }).click();
   await page.locator("#hf-edit-name").fill("Asha R. (e2e)");
 

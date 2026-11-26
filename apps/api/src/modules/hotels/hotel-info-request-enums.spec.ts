@@ -1,6 +1,7 @@
 import {
   auditActorType,
   hotelFormCodeDelivery,
+  hotelFormSectionKey,
   hotelInfoRequestActorKind,
   hotelInfoRequestConsentKind,
   hotelInfoRequestEventType,
@@ -17,6 +18,7 @@ import { describe, expect, it } from "vitest";
 import {
   ActorType,
   HotelFormCodeDelivery,
+  HotelFormSectionKey,
   HotelInfoRequestActorKind,
   HotelInfoRequestConsentKind,
   HotelInfoRequestEventType,
@@ -51,6 +53,10 @@ describe("hotel information request enums, kept in step", () => {
       hotelInfoRequestWithdrawalSource.options,
     );
     expect(Object.values(ActorType)).toEqual(auditActorType.options);
+  });
+
+  it("keep the form's section keys (D-190 §1) the same in both", () => {
+    expect(Object.values(HotelFormSectionKey)).toEqual(hotelFormSectionKey.options);
   });
 
   it("give the policy's status machine exactly the database's statuses", () => {

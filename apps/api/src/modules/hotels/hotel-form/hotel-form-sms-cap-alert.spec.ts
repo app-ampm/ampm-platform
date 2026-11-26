@@ -3,7 +3,10 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { AppLogger } from "../../../common/logger.service.js";
 import type { NotificationService } from "../../admin/notification/notification.service.js";
-import type { HotelFormRequestsRepository } from "./hotel-form-requests.repository.js";
+import {
+  HOTEL_TEAM_ALERT_ROLES,
+  type StaffAlertRecipients,
+} from "../../admin/notification/staff-alert-recipients.js";
 import { HOTEL_FORM_SMS_CAP_TEMPLATE, HotelFormSmsCapAlert } from "./hotel-form-sms-cap-alert.js";
 
 /*
@@ -14,19 +17,22 @@ import { HOTEL_FORM_SMS_CAP_TEMPLATE, HotelFormSmsCapAlert } from "./hotel-form-
 
 function build(recipients: string[]) {
   const queue = vi.fn(async () => ({ suppressed: false as const, notificationId: "n1" }));
+  const ids = vi.fn(async (_roles: readonly string[]) => recipients);
   const { logger, entries } = createMemoryLogger("debug");
   const alert = new HotelFormSmsCapAlert(
-    { alertRecipientIds: vi.fn(async () => recipients) } as unknown as HotelFormRequestsRepository,
+    { ids } as unknown as StaffAlertRecipients,
     { queue } as unknown as NotificationService,
     logger as unknown as AppLogger,
   );
-  return { alert, queue, entries };
+  return { alert, queue, ids, entries };
 }
 
 describe("HotelFormSmsCapAlert", () => {
   it("queues one in-app notice per recipient, outside the hotel form's send gate", async () => {
-    const { alert, queue, entries } = build(["u-sa", "u-ht"]);
+    const { alert, queue, ids, entries } = build(["u-sa", "u-ht"]);
     expect(await alert.send(300, "2026-11-25")).toBe(2);
+    // The recipients come from the query every staff alert shares (D-190 §4).
+    expect(ids).toHaveBeenCalledWith(HOTEL_TEAM_ALERT_ROLES);
     expect(queue).toHaveBeenCalledTimes(2);
     expect(queue).toHaveBeenCalledWith({
       recipientType: "user",

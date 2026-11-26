@@ -232,9 +232,14 @@ export const hotelFormRequestView = z
   .strict();
 export type HotelFormRequestView = z.infer<typeof hotelFormRequestView>;
 
-/** `GET` and `PATCH /hotel-form/me`'s answer. */
+/**
+ * `GET` and `PATCH /hotel-form/me`'s answer: the person signed in, their id on this request, and the
+ * request. The id tells the page whether a new code entered in place signed the same person in again
+ * (what they chose on the page is kept) or someone else (it starts afresh), which a name cannot: two
+ * people may share one, and a person may change theirs. It names the person to themselves only.
+ */
 export const hotelFormMe = z
-  .object({ person: hotelFormPerson, request: hotelFormRequestView })
+  .object({ personId: uuid, person: hotelFormPerson, request: hotelFormRequestView })
   .strict();
 export type HotelFormMe = z.infer<typeof hotelFormMe>;
 

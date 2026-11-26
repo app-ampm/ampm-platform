@@ -1,8 +1,11 @@
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import HotelFormLayout, { metadata } from "./layout";
 import HotelFormPage, { dynamic } from "./page";
+
+// Rendered outside Next: the pages ask its router where to send a signed-in person.
+vi.mock("next/navigation", () => ({ useRouter: () => ({ replace: vi.fn() }), notFound: vi.fn() }));
 
 /* /hotel-form as the server sends it (D-189 §8; HF-G10): generic words, no index, the opening card. */
 describe("/hotel-form route", () => {

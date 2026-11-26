@@ -21,8 +21,9 @@ type OwnField = keyof HotelFormPerson;
 const OWN_FIELDS: readonly OwnField[] = ["fullName", "designation"];
 
 /**
- * A signed-in person's own details (D-189 §4 and §5). `get` answers the person and the request as they
- * see it. `update` changes their name or designation inside the session's write window (10 a minute),
+ * A signed-in person's own details (D-189 §4 and §5). `get` answers the person, their id on the request
+ * (for the page to tell whether a new code signed the same person in again) and the request as they see
+ * it. `update` changes their name or designation inside the session's write window (10 a minute),
  * as a `person_updated` event and a guest_token audit that name the fields changed, never their values;
  * it changes nothing once the request shows its status only (after the merge, plan §4.2), and writes
  * nothing when nothing differs.
@@ -38,7 +39,11 @@ export class HotelFormMe {
   ) {}
 
   get(session: FormSession): HotelFormMeView {
-    return { person: session.person, request: requestViewOf(session.request) };
+    return {
+      personId: session.personId,
+      person: session.person,
+      request: requestViewOf(session.request),
+    };
   }
 
   async update(
@@ -79,6 +84,6 @@ export class HotelFormMe {
       return updated;
     });
     const own = { fullName: person.fullName, designation: person.designation };
-    return { person: own, request: requestViewOf(session.request) };
+    return { personId: session.personId, person: own, request: requestViewOf(session.request) };
   }
 }

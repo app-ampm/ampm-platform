@@ -10,7 +10,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createApiClient } from "../client";
 import {
+  forgetHotelForm,
+  HOTEL_FORM_DRAFT_QUERY_KEY,
   HOTEL_FORM_ME_QUERY_KEY,
+  HOTEL_FORM_QUERY_FAMILY,
   hotelFormCalls,
   hotelFormMeQueryOptions,
   useOpenHotelForm,
@@ -83,6 +86,7 @@ vi.mock("../provider", () => ({ useApiClient: () => api }));
 const SESSION = `hfs_${"A".repeat(43)}`;
 const CHALLENGE = "0192f3a0-7d3e-7b1a-9c2f-123456789abc";
 const ME: HotelFormMe = {
+  personId: "0192f3a0-7d3e-7b1a-9c2f-0000000000a5",
   person: { fullName: "Asha Rao", designation: "General Manager" },
   request: {
     displayLabel: "Seasonal refresh",
@@ -260,5 +264,36 @@ describe("the hooks", () => {
     expect(signOut?.onSettled).toBeTypeOf("function");
     signOut?.onSettled?.();
     expect(cache.getQueryData(HOTEL_FORM_ME_QUERY_KEY)).toBeUndefined();
+  });
+
+  it("forget every query of the form once signed out, and no other, so the next person sees none", () => {
+    useSignOutOfHotelForm();
+    const [signOut] = hooks.options;
+    cache.setQueryData(HOTEL_FORM_DRAFT_QUERY_KEY, { contributors: [] });
+    cache.setQueryData([...HOTEL_FORM_QUERY_FAMILY, "status"], { reference: "HIR-2026-0042" });
+    cache.setQueryData(["me"], { userType: "staff" });
+    signOut?.onSettled?.();
+    expect(cache.getQueryData(HOTEL_FORM_DRAFT_QUERY_KEY)).toBeUndefined();
+    expect(cache.getQueryData([...HOTEL_FORM_QUERY_FAMILY, "status"])).toBeUndefined();
+    expect(cache.getQueryData(["me"])).toEqual({ userType: "staff" });
+    expect(HOTEL_FORM_DRAFT_QUERY_KEY.slice(0, 1)).toEqual(HOTEL_FORM_QUERY_FAMILY);
+    expect(HOTEL_FORM_ME_QUERY_KEY.slice(0, 1)).toEqual(HOTEL_FORM_QUERY_FAMILY);
+  });
+
+  it("forget every query of the form on demand, as the page does when a session ends at HF-08", () => {
+    cache.setQueryData(HOTEL_FORM_ME_QUERY_KEY, ME);
+    cache.setQueryData(HOTEL_FORM_DRAFT_QUERY_KEY, { contributors: [] });
+    forgetHotelForm(cache);
+    expect(cache.getQueryData(HOTEL_FORM_ME_QUERY_KEY)).toBeUndefined();
+    expect(cache.getQueryData(HOTEL_FORM_DRAFT_QUERY_KEY)).toBeUndefined();
+  });
+
+  it("read the draft again after a code, keeping it on the page meanwhile (a new code in place)", () => {
+    useVerifyHotelFormCode();
+    const [verify] = hooks.options;
+    cache.setQueryData(HOTEL_FORM_DRAFT_QUERY_KEY, { contributors: [] });
+    verify?.onSuccess?.({ ...ME, sessionToken: SESSION });
+    expect(cache.getQueryData(HOTEL_FORM_DRAFT_QUERY_KEY)).toEqual({ contributors: [] });
+    expect(cache.getQueryState(HOTEL_FORM_DRAFT_QUERY_KEY)?.isInvalidated).toBe(true);
   });
 });

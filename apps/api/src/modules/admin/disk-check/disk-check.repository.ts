@@ -1,5 +1,4 @@
 import { Injectable } from "@nestjs/common";
-import { STAFF_ROLES } from "@ampm/policy";
 
 import { PrismaService } from "../../../db/prisma.service.js";
 import {
@@ -10,16 +9,14 @@ import {
   type PastNotice,
 } from "./disk-check.rules.js";
 
-/** The staff roles a disk notice goes to (D-177): the Super Admin and the Hotel team. */
-const RECIPIENT_ROLE_KEYS: string[] = [STAFF_ROLES.SA.key, STAFF_ROLES.HT.key];
-
 /** A finished run that notified someone, an alert or the recovery notice, by its recorded outcome. */
 const NOTIFIED = { jobName: DISK_CHECK_JOB_NAME, status: "succeeded" as const };
 const ALERTED = { detailJson: { path: ["alerted"], equals: true } };
 
 /**
- * The disk check's `job_runs` rows, which are also its alert history, and its recipients. Each run's
- * outcome is `{ freeBytes, totalBytes, level, alerted }` (disk-check.rules.ts).
+ * The disk check's `job_runs` rows, which are also its alert history. Each run's outcome is
+ * `{ freeBytes, totalBytes, level, alerted }` (disk-check.rules.ts). Its recipients come from the query
+ * every staff alert shares (StaffAlertRecipients, D-190 §4).
  */
 @Injectable()
 export class DiskCheckRepository {
@@ -70,21 +67,6 @@ export class DiskCheckRepository {
       lastNotice: last ? toNotice(last) : null,
       lastRecoveryAt: recovery?.startedAt ?? null,
     };
-  }
-
-  /** The active staff users who hold the Super Admin or the Hotel team role. */
-  async recipientIds(): Promise<string[]> {
-    const users = await this.prisma.user.findMany({
-      where: {
-        userType: "staff",
-        status: "active",
-        deletedAt: null,
-        roles: { some: { role: { roleKey: { in: RECIPIENT_ROLE_KEYS }, deletedAt: null } } },
-      },
-      select: { id: true },
-      orderBy: { createdAt: "asc" },
-    });
-    return users.map((user) => user.id);
   }
 }
 

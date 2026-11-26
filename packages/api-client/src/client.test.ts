@@ -76,6 +76,23 @@ describe("createApiClient", () => {
     expect(getAccessToken).not.toHaveBeenCalled();
   });
 
+  it("asks the browser to finish a request after the page goes only when told to (keepalive)", async () => {
+    const capture: { init?: RequestInit | undefined } = {};
+    const api = createApiClient({
+      baseUrl: "http://api.test",
+      fetch: fakeFetch(200, { data: { ok: true } }, capture),
+    });
+    await api.request("/hotel-form/draft/sections/rooms", { method: "PUT", body: {}, schema });
+    expect(capture.init).not.toHaveProperty("keepalive");
+    await api.request("/hotel-form/draft/sections/rooms", {
+      method: "PUT",
+      body: {},
+      schema,
+      keepalive: true,
+    });
+    expect(capture.init?.keepalive).toBe(true);
+  });
+
   it("turns a failure envelope into a typed error", async () => {
     const api = createApiClient({
       baseUrl: "http://api.test",

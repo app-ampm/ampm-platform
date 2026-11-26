@@ -185,6 +185,28 @@ describe("eventLine", () => {
       line({ eventType: "person_updated", detail: { fields: ["fullName", "designation"] } }),
     ).toMatch(/^A person changed their name and designation · /);
   });
+
+  it("reads the form's own events (D-190 §1): a submit, a correction, a withdrawal, a removal", () => {
+    const person = { occurredAt: "2026-11-26T09:00:00.000Z", actorKind: "hotel_person" as const };
+    const line = (event: Parameters<typeof requestEventFixture>[0]) =>
+      eventLine(requestEventFixture({ ...person, actorUserId: null, ...event }));
+    expect(line({ eventType: "submitted", detail: { revision: 2 } })).toMatch(
+      /^Submitted \(revision 2\) · .* · The hotel$/,
+    );
+    expect(line({ eventType: "submitted", detail: null })).toMatch(/^Submitted · /);
+    expect(line({ eventType: "correction_requested", detail: { correctionId: "c1" } })).toMatch(
+      /^A correction was requested · /,
+    );
+    expect(
+      line({ eventType: "consent_withdrawn", detail: { kind: "display_authorisation" } }),
+    ).toMatch(/^A person withdrew the display authorisation \(7\.5\) · /);
+    expect(line({ eventType: "consent_withdrawn", detail: { kind: "all" } })).toMatch(
+      /^A person withdrew all their consents · /,
+    );
+    expect(line({ eventType: "removal_requested", detail: null })).toMatch(
+      /^A person asked for their details to be removed · /,
+    );
+  });
 });
 
 describe("duplicateHintReasons", () => {

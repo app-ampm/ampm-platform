@@ -1,15 +1,21 @@
 import { Injectable } from "@nestjs/common";
-import type { HotelFormCodeDelivery } from "@ampm/core";
+import type {
+  HotelFormCodeDelivery,
+  HotelFormDisplayAnswer,
+  HotelInfoRequestConsentKind,
+} from "@ampm/core";
 
 import { PrismaService } from "../../../db/prisma.service.js";
 import type { Prisma } from "../../../generated/prisma/client.js";
+import { isNamedOnForm, NAMED_PERSON_SELECT } from "./hotel-form-named-person.js";
 
 /*
  * The people of a hotel information request and their consents (D-189 §1): a person exists only after a
  * correct code and is never a `users` row. One live person per request and phone (the partial unique index
  * hotel_info_request_people_request_phone_live_key, while neither removed nor deleted); a removed person
- * frees their place among the request's `maxPeople`. Consents are append-only: created here, only ever
- * withdrawn elsewhere.
+ * frees their place among the request's `maxPeople`. Consents are append-only: created here (the privacy
+ * notice at a correct code; 7.4 and 7.5 at a submit, bound to the revision's hash, D-190), and only ever
+ * withdrawn, by their contributor here or by staff.
  */
 
 /** A person as the identity step reads them: their own details only. */
@@ -20,6 +26,11 @@ export interface PersonRow {
 }
 
 const PERSON_SELECT = { id: true, fullName: true, designation: true } as const;
+
+/** A person helping, and whether the form may name them to the request's other people. */
+export interface ContributorRow extends PersonRow {
+  readonly isNamed: boolean;
+}
 
 /** A live person: neither removed by AMPM nor deleted. */
 const LIVE = { removedAt: null, deletedAt: null } as const;
@@ -36,6 +47,30 @@ export interface NewPerson extends CodeEntered {
   readonly fullName: string;
   readonly designation: string;
   readonly phone: string;
+}
+
+/** The two declarations a submit records against its revision's hash (D-190 §3). */
+export interface Declarations {
+  readonly personId: string;
+  readonly revisionHash: string;
+  readonly accuracyVersion: string;
+  readonly displayVersion: string;
+  readonly display: HotelFormDisplayAnswer;
+  readonly ipAddress: string | null;
+  readonly at: Date;
+}
+
+/** A declaration as recorded: its kind, the words' version and the answer. */
+export interface DeclarationRow {
+  readonly kind: HotelInfoRequestConsentKind;
+  readonly textVersion: string;
+  readonly granted: boolean;
+}
+
+/** A consent a withdrawal took back. */
+export interface WithdrawnConsent {
+  readonly id: string;
+  readonly kind: HotelInfoRequestConsentKind;
 }
 
 /** Only an SMS code checks the mobile; a code shown on screen proves nothing about it. */
@@ -67,6 +102,22 @@ export class HotelFormPeopleRepository {
       where: { requestId, phone, removedAt: { not: null }, deletedAt: null },
     });
     return removed > 0;
+  }
+
+  /**
+   * The request's live people, oldest first: who is helping, by name and designation only, and whether
+   * the form may name them to the others (a live privacy notice consent, hotel-form-named-person.ts).
+   */
+  async contributors(requestId: string): Promise<ContributorRow[]> {
+    const rows = await this.prisma.hotelInfoRequestPerson.findMany({
+      where: { requestId, ...LIVE },
+      select: { ...PERSON_SELECT, consents: NAMED_PERSON_SELECT.consents },
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+    });
+    return rows.map(({ consents, ...person }) => ({
+      ...person,
+      isNamed: isNamedOnForm({ fullName: person.fullName, consents }),
+    }));
   }
 
   /** How many live people the request has: what `maxPeople` caps. */
@@ -142,5 +193,76 @@ export class HotelFormPeopleRepository {
       },
       select: { id: true },
     });
+  }
+  /**
+   * Records 7.4 (accepted, so granted) and 7.5 (`granted` holding the Yes or the No), each with its words'
+   * version and bound to the revision's hash (the CHECK requires it); answers their ids.
+   */
+  async addDeclarations(
+    declarations: Declarations,
+    tx: Prisma.TransactionClient,
+  ): Promise<string[]> {
+    const { personId, revisionHash, ipAddress, at } = declarations;
+    const common = { personId, revisionHash, ipAddress, recordedAt: at };
+    const accuracy = await tx.hotelInfoRequestConsent.create({
+      data: {
+        ...common,
+        kind: "accuracy_attestation",
+        textVersion: declarations.accuracyVersion,
+        granted: true,
+      },
+      select: { id: true },
+    });
+    const display = await tx.hotelInfoRequestConsent.create({
+      data: {
+        ...common,
+        kind: "display_authorisation",
+        textVersion: declarations.displayVersion,
+        granted: declarations.display === "yes",
+      },
+      select: { id: true },
+    });
+    return [accuracy.id, display.id];
+  }
+
+  /** The declarations a person recorded against a revision's hash, newest first. */
+  declarationsOf(
+    personId: string,
+    revisionHash: string,
+    tx: Prisma.TransactionClient,
+  ): Promise<DeclarationRow[]> {
+    return tx.hotelInfoRequestConsent.findMany({
+      where: {
+        personId,
+        revisionHash,
+        kind: { in: ["accuracy_attestation", "display_authorisation"] },
+        deletedAt: null,
+      },
+      orderBy: [{ recordedAt: "desc" }, { id: "desc" }],
+      select: { kind: true, textVersion: true, granted: true },
+    });
+  }
+
+  /**
+   * Withdraws the person's live consents of `kinds`, as their own act (source `contributor`); answers the
+   * ones it took back, none when nothing was live.
+   */
+  async withdrawLive(
+    personId: string,
+    kinds: readonly HotelInfoRequestConsentKind[],
+    at: Date,
+    tx: Prisma.TransactionClient,
+  ): Promise<WithdrawnConsent[]> {
+    const live = await tx.hotelInfoRequestConsent.findMany({
+      where: { personId, kind: { in: [...kinds] }, withdrawnAt: null, deletedAt: null },
+      orderBy: [{ recordedAt: "asc" }, { id: "asc" }],
+      select: { id: true, kind: true },
+    });
+    if (live.length === 0) return [];
+    await tx.hotelInfoRequestConsent.updateMany({
+      where: { id: { in: live.map((consent) => consent.id) }, withdrawnAt: null },
+      data: { withdrawnAt: at, withdrawalSource: "contributor" },
+    });
+    return live;
   }
 }

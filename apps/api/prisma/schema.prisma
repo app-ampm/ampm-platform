@@ -1655,7 +1655,8 @@ enum HotelInfoRequestPrefillMode {
 }
 
 /// What a request event records: Slice 7a's, then a hotel person's from the identity step (D-189 §6:
-/// code_requested, person_verified, person_updated); later slices add theirs.
+/// code_requested, person_verified, person_updated), then the form's own (D-190 §1: submitted,
+/// correction_requested, consent_withdrawn, removal_requested); a section's autosave writes none.
 enum HotelInfoRequestEventType {
   created
   link_reissued
@@ -1667,6 +1668,10 @@ enum HotelInfoRequestEventType {
   code_requested
   person_verified
   person_updated
+  submitted
+  correction_requested
+  consent_withdrawn
+  removal_requested
 }
 
 /// Who wrote a request event: AMPM staff, a person at the hotel, or the System.
@@ -1738,12 +1743,15 @@ model HotelInfoRequest {
   updatedBy String?   @map("updated_by") @db.Uuid
   deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
 
-  hotel               Hotel?                      @relation(fields: [hotelId], references: [id], onDelete: Restrict)
-  proposedDestination Destination?                @relation(fields: [proposedDestinationId], references: [id], onDelete: Restrict)
-  submittedBy         HotelInfoRequestPerson?     @relation("HotelInfoRequestSubmittedBy", fields: [submittedByPersonId], references: [id], onDelete: Restrict)
+  hotel               Hotel?                       @relation(fields: [hotelId], references: [id], onDelete: Restrict)
+  proposedDestination Destination?                 @relation(fields: [proposedDestinationId], references: [id], onDelete: Restrict)
+  submittedBy         HotelInfoRequestPerson?      @relation("HotelInfoRequestSubmittedBy", fields: [submittedByPersonId], references: [id], onDelete: Restrict)
   events              HotelInfoRequestEvent[]
-  people              HotelInfoRequestPerson[]    @relation("HotelInfoRequestPeople")
+  people              HotelInfoRequestPerson[]     @relation("HotelInfoRequestPeople")
   challenges          HotelInfoRequestChallenge[]
+  sections            HotelInfoRequestSection[]
+  revisions           HotelInfoRequestRevision[]
+  corrections         HotelInfoRequestCorrection[]
 
   @@index([hotelId])
   @@index([proposedDestinationId])
@@ -1801,9 +1809,12 @@ enum HotelFormCodeDelivery {
   screen
 }
 
-/// What a contributor consented to: the privacy notice; the two declarations arrive with submit.
+/// What a contributor consented to: the privacy notice (D-189), and the two declarations of submit
+/// (D-190 §1), 7.4 and 7.5, each bound to the submitted revision's hash.
 enum HotelInfoRequestConsentKind {
   privacy_notice
+  accuracy_attestation
+  display_authorisation
 }
 
 /// Who withdrew a consent: its contributor, or a member of staff for them.
@@ -1836,11 +1847,14 @@ model HotelInfoRequestPerson {
   updatedBy String?   @map("updated_by") @db.Uuid
   deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
 
-  request    HotelInfoRequest            @relation("HotelInfoRequestPeople", fields: [requestId], references: [id], onDelete: Restrict)
-  challenges HotelInfoRequestChallenge[]
-  consents   HotelInfoRequestConsent[]
-  events     HotelInfoRequestEvent[]
-  submitted  HotelInfoRequest[]          @relation("HotelInfoRequestSubmittedBy")
+  request        HotelInfoRequest             @relation("HotelInfoRequestPeople", fields: [requestId], references: [id], onDelete: Restrict)
+  challenges     HotelInfoRequestChallenge[]
+  consents       HotelInfoRequestConsent[]
+  events         HotelInfoRequestEvent[]
+  submitted      HotelInfoRequest[]           @relation("HotelInfoRequestSubmittedBy")
+  editedSections HotelInfoRequestSection[]
+  revisions      HotelInfoRequestRevision[]
+  corrections    HotelInfoRequestCorrection[]
 
   @@index([requestId])
   @@index([removedBy])
@@ -1895,9 +1909,11 @@ model HotelInfoRequestChallenge {
   @@map("hotel_info_request_challenges")
 }
 
-/// Consent evidence (D-189 §1), append-only by repository convention: created, then only withdrawn. The
-/// privacy notice's consent is recorded when a person's code is entered, with the notice's `text_version`
-/// and no `revision_hash` (a CHECK); the declarations of a later slice bind to a submitted revision's hash.
+/// Consent evidence (D-189 §1, D-190 §1), append-only by repository convention: created, then only
+/// withdrawn. The privacy notice's consent is recorded when a person's code is entered, with the notice's
+/// `text_version` and no `revision_hash`; the two declarations of submit bind to the submitted revision's
+/// `answers_hash`, which they must carry (the CHECK hotel_info_request_consents_revision_hash_by_kind,
+/// raw SQL in 20261201000000_hotel_form_sections). `granted` is 7.5's Yes or No, and always true for 7.4.
 /// `ip_address` is RESTRICTED-CONTACT; a withdrawal sets its time, its source and, for staff, who.
 model HotelInfoRequestConsent {
   id                String                            @id @default(uuid(7)) @db.Uuid
@@ -1924,6 +1940,116 @@ model HotelInfoRequestConsent {
   @@index([withdrawnByUserId])
   @@index([deletedAt])
   @@map("hotel_info_request_consents")
+}
+
+// ---------------------------------------------------------------- Module C — the hotel form's sections
+// (D-190 §1; docs/data-model.md §5; plan §4.4 and §6.1, Slice 8a). The shared draft a request's people
+// fill in, one row per section, created at its first save; the immutable snapshot each submit takes; and
+// the corrections a person asks for after submitting. Retention class `hotel_intake`, following their
+// request (D-180). The CHECKs are raw SQL in 20261201000000_hotel_form_sections. Keep the section keys
+// in step with core `hotelFormSectionKey`.
+
+/// The hotel form's seven sections (core HOTEL_FORM_SECTION_KEYS, D-190 §2).
+enum HotelFormSectionKey {
+  property
+  contact
+  rooms
+  venues
+  booking_terms
+  food_beverage
+  fact_sheet_media
+}
+
+/// One section of a request's shared draft (D-190 §1): its answers as core's draft schema of
+/// `schema_version` reads them, the SHA-256 of their canonical JSON (core `canonicalJson`), and `version`,
+/// 1 at the first save and plus 1 at every change, which a save names to refuse a colleague's newer one.
+/// An unchanged save (the same `content_hash` and `no_changes`) writes nothing. `is_complete` follows core
+/// `isHotelFormSectionComplete`; `no_changes` is a refresh's "No changes since last time". The answers
+/// hold what the hotel typed, contacts included (RESTRICTED-CONTACT).
+model HotelInfoRequestSection {
+  id                 String              @id @default(uuid(7)) @db.Uuid
+  requestId          String              @map("request_id") @db.Uuid
+  sectionKey         HotelFormSectionKey @map("section_key")
+  schemaVersion      Int                 @map("schema_version")
+  answers            Json                @map("answers_json") @db.JsonB // RESTRICTED-CONTACT (contacts)
+  contentHash        String              @map("content_hash") @db.VarChar(64)
+  version            Int                 @default(1)
+  isComplete         Boolean             @default(false) @map("is_complete")
+  noChanges          Boolean             @default(false) @map("no_changes")
+  lastEditorPersonId String              @map("last_editor_person_id") @db.Uuid
+  lastEditedAt       DateTime            @map("last_edited_at") @db.Timestamptz(6)
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  request    HotelInfoRequest       @relation(fields: [requestId], references: [id], onDelete: Restrict)
+  lastEditor HotelInfoRequestPerson @relation(fields: [lastEditorPersonId], references: [id], onDelete: Restrict)
+
+  @@unique([requestId, sectionKey])
+  @@index([lastEditorPersonId])
+  @@index([deletedAt])
+  @@map("hotel_info_request_sections")
+}
+
+/// The immutable snapshot of one submit (D-190 §1): `revision` (1, 2, … per request, the request's
+/// `revision` after it), every section's answers (`answers_json`), the SHA-256 of their canonical JSON
+/// (`answers_hash`, which both declarations bind to), the files (`files_json`, empty until Slice 9), and
+/// who submitted it and when. Create and read only, by repository convention; the answers hold contacts
+/// (RESTRICTED-CONTACT).
+model HotelInfoRequestRevision {
+  id                  String   @id @default(uuid(7)) @db.Uuid
+  requestId           String   @map("request_id") @db.Uuid
+  revision            Int
+  answers             Json     @map("answers_json") @db.JsonB // RESTRICTED-CONTACT (contacts)
+  answersHash         String   @map("answers_hash") @db.VarChar(64)
+  files               Json     @default("[]") @map("files_json") @db.JsonB
+  submittedByPersonId String   @map("submitted_by_person_id") @db.Uuid
+  submittedAt         DateTime @map("submitted_at") @db.Timestamptz(6)
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  request     HotelInfoRequest       @relation(fields: [requestId], references: [id], onDelete: Restrict)
+  submittedBy HotelInfoRequestPerson @relation(fields: [submittedByPersonId], references: [id], onDelete: Restrict)
+
+  @@unique([requestId, revision])
+  @@index([submittedByPersonId])
+  @@index([deletedAt])
+  @@map("hotel_info_request_revisions")
+}
+
+/// A correction a person asked for after submitting (D-190 §1): their message for AMPM's Hotel team (at
+/// most 2,000 characters, RESTRICTED-CONTACT, never in an event, a notice or a log), and when staff
+/// handled it and who (`handled_at` and `handled_by`, set together, Slice 8b).
+model HotelInfoRequestCorrection {
+  id        String    @id @default(uuid(7)) @db.Uuid
+  requestId String    @map("request_id") @db.Uuid
+  personId  String    @map("person_id") @db.Uuid
+  message   String    @db.VarChar(2000) // RESTRICTED-CONTACT
+  handledAt DateTime? @map("handled_at") @db.Timestamptz(6)
+  handledBy String?   @map("handled_by") @db.Uuid
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy String?   @map("created_by") @db.Uuid
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedBy String?   @map("updated_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  request HotelInfoRequest       @relation(fields: [requestId], references: [id], onDelete: Restrict)
+  person  HotelInfoRequestPerson @relation(fields: [personId], references: [id], onDelete: Restrict)
+
+  // A request's corrections, newest first, and those of the last day (5 a day per request).
+  @@index([requestId, createdAt])
+  @@index([personId])
+  @@index([handledBy])
+  @@index([deletedAt])
+  @@map("hotel_info_request_corrections")
 }
 
 // ---------------------------------------------------------------- Module D — Hotel consultancy

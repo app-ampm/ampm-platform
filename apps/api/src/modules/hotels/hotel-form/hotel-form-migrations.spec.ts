@@ -73,3 +73,63 @@ describe("migration 20261130000000_hotel_form_events", () => {
     }
   });
 });
+
+/*
+ * The form's sections (D-190 §1): three new tables, two consent kinds and four event types, and the
+ * consents' CHECK widened from "the notice has no revision hash" to "a declaration has one, the notice
+ * none". Prisma applies the file one statement at a time, each committing on its own, so the new CHECK is
+ * added before the old one is dropped and the table is never without one, and it names only
+ * `privacy_notice`, never a value this file adds, so the file also runs by hand as one transaction
+ * (PostgreSQL refuses a new enum value before its ALTER TYPE commits).
+ */
+describe("migration 20261201000000_hotel_form_sections", () => {
+  const statements = statementsOf("20261201000000_hotel_form_sections");
+  const addedValues = statements.flatMap((statement) => {
+    const added = /^ALTER TYPE "\w+" ADD VALUE '([a-z_]+)'$/.exec(statement);
+    return added?.[1] === undefined ? [] : [added[1]];
+  });
+
+  it("bounds every lock wait at 5 seconds from its first statement", () => {
+    expect(statements[0]).toBe(LOCK_TIMEOUT);
+  });
+
+  it("adds the two declarations' consent kinds and the form's four event types, and no other value", () => {
+    expect(addedValues).toEqual([
+      "accuracy_attestation",
+      "display_authorisation",
+      "submitted",
+      "correction_requested",
+      "consent_withdrawn",
+      "removal_requested",
+    ]);
+  });
+
+  it("creates the sections, revisions and corrections, and touches no audit partition", () => {
+    const created = statements.flatMap((statement) => {
+      const table = /^CREATE TABLE "(\w+)"/.exec(statement);
+      return table?.[1] === undefined ? [] : [table[1]];
+    });
+    expect(created).toEqual([
+      "hotel_info_request_sections",
+      "hotel_info_request_revisions",
+      "hotel_info_request_corrections",
+    ]);
+    expect(placesNaming(statements, ["audit_events"])).toEqual([]);
+  });
+
+  it("widens the consents' CHECK without a moment unchecked, naming no value it adds", () => {
+    const consents = placesNaming(statements, ["hotel_info_request_consents"]);
+    const added = statements.findIndex((statement) =>
+      statement.includes('ADD CONSTRAINT "hotel_info_request_consents_revision_hash_by_kind"'),
+    );
+    const dropped = statements.findIndex((statement) =>
+      statement.includes('DROP CONSTRAINT "hotel_info_request_consents_notice_has_no_revision"'),
+    );
+    expect(consents).toEqual([added, dropped]);
+    expect(added).toBeGreaterThan(0);
+    expect(dropped).toBe(added + 1);
+    const check = statements[added] ?? "";
+    for (const value of addedValues) expect(check).not.toContain(`'${value}'`);
+    expect(check).toContain("'privacy_notice'");
+  });
+});

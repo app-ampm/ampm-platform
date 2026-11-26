@@ -182,6 +182,7 @@ describe("the request bodies", () => {
 
 describe("the answers", () => {
   const view = {
+    personId: "0192f3a0-7d3e-7b1a-9c2f-0000000000a5",
     person: { fullName: "Synthetic Person", designation: "General Manager" },
     request: {
       displayLabel: "Monsoon refresh",
@@ -232,6 +233,10 @@ describe("the answers", () => {
       sessionToken: SESSION,
     });
     expect(hotelFormMe.parse(view)).toEqual(view);
+    // The person's id, which tells the page whether a new code signed the same person in again.
+    const { personId: _id, ...noId } = view;
+    expect(hotelFormMe.safeParse(noId).success).toBe(false);
+    expect(hotelFormMe.safeParse({ ...view, personId: "asha" }).success).toBe(false);
     expect(
       hotelFormMe.safeParse({ ...view, person: { ...view.person, phone: "+917000001234" } })
         .success,

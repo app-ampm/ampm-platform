@@ -244,6 +244,25 @@ export const CONFIG_REGISTRY = {
         text: "The AMPM server has {{freeGb}} GB of disk free, below the {{floorGb}} GB floor: new hotel-form uploads are refused until space is freed.",
       },
     },
+    // The hotel form's staff notices (D-190 §4), to the active Super Admin and Hotel team staff, in-app
+    // and by email: a submit and a correction request. They carry the reference, the catalogue's hotel
+    // name or the staff label, and a link into the app; never text a hotel typed, so a correction is read
+    // only in the app. `system.hotel_form_withdrawal` goes in-app only, so it has no block here. They sit
+    // outside the `hotel_form.` family, whose send gate is for messages to a hotel.
+    "system.hotel_form_submitted": {
+      email: {
+        subject: "Hotel information form submitted: {{reference}}",
+        html: '<p>{{hotelName}} submitted its hotel information form (request {{reference}}).</p>\n<p><a href="{{link}}">Review it in the AMPM app</a></p>',
+        text: "{{hotelName}} submitted its hotel information form (request {{reference}}).\n\nReview it in the AMPM app: {{link}}",
+      },
+    },
+    "system.hotel_form_correction": {
+      email: {
+        subject: "Correction requested on {{reference}}",
+        html: '<p>Someone at {{hotelName}} asked for a correction to its submitted hotel information form (request {{reference}}).</p>\n<p><a href="{{link}}">Read it in the AMPM app</a></p>',
+        text: "Someone at {{hotelName}} asked for a correction to its submitted hotel information form (request {{reference}}).\n\nRead it in the AMPM app: {{link}}",
+      },
+    },
     // A hotel information request's link (D-188 §5), to the recipient AMPM entered. It carries the
     // reference, the catalogue's hotel name or the staff label, the expiry and the link: never text a
     // hotel typed. The link is a fragment link (`#k=`), so the secret stays out of server logs.

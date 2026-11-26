@@ -1,4 +1,6 @@
-import { cn, fieldLabelStyles } from "@ampm/ui/styles";
+import { useRef, type Ref } from "react";
+
+import { buttonLabelStyles, buttonStyles, cn, fieldLabelStyles, textStyles } from "@ampm/ui/styles";
 
 import {
   choiceLabelStyles,
@@ -8,6 +10,7 @@ import {
   type ChoiceLook,
 } from "./choice-segments.styles";
 import { FieldMessage } from "./field-message";
+import { useIsReadOnly } from "./read-only";
 
 export interface ChoiceOption {
   readonly value: string;
@@ -15,11 +18,16 @@ export interface ChoiceOption {
 }
 
 export interface ChoiceSegmentsProps {
-  /** The radios' shared name; the error line is named after it. */
+  /** The radios' shared name; the legend, error and help lines are named after it. */
   readonly name: string;
   readonly legend: string;
   /** The request switch shows no legend (W6); screen readers still hear it. */
   readonly isLegendHidden?: boolean | undefined;
+  /**
+   * Paragraphs under the question saying what the answers mean (the hotel form's 7.5), shown before the
+   * pills and kept beside an error; each radio is described by them.
+   */
+  readonly description?: readonly string[] | undefined;
   readonly options: readonly ChoiceOption[];
   /** The chosen option's value, or "" while none is. */
   readonly value: string;
@@ -27,15 +35,28 @@ export interface ChoiceSegmentsProps {
   /** solid for a switch, soft for a field's value (see choice-segments.styles.ts). */
   readonly look?: ChoiceLook | undefined;
   readonly error?: string | undefined;
+  /** A line under the pills while there is no error. */
+  readonly help?: string | undefined;
+  /**
+   * The question needs an answer (the hotel form's 7.5): every radio is a native required one, which a
+   * screen reader announces, as a required tick's aria-required is.
+   */
+  readonly required?: boolean | undefined;
+  /**
+   * The words of a button that takes the answer back to none ("Clear"), shown once one is chosen: an
+   * optional question (Yes, No or Depends) can be left unanswered again, which radios alone cannot do.
+   */
+  readonly clearLabel?: string | undefined;
   /** Placement in the form's grid. */
   readonly className?: string | undefined;
 }
 
-interface ChoiceSegmentProps extends Pick<ChoiceSegmentsProps, "name" | "onChange"> {
+interface ChoiceSegmentProps extends Pick<ChoiceSegmentsProps, "name" | "onChange" | "required"> {
   readonly option: ChoiceOption;
   readonly isChecked: boolean;
   readonly look: ChoiceLook;
   readonly describedBy: string | undefined;
+  readonly inputRef?: Ref<HTMLInputElement> | undefined;
 }
 
 /** One pill: a native radio, hidden for sight only, and the pill drawn after it. */
@@ -46,15 +67,21 @@ function ChoiceSegment({
   look,
   onChange,
   describedBy,
+  inputRef,
+  required,
 }: ChoiceSegmentProps) {
+  const isReadOnly = useIsReadOnly();
   return (
     <label className={choiceTargetStyles(look)}>
       <input
+        ref={inputRef}
         type="radio"
         name={name}
         value={option.value}
         checked={isChecked}
         onChange={onChange}
+        required={required}
+        disabled={isReadOnly || undefined}
         aria-describedby={describedBy}
         className="peer sr-only"
       />
@@ -65,40 +92,104 @@ function ChoiceSegment({
   );
 }
 
+/** Clear: back to no answer, focus on the first pill so a keyboard can choose again from there. */
+function ClearButton({
+  label,
+  legendId,
+  onClear,
+}: {
+  readonly label: string;
+  readonly legendId: string;
+  readonly onClear: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClear}
+      aria-describedby={legendId}
+      className={cn(buttonStyles({ variant: "ghost", size: "sm" }), "self-start")}
+    >
+      <span className={buttonLabelStyles({ variant: "ghost", size: "sm" })}>{label}</span>
+    </button>
+  );
+}
+
+/** The paragraphs under the question, named for the radios' description. */
+function ChoiceDescription({
+  id,
+  paragraphs,
+}: {
+  readonly id: string;
+  readonly paragraphs: readonly string[];
+}) {
+  return (
+    <div id={id} className="mb-2 flex flex-col gap-2">
+      {paragraphs.map((paragraph) => (
+        <p key={paragraph} className={textStyles({ variant: "bodySmall", tone: "body" })}>
+          {paragraph}
+        </p>
+      ))}
+    </div>
+  );
+}
+
+/** What describes each radio: the meaning of the answers, then the error or else the help. */
+function describedByOf(
+  name: string,
+  { description, error, help }: Pick<ChoiceSegmentsProps, "description" | "error" | "help">,
+): string | undefined {
+  const ids = [
+    description && description.length > 0 ? `${name}-description` : null,
+    error ? `${name}-error` : help ? `${name}-help` : null,
+  ].filter((id) => id !== null);
+  return ids.length === 0 ? undefined : ids.join(" ");
+}
+
 /**
- * A one-of choice as pills in a track (W6: the enquiry or demo switch, the best way to reach you):
- * native radios in a fieldset, so arrow keys move the choice and the legend names the group.
+ * A one-of choice as pills in a track (W6: the enquiry or demo switch, the best way to reach you; the
+ * hotel form's Yes, No or Depends): native radios in a fieldset, so arrow keys move the choice and the
+ * legend names the group. With `clearLabel`, a chosen answer can be cleared again; with `description`,
+ * paragraphs under the question say what each answer means.
  *
  *   <ChoiceSegments name="contactPreference" legend="Best way to reach you" look="soft"
  *     options={[{ value: "whatsapp", label: "WhatsApp" }, …]} value={value} onChange={onChange} />
+ *   <ChoiceSegments name="buyout" legend="Do weddings need a full buyout?" look="soft" clearLabel="Clear"
+ *     options={[{ value: "required", label: "Yes" }, …]} value={value} onChange={onChange} />
  */
-export function ChoiceSegments({
-  name,
-  legend,
-  isLegendHidden = false,
-  options,
-  value,
-  onChange,
-  look = "solid",
-  error,
-  className,
-}: ChoiceSegmentsProps) {
-  const describedBy = error ? `${name}-error` : undefined;
+export function ChoiceSegments(props: ChoiceSegmentsProps) {
+  const { name, legend, isLegendHidden = false, options, value, onChange, look = "solid" } = props;
+  const { description, error, help, clearLabel, className, required } = props;
+  const firstRadio = useRef<HTMLInputElement>(null);
+  const isReadOnly = useIsReadOnly();
+  const describedBy = describedByOf(name, { description, error, help });
+  // Named only where Clear points at it, so a choice without Clear keeps its markup as it was.
+  const legendId = clearLabel === undefined ? undefined : `${name}-legend`;
+  const clear = () => {
+    onChange({ target: { value: "" } });
+    firstRadio.current?.focus();
+  };
   return (
     <fieldset className={cn("flex min-w-0 flex-col gap-2", className)}>
-      <legend className={isLegendHidden ? "sr-only" : cn(fieldLabelStyles, "mb-2")}>
+      <legend id={legendId} className={isLegendHidden ? "sr-only" : cn(fieldLabelStyles, "mb-2")}>
         {legend}
       </legend>
+      {description && description.length > 0 ? (
+        <ChoiceDescription id={`${name}-description`} paragraphs={description} />
+      ) : null}
       <div className={choiceTrackStyles}>
-        {options.map((option) => (
+        {options.map((option, index) => (
           <ChoiceSegment
             key={option.value}
-            {...{ name, option, look, onChange, describedBy }}
+            {...{ name, option, look, onChange, describedBy, required }}
             isChecked={option.value === value}
+            inputRef={index === 0 ? firstRadio : undefined}
           />
         ))}
       </div>
-      <FieldMessage id={name} error={error} />
+      {clearLabel !== undefined && legendId !== undefined && value !== "" && !isReadOnly ? (
+        <ClearButton label={clearLabel} legendId={legendId} onClear={clear} />
+      ) : null}
+      <FieldMessage id={name} error={error} help={help} />
     </fieldset>
   );
 }

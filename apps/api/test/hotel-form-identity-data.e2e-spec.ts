@@ -272,7 +272,7 @@ describe("The hotel form's identity step: the data (e2e, D-189 §1)", () => {
             revisionHash: hex(),
           },
         }),
-      ).rejects.toThrow(/hotel_info_request_consents_notice_has_no_revision/);
+      ).rejects.toThrow(/hotel_info_request_consents_revision_hash_by_kind/);
       await expect(
         prisma.hotelInfoRequestConsent.create({
           data: { personId: randomUUID(), kind: "privacy_notice", textVersion: "x", granted: true },

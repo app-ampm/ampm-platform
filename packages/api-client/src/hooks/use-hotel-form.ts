@@ -1,9 +1,11 @@
+import { useCallback, useEffect } from "react";
 import {
   queryOptions,
   skipToken,
   useMutation,
   useQuery,
   useQueryClient,
+  type QueryClient,
 } from "@tanstack/react-query";
 import {
   acknowledged,
@@ -38,8 +40,91 @@ import { useApiClient } from "../provider";
 /** Sign-out's answer, held to its one field as the form's other answers are. */
 const signedOut = acknowledged.strict();
 
+/**
+ * Every query of the form starts with this key, apart from every staff or client query: what sign-out,
+ * a withdrawal of every consent and a session ended at HF-08 forget at once ({@link forgetHotelForm}).
+ */
+export const HOTEL_FORM_QUERY_FAMILY = ["hotel-form"] as const;
+
 /** The form's own `me`, apart from the staff and client `me` (`["me"]`). */
-export const HOTEL_FORM_ME_QUERY_KEY = ["hotel-form", "me"] as const;
+export const HOTEL_FORM_ME_QUERY_KEY = [...HOTEL_FORM_QUERY_FAMILY, "me"] as const;
+
+/**
+ * The form's draft (D-190 §3), apart from the form's `me` and from every staff or client query: it is
+ * read again after a code (who is "you" among the people helping may change) and forgotten on sign-out.
+ */
+export const HOTEL_FORM_DRAFT_QUERY_KEY = [...HOTEL_FORM_QUERY_FAMILY, "draft"] as const;
+
+/**
+ * The key of one of the form's calls (D-190 review fix C3): under the form's family, so forgetting the form
+ * forgets the call too, with what it sent (a claim's name and mobile, the link's secret, a correction's
+ * words) and what it answered.
+ *
+ * @example
+ * useMutation({ mutationKey: hotelFormMutationKey("code"), mutationFn });
+ */
+export function hotelFormMutationKey(call: string): readonly [string, "call", string] {
+  return [...HOTEL_FORM_QUERY_FAMILY, "call", call];
+}
+
+/**
+ * Forgets every query of the form (`me`, the draft, and any the form adds) and every one of its calls
+ * (`hotelFormMutationKey`), so nothing the person read, typed or sent stays in the query client for the
+ * next person on the tab: on sign-out, after a withdrawal of every consent (which ends the session), and
+ * when a session ends at HF-08 (the page calls it then). A call's hook still mounted keeps its own copy
+ * until it is reset; the flow resets its own on sign-out. Whoever listens ({@link onHotelFormForgotten})
+ * is told, so the answers the page holds unsaved go too.
+ *
+ * @example
+ * forgetHotelForm(queryClient);
+ */
+export function forgetHotelForm(queryClient: QueryClient): void {
+  queryClient.removeQueries({ queryKey: HOTEL_FORM_QUERY_FAMILY });
+  const calls = queryClient.getMutationCache();
+  for (const call of calls.findAll({ mutationKey: HOTEL_FORM_QUERY_FAMILY })) calls.remove(call);
+  for (const listener of [...(forgetListeners.get(queryClient) ?? [])]) listener();
+}
+
+/** Who hears that the form was forgotten, per query client (one per tab's form). */
+const forgetListeners = new WeakMap<QueryClient, Set<() => void>>();
+
+/**
+ * Calls `listener` each time the form is forgotten on `queryClient` ({@link forgetHotelForm}), until the
+ * function it returns is called: what the page holds outside the query client, such as answers typed but
+ * not saved yet, goes with it (D-190 §5, review fix E1).
+ *
+ * @example
+ * const stop = onHotelFormForgotten(queryClient, () => heldSections.drop());
+ */
+export function onHotelFormForgotten(queryClient: QueryClient, listener: () => void): () => void {
+  const listeners = forgetListeners.get(queryClient) ?? new Set<() => void>();
+  forgetListeners.set(queryClient, listeners);
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+}
+
+/**
+ * {@link onHotelFormForgotten} on the page's query client while the component is mounted; `onForgotten`
+ * should be stable.
+ *
+ *   useHotelFormForgotten(heldSections.drop);
+ */
+export function useHotelFormForgotten(onForgotten: () => void): void {
+  const queryClient = useQueryClient();
+  useEffect(() => onHotelFormForgotten(queryClient, onForgotten), [queryClient, onForgotten]);
+}
+
+/**
+ * {@link forgetHotelForm} for the client the page's provider holds, as a stable callback.
+ *
+ *   const forget = useForgetHotelForm(); // then forget() once the session ends at HF-08
+ */
+export function useForgetHotelForm(): () => void {
+  const queryClient = useQueryClient();
+  return useCallback(() => forgetHotelForm(queryClient), [queryClient]);
+}
 
 /** A call made inside a form session. */
 export interface HotelFormSessionCall {
@@ -95,6 +180,7 @@ export function hotelFormCalls(api: ApiClient) {
 export function useOpenHotelForm() {
   const api = useApiClient();
   return useMutation<HotelFormOpenAnswer, Error, HotelFormOpenRequest>({
+    mutationKey: hotelFormMutationKey("open"),
     mutationFn: (body) => hotelFormCalls(api).open(body),
   });
 }
@@ -109,13 +195,15 @@ export function useOpenHotelForm() {
 export function useRequestHotelFormCode() {
   const api = useApiClient();
   return useMutation<HotelFormCodeIssued, Error, HotelFormCodeRequestInput>({
+    mutationKey: hotelFormMutationKey("code"),
     mutationFn: (body) => hotelFormCalls(api).requestCode(body),
   });
 }
 
 /**
  * `POST /hotel-form/codes/verify`: the code of one challenge, answered with the session's token and the
- * person and request as `me` answers them, which become the cached `me` (without the token).
+ * person and request as `me` answers them, which become the cached `me` (without the token). The draft is
+ * read again, kept on the page meanwhile, so a new code asked for in place keeps what the page shows.
  *
  *   const { sessionToken } = await useVerifyHotelFormCode().mutateAsync({ token, challengeId, oneTimeCode });
  */
@@ -123,9 +211,12 @@ export function useVerifyHotelFormCode() {
   const api = useApiClient();
   const queryClient = useQueryClient();
   return useMutation<HotelFormVerified, Error, HotelFormVerifyRequest>({
+    mutationKey: hotelFormMutationKey("verify"),
     mutationFn: (body) => hotelFormCalls(api).verify(body),
-    onSuccess: ({ sessionToken: _token, ...me }) =>
-      queryClient.setQueryData<HotelFormMe>(HOTEL_FORM_ME_QUERY_KEY, me),
+    onSuccess: ({ sessionToken: _token, ...me }) => {
+      queryClient.setQueryData<HotelFormMe>(HOTEL_FORM_ME_QUERY_KEY, me);
+      void queryClient.invalidateQueries({ queryKey: HOTEL_FORM_DRAFT_QUERY_KEY });
+    },
   });
 }
 
@@ -166,13 +257,15 @@ export function useUpdateHotelFormMe() {
   const api = useApiClient();
   const queryClient = useQueryClient();
   return useMutation<HotelFormMe, Error, HotelFormMeChange>({
+    mutationKey: hotelFormMutationKey("me"),
     mutationFn: (variables) => hotelFormCalls(api).updateMe(variables),
     onSuccess: (me) => queryClient.setQueryData<HotelFormMe>(HOTEL_FORM_ME_QUERY_KEY, me),
   });
 }
 
 /**
- * `POST /hotel-form/sign-out`: ends the session; the cached `me` is forgotten whatever the answer.
+ * `POST /hotel-form/sign-out`: ends the session; every query of the form is forgotten whatever the answer
+ * (`me`, the draft and any other), so the next person to sign in on the tab never sees them.
  *
  *   await useSignOutOfHotelForm().mutateAsync({ sessionToken });
  */
@@ -180,7 +273,8 @@ export function useSignOutOfHotelForm() {
   const api = useApiClient();
   const queryClient = useQueryClient();
   return useMutation<Acknowledged, Error, HotelFormSessionCall>({
+    mutationKey: hotelFormMutationKey("sign-out"),
     mutationFn: (variables) => hotelFormCalls(api).signOut(variables),
-    onSettled: () => queryClient.removeQueries({ queryKey: HOTEL_FORM_ME_QUERY_KEY }),
+    onSettled: () => forgetHotelForm(queryClient),
   });
 }

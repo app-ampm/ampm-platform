@@ -31,6 +31,7 @@ import { AuditService } from "../../../policy/audit.service.js";
 import { NotificationService } from "../../admin/notification/notification.service.js";
 import { codeForPage, hotelFormCodeSms, hotelFormDeliveryFor } from "../hotel-form-delivery.js";
 import { HotelInfoRequestJournal } from "../hotel-info-request-journal.js";
+import { hotelFormBotPasses, hotelFormBotRefusal } from "./hotel-form-bot-check.js";
 import { HotelFormChallengesRepository } from "./hotel-form-challenges.repository.js";
 import { HotelFormGate } from "./hotel-form-gate.js";
 import { HOTEL_FORM_CODE_LIMITS, HotelFormLimits } from "./hotel-form-limits.js";
@@ -126,15 +127,15 @@ export class HotelFormCodeIssuer {
 
   /** The Turnstile pass, for the site's own host and the code request's action (D-189 §3, §7). */
   private async checkBot(botToken: string | undefined, ip: string | null): Promise<void> {
-    const human = await this.botCheck.verify(botToken, {
-      remoteIp: ip ?? undefined,
-      expectedHostnames: [new URL(this.env.PUBLIC_SITE_URL).hostname],
-      expectedAction: HOTEL_FORM_CODE_ACTION,
-    });
-    if (!human) {
-      const detail = { path: "botToken", message: HOTEL_FORM_ERRORS.botCheck };
-      throw errors.validation([detail], HOTEL_FORM_ERRORS.botCheck);
-    }
+    const site = this.env.PUBLIC_SITE_URL;
+    const human = await hotelFormBotPasses(
+      this.botCheck,
+      site,
+      botToken,
+      ip,
+      HOTEL_FORM_CODE_ACTION,
+    );
+    if (!human) throw hotelFormBotRefusal();
   }
 
   /**

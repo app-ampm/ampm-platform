@@ -1,18 +1,11 @@
 import { useCallback, useEffect, useReducer, useRef } from "react";
 import {
-  useHotelFormMe,
+  useForgetHotelForm,
   useOpenHotelForm,
   useRequestHotelFormCode,
-  useSignOutOfHotelForm,
-  useUpdateHotelFormMe,
   useVerifyHotelFormCode,
 } from "@ampm/api-client";
-import {
-  hotelFormLinkToken,
-  type HotelFormMe,
-  type HotelFormMeUpdateRequest,
-  type HotelFormPerson,
-} from "@ampm/core";
+import { hotelFormLinkToken, type HotelFormMeUpdateRequest } from "@ampm/core";
 
 import { codeStep } from "./code.form";
 import { detailsStep, type DetailsFields } from "./details.form";
@@ -34,13 +27,16 @@ import {
   takeLink,
   type SessionStore,
 } from "./hotel-form-link";
+import { asksForSession, refusalOf, type SaveOutcome } from "./refusal";
+import { useSessionCalls } from "./use-session-calls";
 import {
-  asksForSession,
-  refusalOf,
-  saveOutcomeOf,
-  type Refusal,
-  type SaveOutcome,
-} from "./refusal";
+  useSessionViews,
+  type DraftView,
+  type MeView,
+  type OnSessionRefused,
+} from "./use-session-views";
+
+export type { DraftView, MeView, QueryView } from "./use-session-views";
 
 /** The bot check as a step hands it over: the token Send carries, and how to start a fresh check. */
 export interface BotCheckPass {
@@ -48,19 +44,12 @@ export interface BotCheckPass {
   readonly reset: () => void;
 }
 
-/** The signed-in page's data: the person and the request, while it loads, and why it failed. */
-export interface MeView {
-  readonly data: HotelFormMe | undefined;
-  readonly isLoading: boolean;
-  /** A failure that is not the session's (a lost connection): shown with Try again. */
-  readonly error: string | null;
-  readonly retry: () => void;
-}
-
 /** The flow and what the steps can do. */
 export interface HotelFormFlow {
   readonly state: FlowState;
   readonly me: MeView;
+  /** The form's draft (D-190 §3), read while signed in: the overview's and the sections' data. */
+  readonly draft: DraftView;
   readonly isSendingCode: boolean;
   readonly isVerifying: boolean;
   readonly isSigningOut: boolean;
@@ -73,6 +62,11 @@ export interface HotelFormFlow {
   readonly changeDetails: () => void;
   readonly saveDetails: (change: HotelFormMeUpdateRequest) => Promise<SaveOutcome>;
   readonly signOut: () => void;
+  /**
+   * Hands the flow a call's refusal when it is the session's (a section's save): the flow then asks for a
+   * new code in place, keeping the page. True when it was the session's.
+   */
+  readonly refuseSession: (error: unknown) => boolean;
 }
 
 /** The identity step on screen: in the main flow, or in place over the signed-in page. */
@@ -131,32 +125,14 @@ function useOpening(
   }, [openingKey, open, dispatch, storage]);
 }
 
-/** Hands a refused session to the flow, with the signed-in person when the page has them. */
-type OnSessionRefused = (refusal: Refusal, person: HotelFormPerson | undefined) => void;
-
-/** The signed-in page's `me`, and a session it refuses handed to the flow. */
-function useSignedIn(state: FlowState, onSessionRefused: OnSessionRefused): MeView {
-  const me = useHotelFormMe(state.phase.kind === "signed_in" ? state.session : null);
-  const { error, refetch } = me;
-  const person = me.data?.person;
-  useEffect(() => {
-    const refused = error ? refusalOf(error) : null;
-    if (refused !== null && asksForSession(refused)) onSessionRefused(refused, person);
-  }, [error, onSessionRefused, person]);
-  const refusal = error ? refusalOf(error) : null;
-  return {
-    data: me.data,
-    isLoading: me.isLoading,
-    error: refusal === null || asksForSession(refusal) ? null : refusal.message,
-    retry: () => void refetch(),
-  };
-}
-
 /** A refusal of a code route, handed to the flow with the time it came and the call it refused. */
 const refusedBy = (dispatch: (event: FlowEvent) => void, call: HeldCall) => (error: unknown) =>
   dispatch({ type: "refused", refusal: refusalOf(error), now: Date.now(), call });
 
-/** Asking for a code (HF-02, and HF-03's resend), in the main flow or in place. */
+/**
+ * Asking for a code (HF-02, and HF-03's resend), in the main flow or in place. `reset` forgets the last
+ * request, which holds the claim (name, designation, mobile) and the link's secret.
+ */
 function useSendCode(state: FlowState, dispatch: (event: FlowEvent) => void) {
   const requestCode = useRequestHotelFormCode();
   const sendCode = (botCheck: BotCheckPass) => {
@@ -172,10 +148,13 @@ function useSendCode(state: FlowState, dispatch: (event: FlowEvent) => void) {
       onError: refusedBy(dispatch, "send"),
     });
   };
-  return { sendCode, isSendingCode: requestCode.isPending };
+  return { sendCode, isSendingCode: requestCode.isPending, reset: requestCode.reset };
 }
 
-/** Entering the code (HF-03): the session it opens is kept for the tab. */
+/**
+ * Entering the code (HF-03): the session it opens is kept for the tab. `reset` forgets the last entry,
+ * which holds the link's secret and the person and session it answered.
+ */
 function useVerifyCode(
   state: FlowState,
   dispatch: (event: FlowEvent) => void,
@@ -191,49 +170,37 @@ function useVerifyCode(
       return;
     }
     verify.mutate(step.request, {
-      onSuccess: ({ sessionToken }) => {
+      onSuccess: ({ sessionToken, personId }) => {
         keepSession(storage.current, sessionToken);
-        dispatch({ type: "verified", sessionToken });
+        dispatch({ type: "verified", sessionToken, personId });
       },
       onError: refusedBy(dispatch, "verify"),
     });
   };
-  return { verifyCode, isVerifying: verify.isPending };
+  return { verifyCode, isVerifying: verify.isPending, reset: verify.reset };
 }
 
-/** Saving your own details and signing out, inside the session. */
-function useSessionCalls(
-  state: FlowState,
+/**
+ * A refused session handed to the flow: the session is forgotten for the tab; when the refusal ends at
+ * HF-08 (the link replaced, the person removed, the request gone from the form) every query of the form
+ * is forgotten too, since no page is kept and the person may no longer see what it held. A new code asked
+ * for in place keeps the page's data, with what was typed, until the code reads the draft again.
+ *
+ *   const onSessionRefused = useSessionRefused(dispatch, storage);
+ */
+export function useSessionRefused(
   dispatch: (event: FlowEvent) => void,
-  onSessionRefused: OnSessionRefused,
-  storage: { current: SessionStore | null },
-  person: HotelFormPerson | undefined,
-) {
-  const { mutateAsync: update } = useUpdateHotelFormMe();
-  const signOutCall = useSignOutOfHotelForm();
-
-  const saveDetails = async (change: HotelFormMeUpdateRequest): Promise<SaveOutcome> => {
-    if (state.session === null) return { kind: "session" };
-    try {
-      await update({ sessionToken: state.session, change });
-      return { kind: "saved" };
-    } catch (error) {
-      const refusal = refusalOf(error);
-      if (asksForSession(refusal)) onSessionRefused(refusal, person);
-      return saveOutcomeOf(refusal, Date.now());
-    }
-  };
-
-  const signOut = () => {
-    const done = () => {
+  storage: { readonly current: SessionStore | null },
+): OnSessionRefused {
+  const forgetHotelForm = useForgetHotelForm();
+  return useCallback<OnSessionRefused>(
+    (refusal, person) => {
       forgetSession(storage.current);
-      dispatch({ type: "signed_out" });
-    };
-    if (state.session === null) done();
-    else signOutCall.mutate({ sessionToken: state.session }, { onSettled: done });
-  };
-
-  return { saveDetails, signOut, isSigningOut: signOutCall.isPending };
+      if (refusal.kind === "gone") forgetHotelForm();
+      dispatch({ type: "session_refused", refusal, person });
+    },
+    [dispatch, storage, forgetHotelForm],
+  );
 }
 
 /**
@@ -246,19 +213,33 @@ function useSessionCalls(
 export function useHotelFormFlow(): HotelFormFlow {
   const [state, dispatch] = useReducer(flowReducer, INITIAL_FLOW);
   const storage = useRef<SessionStore | null>(null);
-  const onSessionRefused = useCallback<OnSessionRefused>((refusal, person) => {
-    forgetSession(storage.current);
-    dispatch({ type: "session_refused", refusal, person });
-  }, []);
+  const onSessionRefused = useSessionRefused(dispatch, storage);
   useOpening(state, dispatch, storage);
   useLinkArrival(dispatch);
-  const me = useSignedIn(state, onSessionRefused);
+  const { me, draft } = useSessionViews(state, onSessionRefused);
+  const person = me.data?.person;
+  const { sendCode, isSendingCode, reset: forgetCodeRequest } = useSendCode(state, dispatch);
+  const { verifyCode, isVerifying, reset: forgetVerify } = useVerifyCode(state, dispatch, storage);
+  const forgetCalls = () => {
+    forgetCodeRequest();
+    forgetVerify();
+  };
+  const context = { state, dispatch, onSessionRefused, storage, person, forgetCalls };
   return {
     state,
     me,
-    ...useSendCode(state, dispatch),
-    ...useVerifyCode(state, dispatch, storage),
-    ...useSessionCalls(state, dispatch, onSessionRefused, storage, me.data?.person),
+    draft,
+    sendCode,
+    isSendingCode,
+    verifyCode,
+    isVerifying,
+    ...useSessionCalls(context),
+    refuseSession: (error) => {
+      const refusal = refusalOf(error);
+      if (!asksForSession(refusal)) return false;
+      onSessionRefused(refusal, person);
+      return true;
+    },
     reopen: () => dispatch({ type: "reopen" }),
     start: () => dispatch({ type: "start" }),
     changeClaim: (claim) => dispatch({ type: "claim_changed", claim }),

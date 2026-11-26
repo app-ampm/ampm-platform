@@ -195,3 +195,51 @@ describe("hotel form code baseline (D-174, D-189 §2)", () => {
     expect(names).toEqual(["code"]);
   });
 });
+
+describe("the hotel form's staff notice baselines (D-190 §4)", () => {
+  const templates = CONFIG_REGISTRY["notification.templates"].default;
+  const vars = {
+    reference: "HIR-2026-0042",
+    hotelName: "Synthetic Lake Hotel",
+    link: "https://app.synthetic.example/hotels-admin/requests",
+  };
+  const placeholders = (template: NotificationTemplate | undefined): Set<string | undefined> => {
+    const { subject = "", html = "", text = "" } = template?.email ?? {};
+    return new Set(
+      [subject, html, text].flatMap((part) =>
+        [...part.matchAll(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g)].map((match) => match[1]),
+      ),
+    );
+  };
+
+  for (const key of ["system.hotel_form_submitted", "system.hotel_form_correction"]) {
+    it(`${key} emails the reference, the hotel's name and the link into the app`, () => {
+      const template = templates[key];
+      if (!template) throw new Error(`missing baseline ${key}`);
+      const out = renderTemplate(template, "email", vars);
+      expect(out.missing).toEqual([]);
+      if (out.content?.kind !== "email") throw new Error("expected email content");
+      expect(out.content.subject).toContain(vars.reference);
+      for (const value of Object.values(vars)) {
+        expect(out.content.text).toContain(value);
+        expect(out.content.html).toContain(value);
+      }
+      expect(out.content.html).toContain(`href="${vars.link}"`);
+    });
+
+    it(`${key} takes those three values and nothing else, so no text a hotel typed fits`, () => {
+      expect(placeholders(templates[key])).toEqual(new Set(Object.keys(vars)));
+    });
+  }
+
+  it("system.hotel_form_withdrawal is in-app only, so it has no email to render", () => {
+    expect(templates["system.hotel_form_withdrawal"]).toBeUndefined();
+  });
+
+  it("keeps every staff notice outside the hotel form's send gate (the hotel_form. family)", () => {
+    for (const key of Object.keys(templates).filter((name) => name.includes("hotel_form_"))) {
+      expect(key.startsWith("hotel_form.")).toBe(false);
+      expect(key.startsWith("system.")).toBe(true);
+    }
+  });
+});

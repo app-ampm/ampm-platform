@@ -45,7 +45,12 @@ describe("The hotel form's sessions (e2e, D-189 §5)", () => {
     const link = await testLink(suite);
     const { sessionToken, challengeId } = await signIn(suite, link.secret, freshMobile());
     const me = await calls.me(sessionToken).expect(200);
+    const { id: personId } = await suite.prisma.hotelInfoRequestPerson.findFirstOrThrow({
+      where: { requestId: link.id },
+      select: { id: true },
+    });
     expect(me.body.data).toEqual({
+      personId,
       person: { fullName: "E2E Synthetic Person", designation: "General Manager" },
       request: {
         displayLabel: null,

@@ -8,6 +8,7 @@ import {
 
 import { FieldMessage, fieldAria } from "./field-message";
 import { peerFocusRingStyles } from "./peer-focus.styles";
+import { useIsReadOnly } from "./read-only";
 
 export interface CheckboxFieldProps {
   readonly id: string;
@@ -59,6 +60,7 @@ export function CheckboxField({
   error,
   required,
 }: CheckboxFieldProps) {
+  const isReadOnly = useIsReadOnly();
   return (
     <div className="flex flex-col">
       <label htmlFor={id} className={cn(checkboxRowStyles(), "relative")}>
@@ -68,6 +70,7 @@ export function CheckboxField({
           {...fieldAria(id, { error, required })}
           checked={checked}
           onChange={onChange}
+          disabled={isReadOnly || undefined}
           className="peer sr-only"
         />
         <CheckboxBox checked={checked} isInvalid={Boolean(error)} />

@@ -26,6 +26,8 @@ export interface StepShellProps {
    * where a field takes focus instead (the code field, for the phone's SMS code autofill).
    */
   readonly isFocusedOnShow?: boolean | undefined;
+  /** step: the identity steps' 576 column (default); form: the 768 column of a page of questions. */
+  readonly width?: "step" | "form" | undefined;
   readonly children: ReactNode;
 }
 
@@ -83,7 +85,8 @@ function StepHeading({
 /**
  * One step of the hotel form on its glass card (the Guest RSVP boards' card, G2 and G9): where the person
  * is, the page's one h1 with its gold ending, a lead line, then the step. One centred column at every
- * width, 576 wide at most, so a phone and a laptop read the same card.
+ * width, 576 wide at most (768 for a page of questions, peacock-night.md §6 `Screen` content), so a phone
+ * and a laptop read the same card.
  *
  *   <StepShell headingId="hf-details" step={2} title="Your details" lead="…">…</StepShell>
  */
@@ -95,6 +98,7 @@ export function StepShell({
   step,
   lead,
   isFocusedOnShow = true,
+  width = "step",
   children,
 }: StepShellProps) {
   return (
@@ -102,7 +106,7 @@ export function StepShell({
       as="section"
       aria-labelledby={headingId}
       padding="lg"
-      className="w-full max-w-xl gap-5 md:p-9"
+      className={cn("w-full gap-5 md:p-9", width === "form" ? "max-w-3xl" : "max-w-xl")}
     >
       {step === undefined ? (
         eyebrow ? (

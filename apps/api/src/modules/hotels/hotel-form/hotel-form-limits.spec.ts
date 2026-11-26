@@ -254,6 +254,72 @@ describe("HotelFormLimits.allowWrite: a session's write window", () => {
   });
 });
 
+describe("HotelFormLimits.allowSectionSave: a section's autosave (D-190 §3)", () => {
+  const REQUEST = "0192f1a0-0000-7000-8000-0000000000b1";
+
+  it("allows a session 30 saves a minute, apart from its 10 changes of its details", async () => {
+    const store = new ClockStore();
+    const { limits } = build(store);
+    for (let save = 0; save < 30; save += 1) {
+      expect(await refusal(limits.allowSectionSave("session-a", REQUEST))).toBeNull();
+    }
+    const over = await refusal(limits.allowSectionSave("session-a", REQUEST));
+    expect(over?.status).toBe(429);
+    expect(over?.message).toBe(HOTEL_FORM_ERRORS.writeLimit);
+    expect(over?.retryAfterSeconds).toBe(60);
+    expect(await refusal(limits.allowWrite("me", "session-a"))).toBeNull();
+    expect(store.keys).toContain("hotel_form:write:sections:session-a");
+    expect(store.keys).toContain(`hotel_form:write:sections:request:${REQUEST}:hour`);
+  });
+
+  it("allows a request 600 saves an hour across all its sessions", async () => {
+    const store = new ClockStore();
+    const { limits } = build(store);
+    for (let save = 0; save < 600; save += 1) {
+      // A new session every 30 saves stays inside each session's minute.
+      const session = `session-${Math.floor(save / 30)}`;
+      expect(await refusal(limits.allowSectionSave(session, REQUEST))).toBeNull();
+    }
+    const over = await refusal(limits.allowSectionSave("session-fresh", REQUEST));
+    expect(over?.status).toBe(429);
+    expect(over?.message).toBe(HOTEL_FORM_ERRORS.writeLimit);
+    expect(over?.retryAfterSeconds).toBe(3600);
+    expect(await refusal(limits.allowSectionSave("session-fresh", "another-request"))).toBeNull();
+  });
+
+  it("fails closed when the store cannot count, saving nothing uncounted", async () => {
+    const outage = await refusal(
+      build(new BrokenStore()).limits.allowSectionSave("session-a", REQUEST),
+    );
+    expect(outage?.status).toBe(503);
+    expect(outage?.message).toBe(HOTEL_FORM_ERRORS.writesUnavailable);
+  });
+});
+
+describe("HotelFormLimits.allowCorrection: 5 corrections per request a day (D-190 §3)", () => {
+  it("allows a request 5 corrections a day, refusing the sixth until the day is over", async () => {
+    const store = new ClockStore();
+    const { limits } = build(store);
+    for (let correction = 0; correction < 5; correction += 1) {
+      expect(await refusal(limits.allowCorrection("request-a"))).toBeNull();
+    }
+    const over = await refusal(limits.allowCorrection("request-a"));
+    expect(over?.status).toBe(429);
+    expect(over?.message).toBe(HOTEL_FORM_ERRORS.correctionLimit);
+    expect(over?.retryAfterSeconds).toBe(24 * 60 * 60);
+    expect(store.keys.at(-1)).toBe("hotel_form:corrections:request:request-a:day");
+    expect(await refusal(limits.allowCorrection("request-b"))).toBeNull();
+    store.advance(24 * HOUR);
+    expect(await refusal(limits.allowCorrection("request-a"))).toBeNull();
+  });
+
+  it("fails closed when the store cannot count", async () => {
+    const outage = await refusal(build(new BrokenStore()).limits.allowCorrection("request-a"));
+    expect(outage?.status).toBe(503);
+    expect(outage?.message).toBe(HOTEL_FORM_ERRORS.writesUnavailable);
+  });
+});
+
 describe("the India day", () => {
   it("names the day in India and the time left in it", () => {
     expect(istDayOf(new Date("2026-11-25T18:29:59.000Z"))).toBe("2026-11-25");

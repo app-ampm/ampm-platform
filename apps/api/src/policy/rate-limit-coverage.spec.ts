@@ -52,10 +52,28 @@ const COSTLY = [
   // spends one of the challenge's tries (D-189 §3 and §4).
   "HotelFormController.requestCode",
   "HotelFormController.verifyCode",
+  // A section's save stores up to 96 KB; a submit costs a bot check, a revision and staff email; a
+  // correction a bot check and staff email; a withdrawal a Super Admin's review (D-190 §3).
+  "HotelFormController.saveSection",
+  "HotelFormController.submit",
+  "HotelFormController.requestCorrection",
+  "HotelFormController.withdrawConsent",
 ];
 
-/** The hotel form's public routes (D-189 §4), whose every limit fails closed but sign-out's. */
-const HOTEL_FORM_ROUTES = ["open", "requestCode", "verifyCode", "getMe", "updateMe", "signOut"];
+/** The hotel form's public routes (D-189 §4, D-190 §3), whose every limit fails closed but sign-out's. */
+const HOTEL_FORM_ROUTES = [
+  "open",
+  "requestCode",
+  "verifyCode",
+  "getMe",
+  "updateMe",
+  "signOut",
+  "getDraft",
+  "saveSection",
+  "submit",
+  "requestCorrection",
+  "withdrawConsent",
+];
 /** The one hotel form route that fails open: D-149 keeps sign-out open. */
 const HOTEL_FORM_FAILS_OPEN = "signOut";
 

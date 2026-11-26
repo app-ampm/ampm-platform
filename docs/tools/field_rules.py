@@ -505,7 +505,10 @@ TABLES["hotel_info_request_events"] = T(
     actor_user_id=F(required="When actor_kind is staff"),
     actor_person_id=F(editor=SYS, required="When actor_kind is hotel_person, except code_requested (no person yet)",
                       validation="references hotel_info_request_people (foreign key from Slice 7b)"),
-    detail_json=F(validation="valid JSON; personal data masked before storage; never the link's secret"),
+    event_type=F(automation="A section's autosave writes no event (D-190): a request's last activity comes from "
+                            "its sections"),
+    detail_json=F(validation="valid JSON; personal data masked before storage; never the link's secret, and "
+                             "never text a hotel typed (a correction's message stays in its own row)"),
     occurred_at=F(editor=SYS, required="System"),
 )
 
@@ -604,20 +607,93 @@ TABLES["hotel_info_request_challenges"] = T(
 )
 TABLES["hotel_info_request_consents"] = T(
     "Hotel intake", SYS, "INTERNAL", required=["person_id", "kind", "text_version", "granted", "recorded_at"],
-    assumptions="D-189, D-180",
+    assumptions="D-189, D-190, D-180",
     note="append-only by convention: created, then only withdrawn",
     person_id=F(validation="references hotel_info_request_people"),
-    kind=F(automation="privacy_notice is recorded when a person's code is entered; the submit declarations arrive "
-                      "with submit"),
-    text_version=F(validation="the version of the text consented to (core constants), up to 64 characters"),
-    revision_hash=F(editor=SYS, validation="SHA-256 of the submitted revision a declaration binds to; null for the "
-                                           "privacy notice (CHECK hotel_info_request_consents_notice_has_no_revision)"),
+    kind=F(automation="privacy_notice is recorded when a person's code is entered; accuracy_attestation (7.4) and "
+                      "display_authorisation (7.5) at each submit, bound to its revision (D-190)"),
+    text_version=F(validation="the version of the text consented to (core constants), up to 64 characters; a stale "
+                              "one is refused with the form was updated"),
+    granted=F(automation="7.5's Yes or No; always true for the notice and for 7.4, which submit refuses without"),
+    revision_hash=F(editor=SYS, required="For accuracy_attestation and display_authorisation",
+                    validation="the answers_hash of the submitted revision a declaration binds to, 64 hex characters; "
+                               "null for the privacy notice (CHECK hotel_info_request_consents_revision_hash_by_kind)"),
     recorded_at=F(editor=SYS, required="System"),
     ip_address=F(editor=SYS, visibility="RESTRICTED-CONTACT", validation="the caller's address"),
     withdrawn_at=F(editor="The person, inside a form session; SA", required="When the consent is withdrawn",
                    automation="Withdrawing is as easy as consenting; a Super Admin review follows"),
     withdrawal_source=F(editor=SYS, required="With withdrawn_at"),
     withdrawn_by_user_id=F(editor="SYS (acting user)", validation="references users; set for a staff withdrawal"),
+)
+
+# D-190 (Slice 8a): the hotel form's sections, the revisions each submit snapshots, and the corrections asked for
+# after a submit. Written only through the form's session routes, as the hotel person; retention class hotel_intake,
+# following the request (D-180).
+FORM_SAVE = "The hotel person, inside a form session (PUT /hotel-form/draft/sections/:sectionKey)"
+TABLES["hotel_info_request_sections"] = T(
+    "Hotel intake", FORM_SAVE, "INTERNAL",
+    required=["request_id", "section_key", "schema_version", "answers_json", "content_hash", "version",
+              "is_complete", "no_changes", "last_editor_person_id", "last_edited_at"],
+    assumptions="D-190, D-180",
+    note="one row per request and section (unique key hotel_info_request_sections_request_id_section_key_key), made "
+         "at the section's first save; a save that changes nothing writes nothing",
+    request_id=F(validation="references hotel_info_requests"),
+    section_key=F(editor=SYS, validation="one of core HOTEL_FORM_SECTION_KEYS"),
+    schema_version=F(editor=SYS, validation="integer, 1 or more: core HOTEL_FORM_SCHEMA_VERSIONS for the section "
+                                            "(CHECK hotel_info_request_sections_version_from_one)"),
+    answers_json=F(visibility="RESTRICTED-CONTACT",
+                   validation="one JSON object (CHECK hotel_info_request_sections_answers_object) that the section's "
+                              "core draft schema reads: unknown keys refused, every field optional, the catalogue's "
+                              "bounds, a Google Maps link, an https website, a PIN, phones in E.164, areas with their "
+                              "unit; at most 32 KB of canonical JSON, 96 KB for rooms and venues; at most 60 room rows, "
+                              "40 venue rows, 3 contacts and 12 other layouts a venue",
+                   automation="Refused over a cap with 400 naming it"),
+    content_hash=F(editor=SYS, validation="SHA-256 of the answers' canonical JSON (core canonicalJson), 64 hex "
+                                          "characters (CHECK hotel_info_request_sections_content_hash_sha256)",
+                   automation="A save with the same hash and the same no_changes writes nothing"),
+    version=F(editor=SYS, validation="integer, 1 or more (CHECK hotel_info_request_sections_version_from_one)",
+              automation="1 at the first save, plus 1 at every change; a save based on an older version is refused "
+                         "with 409, which carries the newer version, its answers, and who saved it when"),
+    is_complete=F(editor=SYS, automation="Recomputed at every save (core isHotelFormSectionComplete): every question "
+                                         "of AMPM's PDF in the section answered, or no_changes"),
+    no_changes=F(editor="The hotel person, on a refresh request",
+                 automation="No changes since last time: the section counts as complete and submit does not read it"),
+    last_editor_person_id=F(editor=SYS, validation="references hotel_info_request_people"),
+    last_edited_at=F(editor=SYS, automation="Shown on the hub, in a conflict and in the colleague warning before submit"),
+)
+TABLES["hotel_info_request_revisions"] = T(
+    "Hotel intake", SYS, "INTERNAL",
+    required=["request_id", "revision", "answers_json", "answers_hash", "files_json", "submitted_by_person_id",
+              "submitted_at"],
+    assumptions="D-190, D-180",
+    note="immutable: created at each submit and only read after (by repository convention); one per request and "
+         "revision (unique key hotel_info_request_revisions_request_id_revision_key)",
+    request_id=F(validation="references hotel_info_requests"),
+    revision=F(validation="integer, 1 or more (CHECK hotel_info_request_revisions_revision_from_one)",
+               automation="The request's revision plus 1 at each submit"),
+    answers_json=F(visibility="RESTRICTED-CONTACT",
+                   validation="one JSON object holding every section (CHECK hotel_info_request_revisions_answers_shape)"),
+    answers_hash=F(validation="SHA-256 of the answers' canonical JSON, 64 hex characters (CHECK "
+                              "hotel_info_request_revisions_answers_hash_sha256)",
+                   automation="Both declarations bind to it; a repeated submit with the same hash answers the same"),
+    files_json=F(validation="a JSON list of each file's id and SHA-256 (CHECK hotel_info_request_revisions_answers_"
+                            "shape); empty until Slice 9"),
+    submitted_by_person_id=F(validation="references hotel_info_request_people"),
+    submitted_at=F(automation="Also set on the request, with submitted_by_person_id"),
+)
+TABLES["hotel_info_request_corrections"] = T(
+    "Hotel intake", "The hotel person, inside a form session (POST /hotel-form/corrections)", "INTERNAL",
+    required=["request_id", "person_id", "message"],
+    assumptions="D-190, D-180",
+    note="read only in the staff app; at most 5 a day per request",
+    request_id=F(validation="references hotel_info_requests"),
+    person_id=F(editor=SYS, validation="references hotel_info_request_people"),
+    message=F(visibility="RESTRICTED-CONTACT",
+              validation="1 to 2,000 characters, not blank (CHECK hotel_info_request_corrections_message_not_blank)",
+              automation="Never in an event, a notice or a log; staff are told a correction arrived, not what it says"),
+    handled_at=F(editor="SA; HT (Slice 8b)", required="With handled_by",
+                 validation="set with handled_by (CHECK hotel_info_request_corrections_handled_together)"),
+    handled_by=F(editor="SYS (acting user)", required="With handled_at", validation="the staff user who handled it"),
 )
 
 # ---------------------------------------------------------------- Module D — hotel consultancy
