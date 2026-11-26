@@ -89,13 +89,15 @@ describe("The hotel form's draft and sections (e2e, D-190 §3)", () => {
     const first = await calls
       .save(sessionToken, "property", firstSave({ name: " E2E Lake Palace ", city: null }))
       .expect(200);
+    const row = await suite.prisma.hotelInfoRequestSection.findFirstOrThrow({
+      where: { requestId: link.id, sectionKey: "property" },
+    });
     expect(first.body.data).toEqual({
       version: 1,
       isComplete: false,
       contentHash: sha256({ name: "E2E Lake Palace" }),
-    });
-    const row = await suite.prisma.hotelInfoRequestSection.findFirstOrThrow({
-      where: { requestId: link.id, sectionKey: "property" },
+      lastEditedBy: "E2E Synthetic Person",
+      lastEditedAt: row.lastEditedAt.toISOString(),
     });
     expect(row.answers).toEqual({ name: "E2E Lake Palace" });
     expect(row).toMatchObject({
@@ -110,7 +112,10 @@ describe("The hotel form's draft and sections (e2e, D-190 §3)", () => {
         expectedVersion: 1,
       })
       .expect(200);
-    expect(unchanged.body.data.version).toBe(1);
+    expect(unchanged.body.data).toMatchObject({
+      version: 1,
+      lastEditedAt: row.lastEditedAt.toISOString(),
+    });
     const after = await suite.prisma.hotelInfoRequestSection.findFirstOrThrow({
       where: { id: row.id },
     });
