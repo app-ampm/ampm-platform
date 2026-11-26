@@ -140,7 +140,10 @@ class AutosaveRun<K extends HotelFormSectionKey> {
 
   keepMine(): void {
     if (this.state.kind !== "conflict") return;
-    this.version = this.state.theirs.version;
+    const { answers, noChanges, version } = this.state.theirs;
+    // The API holds the colleague's save now, so answers undone back to this page's own last save still go.
+    this.version = version;
+    this.savedText = textOf({ answers, noChanges });
     this.show({ kind: "saved" });
     this.save();
   }

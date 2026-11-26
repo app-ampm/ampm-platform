@@ -217,6 +217,35 @@ describe("when a save is refused", () => {
     expect(last()).toEqual({ kind: "saved" });
   });
 
+  it("Keep mine still saves after the person undid their answers back to their own last save", async () => {
+    const { autosave, calls, last, refuse, answer } = harness();
+    autosave.change(payload(31));
+    autosave.flush();
+    await answer(0, { version: 3 });
+    autosave.change(payload(32));
+    autosave.flush();
+    await refuse(1, { kind: "conflict", theirs: THEIRS });
+    // Back to what this page saved last: the API holds the colleague's 44, so it still has to go.
+    autosave.change(payload(31));
+    autosave.keepMine();
+    expect(calls).toHaveLength(3);
+    expect(calls[2]?.payload).toEqual(payload(31));
+    expect(calls[2]?.expectedVersion).toBe(5);
+    await answer(2, { version: 6 });
+    expect(last()).toEqual({ kind: "saved" });
+  });
+
+  it("Keep mine sends nothing when the page's answers are the colleague's already", async () => {
+    const { autosave, calls, last, refuse } = harness();
+    autosave.change(payload(31));
+    autosave.flush();
+    await refuse(0, { kind: "conflict", theirs: THEIRS });
+    autosave.change(payload(44));
+    autosave.keepMine();
+    expect(calls).toHaveLength(1);
+    expect(last()).toEqual({ kind: "saved" });
+  });
+
   it("Take theirs makes the colleague's save the page's, saving nothing", async () => {
     const { autosave, calls, last, refuse } = harness();
     autosave.change(payload(31));
