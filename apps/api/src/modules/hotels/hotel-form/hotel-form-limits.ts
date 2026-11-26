@@ -7,12 +7,14 @@ import { AppLogger } from "../../../common/logger.service.js";
 import { HotelFormSmsCapAlert } from "./hotel-form-sms-cap-alert.js";
 
 /*
- * The hotel form's own limits (D-189 §3; plan §4.3), counted in the limiter's store under `hotel_form:*`
- * keys, never the client sign-in's, and all failing closed: a store that cannot count answers 503, in the
- * words of what it held back (a code, or a write), with no `Retry-After`, and nothing is done uncounted. A
- * 429 carries `Retry-After` (the time left in the window that refused), and so does the SMS cap's 503 (the
- * time to the next day in India). The route's @RateLimit holds the per-network 10 code requests a minute;
- * these hold the rest. A mobile is keyed by its destination hash, so no key holds a number.
+ * The hotel form's own limits (D-189 §3, D-190 §3; plan §4.3), counted in the limiter's store under
+ * `hotel_form:*` keys, never the client sign-in's, and all failing closed: a store that cannot count
+ * answers 503, in the words of what it held back (a code, or a write), with no `Retry-After`, and nothing
+ * is done uncounted. A 429 carries `Retry-After` (the time left in the window that refused), and so does
+ * the SMS cap's 503 (the time to the next day in India). The route's @RateLimit holds the per-network 10
+ * code requests a minute; these hold the rest: the code limits, the write windows of a session, a
+ * request's hourly section saves and its 5 corrections a day. A mobile is keyed by its destination hash,
+ * so no key holds a number.
  */
 
 const SECOND_MS = 1000;
@@ -32,11 +34,20 @@ export const HOTEL_FORM_CODE_LIMITS = {
   requestPerDay: 50,
 } as const;
 
-/** The changes one session may make in a minute (D-189 §5's write windows; Slice 8 adds the sections'). */
-export const HOTEL_FORM_WRITES_PER_MINUTE = 10;
+/** The writes that have a window: a person's own details (D-189 §5) and a section's autosave (D-190 §3). */
+export type HotelFormWriteWindow = "me" | "sections";
 
-/** The writes that have a window: a person's own details now. */
-export type HotelFormWriteWindow = "me";
+/** The changes one session may make in a minute, by window. */
+export const HOTEL_FORM_WRITES_PER_MINUTE: Readonly<Record<HotelFormWriteWindow, number>> = {
+  me: 10,
+  sections: 30,
+};
+
+/** A request's section saves in an hour, across all its people and sessions (D-190 §3). */
+export const HOTEL_FORM_SECTION_SAVES_PER_HOUR = 600;
+
+/** A request's corrections in a day (D-190 §3). */
+export const HOTEL_FORM_CORRECTIONS_PER_DAY = 5;
 
 /** Who a code request counts against: the caller's network, the mobile's hash and the request. */
 export interface CodeRequestScope {
@@ -127,15 +138,41 @@ export class HotelFormLimits {
     throw errors.unavailable(HOTEL_FORM_ERRORS.smsCapReached, seconds(left));
   }
 
-  /** A session's write window: 10 changes a minute of `window`. */
+  /** A session's write window: 10 changes of its details a minute, 30 section saves. */
   async allowWrite(window: HotelFormWriteWindow, sessionId: string): Promise<void> {
     const counted: CountedWindow = {
       key: `hotel_form:write:${window}:${sessionId}`,
       windowMs: MINUTE_MS,
-      limit: HOTEL_FORM_WRITES_PER_MINUTE,
+      limit: HOTEL_FORM_WRITES_PER_MINUTE[window],
       refusal: HOTEL_FORM_ERRORS.writeLimit,
     };
     await this.within(counted, HOTEL_FORM_ERRORS.writesUnavailable);
+  }
+
+  /**
+   * A section's save (D-190 §3): the session's 30 a minute, then the request's 600 an hour across all its
+   * sessions, so a request's people cannot outrun the hour by opening more sessions.
+   */
+  async allowSectionSave(sessionId: string, requestId: string): Promise<void> {
+    await this.allowWrite("sections", sessionId);
+    const hourly: CountedWindow = {
+      key: `hotel_form:write:sections:request:${requestId}:hour`,
+      windowMs: HOUR_MS,
+      limit: HOTEL_FORM_SECTION_SAVES_PER_HOUR,
+      refusal: HOTEL_FORM_ERRORS.writeLimit,
+    };
+    await this.within(hourly, HOTEL_FORM_ERRORS.writesUnavailable);
+  }
+
+  /** A correction (D-190 §3): 5 per request a day, the sixth refused until the day's window ends. */
+  async allowCorrection(requestId: string): Promise<void> {
+    const daily: CountedWindow = {
+      key: `hotel_form:corrections:request:${requestId}:day`,
+      windowMs: DAY_MS,
+      limit: HOTEL_FORM_CORRECTIONS_PER_DAY,
+      refusal: HOTEL_FORM_ERRORS.correctionLimit,
+    };
+    await this.within(daily, HOTEL_FORM_ERRORS.writesUnavailable);
   }
 
   /**

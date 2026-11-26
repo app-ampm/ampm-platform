@@ -207,7 +207,10 @@ export async function signIn(
   return { sessionToken: verified.body.data.sessionToken, challengeId };
 }
 
-/** Removes every row the hotel form wrote for the suite's requests, then what the request suite made. */
+/**
+ * Removes every row the hotel form wrote for the suite's requests (the identity step's, and the form's
+ * sections, revisions, corrections and staff notices, D-190), then what the request suite made.
+ */
 export async function stopFormSuite(suite: FormSuite): Promise<void> {
   const { prisma } = suite;
   const hotels = await prisma.hotel.findMany({
@@ -232,10 +235,29 @@ export async function stopFormSuite(suite: FormSuite): Promise<void> {
     where: { requestId: { in: requestIds } },
     select: { id: true },
   });
+  const corrections = await prisma.hotelInfoRequestCorrection.findMany({
+    where: { requestId: { in: requestIds } },
+    select: { id: true },
+  });
   const personIds = people.map((row) => row.id);
-  const formIds = [...personIds, ...challenges.map((row) => row.id)];
+  const formIds = [
+    ...personIds,
+    ...challenges.map((row) => row.id),
+    ...corrections.map((row) => row.id),
+  ];
   await prisma.auditEvent.deleteMany({ where: { entityId: { in: formIds } } });
   await prisma.notification.deleteMany({ where: { templateKey: "system.hotel_form_sms_cap" } });
+  // The form's staff notices (D-190 §4) go to staff users, about the request.
+  await prisma.notification.deleteMany({
+    where: { templateKey: { startsWith: "system.hotel_form_" }, entityId: { in: requestIds } },
+  });
+  await prisma.hotelInfoRequestSection.deleteMany({ where: { requestId: { in: requestIds } } });
+  await prisma.hotelInfoRequestRevision.deleteMany({ where: { requestId: { in: requestIds } } });
+  await prisma.hotelInfoRequestCorrection.deleteMany({ where: { requestId: { in: requestIds } } });
+  await prisma.hotelInfoRequest.updateMany({
+    where: { id: { in: requestIds } },
+    data: { submittedByPersonId: null },
+  });
   await prisma.hotelInfoRequestEvent.deleteMany({ where: { requestId: { in: requestIds } } });
   await prisma.hotelInfoRequestConsent.deleteMany({ where: { personId: { in: personIds } } });
   await prisma.hotelInfoRequestChallenge.deleteMany({ where: { requestId: { in: requestIds } } });
