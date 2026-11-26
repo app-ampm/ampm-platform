@@ -36,6 +36,7 @@ import type { z, ZodType } from "zod";
 import type { ApiClient } from "../client";
 import { useApiClient } from "../provider";
 import {
+  forgetHotelForm,
   HOTEL_FORM_DRAFT_QUERY_KEY,
   HOTEL_FORM_ME_QUERY_KEY,
   type HotelFormSessionCall,
@@ -279,8 +280,10 @@ export function useRequestHotelFormCorrection() {
 }
 
 /**
- * `POST /hotel-form/consent-withdrawal`: withdraw 7.5 or every consent, or ask for removal; the draft is
- * read again.
+ * `POST /hotel-form/consent-withdrawal`: withdraw 7.5 or every consent, or ask for removal. After 7.5
+ * the draft is read again; withdrawing every consent ends every session of the person, this one included,
+ * so every query of the form is forgotten, and the page forgets its session too (the flow's sign-out
+ * does both, its own call answered 401).
  *
  *   await useWithdrawHotelFormConsent().mutateAsync({ sessionToken, withdrawal: { kind: "all", requestRemoval: true } });
  */
@@ -289,6 +292,9 @@ export function useWithdrawHotelFormConsent() {
   const queryClient = useQueryClient();
   return useMutation<HotelFormWithdrawn, Error, HotelFormWithdrawalCall>({
     mutationFn: (call) => hotelFormDraftCalls(api).withdrawConsent(call),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: HOTEL_FORM_DRAFT_QUERY_KEY }),
+    onSuccess: async (_withdrawn, { withdrawal }) => {
+      if (withdrawal.kind === "all") forgetHotelForm(queryClient);
+      else await queryClient.invalidateQueries({ queryKey: HOTEL_FORM_DRAFT_QUERY_KEY });
+    },
   });
 }

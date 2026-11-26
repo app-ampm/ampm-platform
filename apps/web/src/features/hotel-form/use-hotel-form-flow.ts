@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useReducer, useRef } from "react";
 import {
+  useForgetHotelForm,
   useOpenHotelForm,
   useRequestHotelFormCode,
   useSignOutOfHotelForm,
@@ -214,6 +215,29 @@ function useSessionCalls(
 }
 
 /**
+ * A refused session handed to the flow: the session is forgotten for the tab; when the refusal ends at
+ * HF-08 (the link replaced, the person removed, the request gone from the form) every query of the form
+ * is forgotten too, since no page is kept and the person may no longer see what it held. A new code asked
+ * for in place keeps the page's data, with what was typed, until the code reads the draft again.
+ *
+ *   const onSessionRefused = useSessionRefused(dispatch, storage);
+ */
+export function useSessionRefused(
+  dispatch: (event: FlowEvent) => void,
+  storage: { readonly current: SessionStore | null },
+): OnSessionRefused {
+  const forgetHotelForm = useForgetHotelForm();
+  return useCallback<OnSessionRefused>(
+    (refusal, person) => {
+      forgetSession(storage.current);
+      if (refusal.kind === "gone") forgetHotelForm();
+      dispatch({ type: "session_refused", refusal, person });
+    },
+    [dispatch, storage, forgetHotelForm],
+  );
+}
+
+/**
  * The hotel form's identity step as the page runs it (D-189 §8): the link taken from the fragment and
  * opened, the details and the code, the session kept for the tab, and every refusal handed to the flow.
  *
@@ -223,10 +247,7 @@ function useSessionCalls(
 export function useHotelFormFlow(): HotelFormFlow {
   const [state, dispatch] = useReducer(flowReducer, INITIAL_FLOW);
   const storage = useRef<SessionStore | null>(null);
-  const onSessionRefused = useCallback<OnSessionRefused>((refusal, person) => {
-    forgetSession(storage.current);
-    dispatch({ type: "session_refused", refusal, person });
-  }, []);
+  const onSessionRefused = useSessionRefused(dispatch, storage);
   useOpening(state, dispatch, storage);
   useLinkArrival(dispatch);
   const { me, draft } = useSessionViews(state, onSessionRefused);

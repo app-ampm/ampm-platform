@@ -10,8 +10,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createApiClient } from "../client";
 import {
+  forgetHotelForm,
   HOTEL_FORM_DRAFT_QUERY_KEY,
   HOTEL_FORM_ME_QUERY_KEY,
+  HOTEL_FORM_QUERY_FAMILY,
   hotelFormCalls,
   hotelFormMeQueryOptions,
   useOpenHotelForm,
@@ -263,11 +265,25 @@ describe("the hooks", () => {
     expect(cache.getQueryData(HOTEL_FORM_ME_QUERY_KEY)).toBeUndefined();
   });
 
-  it("forget the draft once signed out, so the next person on the tab never sees it as theirs", () => {
+  it("forget every query of the form once signed out, and no other, so the next person sees none", () => {
     useSignOutOfHotelForm();
     const [signOut] = hooks.options;
     cache.setQueryData(HOTEL_FORM_DRAFT_QUERY_KEY, { contributors: [] });
+    cache.setQueryData([...HOTEL_FORM_QUERY_FAMILY, "status"], { reference: "HIR-2026-0042" });
+    cache.setQueryData(["me"], { userType: "staff" });
     signOut?.onSettled?.();
+    expect(cache.getQueryData(HOTEL_FORM_DRAFT_QUERY_KEY)).toBeUndefined();
+    expect(cache.getQueryData([...HOTEL_FORM_QUERY_FAMILY, "status"])).toBeUndefined();
+    expect(cache.getQueryData(["me"])).toEqual({ userType: "staff" });
+    expect(HOTEL_FORM_DRAFT_QUERY_KEY.slice(0, 1)).toEqual(HOTEL_FORM_QUERY_FAMILY);
+    expect(HOTEL_FORM_ME_QUERY_KEY.slice(0, 1)).toEqual(HOTEL_FORM_QUERY_FAMILY);
+  });
+
+  it("forget every query of the form on demand, as the page does when a session ends at HF-08", () => {
+    cache.setQueryData(HOTEL_FORM_ME_QUERY_KEY, ME);
+    cache.setQueryData(HOTEL_FORM_DRAFT_QUERY_KEY, { contributors: [] });
+    forgetHotelForm(cache);
+    expect(cache.getQueryData(HOTEL_FORM_ME_QUERY_KEY)).toBeUndefined();
     expect(cache.getQueryData(HOTEL_FORM_DRAFT_QUERY_KEY)).toBeUndefined();
   });
 

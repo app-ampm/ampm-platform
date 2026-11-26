@@ -149,9 +149,24 @@ describe("the hooks keep the cached draft as the API holds it", () => {
     expect(isInvalidated(HOTEL_FORM_DRAFT_QUERY_KEY)).toBe(true);
     expect(isInvalidated(HOTEL_FORM_ME_QUERY_KEY)).toBe(true);
     reseed();
-    withdraw?.onSuccess?.({ withdrawn: [], removalRequested: true }, {});
+    const display = {
+      sessionToken: SESSION,
+      withdrawal: { kind: "display_authorisation", requestRemoval: true },
+    };
+    withdraw?.onSuccess?.({ withdrawn: [], removalRequested: true }, display);
     expect(isInvalidated(HOTEL_FORM_DRAFT_QUERY_KEY)).toBe(true);
     expect(correction?.onSuccess).toBeUndefined();
+  });
+
+  it("after withdrawing every consent, which ends the session: the whole form forgotten", () => {
+    useWithdrawHotelFormConsent();
+    const [withdraw] = hooks.options;
+    cache.setQueryData(HOTEL_FORM_DRAFT_QUERY_KEY, DRAFT);
+    cache.setQueryData(HOTEL_FORM_ME_QUERY_KEY, ME);
+    const all = { sessionToken: SESSION, withdrawal: { kind: "all", requestRemoval: false } };
+    withdraw?.onSuccess?.({ withdrawn: ["privacy_notice"], removalRequested: false }, all);
+    expect(cache.getQueryData(HOTEL_FORM_DRAFT_QUERY_KEY)).toBeUndefined();
+    expect(cache.getQueryData(HOTEL_FORM_ME_QUERY_KEY)).toBeUndefined();
   });
 
   it("after a submit refused because a colleague changed sections since the review page read them: read again", () => {

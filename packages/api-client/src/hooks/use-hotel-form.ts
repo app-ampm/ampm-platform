@@ -1,9 +1,11 @@
+import { useCallback } from "react";
 import {
   queryOptions,
   skipToken,
   useMutation,
   useQuery,
   useQueryClient,
+  type QueryClient,
 } from "@tanstack/react-query";
 import {
   acknowledged,
@@ -38,14 +40,42 @@ import { useApiClient } from "../provider";
 /** Sign-out's answer, held to its one field as the form's other answers are. */
 const signedOut = acknowledged.strict();
 
+/**
+ * Every query of the form starts with this key, apart from every staff or client query: what sign-out,
+ * a withdrawal of every consent and a session ended at HF-08 forget at once ({@link forgetHotelForm}).
+ */
+export const HOTEL_FORM_QUERY_FAMILY = ["hotel-form"] as const;
+
 /** The form's own `me`, apart from the staff and client `me` (`["me"]`). */
-export const HOTEL_FORM_ME_QUERY_KEY = ["hotel-form", "me"] as const;
+export const HOTEL_FORM_ME_QUERY_KEY = [...HOTEL_FORM_QUERY_FAMILY, "me"] as const;
 
 /**
  * The form's draft (D-190 §3), apart from the form's `me` and from every staff or client query: it is
  * read again after a code (who is "you" among the people helping may change) and forgotten on sign-out.
  */
-export const HOTEL_FORM_DRAFT_QUERY_KEY = ["hotel-form", "draft"] as const;
+export const HOTEL_FORM_DRAFT_QUERY_KEY = [...HOTEL_FORM_QUERY_FAMILY, "draft"] as const;
+
+/**
+ * Forgets every query of the form (`me`, the draft, and any the form adds), so nothing the person read
+ * stays in memory for the next person on the tab: on sign-out, after a withdrawal of every consent (which
+ * ends the session), and when a session ends at HF-08 (the page calls it then).
+ *
+ * @example
+ * forgetHotelForm(queryClient);
+ */
+export function forgetHotelForm(queryClient: QueryClient): void {
+  queryClient.removeQueries({ queryKey: HOTEL_FORM_QUERY_FAMILY });
+}
+
+/**
+ * {@link forgetHotelForm} for the client the page's provider holds, as a stable callback.
+ *
+ *   const forget = useForgetHotelForm(); // then forget() once the session ends at HF-08
+ */
+export function useForgetHotelForm(): () => void {
+  const queryClient = useQueryClient();
+  return useCallback(() => forgetHotelForm(queryClient), [queryClient]);
+}
 
 /** A call made inside a form session. */
 export interface HotelFormSessionCall {
@@ -181,8 +211,8 @@ export function useUpdateHotelFormMe() {
 }
 
 /**
- * `POST /hotel-form/sign-out`: ends the session; the cached `me` and draft are forgotten whatever the
- * answer, so the next person to sign in on the tab never sees them.
+ * `POST /hotel-form/sign-out`: ends the session; every query of the form is forgotten whatever the answer
+ * (`me`, the draft and any other), so the next person to sign in on the tab never sees them.
  *
  *   await useSignOutOfHotelForm().mutateAsync({ sessionToken });
  */
@@ -191,9 +221,6 @@ export function useSignOutOfHotelForm() {
   const queryClient = useQueryClient();
   return useMutation<Acknowledged, Error, HotelFormSessionCall>({
     mutationFn: (variables) => hotelFormCalls(api).signOut(variables),
-    onSettled: () => {
-      queryClient.removeQueries({ queryKey: HOTEL_FORM_ME_QUERY_KEY });
-      queryClient.removeQueries({ queryKey: HOTEL_FORM_DRAFT_QUERY_KEY });
-    },
+    onSettled: () => forgetHotelForm(queryClient),
   });
 }

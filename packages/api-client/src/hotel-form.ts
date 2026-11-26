@@ -6,13 +6,16 @@
  */
 
 export {
+  forgetHotelForm,
   HOTEL_FORM_ME_QUERY_KEY,
+  HOTEL_FORM_QUERY_FAMILY,
   hotelFormCalls,
   hotelFormMeQueryOptions,
   useHotelFormMe,
   useOpenHotelForm,
   useRequestHotelFormCode,
   useSignOutOfHotelForm,
+  useForgetHotelForm,
   useUpdateHotelFormMe,
   useVerifyHotelFormCode,
   type HotelFormMeChange,
