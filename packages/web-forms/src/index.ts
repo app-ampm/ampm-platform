@@ -13,8 +13,9 @@
  *   <CodeField id="code" label="Your 6-digit code" value={code} onChange={setCode} />
  *
  * The hotel information form adds (D-190 §5): a number with its unit (NumberUnitField), a choice that can
- * be cleared back to unanswered (ChoiceSegments' `clearLabel`), repeatable rows each in a fieldset with
- * its legend (RepeatableFieldsets) and a chip group with Other (ChipGroupField).
+ * be cleared back to unanswered (ChoiceSegments' `clearLabel`) or say what each answer means (its
+ * `description`), repeatable rows each in a fieldset with its legend (RepeatableFieldsets) and a chip group
+ * with Other (ChipGroupField).
  */
 export { CheckboxField } from "./checkbox-field";
 export type { CheckboxFieldProps } from "./checkbox-field";
