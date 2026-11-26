@@ -23,7 +23,7 @@ Global conventions that apply to every row: money is `numeric(14,2)` with a sibl
 | A — Identity, access and administration | 20 | 132 | 61 | 10 | 7 |
 | B — CRM, subscriptions and commercial agreements | 13 | 143 | 55 | 94 | 4 |
 | C — Hotel intelligence | 18 | 255 | 77 | 115 | 30 |
-| D — Hotel consultancy | 6 | 70 | 28 | 65 | 3 |
+| D — Hotel consultancy | 6 | 73 | 28 | 68 | 3 |
 | E — Wedding project | 3 | 36 | 13 | 29 | 3 |
 | F — Functions, programme and run-of-show | 4 | 43 | 17 | 27 | 1 |
 | G — Budget and finance | 7 | 91 | 36 | 59 | 17 |
@@ -37,9 +37,9 @@ Global conventions that apply to every row: money is `numeric(14,2)` with a sibl
 | O — Checklists, closure and feedback | 4 | 30 | 17 | 7 | 0 |
 | P — Public website content (dormant) | 2 | 17 | 8 | 17 | 0 |
 | Q — Live chat | 2 | 16 | 6 | 16 | 0 |
-| **Total** | **125** | **1329** | **541** | **683** | **129** |
+| **Total** | **125** | **1332** | **541** | **686** | **129** |
 
-Fields by visibility class: CLIENT 650, INTERNAL 460, Other (per record, recipient or parent) 57, RESTRICTED-NOTES 36, PUBLIC 33, RESTRICTED-FINANCE 31, RESTRICTED-CONTACT 28, SECRET 15, RESTRICTED-IDENTITY 13, RESTRICTED-BANK 4, SENSITIVE-GUEST 2.
+Fields by visibility class: CLIENT 653, INTERNAL 460, Other (per record, recipient or parent) 57, RESTRICTED-NOTES 36, PUBLIC 33, RESTRICTED-FINANCE 31, RESTRICTED-CONTACT 28, SECRET 15, RESTRICTED-IDENTITY 13, RESTRICTED-BANK 4, SENSITIVE-GUEST 2.
 
 ---
 
@@ -963,6 +963,9 @@ Created at stage: **Discovery (client request)** · Default editor: CO, CA (clie
 | `dates_flexible` | true or false |  | CO, CA (client fields at creation); HT; SA; PM (a) | CLIENT | Optional | — |
 | `guest_estimate` | integer, 0 or more |  | CO, CA (client fields at creation); HT; SA; PM (a) | CLIENT | At creation | — |
 | `rooms_required` | integer, 0 or more |  | CO, CA (client fields at creation); HT; SA; PM (a) | CLIENT | Optional | Starting point for room blocks |
+| `budget_amount_min` | numeric(14,2), 0 or more; nullable (the client's own estimate) |  | CO, CA (client fields at creation); HT; SA; PM (a) | CLIENT | Optional | — |
+| `budget_amount_max` | numeric(14,2), 0 or more; nullable |  | CO, CA (client fields at creation); HT; SA; PM (a) | CLIENT | Optional | — |
+| `budget_currency` | string, up to 255 characters; default INR (A-16) |  | CO, CA (client fields at creation); HT; SA; PM (a) | CLIENT | Optional | — |
 | `functions_summary` | text, up to 10,000 characters |  | CO, CA (client fields at creation); HT; SA; PM (a) | CLIENT | Optional | — |
 | `contact_preference` | string, up to 255 characters |  | CO, CA (client fields at creation); HT; SA; PM (a) | CLIENT | Optional | — |
 | `notes_client` | text, up to 10,000 characters |  | CO, CA; HT | CLIENT | Optional | — |

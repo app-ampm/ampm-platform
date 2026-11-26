@@ -1,4 +1,6 @@
 import {
+  clientAmount,
+  formatAmount,
   formatDay,
   formatDayRange,
   type BookingMilestoneStatus,
@@ -6,6 +8,7 @@ import {
   type HotelEnquiryOutcome,
   type HotelEnquiryStatus,
   type HotelProposalStatus,
+  type Money,
   type ServiceAgreementStatus,
   type SiteVisitStatus,
 } from "@ampm/core";
@@ -179,6 +182,16 @@ interface EnquiryFacts {
   readonly datesFlexible: boolean;
   readonly guestEstimate: number;
   readonly roomsRequired: number | null;
+  readonly budgetMin?: Money | null;
+  readonly budgetMax?: Money | null;
+}
+
+/** The client's stated budget as one label: a single amount, a "lo–hi" range, or null when none was given. */
+function budgetLabel(min: Money | null | undefined, max: Money | null | undefined): string | null {
+  const show = (m: Money): string => formatAmount(clientAmount(m.minor, m.currency));
+  if (min && max) return min.minor === max.minor ? show(min) : `${show(min)}–${show(max)}`;
+  const only = min ?? max;
+  return only ? show(only) : null;
 }
 
 /** An enquiry's stay as one data line: "12–14 FEB 2027 · 300 guests · 80 rooms · Flexible dates". */
@@ -186,6 +199,8 @@ export function enquiryFacts(enquiry: EnquiryFacts): string {
   const stay = formatDayRange(enquiry.dateFrom, enquiry.dateTo, { style: "data" });
   const parts = [stay, guestsLabel(enquiry.guestEstimate)];
   if (enquiry.roomsRequired) parts.push(`${enquiry.roomsRequired} rooms`);
+  const budget = budgetLabel(enquiry.budgetMin, enquiry.budgetMax);
+  if (budget) parts.push(budget);
   if (enquiry.datesFlexible) parts.push("Flexible dates");
   return parts.join(" · ");
 }

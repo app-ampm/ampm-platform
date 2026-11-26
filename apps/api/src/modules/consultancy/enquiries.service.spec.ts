@@ -13,35 +13,12 @@ import { EnquiryEventsRepository, type EnquiryEventRow } from "./enquiry-events.
 import { EnquiryInsightsRepository, NO_EXTRAS } from "./enquiry-insights.repository.js";
 import { EnquiryTransitionWriter } from "./enquiry-transition-writer.js";
 import { EnquiriesRepository, type EnquiryRow } from "./enquiries.repository.js";
+import { makeEnquiryRow } from "./enquiry.fixtures.js";
 import { EnquiriesService } from "./enquiries.service.js";
 import { BookingMilestonesRepository } from "./booking-milestones.repository.js";
 
 function makeRow(over: Partial<EnquiryRow> = {}): EnquiryRow {
-  return {
-    id: "enq-1",
-    accountId: "acc-1",
-    projectId: null,
-    hotelId: "hot-1",
-    requestedByUserId: "usr-1",
-    assignedUserId: null,
-    serviceAgreementId: null,
-    status: "submitted",
-    dateFrom: new Date("2027-02-14"),
-    dateTo: new Date("2027-02-16"),
-    datesFlexible: false,
-    guestEstimate: 120,
-    roomsRequired: 40,
-    functionsSummary: null,
-    contactPreference: null,
-    notesClient: null,
-    notesInternal: "internal only",
-    submittedAt: new Date(),
-    closedAt: null,
-    outcome: null,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    ...over,
-  };
+  return makeEnquiryRow({ notesInternal: "internal only", ...over });
 }
 
 function makeEvent(over: Partial<EnquiryEventRow> = {}): EnquiryEventRow {

@@ -70,6 +70,32 @@ function PartyFields({ form: { draft, update, errors } }: FieldsProps) {
   );
 }
 
+/** The client's approximate budget for the stay, as an optional whole-rupee range (each inline-validated). */
+function BudgetFields({ form: { draft, update, errors } }: FieldsProps) {
+  return (
+    <>
+      <Input
+        label="Budget from (₹, optional)"
+        value={draft.budgetMin}
+        onChangeText={(value) => update("budgetMin", value)}
+        placeholder="500000"
+        keyboardType="number-pad"
+        maxLength={12}
+        errorText={errors.budgetMin}
+      />
+      <Input
+        label="Budget to (₹, optional)"
+        value={draft.budgetMax}
+        onChangeText={(value) => update("budgetMax", value)}
+        placeholder="800000"
+        keyboardType="number-pad"
+        maxLength={12}
+        errorText={errors.budgetMax}
+      />
+    </>
+  );
+}
+
 /** How the client would like the hotel team to reach them, and anything else they want to add. */
 function ContactFields({ form: { draft, update } }: FieldsProps) {
   return (
@@ -103,6 +129,7 @@ export function NewRequestForm({ form }: FieldsProps) {
       <Stack gap={4}>
         <StayFields form={form} />
         <PartyFields form={form} />
+        <BudgetFields form={form} />
         <ContactFields form={form} />
         <Button
           fullWidth

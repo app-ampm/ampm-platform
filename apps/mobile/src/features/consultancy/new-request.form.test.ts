@@ -1,4 +1,5 @@
 import {
+  budgetErrors,
   dateErrors,
   EMPTY_REQUEST_DRAFT,
   isIsoDate,
@@ -53,6 +54,23 @@ describe("roomsError", () => {
   });
 });
 
+describe("budgetErrors", () => {
+  it("stays quiet for blank or whole-rupee amounts and flags anything else", () => {
+    expect(budgetErrors("", "")).toEqual({});
+    expect(budgetErrors(" 500000 ", "800000")).toEqual({});
+    expect(budgetErrors("3.5", "")).toEqual({
+      budgetMin: "Enter a budget in whole rupees, or leave it blank.",
+    });
+  });
+
+  it("flags an upper budget below the lower, on the upper field", () => {
+    expect(budgetErrors("800000", "500000")).toEqual({
+      budgetMax: "The upper budget must be at least the lower one.",
+    });
+    expect(budgetErrors("500000", "500000")).toEqual({});
+  });
+});
+
 describe("toCreateRequest", () => {
   const filled = {
     ...EMPTY_REQUEST_DRAFT,
@@ -71,6 +89,8 @@ describe("toCreateRequest", () => {
       datesFlexible: true,
       guestEstimate: 120,
       roomsRequired: null,
+      budgetMin: null,
+      budgetMax: null,
       functionsSummary: "Sangeet",
       contactPreference: null,
       notesClient: null,
@@ -114,5 +134,32 @@ describe("toCreateRequest", () => {
     expect(toCreateRequest(HOTEL_ID, { ...filled, rooms: "-2" })).toBeNull();
     expect(toCreateRequest(HOTEL_ID, { ...filled, rooms: "3.5" })).toBeNull();
     expect(toCreateRequest(HOTEL_ID, { ...filled, rooms: "a few" })).toBeNull();
+  });
+
+  it("carries the budget range as wire money in paise", () => {
+    expect(
+      toCreateRequest(HOTEL_ID, { ...filled, budgetMin: " 500000 ", budgetMax: "800000" }),
+    ).toMatchObject({
+      budgetMin: { minor: 50000000, currency: "INR" },
+      budgetMax: { minor: 80000000, currency: "INR" },
+    });
+  });
+
+  it("allows a one-sided budget and sends a blank budget as null", () => {
+    expect(toCreateRequest(HOTEL_ID, { ...filled, budgetMax: "800000" })).toMatchObject({
+      budgetMin: null,
+      budgetMax: { minor: 80000000, currency: "INR" },
+    });
+    const bare = toCreateRequest(HOTEL_ID, filled);
+    expect(bare?.budgetMin).toBeNull();
+    expect(bare?.budgetMax).toBeNull();
+  });
+
+  it("holds the request back for a non-number or inverted budget", () => {
+    expect(toCreateRequest(HOTEL_ID, { ...filled, budgetMin: "3.5" })).toBeNull();
+    expect(toCreateRequest(HOTEL_ID, { ...filled, budgetMax: "lots" })).toBeNull();
+    expect(
+      toCreateRequest(HOTEL_ID, { ...filled, budgetMin: "800000", budgetMax: "500000" }),
+    ).toBeNull();
   });
 });

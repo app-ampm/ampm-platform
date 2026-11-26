@@ -28,6 +28,8 @@ const validClientView = {
   datesFlexible: false,
   guestEstimate: 120,
   roomsRequired: 40,
+  budgetMin: null,
+  budgetMax: null,
   functionsSummary: null,
   contactPreference: null,
   notesClient: null,
@@ -90,6 +92,8 @@ describe("hotelEnquiryCreateRequest", () => {
     const parsed = hotelEnquiryCreateRequest.parse(base);
     expect(parsed.datesFlexible).toBe(false);
     expect(parsed.roomsRequired).toBeNull();
+    expect(parsed.budgetMin).toBeNull();
+    expect(parsed.budgetMax).toBeNull();
   });
 
   it("refuses dateTo before dateFrom", () => {
@@ -103,6 +107,35 @@ describe("hotelEnquiryCreateRequest", () => {
     expect(hotelEnquiryCreateRequest.safeParse({ ...base, notesInternal: "x" }).success).toBe(
       false,
     );
+  });
+
+  it("accepts a budget range and refuses an upper below the lower", () => {
+    const money = (minor: number) => ({ minor, currency: "INR" as const });
+    expect(
+      hotelEnquiryCreateRequest.safeParse({
+        ...base,
+        budgetMin: money(50_000_000),
+        budgetMax: money(80_000_000),
+      }).success,
+    ).toBe(true);
+    expect(
+      hotelEnquiryCreateRequest.safeParse({
+        ...base,
+        budgetMin: money(80_000_000),
+        budgetMax: money(50_000_000),
+      }).success,
+    ).toBe(false);
+  });
+
+  it("refuses a budget amount outside the numeric(14,2) range", () => {
+    const money = (minor: number) => ({ minor, currency: "INR" as const });
+    expect(hotelEnquiryCreateRequest.safeParse({ ...base, budgetMax: money(-1) }).success).toBe(
+      false,
+    );
+    expect(
+      hotelEnquiryCreateRequest.safeParse({ ...base, budgetMax: money(100_000_000_000_000) })
+        .success,
+    ).toBe(false);
   });
 });
 

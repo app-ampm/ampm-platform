@@ -67,6 +67,8 @@ export const ENQUIRY: HotelEnquiryClientView = {
   datesFlexible: false,
   guestEstimate: 300,
   roomsRequired: 80,
+  budgetMin: null,
+  budgetMax: null,
   functionsSummary: "Sangeet, wedding, reception",
   contactPreference: null,
   notesClient: null,

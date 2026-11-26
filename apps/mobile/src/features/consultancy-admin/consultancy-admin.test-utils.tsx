@@ -51,6 +51,8 @@ export function enquiryFixture(
     datesFlexible: false,
     guestEstimate: 300,
     roomsRequired: null,
+    budgetMin: null,
+    budgetMax: null,
     functionsSummary: "Sangeet, wedding and reception",
     contactPreference: null,
     notesClient: null,

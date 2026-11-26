@@ -1050,6 +1050,9 @@ erDiagram
         bool dates_flexible
         int guest_estimate
         int rooms_required
+        decimal budget_amount_min "CLIENT, nullable (the client's own estimate)"
+        decimal budget_amount_max "CLIENT, nullable"
+        string budget_currency "default INR (A-16)"
         text functions_summary "CLIENT"
         string contact_preference
         text notes_client "CLIENT"
@@ -1125,6 +1128,7 @@ Notes:
 - An enquiry is never a booking (SPEC §7). `status = confirmed` is reached only when a `booking_milestones` row of type `confirmed` is completed and a contract exists.
 - When a project is created later, `hotel_enquiries.project_id`, `saved_hotels.project_id` and `service_agreements.project_id` are back-filled for the account (GP-27, WHY §3).
 - The client sees the enquiry status, `notes_client`, non-internal events, site visit dates and their own feedback, and proposals in `shared` or later status with client amounts only.
+- `budget_amount_min`/`budget_amount_max` are the client's own estimate of what they expect to spend (CLIENT, INR). They are never an AMPM cost, margin or quote, so they are CLIENT (not RESTRICTED-FINANCE) and the separate client/internal columns of A-4 do not apply; both audiences read the one figure.
 
 ---
 

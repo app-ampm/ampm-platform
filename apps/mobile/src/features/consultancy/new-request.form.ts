@@ -1,11 +1,13 @@
-import { isIsoDate, type HotelEnquiryCreateRequest } from "@ampm/core";
+import { isIsoDate, type HotelEnquiryCreateRequest, type Money } from "@ampm/core";
 
-/** What the person has typed into the CP-07 form, before it becomes a request. */
+/** What the person has typed into the CP-07 form, before it becomes a request. Budgets are whole rupees. */
 export interface NewRequestDraft {
   readonly dateFrom: string;
   readonly dateTo: string;
   readonly guests: string;
   readonly rooms: string;
+  readonly budgetMin: string;
+  readonly budgetMax: string;
   readonly functions: string;
   readonly contactPreference: string;
   readonly notes: string;
@@ -17,6 +19,8 @@ export const EMPTY_REQUEST_DRAFT: NewRequestDraft = {
   dateTo: "",
   guests: "",
   rooms: "",
+  budgetMin: "",
+  budgetMax: "",
   functions: "",
   contactPreference: "",
   notes: "",
@@ -28,9 +32,11 @@ export interface DateErrors {
   readonly dateTo?: string | undefined;
 }
 
-/** Every inline error the form can show: the two dates and the optional rooms count. */
+/** Every inline error the form can show: the two dates, the optional rooms count, and the budget range. */
 export interface FormErrors extends DateErrors {
   readonly rooms?: string | undefined;
+  readonly budgetMin?: string | undefined;
+  readonly budgetMax?: string | undefined;
 }
 
 /** The YYYY-MM-DD calendar-date check, now shared in `@ampm/core`; re-exported for this form's callers. */
@@ -70,9 +76,44 @@ export function roomsError(rooms: string): string | undefined {
   return ROOM_COUNT.test(value) ? undefined : ROOMS_MESSAGE;
 }
 
+const BUDGET_MESSAGE = "Enter a budget in whole rupees, or leave it blank.";
+const BUDGET_RANGE_MESSAGE = "The upper budget must be at least the lower one.";
+
+/** An optional whole-rupee amount the client types → wire money in paise, or null when left blank. */
+function rupeesToMoney(value: string): Money | null {
+  return value === "" ? null : { minor: Number.parseInt(value, 10) * 100, currency: "INR" };
+}
+
+/** A single budget field's inline error: blank is fine, otherwise it must be a whole rupee number. */
+function budgetFieldError(value: string): string | undefined {
+  const trimmed = value.trim();
+  if (trimmed === "") return undefined;
+  return ROOM_COUNT.test(trimmed) ? undefined : BUDGET_MESSAGE;
+}
+
+/**
+ * The budget's inline errors: each field a whole rupee number, and — when both are valid — the upper not
+ * below the lower (that last error sits on the upper field).
+ */
+export function budgetErrors(min: string, max: string): { budgetMin?: string; budgetMax?: string } {
+  const budgetMin = budgetFieldError(min);
+  const budgetMax = budgetFieldError(max);
+  if (budgetMin !== undefined || budgetMax !== undefined) return { budgetMin, budgetMax };
+  const lo = min.trim();
+  const hi = max.trim();
+  if (lo !== "" && hi !== "" && Number.parseInt(hi, 10) < Number.parseInt(lo, 10)) {
+    return { budgetMax: BUDGET_RANGE_MESSAGE };
+  }
+  return {};
+}
+
 /** Every inline error the form shows, derived from the current draft. */
 export function formErrors(draft: NewRequestDraft): FormErrors {
-  return { ...dateErrors(draft.dateFrom, draft.dateTo), rooms: roomsError(draft.rooms) };
+  return {
+    ...dateErrors(draft.dateFrom, draft.dateTo),
+    rooms: roomsError(draft.rooms),
+    ...budgetErrors(draft.budgetMin, draft.budgetMax),
+  };
 }
 
 /**
@@ -91,6 +132,13 @@ export function toCreateRequest(
   const datesValid = isIsoDate(dateFrom) && isIsoDate(dateTo) && dateTo >= dateFrom;
   if (!datesValid || !Number.isInteger(guestEstimate) || guestEstimate < 1) return null;
   if (rooms !== "" && !ROOM_COUNT.test(rooms)) return null;
+  const budgetMinStr = draft.budgetMin.trim();
+  const budgetMaxStr = draft.budgetMax.trim();
+  if (budgetMinStr !== "" && !ROOM_COUNT.test(budgetMinStr)) return null;
+  if (budgetMaxStr !== "" && !ROOM_COUNT.test(budgetMaxStr)) return null;
+  const budgetMin = rupeesToMoney(budgetMinStr);
+  const budgetMax = rupeesToMoney(budgetMaxStr);
+  if (budgetMin !== null && budgetMax !== null && budgetMax.minor < budgetMin.minor) return null;
   const functions = draft.functions.trim();
   const contactPreference = draft.contactPreference.trim();
   const notes = draft.notes.trim();
@@ -101,6 +149,8 @@ export function toCreateRequest(
     datesFlexible: draft.datesFlexible,
     guestEstimate,
     roomsRequired: rooms === "" ? null : Number.parseInt(rooms, 10),
+    budgetMin,
+    budgetMax,
     functionsSummary: functions.length > 0 ? functions : null,
     contactPreference: contactPreference.length > 0 ? contactPreference : null,
     notesClient: notes.length > 0 ? notes : null,
