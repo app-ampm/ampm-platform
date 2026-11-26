@@ -24,12 +24,22 @@ function isBlank(value: Canonical): boolean {
   return typeof value === "object" && Object.keys(value).length === 0;
 }
 
-/** An object's members, the blank ones left out; {@link write} puts them in order. */
+/**
+ * An object's members, the blank ones left out; {@link write} puts them in order. Each is defined as its
+ * own property, so a `__proto__` member (which JSON.parse makes one) stays a member: assigned, it would
+ * set the copy's prototype instead, and two different contents would share one text and one hash.
+ */
 function canonicalObject(value: object): Canonical {
   const out: { [key: string]: Canonical } = {};
   for (const [key, item] of Object.entries(value)) {
     const member = canonical(item);
-    if (!isBlank(member)) out[key] = member;
+    if (isBlank(member)) continue;
+    Object.defineProperty(out, key, {
+      value: member,
+      enumerable: true,
+      writable: true,
+      configurable: true,
+    });
   }
   return out;
 }

@@ -47,6 +47,16 @@ describe("canonicalJson", () => {
     );
   });
 
+  it("keeps a __proto__ member as JSON.parse makes it, never dropping it or merging it into its object", () => {
+    const parsed: unknown = JSON.parse('{"__proto__":{"a":1},"b":2}');
+    expect(canonicalJson(parsed)).toBe('{"__proto__":{"a":1},"b":2}');
+    expect(canonicalJson(parsed)).not.toBe(canonicalJson({ b: 2 }));
+    const nested: unknown = JSON.parse('{"rows":[{"__proto__":{"b":2}}]}');
+    expect(canonicalJson(nested)).toBe('{"rows":[{"__proto__":{"b":2}}]}');
+    expect(canonicalJson(nested)).not.toBe(canonicalJson({ rows: [{ b: 2 }] }));
+    expect(Object.prototype).not.toHaveProperty("a");
+  });
+
   it("refuses what JSON cannot carry: a non-finite number, a date, a map, a function", () => {
     for (const value of [Number.NaN, Number.POSITIVE_INFINITY, new Date(0), new Map(), () => 1]) {
       expect(() => canonicalJson({ value }), String(value)).toThrow();
