@@ -4,6 +4,7 @@ import { cn, fieldLabelStyles, filterChipLabelStyles, filterChipStyles } from "@
 
 import type { ChoiceOption } from "./choice-segments";
 import { FieldMessage } from "./field-message";
+import { useIsReadOnly } from "./read-only";
 import { TextField } from "./text-field";
 
 /** The Other chip, and the words it asks for once chosen. */
@@ -75,6 +76,7 @@ interface ChipProps {
  * nested in its target), with the gold ring when the button has keyboard focus.
  */
 function Chip({ option, isChosen, describedBy, onPress, onBlur }: ChipProps) {
+  const isReadOnly = useIsReadOnly();
   return (
     <li className="flex">
       <button
@@ -83,6 +85,7 @@ function Chip({ option, isChosen, describedBy, onPress, onBlur }: ChipProps) {
         aria-describedby={describedBy}
         onClick={onPress}
         onBlur={onBlur}
+        disabled={isReadOnly || undefined}
         className="group -my-1 flex cursor-pointer py-1 outline-none"
       >
         <span className={filterChipStyles({ selected: isChosen, nested: true })}>

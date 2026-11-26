@@ -2,6 +2,8 @@ import { cn, fieldStyles, fieldTextStyles, textStyles } from "@ampm/ui/styles";
 
 import { fieldAria } from "./field-message";
 import { FieldShell } from "./field-shell";
+import { useIsReadOnly } from "./read-only";
+import { frameStateOf } from "./text-field";
 
 /** One choice of a select: what the form keeps, and what the person reads. */
 export interface SelectOption {
@@ -39,12 +41,14 @@ function SelectControl({
   help,
   required,
 }: SelectControlProps) {
+  const isReadOnly = useIsReadOnly();
   return (
     <select
       id={id}
       {...fieldAria(id, { error, help, required })}
       value={value}
       onChange={onChange}
+      disabled={isReadOnly || undefined}
       className={cn(
         fieldTextStyles(),
         "min-w-0 cursor-pointer appearance-none",
@@ -75,9 +79,10 @@ function SelectControl({
  */
 export function SelectField({ label, className, ...control }: SelectFieldProps) {
   const { id, error, help } = control;
+  const isReadOnly = useIsReadOnly();
   return (
     <FieldShell {...{ id, label, error, help, className }}>
-      <div className={fieldStyles({ state: error ? "error" : "default" })}>
+      <div className={fieldStyles({ state: frameStateOf(error, isReadOnly) })}>
         <SelectControl {...control} />
         <span
           aria-hidden

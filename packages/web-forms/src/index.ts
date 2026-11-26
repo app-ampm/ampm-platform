@@ -15,7 +15,8 @@
  * The hotel information form adds (D-190 §5): a number with its unit (NumberUnitField), a choice that can
  * be cleared back to unanswered (ChoiceSegments' `clearLabel`) or say what each answer means (its
  * `description`), repeatable rows each in a fieldset with its legend (RepeatableFieldsets) and a chip group
- * with Other (ChipGroupField).
+ * with Other (ChipGroupField), and fields made read-only together (ReadOnlyFields), their text still
+ * selectable.
  */
 export { CheckboxField } from "./checkbox-field";
 export type { CheckboxFieldProps } from "./checkbox-field";
@@ -36,6 +37,7 @@ export type { MobileFieldProps } from "./mobile-field";
 export { NumberUnitField, unitSelectId } from "./number-unit-field";
 export type { NumberUnitFieldProps } from "./number-unit-field";
 export { peerFocusRingStyles } from "./peer-focus.styles";
+export { ReadOnlyFields, useIsReadOnly } from "./read-only";
 export { RepeatableFieldsets, focusTargetAfter, rowFieldsetId } from "./repeatable-fieldsets";
 export type { FocusTarget, RepeatableFieldsetsProps, RepeatableRow } from "./repeatable-fieldsets";
 export { SelectField } from "./select-field";

@@ -11,6 +11,7 @@ import {
 
 import { fieldAria } from "./field-message";
 import { FieldShell } from "./field-shell";
+import { useIsReadOnly } from "./read-only";
 
 type NativeInputProps = Omit<
   InputHTMLAttributes<HTMLInputElement>,
@@ -31,6 +32,21 @@ export interface TextFieldProps extends NativeInputProps {
   readonly prefixText?: string | undefined;
   /** Placement in the form's grid. */
   readonly className?: string | undefined;
+}
+
+/**
+ * A field frame's state: gold for an error, the dashed read-only frame (which still takes focus on the
+ * web) while it cannot change, else the default.
+ *
+ * @example
+ * fieldStyles({ state: frameStateOf(error, isReadOnly) });
+ */
+export function frameStateOf(
+  error: string | undefined,
+  isReadOnly: boolean,
+): "error" | "disabled" | "default" {
+  if (error) return "error";
+  return isReadOnly ? "disabled" : "default";
 }
 
 /** The "+91" before a mobile number and the rule after it; the field takes the number either way. */
@@ -63,15 +79,18 @@ export function TextField({
   className,
   ...input
 }: TextFieldProps) {
+  // Read-only, never disabled, so the text can still be selected and copied (ReadOnlyFields).
+  const isReadOnly = useIsReadOnly();
   return (
     <FieldShell {...{ id, label, optionalText, error, help, className }}>
-      <div className={fieldStyles({ state: error ? "error" : "default" })}>
+      <div className={fieldStyles({ state: frameStateOf(error, isReadOnly) })}>
         {prefixText ? <FieldPrefix text={prefixText} /> : null}
         <input
           id={id}
           {...fieldAria(id, { error, help, required })}
           value={value}
           onChange={onChange}
+          readOnly={isReadOnly || undefined}
           className={cn(fieldTextStyles(), "min-w-0 tabular-nums")}
           {...input}
         />

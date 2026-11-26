@@ -11,6 +11,7 @@ import {
 } from "@ampm/ui/styles";
 
 import { FieldMessage } from "./field-message";
+import { useIsReadOnly } from "./read-only";
 
 /** A row of the list: its key (kept while it is renamed or moved) and the legend that names it. */
 export interface RepeatableRow {
@@ -163,6 +164,7 @@ function RowFieldset<R extends RepeatableRow>({
   readonly removeLabel: string;
   readonly onRemove: () => void;
 }) {
+  const isReadOnly = useIsReadOnly();
   return (
     <fieldset
       id={rowFieldsetId(listId, row.key)}
@@ -177,7 +179,9 @@ function RowFieldset<R extends RepeatableRow>({
       </legend>
       <div className="clear-both flex flex-col gap-4 pt-3">
         {children}
-        <ListButton text={removeText} label={removeLabel} onPress={onRemove} />
+        {isReadOnly ? null : (
+          <ListButton text={removeText} label={removeLabel} onPress={onRemove} />
+        )}
       </div>
     </fieldset>
   );
@@ -216,12 +220,14 @@ function ListFooter<R extends RepeatableRow>({
   readonly onAdd: () => void;
 }) {
   const { id, rows, max, error } = props;
+  const isReadOnly = useIsReadOnly();
+  const isFull = rows.length >= max;
   return (
     <>
-      {rows.length < max ? (
-        <ListButton id={`${id}-add`} text={props.addLabel} onPress={onAdd} />
-      ) : (
+      {isReadOnly ? null : isFull ? (
         <p className={textStyles({ variant: "bodySmall", tone: "muted" })}>{props.capText}</p>
+      ) : (
+        <ListButton id={`${id}-add`} text={props.addLabel} onPress={onAdd} />
       )}
       <FieldMessage id={id} error={error} />
     </>

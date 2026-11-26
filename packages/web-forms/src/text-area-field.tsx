@@ -2,6 +2,8 @@ import { fieldStyles, fieldTextStyles } from "@ampm/ui/styles";
 
 import { fieldAria } from "./field-message";
 import { FieldShell } from "./field-shell";
+import { useIsReadOnly } from "./read-only";
+import { frameStateOf } from "./text-field";
 
 export interface TextAreaFieldProps {
   readonly id: string;
@@ -26,15 +28,17 @@ export function TextAreaField({
   rows = 4,
   className,
 }: TextAreaFieldProps) {
+  const isReadOnly = useIsReadOnly();
   return (
     <FieldShell {...{ id, label, error, help, className }}>
-      <div className={fieldStyles({ state: error ? "error" : "default", multiline: true })}>
+      <div className={fieldStyles({ state: frameStateOf(error, isReadOnly), multiline: true })}>
         <textarea
           id={id}
           {...fieldAria(id, { error, help })}
           rows={rows}
           value={value}
           onChange={onChange}
+          readOnly={isReadOnly || undefined}
           className={fieldTextStyles({ multiline: true })}
         />
       </div>

@@ -11,7 +11,9 @@ import {
 
 import { fieldAria } from "./field-message";
 import { FieldShell } from "./field-shell";
+import { useIsReadOnly } from "./read-only";
 import type { SelectOption } from "./select-field";
+import { frameStateOf } from "./text-field";
 
 export interface NumberUnitFieldProps {
   /** The number's id: the label points at it; the unit list is `<id>-unit`. */
@@ -62,6 +64,7 @@ function UnitSelect({
 }: Pick<NumberUnitFieldProps, "id" | "unit" | "units" | "onUnitChange" | "unitLabel" | "onBlur"> & {
   readonly describedBy: string | undefined;
 }) {
+  const isReadOnly = useIsReadOnly();
   return (
     <>
       <span aria-hidden className={fieldAffixStyles}>
@@ -74,6 +77,7 @@ function UnitSelect({
         value={unit}
         onChange={onUnitChange}
         onBlur={onBlur}
+        disabled={isReadOnly || undefined}
         className={cn(fieldTextStyles(), "flex-none cursor-pointer appearance-none")}
       >
         {units.map((option) => (
@@ -104,9 +108,10 @@ function UnitSelect({
 export function NumberUnitField(props: NumberUnitFieldProps) {
   const { id, label, value, onChange, error, help, required, optionalText, className } = props;
   const aria = fieldAria(id, { error, help, required });
+  const isReadOnly = useIsReadOnly();
   return (
     <FieldShell {...{ id, label, optionalText, error, help, className }}>
-      <div className={fieldStyles({ state: error ? "error" : "default" })}>
+      <div className={fieldStyles({ state: frameStateOf(error, isReadOnly) })}>
         <input
           id={id}
           {...aria}
@@ -116,6 +121,7 @@ export function NumberUnitField(props: NumberUnitFieldProps) {
           value={value}
           onChange={onChange}
           onBlur={props.onBlur}
+          readOnly={isReadOnly || undefined}
           className={cn(fieldTextStyles(), "min-w-0 tabular-nums")}
         />
         <UnitSelect {...props} describedBy={aria["aria-describedby"]} />

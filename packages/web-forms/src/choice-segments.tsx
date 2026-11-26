@@ -10,6 +10,7 @@ import {
   type ChoiceLook,
 } from "./choice-segments.styles";
 import { FieldMessage } from "./field-message";
+import { useIsReadOnly } from "./read-only";
 
 export interface ChoiceOption {
   readonly value: string;
@@ -69,6 +70,7 @@ function ChoiceSegment({
   inputRef,
   required,
 }: ChoiceSegmentProps) {
+  const isReadOnly = useIsReadOnly();
   return (
     <label className={choiceTargetStyles(look)}>
       <input
@@ -79,6 +81,7 @@ function ChoiceSegment({
         checked={isChecked}
         onChange={onChange}
         required={required}
+        disabled={isReadOnly || undefined}
         aria-describedby={describedBy}
         className="peer sr-only"
       />
@@ -157,6 +160,7 @@ export function ChoiceSegments(props: ChoiceSegmentsProps) {
   const { name, legend, isLegendHidden = false, options, value, onChange, look = "solid" } = props;
   const { description, error, help, clearLabel, className, required } = props;
   const firstRadio = useRef<HTMLInputElement>(null);
+  const isReadOnly = useIsReadOnly();
   const describedBy = describedByOf(name, { description, error, help });
   // Named only where Clear points at it, so a choice without Clear keeps its markup as it was.
   const legendId = clearLabel === undefined ? undefined : `${name}-legend`;
@@ -182,7 +186,7 @@ export function ChoiceSegments(props: ChoiceSegmentsProps) {
           />
         ))}
       </div>
-      {clearLabel !== undefined && legendId !== undefined && value !== "" ? (
+      {clearLabel !== undefined && legendId !== undefined && value !== "" && !isReadOnly ? (
         <ClearButton label={clearLabel} legendId={legendId} onClear={clear} />
       ) : null}
       <FieldMessage id={name} error={error} help={help} />
