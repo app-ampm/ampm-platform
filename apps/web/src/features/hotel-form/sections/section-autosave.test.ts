@@ -121,6 +121,33 @@ describe("when a section saves", () => {
     expect(calls[1]?.expectedVersion).toBe(3);
   });
 
+  it("keeps saying Saving… when a save lands while newer typing still waits out the delay", async () => {
+    const { autosave, calls, last, answer } = harness();
+    autosave.change(payload(31));
+    autosave.flush();
+    // Typed while the first save is on its way: it waits out its own 1.5 seconds.
+    autosave.change(payload(32));
+    await answer(0, { version: 3 });
+    expect(last()).toEqual({ kind: "saving" });
+    await vi.advanceTimersByTimeAsync(AUTOSAVE_DELAY_MS);
+    expect(calls[1]?.payload).toEqual(payload(32));
+    await answer(1, { version: 4 });
+    expect(last()).toEqual({ kind: "saved" });
+  });
+
+  it("says Saving… as soon as the person types after Saved, and Saved again if they undo", async () => {
+    const { autosave, calls, last, answer } = harness();
+    autosave.change(payload(31));
+    autosave.flush();
+    await answer(0, { version: 3 });
+    autosave.change(payload(32));
+    expect(last()).toEqual({ kind: "saving" });
+    autosave.change(payload(31));
+    await vi.advanceTimersByTimeAsync(AUTOSAVE_DELAY_MS);
+    expect(calls).toHaveLength(1);
+    expect(last()).toEqual({ kind: "saved" });
+  });
+
   it("sends nothing while the answers match what is saved, No changes included", async () => {
     const { autosave, calls } = harness();
     autosave.change(SAVED);

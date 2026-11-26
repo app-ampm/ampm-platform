@@ -130,6 +130,8 @@ class AutosaveRun<K extends HotelFormSectionKey> {
     if (this.isHeld()) return;
     this.clearTimer();
     this.timer = setTimeout(() => this.save(), AUTOSAVE_DELAY_MS);
+    // What was just typed waits out the delay: the line says Saving… rather than the last Saved.
+    if (this.state.kind === "saved" && this.isUnsaved()) this.show({ kind: "saving" });
   }
 
   flush(): void {
@@ -208,7 +210,8 @@ class AutosaveRun<K extends HotelFormSectionKey> {
     this.isSending = false;
     this.version = saved.version;
     this.savedText = text;
-    this.show({ kind: "saved" });
+    // Newer typing still to go (queued, or waiting out its delay) keeps the line at Saving….
+    this.show(this.isUnsaved() ? { kind: "saving" } : { kind: "saved" });
     if (this.isQueued) this.save();
   }
 
