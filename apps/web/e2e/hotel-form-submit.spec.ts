@@ -17,8 +17,8 @@ import { colleagueSignedIn, sessionOf, signIn, type FormPerson } from "./support
 /*
  * The hotel form's review, submit and status end to end (D-190 §5: HF-06 and HF-07): what is missing
  * before a submit, a submit with both declarations, the status page, a correction, removing your details,
- * and a colleague's save during the review refused as 409 sectionsChanged. Each page is checked with axe at
- * a phone's width and a desktop's.
+ * and a colleague's save during the review refused as 409 sectionsChanged, kept off the page until the
+ * person takes the latest answers in. Each page is checked with axe at a phone's width and a desktop's.
  */
 
 const person = (fullName: string): FormPerson => ({
@@ -139,7 +139,7 @@ test("HF-07: a correction, then Remove my details withdraws every consent and en
   ).toBeVisible();
 });
 
-test("HF-06: a colleague saving during the review is a 409 sectionsChanged, marked, then submitted", async ({
+test("HF-06: a colleague saving during the review is a 409 sectionsChanged, marked, taken in, then submitted", async ({
   page,
   formLink,
   browser,
@@ -156,7 +156,12 @@ test("HF-06: a colleague saving during the review is a 409 sectionsChanged, mark
   await leaveAndSave(ravi);
   await ravi.context().close();
 
+  // The 409 makes the page read the draft again; the colleague's save arrives under it with that read.
+  const readAgain = page.waitForResponse(
+    (response) => response.url().endsWith("/hotel-form/draft") && response.status() === 200,
+  );
   await submit(page);
+  await readAgain;
   const notice = page.locator("#hf-submit-notice");
   await expect(notice).toContainText(
     "A colleague changed some answers while you were reviewing them.",
@@ -165,7 +170,15 @@ test("HF-06: a colleague saving during the review is a 409 sectionsChanged, mark
   await expect(notice.getByRole("link", { name: "Rooms" })).toBeVisible();
   const rooms = page.getByRole("article", { name: "Rooms" });
   await expect(rooms).toContainText("Changed by a colleague");
+  // The page keeps showing what it opened with until the person takes the latest answers in.
+  await expect(rooms).not.toContainText("40");
+  await expect(
+    page.getByRole("status").filter({ hasText: "A colleague changed Rooms" }),
+  ).toBeAttached();
+  await expectAccessibleAtBothWidths(page);
+  await page.getByRole("button", { name: "Show the latest answers" }).click();
   await expect(rooms).toContainText("40");
+  await expect(rooms).not.toContainText("Changed by a colleague");
   await expect(page.getByText(/^Ravi Kumar saved Rooms at \d\d:\d\d\.$/)).toBeVisible();
   // The declarations are kept as ticked.
   await expect(

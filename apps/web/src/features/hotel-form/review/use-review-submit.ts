@@ -50,11 +50,14 @@ export interface ReviewSubmit {
   readonly fields: DeclarationFields;
   readonly errors: DeclarationErrors;
   readonly notice: ShownNotice | null;
+  /** Sections a 409 sectionsChanged named: marked until the page takes the latest answers in. */
   readonly changed: readonly HotelFormSectionKey[];
   readonly isSending: boolean;
   readonly setAccuracy: (accepted: boolean) => void;
   readonly setDisplay: (answer: string) => void;
   readonly submit: () => void;
+  /** The latest answers were taken in: the 409's marks, and its notice, have done their work. */
+  readonly clearChanged: () => void;
 }
 
 /** Puts focus on the first declaration that needs an answer: 7.4's tick, else 7.5's first answer. */
@@ -102,7 +105,11 @@ function useSubmitNotice() {
     setNotice(null);
     setChanged([]);
   };
-  return { notice, changed, setChanged, show, clear };
+  const clearChanged = () => {
+    setChanged([]);
+    setNotice((current) => (current?.kind === "sections_changed" ? null : current));
+  };
+  return { notice, changed, setChanged, show, clear, clearChanged };
 }
 
 type SubmitNoticeState = ReturnType<typeof useSubmitNotice>;
@@ -148,7 +155,7 @@ function useSubmitCall(site: HotelFormSite, botCheck: BotCheckControl, page: Sub
 /**
  * HF-06's Submit (D-190 §5): 7.4 and 7.5 as the person answers them, then on Submit, in order, the
  * declarations (focus on the first unanswered), the missing items, the bot check's pass, and the call with
- * the section versions the page showed. Success goes to the status page; a refusal shows beside Submit and
+ * the section versions the page showed (`draft` is the page's snapshot, never a later read). Success goes to the status page; a refusal shows beside Submit and
  * takes focus (useSubmitCall); a 429 holds Submit back until its wait is over, saying so again if pressed.
  * Submit is disabled only while it sends.
  *
@@ -178,7 +185,7 @@ export function useReviewSubmit(
     void call.send(step.request);
   };
   const { fields, errors, setAccuracy, setDisplay } = declarations;
-  const { notice, changed } = page;
+  const { notice, changed, clearChanged } = page;
   return {
     fields,
     errors,
@@ -188,5 +195,6 @@ export function useReviewSubmit(
     setAccuracy,
     setDisplay,
     submit,
+    clearChanged,
   };
 }

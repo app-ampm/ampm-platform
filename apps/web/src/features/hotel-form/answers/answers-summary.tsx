@@ -135,7 +135,12 @@ export interface AnswersSummaryProps {
 export function AnswersSummary({ sections, canEdit, changed = [] }: AnswersSummaryProps) {
   return (
     <section aria-labelledby={ANSWERS_HEADING_ID} className="flex min-w-0 flex-col gap-4">
-      <h2 id={ANSWERS_HEADING_ID} className={textStyles({ variant: "heading" })}>
+      {/* Focus comes here once the review takes a colleague's answers in (fix C1). */}
+      <h2
+        id={ANSWERS_HEADING_ID}
+        tabIndex={-1}
+        className={cn(textStyles({ variant: "heading" }), "outline-none")}
+      >
         {COPY.heading}
       </h2>
       {HOTEL_FORM_SECTION_KEYS.map((key) => (

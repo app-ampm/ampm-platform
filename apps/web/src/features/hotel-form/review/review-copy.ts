@@ -12,6 +12,19 @@ export const REVIEW_COPY = {
   lead: "Check each section's answers. Edit a section to change it, then come back here to submit the form to AMPM.",
   loading: "Loading your answers…",
   failed: "We couldn't load your answers.",
+  /** Sections a colleague saved while the page was open, kept as the page showed them (fix C1). */
+  changed: {
+    heading: "A colleague changed some answers while you were reviewing",
+    announce: (sections: string) =>
+      `A colleague changed ${sections} while you were reviewing. Show the latest answers before you submit.`,
+    body: "The sections marked below still show the answers this page opened with. Show the latest answers to see what changed: your choices under Before you submit are kept.",
+    showLatest: "Show the latest answers",
+    /** "Rooms", "Rooms and Venues", "Rooms, Venues and Booking terms". */
+    sections: (titles: readonly string[]) =>
+      titles.length < 2
+        ? titles.join("")
+        : `${titles.slice(0, -1).join(", ")} and ${titles.at(-1)}`,
+  },
   colleagues: {
     heading: "A colleague saved some answers a moment ago",
     named: (name: string, section: string, time: string) => `${name} saved ${section} at ${time}.`,

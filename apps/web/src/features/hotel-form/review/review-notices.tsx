@@ -112,6 +112,43 @@ export function ColleagueWarning({ saves }: { readonly saves: readonly Colleague
   );
 }
 
+/**
+ * A colleague changed sections while the page was open (D-190 §5, review fix C1): announced in a polite
+ * live region (always present, so a change is heard), and shown above the answers with "Show the latest
+ * answers", which takes them in. Nothing visible while nothing changed.
+ *
+ *   <ChangedNotice changed={changed} onShowLatest={showLatest} />
+ */
+export function ChangedNotice({
+  changed,
+  onShowLatest,
+}: {
+  readonly changed: readonly HotelFormSectionKey[];
+  readonly onShowLatest: () => void;
+}) {
+  const sections = COPY.changed.sections(changed.map((key) => SECTION_TITLES[key].title));
+  return (
+    <>
+      <p role="status" aria-live="polite" className="sr-only">
+        {changed.length > 0 ? COPY.changed.announce(sections) : ""}
+      </p>
+      {changed.length > 0 ? (
+        <section aria-labelledby="hf-changed-heading" className={cn(GOLD_CALLOUT, "gap-3")}>
+          <h2 id="hf-changed-heading" className={textStyles({ variant: "label", tone: "primary" })}>
+            {COPY.changed.heading}
+          </h2>
+          <p className={textStyles({ variant: "bodySmall", tone: "primary" })}>
+            {COPY.changed.body}
+          </p>
+          <FormButton variant="secondary" onClick={onShowLatest}>
+            {COPY.changed.showLatest}
+          </FormButton>
+        </section>
+      ) : null}
+    </>
+  );
+}
+
 export interface MissingPanelProps {
   readonly items: readonly HotelFormMissingItem[];
   /** Sections not complete: a warning only, empty sections never block a submit. */
