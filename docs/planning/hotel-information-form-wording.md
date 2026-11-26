@@ -7,7 +7,7 @@ Placeholders are in angle brackets. The help contact and the reply-to are AMPM's
 
 ## 1. Privacy notice for the people who fill in the form
 
-Version `hf-notice-1`. It is shown on the welcome page (HF-01), and must be accepted before a code is issued.
+Version `hf-notice-2026-11-25` (core `HOTEL_FORM_NOTICE_VERSION`). It is shown on the welcome page (HF-01), and must be accepted before a code is issued.
 
 > **How AMPM uses what you give us**
 >
@@ -66,13 +66,13 @@ This is an email, sent when an AMPM reviewer adds the person as a hotel contact.
 
 ## 3. Accuracy confirmation (question 7.4)
 
-Version `hf-accuracy-1`. It is a required tick on the review page (HF-06), recorded against the submitted revision.
+Version `hf-accuracy-2026-11-26` (core `HOTEL_FORM_ACCURACY_VERSION`). It is a required tick on the review page (HF-06), recorded against the submitted revision.
 
 > - [ ] I confirm that the information in this form is correct to the best of my knowledge. I am authorised by the hotel to share it, including the work contact details of the people named in it.
 
 ## 4. Display authorisation (question 7.5, reworded)
 
-Version `hf-display-1`. It is an explicit Yes or No on the review page (HF-06), never pre-selected, and recorded against the submitted revision.
+Version `hf-display-2026-11-26` (core `HOTEL_FORM_DISPLAY_VERSION`). It is an explicit Yes or No on the review page (HF-06), never pre-selected, and recorded against the submitted revision.
 
 > **May AMPM show your hotel's details to its clients?**
 >
