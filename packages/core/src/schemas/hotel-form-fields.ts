@@ -192,6 +192,7 @@ export const hotelFormAccessPoint = z
 
 /**
  * A room or venue row's key: a UUID the page makes when the row is added, kept while it is renamed or
- * moved, so a photo (Slice 9) and the merge name the row and never its place in the list.
+ * moved, so a photo (Slice 9) and the merge name the row and never its place in the list. Kept lower-case,
+ * so two ids that differ only in case are one row's, which a section refuses twice.
  */
-export const hotelFormRowId = uuid;
+export const hotelFormRowId = uuid.transform((id) => id.toLowerCase());
