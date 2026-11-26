@@ -5,6 +5,7 @@ import { HOTEL_CUISINE_OTHER } from "./config";
 import {
   HOTEL_FORM_CONFLICT_PATH,
   HOTEL_FORM_READ_ONLY_PATH,
+  HOTEL_FORM_TOO_LARGE_PATH,
   hotelFormDraftView,
   hotelFormReadOnlyDetails,
   hotelFormReadOnlyOf,
@@ -13,10 +14,13 @@ import {
   hotelFormSectionParams,
   hotelFormSectionSaved,
   hotelFormSectionSaveRequest,
+  hotelFormSectionTooLargeDetails,
   type HotelFormSectionConflict,
 } from "./hotel-form-draft";
 import { HOTEL_FACILITY_OPTIONS, HOTEL_FACILITY_OTHER } from "./hotel-form-options";
+import { HOTEL_FORM_ERRORS } from "./hotel-form-refusals";
 import { HOTEL_FORM_CAPS, HOTEL_FORM_SECTION_KEYS } from "./hotel-form-section-keys";
+import { hotelFormMissingItemsOf } from "./hotel-form-submit";
 
 /*
  * The draft's contracts (D-190 §3): `GET /hotel-form/draft`'s answer, a section's save and its answer,
@@ -175,5 +179,22 @@ describe("the 409s' details", () => {
     expect(
       hotelFormReadOnlyOf({ code: "conflict", details: hotelFormSectionConflictDetails(conflict) }),
     ).toBeNull();
+  });
+});
+
+describe("a section over its cap (400 sectionTooLarge)", () => {
+  it("names the cap of the section it refused, on the answers, never as a section's missing item", () => {
+    expect(hotelFormSectionTooLargeDetails("rooms")).toEqual([
+      { path: HOTEL_FORM_TOO_LARGE_PATH, message: "Keep this section under 96 KB" },
+    ]);
+    expect(hotelFormSectionTooLargeDetails("property")[0]?.message).toBe(
+      "Keep this section under 32 KB",
+    );
+    const refused = new AppError(
+      "validation_failed",
+      HOTEL_FORM_ERRORS.sectionTooLarge,
+      hotelFormSectionTooLargeDetails("venues"),
+    );
+    expect(hotelFormMissingItemsOf(refused)).toEqual([]);
   });
 });

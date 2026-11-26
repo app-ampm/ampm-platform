@@ -66,7 +66,7 @@ describe("the hotel form's messages", () => {
     expect(HOTEL_FORM_ERRORS.noticeStale).toBe("The form was updated. Reload the page.");
   });
 
-  it("has a message for every refusal of the identity step", () => {
+  it("has a message for every refusal of the identity step and of the form (D-190 §3)", () => {
     expect(Object.keys(HOTEL_FORM_ERRORS).sort()).toEqual(
       [
         "botCheck",
@@ -86,6 +86,13 @@ describe("the hotel form's messages", () => {
         "tooSoon",
         "writeLimit",
         "writesUnavailable",
+        "sectionConflict",
+        "sectionTooLarge",
+        "submitIncomplete",
+        "alreadySubmitted",
+        "correctionLimit",
+        "notSubmitted",
+        "noChangesOnOnboarding",
       ].sort(),
     );
   });
@@ -93,5 +100,22 @@ describe("the hotel form's messages", () => {
   it("tells a person whose change could not be counted that it was not saved, not that codes failed", () => {
     expect(HOTEL_FORM_ERRORS.writesUnavailable).not.toBe(HOTEL_FORM_ERRORS.codesUnavailable);
     expect(HOTEL_FORM_ERRORS.writesUnavailable).not.toMatch(/code/i);
+  });
+
+  it("words each of the form's refusals apart, so the page never confuses two of them", () => {
+    const form = [
+      HOTEL_FORM_ERRORS.sectionConflict,
+      HOTEL_FORM_ERRORS.sectionTooLarge,
+      HOTEL_FORM_ERRORS.submitIncomplete,
+      HOTEL_FORM_ERRORS.alreadySubmitted,
+      HOTEL_FORM_ERRORS.correctionLimit,
+      HOTEL_FORM_ERRORS.notSubmitted,
+      HOTEL_FORM_ERRORS.noChangesOnOnboarding,
+      HOTEL_FORM_ERRORS.readOnly,
+    ];
+    expect(new Set(form).size).toBe(form.length);
+    for (const message of form) expect(message.length).toBeGreaterThan(20);
+    // A correction is a message for AMPM; the limit says when another may go.
+    expect(HOTEL_FORM_ERRORS.correctionLimit).toMatch(/tomorrow|later/i);
   });
 });

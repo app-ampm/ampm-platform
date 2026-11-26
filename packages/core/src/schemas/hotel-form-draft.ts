@@ -5,7 +5,11 @@ import { isoDateTime } from "./common";
 import { hotelFormLinkState, hotelFormRequestStatus } from "./hotel-form";
 import { hotelCuisineOptionsView } from "./hotel-catalogue";
 import { hotelInfoRequestKind } from "./hotel-info-requests";
-import { hotelFormSectionKey, type HotelFormSectionKey } from "./hotel-form-section-keys";
+import {
+  HOTEL_FORM_SECTION_MAX_BYTES,
+  hotelFormSectionKey,
+  type HotelFormSectionKey,
+} from "./hotel-form-section-keys";
 import { HOTEL_FORM_SECTION_DRAFTS, type HotelFormSectionAnswers } from "./hotel-form-sections";
 import type { HotelFormRefusedCall } from "./hotel-form-submit";
 
@@ -193,9 +197,23 @@ export function hotelFormSectionConflictDetails(conflict: HotelFormSectionConfli
   return [{ path: HOTEL_FORM_CONFLICT_PATH, message: JSON.stringify(conflict) }];
 }
 
-/** A `readOnly`'s details for the error envelope. */
+/** A `readOnly`'s details for the error envelope; submit's `alreadySubmitted` carries the same. */
 export function hotelFormReadOnlyDetails(readOnly: HotelFormReadOnly): ErrorDetail[] {
   return [{ path: HOTEL_FORM_READ_ONLY_PATH, message: JSON.stringify(readOnly) }];
+}
+
+/** The detail path of a section's 400 `sectionTooLarge`: its answers, never one of the section keys. */
+export const HOTEL_FORM_TOO_LARGE_PATH = "answers";
+
+/**
+ * A `sectionTooLarge`'s details: the cap the section is over, in KB (HOTEL_FORM_SECTION_MAX_BYTES).
+ *
+ * @example
+ * new AppError("validation_failed", HOTEL_FORM_ERRORS.sectionTooLarge, hotelFormSectionTooLargeDetails(key));
+ */
+export function hotelFormSectionTooLargeDetails(key: HotelFormSectionKey): ErrorDetail[] {
+  const kb = HOTEL_FORM_SECTION_MAX_BYTES[key] / 1024;
+  return [{ path: HOTEL_FORM_TOO_LARGE_PATH, message: `Keep this section under ${kb} KB` }];
 }
 
 /** The JSON a 409 carries under `path`, or undefined when it carries none that parses. */

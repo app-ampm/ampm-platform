@@ -12,6 +12,7 @@ import {
   hotelFormSubmitRequest,
   hotelFormSubmitted,
   hotelFormWithdrawalRequest,
+  hotelFormWithdrawn,
 } from "./hotel-form-declarations";
 import { HOTEL_FORM_CODE_ACTION, HOTEL_FORM_NOTICE_VERSION } from "./hotel-form";
 
@@ -159,5 +160,24 @@ describe("hotelFormWithdrawalRequest", () => {
         .success,
     ).toBe(false);
     expect(hotelFormWithdrawalRequest.safeParse({ kind: "all" }).success).toBe(false);
+  });
+});
+
+describe("hotelFormWithdrawn", () => {
+  it("answers the kinds this call withdrew and whether a removal is asked for, nothing more", () => {
+    const answer = { withdrawn: ["display_authorisation"], removalRequested: false };
+    expect(hotelFormWithdrawn.parse(answer)).toEqual(answer);
+    const all = {
+      withdrawn: ["privacy_notice", "accuracy_attestation", "display_authorisation"],
+      removalRequested: true,
+    };
+    expect(hotelFormWithdrawn.parse(all)).toEqual(all);
+    expect(hotelFormWithdrawn.parse({ withdrawn: [], removalRequested: true }).withdrawn).toEqual(
+      [],
+    );
+    expect(
+      hotelFormWithdrawn.safeParse({ withdrawn: ["photos"], removalRequested: false }).success,
+    ).toBe(false);
+    expect(hotelFormWithdrawn.safeParse({ ...answer, consentIds: [] }).success).toBe(false);
   });
 });

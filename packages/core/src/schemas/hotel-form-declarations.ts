@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import { isoDateTime, storableJsonText } from "./common";
 import { hotelFormRequestStatus } from "./hotel-form";
-import { HOTEL_INFO_REQUEST_REFERENCE } from "./hotel-info-requests";
+import { HOTEL_INFO_REQUEST_REFERENCE, hotelInfoRequestConsentKind } from "./hotel-info-requests";
 
 /*
  * DRAFT wording, for counsel's review and AMPM's approval before real hotels use the form (HF-G2;
@@ -13,7 +13,8 @@ import { HOTEL_INFO_REQUEST_REFERENCE } from "./hotel-info-requests";
  * pre-selects. Each is a consent row bound to the submitted revision's hash, recording the version of the
  * words below; the API refuses a submit naming another version ("The form was updated. Reload the
  * page."), so the words and their version change together, as the privacy notice's do
- * (HOTEL_FORM_NOTICE_VERSION). Then the bodies of submit, of a correction and of a withdrawal.
+ * (HOTEL_FORM_NOTICE_VERSION). Then the bodies of submit, of a correction and of a withdrawal, and the
+ * withdrawal's answer.
  */
 
 /** The version of 7.4's words, recorded on each `accuracy_attestation` consent. */
@@ -125,3 +126,12 @@ export const hotelFormWithdrawalRequest = z
   .object({ kind: hotelFormWithdrawalKind, requestRemoval: z.boolean() })
   .strict();
 export type HotelFormWithdrawalRequest = z.infer<typeof hotelFormWithdrawalRequest>;
+
+/**
+ * `consent-withdrawal`'s answer: the kinds of consent this call withdrew (none when the person had no live
+ * one of that kind left), and whether the person's details are now asked to be removed, for a Super Admin.
+ */
+export const hotelFormWithdrawn = z
+  .object({ withdrawn: z.array(hotelInfoRequestConsentKind), removalRequested: z.boolean() })
+  .strict();
+export type HotelFormWithdrawn = z.infer<typeof hotelFormWithdrawn>;
