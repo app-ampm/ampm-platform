@@ -81,6 +81,28 @@ describe("SiteverifyBotCheckAdapter (C1)", () => {
     expect(await adapter(answering({ success: true }, 500)).verify("t", SITE)).toBe(false);
   });
 
+  it("logs the provider's error codes when it refuses a token, never the token itself", async () => {
+    const refused = answering({
+      success: false,
+      "error-codes": ["timeout-or-duplicate", "Not A Code <script>", "x".repeat(65)],
+    });
+    expect(await adapter(refused).verify("token-secret-123", SITE)).toBe(false);
+    expect(logger.warn).toHaveBeenCalledWith("bot_check.rejected", {
+      errorCodes: ["timeout-or-duplicate"],
+    });
+    expect(JSON.stringify(logger.warn.mock.calls)).not.toContain("token-secret-123");
+  });
+
+  it("logs a refusal with no error codes as an empty list", async () => {
+    expect(await adapter(answering({ success: false })).verify("t", SITE)).toBe(false);
+    expect(logger.warn).toHaveBeenCalledWith("bot_check.rejected", { errorCodes: [] });
+  });
+
+  it("logs the status of an error answer from the provider", async () => {
+    expect(await adapter(answering({ success: true }, 503)).verify("t", SITE)).toBe(false);
+    expect(logger.warn).toHaveBeenCalledWith("bot_check.http_error", { status: 503 });
+  });
+
   it("fails closed on an answer it cannot read, never trusting its shape", async () => {
     for (const body of [{ success: "true" }, { ok: true }, null, [true], "success"]) {
       expect(
