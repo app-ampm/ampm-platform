@@ -6,6 +6,7 @@ import {
   fieldDividerStyles,
   fieldStyles,
   fieldTextStyles,
+  focusRingStyles,
   textStyles,
 } from "@ampm/ui/styles";
 
@@ -52,8 +53,39 @@ export function unitSelectId(id: string): string {
   return `${id}-unit`;
 }
 
-/** The unit list after the number: a native select with a name of its own and a chevron for sight. */
-function UnitSelect({
+type UnitListProps = Pick<
+  NumberUnitFieldProps,
+  "id" | "unit" | "units" | "onUnitChange" | "unitLabel" | "onBlur"
+> & { readonly describedBy: string | undefined };
+
+/** The list's look: the field's text in a target at least 44px wide, room for the chevron, its own ring. */
+const UNIT_LIST_STYLES = cn(
+  fieldTextStyles(),
+  "min-w-touch cursor-pointer appearance-none rounded-full border border-transparent pl-3 pr-8",
+  focusRingStyles,
+);
+
+/** The chevron, for sight only, over the list's own box: part of its target, presses pass through. */
+function UnitChevron() {
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        textStyles({ variant: "body", tone: "muted" }),
+        "pointer-events-none absolute inset-y-0 right-3 flex items-center",
+      )}
+    >
+      ▾
+    </span>
+  );
+}
+
+/**
+ * The unit list itself: a native select with a name of its own, at least 44px wide and the field's height,
+ * ringed in gold on its own when it has keyboard focus (the field's ring says the field has it), and the
+ * chevron drawn inside its box, so pressing the chevron opens the list too.
+ */
+function UnitList({
   id,
   unit,
   units,
@@ -61,15 +93,10 @@ function UnitSelect({
   unitLabel,
   describedBy,
   onBlur,
-}: Pick<NumberUnitFieldProps, "id" | "unit" | "units" | "onUnitChange" | "unitLabel" | "onBlur"> & {
-  readonly describedBy: string | undefined;
-}) {
+}: UnitListProps) {
   const isReadOnly = useIsReadOnly();
   return (
-    <>
-      <span aria-hidden className={fieldAffixStyles}>
-        <span className={fieldDividerStyles} />
-      </span>
+    <span className="relative flex shrink-0 self-stretch">
       <select
         id={unitSelectId(id)}
         aria-label={unitLabel}
@@ -78,7 +105,7 @@ function UnitSelect({
         onChange={onUnitChange}
         onBlur={onBlur}
         disabled={isReadOnly || undefined}
-        className={cn(fieldTextStyles(), "flex-none cursor-pointer appearance-none")}
+        className={UNIT_LIST_STYLES}
       >
         {units.map((option) => (
           <option key={option.value} value={option.value} className="bg-surface text-primary">
@@ -86,12 +113,19 @@ function UnitSelect({
           </option>
         ))}
       </select>
-      <span
-        aria-hidden
-        className={cn(textStyles({ variant: "body", tone: "muted" }), "pointer-events-none")}
-      >
-        ▾
+      <UnitChevron />
+    </span>
+  );
+}
+
+/** The unit list after the number, past a pearl rule. */
+function UnitSelect(props: UnitListProps) {
+  return (
+    <>
+      <span aria-hidden className={fieldAffixStyles}>
+        <span className={fieldDividerStyles} />
       </span>
+      <UnitList {...props} />
     </>
   );
 }

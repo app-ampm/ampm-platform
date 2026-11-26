@@ -56,6 +56,19 @@ describe("number with its unit", () => {
     expect(html).toContain("border-brand");
   });
 
+  it("gives the unit list a focus ring of its own and a 44px target with the chevron inside it", () => {
+    const html = field();
+    const [select] = tagsWith(html, "select", 'id="size-unit"');
+    // Its own gold border and halo on keyboard focus, apart from the field's ring around both controls.
+    expect(select).toContain("web:focus-visible:border-brand");
+    expect(select).toContain("web:focus-visible:shadow-halo");
+    expect(select).toContain("min-w-touch");
+    // The chevron is drawn inside the list's own box, so pressing it opens the list too.
+    expect(html).toMatch(
+      /<span class="relative[^"]*"><select id="size-unit"[^>]*>[\s\S]*?<\/select><span aria-hidden="true"[^>]*pointer-events-none[^>]*>▾<\/span><\/span>/,
+    );
+  });
+
   it("describes both with the help line while there is no error", () => {
     const html = field({ help: "As on your fact sheet", inputMode: "decimal" });
     expect(tagsWith(html, "input", 'id="size"')[0]).toContain('aria-describedby="size-help"');
