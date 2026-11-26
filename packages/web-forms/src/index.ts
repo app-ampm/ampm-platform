@@ -11,9 +11,15 @@
  *     autoComplete="name" error={errors.fullName} />
  *   <MobileField id="mobile" label="Mobile number" value={fields.mobile} onChange={…} required />
  *   <CodeField id="code" label="Your 6-digit code" value={code} onChange={setCode} />
+ *
+ * The hotel information form adds (D-190 §5): a number with its unit (NumberUnitField), a choice that can
+ * be cleared back to unanswered (ChoiceSegments' `clearLabel`), repeatable rows each in a fieldset with
+ * its legend (RepeatableFieldsets) and a chip group with Other (ChipGroupField).
  */
 export { CheckboxField } from "./checkbox-field";
 export type { CheckboxFieldProps } from "./checkbox-field";
+export { ChipGroupField } from "./chip-group-field";
+export type { ChipGroupFieldProps, ChipGroupOther } from "./chip-group-field";
 export { ChoiceSegments } from "./choice-segments";
 export type { ChoiceOption, ChoiceSegmentsProps } from "./choice-segments";
 export type { ChoiceLook } from "./choice-segments.styles";
@@ -26,7 +32,11 @@ export { FieldShell } from "./field-shell";
 export type { FieldShellProps } from "./field-shell";
 export { MOBILE_PREFIX, MobileField } from "./mobile-field";
 export type { MobileFieldProps } from "./mobile-field";
+export { NumberUnitField, unitSelectId } from "./number-unit-field";
+export type { NumberUnitFieldProps } from "./number-unit-field";
 export { peerFocusRingStyles } from "./peer-focus.styles";
+export { RepeatableFieldsets, focusTargetAfter, rowFieldsetId } from "./repeatable-fieldsets";
+export type { FocusTarget, RepeatableFieldsetsProps, RepeatableRow } from "./repeatable-fieldsets";
 export { SelectField } from "./select-field";
 export type { SelectFieldProps, SelectOption } from "./select-field";
 export { TextAreaField } from "./text-area-field";
