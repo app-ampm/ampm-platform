@@ -69,8 +69,24 @@ const siteverifyAnswer = z.object({
   success: z.boolean(),
   hostname: z.string().nullish(),
   action: z.string().nullish(),
+  "error-codes": z.array(z.unknown()).nullish(),
 });
 type SiteverifyAnswer = z.infer<typeof siteverifyAnswer>;
+
+/** A provider error code as Turnstile and reCAPTCHA write them (`timeout-or-duplicate`). */
+const ERROR_CODE = /^[a-z0-9-]{1,64}$/;
+const MAX_LOGGED_CODES = 10;
+
+/**
+ * The provider's reasons for a refusal, safe to log: only short lower-case codes, at most ten, so nothing
+ * the answer carries beyond its codes (and never the token) reaches the log.
+ */
+function loggableCodes(codes: SiteverifyAnswer["error-codes"]): string[] {
+  const safe = (codes ?? []).filter(
+    (code): code is string => typeof code === "string" && ERROR_CODE.test(code),
+  );
+  return safe.slice(0, MAX_LOGGED_CODES);
+}
 
 /** Why a successful verdict is still refused: it was solved elsewhere, or for another action. */
 function mismatch(
@@ -107,7 +123,12 @@ export class SiteverifyBotCheckAdapter implements BotCheckAdapter {
   async verify(token: string | undefined, options: BotCheckOptions): Promise<boolean> {
     if (!present(token)) return false;
     const answer = await this.ask(token, options.remoteIp);
-    if (answer === null || !answer.success) return false;
+    if (answer === null) return false;
+    if (!answer.success) {
+      // The provider's own reason (a used, expired or foreign token, a wrong secret), never the token.
+      this.logger.warn("bot_check.rejected", { errorCodes: loggableCodes(answer["error-codes"]) });
+      return false;
+    }
     const reason = mismatch(answer, options);
     if (reason !== null) {
       // A token solved elsewhere or for another form; logged by reason only, never the token or host.
@@ -128,7 +149,10 @@ export class SiteverifyBotCheckAdapter implements BotCheckAdapter {
         body,
         signal: AbortSignal.timeout(this.timeoutMs),
       });
-      if (!response.ok) return null;
+      if (!response.ok) {
+        this.logger.warn("bot_check.http_error", { status: response.status });
+        return null;
+      }
       const parsed = siteverifyAnswer.safeParse(await response.json());
       if (!parsed.success) this.logger.warn("bot_check.unreadable_answer", {});
       return parsed.success ? parsed.data : null;
