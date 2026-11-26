@@ -39,6 +39,7 @@ import {
   forgetHotelForm,
   HOTEL_FORM_DRAFT_QUERY_KEY,
   HOTEL_FORM_ME_QUERY_KEY,
+  hotelFormMutationKey,
   type HotelFormSessionCall,
 } from "./use-hotel-form";
 
@@ -246,6 +247,7 @@ export function useSaveHotelFormSection() {
   const api = useApiClient();
   const queryClient = useQueryClient();
   return useMutation<HotelFormSectionSaved, Error, HotelFormSectionSaveCall>({
+    mutationKey: hotelFormMutationKey("save"),
     mutationFn: (call) => hotelFormDraftCalls(api).saveSection(call),
     onSuccess: (saved, call) => cacheSaved(queryClient, call, saved),
     onError: (error, call) => cacheRefused(queryClient, call.section, error),
@@ -265,6 +267,7 @@ export function useSubmitHotelForm() {
   const api = useApiClient();
   const queryClient = useQueryClient();
   return useMutation<HotelFormSubmitted, Error, HotelFormSubmitCall>({
+    mutationKey: hotelFormMutationKey("submit"),
     mutationFn: (call) => hotelFormDraftCalls(api).submit(call),
     onSuccess: () => readAgain(queryClient),
     onError: (error) => {
@@ -281,6 +284,7 @@ export function useSubmitHotelForm() {
 export function useRequestHotelFormCorrection() {
   const api = useApiClient();
   return useMutation<Acknowledged, Error, HotelFormCorrectionCall>({
+    mutationKey: hotelFormMutationKey("correction"),
     mutationFn: (call) => hotelFormDraftCalls(api).requestCorrection(call),
   });
 }
@@ -297,6 +301,7 @@ export function useWithdrawHotelFormConsent() {
   const api = useApiClient();
   const queryClient = useQueryClient();
   return useMutation<HotelFormWithdrawn, Error, HotelFormWithdrawalCall>({
+    mutationKey: hotelFormMutationKey("withdrawal"),
     mutationFn: (call) => hotelFormDraftCalls(api).withdrawConsent(call),
     onSuccess: async (_withdrawn, { withdrawal }) => {
       if (withdrawal.kind === "all") forgetHotelForm(queryClient);

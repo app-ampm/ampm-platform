@@ -3,15 +3,9 @@ import {
   useForgetHotelForm,
   useOpenHotelForm,
   useRequestHotelFormCode,
-  useSignOutOfHotelForm,
-  useUpdateHotelFormMe,
   useVerifyHotelFormCode,
 } from "@ampm/api-client";
-import {
-  hotelFormLinkToken,
-  type HotelFormMeUpdateRequest,
-  type HotelFormPerson,
-} from "@ampm/core";
+import { hotelFormLinkToken, type HotelFormMeUpdateRequest } from "@ampm/core";
 
 import { codeStep } from "./code.form";
 import { detailsStep, type DetailsFields } from "./details.form";
@@ -33,7 +27,8 @@ import {
   takeLink,
   type SessionStore,
 } from "./hotel-form-link";
-import { asksForSession, refusalOf, saveOutcomeOf, type SaveOutcome } from "./refusal";
+import { asksForSession, refusalOf, type SaveOutcome } from "./refusal";
+import { useSessionCalls } from "./use-session-calls";
 import {
   useSessionViews,
   type DraftView,
@@ -134,7 +129,10 @@ function useOpening(
 const refusedBy = (dispatch: (event: FlowEvent) => void, call: HeldCall) => (error: unknown) =>
   dispatch({ type: "refused", refusal: refusalOf(error), now: Date.now(), call });
 
-/** Asking for a code (HF-02, and HF-03's resend), in the main flow or in place. */
+/**
+ * Asking for a code (HF-02, and HF-03's resend), in the main flow or in place. `reset` forgets the last
+ * request, which holds the claim (name, designation, mobile) and the link's secret.
+ */
 function useSendCode(state: FlowState, dispatch: (event: FlowEvent) => void) {
   const requestCode = useRequestHotelFormCode();
   const sendCode = (botCheck: BotCheckPass) => {
@@ -150,10 +148,13 @@ function useSendCode(state: FlowState, dispatch: (event: FlowEvent) => void) {
       onError: refusedBy(dispatch, "send"),
     });
   };
-  return { sendCode, isSendingCode: requestCode.isPending };
+  return { sendCode, isSendingCode: requestCode.isPending, reset: requestCode.reset };
 }
 
-/** Entering the code (HF-03): the session it opens is kept for the tab. */
+/**
+ * Entering the code (HF-03): the session it opens is kept for the tab. `reset` forgets the last entry,
+ * which holds the link's secret and the person and session it answered.
+ */
 function useVerifyCode(
   state: FlowState,
   dispatch: (event: FlowEvent) => void,
@@ -176,42 +177,7 @@ function useVerifyCode(
       onError: refusedBy(dispatch, "verify"),
     });
   };
-  return { verifyCode, isVerifying: verify.isPending };
-}
-
-/** Saving your own details and signing out, inside the session. */
-function useSessionCalls(
-  state: FlowState,
-  dispatch: (event: FlowEvent) => void,
-  onSessionRefused: OnSessionRefused,
-  storage: { current: SessionStore | null },
-  person: HotelFormPerson | undefined,
-) {
-  const { mutateAsync: update } = useUpdateHotelFormMe();
-  const signOutCall = useSignOutOfHotelForm();
-
-  const saveDetails = async (change: HotelFormMeUpdateRequest): Promise<SaveOutcome> => {
-    if (state.session === null) return { kind: "session" };
-    try {
-      await update({ sessionToken: state.session, change });
-      return { kind: "saved" };
-    } catch (error) {
-      const refusal = refusalOf(error);
-      if (asksForSession(refusal)) onSessionRefused(refusal, person);
-      return saveOutcomeOf(refusal, Date.now());
-    }
-  };
-
-  const signOut = () => {
-    const done = () => {
-      forgetSession(storage.current);
-      dispatch({ type: "signed_out" });
-    };
-    if (state.session === null) done();
-    else signOutCall.mutate({ sessionToken: state.session }, { onSettled: done });
-  };
-
-  return { saveDetails, signOut, isSigningOut: signOutCall.isPending };
+  return { verifyCode, isVerifying: verify.isPending, reset: verify.reset };
 }
 
 /**
@@ -252,13 +218,22 @@ export function useHotelFormFlow(): HotelFormFlow {
   useLinkArrival(dispatch);
   const { me, draft } = useSessionViews(state, onSessionRefused);
   const person = me.data?.person;
+  const { sendCode, isSendingCode, reset: forgetCodeRequest } = useSendCode(state, dispatch);
+  const { verifyCode, isVerifying, reset: forgetVerify } = useVerifyCode(state, dispatch, storage);
+  const forgetCalls = () => {
+    forgetCodeRequest();
+    forgetVerify();
+  };
+  const context = { state, dispatch, onSessionRefused, storage, person, forgetCalls };
   return {
     state,
     me,
     draft,
-    ...useSendCode(state, dispatch),
-    ...useVerifyCode(state, dispatch, storage),
-    ...useSessionCalls(state, dispatch, onSessionRefused, storage, person),
+    sendCode,
+    isSendingCode,
+    verifyCode,
+    isVerifying,
+    ...useSessionCalls(context),
     refuseSession: (error) => {
       const refusal = refusalOf(error);
       if (!asksForSession(refusal)) return false;

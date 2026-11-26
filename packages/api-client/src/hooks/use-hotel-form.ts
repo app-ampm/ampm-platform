@@ -56,15 +56,31 @@ export const HOTEL_FORM_ME_QUERY_KEY = [...HOTEL_FORM_QUERY_FAMILY, "me"] as con
 export const HOTEL_FORM_DRAFT_QUERY_KEY = [...HOTEL_FORM_QUERY_FAMILY, "draft"] as const;
 
 /**
- * Forgets every query of the form (`me`, the draft, and any the form adds), so nothing the person read
- * stays in memory for the next person on the tab: on sign-out, after a withdrawal of every consent (which
- * ends the session), and when a session ends at HF-08 (the page calls it then).
+ * The key of one of the form's calls (D-190 review fix C3): under the form's family, so forgetting the form
+ * forgets the call too, with what it sent (a claim's name and mobile, the link's secret, a correction's
+ * words) and what it answered.
+ *
+ * @example
+ * useMutation({ mutationKey: hotelFormMutationKey("code"), mutationFn });
+ */
+export function hotelFormMutationKey(call: string): readonly [string, "call", string] {
+  return [...HOTEL_FORM_QUERY_FAMILY, "call", call];
+}
+
+/**
+ * Forgets every query of the form (`me`, the draft, and any the form adds) and every one of its calls
+ * (`hotelFormMutationKey`), so nothing the person read, typed or sent stays in the query client for the
+ * next person on the tab: on sign-out, after a withdrawal of every consent (which ends the session), and
+ * when a session ends at HF-08 (the page calls it then). A call's hook still mounted keeps its own copy
+ * until it is reset; the flow resets its own on sign-out.
  *
  * @example
  * forgetHotelForm(queryClient);
  */
 export function forgetHotelForm(queryClient: QueryClient): void {
   queryClient.removeQueries({ queryKey: HOTEL_FORM_QUERY_FAMILY });
+  const calls = queryClient.getMutationCache();
+  for (const call of calls.findAll({ mutationKey: HOTEL_FORM_QUERY_FAMILY })) calls.remove(call);
 }
 
 /**
@@ -131,6 +147,7 @@ export function hotelFormCalls(api: ApiClient) {
 export function useOpenHotelForm() {
   const api = useApiClient();
   return useMutation<HotelFormOpenAnswer, Error, HotelFormOpenRequest>({
+    mutationKey: hotelFormMutationKey("open"),
     mutationFn: (body) => hotelFormCalls(api).open(body),
   });
 }
@@ -145,6 +162,7 @@ export function useOpenHotelForm() {
 export function useRequestHotelFormCode() {
   const api = useApiClient();
   return useMutation<HotelFormCodeIssued, Error, HotelFormCodeRequestInput>({
+    mutationKey: hotelFormMutationKey("code"),
     mutationFn: (body) => hotelFormCalls(api).requestCode(body),
   });
 }
@@ -160,6 +178,7 @@ export function useVerifyHotelFormCode() {
   const api = useApiClient();
   const queryClient = useQueryClient();
   return useMutation<HotelFormVerified, Error, HotelFormVerifyRequest>({
+    mutationKey: hotelFormMutationKey("verify"),
     mutationFn: (body) => hotelFormCalls(api).verify(body),
     onSuccess: ({ sessionToken: _token, ...me }) => {
       queryClient.setQueryData<HotelFormMe>(HOTEL_FORM_ME_QUERY_KEY, me);
@@ -205,6 +224,7 @@ export function useUpdateHotelFormMe() {
   const api = useApiClient();
   const queryClient = useQueryClient();
   return useMutation<HotelFormMe, Error, HotelFormMeChange>({
+    mutationKey: hotelFormMutationKey("me"),
     mutationFn: (variables) => hotelFormCalls(api).updateMe(variables),
     onSuccess: (me) => queryClient.setQueryData<HotelFormMe>(HOTEL_FORM_ME_QUERY_KEY, me),
   });
@@ -220,6 +240,7 @@ export function useSignOutOfHotelForm() {
   const api = useApiClient();
   const queryClient = useQueryClient();
   return useMutation<Acknowledged, Error, HotelFormSessionCall>({
+    mutationKey: hotelFormMutationKey("sign-out"),
     mutationFn: (variables) => hotelFormCalls(api).signOut(variables),
     onSettled: () => forgetHotelForm(queryClient),
   });

@@ -11,6 +11,7 @@ export {
   HOTEL_FORM_QUERY_FAMILY,
   hotelFormCalls,
   hotelFormMeQueryOptions,
+  hotelFormMutationKey,
   useHotelFormMe,
   useOpenHotelForm,
   useRequestHotelFormCode,
