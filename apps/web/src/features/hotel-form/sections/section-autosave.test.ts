@@ -100,6 +100,21 @@ describe("when a section saves", () => {
     expect(calls[1]?.expectedVersion).toBe(3);
   });
 
+  it("takes what waits, read again, in its place: its delay and its place behind the save on its way", async () => {
+    const { autosave, calls, answer } = harness();
+    autosave.change(payload(31));
+    autosave.flush();
+    autosave.change(payload(32));
+    await vi.advanceTimersByTimeAsync(AUTOSAVE_DELAY_MS - 500);
+    autosave.rebase(payload(33));
+    // The delay set by the typing ends now: the save waits behind the first.
+    await vi.advanceTimersByTimeAsync(500);
+    expect(calls).toHaveLength(1);
+    await answer(0, { version: 3 });
+    expect(calls).toHaveLength(2);
+    expect(calls[1]?.payload).toEqual(payload(33));
+  });
+
   it("says what each save stored once it lands, and the version the next one goes on", async () => {
     const { autosave, landed, answer } = harness();
     autosave.change(payload(31));

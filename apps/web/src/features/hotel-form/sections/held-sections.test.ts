@@ -1,17 +1,21 @@
-import type { HotelFormSectionSaveCall } from "@ampm/api-client";
-import {
-  AppError,
-  errors,
-  HOTEL_FORM_ERRORS,
-  hotelFormSessionError,
-  type HotelFormSectionSaved,
-} from "@ampm/core";
+import { errors, hotelFormSessionError } from "@ampm/core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CONTACT_MODEL, type ContactFields } from "./contact.form";
-import { HeldSections, KEEPALIVE_BUDGET_BYTES, type FormSession } from "./held-sections";
+import { KEEPALIVE_BUDGET_BYTES } from "./held-sections";
+import {
+  COLLEAGUE,
+  NEW_SESSION,
+  PERSON,
+  ROOMS,
+  SESSION,
+  TOO_MANY,
+  TOTAL_ID,
+  heldHarness as harness,
+  typeTotal,
+} from "./held-sections.test-utils";
 import { PROPERTY_MODEL, type PropertyFields } from "./property.form";
-import { ROOMS_MODEL, emptyRoom, type RoomsFields } from "./rooms.form";
+import { emptyRoom } from "./rooms.form";
 import { AUTOSAVE_DELAY_MS } from "./section-autosave";
 import { payloadOf } from "./section-payload";
 
@@ -21,62 +25,7 @@ import { payloadOf } from "./section-payload";
  * tab may close. Synthetic answers only.
  */
 
-const PERSON = "0192f3a0-7d3e-7b1a-9c2f-0000000000a5";
-const COLLEAGUE = "0192f3a0-7d3e-7b1a-9c2f-0000000000b7";
-const SESSION = `hfs_${"y".repeat(43)}`;
-const NEW_SESSION = `hfs_${"z".repeat(43)}`;
-const SAVED: HotelFormSectionSaved = {
-  version: 3,
-  isComplete: false,
-  contentHash: "a".repeat(64),
-  lastEditedBy: "Asha Rao",
-  lastEditedAt: "2026-11-26T10:00:00.000Z",
-  isLastSaveYours: true,
-};
-const TOO_MANY = () =>
-  new AppError("rate_limited", HOTEL_FORM_ERRORS.writeLimit, undefined, 429, 3);
-const ROOMS = { model: ROOMS_MODEL, check: payloadOf };
 const PROPERTY = { model: PROPERTY_MODEL, check: payloadOf };
-
-interface Call {
-  readonly call: HotelFormSectionSaveCall;
-  readonly resolve: (saved: HotelFormSectionSaved) => void;
-  readonly reject: (error: unknown) => void;
-}
-
-/** Held sections whose saves wait for the test to answer them, under the session the test sets. */
-function harness() {
-  const calls: Call[] = [];
-  const session: { current: FormSession } = { current: { token: SESSION, personId: PERSON } };
-  const refusedSessions: unknown[] = [];
-  const sections = new HeldSections({
-    save: (call) =>
-      new Promise<HotelFormSectionSaved>((resolve, reject) =>
-        calls.push({ call, resolve, reject }),
-      ),
-    session: () => session.current,
-    refuseSession: (error) => refusedSessions.push(error),
-  });
-  const openRooms = (version = 2, totalRooms = 40) =>
-    sections.open(
-      "rooms",
-      ROOMS,
-      { version, saved: { answers: { totalRooms }, noChanges: false } },
-      session.current.personId ?? PERSON,
-    );
-  const answer = async (index: number, saved: Partial<HotelFormSectionSaved> = {}) => {
-    calls[index]?.resolve({ ...SAVED, ...saved });
-    await vi.advanceTimersByTimeAsync(0);
-  };
-  const refuse = async (index: number, error: unknown) => {
-    calls[index]?.reject(error);
-    await vi.advanceTimersByTimeAsync(0);
-  };
-  return { sections, calls, session, refusedSessions, openRooms, answer, refuse };
-}
-
-const typeTotal = (total: string) => (fields: RoomsFields) => ({ ...fields, totalRooms: total });
-const TOTAL_ID = "hf-rooms-totalRooms";
 
 beforeEach(() => {
   vi.useFakeTimers();

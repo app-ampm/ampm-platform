@@ -217,13 +217,17 @@ export class HeldSection<K extends HotelFormSectionKey, F> {
     this.autosave.stop();
   }
 
-  private commit(fields: F, noChanges: boolean): void {
+  /**
+   * Reads the fields into answers, a refused field as last saved, and hands them to the autosave: as a
+   * change, or (`rebase`) in place of what waits behind a save that just landed.
+   */
+  private commit(fields: F, noChanges: boolean, hand = this.autosave.change): void {
     const { answers, errors } = this.reading.model.answersOf(fields, this.view.saved);
     const check = this.reading.check(this.key, answers, noChanges);
     this.hasRefused = Object.keys(errors).length > 0;
     if (check.kind === "send") {
       this.sentFrom.set(check.payload, fields);
-      this.autosave.change(check.payload);
+      hand(check.payload);
     }
     // Told last, so what the overview reads already counts the change.
     this.set({ fields, noChanges, problem: check.kind === "refused" ? check.message : null });
@@ -238,6 +242,10 @@ export class HeldSection<K extends HotelFormSectionKey, F> {
         ? savedInto(this.view.fields, sentFrom, payload.answers)
         : this.view.fields;
     this.set({ fields, saved: payload.answers });
+    // Typing still to go was read against what the API held before this save: read again, a refused
+    // field goes as this save stored it, never as the value before it (review fix F1).
+    if (this.autosave.hasUnsaved())
+      this.commit(this.view.fields, this.view.noChanges, this.autosave.rebase);
   }
 
   private set(change: Partial<HeldView<K, F>>): void {

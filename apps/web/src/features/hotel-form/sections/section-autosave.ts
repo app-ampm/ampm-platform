@@ -69,6 +69,11 @@ export interface AutosaveOptions<K extends HotelFormSectionKey> {
 export interface SectionAutosave<K extends HotelFormSectionKey> {
   /** The person changed the section: it saves once typing has stopped for a while. */
   readonly change: (payload: SectionPayload<K>) => void;
+  /**
+   * What waits to be saved, read again against what a save that just landed stored: it takes the place
+   * of what waited, keeping its delay and its place behind that save.
+   */
+  readonly rebase: (payload: SectionPayload<K>) => void;
   /** Saves now: a field or the section was left, or the page was hidden (with keepalive). */
   readonly flush: (options?: SendOptions) => void;
   /** Not saved – retry. */
@@ -115,6 +120,7 @@ export function createSectionAutosave<K extends HotelFormSectionKey>(
   const run = new AutosaveRun(options);
   return {
     change: (payload) => run.change(payload),
+    rebase: (payload) => run.rebase(payload),
     flush: (sending) => run.flush(sending),
     retry: () => run.flush(),
     keepMine: () => run.keepMine(),
@@ -150,6 +156,10 @@ class AutosaveRun<K extends HotelFormSectionKey> {
     this.timer = setTimeout(() => this.save(), AUTOSAVE_DELAY_MS);
     // What was just typed waits out the delay: the line says Saving… rather than the last Saved.
     if (this.state.kind === "saved" && this.isUnsaved()) this.show({ kind: "saving" });
+  }
+
+  rebase(payload: SectionPayload<K>): void {
+    this.latest = payload;
   }
 
   flush(sending: SendOptions = { keepalive: false }): void {
