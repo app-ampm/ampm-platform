@@ -14,7 +14,7 @@ import { HOTEL_FORM_SECTION_DRAFTS, type HotelFormSectionAnswers } from "./hotel
  * on an onboarding request the hotel's name, city and state and a contact with an email or a phone; on a
  * refresh nothing, since "blanks leave our records unchanged" and the request already names its hotel.
  * On every request a contact, room or venue row that holds an answer needs its name, which the merge
- * matches rows on; a blank row is left out, and a refresh section marked "No changes" is not read.
+ * matches rows on; a blank row is left out, and a refresh section marked "No changes" asks for nothing.
  * Empty sections only warn, through completeness: a section is complete when every question AMPM's PDF
  * asks in it is answered, or when it is marked "No changes"; the fact sheet section always is until its
  * uploads arrive (Slice 9). Both read the answers as stored through the section's draft, so a saved draft
@@ -142,8 +142,9 @@ function read<K extends HotelFormSectionKey>(key: K, answers: unknown): Answers[
 }
 
 /**
- * Whether a section is complete: marked "No changes", or every question of AMPM's PDF in it answered
- * (the fact sheet section always, until Slice 9). The API stores it as `is_complete` on every save.
+ * Whether a section is complete: its answers read, and it is marked "No changes" or every question of
+ * AMPM's PDF in it is answered (the fact sheet section always, until Slice 9). The API stores it as
+ * `is_complete` on every save.
  *
  * @example
  * isHotelFormSectionComplete("food_beverage", { cuisines: ["Indian"] }, false); // true
@@ -153,19 +154,23 @@ export function isHotelFormSectionComplete<K extends HotelFormSectionKey>(
   answers: unknown,
   noChanges: boolean,
 ): boolean {
-  if (noChanges) return true;
   const draft = read(key, answers);
-  return draft !== null && COMPLETE[key](draft);
+  return draft !== null && (noChanges || COMPLETE[key](draft));
 }
 
+/**
+ * A section's missing items. Its answers are read first, even on a refresh section marked "No changes":
+ * the revision holds every section as its draft reads it, so one that no longer reads is named here
+ * rather than failing the submit after this check passed.
+ */
 function sectionItems<K extends HotelFormSectionKey>(
   key: K,
   { kind, sections }: HotelFormSubmitInput,
 ): HotelFormMissingItem[] {
   const saved = sections[key];
-  if (kind === "refresh" && saved?.noChanges === true) return [];
   const draft = read(key, saved?.answers);
   if (draft === null) return [{ section: key, field: null, message: UNREADABLE }];
+  if (kind === "refresh" && saved?.noChanges === true) return [];
   return REQUIRED[key](draft, kind).map((item) => ({ section: key, ...item }));
 }
 

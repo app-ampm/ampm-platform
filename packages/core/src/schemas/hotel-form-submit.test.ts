@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { AppError } from "../errors";
+import { hotelFormRevisionAnswersOf } from "./hotel-form-revision";
 import { HOTEL_FORM_SECTION_KEYS } from "./hotel-form-section-keys";
 import {
   checkSubmit,
@@ -99,6 +100,17 @@ describe("checkSubmit", () => {
     expect(checkSubmit({ kind: "onboarding", sections: { ...ready, property } })).toEqual([
       { section: "property", field: null, message: "Check this section and save it again" },
     ]);
+  });
+
+  it("names a refresh section marked No changes whose saved answers no longer read, as its revision could not hold them", () => {
+    const acre = { rowId: rowId(1), name: "Suite", size: { value: 1, unit: "acre" } };
+    const rooms = state({ rows: [acre] }, true);
+    const sections = { rooms };
+    expect(checkSubmit({ kind: "refresh", sections })).toEqual([
+      { section: "rooms", field: null, message: "Check this section and save it again" },
+    ]);
+    const saved = { rooms: { ...rooms, schemaVersion: 1 } };
+    expect(() => hotelFormRevisionAnswersOf(saved)).toThrow();
   });
 });
 
@@ -235,7 +247,8 @@ describe("isHotelFormSectionComplete", () => {
     expect(isHotelFormSectionComplete("rooms", {}, false)).toBe(false);
   });
 
-  it("counts answers that no longer read as incomplete", () => {
+  it("counts answers that no longer read as incomplete, even marked No changes", () => {
     expect(isHotelFormSectionComplete("food_beverage", { cuisines: "Indian" }, false)).toBe(false);
+    expect(isHotelFormSectionComplete("food_beverage", { cuisines: "Indian" }, true)).toBe(false);
   });
 });
