@@ -80,7 +80,6 @@ export function formRequests(
   const repository = {
     findByLinkHash: vi.fn(async () => row),
     lockForForm: vi.fn(async () => locked),
-    alertRecipientIds: vi.fn(async () => []),
     transaction: vi.fn(async <T>(work: (tx: Prisma.TransactionClient) => Promise<T>) =>
       work(FORM_TX),
     ),

@@ -3,10 +3,14 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { PrismaService } from "../src/db/prisma.service.js";
 import type { UserStatus, UserType } from "../src/generated/prisma/client.js";
-import { DiskCheckRepository } from "../src/modules/admin/disk-check/disk-check.repository.js";
 import { DISK_CHECK_JOB_NAME, GIB } from "../src/modules/admin/disk-check/disk-check.rules.js";
 import { DiskCheckService } from "../src/modules/admin/disk-check/disk-check.service.js";
 import { DiskSpaceProbe } from "../src/modules/admin/disk-check/disk-space.probe.js";
+import {
+  HOTEL_TEAM_ALERT_ROLES,
+  StaffAlertRecipients,
+  SUPER_ADMIN_ALERT_ROLES,
+} from "../src/modules/admin/notification/staff-alert-recipients.js";
 import { startApi } from "./start-api.js";
 
 const PREFIX = "e2e-disk-";
@@ -94,11 +98,18 @@ describe("The disk check (e2e)", () => {
   });
 
   it("tells the active staff who hold the Super Admin or Hotel team role, and no one else", async () => {
-    const ids = await app.get(DiskCheckRepository).recipientIds();
+    // The one recipient query every staff alert shares (D-190 §4): the disk check, the hotel form's SMS
+    // cap, and its submit, correction and withdrawal notices.
+    const recipients = app.get(StaffAlertRecipients);
+    const ids = await recipients.ids(HOTEL_TEAM_ALERT_ROLES);
     expect(ids).toEqual(expect.arrayContaining([users["sa"], users["ht"]]));
     for (const other of ["ht-disabled", "sa-deleted", "sales", "client"]) {
       expect(ids).not.toContain(users[other]);
     }
+    const superAdmins = await recipients.ids(SUPER_ADMIN_ALERT_ROLES);
+    expect(superAdmins).toContain(users["sa"]);
+    expect(superAdmins).not.toContain(users["ht"]);
+    expect(await recipients.ids([])).toEqual([]);
   });
 
   it("alerts once, keeps quiet across a restart, reminds a day later and sends one recovery", async () => {

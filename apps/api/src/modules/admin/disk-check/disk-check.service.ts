@@ -11,6 +11,10 @@ import {
   NotificationService,
   type QueueNotification,
 } from "../notification/notification.service.js";
+import {
+  HOTEL_TEAM_ALERT_ROLES,
+  StaffAlertRecipients,
+} from "../notification/staff-alert-recipients.js";
 import { DiskCheckRepository } from "./disk-check.repository.js";
 import {
   DISK_CHECK_JOB_NAME,
@@ -54,6 +58,7 @@ export class DiskCheckService implements OnModuleInit {
     private readonly runs: DiskCheckRepository,
     private readonly config: ConfigService,
     private readonly notifications: NotificationService,
+    private readonly recipients: StaffAlertRecipients,
     private readonly probe: DiskSpaceProbe,
     private readonly logger: AppLogger,
     @Inject(ENV) private readonly env: Env,
@@ -108,7 +113,7 @@ export class DiskCheckService implements OnModuleInit {
     guard: StorageDiskGuard,
     runId: string,
   ): Promise<number> {
-    const recipients = await this.runs.recipientIds();
+    const recipients = await this.recipients.ids(HOTEL_TEAM_ALERT_ROLES);
     if (recipients.length === 0) {
       this.logger.warn("system.disk_check.no_recipients", { templateKey: message.templateKey });
       return 0;

@@ -15,6 +15,7 @@ import { NotificationService } from "./notification.service.js";
 import { GatewaySmsAdapter } from "./gateway-sms.adapter.js";
 import { smsTransportFor } from "./sms-transports.js";
 import { SmtpEmailAdapter, type MailTransport } from "./smtp-email.adapter.js";
+import { StaffAlertRecipients } from "./staff-alert-recipients.js";
 
 /** Builds the SMTP transport from env; isolates the nodemailer import to this composition root. */
 function smtpTransport(env: Env): MailTransport {
@@ -64,7 +65,8 @@ export function buildAdapters(env: Env, logger: AppLogger): NotificationAdapters
  * Module A notifications: queue → persist → send job → the per-channel adapter registry; in-app is
  * delivered as a readable row, every external channel sits behind the provider-neutral adapter (the
  * console stub, with email on SES/SMTP once EMAIL_PROVIDER=smtp). JobsModule and ConfigModule are
- * global, so JobQueue and ConfigService are available here.
+ * global, so JobQueue and ConfigService are available here. It also exports the one recipient query of
+ * the staff alerts (StaffAlertRecipients, D-190 §4).
  */
 @Module({
   controllers: [NotificationController],
@@ -76,7 +78,8 @@ export function buildAdapters(env: Env, logger: AppLogger): NotificationAdapters
       inject: [ENV, AppLogger],
     },
     NotificationService,
+    StaffAlertRecipients,
   ],
-  exports: [NotificationService],
+  exports: [NotificationService, StaffAlertRecipients],
 })
 export class NotificationModule {}

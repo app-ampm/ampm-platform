@@ -1,5 +1,4 @@
 import { Injectable } from "@nestjs/common";
-import { STAFF_ROLES } from "@ampm/policy";
 
 import { PrismaService } from "../../../db/prisma.service.js";
 import type { Prisma } from "../../../generated/prisma/client.js";
@@ -37,9 +36,6 @@ export interface LinkedRequest extends FormRequest {
   readonly tokenHash: string;
 }
 
-/** The staff roles the global SMS cap's alert goes to (D-189 §3), as the disk check's (D-177). */
-const ALERT_ROLE_KEYS: string[] = [STAFF_ROLES.SA.key, STAFF_ROLES.HT.key];
-
 @Injectable()
 export class HotelFormRequestsRepository {
   constructor(private readonly prisma: PrismaService) {}
@@ -68,21 +64,6 @@ export class HotelFormRequestsRepository {
       select: FORM_REQUEST_SELECT,
     });
     return row === null ? null : toFormRequest(row);
-  }
-
-  /** The active staff users who hold the Super Admin or the Hotel team role. */
-  async alertRecipientIds(): Promise<string[]> {
-    const users = await this.prisma.user.findMany({
-      where: {
-        userType: "staff",
-        status: "active",
-        deletedAt: null,
-        roles: { some: { role: { roleKey: { in: ALERT_ROLE_KEYS }, deletedAt: null } } },
-      },
-      select: { id: true },
-      orderBy: { createdAt: "asc" },
-    });
-    return users.map((user) => user.id);
   }
 
   /** Runs `work` in one transaction: a change, its event and its audit commit together. */
