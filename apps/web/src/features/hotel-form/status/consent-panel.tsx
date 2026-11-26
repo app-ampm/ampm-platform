@@ -3,7 +3,7 @@ import { useEffect, useRef } from "react";
 import { calloutStyles, cn, flatTintStyles, glassStyles, textStyles } from "@ampm/ui/styles";
 
 import { FocusNotice, WaitLeft } from "../focus-notice";
-import { FormButton } from "../form-parts";
+import { FormButton, QuietLine } from "../form-parts";
 import type { HotelFormSite } from "../hotel-form-provider";
 import { STATUS_COPY } from "./status-copy";
 import type { ShownPressNotice } from "./use-press-notice";
@@ -52,6 +52,25 @@ function DisplayPermission({ withdrawal }: { readonly withdrawal: Withdrawal }) 
       </FormButton>
     </div>
   );
+}
+
+/**
+ * 7.5 as the person answered it (`me.photoPermission`): a Yes, what it covers and its withdrawal; a No,
+ * one plain line in its place, with nothing to withdraw; none on record (they never submitted, or withdrew
+ * it on an earlier visit), nothing. A withdrawal made here keeps the block and its notice on screen until
+ * the person leaves, though `me`, read again, now answers none; a reload then shows the state as it is.
+ */
+function PhotoPermission({
+  site,
+  withdrawal,
+}: {
+  readonly site: HotelFormSite;
+  readonly withdrawal: Withdrawal;
+}) {
+  const answer = site.flow.me.data?.photoPermission ?? "none";
+  if (answer === "yes" || withdrawal.hasWithdrawnDisplay)
+    return <DisplayPermission withdrawal={withdrawal} />;
+  return answer === "no" ? <QuietLine>{COPY.display.answeredNo}</QuietLine> : null;
 }
 
 /** The removal's confirmation step: what happens next, then Yes or Cancel. Its heading takes focus. */
@@ -125,8 +144,9 @@ function RemoveDetails({ withdrawal }: { readonly withdrawal: Withdrawal }) {
 
 /**
  * "Your consent and your details" on HF-07 (D-190 §3; plan §9.3): withdraw 7.5, the permission to show
- * photos, at once; or remove your details, after a step that says what happens next, which signs you out
- * and leaves the page saying so (`onRemoved`).
+ * photos, at once, when the person gave it (a No is said in one line, and none on record shows nothing);
+ * or remove your details, after a step that says what happens next, which signs you out and leaves the
+ * page saying so (`onRemoved`).
  *
  *   <ConsentPanel site={site} onRemoved={() => setIsRemoved(true)} />
  */
@@ -143,7 +163,7 @@ export function ConsentPanel({
       <h2 id="hf-consent-heading" className={textStyles({ variant: "heading" })}>
         {COPY.heading}
       </h2>
-      <DisplayPermission withdrawal={withdrawal} />
+      <PhotoPermission site={site} withdrawal={withdrawal} />
       <RemoveDetails withdrawal={withdrawal} />
     </section>
   );

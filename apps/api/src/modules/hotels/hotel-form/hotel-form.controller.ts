@@ -146,7 +146,7 @@ export class HotelFormController {
   @Get("me")
   @UseGuards(HotelFormSessionGuard)
   @RateLimit(HOTEL_FORM_READS)
-  getMe(@CurrentFormSession() session: FormSession): HotelFormMeView {
+  getMe(@CurrentFormSession() session: FormSession): Promise<HotelFormMeView> {
     return this.me.get(session);
   }
 

@@ -54,7 +54,10 @@ describe("HotelFormEnrolment of a new person", () => {
         status: "open",
         expiresAt: FORM_LATER.toISOString(),
       },
+      photoPermission: "none",
     });
+    // A person created by this code has given no answer to 7.5 yet: nothing to read.
+    expect(built.people.photoPermissionOf).not.toHaveBeenCalled();
   });
 
   it("spends the challenge on the person, opening the session by its token's hash only", async () => {
@@ -159,6 +162,15 @@ describe("HotelFormEnrolment of a returning person", () => {
       }),
       FORM_TX,
     );
+  });
+
+  it("answers their own 7.5 as their consents hold it, read inside the transaction", async () => {
+    for (const photoPermission of ["yes", "no", "none"] as const) {
+      const built = build({ live: STORED, photoPermission });
+      const { result } = await verify(built);
+      expect(result.photoPermission).toBe(photoPermission);
+      expect(built.people.photoPermissionOf).toHaveBeenCalledWith(FORM_PERSON_ID, FORM_TX);
+    }
   });
 
   it("lets them in when the request is full, and after the merge", async () => {

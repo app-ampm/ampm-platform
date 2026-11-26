@@ -7,7 +7,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { EDITED_AT } from "../draft.test-fixtures";
 import type { HotelFormSite } from "../hotel-form-provider";
+import { mountLivePage } from "../live-page.test-utils";
 import { SESSION } from "../screen.test-utils";
+import { HotelFormStatusPage } from "./status-page";
 import { SUBMITTED, mountStatus, settle, statusSite, typeInto } from "./status.test-utils";
 
 /* HF-07's actions (D-190 §3 and §5; plan §9.3): a correction, withdrawing 7.5, and removing your details. */
@@ -143,6 +145,24 @@ describe("Withdraw my permission to show photos (7.5)", () => {
     expect(byId("hf-display-notice").textContent).toContain(
       "You have no permission to show photos on record",
     );
+  });
+
+  it("once withdrawn, keeps the block and its notice on screen though me now answers none", async () => {
+    mounted?.unmount();
+    const page = await mountLivePage(HotelFormStatusPage, site);
+    mounted = page;
+    api.withdraw.mockResolvedValueOnce({
+      withdrawn: ["display_authorisation"],
+      removalRequested: false,
+    });
+    await press(buttonNamed(host(), "Withdraw my permission to show photos"));
+    await settle();
+    // me read again after the withdrawal: the person holds no permission now.
+    await page.rerender(statusSite(SUBMITTED, { signOut, refuseSession }, "none"));
+    expect(host().textContent).toContain("Showing your hotel's photographs");
+    const notice = byId("hf-display-notice");
+    expect(notice.textContent).toContain("Your permission to show photos is withdrawn");
+    expect(document.activeElement).toBe(notice);
   });
 });
 

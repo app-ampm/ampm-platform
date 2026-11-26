@@ -58,6 +58,7 @@ describe("The hotel form's sessions (e2e, D-189 §5)", () => {
         status: "open",
         expiresAt: expect.any(String),
       },
+      photoPermission: "none",
     });
     const changed = await calls.patchMe(sessionToken, { fullName: "Renamed Person" }).expect(200);
     expect(changed.body.data.person.fullName).toBe("Renamed Person");

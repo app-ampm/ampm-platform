@@ -93,6 +93,36 @@ describe("HF-07, a submitted request", () => {
   });
 });
 
+describe("Showing your hotel's photographs, as the person answered 7.5", () => {
+  const buttons = (host: HTMLElement) =>
+    [...host.querySelectorAll("button")].map((button) => button.textContent);
+  const ANSWERED_NO =
+    "You answered No, so AMPM uses your answers only for its own planning and shows none of your hotel's photographs.";
+
+  it("yes: what the permission covers, and the button to withdraw it", async () => {
+    const host = await open(SUBMITTED, statusSite(SUBMITTED, {}, "yes"));
+    expect(host.textContent).toContain("Showing your hotel's photographs");
+    expect(buttons(host)).toContain("Withdraw my permission to show photos");
+    expect(host.textContent).not.toContain(ANSWERED_NO);
+  });
+
+  it("no: one plain line in its place, and nothing to withdraw", async () => {
+    const host = await open(SUBMITTED, statusSite(SUBMITTED, {}, "no"));
+    expect(host.textContent).toContain(ANSWERED_NO);
+    expect(host.textContent).not.toContain("Showing your hotel's photographs");
+    expect(buttons(host)).not.toContain("Withdraw my permission to show photos");
+    expect(buttons(host)).toContain("Remove my details");
+  });
+
+  it("none (a colleague who did not submit, or a permission withdrawn earlier): no photographs block", async () => {
+    const host = await open(SUBMITTED, statusSite(SUBMITTED, {}, "none"));
+    expect(host.textContent).not.toContain("Showing your hotel's photographs");
+    expect(host.textContent).not.toContain(ANSWERED_NO);
+    expect(buttons(host)).not.toContain("Withdraw my permission to show photos");
+    expect(buttons(host)).toContain("Remove my details");
+  });
+});
+
 describe("HF-07 in the other states", () => {
   it("in review and complete: the status in words, a correction still offered", async () => {
     let host = await open(draftWith({ ...SUBMITTED.request, status: "in_review" }));

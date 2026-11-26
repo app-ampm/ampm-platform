@@ -83,6 +83,9 @@ export const STATUS_COPY = {
       withdrawing: "Withdrawing…",
       done: "Your permission to show photos is withdrawn, and AMPM has been told.",
       none: "You have no permission to show photos on record, so nothing changed.",
+      /** In the block's place when the person answered No to 7.5: nothing to withdraw. */
+      answeredNo:
+        "You answered No, so AMPM uses your answers only for its own planning and shows none of your hotel's photographs.",
     },
     removal: {
       heading: "Remove my details",

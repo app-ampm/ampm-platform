@@ -2,12 +2,14 @@ import { Injectable } from "@nestjs/common";
 import type {
   HotelFormCodeDelivery,
   HotelFormDisplayAnswer,
+  HotelFormPhotoPermission,
   HotelInfoRequestConsentKind,
 } from "@ampm/core";
 
 import { PrismaService } from "../../../db/prisma.service.js";
 import type { Prisma } from "../../../generated/prisma/client.js";
 import { isNamedOnForm, NAMED_PERSON_SELECT } from "./hotel-form-named-person.js";
+import { photoPermissionOf } from "./hotel-form-photo-permission.js";
 
 /*
  * The people of a hotel information request and their consents (D-189 §1): a person exists only after a
@@ -241,6 +243,21 @@ export class HotelFormPeopleRepository {
       orderBy: [{ recordedAt: "desc" }, { id: "desc" }],
       select: { kind: true, textVersion: true, granted: true },
     });
+  }
+
+  /**
+   * The person's own current answer to 7.5 (hotel-form-photo-permission.ts): their display consents not
+   * deleted, read for `me` and the verify answer only, never for a colleague.
+   */
+  async photoPermissionOf(
+    personId: string,
+    tx: Prisma.TransactionClient = this.prisma,
+  ): Promise<HotelFormPhotoPermission> {
+    const consents = await tx.hotelInfoRequestConsent.findMany({
+      where: { personId, kind: "display_authorisation", deletedAt: null },
+      select: { id: true, granted: true, recordedAt: true, withdrawnAt: true },
+    });
+    return photoPermissionOf(consents);
   }
 
   /**

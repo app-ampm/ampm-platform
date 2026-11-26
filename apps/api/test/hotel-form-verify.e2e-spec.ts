@@ -68,6 +68,7 @@ describe("The hotel form's code verification (e2e, D-189, on screen)", () => {
         status: "open",
         expiresAt: expect.any(String),
       },
+      photoPermission: "none",
     });
     expect(person).toMatchObject({
       codeDelivery: "screen",

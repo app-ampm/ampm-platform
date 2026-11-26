@@ -22,11 +22,12 @@ const OWN_FIELDS: readonly OwnField[] = ["fullName", "designation"];
 
 /**
  * A signed-in person's own details (D-189 §4 and §5). `get` answers the person, their id on the request
- * (for the page to tell whether a new code signed the same person in again) and the request as they see
- * it. `update` changes their name or designation inside the session's write window (10 a minute),
- * as a `person_updated` event and a guest_token audit that name the fields changed, never their values;
- * it changes nothing once the request shows its status only (after the merge, plan §4.2), and writes
- * nothing when nothing differs.
+ * (for the page to tell whether a new code signed the same person in again), the request as they see it,
+ * and their own current answer to 7.5 (`photoPermission`, read again on every answer, so a withdrawal or
+ * a new submit shows at once). `update` changes their name or designation inside the session's write
+ * window (10 a minute), as a `person_updated` event and a guest_token audit that name the fields changed,
+ * never their values; it changes nothing once the request shows its status only (after the merge, plan
+ * §4.2), and writes nothing when nothing differs.
  */
 @Injectable()
 export class HotelFormMe {
@@ -38,12 +39,8 @@ export class HotelFormMe {
     private readonly audit: AuditService,
   ) {}
 
-  get(session: FormSession): HotelFormMeView {
-    return {
-      personId: session.personId,
-      person: session.person,
-      request: requestViewOf(session.request),
-    };
+  get(session: FormSession): Promise<HotelFormMeView> {
+    return this.answer(session, session.person);
   }
 
   async update(
@@ -83,7 +80,16 @@ export class HotelFormMe {
       );
       return updated;
     });
-    const own = { fullName: person.fullName, designation: person.designation };
-    return { personId: session.personId, person: own, request: requestViewOf(session.request) };
+    return this.answer(session, { fullName: person.fullName, designation: person.designation });
+  }
+
+  /** The answer for the session's person, with `person` as stored now. */
+  private async answer(session: FormSession, person: HotelFormPerson): Promise<HotelFormMeView> {
+    return {
+      personId: session.personId,
+      person,
+      request: requestViewOf(session.request),
+      photoPermission: await this.people.photoPermissionOf(session.personId),
+    };
   }
 }

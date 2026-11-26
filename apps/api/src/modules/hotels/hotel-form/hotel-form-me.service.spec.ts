@@ -1,4 +1,4 @@
-import { errors, HOTEL_FORM_ERRORS } from "@ampm/core";
+import { errors, HOTEL_FORM_ERRORS, type HotelFormPhotoPermission } from "@ampm/core";
 import { describe, expect, it, vi } from "vitest";
 
 import type { AuditService } from "../../../policy/audit.service.js";
@@ -35,7 +35,7 @@ const SESSION: FormSession = {
   state: "ready",
 };
 
-function build() {
+function build(photoPermission: HotelFormPhotoPermission = "yes") {
   const { typed } = formRequests();
   const updateDetails = vi.fn(
     async (_id: string, details: { fullName?: string; designation?: string }) => ({
@@ -44,22 +44,24 @@ function build() {
       designation: details.designation ?? "General Manager",
     }),
   );
+  const photoPermissionOf = vi.fn(async () => photoPermission);
   const allowWrite = vi.fn(async () => undefined);
   const journal = { event: vi.fn(async () => undefined) };
   const audit = { record: vi.fn(async () => undefined) };
   const me = new HotelFormMe(
     typed,
-    { updateDetails } as unknown as HotelFormPeopleRepository,
+    { updateDetails, photoPermissionOf } as unknown as HotelFormPeopleRepository,
     { allowWrite } as unknown as HotelFormLimits,
     journal as unknown as HotelInfoRequestJournal,
     audit as unknown as AuditService,
   );
-  return { me, updateDetails, allowWrite, journal, audit };
+  return { me, updateDetails, photoPermissionOf, allowWrite, journal, audit };
 }
 
 describe("HotelFormMe", () => {
-  it("answers the person, their id and the request as the person sees it", () => {
-    expect(build().me.get(SESSION)).toEqual({
+  it("answers the person, their id, the request as the person sees it and their own 7.5", async () => {
+    const built = build();
+    expect(await built.me.get(SESSION)).toEqual({
       personId: FORM_PERSON_ID,
       person: { fullName: "Stored Person", designation: "General Manager" },
       request: {
@@ -68,7 +70,14 @@ describe("HotelFormMe", () => {
         status: "open",
         expiresAt: FORM_LATER.toISOString(),
       },
+      photoPermission: "yes",
     });
+    expect(built.photoPermissionOf).toHaveBeenCalledWith(FORM_PERSON_ID);
+  });
+
+  it("answers the person's own 7.5 as their consents hold it: no, or none on record", async () => {
+    expect((await build("no").me.get(SESSION)).photoPermission).toBe("no");
+    expect((await build("none").me.get(SESSION)).photoPermission).toBe("none");
   });
 
   it("changes the person's own name inside the session's write window", async () => {
@@ -81,6 +90,7 @@ describe("HotelFormMe", () => {
       FORM_TX,
     );
     expect(answer.person).toEqual({ fullName: "Renamed Person", designation: "General Manager" });
+    expect(answer.photoPermission).toBe("yes");
   });
 
   it("records the change by its fields only, as the person", async () => {
@@ -112,11 +122,12 @@ describe("HotelFormMe", () => {
   });
 
   it("writes nothing when nothing changed", async () => {
-    const built = build();
+    const built = build("no");
     const answer = await built.me.update(SESSION, { designation: "General Manager" }, FORM_NOW);
     expect(built.updateDetails).not.toHaveBeenCalled();
     expect(built.journal.event).not.toHaveBeenCalled();
     expect(answer.person).toEqual(SESSION.person);
+    expect(answer.photoPermission).toBe("no");
   });
 
   it("refuses past the write window, writing nothing", async () => {

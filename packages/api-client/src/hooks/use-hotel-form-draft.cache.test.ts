@@ -182,6 +182,8 @@ describe("the hooks keep the cached draft as the API holds it", () => {
     };
     withdraw?.onSuccess?.({ withdrawn: [], removalRequested: true }, display);
     expect(isInvalidated(HOTEL_FORM_DRAFT_QUERY_KEY)).toBe(true);
+    // me carries the person's own answer to 7.5, which the withdrawal changed.
+    expect(isInvalidated(HOTEL_FORM_ME_QUERY_KEY)).toBe(true);
     expect(correction?.onSuccess).toBeUndefined();
   });
 
