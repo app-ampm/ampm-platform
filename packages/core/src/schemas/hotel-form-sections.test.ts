@@ -108,7 +108,7 @@ describe("property", () => {
     const parsed = hotelFormPropertyDraft.parse(property);
     expect(parsed).toMatchObject({
       postalCode: "313001",
-      website: "https://www.synthetic-lake-palace.example",
+      website: "https://www.synthetic-lake-palace.example/",
       airport: { name: "Synthetic Airport", km: 22.5, minutes: 40 },
     });
   });

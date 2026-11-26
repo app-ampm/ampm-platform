@@ -52,9 +52,12 @@ export type {
 export {
   httpsWebsite,
   normaliseWebAddress,
+  readHttpsWebsite,
   WEB_ADDRESS_KEY_MAX_LENGTH,
   WEBSITE_MAX_LENGTH,
   webAddressHost,
+  type HttpsWebsiteProblem,
+  type HttpsWebsiteReading,
 } from "./web-address";
 // Canonical JSON (D-190 §1): what the hotel form's section and revision hashes are taken of, and its size.
 export { canonicalJson, utf8ByteLength } from "./canonical-json";

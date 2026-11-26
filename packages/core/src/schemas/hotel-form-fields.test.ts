@@ -96,10 +96,18 @@ describe("hotelFormMapsUrl and hotelFormWebsite", () => {
 
   it("take a website over https only, reading one typed without a scheme as https", () => {
     expect(hotelFormWebsite.parse("www.synthetic-hotel.example")).toBe(
-      "https://www.synthetic-hotel.example",
+      "https://www.synthetic-hotel.example/",
     );
     expect(messageOf(hotelFormWebsite, "http://synthetic-hotel.example")).toBe(
       "Use the hotel's https address, such as https://www.hotel.example",
+    );
+  });
+
+  it("say a website is too long when it is, https:// included, not that it is not https", () => {
+    const host = `${"a".repeat(240)}.example`;
+    expect(host).toHaveLength(248);
+    expect(messageOf(hotelFormWebsite, host)).toBe(
+      "Use an address of at most 255 characters, https:// included",
     );
   });
 });

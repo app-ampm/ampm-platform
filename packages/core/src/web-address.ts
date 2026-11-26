@@ -12,6 +12,7 @@
 
 // Core has no DOM or Node types; the WHATWG URL exists in every runtime the package runs in.
 declare const URL: new (input: string) => {
+  readonly href: string;
   readonly protocol: string;
   readonly username: string;
   readonly password: string;
@@ -113,30 +114,55 @@ function isRegisteredHost(hostname: string): boolean {
   return TOP_LEVEL.test(labels.at(-1) ?? "");
 }
 
+/** Why a website is refused: not an https address the form takes, or too long written in full. */
+export type HttpsWebsiteProblem = "not_https" | "too_long";
+
+/** A website read: the address as kept, or why it is refused. */
+export type HttpsWebsiteReading =
+  { readonly website: string } | { readonly problem: HttpsWebsiteProblem };
+
+const NOT_HTTPS: HttpsWebsiteReading = { problem: "not_https" };
+
+/** The address as typed with https:// before it when it names no scheme. */
+const asHttps = (trimmed: string): string =>
+  HTTPS.test(trimmed) ? trimmed : `https://${trimmed.replace(/^\/\//, "")}`;
+
 /**
  * A hotel's official website as the hotel form takes it (D-190 §2): https only. Text typed without a
- * scheme reads as https (`www.hotel.example` becomes `https://www.hotel.example`); http and every other
+ * scheme reads as https (`www.hotel.example` becomes `https://www.hotel.example/`); http and every other
  * scheme are refused, and so are an address naming a user or a port, an IP address, a host without a
- * top-level domain, whitespace or a backslash inside, and an address over {@link WEBSITE_MAX_LENGTH}
- * characters. The address is kept as typed, trimmed, never fetched.
+ * top-level domain, and whitespace or a backslash inside. The address is kept as the URL parser writes it
+ * (`href`), never fetched: the host lower-case in punycode, so a look-alike host shows as `xn--…`, with
+ * what the host parser drops unseen (a zero-width space) gone. Too long is over
+ * {@link WEBSITE_MAX_LENGTH} characters written so, https:// included.
  *
  * @example
- * httpsWebsite(" www.synthetic-hotel.example "); // "https://www.synthetic-hotel.example"
+ * readHttpsWebsite(" www.synthetic-hotel.example "); // { website: "https://www.synthetic-hotel.example/" }
+ * readHttpsWebsite("http://synthetic-hotel.example"); // { problem: "not_https" }
+ */
+export function readHttpsWebsite(text: string): HttpsWebsiteReading {
+  const trimmed = text.trim();
+  if (trimmed === "" || /[\s\\]/.test(trimmed)) return NOT_HTTPS;
+  if (SCHEMED.test(trimmed) && !HTTPS.test(trimmed)) return NOT_HTTPS;
+  let url: InstanceType<typeof URL>;
+  try {
+    url = new URL(asHttps(trimmed));
+  } catch {
+    return NOT_HTTPS;
+  }
+  if (url.protocol !== "https:" || url.username !== "" || url.password !== "") return NOT_HTTPS;
+  if (url.port !== "" || !isRegisteredHost(url.hostname)) return NOT_HTTPS;
+  return url.href.length > WEBSITE_MAX_LENGTH ? { problem: "too_long" } : { website: url.href };
+}
+
+/**
+ * The website {@link readHttpsWebsite} keeps, or null when it refuses the text.
+ *
+ * @example
+ * httpsWebsite(" www.synthetic-hotel.example "); // "https://www.synthetic-hotel.example/"
  * httpsWebsite("http://synthetic-hotel.example"); // null
  */
 export function httpsWebsite(text: string): string | null {
-  const trimmed = text.trim();
-  if (trimmed === "" || /[\s\\]/.test(trimmed)) return null;
-  if (SCHEMED.test(trimmed) && !HTTPS.test(trimmed)) return null;
-  const website = HTTPS.test(trimmed) ? trimmed : `https://${trimmed.replace(/^\/\//, "")}`;
-  if (website.length > WEBSITE_MAX_LENGTH) return null;
-  let url: InstanceType<typeof URL>;
-  try {
-    url = new URL(website);
-  } catch {
-    return null;
-  }
-  if (url.protocol !== "https:" || url.username !== "" || url.password !== "") return null;
-  if (url.port !== "" || !isRegisteredHost(url.hostname)) return null;
-  return website;
+  const reading = readHttpsWebsite(text);
+  return "website" in reading ? reading.website : null;
 }

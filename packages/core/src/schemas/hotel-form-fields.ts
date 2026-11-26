@@ -7,7 +7,7 @@ import {
   normalisePostalCode,
 } from "../hotel-location";
 import { HOTEL_PHONE_REFUSAL, normaliseHotelPhone } from "../hotel-phone";
-import { httpsWebsite, WEBSITE_MAX_LENGTH } from "../web-address";
+import { readHttpsWebsite, WEBSITE_MAX_LENGTH, type HttpsWebsiteProblem } from "../web-address";
 import { storableJsonText, uuid } from "./common";
 import { hotelCatalogueRequestFields } from "./hotel-catalogue";
 import { VENUE_CAPACITY_MAX } from "./hotel-rooms-venues";
@@ -23,21 +23,35 @@ import { VENUE_CAPACITY_MAX } from "./hotel-rooms-venues";
 
 const tooLong = (max: number): string => `Use at most ${max} characters`;
 
+/** What a field's rule makes of filled text: the value to keep, or the words it is refused with. */
+type Reading = { readonly value: string } | { readonly refusal: string };
+
+/**
+ * Blank-or-read text: trimmed, at most `max` characters, blank as null, otherwise the value `read` keeps,
+ * or refused with the words it gives.
+ */
+function readText(max: number, read: (text: string) => Reading) {
+  return storableJsonText()
+    .max(max, tooLong(max))
+    .transform((text, ctx) => {
+      if (text === "") return null;
+      const reading = read(text);
+      if ("value" in reading) return reading.value;
+      ctx.addIssue({ code: "custom", message: reading.refusal });
+      return z.NEVER;
+    })
+    .nullish();
+}
+
 /**
  * Blank-or-formatted text: trimmed, at most `max` characters, blank as null, otherwise what `normalise`
  * makes of it, or refused with `refusal` when it makes nothing.
  */
 function formatted(max: number, normalise: (text: string) => string | null, refusal: string) {
-  return storableJsonText()
-    .max(max, tooLong(max))
-    .transform((text, ctx) => {
-      if (text === "") return null;
-      const value = normalise(text);
-      if (value !== null) return value;
-      ctx.addIssue({ code: "custom", message: refusal });
-      return z.NEVER;
-    })
-    .nullish();
+  return readText(max, (text) => {
+    const value = normalise(text);
+    return value === null ? { refusal } : { value };
+  });
 }
 
 /**
@@ -86,12 +100,22 @@ export const hotelFormMapsUrl = formatted(
   "Use an https Google Maps link",
 );
 
-/** The hotel's official website, https only (`httpsWebsite`): typed without a scheme, it reads as https. */
-export const hotelFormWebsite = formatted(
-  WEBSITE_MAX_LENGTH,
-  httpsWebsite,
-  "Use the hotel's https address, such as https://www.hotel.example",
-);
+/** Why a website is refused, by what is wrong with it. */
+const WEBSITE_REFUSALS: Readonly<Record<HttpsWebsiteProblem, string>> = {
+  not_https: "Use the hotel's https address, such as https://www.hotel.example",
+  too_long: `Use an address of at most ${WEBSITE_MAX_LENGTH} characters, https:// included`,
+};
+
+/**
+ * The hotel's official website, https only (`readHttpsWebsite`): typed without a scheme it reads as https,
+ * and it is kept as the URL parser writes it, its host in punycode.
+ */
+export const hotelFormWebsite = readText(WEBSITE_MAX_LENGTH, (text) => {
+  const reading = readHttpsWebsite(text);
+  return "website" in reading
+    ? { value: reading.website }
+    : { refusal: WEBSITE_REFUSALS[reading.problem] };
+});
 
 const MONTH = /^20\d{2}-(?:0[1-9]|1[0-2])$/;
 

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   httpsWebsite,
+  readHttpsWebsite,
   normaliseWebAddress,
   WEB_ADDRESS_KEY_MAX_LENGTH,
   WEBSITE_MAX_LENGTH,
@@ -144,19 +145,33 @@ describe("webAddressHost", () => {
 
 /* A hotel's official website as the hotel form takes it (D-190 §2): https only. */
 describe("httpsWebsite", () => {
-  it("keeps an https address as typed, trimmed", () => {
-    for (const link of [
-      "https://www.synthetic-hotel.example",
-      "https://synthetic-hotel.example/weddings?season=winter#venues",
-      "HTTPS://Synthetic-Hotel.Example/Rooms",
-      "https://bücher.example",
-    ]) {
-      expect(httpsWebsite(` ${link} `), link).toBe(link);
+  it("keeps an https address as the URL parser writes it in full, trimmed", () => {
+    for (const [typed, kept] of [
+      ["https://www.synthetic-hotel.example", "https://www.synthetic-hotel.example/"],
+      [
+        "https://synthetic-hotel.example/weddings?season=winter#venues",
+        "https://synthetic-hotel.example/weddings?season=winter#venues",
+      ],
+      ["HTTPS://Synthetic-Hotel.Example/Rooms", "https://synthetic-hotel.example/Rooms"],
+    ] as const) {
+      expect(httpsWebsite(` ${typed} `), typed).toBe(kept);
     }
   });
 
+  it("keeps a look-alike host in punycode, and drops what the host parser leaves out unseen", () => {
+    expect(httpsWebsite("https://bücher.example")).toBe("https://xn--bcher-kva.example/");
+    expect(httpsWebsite("https://synthetic-h\u0430tel.example")).toBe(
+      "https://xn--synthetic-htel-5tl.example/",
+    );
+    expect(httpsWebsite("https://synthetic-ho\u200btel.example/rooms")).toBe(
+      "https://synthetic-hotel.example/rooms",
+    );
+  });
+
   it("reads an address typed without a scheme as https", () => {
-    expect(httpsWebsite("www.synthetic-hotel.example")).toBe("https://www.synthetic-hotel.example");
+    expect(httpsWebsite("www.synthetic-hotel.example")).toBe(
+      "https://www.synthetic-hotel.example/",
+    );
     expect(httpsWebsite("synthetic-hotel.example/weddings")).toBe(
       "https://synthetic-hotel.example/weddings",
     );
@@ -202,5 +217,15 @@ describe("httpsWebsite", () => {
     const fits = `https://synthetic-hotel.example/${"a".repeat(WEBSITE_MAX_LENGTH - 32)}`;
     expect(fits).toHaveLength(WEBSITE_MAX_LENGTH);
     expect(httpsWebsite(fits)).toBe(fits);
+  });
+
+  it("measures the address as kept, so https:// added to a host typed alone counts", () => {
+    const host = `${"a".repeat(WEBSITE_MAX_LENGTH - 15)}.example`;
+    expect(host.length).toBeLessThanOrEqual(WEBSITE_MAX_LENGTH);
+    expect(readHttpsWebsite(host)).toEqual({ problem: "too_long" });
+    expect(readHttpsWebsite("http://synthetic-hotel.example")).toEqual({ problem: "not_https" });
+    expect(readHttpsWebsite("synthetic-hotel.example")).toEqual({
+      website: "https://synthetic-hotel.example/",
+    });
   });
 });
