@@ -6,6 +6,7 @@ import { InviteHotelSheet } from "./invite-hotel-sheet";
 import {
   destinationListItemFixture,
   duplicateHintFixture,
+  duplicateLiveRequestFixture,
   ISSUED_URL,
   linkIssuedFixture,
   newHotelRequestFixture,
@@ -34,6 +35,7 @@ const DELETED = duplicateHintFixture({
   reasons: ["web_address"],
   deletedAt: "2026-11-01T10:00:00.000Z",
 });
+const INVITED = duplicateLiveRequestFixture();
 
 interface Api {
   readonly fetch: FetchFn;
@@ -54,7 +56,10 @@ function inviteApi(roles: ReturnType<typeof staffMeFixture>["roles"] = ["HT"]): 
       }
       if (url.pathname === "/hotels-admin/hotel-duplicate-hints") {
         api.hintQueries.push(url.search);
-        return Promise.resolve(ok({ hints: [HINT, DELETED] }));
+        if (!url.searchParams.has("destinationId")) {
+          return Promise.resolve(ok({ hints: [HINT, DELETED] }));
+        }
+        return Promise.resolve(ok({ hints: [HINT], liveRequests: [INVITED] }));
       }
       if (url.pathname === "/hotels-admin/info-requests") {
         api.created = JSON.parse(String(init?.body));
@@ -69,16 +74,55 @@ function inviteApi(roles: ReturnType<typeof staffMeFixture>["roles"] = ["HT"]): 
 const noop = (): void => {};
 
 describe("InviteHotelSheet", () => {
-  it("asks for the hotel's name, destination and web address", async () => {
+  it("asks for the hotel's name and destination, its website optional (D-192)", async () => {
     const api = inviteApi();
     await renderWithApi(<InviteHotelSheet open onClose={noop} />, api.fetch);
-    await fireEvent.press(await screen.findByTestId("invite-hotel-submit"));
+    const website = await screen.findByTestId("invite-hotel-web-address");
+    expect(website).toHaveProp("accessibilityLabel", "Hotel website");
+    expect(website).toHaveProp("aria-required", false);
+    expect(
+      screen.getByText(
+        "Optional. If you know it, AMPM can tell whether this hotel is already invited or in the catalogue.",
+      ),
+    ).toBeOnTheScreen();
+    await fireEvent.press(screen.getByTestId("invite-hotel-submit"));
     expect(await screen.findByText("Enter the hotel's name")).toBeOnTheScreen();
     expect(screen.getByText("Choose the hotel's destination")).toBeOnTheScreen();
-    expect(
-      screen.getByText("Enter a web address such as https://www.hotel.example"),
-    ).toBeOnTheScreen();
+    expect(screen.queryByText("Enter a web address such as https://www.hotel.example")).toBeNull();
     expect(api.created).toBeUndefined();
+  });
+
+  it("warns of a live invite of the same name in the destination chosen, beside the catalogue's hints", async () => {
+    const api = inviteApi();
+    await renderWithApi(<InviteHotelSheet open onClose={noop} />, api.fetch);
+    await fireEvent.changeText(await screen.findByTestId("invite-hotel-name"), "The Desert Fort");
+    await fireEvent.press(await screen.findByTestId("hotel-destination"));
+    await fireEvent.press(await screen.findByTestId(`hotel-destination-option-${DESTINATION_ID}`));
+    await waitFor(() =>
+      expect(api.hintQueries).toContain(`?name=The+Desert+Fort&destinationId=${DESTINATION_ID}`),
+    );
+    const warning = await screen.findByTestId(`duplicate-live-request-${INVITED.requestId}`);
+    expect(warning).toHaveTextContent(/HIR-2026-0003 · The Desert Fort/);
+    expect(warning).not.toHaveTextContent(/https:/);
+    expect(screen.getByText("1 live invite already has this name in Jaisalmer")).toBeOnTheScreen();
+    expect(screen.getByText("1 hotel in the catalogue may be this one")).toBeOnTheScreen();
+  });
+
+  it("creates the request with no website when none is given", async () => {
+    const api = inviteApi();
+    await renderWithApi(<InviteHotelSheet open onClose={noop} />, api.fetch);
+    await fireEvent.changeText(await screen.findByTestId("invite-hotel-name"), "The Desert Fort");
+    await fireEvent.press(await screen.findByTestId("hotel-destination"));
+    await fireEvent.press(await screen.findByTestId(`hotel-destination-option-${DESTINATION_ID}`));
+    await fireEvent.press(screen.getByTestId("invite-hotel-submit"));
+    expect(await screen.findByText(ISSUED_URL)).toBeOnTheScreen();
+    expect(api.created).toEqual({
+      target: "new",
+      proposedName: "The Desert Fort",
+      proposedDestinationId: DESTINATION_ID,
+      emailIt: false,
+      isTest: false,
+    });
   });
 
   it("hints catalogue hotels once the typing pauses, and opens a live one's record", async () => {

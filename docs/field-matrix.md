@@ -1,6 +1,6 @@
 # AMPM Platform — Field Matrix
 
-**Status:** DRAFT v0.1, generated 2026-11-26 from [data-model.md](data-model.md) by `docs/tools/field_matrix_build.py`. Do not edit by hand; change the data model or `docs/tools/field_rules.py` and rebuild.
+**Status:** DRAFT v0.1, generated 2026-11-27 from [data-model.md](data-model.md) by `docs/tools/field_matrix_build.py`. Do not edit by hand; change the data model or `docs/tools/field_rules.py` and rebuild.
 **Companions:** [requirements-audit.md](requirements-audit.md) (Q numbers), [data-model.md](data-model.md) (assumptions A-1 to A-30), [permission-matrix.md](permission-matrix.md) (role codes, visibility classes, assumptions P-1 to P-11).
 **Spreadsheet version:** [field-matrix.csv](field-matrix.csv) has the same rows for filtering.
 
@@ -781,10 +781,10 @@ Created at stage: **Hotel intake** · Default editor: SA; HT · Default visibili
 | `kind` | one of the listed options | onboarding, refresh | SA; HT, at creation | INTERNAL | At creation | — |
 | `target` | one of the listed options | existing, new | SA; HT, at creation | INTERNAL | At creation | — |
 | `hotel_id` (FK) | references hotels; nullable for a new hotel until the merge |  | SA; HT | INTERNAL | At creation for target existing (CHECK hotel_info_requests_existing_has_hotel); set at the merge for target new | One live request per hotel: partial unique index hotel_info_requests_hotel_live_key; live means open, submitted, in_review or changes_requested; a soft-deleted request frees it |
-| `proposed_name` | string, up to 255 characters |  | SA; HT | INTERNAL | At creation for target new (CHECK hotel_info_requests_new_has_proposal) | — |
-| `proposed_destination_id` (FK) | references destinations |  | SA; HT | INTERNAL | At creation for target new | — |
-| `proposed_web_address` | an http or https address, up to 255 characters, as staff typed it |  | SA; HT | INTERNAL | Optional | — |
-| `proposed_web_address_key` | core normaliseWebAddress of proposed_web_address, up to 2,048 characters |  | SYS | INTERNAL | System, for target new | One live new-hotel request per key: partial unique index hotel_info_requests_web_address_live_key; live means open, submitted, in_review or changes_requested; a soft-deleted request frees it |
+| `proposed_name` | string, up to 255 characters |  | SA; HT | INTERNAL | At creation for target new (CHECK hotel_info_requests_new_has_name_and_destination) | — |
+| `proposed_destination_id` (FK) | references destinations |  | SA; HT | INTERNAL | At creation for target new (the same CHECK) | — |
+| `proposed_web_address` | an http or https address, up to 255 characters, as staff typed it |  | SA; HT | INTERNAL | Optional (D-192): staff may not know the hotel's website when they invite it | — |
+| `proposed_web_address_key` | core normaliseWebAddress of proposed_web_address, up to 2,048 characters |  | SYS | INTERNAL | System, for target new when a website is given; null otherwise | One live new-hotel request per key: partial unique index hotel_info_requests_web_address_live_key; live means open, submitted, in_review or changes_requested; a soft-deleted request frees it |
 | `official_website` | string, up to 255 characters; entered by staff |  | SA; HT | INTERNAL | Optional | — |
 | `switchboard_phone` | E.164 format, default +91 |  | SA; HT | INTERNAL | Optional | — |
 | `switchboard_source` | string, up to 255 characters; where staff found the switchboard number |  | SA; HT | INTERNAL | Optional | — |

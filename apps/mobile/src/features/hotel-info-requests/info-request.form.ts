@@ -102,7 +102,7 @@ const FIELD_NAME: Partial<Record<RequestField, string>> = {
   officialWebsite: "web address",
   switchboardSource: "source",
   proposedName: "name",
-  proposedWebAddress: "web address",
+  proposedWebAddress: "website",
 };
 
 /** What a missing or unreadable value means, where the contract says nothing of its own. */
@@ -183,13 +183,17 @@ export function existingHotelBody(
   return { target: "existing", hotelId, kind: draft.kind, ...staffFields(draft) };
 }
 
-/** The Invite a new hotel body: the proposed hotel, always its onboarding (the contract's rule). */
+/**
+ * The Invite a new hotel body: the proposed hotel, always its onboarding (the contract's rule), its
+ * website left out when blank (D-192).
+ */
 export function newHotelBody(draft: NewHotelDraft): HotelInfoRequestCreateRequestInput {
+  const website = filled(draft.proposedWebAddress);
   return {
     target: "new",
     proposedName: draft.proposedName.trim(),
     proposedDestinationId: draft.proposedDestinationId,
-    proposedWebAddress: draft.proposedWebAddress.trim(),
+    ...(website === undefined ? {} : { proposedWebAddress: website }),
     ...staffFields(draft),
   };
 }

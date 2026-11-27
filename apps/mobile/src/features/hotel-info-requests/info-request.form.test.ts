@@ -89,10 +89,18 @@ describe("the Send request body", () => {
 });
 
 describe("the Invite a new hotel body", () => {
-  it("asks for the name, the destination and the web address", () => {
-    expect(requestErrors(newHotelBody(EMPTY_NEW_HOTEL_DRAFT))).toEqual({
+  it("asks for the name and the destination, and leaves a blank website out (D-192)", () => {
+    const body = newHotelBody({ ...EMPTY_NEW_HOTEL_DRAFT, proposedWebAddress: "  " });
+    expect(body).not.toHaveProperty("proposedWebAddress");
+    expect(requestErrors(body)).toEqual({
       proposedName: "Enter the hotel's name",
       proposedDestinationId: "Choose the hotel's destination",
+    });
+  });
+
+  it("checks a website given in the contract's words", () => {
+    const body = newHotelBody({ ...EMPTY_NEW_HOTEL_DRAFT, proposedWebAddress: "not a website" });
+    expect(requestErrors(body)).toMatchObject({
       proposedWebAddress: "Enter a web address such as https://www.hotel.example",
     });
   });

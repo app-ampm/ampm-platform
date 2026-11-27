@@ -17,6 +17,7 @@ export {
   useHotelInfoRequestHistory,
   useHotelInfoRequests,
   useHotelInfoRequestsToReview,
+  type HotelDuplicateHintsFound,
   type HotelInfoRequestsQuery,
   type HotelInfoRequestsToReview,
 } from "./hooks/use-hotel-info-requests";

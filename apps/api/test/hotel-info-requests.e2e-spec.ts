@@ -18,13 +18,13 @@ const sha256 = (text: string) => createHash("sha256").update(text).digest("hex")
  * Issuing hotel information requests' links end to end (D-188 §3 and §4): the Super Admin and the Hotel
  * team create a request for an existing or a new hotel and reissue its link; the link is answered once,
  * by those two routes alone, and the database never holds it but as its SHA-256; one live request per
- * hotel and per web address, http and https alike; test requests are the Super Admin's, for a draft or
- * new hotel. Reads, changes, email and the hotel delete are in the other hotel-info-requests suites.
+ * hotel and per web address given, http and https alike, a new hotel's website being optional (D-192);
+ * test requests are the Super Admin's, for a draft or new hotel. Reads, changes, email and the hotel delete are in the other hotel-info-requests suites.
  */
 describe("Hotel information requests: issuing links (e2e)", () => {
   let suite: RequestSuite;
   let site: string;
-  const { create, reissue, revoke, get } = requestCalls(() => suite);
+  const { create, reissue, revoke, get, hints } = requestCalls(() => suite);
 
   beforeAll(async () => {
     suite = await startRequestSuite("e2e-hir-issue-");
@@ -126,6 +126,46 @@ describe("Hotel information requests: issuing links (e2e)", () => {
     });
     expect(stored.proposedWebAddressKey).toBe(address);
     await create("sa", { ...proposal, proposedWebAddress: `http://${address}` }).expect(409);
+  });
+
+  it("takes two invites with no website in one destination, the second warned of the first by name (D-192)", async () => {
+    const proposal = {
+      target: "new",
+      proposedName: "E2E Unsited Lake Lodge",
+      proposedDestinationId: suite.destinationId,
+    };
+    const first = await create("ht", proposal).expect(201);
+    const made = first.body.data.request;
+    expect(made).toMatchObject({ target: "new", hotelId: null, proposedWebAddress: null });
+    const stored = await suite.prisma.hotelInfoRequest.findUniqueOrThrow({
+      where: { id: made.id },
+    });
+    expect(stored).toMatchObject({ proposedWebAddress: null, proposedWebAddressKey: null });
+    const typed = { name: "the e2e unsited lake lodge", destinationId: suite.destinationId };
+    const warned = await hints("ht", typed).expect(200);
+    expect(warned.body.data.liveRequests).toEqual([
+      expect.objectContaining({
+        requestId: made.id,
+        reference: made.reference,
+        proposedName: "E2E Unsited Lake Lodge",
+        proposedWebAddress: null,
+      }),
+    ]);
+    const second = await create("sa", proposal).expect(201);
+    expect(second.body.data.request).toMatchObject({ status: "open", proposedWebAddress: null });
+  });
+
+  it("treats an empty website as none: no address and no key are stored (D-192)", async () => {
+    const created = await create("ht", {
+      target: "new",
+      proposedName: "E2E Blank Site Retreat",
+      proposedDestinationId: suite.destinationId,
+      proposedWebAddress: "",
+    }).expect(201);
+    const stored = await suite.prisma.hotelInfoRequest.findUniqueOrThrow({
+      where: { id: created.body.data.request.id },
+    });
+    expect(stored).toMatchObject({ proposedWebAddress: null, proposedWebAddressKey: null });
   });
 
   it("reissues a new link: a new secret, the next generation, the old hash gone, audited as share", async () => {

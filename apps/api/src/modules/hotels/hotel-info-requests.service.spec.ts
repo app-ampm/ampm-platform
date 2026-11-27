@@ -21,6 +21,17 @@ import { REQUEST_ID, requestRow } from "./testing/info-request-fixtures.js";
 const HT = staffPrincipal(["HT"]);
 const TX = {} as unknown as Prisma.TransactionClient;
 const FIRST_EXPIRY = new Date("2099-01-31T10:00:00.000Z");
+const DESTINATION_ID = "0192f1a0-0000-7000-8000-0000000000a2";
+/** A live new-hotel request with no website, in the destination asked for. */
+const proposal = {
+  id: "0192f1a0-0000-7000-8000-0000000000b9",
+  reference: "HIR-2026-0009",
+  status: "open" as const,
+  isTest: false,
+  proposedName: "Synthetic Lake Palace",
+  proposedWebAddress: null,
+  proposedDestination: { name: "Synthetic Coast" },
+};
 
 function build(
   row: RequestRow = requestRow({ expiresAt: FIRST_EXPIRY }),
@@ -33,6 +44,7 @@ function build(
     updateIf: vi.fn(async (..._args: unknown[]): Promise<number> => 1),
     firstExtensionDetail: vi.fn(async (): Promise<unknown> => firstExtension),
     hintCandidates: vi.fn(async () => []),
+    liveProposalsIn: vi.fn(async (_destinationId: string) => [proposal]),
   };
   const journal = { event: vi.fn(async () => undefined), record: vi.fn(async () => undefined) };
   const revoker = { revokeByStaff: vi.fn(async () => undefined) };
@@ -62,6 +74,26 @@ describe("HotelInfoRequestsService.duplicateHints", () => {
     expect(repo.hintCandidates).not.toHaveBeenCalled();
     await service.duplicateHints({ name: "Synthetic Lake Palace" });
     expect(repo.hintCandidates).toHaveBeenCalledOnce();
+    expect(repo.liveProposalsIn).not.toHaveBeenCalled();
+  });
+
+  it("names the live requests of the same name in the destination asked for, and only then (D-192)", async () => {
+    const { service, repo } = build();
+    const asked = { name: "Synthetic Lake Palace", destinationId: DESTINATION_ID };
+    const answer = await service.duplicateHints(asked);
+    expect(repo.liveProposalsIn).toHaveBeenCalledWith(DESTINATION_ID);
+    expect(answer).toEqual({
+      hints: [],
+      liveRequests: [expect.objectContaining({ reference: "HIR-2026-0009" })],
+    });
+    expect(await service.duplicateHints({ name: "Synthetic Lake Palace" })).toEqual({ hints: [] });
+    const unnamed = { webAddress: "synthetic-lake.example", destinationId: DESTINATION_ID };
+    expect(await service.duplicateHints(unnamed)).toEqual({ hints: [], liveRequests: [] });
+    expect(await service.duplicateHints({ destinationId: DESTINATION_ID })).toEqual({
+      hints: [],
+      liveRequests: [],
+    });
+    expect(repo.liveProposalsIn).toHaveBeenCalledOnce();
   });
 });
 
