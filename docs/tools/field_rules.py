@@ -456,11 +456,13 @@ TABLES["hotel_info_requests"] = T(
                         "the merge for target new",
                automation="One live request per hotel: partial unique index hotel_info_requests_hotel_live_key; "
                           + LIVE_REQUEST),
-    proposed_name=F(required="At creation for target new (CHECK hotel_info_requests_new_has_proposal)",
+    proposed_name=F(required="At creation for target new (CHECK hotel_info_requests_new_has_name_and_destination)",
                     validation="string, up to 255 characters"),
-    proposed_destination_id=F(required="At creation for target new", validation="references destinations"),
-    proposed_web_address=F(validation="an http or https address, up to 255 characters, as staff typed it"),
-    proposed_web_address_key=F(editor=SYS, required="System, for target new",
+    proposed_destination_id=F(required="At creation for target new (the same CHECK)",
+                              validation="references destinations"),
+    proposed_web_address=F(required="Optional (D-192): staff may not know the hotel's website when they invite it",
+                           validation="an http or https address, up to 255 characters, as staff typed it"),
+    proposed_web_address_key=F(editor=SYS, required="System, for target new when a website is given; null otherwise",
                                validation="core normaliseWebAddress of proposed_web_address, up to 2,048 characters",
                                automation="One live new-hotel request per key: partial unique index "
                                           "hotel_info_requests_web_address_live_key; " + LIVE_REQUEST),

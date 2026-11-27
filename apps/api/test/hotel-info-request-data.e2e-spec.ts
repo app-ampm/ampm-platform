@@ -17,7 +17,8 @@ function numberOf(reference: string): number {
 
 /**
  * The hotel information request tables of migration 20261128000000_hotel_info_requests (D-188 §1)
- * against the migrated test database: the reference sequence, the live-request indexes and the checks.
+ * against the migrated test database: the reference sequence, the live-request indexes and the checks,
+ * the new-hotel one as 20261203000000_hotel_info_request_optional_website widened it (D-192).
  * Synthetic rows only; every row this file writes is removed after it.
  */
 describe("Hotel information requests: the data (e2e, D-188 §1)", () => {
@@ -152,11 +153,11 @@ describe("Hotel information requests: the data (e2e, D-188 §1)", () => {
     });
   });
 
-  it("refuses an existing-hotel request without its hotel, and a new-hotel request without its proposal", async () => {
+  it("refuses an existing-hotel request without its hotel, and a new-hotel request without its name or destination", async () => {
     await expect(
       prisma.hotelInfoRequest.create({ data: await base({ hotelId: null }) }),
     ).rejects.toThrow(/hotel_info_requests_existing_has_hotel/);
-    for (const missing of ["proposedName", "proposedDestinationId", "proposedWebAddressKey"]) {
+    for (const missing of ["proposedName", "proposedDestinationId"]) {
       const proposal: Record<string, unknown> = {
         target: "new",
         hotelId: null,
@@ -168,8 +169,32 @@ describe("Hotel information requests: the data (e2e, D-188 §1)", () => {
       await expect(
         prisma.hotelInfoRequest.create({ data: await base(proposal) }),
         missing,
-      ).rejects.toThrow(/hotel_info_requests_new_has_proposal/);
+      ).rejects.toThrow(/hotel_info_requests_new_has_name_and_destination/);
     }
+  });
+
+  it("takes new-hotel requests with no website, two live in one destination: a null key holds no address (D-192)", async () => {
+    const unsited = {
+      target: "new" as const,
+      hotelId: null,
+      proposedName: "E2E Unsited Lodge",
+      proposedDestinationId: destinationId,
+      proposedWebAddress: null,
+      proposedWebAddressKey: null,
+    };
+    const first = await prisma.hotelInfoRequest.create({ data: await base(unsited) });
+    const second = await prisma.hotelInfoRequest.create({ data: await base(unsited) });
+    expect(second).toMatchObject({ status: "open", proposedWebAddressKey: null });
+    await prisma.hotelInfoRequest.updateMany({
+      where: { id: { in: [first.id, second.id] } },
+      data: { status: "revoked" },
+    });
+    const checks = await prisma.$queryRaw<{ conname: string }[]>`
+      SELECT conname FROM pg_constraint
+      WHERE conrelid = 'hotel_info_requests'::regclass AND contype = 'c'`;
+    const names = checks.map((row) => row.conname);
+    expect(names).toContain("hotel_info_requests_new_has_name_and_destination");
+    expect(names).not.toContain("hotel_info_requests_new_has_proposal");
   });
 
   it("keeps each link's hash and each reference unique", async () => {

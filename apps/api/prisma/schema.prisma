@@ -1685,10 +1685,12 @@ enum HotelInfoRequestActorKind {
 /// creation year (UTC) and a number from the sequence `hotel_info_request_ref_seq`, which never resets
 /// (helper `nextHotelInfoRequestReference`). `token_hash` is the SHA-256 of the link's secret (SECRET);
 /// the secret itself is never stored. `recipient_name` and `recipient_email` are RESTRICTED-CONTACT, as AMPM
-/// entered them. An existing-hotel request names its hotel, and a new-hotel request its proposed name,
-/// destination and normalised web address (core `normaliseWebAddress`): two CHECKs, and two partial unique
-/// indexes holding one live request per hotel and per proposed web address, are raw SQL in
-/// 20261128000000_hotel_info_requests. A new hotel's request gets its `hotel_id` at the merge. The
+/// entered them. An existing-hotel request names its hotel, and a new-hotel request its proposed name and
+/// destination; its web address, and the key core `normaliseWebAddress` makes of it, only when staff give
+/// one (D-192). Two CHECKs, and two partial unique indexes holding one live request per hotel and per
+/// proposed web address (a null key holds none), are raw SQL in 20261128000000_hotel_info_requests, the
+/// new-hotel CHECK as 20261203000000_hotel_info_request_optional_website widened it. A new hotel's request
+/// gets its `hotel_id` at the merge. The
 /// submission, review, merge and revoke columns wait, nullable, for their slices; `submitted_by_person_id`
 /// names a hotel_info_request_people row (its foreign key from Slice 7b, D-189).
 model HotelInfoRequest {
