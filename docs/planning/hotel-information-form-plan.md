@@ -44,7 +44,7 @@ D-172 onward are proposed decision numbers (D-171 went to the staff over-read fi
 
 - **AMPM starts every request; there is one per hotel.** The Hotel team starts every information request from the staff app:
   - for a hotel AMPM already has, "Request details from the hotel" on its record;
-  - for a new hotel, "Invite a new hotel" with a name, an existing destination and a proposed web address, checked against every hotel, deleted ones included.
+  - for a new hotel, "Invite a new hotel" with a name, an existing destination and, when staff know it, the hotel website (optional, D-192), checked against every hotel, deleted ones included.
 
   There is no generic link, so no submission ever has to be matched to a hotel by guesswork.
 - **One link per request.** AMPM sends the hotel's management one link, `https://site.ampmverse.com/hotel-form#k=…`, by email from the app or pasted into WhatsApp. The hotel shares it with the colleagues who help. The secret sits after the `#`, so it never reaches AMPM's server logs. AMPM can cancel the link or send a new one, and it expires after 30 days unless AMPM extends it.
@@ -252,7 +252,7 @@ Every clean-up needs Super Admin approval (A-17, T-9). A lawyer confirms the leg
 
 | | Existing hotel | New hotel |
 | --- | --- | --- |
-| Started from | The hotel's record: "Request details from the hotel" | The Hotels list: "Invite a new hotel" (name, existing destination, proposed web address; duplicate hints shown) |
+| Started from | The hotel's record: "Request details from the hotel" | The Hotels list: "Invite a new hotel" (name, existing destination, and the hotel website when staff know it, optional since D-192; duplicate hints shown) |
 | Bound to | The hotel | A proposed identity held on the request; no catalogue row yet |
 | On submit | Answers locked and staged | Answers locked and staged |
 | Review target | That hotel | "Create as a new draft hotel" by default, or "Merge into an existing hotel" when a duplicate surfaces |
@@ -261,11 +261,13 @@ Every clean-up needs Super Admin approval (A-17, T-9). A lawyer confirms the leg
 
 **Rules**
 
-- **One live request at a time:** per hotel, and per proposed web address for new hotels (partial unique indexes).
+- **One live request at a time:** per hotel, and per proposed website for new hotels when one is given (partial unique indexes). A new hotel invited with no website holds no address (its key is null), so two such invites are possible; the name warning below and the review step catch them (D-192).
 - **Duplicate hints when inviting:**
-  - the normalised name, checked against every hotel and its name variants;
-  - the web address, checked against every row, deleted ones included (with the reason);
-  - the website host, flagged as weak evidence when it is a brand's shared domain.
+  - the normalised name, always checked against every hotel and its name variants;
+  - the normalised name, checked too against the other live new-hotel requests in the destination chosen: a warning, never a block, as two hotels can share a name (D-192);
+  - the website, when one is given, checked against every row, deleted ones included (with the reason);
+  - the website host, when one is given, flagged as weak evidence when it is a brand's shared domain.
+- **A new hotel's website at the merge** (Slice 10): when the invite had none, it comes from the hotel's own answer in section 1; a duplicate found then goes through "Merge into an existing hotel" (D-192).
 - **Hotels staff already created** from a fact sheet use the existing-hotel path.
 - **Deleted hotels:** deleting a hotel revokes its live request in the same transaction, and its link then shows "not active". An inactive hotel can still be refreshed.
 
