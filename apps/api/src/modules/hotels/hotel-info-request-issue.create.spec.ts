@@ -15,9 +15,9 @@ import {
 } from "./testing/info-request-fixtures.js";
 
 /*
- * Creating a hotel information request (D-188 §3 and §4): for an existing hotel or a proposed new one; one
- * live request per hotel and per web address (409); a test request only from the Super Admin and only for
- * a draft or new hotel; the link answered once, and stored only as its hash.
+ * Creating a hotel information request (D-188 §3 and §4): for an existing hotel or a proposed new one, its
+ * website optional (D-192); one live request per hotel and per web address given (409); a test request
+ * only from the Super Admin and only for a draft or new hotel; the link answered once, stored as its hash.
  */
 
 const HT = staffPrincipal(["HT"]);
@@ -213,6 +213,21 @@ describe("HotelInfoRequestIssueService.create for a new hotel", () => {
       "synthetic-lake-palace.example",
       expect.anything(),
     );
+  });
+
+  it("proposes a new hotel with no website, or a blank one: no address, no key, none held (D-192)", async () => {
+    for (const blank of [undefined, "", "  "]) {
+      const fakes = build();
+      await fakes.service.create(proposed({ proposedWebAddress: blank }), HT);
+      expect(created(fakes.repo), JSON.stringify(blank)).toMatchObject({
+        target: "new",
+        proposedName: "Synthetic Lake Palace",
+        proposedDestinationId: DESTINATION_ID,
+        proposedWebAddress: null,
+        proposedWebAddressKey: null,
+      });
+      expect(fakes.repo.findLiveForAddress).not.toHaveBeenCalled();
+    }
   });
 
   it("refuses an address a live request already proposes (409) and an unknown destination (400)", async () => {

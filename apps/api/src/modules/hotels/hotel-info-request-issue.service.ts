@@ -276,7 +276,8 @@ export class HotelInfoRequestIssueService {
 
   /**
    * The hotel a request names, locked so it cannot be deleted meanwhile, or a new hotel's proposal; and
-   * the friendly 409 when a live request holds it already (the unique indexes are the race-safe backstop).
+   * the friendly 409 when a live request holds the hotel or the website given already (the unique indexes
+   * are the race-safe backstop).
    */
   private resolveTarget(
     body: HotelInfoRequestCreateRequest,
@@ -310,7 +311,26 @@ export class HotelInfoRequestIssueService {
     if (!destination) {
       throw errors.validation([{ path: "proposedDestinationId", message: "Unknown destination" }]);
     }
-    const key = normaliseWebAddress(body.proposedWebAddress);
+    const columns = {
+      hotelId: null,
+      proposedName: body.proposedName,
+      proposedDestinationId: destination.id,
+      proposedWebAddress: body.proposedWebAddress ?? null,
+      proposedWebAddressKey: await this.liveFreeAddressKey(body.proposedWebAddress, tx),
+    };
+    return { columns, name: body.proposedName };
+  }
+
+  /**
+   * A proposed website's key, once no live request holds it (the friendly 409); null when staff gave no
+   * website (D-192), which holds no address and so is checked against none.
+   */
+  private async liveFreeAddressKey(
+    address: string | undefined,
+    tx: Prisma.TransactionClient,
+  ): Promise<string | null> {
+    if (address === undefined) return null;
+    const key = normaliseWebAddress(address);
     if (key === null) {
       throw errors.validation([{ path: "proposedWebAddress", message: "Unreadable web address" }]);
     }
@@ -318,13 +338,6 @@ export class HotelInfoRequestIssueService {
     if (live) {
       throw errors.conflict(`A live request already proposes this web address (${live.reference})`);
     }
-    const columns = {
-      hotelId: null,
-      proposedName: body.proposedName,
-      proposedDestinationId: destination.id,
-      proposedWebAddress: body.proposedWebAddress,
-      proposedWebAddressKey: key,
-    };
-    return { columns, name: body.proposedName };
+    return key;
   }
 }

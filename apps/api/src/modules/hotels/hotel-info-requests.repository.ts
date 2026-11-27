@@ -3,7 +3,7 @@ import { HOTEL_INFO_REQUEST_LIVE_STATUSES, type HotelStatus } from "@ampm/core";
 
 import { PrismaService } from "../../db/prisma.service.js";
 import type { HotelInfoRequestStatus, Prisma } from "../../generated/prisma/client.js";
-import type { HintCandidate } from "./hotel-duplicate-hints.js";
+import type { HintCandidate, LiveProposal } from "./hotel-duplicate-hints.js";
 
 /*
  * Hotel information requests and their events (D-188 §1), for the staff routes: Module C reads the
@@ -297,6 +297,31 @@ export class HotelInfoRequestsRepository {
         website: true,
         deletedAt: true,
         destination: { select: { name: true } },
+      },
+    });
+  }
+
+  /**
+   * The live new-hotel requests proposing a hotel in a destination, oldest first: the name warning's
+   * candidates (D-192). Names are compared in code, as the catalogue's are.
+   */
+  liveProposalsIn(destinationId: string): Promise<LiveProposal[]> {
+    return this.prisma.hotelInfoRequest.findMany({
+      where: {
+        target: "new",
+        proposedDestinationId: destinationId,
+        status: { in: LIVE },
+        deletedAt: null,
+      },
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+      select: {
+        id: true,
+        reference: true,
+        status: true,
+        isTest: true,
+        proposedName: true,
+        proposedWebAddress: true,
+        proposedDestination: { select: { name: true } },
       },
     });
   }

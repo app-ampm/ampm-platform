@@ -16,7 +16,12 @@ import {
 
 import type { Prisma } from "../../generated/prisma/client.js";
 import { type Principal, staffId } from "../../policy/principal.types.js";
-import { duplicateHints, hasHintInput } from "./hotel-duplicate-hints.js";
+import {
+  duplicateHints,
+  hasHintInput,
+  hasNameInput,
+  liveRequestHints,
+} from "./hotel-duplicate-hints.js";
 import { nextExpiry } from "./hotel-info-request-expiry.js";
 import {
   HotelInfoRequestJournal,
@@ -71,10 +76,25 @@ export class HotelInfoRequestsService {
     private readonly revoker: HotelInfoRequestRevoker,
   ) {}
 
-  /** The catalogue hotels a proposed new hotel may already be; none until a name or address is typed. */
+  /**
+   * The catalogue hotels a proposed new hotel may already be, none until a name or address is typed; and,
+   * when a destination is asked for, the live new-hotel requests of the same name there (D-192).
+   */
   async duplicateHints(query: HotelDuplicateHintsQuery): Promise<HotelDuplicateHints> {
-    if (!hasHintInput(query)) return { hints: [] };
-    return { hints: duplicateHints(await this.repo.hintCandidates(), query) };
+    const hints = hasHintInput(query)
+      ? duplicateHints(await this.repo.hintCandidates(), query)
+      : [];
+    return { hints, ...(await this.liveRequestsFor(query)) };
+  }
+
+  /** The name warning's live requests: absent with no destination asked for, none with no name typed. */
+  private async liveRequestsFor(
+    query: HotelDuplicateHintsQuery,
+  ): Promise<Pick<HotelDuplicateHints, "liveRequests">> {
+    if (query.destinationId === undefined) return {};
+    if (!hasNameInput(query)) return { liveRequests: [] };
+    const proposals = await this.repo.liveProposalsIn(query.destinationId);
+    return { liveRequests: liveRequestHints(proposals, query) };
   }
 
   /** The hotel form's mode, fresh, for the staff sheets. */

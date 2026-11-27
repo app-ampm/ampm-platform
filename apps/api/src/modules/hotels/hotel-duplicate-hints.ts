@@ -6,6 +6,8 @@ import {
   type HotelDuplicateHint,
   type HotelDuplicateHintReason,
   type HotelDuplicateHintsQuery,
+  type HotelDuplicateLiveRequest,
+  type HotelInfoRequestStatus,
   type HotelStatus,
 } from "@ampm/core";
 
@@ -17,8 +19,9 @@ import { toStringList } from "./hotel-string-lists.js";
  * proposed new hotel may already be. A hotel is a hint when its name or one of its name variants matches
  * the name typed, its website is the address typed (core `normaliseWebAddress`: no scheme, `www.`, query
  * or trailing slash), or its website is on the same host. Deleted hotels are hints too: their slug and web
- * address stay taken. Names are compared here rather than in core, as `String.normalize` is not available
- * everywhere core runs (Hermes).
+ * address stay taken. The website hints run only when a website is typed, as it is optional (D-192), and
+ * the name warns too of a live new-hotel request of the same name in the destination chosen. Names are
+ * compared here rather than in core, as `String.normalize` is not available everywhere core runs (Hermes).
  */
 
 /** A catalogue hotel as the hints read it, deleted ones included. */
@@ -31,6 +34,17 @@ export interface HintCandidate {
   readonly website: string | null;
   readonly deletedAt: Date | null;
   readonly destination: { readonly name: string };
+}
+
+/** A live new-hotel request in the destination asked for, as the name warning reads it (D-192). */
+export interface LiveProposal {
+  readonly id: string;
+  readonly reference: string;
+  readonly status: HotelInfoRequestStatus;
+  readonly isTest: boolean;
+  readonly proposedName: string | null;
+  readonly proposedWebAddress: string | null;
+  readonly proposedDestination: { readonly name: string } | null;
 }
 
 /** Words any hotel's name may carry, which say nothing about which hotel it is. */
@@ -120,6 +134,16 @@ export function hasHintInput(query: HotelDuplicateHintsQuery): boolean {
   return typed.words.length > 0 || typed.host !== null;
 }
 
+/**
+ * Whether what staff typed reads as a name (three telling characters): the name warning's input.
+ *
+ * @example
+ * hasNameInput({ name: "The Resort", webAddress: "lake.example" }); // false
+ */
+export function hasNameInput(query: HotelDuplicateHintsQuery): boolean {
+  return typedOf(query).words.length > 0;
+}
+
 /** One hotel's evidence: each reason with its weight. */
 function evidenceOf(candidate: HintCandidate, typed: Typed): Map<HotelDuplicateHintReason, number> {
   const evidence = new Map<HotelDuplicateHintReason, number>();
@@ -186,4 +210,35 @@ export function duplicateHints(
       a.hint.hotelId.localeCompare(b.hint.hotelId),
   );
   return scored.slice(0, HOTEL_DUPLICATE_HINTS_MAX).map(({ hint }) => hint);
+}
+
+/**
+ * The live new-hotel requests whose proposed name has the name typed's telling words, no more and no less
+ * (case, accents and words such as "hotel" aside), in the order given, twenty at most (D-192). A warning,
+ * never a block: two hotels in a destination may share a name.
+ *
+ * @example
+ * liveRequestHints(await repo.liveProposalsIn(destinationId), { name: "Lake Palace" });
+ */
+export function liveRequestHints(
+  proposals: readonly LiveProposal[],
+  query: HotelDuplicateHintsQuery,
+): HotelDuplicateLiveRequest[] {
+  const { words } = typedOf(query);
+  const warned = proposals.flatMap((proposal) => {
+    const { proposedName, proposedDestination } = proposal;
+    if (proposedName === null || proposedDestination === null) return [];
+    if (nameScore(words, nameTokens(proposedName)) !== 1) return [];
+    const hint: HotelDuplicateLiveRequest = {
+      requestId: proposal.id,
+      reference: proposal.reference,
+      status: proposal.status,
+      isTest: proposal.isTest,
+      proposedName,
+      destinationName: proposedDestination.name,
+      proposedWebAddress: proposal.proposedWebAddress,
+    };
+    return [hint];
+  });
+  return warned.slice(0, HOTEL_DUPLICATE_HINTS_MAX);
 }

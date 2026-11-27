@@ -3,8 +3,10 @@ import { describe, expect, it } from "vitest";
 import {
   duplicateHints,
   hasHintInput,
+  liveRequestHints,
   nameTokens,
   type HintCandidate,
+  type LiveProposal,
 } from "./hotel-duplicate-hints.js";
 
 /*
@@ -150,5 +152,53 @@ describe("hasHintInput", () => {
     ]) {
       expect(hasHintInput(query), JSON.stringify(query)).toBe(true);
     }
+  });
+});
+
+describe("liveRequestHints", () => {
+  const proposal = (overrides: Partial<LiveProposal> = {}): LiveProposal => {
+    sequence += 1;
+    return {
+      id: `0192f1a0-0000-7000-8000-${String(sequence).padStart(12, "0")}`,
+      reference: `HIR-2026-${String(sequence).padStart(4, "0")}`,
+      status: "open",
+      isTest: false,
+      proposedName: "Synthetic Lake Palace",
+      proposedWebAddress: null,
+      proposedDestination: { name: "Synthetic Coast" },
+      ...overrides,
+    };
+  };
+
+  it("warns of a live new-hotel request whose name has the same telling words, case and accents aside (D-192)", () => {
+    const same = proposal({ proposedName: "The Synthetic LAKE Palacé Hotel" });
+    const sited = proposal({ proposedWebAddress: "https://synthetic-lake-palace.example" });
+    const longer = proposal({ proposedName: "Synthetic Lake Palace Annexe" });
+    const other = proposal({ proposedName: "Synthetic Desert Fort" });
+    const hints = liveRequestHints([same, sited, longer, other], {
+      name: "synthetic lake palace",
+    });
+    expect(hints).toEqual([
+      {
+        requestId: same.id,
+        reference: same.reference,
+        status: "open",
+        isTest: false,
+        proposedName: "The Synthetic LAKE Palacé Hotel",
+        destinationName: "Synthetic Coast",
+        proposedWebAddress: null,
+      },
+      expect.objectContaining({
+        requestId: sited.id,
+        proposedWebAddress: "https://synthetic-lake-palace.example",
+      }),
+    ]);
+  });
+
+  it("warns of nothing when no name is typed, whatever the address", () => {
+    const sited = proposal({ proposedWebAddress: "https://synthetic-lake-palace.example" });
+    expect(liveRequestHints([sited], {})).toEqual([]);
+    expect(liveRequestHints([sited], { name: "The Hotel" })).toEqual([]);
+    expect(liveRequestHints([sited], { webAddress: "synthetic-lake-palace.example" })).toEqual([]);
   });
 });
