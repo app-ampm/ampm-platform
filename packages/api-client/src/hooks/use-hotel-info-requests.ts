@@ -4,7 +4,7 @@ import {
   hotelFormModeView,
   hotelInfoRequestDetail,
   hotelInfoRequestPage,
-  type HotelDuplicateHint,
+  type HotelDuplicateHints,
   type HotelDuplicateHintsQuery,
   type HotelFormMode,
   type HotelInfoRequestDetail,
@@ -188,7 +188,7 @@ export function useHotelFormMode({ enabled = true }: { readonly enabled?: boolea
 const HINTS_MIN_CHARS = 3;
 
 /**
- * The duplicate hints' path: what was typed, trimmed; a blank is left out.
+ * The duplicate hints' path: what was typed, trimmed, and the destination chosen; a blank is left out.
  *
  * @example
  * hotelDuplicateHintsPath({ name: "Lake Palace" }); // "/hotels-admin/hotel-duplicate-hints?name=Lake+Palace"
@@ -199,16 +199,21 @@ export function hotelDuplicateHintsPath(query: HotelDuplicateHintsQuery): string
   const webAddress = query.webAddress?.trim() ?? "";
   if (name) params.set("name", name);
   if (webAddress) params.set("webAddress", webAddress);
+  if (query.destinationId) params.set("destinationId", query.destinationId);
   const search = params.toString();
   return `/hotels-admin/hotel-duplicate-hints${search ? `?${search}` : ""}`;
 }
 
+/** The duplicate hints as the Invite sheet reads them: the live requests are none when none were asked. */
+export type HotelDuplicateHintsFound = Required<HotelDuplicateHints>;
+
 /**
  * The catalogue hotels a proposed new hotel may already be (`hotels.info_requests.create`), strongest
- * first, deleted ones included. Pass the values after a debounce (`useDebouncedValue`); nothing is asked
+ * first, deleted ones included; and, with the destination chosen, the live new-hotel requests of the same
+ * name there (D-192). Pass the typed values after a debounce (`useDebouncedValue`); nothing is asked
  * until a name or an address has three characters, and the last hints stay while a refined one loads.
  *
- *   const hints = useHotelDuplicateHints({ name: debouncedName, webAddress: debouncedAddress });
+ *   const hints = useHotelDuplicateHints({ name: debouncedName, webAddress, destinationId });
  */
 export function useHotelDuplicateHints(
   query: HotelDuplicateHintsQuery,
@@ -217,12 +222,15 @@ export function useHotelDuplicateHints(
   const api = useApiClient();
   const name = query.name?.trim() ?? "";
   const webAddress = query.webAddress?.trim() ?? "";
+  const destinationId = query.destinationId ?? "";
   const ready = enabled && (name.length >= HINTS_MIN_CHARS || webAddress.length >= HINTS_MIN_CHARS);
-  return useQuery<HotelDuplicateHint[]>({
-    queryKey: [...HOTEL_DUPLICATE_HINTS_QUERY_KEY, { name, webAddress }],
-    queryFn: async ({ signal }) =>
-      (await api.get(hotelDuplicateHintsPath({ name, webAddress }), hotelDuplicateHints, signal))
-        .hints,
+  return useQuery<HotelDuplicateHintsFound>({
+    queryKey: [...HOTEL_DUPLICATE_HINTS_QUERY_KEY, { name, webAddress, destinationId }],
+    queryFn: async ({ signal }) => {
+      const path = hotelDuplicateHintsPath({ name, webAddress, destinationId });
+      const answer = await api.get(path, hotelDuplicateHints, signal);
+      return { hints: answer.hints, liveRequests: answer.liveRequests ?? [] };
+    },
     enabled: ready,
     placeholderData: (previous) => (ready ? previous : undefined),
   });

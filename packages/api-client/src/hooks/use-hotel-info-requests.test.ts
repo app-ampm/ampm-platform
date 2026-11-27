@@ -243,6 +243,9 @@ describe("hotelDuplicateHintsPath", () => {
     expect(hotelDuplicateHintsPath({ webAddress: "https://fort.example/?a=1&b" })).toBe(
       "/hotels-admin/hotel-duplicate-hints?webAddress=https%3A%2F%2Ffort.example%2F%3Fa%3D1%26b",
     );
+    expect(hotelDuplicateHintsPath({ name: "Fort", destinationId: HOTEL_ID })).toBe(
+      `/hotels-admin/hotel-duplicate-hints?name=Fort&destinationId=${HOTEL_ID}`,
+    );
   });
 });
 
@@ -265,9 +268,30 @@ describe("useHotelDuplicateHints", () => {
     expect(seen.options?.["queryKey"]).toEqual([
       "hotels-admin",
       "hotel-duplicate-hints",
-      { name: "Synthetic Fort", webAddress: "" },
+      { name: "Synthetic Fort", webAddress: "", destinationId: "" },
     ]);
-    await expect(run()).resolves.toEqual([hint]);
+    await expect(run()).resolves.toEqual({ hints: [hint], liveRequests: [] });
+  });
+
+  it("asks under the destination chosen, and answers its live requests of the same name (D-192)", async () => {
+    const live = {
+      requestId: REQUEST_ID,
+      reference: "HIR-2026-0003",
+      status: "open",
+      isTest: false,
+      proposedName: "Synthetic Fort",
+      destinationName: "Synthetic Destination",
+      proposedWebAddress: null,
+    };
+    seen.answers = [ok({ hints: [], liveRequests: [live] })];
+    useHotelDuplicateHints({ name: "Synthetic Fort", destinationId: HOTEL_ID });
+    expect(seen.options?.["queryKey"]).toEqual([
+      "hotels-admin",
+      "hotel-duplicate-hints",
+      { name: "Synthetic Fort", webAddress: "", destinationId: HOTEL_ID },
+    ]);
+    await expect(run()).resolves.toEqual({ hints: [], liveRequests: [live] });
+    expect(seen.urls[0]).toContain(`destinationId=${HOTEL_ID}`);
   });
 
   it("asks nothing for a letter or two, nor when the sheet is closed", () => {
