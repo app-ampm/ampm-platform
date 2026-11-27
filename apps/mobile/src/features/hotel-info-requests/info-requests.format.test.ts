@@ -38,6 +38,10 @@ describe("a request's status", () => {
     expect(proposedHotelText(newHotelRequestFixture())).toBe(
       "The Desert Fort · Jaisalmer · https://desert-fort.example",
     );
+    // A website only when staff gave one (D-192).
+    expect(proposedHotelText(newHotelRequestFixture({ proposedWebAddress: null }))).toBe(
+      "The Desert Fort · Jaisalmer",
+    );
     expect(proposedHotelText(requestSummaryFixture())).toBeNull();
   });
 

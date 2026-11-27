@@ -14,6 +14,7 @@ import {
 
 import { hotelStatusLabel, hotelStatusTone } from "../hotels-admin/hotels-admin.format";
 import { duplicateHintReasons } from "./info-requests.format";
+import { LiveRequestWarning } from "./live-request-warning";
 
 /** A hinted hotel's name and status, where it is, and why it is a hint. */
 function HintFacts({ hint }: { readonly hint: HotelDuplicateHint }) {
@@ -89,6 +90,27 @@ function HintsList({
   );
 }
 
+/** The catalogue's hints: the hotels it may already be, or that none matches so far. */
+function CatalogueHints({
+  hints,
+  onOpenHotel,
+}: {
+  readonly hints: readonly HotelDuplicateHint[];
+  readonly onOpenHotel: ((hotelId: string) => void) | undefined;
+}) {
+  if (hints.length === 0) {
+    return (
+      <Row gap={2} align="center">
+        <Icon name="check-circle" tone="primary" size="sm" />
+        <Text variant="bodySmall" accessibilityLiveRegion="polite">
+          No hotel in the catalogue matches so far.
+        </Text>
+      </Row>
+    );
+  }
+  return <HintsList hints={hints} onOpenHotel={onOpenHotel} />;
+}
+
 function HintsBody({
   hints,
   onOpenHotel,
@@ -109,39 +131,47 @@ function HintsBody({
     );
   }
   if (!hints.data) return <Skeleton className="h-12 w-full" testID="duplicate-hints-loading" />;
-  if (hints.data.length === 0) {
-    return (
-      <Row gap={2} align="center">
-        <Icon name="check-circle" tone="primary" size="sm" />
-        <Text variant="bodySmall" accessibilityLiveRegion="polite">
-          No hotel in the catalogue matches so far.
-        </Text>
-      </Row>
-    );
-  }
-  return <HintsList hints={hints.data} onOpenHotel={onOpenHotel} />;
+  return (
+    <Stack gap={3}>
+      <LiveRequestWarning requests={hints.data.liveRequests} />
+      <CatalogueHints hints={hints.data.hints} onOpenHotel={onOpenHotel} />
+    </Stack>
+  );
 }
 
 export interface DuplicateHintsProps {
-  /** The proposed name and web address as typed; asked after a pause in typing. */
+  /** The proposed name and website as typed; asked after a pause in typing. */
   readonly name: string;
   readonly webAddress: string;
+  /** The destination chosen ("" for none yet): the live invites of the same name there are named too. */
+  readonly destinationId: string;
   /** Leaves the sheet for a hinted hotel's record; a deleted hotel has none to open. */
   readonly onOpenHotel?: ((hotelId: string) => void) | undefined;
 }
 
 /**
- * The catalogue hotels a proposed new hotel may already be (D-188 §3 and §7), as the name and the web
- * address are typed, after a pause: the same name or another of its names, the same web address or host,
- * deleted hotels included (their web address stays taken). A host several hotels share is weak evidence
- * and says so. Nothing shows until a name or an address has three characters.
+ * The catalogue hotels a proposed new hotel may already be (D-188 §3 and §7), as the name and the website
+ * are typed, after a pause: the same name or another of its names, the same web address or host, deleted
+ * hotels included (their web address stays taken). A host several hotels share is weak evidence and says
+ * so. With the destination chosen, a live invite of the same name there is a warning above them (D-192).
+ * Nothing shows until a name or an address has three characters.
  *
- *   <DuplicateHints name={draft.proposedName} webAddress={draft.proposedWebAddress} onOpenHotel={open} />
+ *   <DuplicateHints name={draft.proposedName} webAddress={draft.proposedWebAddress}
+ *     destinationId={draft.proposedDestinationId} onOpenHotel={open} />
  */
-export function DuplicateHints({ name, webAddress, onOpenHotel }: DuplicateHintsProps) {
+export function DuplicateHints({
+  name,
+  webAddress,
+  destinationId,
+  onOpenHotel,
+}: DuplicateHintsProps) {
   const settledName = useDebouncedValue(name.trim());
   const settledAddress = useDebouncedValue(webAddress.trim());
-  const hints = useHotelDuplicateHints({ name: settledName, webAddress: settledAddress });
+  const hints = useHotelDuplicateHints({
+    name: settledName,
+    webAddress: settledAddress,
+    destinationId,
+  });
   // Idle with no answer: nothing typed reads as a name or an address yet.
   if (hints.fetchStatus === "idle" && !hints.data && !hints.isError) return null;
   return (

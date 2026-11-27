@@ -1,5 +1,6 @@
 import type {
   HotelDuplicateHint,
+  HotelDuplicateLiveRequest,
   HotelInfoRequestEventView,
   HotelInfoRequestFullView,
   HotelInfoRequestLinkIssued,
@@ -140,6 +141,22 @@ export function duplicateHintFixture(
     deletedAt: null,
     reasons: ["name"],
     sharedHost: false,
+    ...overrides,
+  };
+}
+
+/** A live invite of the same name in the destination chosen (D-192): open, with no website. */
+export function duplicateLiveRequestFixture(
+  overrides: Partial<HotelDuplicateLiveRequest> = {},
+): HotelDuplicateLiveRequest {
+  return {
+    requestId: "018f0000-0000-7000-8000-0000000c2003",
+    reference: "HIR-2026-0003",
+    status: "open",
+    isTest: false,
+    proposedName: "The Desert Fort",
+    destinationName: "Jaisalmer",
+    proposedWebAddress: null,
     ...overrides,
   };
 }

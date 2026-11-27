@@ -9,6 +9,7 @@ import {
   type NewHotelDraft,
   type RequestErrors,
 } from "./info-request.form";
+import { inviteHotelCopy } from "./invite-hotel-copy";
 import { IssuedLink } from "./issued-link";
 import {
   RecipientFields,
@@ -26,7 +27,7 @@ interface HotelFieldsProps {
   readonly onAddDestination: (() => void) | undefined;
 }
 
-/** The proposed hotel: its name, its destination and its web address, all three required. */
+/** The proposed hotel: its name and its destination, required, and its website when known (D-192). */
 function ProposedHotelFields({ draft, patch, errors, onAddDestination }: HotelFieldsProps) {
   return (
     <>
@@ -46,16 +47,15 @@ function ProposedHotelFields({ draft, patch, errors, onAddDestination }: HotelFi
         onAddDestination={onAddDestination}
       />
       <Input
-        label="Web address"
-        required
-        helpText="The hotel's own website: one live request per address."
+        label={inviteHotelCopy.websiteLabel}
+        helpText={inviteHotelCopy.websiteHelp}
         value={draft.proposedWebAddress}
         onChangeText={(proposedWebAddress) => patch({ proposedWebAddress })}
         errorText={errors.proposedWebAddress}
         keyboardType="url"
         autoCapitalize="none"
         autoCorrect={false}
-        placeholder="https://www.hotel.example"
+        placeholder={inviteHotelCopy.websitePlaceholder}
         testID="invite-hotel-web-address"
       />
     </>
@@ -85,6 +85,7 @@ function InviteHotelForm({ sheet, canMakeTests, onOpenHotel, onAddDestination }:
         <DuplicateHints
           name={sheet.draft.proposedName}
           webAddress={sheet.draft.proposedWebAddress}
+          destinationId={sheet.draft.proposedDestinationId}
           onOpenHotel={onOpenHotel}
         />
       </Stack>
@@ -107,8 +108,9 @@ export interface InviteHotelSheetProps {
 
 /**
  * Invite a new hotel (D-188 §7; plan §8): a request for a hotel the catalogue does not hold yet, from the
- * hotels list (`hotels.info_requests.create`). It takes the proposed name, destination and web address,
- * shows the catalogue hotels it may already be as they are typed, then the fields Send request takes (the
+ * hotels list (`hotels.info_requests.create`). It takes the proposed name and destination, and the hotel
+ * website when staff know it (D-192), shows the catalogue hotels it may already be as they are typed and
+ * any live invite of the same name in that destination, then the fields Send request takes (the
  * round is always the onboarding), the Super Admin's test switch included. Once created, the link shows
  * here once, with Copy and Share; closing forgets it.
  *
