@@ -145,6 +145,29 @@ describe("the duplicate hints", () => {
     const many = Array.from({ length: HOTEL_DUPLICATE_HINTS_MAX + 1 }, () => hint);
     expect(hotelDuplicateHints.safeParse({ hints: many }).success).toBe(false);
   });
+
+  it("names the live new-hotel requests of the same name in the destination asked for (D-192)", () => {
+    const live = {
+      requestId: "0192f1a0-0000-7000-8000-0000000000b2",
+      reference: "HIR-2026-0002",
+      status: "open",
+      isTest: false,
+      proposedName: "Synthetic Lake Hotel",
+      destinationName: "Synthetic Destination",
+      proposedWebAddress: null,
+    } as const;
+    expect(hotelDuplicateHints.safeParse({ hints: [], liveRequests: [live] }).success).toBe(true);
+    const withSite = { ...live, proposedWebAddress: "https://synthetic-lake-hotel.example" };
+    expect(hotelDuplicateHints.safeParse({ hints: [], liveRequests: [withSite] }).success).toBe(
+      true,
+    );
+    expect(
+      hotelDuplicateHints.safeParse({ hints: [], liveRequests: [{ ...live, tokenHash: "x" }] })
+        .success,
+    ).toBe(false);
+    const many = Array.from({ length: HOTEL_DUPLICATE_HINTS_MAX + 1 }, () => live);
+    expect(hotelDuplicateHints.safeParse({ hints: [], liveRequests: many }).success).toBe(false);
+  });
 });
 
 describe("the hotel form's mode, for the Hotel team", () => {

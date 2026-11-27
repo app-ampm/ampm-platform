@@ -116,8 +116,22 @@ describe("hotelInfoRequestCreateRequest", () => {
     expect(pathsOf(extension)).toEqual(["switchboardPhone"]);
   });
 
+  it("takes a new hotel without a website, and reads a blank website as none (D-192)", () => {
+    const { proposedWebAddress: _omitted, ...withoutWebsite } = proposed;
+    for (const blank of [undefined, "", "   "]) {
+      const parsed = hotelInfoRequestCreateRequest.parse({
+        ...proposed,
+        proposedWebAddress: blank,
+      });
+      const expected = { ...withoutWebsite, kind: "onboarding", emailIt: false, isTest: false };
+      expect(parsed, JSON.stringify(blank)).toEqual(expected);
+    }
+    const kept = hotelInfoRequestCreateRequest.parse(proposed);
+    expect(kept).toMatchObject({ proposedWebAddress: proposed.proposedWebAddress });
+  });
+
   it("refuses a web address that is not an http or https address", () => {
-    for (const address of ["not a web address", "ftp://synthetic-hotel.example", ""]) {
+    for (const address of ["not a web address", "ftp://synthetic-hotel.example"]) {
       const result = hotelInfoRequestCreateRequest.safeParse({
         ...proposed,
         proposedWebAddress: address,
@@ -302,11 +316,11 @@ describe("the queries", () => {
     expect(hotelInfoRequestHistoryQuery.safeParse({ cursor: "not-a-uuid" }).success).toBe(false);
   });
 
-  it("takes a name, a web address, both or neither for the duplicate hints", () => {
-    expect(
-      hotelDuplicateHintsQuery.parse({ name: " Lake Palace ", webAddress: "lake.example" }),
-    ).toEqual({ name: "Lake Palace", webAddress: "lake.example" });
+  it("takes a name, a web address and the destination chosen (D-192), all or none, for the hints", () => {
+    const typed = { name: " Lake Palace ", webAddress: "lake.example", destinationId: DESTINATION };
+    expect(hotelDuplicateHintsQuery.parse(typed)).toEqual({ ...typed, name: "Lake Palace" });
     expect(hotelDuplicateHintsQuery.parse({})).toEqual({});
     expect(hotelDuplicateHintsQuery.safeParse({ hotelId: HOTEL }).success).toBe(false);
+    expect(hotelDuplicateHintsQuery.safeParse({ destinationId: "goa" }).success).toBe(false);
   });
 });

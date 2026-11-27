@@ -199,9 +199,35 @@ export const hotelDuplicateHint = z
   .strict();
 export type HotelDuplicateHint = z.infer<typeof hotelDuplicateHint>;
 
-/** The duplicate hints, strongest first, twenty at most. */
+/**
+ * A live new-hotel request whose proposed name is the name typed (case, accents and words such as "hotel"
+ * aside) in the destination chosen (D-192): a warning that the hotel may be invited already, never a
+ * block, as two hotels may share a name. Its website is null when staff gave none.
+ */
+export const hotelDuplicateLiveRequest = z
+  .object({
+    requestId: uuid,
+    /** `HIR-<year>-<n>`. */
+    reference: z.string(),
+    status: hotelInfoRequestStatus,
+    isTest: z.boolean(),
+    proposedName: z.string(),
+    destinationName: z.string(),
+    proposedWebAddress: z.string().nullable(),
+  })
+  .strict();
+export type HotelDuplicateLiveRequest = z.infer<typeof hotelDuplicateLiveRequest>;
+
+/**
+ * The duplicate hints, strongest first, twenty at most; and, only when the query names a destination,
+ * the live new-hotel requests of the same name there, oldest first (absent otherwise, so a portal that
+ * never sends a destination reads the answer it always did).
+ */
 export const hotelDuplicateHints = z
-  .object({ hints: z.array(hotelDuplicateHint).max(HOTEL_DUPLICATE_HINTS_MAX) })
+  .object({
+    hints: z.array(hotelDuplicateHint).max(HOTEL_DUPLICATE_HINTS_MAX),
+    liveRequests: z.array(hotelDuplicateLiveRequest).max(HOTEL_DUPLICATE_HINTS_MAX).optional(),
+  })
   .strict();
 export type HotelDuplicateHints = z.infer<typeof hotelDuplicateHints>;
 

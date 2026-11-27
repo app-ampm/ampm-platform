@@ -61,6 +61,17 @@ const recipientEmail = z.string().trim().toLowerCase().email().max(255);
 const webAddress = shortText.refine((text) => text === "" || normaliseWebAddress(text) !== null, {
   error: WEB_ADDRESS_REFUSAL,
 });
+/**
+ * A new hotel's website, which staff may not know when they invite it (D-192): blank text, as an empty
+ * field sends it, reads as none given; any other text is checked as `webAddress`.
+ */
+const optionalWebAddress = z
+  .preprocess(
+    (value: string | undefined) =>
+      typeof value === "string" && value.trim() === "" ? undefined : value,
+    webAddress.optional(),
+  )
+  .optional();
 /** The hotel's switchboard, stored in E.164 by core `normaliseHotelPhone`. */
 const switchboardPhone = storableText()
   .max(40)
@@ -101,13 +112,16 @@ const existingHotelRequest = z
   })
   .strict();
 
-/** A request for a proposed new hotel: always its onboarding. */
+/**
+ * A request for a proposed new hotel: always its onboarding. Its name and destination are required, its
+ * website optional (D-192): when given it keys the one live request per address.
+ */
 const newHotelRequest = z
   .object({
     target: z.literal("new"),
     proposedName: shortText,
     proposedDestinationId: uuid,
-    proposedWebAddress: webAddress,
+    proposedWebAddress: optionalWebAddress,
     kind: z
       .literal("onboarding", { error: "A new hotel's request is its onboarding" })
       .default("onboarding"),
@@ -116,8 +130,8 @@ const newHotelRequest = z
   .strict();
 
 /**
- * `POST /hotels-admin/info-requests`: an existing hotel (`hotelId`) or a proposed new one (its name,
- * destination and web address), with the staff fields. Emailing the link needs a recipient email, and a
+ * `POST /hotels-admin/info-requests`: an existing hotel (`hotelId`) or a proposed new one (its name and
+ * destination, and its website when staff know it), with the staff fields. Emailing the link needs a recipient email, and a
  * switchboard number its source (and a source its number).
  *
  * @example
@@ -253,7 +267,8 @@ export type HotelInfoRequestHistoryQuery = z.output<typeof hotelInfoRequestHisto
 
 /**
  * `GET /hotels-admin/hotel-duplicate-hints`: what staff typed in the Invite sheet so far. Either may be
- * absent or still incomplete; the hints use what reads as a name or an address.
+ * absent or still incomplete; the hints use what reads as a name or an address. With the destination
+ * chosen, the answer also names the live new-hotel requests of the same name there (D-192).
  *
  * @example
  * hotelDuplicateHintsQuery.parse({ name: "Lake Palace", webAddress: "lakepalace.example" });
@@ -262,6 +277,7 @@ export const hotelDuplicateHintsQuery = z
   .object({
     name: storableText().max(255).optional(),
     webAddress: storableText().max(2048).optional(),
+    destinationId: uuid.optional(),
   })
   .strict();
 export type HotelDuplicateHintsQuery = z.infer<typeof hotelDuplicateHintsQuery>;
